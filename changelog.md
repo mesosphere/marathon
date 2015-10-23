@@ -9,6 +9,19 @@ do no longer contain redundant information about the app id. Additionally, the t
 in Zookeeper changed as well. Previous versions of Marathon will **not** be able to read the tasks'
 status once these are migrated. Please backup your ZooKeeper state before migrating to this version. 
 
+#### Zookeeper Compression
+ZK nodes larger than a certain threshold will now be compressed. This allows Marathon to handle
+more apps and groups, but breaks backwards compatibility, because older versions of Marathon are
+not able to parse compressed nodes. You can define the threshold with `--zk_compression_threshold` 
+which defaults to 64KB. 
+To disable this feature, start Marathon with the `--disable-zk-compression` flag.
+
+#### Use logback as logging backend
+We moved from log4j to [Logback](http://logback.qos.ch) backend. 
+If you are using custom log4j properties, you will have to migrate them to a logback configuration. 
+The log4j.properties to logback.xml [Translator](http://logback.qos.ch/translator/) can help you with that.
+
+
 ### Overview
 
 #### Enable extensions to Marathon via Plugins
@@ -28,6 +41,23 @@ The probably most wanted feature in Marathon is the ability to have Authenticati
 Since this topic has so distinct requirements for different organizations, it is a perfect match for our new plugin mechanism.
 This version now implements all the necessary hooks needed to secure most external interfaces to your specific needs.
 If you are interested in a very simple implementation, you can look into the [Example Auth Plugin](https://github.com/mesosphere/marathon-example-plugins/tree/master/auth)
+
+#### Persistent Store Cache 
+All entities in the persistent store (ZK) are loaded into a cache during leader election.
+Subsequent reads are delivered from that cache. Updates to entities also update the cache.
+This cache should improve read access time significantly.
+You can disable the cache with `--disable_store_cache`.
+
+#### Greatly improved API Reference
+With this release we integrated [RAML](http://raml.org) based API documentation.
+The `/help` endpoint uses the [RAML Console](https://github.com/mulesoft/api-console) to show the API Reference.
+The Github pages documentation now also uses that specification.
+We had a lot of feedback for documentation improvements - so please give us your thoughts on that. 
+
+#### Graphite and DataDog reporter
+We collect a lot of metrics in Marathon.
+You can collect those metrics via the `/metrics` endpoint.
+With those reporters you can transfer the data into either Graphite or DataDog and see the values over time. 
 
 #### Force action
 Previous versions of the UI did not support sending the `?force=true` query parameter when the
@@ -54,6 +84,11 @@ The Configuration panel in the application's detail view sees a number of improv
 fixes. The application labels and dependencies are now also shown, and the lifetime durations
 are shown as "humanized".
 
+#### Define the number of maximum apps 
+A new flag (`--max_apps`) has been introduced, which allows Marathon to limit the maximum number
+of applications that may be created. This limit is disabled by default.
+
+
 ### Under the Hood
 
 #### Introduce a plugin-interface module
@@ -61,26 +96,54 @@ We now publish a separate marathon-plugin-interface.jar with every Marathon rele
 This artifact holds all the inerfaces needed to develop your own Marathon plugin.
 
 #### Consolidate logging to use slf4j
-We moved completely to slf4j as Logging API. The logging backend still uses log4j.
+We moved completely to slf4j as Logging API. 
+
+#### Several performance improvements
+* A separate thread pool is used for health check operations
+* Group and app creation is more efficient.
 
 #### Introduce configurable zk node compression
 We introduced zk compression which improves performance significantly. Compression can be turned on/off via cmd line flags and is enabled by default.
 
+#### Tasks are now stored via the standard EntityRepository
+The storage of tasks was handled separately in previous versions of Marathon.
+With this change in place we handle all entities via the same interface.
+This allows for globally available extensions (e.g. the store cache).
+ 
+
 ### Fixed Issues
-- #2477 - Marathon forgets all tasks on restart
-- #2294 - Make boolean command line flags use Scallop's 'toggle'
-- #2459 - Framework Id not visible in the UI 
-- #2405 - Migration of ZK State to 0.13 does not work
-- #2299 - Writes to EntityRepositories should be visible in following reads
-- #2256 - Misleading log message if offer doesn't match because of filtered roles
-- #2174 - REST api returns code 500 for invalid JSON and fails silently to proxy the error
 - #1429 - Non-integer is accepted as instance count
-- #2441 - AppRestart deployments don't wait for old tasks to be killed
-- #2270 - Overlapping text in Deployment view
-- #2266 - Link "Mesos details" is broken
-- #2264 - Cannot submit job with id containing internal slashes
-- #2216 - Do not show (x) in keyword search input until user begins typing
+- #1563 - Inconsistent /help <-> rest-api.md documentation
+- #1588 - Incorrect healthcheck triggers 500 Server error
+- #1730 - Add uptime metric
+- #1835 - No error received when a DELETE is sent to a task in deployment
+- #1904 - App scaled below minimumHealthCapacity
+- #1988 - Move from log4j to logback
 - #2157 - Row is off-centre if upper row is empty in lists
+- #2174 - REST api returns code 500 for invalid JSON and fails silently to proxy the error
+- #2177 - Error Handling/validation required for COMMAND health check
+- #2202 - App not present right after its creation
+- #2216 - Do not show (x) in keyword search input until user begins typing
+- #2256 - Misleading log message if offer doesn't match because of filtered roles
+- #2264 - Cannot submit job with id containing internal slashes
+- #2266 - Link "Mesos details" is broken
+- #2270 - Overlapping text in Deployment view
+- #2280 - Scaling check ignores task versions
+- #2294 - Make boolean command line flags use Scallop's 'toggle'
+- #2299 - Writes to EntityRepositories should be visible in following reads
+- #2307 - Investigate MarathonSchedulerServiceTest failure
+- #2353 - Never recover from race condition when scaling up
+- #2360 - PUT /v2/groups triggers restart while PUT /v2/apps does not
+- #2369 - Large file URIs cause "Failed to fetch all URIs for container" error when pulling from HDFS
+- #2381 - Marathon stops apps instead of restart
+- #2405 - Migration of ZK State to 0.13 does not work
+- #2441 - AppRestart deployments don't wait for old tasks to be killed
+- #2494 - Remove mentions of Marathon gem from docs 
+- #2459 - Framework Id not visible in the UI 
+- #2477 - Marathon forgets all tasks on restart
+
+
+------------------------------------------------------------
 
 
 ## Changes from 0.11.0 to 0.11.1
