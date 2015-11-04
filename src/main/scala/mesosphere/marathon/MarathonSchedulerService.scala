@@ -276,7 +276,7 @@ class MarathonSchedulerService @Inject() (
 
       //run all leadership callbacks
       log.info(s"""Call onElected leadership callbacks on ${leadershipCallbacks.mkString(", ")}""")
-      Await.result(Future.sequence(leadershipCallbacks.map(_.onElected)), zkTimeout)
+      Await.result(Future.sequence(leadershipCallbacks.map(_.onElected)), config.onElectedPrepareTimeout().millis)
       log.info(s"Finished onElected leadership callbacks")
 
       // We have been elected. Thus, elect leadership with the abdication command.
