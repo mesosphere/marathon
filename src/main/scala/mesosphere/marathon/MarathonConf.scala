@@ -217,4 +217,9 @@ trait MarathonConf
     descrNo = "Disable the in memory cache for the storage layer ",
     prefix = "disable_"
   )
+
+  lazy val onElectedPrepareTimeout = opt[Long] ("on_elected_prepare_timeout",
+    descr = "The timeout for preparing the Marathon instance when elected as leader",
+    default = Some(3 * 60 * 1000L) //3 minutes
+  )
 }
