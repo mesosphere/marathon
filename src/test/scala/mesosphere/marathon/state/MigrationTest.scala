@@ -38,6 +38,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.store.update(any) returns Future.successful(mock[PersistentEntity])
     f.store.allIds() returns Future.successful(Seq.empty)
     f.store.initialize() returns Future.successful(())
+    f.store.load(any) returns Future.successful(None)
     f.appRepo.apps() returns Future.successful(Seq.empty)
     f.appRepo.allPathIds() returns Future.successful(Seq.empty)
     f.groupRepo.group("root") returns Future.successful(None)

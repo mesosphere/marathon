@@ -17,6 +17,9 @@ object MarathonSchedulerDriver {
                 httpConfig: HttpConf,
                 newScheduler: MarathonScheduler,
                 frameworkId: Option[FrameworkID]): SchedulerDriver = {
+
+    log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId")
+
     val frameworkInfoBuilder = FrameworkInfo.newBuilder()
       .setName(config.frameworkName())
       .setFailoverTimeout(config.mesosFailoverTimeout().toDouble)

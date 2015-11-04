@@ -57,7 +57,7 @@ class Migration @Inject() (
       }
     },
     StorageVersions(0, 13, 0) -> { () =>
-      new MigrationTo0_13(taskRepo, store).migrateTasks().recover {
+      new MigrationTo0_13(taskRepo, store).migrate().recover {
         case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.13", e)
       }
     }
@@ -339,6 +339,26 @@ class MigrationTo0_13(taskRepository: TaskRepository, store: PersistentStore) {
       Future.sequence(keys.map(migrateKey)).map(_ => ())
     }
   }
+
+  def renameFrameworkId(): Future[Unit] = {
+    val oldName = "frameworkId"
+    val newName = "framework:id"
+    def moveKey(bytes: IndexedSeq[Byte]): Future[Unit] = {
+      for {
+        _ <- store.create(newName, bytes)
+        _ <- store.delete(oldName)
+      } yield ()
+    }
+    store.load(oldName).flatMap {
+      case Some(key) => moveKey(key.bytes)
+      case None      => Future.successful(())
+    }
+  }
+
+  def migrate(): Future[Unit] = for {
+    _ <- migrateTasks()
+    _ <- renameFrameworkId()
+  } yield ()
 }
 
 object StorageVersions {

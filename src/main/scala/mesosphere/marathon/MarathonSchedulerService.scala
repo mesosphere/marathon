@@ -265,22 +265,25 @@ class MarathonSchedulerService @Inject() (
     try {
       log.info("Elected (Leader Interface)")
 
-      //create new driver
-      driver = Some(driverFactory.createDriver())
-
       //execute tasks, only the leader is allowed to
       migration.migrate()
-
-      Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)
-      driverHandlesAbdication = true
 
       //run all leadership callbacks
       log.info(s"""Call onElected leadership callbacks on ${leadershipCallbacks.mkString(", ")}""")
       Await.result(Future.sequence(leadershipCallbacks.map(_.onElected)), zkTimeout)
       log.info(s"Finished onElected leadership callbacks")
 
+      //start all leadership coordination actors
+      Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)
+
+      //create new driver
+      driver = Some(driverFactory.createDriver())
+
       // We have been elected. Thus, elect leadership with the abdication command.
       electLeadership(Some(abdicateCmd))
+
+      // The driver is created and running - now he is responsible for abdication handling
+      driverHandlesAbdication = true
 
       // We successfully took over leadership. Time to reset backoff
       resetOfferLeadershipBackOff()
