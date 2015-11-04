@@ -83,6 +83,9 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
 
     def handleEntries(names: Seq[String]): Future[Unit] = {
       val (unversionedNames, versionedNames) = names.partition(noVersionKey)
+      if (log.isDebugEnabled) {
+        log.debug(s"$store Preload and cache entries: $unversionedNames and versioned entries $versionedNames")
+      }
       //add keys with None for version entries
       versionedNames.foreach(cache.put(_, None))
       //add key with loaded values
@@ -93,6 +96,7 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
   }
 
   override def onDefeated: Future[Unit] = {
+    log.debug(s"$store Clear all cached entries")
     cache.clear()
     Future.successful(())
   }

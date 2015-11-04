@@ -413,7 +413,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideFrameworkIdStore(store: PersistentStore, metrics: Metrics): EntityStore[FrameworkId] = {
-    entityStore(store, metrics, "", () => new FrameworkId(UUID.randomUUID().toString))
+    entityStore(store, metrics, "framework:", () => new FrameworkId(UUID.randomUUID().toString))
   }
 
   @Named(ModuleNames.STORE_GROUP)
