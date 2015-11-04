@@ -46,5 +46,14 @@
     "minimumHealthCapacity": 1,
     "maximumOverCapacity": 1
   },
+  "network":{
+    "ipAddress": "1.2.3.4",
+    "protocol": "IPv4",
+    "groups": ["public", "service", "db"],
+    "labels": {
+      "foo": "bar",
+      "baz": "buzz"
+    }
+  },
   "version": "2015-08-19T21:26:47.616Z"
 }
