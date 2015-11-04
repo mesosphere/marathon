@@ -216,8 +216,8 @@ trait NetworkFormats {
     enumFormat(mesos.NetworkInfo.Protocol.valueOf, str => s"$str is not a valid protocol")
 
   implicit lazy val NetworkFormat: Format[Network] = (
-    (__ \ "ipAddress").formatNullable[Option[String]].withDefault(None) ~
-    (__ \ "protocol").formatNullable[Option[mesos.NetworkInfo.Protocol]].withDefault(None) ~
+    (__ \ "ipAddress").formatNullable[String] ~
+    (__ \ "protocol").formatNullable[mesos.NetworkInfo.Protocol] ~
     (__ \ "groups").formatNullable[Seq[String]].withDefault(Nil) ~
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
   )(Network(_, _, _, _), unlift(Network.unapply))
@@ -456,7 +456,7 @@ trait V2Formats {
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(AppDefinition.DefaultUpgradeStrategy) ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
-            (__ \ "network").readNullable[Option[Seq[Network]]].withDefault(AppDefinition.DefaultNetwork) ~
+            (__ \ "network").readNullable[Seq[Network]] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now())
           )(ExtraFields)
 
