@@ -1,12 +1,14 @@
 package mesosphere.marathon.health
 
+import akka.actor.ActorDSL._
 import akka.actor._
 import akka.event.EventStream
-import akka.testkit.EventFilter
+import akka.testkit.{ EventFilter, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, MarathonStore, PathId, Timestamp }
@@ -25,6 +27,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
   var hcManager: MarathonHealthCheckManager = _
   var taskTracker: TaskTracker = _
   var appRepository: AppRepository = _
+  var eventStream: EventStream = _
 
   implicit var system: ActorSystem = _
 
@@ -46,11 +49,13 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
       None,
       metrics)
 
+    eventStream = new EventStream()
+
     hcManager = new MarathonHealthCheckManager(
       system,
       mock[MarathonScheduler],
       new MarathonSchedulerDriverHolder,
-      mock[EventStream],
+      eventStream,
       taskTracker,
       appRepository
     )
@@ -86,7 +91,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
       .setHealthy(healthy)
       .build
 
-    EventFilter.info(start = "Received health result: [", occurrences = 1).intercept {
+    EventFilter.info(start = "Received health result for app", occurrences = 1).intercept {
       hcManager.update(taskStatus, version)
     }
   }
@@ -127,7 +132,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(status1 == Seq(Health(taskId.getValue)))
 
     // send unhealthy task status
-    EventFilter.info(start = "Received health result: [", occurrences = 1).intercept {
+    EventFilter.info(start = "Received health result for app", occurrences = 1).intercept {
       hcManager.update(taskStatus.toBuilder.setHealthy(false).build, version)
     }
 
@@ -136,7 +141,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(health2.lastSuccess.isEmpty)
 
     // send healthy task status
-    EventFilter.info(start = "Received health result: [", occurrences = 1).intercept {
+    EventFilter.info(start = "Received health result for app", occurrences = 1).intercept {
       hcManager.update(taskStatus.toBuilder.setHealthy(true).build, version)
     }
 
@@ -210,7 +215,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
         .setTaskId(mesos.TaskID.newBuilder()
           .setValue(task.getId)
           .build)
-        .setState(mesos.TaskState.TASK_RUNNING)
+        .setState(state)
         .setHealthy(false)
         .build
     val healthChecks = List(0, 1, 2).map { i =>
@@ -256,33 +261,83 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(hcManager.list(appId) == Set())
 
     // reconcileWith starts health checks of task 1
-    assert(hcManager.list(appId) == Set())
-    startTask_i(1)
-    Await.result(hcManager.reconcileWith(appId), 2.second)
+    val captured1 = captureEvents {
+      assert(hcManager.list(appId) == Set())
+      startTask_i(1)
+      Await.result(hcManager.reconcileWith(appId), 2.second)
+    }
+    assert(captured1.map(_.eventType) == Vector("add_health_check_event"))
     assert(hcManager.list(appId) == healthChecks(1))
 
     // reconcileWith leaves health check running
-    Await.result(hcManager.reconcileWith(appId), 2.second)
+    val captured2 = captureEvents {
+      Await.result(hcManager.reconcileWith(appId), 2.second)
+    }
+    assert(captured2.isEmpty)
     assert(hcManager.list(appId) == healthChecks(1))
 
     // reconcileWith starts health checks of task 2 and leaves those of task 1 running
-    startTask_i(2)
-    Await.result(hcManager.reconcileWith(appId), 2.second)
+    val captured3 = captureEvents {
+      startTask_i(2)
+      Await.result(hcManager.reconcileWith(appId), 2.second)
+    }
+    assert(captured3.map(_.eventType) == Vector("add_health_check_event", "add_health_check_event"))
     assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2))
 
     // reconcileWith stops health checks which are not current and which are without tasks
-    stopTask(appId, tasks(1))
-    assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2))
-    Await.result(hcManager.reconcileWith(appId), 2.second)
+    val captured4 = captureEvents {
+      stopTask(appId, tasks(1))
+      assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2))
+      Await.result(hcManager.reconcileWith(appId), 2.second)
+    }
+    assert(captured4.map(_.eventType) == Vector("remove_health_check_event"))
     assert(hcManager.list(appId) == healthChecks(2))
 
     // reconcileWith leaves current version health checks running after termination
-    stopTask(appId, tasks(2))
-    assert(hcManager.list(appId) == healthChecks(2))
-    Await.result(hcManager.reconcileWith(appId), 2.second)
+    val captured5 = captureEvents {
+      stopTask(appId, tasks(2))
+      assert(hcManager.list(appId) == healthChecks(2))
+      Await.result(hcManager.reconcileWith(appId), 2.second)
+    }
+    assert(captured5.map(_.eventType) == Vector.empty)
     assert(hcManager.list(appId) == healthChecks(2))
 
     // other task was not touched
     assert(hcManager.list(otherAppId) == otherHealthChecks)
+  }
+
+  /**
+    * Captures the events send to the EventStream while the block is executing.
+    *
+    * For issue #2314 not only the end state is important. It is also important, which health checks
+    * were removed incorrectly and then readded afterwards.
+    */
+  private[this] def captureEvents(block: => Unit): Seq[MarathonEvent] = {
+    // yes, this is ugly. Since we only access it in the actor until it terminates, we do have
+    // the correct thread sync boundaries in place.
+
+    var capture = Vector.empty[MarathonEvent]
+    val captureEventsActor = actor {
+      new Act {
+        become {
+          case captureMe: MarathonEvent => capture :+= captureMe
+        }
+      }
+    }
+    eventStream.subscribe(captureEventsActor, classOf[MarathonEvent])
+    eventStream.subscribe(captureEventsActor, classOf[String])
+
+    try {
+      block
+    }
+    finally {
+      eventStream.unsubscribe(captureEventsActor)
+      captureEventsActor ! PoisonPill
+      val probe = TestProbe()
+      probe.watch(captureEventsActor)
+      probe.expectMsgClass(classOf[Terminated])
+    }
+
+    capture
   }
 }
