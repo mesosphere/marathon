@@ -7,9 +7,9 @@ title: Setting Up and Running Marathon
 
 ### Requirements
 
-* [Apache Mesos][Mesos] 0.22.1+
+* [Apache Mesos][Mesos] 0.24.0+
 * [Apache ZooKeeper][ZooKeeper]
-* JDK 1.7+ 
+* JDK 1.8+ 
 
 ### Installation
 
@@ -32,28 +32,14 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
 
 #### From a Tarball
 
-1.  Download and unpack the latest Marathon release.
+Download and unpack the latest Marathon release.
 
-    **For Mesos 0.22.1+:**
+``` bash
+$ curl -O http://downloads.mesosphere.com/marathon/v0.11.1/marathon-0.11.1.tgz
+$ tar xzf marathon-0.11.1.tgz
+```
 
-    ``` bash
-    $ curl -O http://downloads.mesosphere.com/marathon/v0.10.1/marathon-0.10.1.tgz
-    $ tar xzf marathon-0.10.1.tgz
-    ```
-    
-    We do not expect problems in combination with Mesos 0.21.* or 0.23.* but these combinations
-    are not well tested.
-
-    **For Mesos 0.20.0 until 0.22.0:**
-
-    Please consider migrating to Mesos 0.22.1 and Marathon 0.8.2!
-
-    ``` bash
-    $ curl -O http://downloads.mesosphere.com/marathon/v0.8.1/marathon-0.8.1.tgz
-    $ tar xzf marathon-0.8.1.tgz
-    ```
-
-    SHA-256 checksums are available by appending `.sha256` to the URLs.
+SHA-256 checksums are available by appending `.sha256` to the URLs.
 
 ### Versioning
 
