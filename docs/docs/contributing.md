@@ -83,9 +83,6 @@ _TODO_: Do we need a CLA?
 
 - Run all tests via the supplied `./bin/run-tests.sh` script (requires docker).
 
-- All Python code (servicerouter) should be PEP-8 compliant as tested by the Python
-  [pep8](http://pep8.readthedocs.org/en/latest/intro.html) utility.
-
 ## Source Files
 
 - Public classes should be defined in a file of the same name, except for
