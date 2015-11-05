@@ -1,0 +1,50 @@
+{
+  "id": "/tools/docker/registry",
+  "instances": 1,
+  "cpus": 0.5,
+  "mem": 4096,
+  "disk": 0,
+  "executor": "",
+  "constraints": [],
+  "uris": [],
+  "storeUrls": [],
+  "ports": [
+    5000
+  ],
+  "requirePorts": false,
+  "backoffSeconds": 1,
+  "backoffFactor": 1.15,
+  "maxLaunchDelaySeconds": 3600,
+  "container": {
+    "type": "DOCKER",
+    "volumes": [
+      {
+        "containerPath": "/docker_storage",
+        "hostPath": "/hdd/tools/docker/registry",
+        "mode": "RW"
+      }
+    ],
+    "docker": {
+      "image": "registry",
+      "network": "BRIDGE",
+      "portMappings": [
+        {
+          "containerPort": 5000,
+          "hostPort": 0,
+          "servicePort": 5000,
+          "protocol": "tcp"
+        }
+      ],
+      "privileged": false,
+      "parameters": [],
+      "forcePullImage": false
+    }
+  },
+  "healthChecks": [],
+  "dependencies": [],
+  "upgradeStrategy": {
+    "minimumHealthCapacity": 1,
+    "maximumOverCapacity": 1
+  },
+  "version": "2015-08-19T21:26:47.616Z"
+}

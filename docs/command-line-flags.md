@@ -37,7 +37,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Comma separated list of allowed originating domains for HTTP requests.
     The origin(s) to allow in Marathon. Not set by default.
     Examples: `"*"`, or `"http://localhost:8888, http://domain.com"`.
-* <span class="label label-default">v0.12.0</span> `--[disable_]checkpoint` (Optional. Default: enabled):
+* <span class="label label-default">v0.13.0</span> `--[disable_]checkpoint` (Optional. Default: enabled):
     Enable checkpointing of tasks.
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and Marathon scheduler failover.  See the
@@ -51,7 +51,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     enabled.
 * `--framework_name` (Optional. Default: marathon-VERSION): The framework name
     to register with Mesos.
-* <span class="label label-default">v0.12.0</span> `--[disable_]ha` (Optional. Default: enabled):
+* <span class="label label-default">v0.13.0</span> `--[disable_]ha` (Optional. Default: enabled):
     Run Marathon in HA mode with leader election.
     Allows starting an arbitrary number of other Marathons but all need to be
     started in HA mode. This mode requires a running ZooKeeper. See `--master`.
@@ -119,7 +119,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     elected.
     Format: `protocol://host:port/`
     _Note: When this option is set given url should always load balance to current Mesos master
-* `--marathon_store_timeout` (Optional. Default: 2000 (2 seconds)): Maximum time
+* <span class="label label-default">Deprecated</span>`--marathon_store_timeout` (Optional.): Maximum time
     in milliseconds, to wait for persistent storage operations to complete.
 * <span class="label label-default">v0.10.0</span> `--env_vars_prefix` (Optional. Default: None):
     The prefix to add to the name of task's environment variables created
@@ -132,8 +132,10 @@ The core functionality flags can be also set by environment variable `MARATHON_O
    64 KB): Threshold in bytes, when compression is applied to the zk node
 * <span class="label label-default">v0.11.1</span> `--max_apps` (Optional):
     The maximum number of applications that may be created.
-* <span class="label label-default">v0.12.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
-    
+* <span class="label label-default">v0.13.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
+* <span class="label label-default">v0.13.0</span> `--on_elected_prepare_timeout` (Optional. Default: 3 minutes):
+    The timeout for preparing the Marathon instance when elected as leader.
+
 ## Tuning Flags for Offer Matching/Launching Tasks
 
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
@@ -274,15 +276,32 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of
     concurrent http requests, that is allowed concurrently before requests get answered directly with a
     HTTP 503 Service Temporarily Unavailable.
+    
+### Metrics Flags
+
+* <span class="label label-default">v0.13.0</span> `--[disable_]metrics` (Optional. Default: enabled):
+    Expose the execution time per method via the metrics endpoint.
+    This metrics measurement can be disabled with --disable_metrics.
+* <span class="label label-default">v0.13.0</span> `--reporter_graphite` (Optional. Default: disabled):
+    Report metrics to [Graphite](http://graphite.wikidot.com) as defined by the given url. Example: tcp://localhost:2003?prefix=marathon-test&interval=10 
+    The url can have several parameters to refine the functionality.
+    * prefix: (Default: None) the prefix for all metrics
+    * interval: (Default: 10) the interval to report to graphite in seconds
+* <span class="label label-default">v0.13.0</span> `--reporter_datadog` (Optional. Default: disabled):
+    Report metrics to [Datadog](https://www.datadoghq.com) as defined by the given url. Example: udp://localhost:8125?prefix=marathon-test&tags=marathon&interval=10
+    Either use udp to talk to a datadog agent or http to talk directly to DatadogHQ.
+    The url can have several parameters to refine the functionality.
+    * expansions: (Default: all) which metric data should be expanded. can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999 
+    * interval: (Default: 10) the interval in seconds to report to Datadog
+    * prefix: (Default: marathon_test) the prefix is prepended to all metric names
+    * tags: (Default: empty) the tags to send with each metric. Can be either simple value like `foo` or key value like `foo:bla`
+    * apiKey: (Default: empty) the api key to use, when directly connecting to Datadog (http) 
 
 ### Debug Flags
 
 * <span class="label label-default">v0.8.2</span> `--logging_level` (Optional):
     Set the logging level of the application.
     Use one of `off`, `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `all`.
-* <span class="label label-default">v0.12.0</span> `--[disable_]metrics` (Optional. Default: enabled):
-    Expose the execution time per method via the metrics endpoint.
-    This metrics measurement can be disabled with --disable_metrics.
-* <span class="label label-default">v0.12.0</span> `--[disable_]tracing` (Optional. Default: disabled):
+* <span class="label label-default">v0.13.0</span> `--[disable_]tracing` (Optional. Default: disabled):
     Enable tracing for all service method calls.
     Log a trace message around the execution of every service method.

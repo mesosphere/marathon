@@ -1,0 +1,31 @@
+[
+  {
+    "id": "97c136bf-5a28-4821-9d94-480d9fbb01c8",
+    "version": "2015-09-30T09:09:17.614Z",
+    "affectedApps": [
+      "/foo"
+    ],
+    "steps": [
+      [
+        {
+          "action": "StartApplication",
+          "app": "/foo"
+        }
+      ],
+      [
+        {
+          "action": "ScaleApplication",
+          "app": "/foo"
+        }
+      ]
+    ],
+    "currentActions": [
+      {
+        "action": "ScaleApplication",
+        "app": "/foo"
+      }
+    ],
+    "currentStep": 2,
+    "totalSteps": 2
+  }
+]

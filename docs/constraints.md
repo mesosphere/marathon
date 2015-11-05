@@ -4,8 +4,7 @@ title: Constraints
 
 # Constraints
 
-Constraints control where apps run to allow optimizing for fault tolerance or locality.
-Constraints can be set via the REST API or the [Marathon gem](https://rubygems.org/gems/marathon_client) when starting an app. Make sure to use the gem version 0.2.0 or later for constraint support. Constraints are made up of three parts: a field name, an operator, and an optional parameter. The field can be the slave hostname or any Mesos slave attribute.
+Constraints control where apps run to allow optimizing for fault tolerance or locality. They are made up of three parts: a field name, an operator, and an optional parameter. The field can be the slave hostname or any Mesos slave attribute.
 
 ## Fields
 
@@ -31,14 +30,6 @@ Note that currently Marathon only supports text values for attributes and will n
 
 `UNIQUE` tells Marathon to enforce uniqueness of the attribute across all of an app's tasks. For example the following constraint ensures that there is only one app task running on each host:
 
-via the Marathon gem:
-
-``` bash
-$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint hostname:UNIQUE
-```
-
-via curl:
-
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "id": "sleep-unique",
@@ -50,15 +41,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 
 ### CLUSTER operator
 
-`CLUSTER` allows you to run all of your app's tasks on slaves that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency.
-
-via the Marathon gem:
-
-``` bash
-$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:CLUSTER:rack-1
-```
-
-via curl:
+`CLUSTER` allows you to run all of your app's tasks on slaves that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -82,15 +65,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 
 ### GROUP_BY operator
 
-`GROUP_BY` can be used to distribute tasks evenly across racks or datacenters for high availability.
-
-via the Marathon gem:
-
-``` bash
-$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:GROUP_BY
-```
-
-via curl:
+`GROUP_BY` can be used to distribute tasks evenly across racks or datacenters for high availability:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -104,12 +79,6 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 It is important to note that Marathon only knows about different values of the attribute (e.g. "rack_id") by analyzing current running tasks. If tasks are not already spread across all possible values, it may be required to specify the number of values in constraints (assuming you know apriori). For example, if you are spreading across 3 racks, use:
 
 ``` bash
-$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:GROUP_BY:3
-```
-
-via curl:
-
-``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "id": "sleep-group-by",
     "cmd": "sleep 60",
@@ -121,15 +90,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 
 ### LIKE operator
 
-`LIKE` accepts a regular expression as parameter, and allows you to run your tasks only on the slaves whose field values match the regular expression.
-
-via the Marathon gem:
-
-``` bash
-$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:LIKE:rack-[1-3]
-```
-
-via curl:
+`LIKE` accepts a regular expression as parameter, and allows you to run your tasks only on the slaves whose field values match the regular expression:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -144,15 +105,7 @@ Note, the parameter is required, or you'll get a warning.
 
 ### UNLIKE operator
 
-Just like `LIKE` operator, but only run tasks on slaves whose field values don't match the regular expression.
-
-via the Marathon gem:
-
-``` bash
-$ marathon start -i sleep -C 'sleep 60' -n 3 --constraint rack_id:UNLIKE:rack-[7-9]
-```
-
-via curl:
+Just like `LIKE` operator, but only run tasks on slaves whose field values don't match the regular expression:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{

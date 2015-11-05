@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "additionalProperties": true,
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "apps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { }
+      }
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "apps": {
+            "type": "array",
+            "items": {}
+          },
+          "groups": {
+            "type": "array",
+            "items": {}
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {}
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {}
+    },
+    "version": {
+      "type": "string"
+    }
+  }
+}

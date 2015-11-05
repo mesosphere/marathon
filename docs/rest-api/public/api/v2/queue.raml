@@ -1,0 +1,34 @@
+
+get:
+  description:
+    List all the tasks queued up or waiting to be scheduled.
+    This is mainly used for troubleshooting and occurs when scaling
+    changes are requested and the volume of scaling changes out paces the ability to schedule those tasks.
+
+    In addition to the application in the queue, you see also the task count that needs to be started.
+
+    If the task has a rate limit, then a delay to the start gets applied.
+    You can see this delay for every application with the seconds to wait before the next launch will be tried.
+  is: [ secured ]
+  responses:
+    200:
+      description: the list of all tasks waiting to be scheduled.
+      body:
+        application/json:
+          example: !include examples/queue.json
+
+
+
+/{app_id}/delay:
+
+  delete:
+    description:
+      If an application fails too often in a specified amount of time (according to the application definition),
+      the task launch will be delayed.
+      This delay can be removed by calling this endpoint.
+      The effect is, that the tasks of this application will be launched immediately.
+    responses:
+      200:
+        description: the delay is reset and no body is returned
+      404:
+        description: there is no delay for the given application with id `app_id`
