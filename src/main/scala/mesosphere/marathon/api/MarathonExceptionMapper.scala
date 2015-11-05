@@ -46,7 +46,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
   private def statusCode(exception: Exception): Int = exception match {
     //scalastyle:off magic.number
     case e: IllegalArgumentException     => 422 // Unprocessable entity
-    case e: TimeoutException             => 504 // Gateway timeout
+    case e: TimeoutException             => 503 // Service Unavailable
     case e: UnknownAppException          => 404 // Not found
     case e: AppLockedException           => 409 // Conflict
     case e: ConflictingChangeException   => 409 // Conflict
