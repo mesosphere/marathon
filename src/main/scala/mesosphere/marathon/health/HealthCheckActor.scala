@@ -31,8 +31,9 @@ class HealthCheckActor(
 
   override def preStart(): Unit = {
     log.info(
-      "Starting health check actor for app [{}] and healthCheck [{}]",
+      "Starting health check actor for app [{}] version [{}] and healthCheck [{}]",
       appId,
+      appVersion,
       healthCheck
     )
     scheduleNextHealthCheck()
@@ -40,24 +41,27 @@ class HealthCheckActor(
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit =
     log.info(
-      "Restarting health check actor for app [{}] and healthCheck [{}]",
+      "Restarting health check actor for app [{}] version [{}] and healthCheck [{}]",
       appId,
+      appVersion,
       healthCheck
     )
 
   override def postStop(): Unit = {
     nextScheduledCheck.forall { _.cancel() }
     log.info(
-      "Stopped health check actor for app [{}] and healthCheck [{}]",
+      "Stopped health check actor for app [{}] version [{}] and healthCheck [{}]",
       appId,
+      appVersion,
       healthCheck
     )
   }
 
   def purgeStatusOfDoneTasks(): Unit = {
     log.debug(
-      "Purging health status of done tasks for app [{}] and healthCheck [{}]",
+      "Purging health status of done tasks for app [{}] version [{}] and healthCheck [{}]",
       appId,
+      appVersion,
       healthCheck
     )
     val activeTaskIds = taskTracker.getTasks(appId).map(_.getId).toSet
@@ -69,8 +73,9 @@ class HealthCheckActor(
   def scheduleNextHealthCheck(): Unit =
     if (healthCheck.protocol != Protocol.COMMAND) {
       log.debug(
-        "Scheduling next health check for app [{}] and healthCheck [{}]",
+        "Scheduling next health check for app [{}] version [{}] and healthCheck [{}]",
         appId,
+        appVersion,
         healthCheck
       )
       nextScheduledCheck = Some(
@@ -98,7 +103,7 @@ class HealthCheckActor(
 
     // ignore failures if maxFailures == 0
     if (consecutiveFailures >= maxFailures && maxFailures > 0) {
-      log.info(f"Detected unhealthy task ${task.getId} on host ${task.getHost}")
+      log.info(f"Detected unhealthy task ${task.getId} of app [$appId] version [$appVersion] on host ${task.getHost}")
 
       // kill the task
       marathonSchedulerDriverHolder.driver.foreach { driver =>
@@ -131,7 +136,7 @@ class HealthCheckActor(
       scheduleNextHealthCheck()
 
     case result: HealthResult if result.version == appVersion =>
-      log.info("Received health result: [{}]", result)
+      log.info("Received health result for app [{}] version [{}]: [{}]", appId, appVersion, result)
       val taskId = result.taskId
       val health = taskHealth.getOrElse(taskId, Health(taskId))
 
