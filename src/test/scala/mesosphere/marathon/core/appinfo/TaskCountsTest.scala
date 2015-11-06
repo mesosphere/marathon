@@ -15,15 +15,15 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
     counts should be(TaskCounts.zero)
   }
 
-  test("one unstaged task") {
+  test("one task without explicit task state is treated as staged task") {
     Given("one unstaged task")
-    val oneUnstagedTask = Seq(
-      unstagedTask("task1")
+    val oneTaskWithoutTaskState = Seq(
+      taskWithoutTaskState("task1")
     )
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneUnstagedTask, statuses = Map.empty)
-    Then("all counts are 0")
-    counts should be(TaskCounts.zero)
+    val counts = TaskCounts(appTasks = oneTaskWithoutTaskState, statuses = Map.empty)
+    Then("the task without taskState is counted as staged")
+    counts should be(TaskCounts.zero.copy(tasksStaged = 1))
   }
 
   test("one staged task") {
@@ -131,7 +131,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
       .buildPartial()
   }
 
-  private[this] def unstagedTask(id: String): Protos.MarathonTask = {
+  private[this] def taskWithoutTaskState(id: String): Protos.MarathonTask = {
     Protos.MarathonTask
       .newBuilder()
       .setId(id)
