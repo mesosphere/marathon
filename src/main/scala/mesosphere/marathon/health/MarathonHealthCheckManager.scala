@@ -115,30 +115,43 @@ class MarathonHealthCheckManager @Inject() (
   override def reconcileWith(appId: PathId): Future[Unit] =
     appRepository.currentVersion(appId) flatMap {
       case None => Future(())
-      case Some(app) => appHealthChecks.writeLock { ahcs =>
-        val versionTasksMap: Map[String, MarathonTask] =
-          taskTracker.getTasks(app.id).iterator.map { task => task.getVersion -> task }.toMap
+      case Some(app) =>
+        log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        // remove health checks for which the app version is not current and no tasks remain
-        // since only current version tasks are launched.
-        for {
-          (version, activeHealthChecks) <- ahcs(appId)
-          if version != app.version && !versionTasksMap.contains(app.id.toString)
-          activeHealthCheck <- activeHealthChecks
-        } {
-          remove(appId, version, activeHealthCheck.healthCheck)
+        val tasks: Iterable[MarathonTask] = taskTracker.getTasks(app.id)
+        val activeAppVersions: Set[String] = tasks.iterator.map(_.getVersion).toSet + app.version.toString
+
+        val healthCheckAppVersions: Set[String] = appHealthChecks.writeLock { ahcs =>
+          // remove health checks for which the app version is not current and no tasks remain
+          // since only current version tasks are launched.
+          for {
+            (version, activeHealthChecks) <- ahcs(appId)
+            if version != app.version && !activeAppVersions.contains(version.toString)
+            activeHealthCheck <- activeHealthChecks
+          } remove(appId, version, activeHealthCheck.healthCheck)
+
+          ahcs(appId).iterator.map(_._1.toString).toSet
         }
 
         // add missing health checks for the current
         // reconcile all running versions of the current app
-        val res = versionTasksMap.keys map { version =>
+        val appVersionsWithoutHealthChecks: Set[String] = activeAppVersions -- healthCheckAppVersions
+        val res: Iterator[Future[Unit]] = appVersionsWithoutHealthChecks.iterator map { version =>
           appRepository.app(app.id, Timestamp(version)) map {
-            case None             =>
-            case Some(appVersion) => addAllFor(appVersion)
+            case None =>
+              // FIXME: If the app version of the task is not available anymore, no health check is started.
+              // We generated a new app version for every scale change. If maxVersions is configured, we
+              // throw away old versions such that we may not have the app configuration of all tasks available anymore.
+              log.warn(
+                s"Cannot find health check configuration for [$appId] and version [$version], " +
+                  "using most recent one.")
+
+            case Some(appVersion) =>
+              log.info(s"addAllFor [$appId] version [$version]")
+              addAllFor(appVersion)
           }
         }
         Future.sequence(res) map { _ => () }
-      }
     }
 
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
