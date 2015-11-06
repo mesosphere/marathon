@@ -8,7 +8,7 @@ import akka.event.EventStream
 import akka.testkit.{ EventFilter, ImplicitSender, TestActorRef, TestKit }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.event.{ EventStreamAttached, EventStreamDetached, Subscribe }
-import mesosphere.util.Mockito
+import mesosphere.marathon.test.Mockito
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._

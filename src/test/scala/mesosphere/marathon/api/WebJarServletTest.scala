@@ -6,7 +6,7 @@ import javax.servlet.{ WriteListener, ServletOutputStream, ServletConfig, Servle
 import javax.servlet.http.{ HttpServletResponse, HttpServletRequest }
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.util.Mockito
+import mesosphere.marathon.test.Mockito
 import org.scalatest.{ Matchers, GivenWhenThen }
 
 class WebJarServletTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers {

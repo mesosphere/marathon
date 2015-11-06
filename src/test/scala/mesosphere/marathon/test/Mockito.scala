@@ -1,4 +1,4 @@
-package mesosphere.util
+package mesosphere.marathon.test
 
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.{ Answer, OngoingStubbing }

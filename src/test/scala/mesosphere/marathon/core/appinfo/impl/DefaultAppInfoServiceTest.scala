@@ -3,7 +3,7 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppSelector }
 import mesosphere.marathon.state._
-import mesosphere.util.Mockito
+import mesosphere.marathon.test.Mockito
 import org.scalatest.{ Matchers, GivenWhenThen }
 
 import scala.concurrent.Future

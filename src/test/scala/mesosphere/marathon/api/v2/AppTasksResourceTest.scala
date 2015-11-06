@@ -7,10 +7,10 @@ import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
-import mesosphere.util.Mockito
 import org.mockito.Matchers.{ eq => equalTo }
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }

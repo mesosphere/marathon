@@ -13,8 +13,8 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.util.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsNumber, Json }
 

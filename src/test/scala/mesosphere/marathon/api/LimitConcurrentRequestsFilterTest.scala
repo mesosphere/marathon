@@ -5,7 +5,7 @@ import javax.servlet.FilterChain
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.util.Mockito
+import mesosphere.marathon.test.Mockito
 import org.scalatest.{ Matchers, GivenWhenThen }
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -8,11 +8,11 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ Group, GroupManager, Timestamp }
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil, TaskTracker }
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, MarathonSpec }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos._
-import mesosphere.util.Mockito
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 

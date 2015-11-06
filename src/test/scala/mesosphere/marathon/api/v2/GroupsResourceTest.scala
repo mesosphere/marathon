@@ -5,8 +5,8 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2Group, V2GroupUpdate }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
-import mesosphere.util.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, Json }
 
