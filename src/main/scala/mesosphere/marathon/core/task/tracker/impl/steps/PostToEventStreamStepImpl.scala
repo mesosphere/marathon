@@ -31,26 +31,16 @@ class PostToEventStreamStepImpl @Inject() (
   override def name: String = "postTaskStatusEvent"
 
   override def processUpdate(
-    timestamp: Timestamp, appId: PathId, maybeTask: Option[MarathonTask], status: TaskStatus): Future[_] = {
-    val taskId = status.getTaskId.getValue
-
-    def postEventForExistingTask(): Unit = {
-      maybeTask match {
-        case Some(task) =>
-          postEvent(timestamp, appId, status, task)
-        case None =>
-          log.warn(s"Received ${status.getState.name()} for unknown task [$taskId] of [$appId]. Not posting event.")
-      }
-
-    }
+    timestamp: Timestamp, appId: PathId, task: MarathonTask, status: TaskStatus): Future[_] = {
 
     status.getState match {
       case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
-        postEventForExistingTask()
-      case TASK_RUNNING if !maybeTask.exists(_.hasStartedAt) => // staged, not running
-        postEventForExistingTask()
+        postEvent(timestamp, appId, status, task)
+      case TASK_RUNNING if !task.hasStartedAt => // staged, not running
+        postEvent(timestamp, appId, status, task)
 
       case state: TaskState =>
+        val taskId = status.getTaskId.getValue
         log.debug(s"Do not post event $state for [$taskId] of app [$appId].")
     }
 

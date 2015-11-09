@@ -19,7 +19,7 @@ class NotifyLaunchQueueStepImpl @Inject() (launchQueue: LaunchQueue) extends Tas
   override def name: String = "notifyLaunchQueue"
 
   override def processUpdate(
-    timestamp: Timestamp, appId: PathId, maybeTask: Option[MarathonTask], status: TaskStatus): Future[_] = {
+    timestamp: Timestamp, appId: PathId, task: MarathonTask, status: TaskStatus): Future[_] = {
     val taskId = status.getTaskId
     val update = TaskStatusUpdate(timestamp, taskId, MarathonTaskStatus(status))
     launchQueue.notifyOfTaskUpdate(update)

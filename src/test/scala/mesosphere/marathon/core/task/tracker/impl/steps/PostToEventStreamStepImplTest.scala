@@ -22,7 +22,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
   test("process running notification of staged task") {
     Given("an existing STAGED task")
     val f = new Fixture
-    val existingTask = Some(stagedMarathonTask)
+    val existingTask = stagedMarathonTask
 
     When("we receive a running status update")
     val status = runningTaskStatus
@@ -30,7 +30,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       f.step.processUpdate(
         timestamp = updateTimestamp,
         appId = appId,
-        maybeTask = existingTask,
+        task = existingTask,
         status = status
       ).futureValue
     }
@@ -57,33 +57,10 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     ))
   }
 
-  test("process running notification of missing task") {
-    Given("a missing task")
-    val f = new Fixture
-    val existingTask = None
-
-    When("we receive a running status update")
-    val status = runningTaskStatus
-    val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(
-        timestamp = updateTimestamp,
-        appId = appId,
-        maybeTask = existingTask,
-        status = status
-      ).futureValue
-    }
-
-    Then("no event gets posted")
-    events should be (empty)
-    And("a warning is logged for the unknown task")
-    logs should have size 1
-    logs.map(_.toString).head should startWith ("[WARN] Received TASK_RUNNING for unknown task")
-  }
-
   test("ignore running notification of already running task") {
     Given("an existing RUNNING task")
     val f = new Fixture
-    val existingTask = Some(stagedMarathonTask.toBuilder.setStartedAt(100).build())
+    val existingTask = stagedMarathonTask.toBuilder.setStartedAt(100).build()
 
     When("we receive a running update")
     val status = runningTaskStatus
@@ -91,7 +68,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       f.step.processUpdate(
         timestamp = updateTimestamp,
         appId = appId,
-        maybeTask = existingTask,
+        task = existingTask,
         status = status
       ).futureValue
     }
@@ -100,37 +77,6 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     events should be (empty)
     And("and nothing of importance is logged")
     logs.filter(_.getLevel != Level.DEBUG_INT) should be (empty)
-  }
-
-  test("terminate unknown task with TASK_ERROR") { testMissingTerminatedTask(TaskState.TASK_ERROR) }
-  test("terminate unknown task with TASK_FAILED") { testMissingTerminatedTask(TaskState.TASK_FAILED) }
-  test("terminate unknown task with TASK_FINISHED") { testMissingTerminatedTask(TaskState.TASK_FINISHED) }
-  test("terminate unknown task with TASK_KILLED") { testMissingTerminatedTask(TaskState.TASK_KILLED) }
-  test("terminate unknown task with TASK_LOST") { testMissingTerminatedTask(TaskState.TASK_LOST) }
-
-  private[this] def testMissingTerminatedTask(terminalTaskState: TaskState): Unit = {
-    Given("a missing task")
-    val f = new Fixture
-    val existingTask = None
-
-    When("we receive a terminal status update")
-    val status = runningTaskStatus.toBuilder.setState(terminalTaskState).build()
-    val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(
-        timestamp = updateTimestamp,
-        appId = appId,
-        maybeTask = existingTask,
-        status = status
-      ).futureValue
-    }
-
-    Then("the appropriate event is posted")
-    events should have size 0
-    And("only sending event info gets logged")
-    logs should have size 1
-    logs.map(_.toString) should be (Seq(
-      s"[WARN] Received ${status.getState.name()} for unknown task [${taskId.getValue}] of [$appId]. Not posting event."
-    ))
   }
 
   test("terminate existing task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR) }
@@ -142,7 +88,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
   private[this] def testExistingTerminatedTask(terminalTaskState: TaskState): Unit = {
     Given("an existing task")
     val f = new Fixture
-    val existingTask = Some(stagedMarathonTask)
+    val existingTask = stagedMarathonTask
 
     When("we receive a terminal status update")
     val status = runningTaskStatus.toBuilder.setState(terminalTaskState).build()
@@ -150,7 +96,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       f.step.processUpdate(
         timestamp = updateTimestamp,
         appId = appId,
-        maybeTask = existingTask,
+        task = existingTask,
         status = status
       ).futureValue
     }

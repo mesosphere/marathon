@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.tracker.impl.steps
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
@@ -18,13 +18,21 @@ class ContinueOnErrorStep(wrapped: TaskStatusUpdateStep) extends TaskStatusUpdat
   override def name: String = s"continueOnError(${wrapped.name})"
 
   override def processUpdate(
-    timestamp: Timestamp, appId: PathId, maybeTask: Option[MarathonTask], mesosStatus: TaskStatus): Future[_] = {
+    timestamp: Timestamp, appId: PathId, task: MarathonTask, mesosStatus: TaskStatus): Future[_] = {
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    wrapped.processUpdate(timestamp, appId, maybeTask, mesosStatus).recover {
-      case NonFatal(e) =>
-        log.error("while executing step {} for [{}], continue with other steps",
-          wrapped.name, mesosStatus.getTaskId.getValue, e)
+    val maybeProcessed: Option[Future[_]] = Option(wrapped.processUpdate(timestamp, appId, task, mesosStatus))
+    maybeProcessed match {
+      case Some(processed) =>
+        processed.recover {
+          case NonFatal(e) =>
+            log.error("while executing step {} for [{}], continue with other steps",
+              wrapped.name, mesosStatus.getTaskId.getValue, e)
+        }
+      case None =>
+        log.error("step {} for [{}] returned null, continue with other steps",
+          Array[Object](wrapped.name, mesosStatus.getTaskId.getValue): _*)
+        Future.successful(())
     }
   }
 }

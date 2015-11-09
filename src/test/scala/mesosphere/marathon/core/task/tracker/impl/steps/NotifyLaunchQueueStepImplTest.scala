@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task.tracker.impl.steps
 
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
@@ -30,7 +30,7 @@ class NotifyLaunchQueueStepImplTest extends FunSuite with Matchers with GivenWhe
     f.step.processUpdate(
       updateTimestamp,
       appId,
-      maybeTask = None,
+      task = MarathonTestHelper.dummyTask(appId),
       status = status
     ).futureValue
 

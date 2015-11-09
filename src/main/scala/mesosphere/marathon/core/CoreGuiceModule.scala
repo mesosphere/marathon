@@ -10,7 +10,6 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusObservables }
 import mesosphere.marathon.core.task.tracker.impl.TaskStatusUpdateProcessorImpl
 import mesosphere.marathon.core.task.tracker.impl.steps.{
-  AcknowledgeTaskUpdateStepImpl,
   ContinueOnErrorStep,
   NotifyHealthCheckManagerStepImpl,
   NotifyLaunchQueueStepImpl,
@@ -70,13 +69,12 @@ class CoreGuiceModule extends AbstractModule {
   @Provides @Singleton
   def taskStatusUpdateSteps(
     notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
-    acknowledgeTaskUpdateStepImpl: AcknowledgeTaskUpdateStepImpl,
     notifyRateLimiterStepImpl: NotifyRateLimiterStepImpl,
+    updateTaskTrackerStepImpl: UpdateTaskTrackerStepImpl,
+    notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
     taskStatusEmitterPublishImpl: TaskStatusEmitterPublishStepImpl,
     postToEventStreamStepImpl: PostToEventStreamStepImpl,
-    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl,
-    notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
-    updateTaskTrackerStepImpl: UpdateTaskTrackerStepImpl): Seq[TaskStatusUpdateStep] = {
+    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[TaskStatusUpdateStep] = {
 
     // This is a sequence on purpose. The specified steps are executed in order for every
     // task status update.
@@ -90,8 +88,7 @@ class CoreGuiceModule extends AbstractModule {
       ContinueOnErrorStep(notifyLaunchQueueStepImpl),
       ContinueOnErrorStep(taskStatusEmitterPublishImpl),
       ContinueOnErrorStep(postToEventStreamStepImpl),
-      ContinueOnErrorStep(scaleAppUpdateStepImpl),
-      acknowledgeTaskUpdateStepImpl
+      ContinueOnErrorStep(scaleAppUpdateStepImpl)
     )
   }
 

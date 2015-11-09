@@ -7,7 +7,7 @@ import com.google.inject.Inject
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
@@ -23,7 +23,7 @@ class ScaleAppUpdateStepImpl @Inject() (
   override def name: String = "scaleApp"
 
   override def processUpdate(
-    timestamp: Timestamp, appId: PathId, maybeTask: Option[MarathonTask], status: TaskStatus): Future[_] = {
+    timestamp: Timestamp, appId: PathId, task: MarathonTask, status: TaskStatus): Future[_] = {
     val taskId = status.getTaskId
 
     import org.apache.mesos.Protos.TaskState._

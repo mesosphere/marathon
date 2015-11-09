@@ -6,11 +6,13 @@ import akka.testkit.TestProbe
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskStatusUpdateProcessor
-import mesosphere.marathon.core.task.tracker.impl.steps.{ AcknowledgeTaskUpdateStepImpl, NotifyHealthCheckManagerStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl, UpdateTaskTrackerStepImpl }
+import mesosphere.marathon.core.task.tracker.impl.steps._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
@@ -19,7 +21,7 @@ import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.SchedulerDriver
-import org.mockito.{ ArgumentCaptor, Mockito }
+import org.mockito.{ Matchers, ArgumentCaptor, Mockito }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
@@ -43,6 +45,7 @@ class TaskStatusUpdateProcessorImplTest extends MarathonSpec {
       Mockito.when(taskTracker.terminated(appId, update.wrapped.taskId.getValue))
         .thenReturn(Future.successful(Some(marathonTask)))
       Mockito.when(appRepository.app(appId, version)).thenReturn(Future.successful(Some(app)))
+      Mockito.when(launchQueue.notifyOfTaskUpdate(Matchers.any())).thenReturn(Future.successful(None))
 
       Await.result(updateProcessor.publish(status), 3.seconds)
 
@@ -51,6 +54,7 @@ class TaskStatusUpdateProcessorImplTest extends MarathonSpec {
       Mockito.verify(taskTracker).terminated(appId, update.wrapped.taskId.getValue)
       schedulerActor.expectMsg(ScaleApp(appId))
       Mockito.verify(schedulerDriver).acknowledgeStatusUpdate(status)
+      Mockito.verify(launchQueue).notifyOfTaskUpdate(Matchers.any())
 
       if (update.wrapped.status.mesosStatus.forall(_.getState != TaskState.TASK_KILLED)) {
         Mockito.verify(appRepository).app(appId, version)
@@ -104,32 +108,33 @@ class TaskStatusUpdateProcessorImplTest extends MarathonSpec {
 
     val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueue, appRepository)
 
-    val acknowledgeStep = new AcknowledgeTaskUpdateStepImpl(marathonSchedulerDriverHolder)
-
-    val updateTaskTrackerStep = new UpdateTaskTrackerStepImpl(
-      taskTracker,
-      marathonSchedulerDriverHolder
-    )
+    val updateTaskTrackerStep = new UpdateTaskTrackerStepImpl(taskTracker)
 
     val postToEventStream = new PostToEventStreamStepImpl(eventBus)
+
+    val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueue)
 
     val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitter)
 
     val scaleApp = new ScaleAppUpdateStepImpl(schedulerActor.ref)
+
+    val guiceModule = new CoreGuiceModule
 
     updateProcessor = new TaskStatusUpdateProcessorImpl(
       new Metrics(new MetricRegistry),
       clock,
       taskIdUtil,
       taskTracker,
-      Seq(
+      marathonSchedulerDriverHolder,
+      // Use module method to ensure that we keep the list of steps in sync with the test.
+      guiceModule.taskStatusUpdateSteps(
         notifyHealthCheckManager,
         notifyRateLimiter,
         updateTaskTrackerStep,
+        notifyLaunchQueue,
         emitUpdate,
         postToEventStream,
-        scaleApp,
-        acknowledgeStep
+        scaleApp
       )
     )
   }
