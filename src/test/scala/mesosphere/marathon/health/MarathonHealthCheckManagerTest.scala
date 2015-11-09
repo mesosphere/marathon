@@ -1,18 +1,17 @@
 package mesosphere.marathon.health
 
-import akka.actor.ActorDSL._
 import akka.actor._
 import akka.event.EventStream
-import akka.testkit.{ EventFilter, TestProbe }
+import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.event.MarathonEvent
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, MarathonStore, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.test.CaptureEvents
 import mesosphere.marathon.{ MarathonConf, MarathonScheduler, MarathonSchedulerDriverHolder, MarathonSpec }
 import mesosphere.util.Logging
 import mesosphere.util.state.memory.InMemoryStore
@@ -306,38 +305,5 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(hcManager.list(otherAppId) == otherHealthChecks)
   }
 
-  /**
-    * Captures the events send to the EventStream while the block is executing.
-    *
-    * For issue #2314 not only the end state is important. It is also important, which health checks
-    * were removed incorrectly and then readded afterwards.
-    */
-  private[this] def captureEvents(block: => Unit): Seq[MarathonEvent] = {
-    // yes, this is ugly. Since we only access it in the actor until it terminates, we do have
-    // the correct thread sync boundaries in place.
-
-    var capture = Vector.empty[MarathonEvent]
-    val captureEventsActor = actor {
-      new Act {
-        become {
-          case captureMe: MarathonEvent => capture :+= captureMe
-        }
-      }
-    }
-    eventStream.subscribe(captureEventsActor, classOf[MarathonEvent])
-    eventStream.subscribe(captureEventsActor, classOf[String])
-
-    try {
-      block
-    }
-    finally {
-      eventStream.unsubscribe(captureEventsActor)
-      captureEventsActor ! PoisonPill
-      val probe = TestProbe()
-      probe.watch(captureEventsActor)
-      probe.expectMsgClass(classOf[Terminated])
-    }
-
-    capture
-  }
+  def captureEvents = CaptureEvents(eventStream)
 }
