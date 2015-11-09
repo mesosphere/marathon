@@ -59,6 +59,7 @@ object ModuleNames {
   final val STORE_FRAMEWORK_ID = "FrameworkIdStore"
   final val STORE_GROUP = "GroupStore"
   final val STORE_TASK = "TaskStore"
+  final val STORE_EVENT_SUBSCRIBERS = "EventSubscriberStore"
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
@@ -454,6 +455,13 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       "task:",
       () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())
     )
+  }
+
+  @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS)
+  @Provides
+  @Singleton
+  def provideEventSubscribersStore(store: PersistentStore, metrics: Metrics): EntityStore[EventSubscribers] = {
+    entityStore(store, metrics, "events:", () => new EventSubscribers(Set.empty[String]))
   }
 
   private[this] def entityStore[T <: mesosphere.marathon.state.MarathonState[_, T]](
