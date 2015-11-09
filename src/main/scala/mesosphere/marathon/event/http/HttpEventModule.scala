@@ -6,11 +6,10 @@ import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.name.Named
-import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
+import com.google.inject.{ AbstractModule, Provides, Scopes }
+import mesosphere.marathon.ModuleNames.STORE_EVENT_SUBSCRIBERS
 import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe }
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ EntityStore, MarathonStore }
-import mesosphere.util.state.PersistentStore
+import mesosphere.marathon.state.EntityStore
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
 
@@ -50,7 +49,7 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
   @Named(HttpEventModule.SubscribersKeeperActor)
   def provideSubscribersKeeperActor(conf: HttpEventConfiguration,
                                     system: ActorSystem,
-                                    store: EntityStore[EventSubscribers]): ActorRef = {
+                                    @Named(STORE_EVENT_SUBSCRIBERS) store: EntityStore[EventSubscribers]): ActorRef = {
     implicit val timeout = HttpEventModule.timeout
     implicit val ec = HttpEventModule.executionContext
     val local_ip = java.net.InetAddress.getLocalHost.getHostAddress
@@ -68,12 +67,6 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
     }
 
     actor
-  }
-
-  @Provides
-  @Singleton
-  def provideCallbackUrlsStore(store: PersistentStore, metrics: Metrics): EntityStore[EventSubscribers] = {
-    new MarathonStore[EventSubscribers](store, metrics, () => new EventSubscribers(Set.empty[String]), "events:")
   }
 }
 
