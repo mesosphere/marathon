@@ -260,7 +260,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(hcManager.list(appId) == Set())
 
     // reconcileWith starts health checks of task 1
-    val captured1 = captureEvents {
+    val captured1 = captureEvents.forBlock {
       assert(hcManager.list(appId) == Set())
       startTask_i(1)
       Await.result(hcManager.reconcileWith(appId), 2.second)
@@ -269,14 +269,14 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(hcManager.list(appId) == healthChecks(1))
 
     // reconcileWith leaves health check running
-    val captured2 = captureEvents {
+    val captured2 = captureEvents.forBlock {
       Await.result(hcManager.reconcileWith(appId), 2.second)
     }
     assert(captured2.isEmpty)
     assert(hcManager.list(appId) == healthChecks(1))
 
     // reconcileWith starts health checks of task 2 and leaves those of task 1 running
-    val captured3 = captureEvents {
+    val captured3 = captureEvents.forBlock {
       startTask_i(2)
       Await.result(hcManager.reconcileWith(appId), 2.second)
     }
@@ -284,7 +284,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2))
 
     // reconcileWith stops health checks which are not current and which are without tasks
-    val captured4 = captureEvents {
+    val captured4 = captureEvents.forBlock {
       stopTask(appId, tasks(1))
       assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2))
       Await.result(hcManager.reconcileWith(appId), 2.second)
@@ -293,7 +293,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(hcManager.list(appId) == healthChecks(2))
 
     // reconcileWith leaves current version health checks running after termination
-    val captured5 = captureEvents {
+    val captured5 = captureEvents.forBlock {
       stopTask(appId, tasks(2))
       assert(hcManager.list(appId) == healthChecks(2))
       Await.result(hcManager.reconcileWith(appId), 2.second)
@@ -305,5 +305,5 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     assert(hcManager.list(otherAppId) == otherHealthChecks)
   }
 
-  def captureEvents = CaptureEvents(eventStream)
+  def captureEvents = new CaptureEvents(eventStream)
 }

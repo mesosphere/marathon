@@ -6,14 +6,11 @@ import akka.event.EventStream
 import akka.testkit.TestProbe
 import mesosphere.marathon.event.MarathonEvent
 
-case class CaptureEvents(eventStream: EventStream) {
+class CaptureEvents(eventStream: EventStream) {
   /**
     * Captures the events send to the EventStream while the block is executing.
-    *
-    * For issue #2314 not only the end state is important. It is also important, which health checks
-    * were removed incorrectly and then readded afterwards.
     */
-  def apply(block: => Unit): Seq[MarathonEvent] = {
+  def forBlock(block: => Unit): Seq[MarathonEvent] = {
     implicit val actorSystem = ActorSystem("captureEvents")
 
     // yes, this is ugly. Since we only access it in the actor until it terminates, we do have
