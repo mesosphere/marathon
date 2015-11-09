@@ -1,8 +1,8 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
-import mesosphere.util.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class AppVersionsResourceTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {

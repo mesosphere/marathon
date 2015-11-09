@@ -8,8 +8,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
-import mesosphere.util.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json._
 

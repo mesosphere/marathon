@@ -1,8 +1,8 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.MarathonApp
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, Protos }
-import mesosphere.util.Mockito
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 

@@ -15,7 +15,7 @@ import scala.util.control.NonFatal
 class ContinueOnErrorStep(wrapped: TaskStatusUpdateStep) extends TaskStatusUpdateStep {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  override def name: String = s"continueOnError(${wrapped.name}})"
+  override def name: String = s"continueOnError(${wrapped.name})"
 
   override def processUpdate(
     timestamp: Timestamp, appId: PathId, maybeTask: Option[MarathonTask], mesosStatus: TaskStatus): Future[_] = {

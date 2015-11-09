@@ -6,7 +6,7 @@ import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import mesosphere.marathon.plugin.PathId
 import mesosphere.marathon.plugin.auth.{ Identity, Authorizer, Authenticator, AuthorizedAction }
 import mesosphere.marathon.plugin.http.{ HttpRequest, HttpResponse }
-import mesosphere.util.Mockito
+import mesosphere.marathon.test.Mockito
 
 import scala.concurrent.Future
 

@@ -2,8 +2,8 @@ package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, Protos }
-import mesosphere.util.Mockito
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 

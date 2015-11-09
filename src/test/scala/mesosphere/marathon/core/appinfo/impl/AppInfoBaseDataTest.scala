@@ -6,10 +6,10 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ MarathonSchedulerService, MarathonSpec }
-import mesosphere.util.Mockito
 import org.apache.mesos.Protos
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json

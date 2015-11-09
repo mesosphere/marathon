@@ -8,8 +8,8 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskLa
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
-import mesosphere.util.Mockito
 import org.apache.mesos.Protos.TaskInfo
 import org.scalatest.GivenWhenThen
 
