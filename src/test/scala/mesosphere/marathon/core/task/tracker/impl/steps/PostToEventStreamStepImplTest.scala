@@ -9,11 +9,12 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.{ CaptureLogEvents, CaptureEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 
-class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhenThen {
+class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhenThen with ScalaFutures {
   test("name") {
     new Fixture().step.name should be ("postTaskStatusEvent")
   }
@@ -31,7 +32,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         appId = appId,
         maybeTask = existingTask,
         status = status
-      )
+      ).futureValue
     }
 
     Then("the appropriate event is posted")
@@ -69,7 +70,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         appId = appId,
         maybeTask = existingTask,
         status = status
-      )
+      ).futureValue
     }
 
     Then("no event gets posted")
@@ -92,7 +93,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         appId = appId,
         maybeTask = existingTask,
         status = status
-      )
+      ).futureValue
     }
 
     Then("no event is posted to the event stream")
@@ -120,7 +121,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         appId = appId,
         maybeTask = existingTask,
         status = status
-      )
+      ).futureValue
     }
 
     Then("the appropriate event is posted")
@@ -151,7 +152,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         appId = appId,
         maybeTask = existingTask,
         status = status
-      )
+      ).futureValue
     }
 
     Then("the appropriate event is posted")
@@ -205,11 +206,11 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
   class Fixture {
     val eventStream = new EventStream()
-    val captureEvents = CaptureEvents(eventStream)
+    val captureEvents = new CaptureEvents(eventStream)
 
     def captureLogAndEvents(block: => Unit): (Vector[ILoggingEvent], Seq[MarathonEvent]) = {
       var logs: Vector[ILoggingEvent] = Vector.empty
-      val events = captureEvents {
+      val events = captureEvents.forBlock {
         logs = CaptureLogEvents.forBlock {
           block
         }
