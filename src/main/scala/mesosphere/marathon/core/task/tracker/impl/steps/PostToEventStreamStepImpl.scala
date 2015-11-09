@@ -16,7 +16,7 @@ import org.apache.mesos.Protos.TaskState.{
   TASK_LOST,
   TASK_RUNNING
 }
-import org.apache.mesos.Protos.TaskStatus
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -32,28 +32,36 @@ class PostToEventStreamStepImpl @Inject() (
 
   override def processUpdate(
     timestamp: Timestamp, appId: PathId, maybeTask: Option[MarathonTask], status: TaskStatus): Future[_] = {
-    val taskId = status.getTaskId
+    val taskId = status.getTaskId.getValue
+
+    def postEventForExistingTask(): Unit = {
+      maybeTask match {
+        case Some(task) =>
+          postEvent(timestamp, appId, status, task)
+        case None =>
+          log.warn(s"Received ${status.getState.name()} for unknown task [$taskId] of [$appId]. Not posting event.")
+      }
+
+    }
 
     status.getState match {
       case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
-        // Remove from our internal list
-        maybeTask match {
-          case Some(task) => postEvent(appId, status, task)
-          case None       => log.warn(s"Task not found. Do not post event for '{}'", taskId.getValue)
-        }
-
+        postEventForExistingTask()
       case TASK_RUNNING if !maybeTask.exists(_.hasStartedAt) => // staged, not running
-        maybeTask.foreach { task => postEvent(appId, status, task) }
+        postEventForExistingTask()
 
-      case _ =>
-      // ignore
+      case state: TaskState =>
+        log.debug(s"Do not post event $state for [$taskId] of app [$appId].")
     }
 
     Future.successful(())
   }
 
-  private[this] def postEvent(appId: PathId, status: TaskStatus, task: MarathonTask): Unit = {
-    log.info("Sending event notification for task [{}]: {}", Array[Object](task.getId, status.getState): _*)
+  private[this] def postEvent(timestamp: Timestamp, appId: PathId, status: TaskStatus, task: MarathonTask): Unit = {
+    log.info(
+      "Sending event notification for task [{}] of app [{}]: {}",
+      Array[Object](task.getId, appId, status.getState): _*
+    )
     import scala.collection.JavaConverters._
     eventBus.publish(
       MesosStatusUpdateEvent(
@@ -64,7 +72,8 @@ class PostToEventStreamStepImpl @Inject() (
         appId,
         task.getHost,
         task.getPortsList.asScala,
-        task.getVersion
+        task.getVersion,
+        timestamp = timestamp.toString
       )
     )
   }
