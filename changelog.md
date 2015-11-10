@@ -14,7 +14,7 @@ ZK nodes larger than a certain threshold will now be compressed. This allows Mar
 more apps and groups, but breaks backwards compatibility, because older versions of Marathon are
 not able to parse compressed nodes. You can define the threshold with `--zk_compression_threshold` 
 which defaults to 64KB. 
-To disable this feature, start Marathon with the `--disable-zk-compression` flag.
+To disable this feature, start Marathon with the `--disable_zk_compression` flag.
 
 #### Use logback as logging backend
 We moved from log4j to [Logback](http://logback.qos.ch) backend. 
@@ -186,7 +186,7 @@ available, but disabled by default:
   more apps and groups, but breaks backwards compatibility, because older versions of Marathon are
   not able to parse compressed nodes.
 
-  To enable this feature, start Marathon with the `--zk-compression` flag.
+  To enable this feature, start Marathon with the `--zk_compression` flag.
 * A new flag (`--max_apps`) has been introduced, which allows Marathon to limit the maximum number
   of applications that may be created. This limit is disabled by default, but we performed scale
   tests on this release and recommend setting the limit to 500.
