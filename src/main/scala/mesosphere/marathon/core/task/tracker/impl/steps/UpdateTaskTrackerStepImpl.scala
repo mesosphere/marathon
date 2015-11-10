@@ -19,19 +19,7 @@ class UpdateTaskTrackerStepImpl @Inject() (
 
   def processUpdate(
     timestamp: Timestamp, appId: PathId, task: MarathonTask, status: TaskStatus): Future[_] = {
-    val taskId = status.getTaskId
 
-    import org.apache.mesos.Protos.TaskState._
-    status.getState match {
-      case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
-        // Remove from our internal list
-        taskTracker.terminated(appId, taskId.getValue)
-
-      case TASK_RUNNING if !task.hasStartedAt => // was staged and is now running
-        taskTracker.running(appId, status)
-
-      case _ =>
-        taskTracker.statusUpdate(appId, status)
-    }
+    taskTracker.statusUpdate(appId, status)
   }
 }

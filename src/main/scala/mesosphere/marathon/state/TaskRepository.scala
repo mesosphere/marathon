@@ -25,7 +25,6 @@ class TaskRepository(
   def store(task: MarathonTask): Future[MarathonTask] = {
     this.store.store(task.getId, MarathonTaskState(task)).map(_.toProto)
   }
-
 }
 
 object TaskRepository {

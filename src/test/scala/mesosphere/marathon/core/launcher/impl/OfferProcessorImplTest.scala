@@ -36,7 +36,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("a cooperative offerMatcher and taskTracker")
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTasks(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
-      taskTracker.store(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
+      taskTracker.created(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
     }
 
     And("a working taskLauncher")
@@ -57,7 +57,6 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     for (task <- tasksWithSource) {
       val ordered = inOrder(taskTracker)
       ordered.verify(taskTracker).created(appId, task.marathonTask)
-      ordered.verify(taskTracker).store(appId, task.marathonTask)
     }
   }
 
@@ -73,8 +72,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("a cooperative offerMatcher and taskTracker")
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTasks(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
-      taskTracker.store(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
-      taskTracker.terminated(appId, task.marathonTask.getId) returns Future.successful(Some(task.marathonTask))
+      taskTracker.created(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
+      taskTracker.terminated(appId, task.marathonTask.getId).asInstanceOf[Future[Unit]] returns
+        Future.successful(())
     }
 
     And("a dysfunctional taskLauncher")
@@ -95,7 +95,6 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     for (task <- tasksWithSource) {
       val ordered = inOrder(taskTracker)
       ordered.verify(taskTracker).created(appId, task.marathonTask)
-      ordered.verify(taskTracker).store(appId, task.marathonTask)
       ordered.verify(taskTracker).terminated(appId, task.marathonTask.getId)
     }
   }
@@ -153,12 +152,13 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTasks(offerId, tasksWithSource))
 
     for (task <- tasksWithSource) {
-      taskTracker.store(appId, task.marathonTask) answers { args =>
+      taskTracker.created(appId, task.marathonTask) answers { args =>
         // simulate that stores are really slow
         clock += 1.hour
         Future.successful(dummyTask(appId))
       }
-      taskTracker.terminated(appId, task.marathonTask.getId) returns Future.successful(Some(task.marathonTask))
+      taskTracker.terminated(appId, task.marathonTask.getId).asInstanceOf[Future[Unit]] returns
+        Future.successful(Some(task.marathonTask))
     }
 
     When("processing the offer")
@@ -178,7 +178,6 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     for (task <- tasksWithSource.take(1)) {
       val ordered = inOrder(taskTracker)
       ordered.verify(taskTracker).created(appId, task.marathonTask)
-      ordered.verify(taskTracker).store(appId, task.marathonTask)
     }
 
     And("and the second task was not stored")
