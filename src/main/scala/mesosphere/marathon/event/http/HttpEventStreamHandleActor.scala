@@ -76,11 +76,11 @@ class HttpEventStreamHandleActor(
       //Do not act any longer on any event.
       context.become(Actor.emptyBehavior)
     case _ =>
-      log.warning(s"Could not send message to $handle", ex)
+      log.warning("Could not send message to {} reason: {}", handle, ex)
   }
 
   private[this] def dropEvent(event: MarathonEvent): Unit = {
-    log.warning(s"Ignore event $event for handle $handle (slow consumer)")
+    log.warning("Ignore event {} for handle {} (slow consumer)", event, handle)
   }
 }
 
