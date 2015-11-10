@@ -20,7 +20,7 @@ class SubscribersKeeperActor(val store: EntityStore[EventSubscribers]) extends A
       val subscription: Future[MarathonSubscriptionEvent] =
         addResult.map { subscribers =>
           if (subscribers.urls.contains(callbackUrl))
-            log.info("Callback [%s] subscribed." format callbackUrl)
+            log.info("Callback {} subscribed.", callbackUrl)
           event
         }
 
@@ -32,7 +32,7 @@ class SubscribersKeeperActor(val store: EntityStore[EventSubscribers]) extends A
       val subscription: Future[MarathonSubscriptionEvent] =
         removeResult.map { subscribers =>
           if (!subscribers.urls.contains(callbackUrl))
-            log.info("Callback [%s] unsubscribed." format callbackUrl)
+            log.info("Callback {} unsubscribed.", callbackUrl)
           event
         }
 
@@ -48,7 +48,7 @@ class SubscribersKeeperActor(val store: EntityStore[EventSubscribers]) extends A
     store.modify(Subscribers) { deserialize =>
       val existingSubscribers = deserialize()
       if (existingSubscribers.urls.contains(callbackUrl)) {
-        log.info("Existing callback [%s] resubscribed." format callbackUrl)
+        log.info("Existing callback {} resubscribed.", callbackUrl)
         existingSubscribers
       }
       else EventSubscribers(existingSubscribers.urls + callbackUrl)
@@ -62,7 +62,7 @@ class SubscribersKeeperActor(val store: EntityStore[EventSubscribers]) extends A
         EventSubscribers(existingSubscribers.urls - callbackUrl)
 
       else {
-        log.warning("Attempted to unsubscribe nonexistent callback [%s]." format callbackUrl)
+        log.warning("Attempted to unsubscribe nonexistent callback {}", callbackUrl)
         existingSubscribers
       }
     }

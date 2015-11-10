@@ -2,16 +2,15 @@ package mesosphere.marathon.event.http
 
 import akka.actor._
 import akka.pattern.ask
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
-import play.api.libs.json.{ JsValue, Json }
-import spray.client.pipelining.{ sendReceive, _ }
-import spray.http.{ HttpRequest, HttpResponse }
+import spray.client.pipelining.{sendReceive, _}
+import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.PlayJsonSupport
-import mesosphere.marathon.api.v2.json.Formats._
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLogging with PlayJsonSupport {
 
@@ -45,10 +44,9 @@ class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLo
     response.onComplete {
       case Success(res) =>
         if (res.status.isFailure)
-          log.warning(s"Failed to post $event to $urlString")
-
+          log.warning("Post {} to {} resulted in error response {}", event, urlString, res.status)
       case Failure(t) =>
-        log.warning(s"Failed to post $event to $urlString", t)
+        log.warning("Failed to post {} to {} reason: {}", event, urlString, t)
     }
   }
 }
