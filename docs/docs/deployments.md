@@ -14,7 +14,7 @@ A deployment is a set of actions, that can do:
 Deployments are not instantly available - they take time. 
 A deployment is active in Marathon until the deployment is finished successfully.
 
-Multiple deployments can be performed at the same, as long as one application is changed only by one deployment.
+Multiple deployments can be performed at the same time, as long as one application is changed only by one deployment.
 If a deployment is requested, that tries to change an application that is already being changed by another active deployment, 
 the new deployment request will be rejected.
 
