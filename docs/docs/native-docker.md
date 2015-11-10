@@ -157,7 +157,7 @@ range `[local_port_min, local_port_max]` where `local_port_min` and
 `local_port_max` are command line options with default values of `10000` and
 `20000`, respectively.
 
-The `"protocol"` parameter is optional and defaults to `"tcp"`.
+The `"protocol"` parameter is optional and defaults to `"tcp"`. Its possible values are `"tcp"` and `"udp"`.
 
 **Static port mapping:**
 
