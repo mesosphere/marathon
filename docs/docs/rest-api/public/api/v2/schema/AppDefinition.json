@@ -246,35 +246,45 @@
       "minimum": 0,
       "type": "number"
     },
-    "network": {
-      "type": "object",
-      "properties": {
-        "ipAddress": {
-          "type": "string",
-          "description": "A string describing a specific IP address, a CIDR, or a named pool of addresses to allocate from (depending on the behavior of the underlying IPAM.)",
-          "anyOf": [
-            { "format": "ipv4" },
-            { "format": "ipv6" }
-          ]
-        },
-        "protocol": {
-          "type": "string",
-          "description": "Defines the version of the ip protocol to use. Accepted values: “ipv4”, “ipv6”. If it is missing, then the IPAM (IP Address Manager) will decide which kind of IP to assign.",
-          "pattern": "^IPv4|IPv6$"
-        },
-        "groups": {
-          "type": "array",
-          "description": "Array of network groups. One network interface can belong to zero or more network groups. The idea is that containers can only reach containers with which they share at least one network group.",
-          "items": {
-            "type": "string",
-            "description": "The name of the network group"
+    "networkInterfaces": {
+      "type": "array",
+      "description": "The list of all network interface specifications.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ipAddresses": {
+            "type": "array",
+            "description": "The list of ip address specifications.",
+            "items": {
+              "type": "object",
+              "description": "???",
+              "properties": {
+                "protocol": {
+                  "type": "string",
+                  "description": "Defines the version of the ip protocol to use. Accepted values: “IPv4”, “IPv6”. If it is missing, then the IPAM (IP Address Manager) will decide which kind of IP to assign.",
+                  "pattern": "^IPv[46]$"
+                },
+                "specification": {
+                  "type": "string",
+                  "description": "A string describing a specific IP address, a CIDR, or a named pool of addresses to allocate from (depending on the behavior of the underlying IPAM.)"
+                }
+              }
+            }
+          },
+          "groups": {
+            "type": "array",
+            "description": "Array of network groups. One network interface can belong to zero or more network groups. The idea is that containers can only reach containers with which they share at least one network group.",
+            "items": {
+              "type": "string",
+              "description": "The name of the network group"
+            }
+          },
+          "labels": {
+            "type": "object",
+            "description": "Key value pair for meta data on that network interface.",
+            "properties": {},
+            "additionalProperties": true
           }
-        },
-        "labels": {
-          "type": "object",
-          "description": "Key value pair for meta data on that network interface.",
-          "properties": {},
-          "additionalProperties": true
         }
       }
     },
