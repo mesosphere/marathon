@@ -231,6 +231,11 @@ private class AppTaskLauncherActor(
     case TaskStatusUpdate(_, taskId, MarathonTaskStatus.Terminal(_)) =>
       log.debug("task '{}' finished", taskId.getValue)
       removeTask(taskId)
+
+      // If the app has constraints, we need to reconsider offers that
+      // we already rejected. E.g. when a host:unique constraint prevented
+      // us to launch tasks on a particular node before, we need to reconsider offers
+      // of that node after a task on that node has died.
       if (app.constraints.nonEmpty) {
         maybeOfferReviver.foreach(_.reviveOffers())
       }

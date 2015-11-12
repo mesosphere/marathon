@@ -15,5 +15,5 @@ trait TaskStatusUpdateStep {
   def name: String
 
   def processUpdate(
-    timestamp: Timestamp, appId: PathId, maybeTask: Option[MarathonTask], mesosStatus: TaskStatus): Future[_]
+    timestamp: Timestamp, appId: PathId, task: MarathonTask, mesosStatus: TaskStatus): Future[_]
 }

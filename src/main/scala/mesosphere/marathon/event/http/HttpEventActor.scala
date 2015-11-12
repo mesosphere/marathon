@@ -5,12 +5,12 @@ import akka.pattern.ask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
-import spray.client.pipelining.{sendReceive, _}
-import spray.http.{HttpRequest, HttpResponse}
+import spray.client.pipelining.{ sendReceive, _ }
+import spray.http.{ HttpRequest, HttpResponse }
 import spray.httpx.PlayJsonSupport
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 class HttpEventActor(val subscribersKeeper: ActorRef) extends Actor with ActorLogging with PlayJsonSupport {
 

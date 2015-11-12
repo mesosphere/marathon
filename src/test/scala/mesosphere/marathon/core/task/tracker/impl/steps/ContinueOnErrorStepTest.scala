@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.tracker.impl.steps
 
+import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -15,7 +16,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
     object nested extends TaskStatusUpdateStep {
       override def name: String = "nested"
       override def processUpdate(
-        timestamp: Timestamp, appId: PathId, maybeTask: Option[MarathonTask], mesosStatus: TaskStatus): Future[_] = ???
+        timestamp: Timestamp, appId: PathId, task: MarathonTask, mesosStatus: TaskStatus): Future[_] = ???
     }
 
     ContinueOnErrorStep(nested).name should equal ("continueOnError(nested)")
@@ -23,10 +24,16 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
 
   private[this] val timestamp: Timestamp = Timestamp(1)
   private[this] val appId: PathId = PathId("/test")
+  private[this] val dummyTask: MarathonTask = MarathonTestHelper.dummyTask(appId)
 
   test("A successful step should not produce logging output") {
     def processUpdate(step: TaskStatusUpdateStep): Future[_] = {
-      step.processUpdate(timestamp, appId, maybeTask = None, mesosStatus = TaskStatus.newBuilder().buildPartial())
+      step.processUpdate(
+        timestamp = timestamp,
+        appId = appId,
+        task = dummyTask,
+        mesosStatus = TaskStatus.newBuilder().buildPartial()
+      )
     }
 
     Given("a nested step that is always successful")
@@ -48,7 +55,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
   test("A failing step should log the error but proceed") {
     def processUpdate(step: TaskStatusUpdateStep): Future[_] = {
       step.processUpdate(
-        timestamp, appId, maybeTask = None,
+        timestamp, appId, task = dummyTask,
         mesosStatus = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue("task")).buildPartial())
     }
 
