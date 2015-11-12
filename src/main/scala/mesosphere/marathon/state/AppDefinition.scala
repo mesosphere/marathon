@@ -69,7 +69,7 @@ case class AppDefinition(
 
   acceptedResourceRoles: Option[Set[String]] = None,
 
-  network: Option[Seq[Network]] = AppDefinition.DefaultNetwork,
+  networkInterfaces: Option[Seq[NetworkInterface]] = AppDefinition.DefaultNetwork,
 
   versionInfo: VersionInfo = VersionInfo.NoVersion)
 
@@ -129,7 +129,7 @@ case class AppDefinition(
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
 
-    network.foreach { n =>
+    networkInterfaces.foreach { n =>
       builder.setNetwork(
         Protos.NetworkInfos.newBuilder
           .addAllNetworks(n.map(_.toProto).asJava)
@@ -205,6 +205,13 @@ case class AppDefinition(
       else
         OnlyVersion(Timestamp(proto.getVersion))
 
+    val networkInterfaceOption =
+      if (proto.hasNetwork) {
+        val networkInfos = proto.getNetwork.getNetworksList.asScala
+        Some(networkInfos.map(NetworkInterface.fromProto).toIndexedSeq)
+      }
+      else None
+
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -233,12 +240,7 @@ case class AppDefinition(
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
-      network =
-        if (proto.hasNetwork) {
-          val networkInfos = proto.getNetwork.getNetworksList.asScala
-          Some(networkInfos.map (Network.apply(_)).toIndexedSeq)
-        }
-        else None
+      networkInterfaces = networkInterfaceOption
     )
   }
 
@@ -440,7 +442,7 @@ object AppDefinition {
 
   val DefaultLabels: Map[String, String] = Map.empty
 
-  val DefaultNetwork: Option[Seq[Network]] = None
+  val DefaultNetwork: Option[Seq[NetworkInterface]] = None
 
   /**
     * This default is only used in tests

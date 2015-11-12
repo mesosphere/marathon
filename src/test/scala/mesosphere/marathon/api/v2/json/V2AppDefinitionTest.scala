@@ -9,7 +9,7 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
@@ -297,7 +297,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
   }
 
   test("Read app with container definition and port mappings") {
-    import java.lang.{ Integer => JInt }
+    import java.lang.{Integer => JInt}
 
     import mesosphere.marathon.state.Container.Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
@@ -338,15 +338,12 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
   }
 
   test("Read app with network info") {
-    import mesosphere.marathon.state.Network
-
     val app = V2AppDefinition(
       id = "app-with-network-isolation".toPath,
       cmd = Some("python3 -m http.server 8080"),
-      network = Some(Seq(
-        Network(
-          ipAddress = Some("auto"),
-          protocol = Some(mesos.NetworkInfo.Protocol.IPv6),
+      networkInterfaces = Some(Seq(
+        NetworkInterface(
+          ipAddresses = Seq(IPSpecification(Some(mesos.NetworkInfo.Protocol.IPv6))),
           groups = Seq("a", "b", "c"),
           labels = Map(
             "foo" -> "bar",
@@ -362,10 +359,11 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       {
         "id": "app-with-network-isolation",
         "cmd": "python3 -m http.server 8080",
-        "network": [
+        "networkInterfaces": [
           {
-            "ipAddress": "auto",
-            "protocol": "IPv6",
+            "ipAddresses": [
+               { "protocol": "IPv6" }
+            ],
             "groups": ["a", "b", "c"],
             "labels": {
               "foo": "bar",
@@ -378,9 +376,6 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       """
 
     val readResult = fromJson(json)
-
-    println(s"expected:\n$app")
-    println(s"result:\n$readResult")
 
     assert(readResult.copy(version = app.version) == app)
   }

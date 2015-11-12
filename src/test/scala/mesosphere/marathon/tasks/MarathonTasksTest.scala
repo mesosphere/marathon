@@ -29,7 +29,9 @@ class MarathonTasksTest extends MarathonSpec with Matchers {
       .setNetwork(NetworkInfos.newBuilder
         .addAllNetworks(Seq(
           mesos.NetworkInfo.newBuilder
-            .setIpAddress("123.123.123.123")
+            .addIpAddresses(
+              mesos.NetworkInfo.IPAddress.newBuilder().setIpAddress("123.123.123.123")
+            )
             .build).asJava))
       .build
 
@@ -44,7 +46,9 @@ class MarathonTasksTest extends MarathonSpec with Matchers {
         .addAllNetworks(Seq(
           mesos.NetworkInfo.newBuilder.build,
           mesos.NetworkInfo.newBuilder
-            .setIpAddress("123.123.123.123")
+            .addIpAddresses(
+              mesos.NetworkInfo.IPAddress.newBuilder().setIpAddress("123.123.123.123")
+            )
             .build).asJava))
       .build
 

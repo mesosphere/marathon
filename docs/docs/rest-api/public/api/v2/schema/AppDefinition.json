@@ -257,16 +257,12 @@
             "description": "The list of ip address specifications.",
             "items": {
               "type": "object",
-              "description": "???",
+              "description": "The specification of an ip address.",
               "properties": {
                 "protocol": {
                   "type": "string",
                   "description": "Defines the version of the ip protocol to use. Accepted values: “IPv4”, “IPv6”. If it is missing, then the IPAM (IP Address Manager) will decide which kind of IP to assign.",
                   "pattern": "^IPv[46]$"
-                },
-                "specification": {
-                  "type": "string",
-                  "description": "A string describing a specific IP address, a CIDR, or a named pool of addresses to allocate from (depending on the behavior of the underlying IPAM.)"
                 }
               }
             }

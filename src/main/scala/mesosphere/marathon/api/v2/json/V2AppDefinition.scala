@@ -65,7 +65,7 @@ case class V2AppDefinition(
 
     acceptedResourceRoles: Option[Set[String]] = None,
 
-    network: Option[Seq[Network]] = AppDefinition.DefaultNetwork,
+    networkInterfaces: Option[Seq[NetworkInterface]] = AppDefinition.DefaultNetwork,
 
     version: Timestamp = Timestamp.now(),
 
@@ -97,7 +97,7 @@ case class V2AppDefinition(
       backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container,
       healthChecks = healthChecks, dependencies = dependencies, upgradeStrategy = upgradeStrategy,
       labels = labels, acceptedResourceRoles = acceptedResourceRoles,
-      versionInfo = appVersionInfo
+      networkInterfaces = networkInterfaces, versionInfo = appVersionInfo
     )
   }
 
@@ -126,6 +126,6 @@ object V2AppDefinition {
       backoff = app.backoff, backoffFactor = app.backoffFactor, maxLaunchDelay = app.maxLaunchDelay,
       container = app.container, healthChecks = app.healthChecks, dependencies = app.dependencies,
       upgradeStrategy = app.upgradeStrategy, labels = app.labels, acceptedResourceRoles = app.acceptedResourceRoles,
-      version = app.version, versionInfo = maybeVersionInfo)
+      networkInterfaces = app.networkInterfaces, version = app.version, versionInfo = maybeVersionInfo)
   }
 }

@@ -215,12 +215,13 @@ trait NetworkFormats {
   implicit lazy val NetworkProtocolFormat: Format[mesos.NetworkInfo.Protocol] =
     enumFormat(mesos.NetworkInfo.Protocol.valueOf, str => s"$str is not a valid protocol")
 
-  implicit lazy val NetworkFormat: Format[Network] = (
-    (__ \ "ipAddress").formatNullable[String] ~
-    (__ \ "protocol").formatNullable[mesos.NetworkInfo.Protocol] ~
+  implicit lazy val IPSpecificationFormat: Format[IPSpecification] = Json.format[IPSpecification]
+
+  implicit lazy val NetworkFormat: Format[NetworkInterface] = (
+    (__ \ "ipAddresses").format[Seq[IPSpecification]] ~
     (__ \ "groups").formatNullable[Seq[String]].withDefault(Nil) ~
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
-  )(Network(_, _, _, _), unlift(Network.unapply))
+  )(NetworkInterface(_, _, _), unlift(NetworkInterface.unapply))
 }
 
 trait DeploymentFormats {
@@ -249,7 +250,6 @@ trait DeploymentFormats {
         _.map { case (k, v) => new java.net.URL(k) -> v }
       ),
     Writes[Map[java.net.URL, String]] { m =>
-      val mapped = m.map { case (k, v) => k.toString -> v }
       Json.toJson(m)
     }
   )
@@ -448,7 +448,7 @@ trait V2Formats {
           upgradeStrategy: UpgradeStrategy,
           labels: Map[String, String],
           acceptedResourceRoles: Option[Set[String]],
-          network: Option[Seq[Network]],
+          networkInterfaces: Option[Seq[NetworkInterface]],
           version: Timestamp)
 
         val extraReads: Reads[ExtraFields] =
@@ -456,7 +456,7 @@ trait V2Formats {
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(AppDefinition.DefaultUpgradeStrategy) ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
-            (__ \ "network").readNullable[Seq[Network]] ~
+            (__ \ "networkInterfaces").readNullable[Seq[NetworkInterface]] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now())
           )(ExtraFields)
 
@@ -465,7 +465,7 @@ trait V2Formats {
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             acceptedResourceRoles = extraFields.acceptedResourceRoles,
-            network = extraFields.network,
+            networkInterfaces = extraFields.networkInterfaces,
             version = extraFields.version,
             versionInfo = None
           )
@@ -506,7 +506,7 @@ trait V2Formats {
         "upgradeStrategy" -> app.upgradeStrategy,
         "labels" -> app.labels,
         "acceptedResourceRoles" -> app.acceptedResourceRoles,
-        "network" -> app.network,
+        "networkInterfaces" -> app.networkInterfaces,
         "version" -> app.version
       )
 

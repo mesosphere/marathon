@@ -14,18 +14,16 @@ class NetworkTest extends MarathonSpec with Matchers {
 
   class Fixture {
 
-    lazy val network1 = Network()
+    lazy val network1 = NetworkInterface()
 
-    lazy val network2 = Network(
-      ipAddress = None,
-      protocol = Some(mesos.NetworkInfo.Protocol.IPv6),
+    lazy val network2 = NetworkInterface(
+      ipAddresses = Seq(IPSpecification(Some(mesos.NetworkInfo.Protocol.IPv6))),
       groups = Vector("foo", "bar"),
       labels = Map.empty
     )
 
-    lazy val network3 = Network(
-      ipAddress = Some("2001:db8::/48"),
-      protocol = Some(mesos.NetworkInfo.Protocol.IPv4),
+    lazy val network3 = NetworkInterface(
+      ipAddresses = Seq(IPSpecification(Some(mesos.NetworkInfo.Protocol.IPv4))),
       groups = Vector("a", "b", "c"),
       labels = Map(
         "foo" -> "bar",
@@ -54,21 +52,27 @@ class NetworkTest extends MarathonSpec with Matchers {
 
     val networkInfo1 = mesos.NetworkInfo.newBuilder.build
     println(networkInfo1)
-    val result1 = Network(networkInfo1)
+    val result1 = NetworkInterface.fromProto(networkInfo1)
     println(result1)
     println(f.network1)
     assert(result1 == f.network1)
 
     val networkInfo2 = mesos.NetworkInfo.newBuilder
-      .setProtocol(mesos.NetworkInfo.Protocol.IPv6)
+      .addIpAddresses(
+        mesos.NetworkInfo.IPAddress.newBuilder()
+          .setProtocol(mesos.NetworkInfo.Protocol.IPv6)
+      )
       .addAllGroups(Seq("foo", "bar").asJava)
       .build
-    val result2 = Network(networkInfo2)
+    val result2 = NetworkInterface.fromProto(networkInfo2)
     assert(result2 == f.network2)
 
     val networkInfo3 = mesos.NetworkInfo.newBuilder
-      .setIpAddress("2001:db8::/48")
-      .setProtocol(mesos.NetworkInfo.Protocol.IPv4)
+      .addIpAddresses(
+        mesos.NetworkInfo.IPAddress.newBuilder()
+          .setIpAddress("2001:db8::/48")
+          .setProtocol(mesos.NetworkInfo.Protocol.IPv4)
+      )
       .addAllGroups(Seq("a", "b", "c").asJava)
       .setLabels(
         mesos.Labels.newBuilder
@@ -87,7 +91,7 @@ class NetworkTest extends MarathonSpec with Matchers {
           .build
       )
       .build
-    val result3 = Network(networkInfo3)
+    val result3 = NetworkInterface.fromProto(networkInfo3)
     assert(result3 == f.network3)
   }
 
@@ -98,14 +102,14 @@ class NetworkTest extends MarathonSpec with Matchers {
     JsonTestHelper.assertSerializationRoundtripWorks(f.network3)
   }
 
-  private[this] def fromJson(json: String): Network = {
-    Json.fromJson[Network](Json.parse(json)).get
+  private[this] def fromJson(json: String): NetworkInterface = {
+    Json.fromJson[NetworkInterface](Json.parse(json)).get
   }
 
   test("Reading empty Network from JSON") {
     val json1 =
       """
-      {}
+      { "ipAddresses": [] }
       """
 
     val readResult = fromJson(json1)
@@ -117,7 +121,9 @@ class NetworkTest extends MarathonSpec with Matchers {
     val json =
       """
       {
-        "protocol": "IPv6",
+        "ipAddresses": [
+          { "protocol": "IPv6" }
+        ],
         "groups": ["foo", "bar"]
       }
       """
@@ -131,8 +137,9 @@ class NetworkTest extends MarathonSpec with Matchers {
     val json =
       """
       {
-        "ipAddress": "2001:db8::/48",
-        "protocol": "IPv4",
+        "ipAddresses": [
+          { "protocol": "IPv4" }
+        ],
         "groups": ["a", "b", "c"],
         "labels": {
           "foo": "bar",

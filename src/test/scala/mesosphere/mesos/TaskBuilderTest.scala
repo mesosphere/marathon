@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, Network, PathId, Timestamp }
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
 import mesosphere.mesos.protos.{ Resource, TaskID, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
@@ -98,7 +98,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     def resourceOpt(name: String) = taskInfo.getResourcesList.asScala.find(_.getName == name)
 
-    assert(resourceOpt("disk") == None)
+    assert(resourceOpt("disk").isEmpty)
   }
 
   test("build creates task with appropriate resource share also preserves role") {
@@ -163,8 +163,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val expectedLabels = Labels.newBuilder.addAllLabels(
       labels.map {
-        case (key, value) =>
-          Label.newBuilder.setKey(key).setValue(value).build()
+        case (mKey, mValue) =>
+          Label.newBuilder.setKey(mKey).setValue(mValue).build()
       }.asJava
     ).build()
     assert(taskInfo.hasLabels)
@@ -231,19 +231,17 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         cpus = 1.0,
         mem = 64.0,
         disk = 1.0,
-        network = Some(Seq(
-          Network(
-            ipAddress = Some("auto"),
-            protocol = Some(NetworkInfo.Protocol.IPv4),
+        networkInterfaces = Some(Seq(
+          NetworkInterface(
+            ipAddresses = Seq(IPSpecification(Some(NetworkInfo.Protocol.IPv4))),
             groups = Seq("a", "b", "c"),
             labels = Map(
               "foo" -> "bar",
               "baz" -> "buzz"
             )
           ),
-          Network(
-            ipAddress = Some("xxx"),
-            protocol = Some(NetworkInfo.Protocol.IPv6),
+          NetworkInterface(
+            ipAddresses = Seq(IPSpecification(Some(NetworkInfo.Protocol.IPv6))),
             groups = Seq("abc")
           )
         ))
@@ -256,11 +254,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     taskInfo.hasExecutor should be (false)
     taskInfo.hasContainer should be (true)
-    val networkInfos =
-      taskInfo.getContainer.getNetworkInfosList.asScala
+    val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
     networkInfos.size should be (2)
-    networkInfos.head.getIpAddress should be ("auto")
-    networkInfos.last.getIpAddress should be ("xxx")
+    networkInfos.head.getIpAddresses(0).getProtocol should be (NetworkInfo.Protocol.IPv4)
+    networkInfos.head.getGroupsList.asScala should be (Seq("a", "b", "c"))
+    networkInfos.last.getIpAddresses(0).getProtocol should be (NetworkInfo.Protocol.IPv6)
+    networkInfos.last.getGroupsList.asScala should be (Seq("abc"))
   }
 
   test("BuildIfMatchesWithNetworkAndCustomExecutor") {
@@ -279,19 +278,17 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         mem = 64.0,
         disk = 1.0,
         executor = "/custom/executor",
-        network = Some(Seq(
-          Network(
-            ipAddress = Some("auto"),
-            protocol = Some(NetworkInfo.Protocol.IPv4),
+        networkInterfaces = Some(Seq(
+          NetworkInterface(
+            ipAddresses = Seq(IPSpecification(Some(NetworkInfo.Protocol.IPv4))),
             groups = Seq("a", "b", "c"),
             labels = Map(
               "foo" -> "bar",
               "baz" -> "buzz"
             )
           ),
-          Network(
-            ipAddress = Some("xxx"),
-            protocol = Some(NetworkInfo.Protocol.IPv6),
+          NetworkInterface(
+            ipAddresses = Seq(IPSpecification(Some(NetworkInfo.Protocol.IPv6))),
             groups = Seq("abc")
           )
         ))
@@ -305,11 +302,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     taskInfo.hasContainer should be (false)
     taskInfo.hasExecutor should be (true)
     taskInfo.getExecutor.hasContainer should be (true)
-    val networkInfos =
-      taskInfo.getExecutor.getContainer.getNetworkInfosList.asScala
+    val networkInfos = taskInfo.getExecutor.getContainer.getNetworkInfosList.asScala
     networkInfos.size should be (2)
-    networkInfos.head.getIpAddress should be ("auto")
-    networkInfos.last.getIpAddress should be ("xxx")
+    networkInfos.head.getIpAddresses(0).getProtocol should be (NetworkInfo.Protocol.IPv4)
+    networkInfos.last.getIpAddresses(0).getProtocol should be (NetworkInfo.Protocol.IPv6)
   }
 
   test("BuildIfMatchesWithCommandAndExecutor") {

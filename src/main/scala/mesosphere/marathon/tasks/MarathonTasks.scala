@@ -49,8 +49,8 @@ object MarathonTasks {
         // since Marathon doesn't know how to deal with multiple addresses.
         task.getNetwork.getNetworksList
           .asScala
-          .find(_.hasIpAddress)
-          .map(_.getIpAddress)
+          .find(_.getIpAddressesCount > 0)
+          .map(_.getIpAddresses(0).getIpAddress)
       }
       else None
 

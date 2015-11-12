@@ -173,7 +173,7 @@ class TaskBuilder(app: AppDefinition,
   }
 
   protected def computeContainerInfo(ports: Seq[Long]): Option[ContainerInfo] = {
-    if (app.container.isEmpty && app.network.isEmpty) None
+    if (app.container.isEmpty && app.networkInterfaces.isEmpty) None
     else {
       val builder = ContainerInfo.newBuilder
 
@@ -213,8 +213,8 @@ class TaskBuilder(app: AppDefinition,
       }
 
       // Set NetworkInfo if necessary
-      app.network.foreach { nets =>
-        builder.addAllNetworkInfos(nets.map(_.toProto).asJava)
+      app.networkInterfaces.foreach { nets =>
+        nets.foreach(net => builder.addNetworkInfos(net.toProto))
       }
 
       // Set container type to MESOS by default (this is a required field)
@@ -276,14 +276,14 @@ object TaskBuilder {
     builder.build
   }
 
-  private def isExtract(stringuri: String): Boolean = {
-    stringuri.endsWith(".tgz") ||
-      stringuri.endsWith(".tar.gz") ||
-      stringuri.endsWith(".tbz2") ||
-      stringuri.endsWith(".tar.bz2") ||
-      stringuri.endsWith(".txz") ||
-      stringuri.endsWith(".tar.xz") ||
-      stringuri.endsWith(".zip")
+  private def isExtract(stringUri: String): Boolean = {
+    stringUri.endsWith(".tgz") ||
+      stringUri.endsWith(".tar.gz") ||
+      stringUri.endsWith(".tbz2") ||
+      stringUri.endsWith(".tar.bz2") ||
+      stringUri.endsWith(".txz") ||
+      stringUri.endsWith(".tar.xz") ||
+      stringUri.endsWith(".zip")
   }
 
   def environment(vars: Map[String, String]): Environment = {

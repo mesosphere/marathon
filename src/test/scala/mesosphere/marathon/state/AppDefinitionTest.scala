@@ -113,17 +113,16 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val app = AppDefinition(
       id = "app-with-network-isolation".toPath,
       cmd = Some("sleep 30"),
-      network = Some(Seq(
-        Network(
-          ipAddress = Some("auto"),
-          protocol = Some(mesos.NetworkInfo.Protocol.IPv4),
+      networkInterfaces = Some(Seq(
+        NetworkInterface(
+          ipAddresses = Seq(IPSpecification(Some(mesos.NetworkInfo.Protocol.IPv4))),
           groups = Seq("a", "b", "c"),
           labels = Map(
             "foo" -> "bar",
             "baz" -> "buzz"
           )
         ),
-        Network(
+        NetworkInterface(
           groups = Seq("public")
         )
       ))

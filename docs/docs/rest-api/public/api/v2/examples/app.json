@@ -80,8 +80,7 @@
     {
       "ipAddresses": [
         {
-          "protocol": "IPv6",
-          "specification": "2001:db8::/48"
+          "protocol": "IPv6"
         }
       ],
       "groups": [
