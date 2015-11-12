@@ -6,7 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event.{ MesosStatusUpdateEvent, MarathonEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil }
 import mesosphere.marathon.test.{ CaptureLogEvents, CaptureEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
@@ -44,6 +44,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         status.getState.name,
         taskStatusMessage,
         appId,
+        host,
         host,
         portsList.asJava.asScala,
         version.toString,
@@ -110,6 +111,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         status.getState.name,
         taskStatusMessage,
         appId,
+        host,
         host,
         portsList.asJava.asScala,
         version.toString,

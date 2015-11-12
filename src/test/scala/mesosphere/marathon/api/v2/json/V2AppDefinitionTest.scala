@@ -9,7 +9,7 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import org.apache.mesos.{Protos => mesos}
+import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
@@ -297,7 +297,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
   }
 
   test("Read app with container definition and port mappings") {
-    import java.lang.{Integer => JInt}
+    import java.lang.{ Integer => JInt }
 
     import mesosphere.marathon.state.Container.Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
