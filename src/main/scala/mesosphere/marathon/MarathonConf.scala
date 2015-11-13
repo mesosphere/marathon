@@ -109,7 +109,7 @@ trait MarathonConf
   lazy val defaultAcceptedResourceRoles = opt[String]("default_accepted_resource_roles",
     descr =
       "Default for the defaultAcceptedResourceRoles attribute of all app definitions" +
-        " as a comma-separated list of strings." +
+        " as a comma-separated list of strings. " +
         "This defaults to all roles for which this Marathon instance is configured to receive offers.",
     default = None,
     validate = validateDefaultAcceptedResourceRoles).map(parseDefaultAcceptedResourceRoles)
