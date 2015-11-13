@@ -22,7 +22,7 @@ trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
 trait EventConfiguration extends ScallopConf {
 
   lazy val eventSubscriber = opt[String]("event_subscriber",
-    descr = "e.g. http_callback",
+    descr = "The event subscription module to use. E.g. http_callback.",
     required = false,
     noshort = true)
 }

@@ -44,7 +44,7 @@ class InfoResource @Inject() (
     "leader_proxy_connection_timeout_ms" -> config.leaderProxyConnectionTimeout.get,
     "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.get)
 
-  // Zookeeper congiurations
+  // ZooKeeper congiurations
   private[this] lazy val zookeeperConfigValues = Json.obj(
     "zk" -> config.zooKeeperUrl(),
     "zk_timeout" -> config.zooKeeperTimeout(),

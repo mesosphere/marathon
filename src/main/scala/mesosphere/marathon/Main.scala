@@ -35,13 +35,13 @@ class MarathonApp extends App {
 
     while (!connectedToZk) {
       try {
-        log.info("Connecting to Zookeeper...")
+        log.info("Connecting to ZooKeeper...")
         client.get
         connectedToZk = true
       }
       catch {
         case t: Throwable =>
-          log.warn("Unable to connect to Zookeeper, retrying...")
+          log.warn("Unable to connect to ZooKeeper, retrying...")
       }
     }
     client

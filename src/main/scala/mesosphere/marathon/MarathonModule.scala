@@ -253,7 +253,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Singleton
   def provideCandidate(zk: ZooKeeperClient, @Named(ModuleNames.HOST_PORT) hostPort: String): Option[Candidate] = {
     if (conf.highlyAvailable()) {
-      log.info("Registering in Zookeeper with hostPort:" + hostPort)
+      log.info("Registering in ZooKeeper with hostPort:" + hostPort)
       val candidate = new CandidateImpl(new ZGroup(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE, conf.zooKeeperLeaderPath),
         new Supplier[Array[Byte]] {
           def get(): Array[Byte] = {
