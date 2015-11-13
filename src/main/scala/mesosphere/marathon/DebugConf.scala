@@ -16,8 +16,8 @@ import org.slf4j.{ Logger, LoggerFactory }
 trait DebugConf extends ScallopConf {
 
   lazy val debugTracing = toggle("tracing",
-    descrYes = "Enable trace logging of service method calls",
-    descrNo = "(Default) Disable trace logging of service method calls",
+    descrYes = "Enable trace logging of service method calls.",
+    descrNo = "(Default) Disable trace logging of service method calls.",
     default = Some(false),
     noshort = true,
     prefix = "disable_")
@@ -28,8 +28,8 @@ trait DebugConf extends ScallopConf {
   lazy val enableDebugTracing = debugTracing() || deprecatedDebugTracing()
 
   lazy val metrics = toggle("metrics",
-    descrYes = "(Default) Enable metric measurement of service method calls",
-    descrNo = "Disable metric measurement of service method calls",
+    descrYes = "(Default) Enable metric measurement of service method calls.",
+    descrNo = "Disable metric measurement of service method calls.",
     default = Some(true),
     noshort = true,
     prefix = "disable_")

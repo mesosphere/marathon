@@ -23,12 +23,12 @@ trait MarathonConf
     noshort = true)
 
   lazy val mesosLeaderUiUrl = opt[String]("mesos_leader_ui_url",
-    descr = "The host and port (e.g. \"http://mesos_host:5050\") of the Mesos master",
+    descr = "The host and port (e.g. \"http://mesos_host:5050\") of the Mesos master.",
     required = false,
     noshort = true)
 
   lazy val mesosFailoverTimeout = opt[Long]("failover_timeout",
-    descr = "The failover_timeout for mesos in seconds (default: 1 week)",
+    descr = "(Default: 1 week) The failover_timeout for mesos in seconds.",
     default = Some(604800L))
 
   lazy val highlyAvailable = toggle("ha",
@@ -50,29 +50,29 @@ trait MarathonConf
     default = Some(true))
 
   lazy val localPortMin = opt[Int]("local_port_min",
-    descr = "Min port number to use when assigning globally unique service ports to apps",
+    descr = "Min port number to use when assigning globally unique service ports to apps.",
     default = Some(10000))
 
   lazy val localPortMax = opt[Int]("local_port_max",
-    descr = "Max port number to use when assigning globally unique service ports to apps",
+    descr = "Max port number to use when assigning globally unique service ports to apps.",
     default = Some(20000))
 
   lazy val defaultExecutor = opt[String]("executor",
-    descr = "Executor to use when none is specified",
+    descr = "Executor to use when none is specified. If not defined the Mesos command executor is used by default.",
     default = Some("//cmd"))
 
   lazy val hostname = opt[String]("hostname",
-    descr = "The advertised hostname that is used for the communication with the mesos master. " +
+    descr = "The advertised hostname that is used for the communication with the Mesos master. " +
       "The value is also stored in the persistent store so another standby host can redirect to the elected leader.",
     default = Some(java.net.InetAddress.getLocalHost.getHostName))
 
   lazy val webuiUrl = opt[String]("webui_url",
-    descr = "The http(s) url of the web ui, defaulting to the advertised hostname",
+    descr = "The HTTP(S) url of the web ui, defaulting to the advertised hostname.",
     noshort = true,
     default = None)
 
   lazy val maxConcurrentHttpConnections = opt[Int]("http_max_concurrent_requests",
-    descr = "The number of concurrent http requests, that are allowed before rejecting.",
+    descr = "The number of concurrent HTTP requests that are allowed before rejecting.",
     noshort = true,
     default = None
   )
@@ -151,7 +151,7 @@ trait MarathonConf
 
   lazy val scaleAppsInitialDelay = opt[Long]("scale_apps_initial_delay",
     descr = "This is the length of time, in milliseconds, before Marathon " +
-      "begins to periodically attempt to scale apps",
+      "begins to periodically attempt to scale apps.",
     default = Some(15000L)) // 15 seconds
 
   lazy val scaleAppsInterval = opt[Long]("scale_apps_interval",
@@ -167,7 +167,7 @@ trait MarathonConf
     default = None)
 
   lazy val mesosUser = opt[String]("mesos_user",
-    descr = "Mesos user for this framework",
+    descr = "Mesos user for this framework.",
     default = new SystemProperties().get("user.name")) // Current logged in user
 
   lazy val frameworkName = opt[String]("framework_name",
@@ -183,23 +183,23 @@ trait MarathonConf
   )
 
   lazy val mesosAuthenticationPrincipal = opt[String]("mesos_authentication_principal",
-    descr = "Mesos Authentication Principal",
+    descr = "Mesos Authentication Principal.",
     noshort = true
   )
 
   lazy val mesosAuthenticationSecretFile = opt[String]("mesos_authentication_secret_file",
-    descr = "Mesos Authentication Secret",
+    descr = "Mesos Authentication Secret.",
     noshort = true
   )
 
   lazy val envVarsPrefix = opt[String]("env_vars_prefix",
-    descr = "Prefix to use for environment variables",
+    descr = "Prefix to use for environment variables injected automatically into all started tasks.",
     noshort = true
   )
 
   //Internal settings, that are not intended for external use
   lazy val internalStoreBackend = opt[String]("internal_store_backend",
-    descr = "The backend storage system to use. One of zk, mesos_zk, mem",
+    descr = "The backend storage system to use. One of zk, mesos_zk, mem.",
     hidden = true,
     validate = Set("zk", "mesos_zk", "mem").contains,
     default = Some("zk")
@@ -213,13 +213,13 @@ trait MarathonConf
   lazy val storeCache = toggle("store_cache",
     default = Some(true),
     noshort = true,
-    descrYes = "Enable an in memory cache for the storage layer.",
-    descrNo = "Disable the in memory cache for the storage layer ",
+    descrYes = "Enable an in-memory cache for the storage layer.",
+    descrNo = "Disable the in-memory cache for the storage layer. ",
     prefix = "disable_"
   )
 
   lazy val onElectedPrepareTimeout = opt[Long] ("on_elected_prepare_timeout",
-    descr = "The timeout for preparing the Marathon instance when elected as leader",
+    descr = "The timeout for preparing the Marathon instance when elected as leader.",
     default = Some(3 * 60 * 1000L) //3 minutes
   )
 }

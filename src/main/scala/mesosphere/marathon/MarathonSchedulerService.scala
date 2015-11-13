@@ -170,7 +170,7 @@ class MarathonSchedulerService @Inject() (
   override def run(): Unit = {
     log.info("Beginning run")
 
-    // The first thing we do is offer our leadership. If using Zookeeper for
+    // The first thing we do is offer our leadership. If using ZooKeeper for
     // leadership election then we will wait to be elected. If we aren't (i.e.
     // no HA) then we take over leadership run the driver immediately.
     offerLeadership()
@@ -364,12 +364,12 @@ class MarathonSchedulerService @Inject() (
       candidate.synchronized {
         candidate match {
           case Some(c) =>
-            // In this case we care using Zookeeper for leadership candidacy.
+            // In this case we care using ZooKeeper for leadership candidacy.
             // Thus, offer our leadership.
             log.info("Using HA and therefore offering leadership")
             c.offerLeadership(this)
           case _ =>
-            // In this case we aren't using Zookeeper for leadership election.
+            // In this case we aren't using ZooKeeper for leadership election.
             // Thus, we simply elect ourselves as leader.
             log.info("Not using HA and therefore electing as leader by default")
             electLeadership(None)

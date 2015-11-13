@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
-import mesosphere.marathon.state.{AppRepository, PathId, Timestamp}
+import mesosphere.marathon.state.{ AppRepository, PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.concurrent.Future
