@@ -2,7 +2,10 @@
 title: Advanced Deployment Design
 ---
 
-# Advanced Deployment with Marathon
+# DESIGN: Advanced Deployment with Marathon
+
+IMPORTANT: This is the original design document. Some of the features are implemented, some are not, some are 
+implemented differently. Do not use as a reference on how to configure your deployments.
 
 ## Problem Statement
 
