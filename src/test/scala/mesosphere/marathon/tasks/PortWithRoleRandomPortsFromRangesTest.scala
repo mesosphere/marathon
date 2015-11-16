@@ -125,7 +125,7 @@ class PortWithRoleRandomPortsFromRangesTest extends MarathonSpec {
     for (seed <- 1 to iterations) performTest(seed)
     val duration = FiniteDuration(System.nanoTime() - start, TimeUnit.NANOSECONDS)
 
-    val allowTimeForTest = benchmarkDuration * 20
+    val allowTimeForTest = benchmarkDuration * 50
     log.info(
       s"benchmarkDuration = ${benchmarkDuration.toMillis}ms, " +
         s"allowing time for test = ${allowTimeForTest.toMillis}ms"
