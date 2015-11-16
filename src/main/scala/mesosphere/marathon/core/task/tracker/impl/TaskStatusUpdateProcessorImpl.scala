@@ -10,7 +10,7 @@ import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
-import org.apache.mesos.Protos.{ TaskID, TaskStatus }
+import org.apache.mesos.Protos.{ TaskState, TaskID, TaskStatus }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -58,7 +58,11 @@ class TaskStatusUpdateProcessorImpl @Inject() (
         ).map(_ => acknowledge(status))
       case None =>
         killUnknownTaskTimer {
-          killTask(taskId)
+          if (status.getState != TaskState.TASK_LOST) {
+            // If we kill a unknown task, we will get another TASK_LOST notification which leads to an endless
+            // stream of kills and TASK_LOST updates.
+            killTask(taskId)
+          }
           acknowledge(status)
           Future.successful(())
         }
