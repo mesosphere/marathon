@@ -9,11 +9,12 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
+import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container.{ Docker, Volume }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade._
-import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => mesos }
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
@@ -51,7 +52,8 @@ trait Formats
     with ContainerFormats
     with DeploymentFormats
     with EventFormats
-    with EventSubscribersFormats {
+    with EventSubscribersFormats
+    with NetworkFormats {
   import scala.collection.JavaConverters._
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
@@ -68,9 +70,15 @@ trait Formats
   }
 
   implicit lazy val MarathonTaskWrites: Writes[MarathonTask] = Writes { task =>
+    val containerAddress = {
+      val result = MarathonTasks.hostAddress(task)
+      if (result.nonEmpty) JsString(result) else JsNull
+    }
+
     Json.obj(
       "id" -> task.getId,
       "host" -> (if (task.hasHost) task.getHost else JsNull),
+      "containerAddress" -> containerAddress,
       "ports" -> task.getPortsList.asScala,
       "startedAt" -> (if (task.getStartedAt != 0) Timestamp(task.getStartedAt) else JsNull),
       "stagedAt" -> (if (task.getStagedAt != 0) Timestamp(task.getStagedAt) else JsNull),
@@ -163,8 +171,8 @@ trait Formats
 trait ContainerFormats {
   import Formats._
 
-  implicit lazy val NetworkFormat: Format[Network] =
-    enumFormat(Network.valueOf, str => s"$str is not a valid network type")
+  implicit lazy val DockerNetworkFormat: Format[DockerInfo.Network] =
+    enumFormat(DockerInfo.Network.valueOf, str => s"$str is not a valid network type")
 
   implicit lazy val PortMappingFormat: Format[Docker.PortMapping] = (
     (__ \ "containerPort").formatNullable[Integer].withDefault(0) ~
@@ -175,7 +183,7 @@ trait ContainerFormats {
 
   implicit lazy val DockerFormat: Format[Docker] = (
     (__ \ "image").format[String] ~
-    (__ \ "network").formatNullable[Network] ~
+    (__ \ "network").formatNullable[DockerInfo.Network] ~
     (__ \ "portMappings").formatNullable[Seq[Docker.PortMapping]] ~
     (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
     (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
@@ -199,6 +207,21 @@ trait ContainerFormats {
     (__ \ "volumes").formatNullable[Seq[Volume]].withDefault(Nil) ~
     (__ \ "docker").formatNullable[Docker]
   )(Container(_, _, _), unlift(Container.unapply))
+}
+
+trait NetworkFormats {
+  import Formats._
+
+  implicit lazy val NetworkProtocolFormat: Format[mesos.NetworkInfo.Protocol] =
+    enumFormat(mesos.NetworkInfo.Protocol.valueOf, str => s"$str is not a valid protocol")
+
+  implicit lazy val IPSpecificationFormat: Format[IPSpecification] = Json.format[IPSpecification]
+
+  implicit lazy val NetworkFormat: Format[NetworkInterface] = (
+    (__ \ "ipAddresses").format[Seq[IPSpecification]] ~
+    (__ \ "groups").formatNullable[Seq[String]].withDefault(Nil) ~
+    (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
+  )(NetworkInterface(_, _, _), unlift(NetworkInterface.unapply))
 }
 
 trait DeploymentFormats {
@@ -227,7 +250,6 @@ trait DeploymentFormats {
         _.map { case (k, v) => new java.net.URL(k) -> v }
       ),
     Writes[Map[java.net.URL, String]] { m =>
-      val mapped = m.map { case (k, v) => k.toString -> v }
       Json.toJson(m)
     }
   )
@@ -341,7 +363,7 @@ trait HealthCheckFormats {
     )
   }
 
-  implicit lazy val ProtocolFormat: Format[Protocol] =
+  implicit lazy val HealthCheckProtocolFormat: Format[Protocol] =
     enumFormat(Protocol.valueOf, str => s"$str is not a valid protocol")
 
   implicit lazy val HealthCheckFormat: Format[HealthCheck] = {
@@ -426,6 +448,7 @@ trait V2Formats {
           upgradeStrategy: UpgradeStrategy,
           labels: Map[String, String],
           acceptedResourceRoles: Option[Set[String]],
+          networkInterfaces: Option[Seq[NetworkInterface]],
           version: Timestamp)
 
         val extraReads: Reads[ExtraFields] =
@@ -433,6 +456,7 @@ trait V2Formats {
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(AppDefinition.DefaultUpgradeStrategy) ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
+            (__ \ "networkInterfaces").readNullable[Seq[NetworkInterface]] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now())
           )(ExtraFields)
 
@@ -441,6 +465,7 @@ trait V2Formats {
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             acceptedResourceRoles = extraFields.acceptedResourceRoles,
+            networkInterfaces = extraFields.networkInterfaces,
             version = extraFields.version,
             versionInfo = None
           )
@@ -481,6 +506,7 @@ trait V2Formats {
         "upgradeStrategy" -> app.upgradeStrategy,
         "labels" -> app.labels,
         "acceptedResourceRoles" -> app.acceptedResourceRoles,
+        "networkInterfaces" -> app.networkInterfaces,
         "version" -> app.version
       )
 

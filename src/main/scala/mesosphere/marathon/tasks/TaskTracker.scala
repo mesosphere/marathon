@@ -61,10 +61,17 @@ class TaskTracker @Inject() (
     val taskId = status.getTaskId.getValue
     getInternal(appId).get(taskId) match {
       case Some(oldTask) if !oldTask.hasStartedAt => // staged
-        val task = oldTask.toBuilder
+        val taskBuilder = oldTask.toBuilder
           .setStartedAt(System.currentTimeMillis)
           .setStatus(status)
-          .build
+
+        // Save the assigned container address, if present.
+        if (status.hasContainerStatus)
+          taskBuilder.setNetwork(
+            NetworkInfos.newBuilder
+              .addAllNetworks(status.getContainerStatus.getNetworkInfosList))
+
+        val task = taskBuilder.build
         getInternal(appId) += (task.getId -> task)
         store(appId, task).map(_ => task)
 

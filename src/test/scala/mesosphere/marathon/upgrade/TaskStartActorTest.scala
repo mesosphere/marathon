@@ -77,7 +77,7 @@ class TaskStartActorTest
       verify(launchQueue, Mockito.timeout(3000)).add(app, app.instances)
 
       for (i <- 0 until app.instances)
-        system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+        system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", "", Nil, app.version.toString))
 
       Await.result(promise.future, 3.seconds) should be(())
 
@@ -118,7 +118,7 @@ class TaskStartActorTest
       for (i <- 0 until (app.instances - 1))
         system
           .eventStream
-          .publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+          .publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", "", Nil, app.version.toString))
 
       Await.result(promise.future, 3.seconds) should be(())
 
@@ -153,7 +153,7 @@ class TaskStartActorTest
     verify(launchQueue, Mockito.timeout(3000)).add(app, app.instances - 1)
 
     for (i <- 0 until (app.instances - 1))
-      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
 
@@ -289,12 +289,12 @@ class TaskStartActorTest
 
     verify(launchQueue, Mockito.timeout(3000)).add(app, app.instances)
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", "", app.id, "", Nil, app.version.toString))
+    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_FAILED", "", app.id, "", "", Nil, app.version.toString))
 
     verify(launchQueue, Mockito.timeout(3000)).add(app, 1)
 
     for (i <- 0 until app.instances)
-      system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+      system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_RUNNING", "", app.id, "", "", Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
 
@@ -338,7 +338,7 @@ class TaskStartActorTest
     // we mock instead
     when(taskTracker.count(app.id)).thenReturn(0)
     when(launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 4)))
-    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_ERROR", "", app.id, "", Nil, task.getVersion))
+    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_ERROR", "", app.id, "", "", Nil, task.getVersion))
 
     // sync will reschedule task
     ref ! StartingBehavior.Sync
@@ -352,7 +352,7 @@ class TaskStartActorTest
     when(launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = app.instances)))
     when(taskTracker.count(app.id)).thenReturn(4)
     List(0, 1, 2, 3) foreach { i =>
-      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, app.version.toString))
+      system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", "", Nil, app.version.toString))
     }
 
     // it finished early
