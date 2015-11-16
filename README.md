@@ -63,7 +63,7 @@ Instructions on how to install prepackaged releases are available [in the Marath
         sbt assembly
 
 1.  Run `./bin/build-distribution` to package Marathon as an
-    [executable JAR](http://mesosphere.com/2013/12/07/executable-jars/)
+    [executable JAR](https://mesosphere.com/blog/2013/12/07/executable-jars/)
     (optional).
 
 ### Running in Development Mode
@@ -128,20 +128,20 @@ Across all installations Marathon is managing applications on more than 100,000 
 
 * [Airbnb](https://www.airbnb.com/)
 * [Allegro Group](http://www.allegrogroup.com)
-* [AllUnite](http://allunite.com)
+* [AllUnite](https://allunite.com/)
 * [Argus Cyber Security](http://argus-sec.com/)
 * [Artirix](http://www.artirix.com/)
 * [Corvisa](https://www.corvisa.com/)
 * [bol.com](https://www.bol.com/)
 * [Branding Brand](http://www.brandingbrand.com/)
 * [Daemon](http://www.daemon.com.au/)
-* [DHL Parcel](http://www.dhlparcel.nl)
-* [Disqus](https://www.disqus.com/)
+* [DHL Parcel](https://www.dhlparcel.nl/)
+* [Disqus](https://disqus.com/)
 * [eBay](http://www.ebay.com/)
 * [The Factory](https://github.com/thefactory/)
 * [Football Radar](http://www.footballradar.com)
-* [Guidewire](http://www.guidewire.com/)
-* [Groupon](http://www.groupon.com/)
+* [Guidewire](https://www.guidewire.com/)
+* [Groupon](https://www.groupon.com/)
 * [GSShop](http://www.gsshop.com/)
 * [HolidayCheck](http://www.holidaycheck.com/)
 * [Human API](https://humanapi.co/)
@@ -154,16 +154,16 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Orbitz](http://www.orbitz.com/)
 * [Otto](https://www.otto.de/)
 * [PayPal](https://www.paypal.com)
-* [Qubit](http://www.qubitproducts.com/)
-* [RelateIQ](http://relateiq.com/)
+* [Qubit](http://www.qubit.com/)
+* [RelateIQ](https://www.salesforceiq.com/)
 * [Refinery29](https://www.refinery29.com)
 * [Sailthru](http://www.sailthru.com/)
 * [sloppy.io](http://sloppy.io/)
 * [SmartProcure](https://smartprocure.us/)
 * [Strava](https://www.strava.com)
 * [Viadeo](http://www.viadeo.com)
-* [Wikia](http://www.wikia.com)
-* [WooRank](http://www.woorank.com)
+* [Wikia](http://www.wikia.com/Wikia)
+* [WooRank](https://www.woorank.com/)
 * [Yelp](http://www.yelp.com/)
 
 Not in the list? Open a pull request and add yourself!
@@ -188,14 +188,14 @@ Marathon was created by [Tobias Knaup](https://github.com/guenter) and
 developed by the team at Mesosphere and by many contributors from
 the community.
 
-[Chronos]: https://github.com/airbnb/chronos "Airbnb's Chronos"
+[Chronos]: https://github.com/mesos/chronos "Airbnb's Chronos"
 [Mesos]: https://mesos.apache.org/ "Apache Mesos"
 [Zookeeper]: https://zookeeper.apache.org/ "Apache Zookeeper"
-[Storm]: http://storm-project.net/ "distributed realtime computation"
+[Storm]: http://storm.apache.org "distributed realtime computation"
 [freenode]: https://freenode.net/ "IRC channels"
 [upstart]: http://upstart.ubuntu.com/ "Ubuntu's event-based daemons"
 [init]: https://en.wikipedia.org/wiki/Init "init"
-[Mesosphere]: http://mesosphere.com/ "Mesosphere"
+[Mesosphere]: https://mesosphere.com/ "Mesosphere"
 
 ## Acknowledgements
 
