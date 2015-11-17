@@ -64,7 +64,7 @@ function install_haproxy_system {
     os="AmazonAMI"
   fi
      
-  if [[ $os == "CentOS" ]] || [[ $os == "RHEL" ]] || [[ $os == "AmazonAMI" ]] || [ $os == "OracleServer" ]
+  if [[ $os == "CentOS" ]] || [[ $os == "RHEL" ]] || [[ $os == "AmazonAMI" ]] || [[ $os == "OracleServer" ]]
   then
     sudo yum install -y haproxy
     sudo chkconfig haproxy on
