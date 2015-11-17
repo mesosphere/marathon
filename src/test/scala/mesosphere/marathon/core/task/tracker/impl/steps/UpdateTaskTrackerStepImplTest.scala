@@ -18,98 +18,13 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     new Fixture().step.name should equal("updateTaskTracker")
   }
 
-  test("processing task termination update (TASK_ERROR)") { processTerminalStateSuccessfully(TaskState.TASK_ERROR) }
-  test("processing task termination update (TASK_FAILED)") { processTerminalStateSuccessfully(TaskState.TASK_FAILED) }
-  test("processing task termination update (TASK_FINISHED)") { processTerminalStateSuccessfully(TaskState.TASK_FINISHED) }
-  test("processing task termination update (TASK_KILLED)") { processTerminalStateSuccessfully(TaskState.TASK_KILLED) }
-  test("processing task termination update (TASK_LOST)") { processTerminalStateSuccessfully(TaskState.TASK_LOST) }
-
-  private[this] def processTerminalStateSuccessfully(terminalState: TaskState) {
-    val f = new Fixture
-
-    Given("a running task and a working taskTracker")
-    val existingTask = runningMarathonTask
-    val status = runningTaskStatus.toBuilder.setState(terminalState).build()
-    f.taskTracker.terminated(appId, taskId.getValue) returns Future.successful(None)
-
-    When("processUpdate is called")
-    f.step.processUpdate(
-      updateTimestamp,
-      appId,
-      existingTask,
-      status
-    ).futureValue
-
-    Then("taskTracker.terminated is called")
-    verify(f.taskTracker).terminated(appId, taskId.getValue)
-
-    And("that's it")
-    f.verifyNoMoreInteractions()
-  }
-
-  test("processing terminal update fails (TASK_ERROR)") { processTerminalStateUnsuccessfully(TaskState.TASK_ERROR) }
-  test("processing terminal update fails (TASK_FAILED)") { processTerminalStateUnsuccessfully(TaskState.TASK_FAILED) }
-  test("processing terminal update fails (TASK_FINISHED)") { processTerminalStateUnsuccessfully(TaskState.TASK_FINISHED) }
-  test("processing terminal update fails (TASK_KILLED)") { processTerminalStateUnsuccessfully(TaskState.TASK_KILLED) }
-  test("processing terminal update fails (TASK_LOST)") { processTerminalStateUnsuccessfully(TaskState.TASK_LOST) }
-
-  private[this] def processTerminalStateUnsuccessfully(terminalState: TaskState) {
-    val f = new Fixture
-
-    Given("a running task and a working taskTracker")
-    val existingTask = runningMarathonTask
-    val status = runningTaskStatus.toBuilder.setState(terminalState).build()
-    val failure: RuntimeException = new scala.RuntimeException("fail")
-    f.taskTracker.terminated(appId, taskId.getValue) returns Future.failed(failure)
-
-    When("processUpdate is called")
-    val error = f.step.processUpdate(
-      updateTimestamp,
-      appId,
-      existingTask,
-      status
-    ).failed.futureValue
-
-    Then("taskTracker.terminated is called")
-    verify(f.taskTracker).terminated(appId, taskId.getValue)
-
-    And("the error is propagated")
-    error.getMessage should equal("fail")
-
-    And("that's it")
-    f.verifyNoMoreInteractions()
-  }
-
-  test("processing running update for staged task") {
-    val f = new Fixture
-
-    Given("a running task and a working taskTracker")
-    val existingTask = stagedMarathonTask
-    val status = runningTaskStatus.toBuilder.setState(TaskState.TASK_RUNNING).build()
-    f.taskTracker.running(appId, status) returns Future.successful(MarathonTask.getDefaultInstance)
-
-    When("processUpdate is called")
-    f.step.processUpdate(
-      updateTimestamp,
-      appId,
-      existingTask,
-      status
-    ).futureValue
-
-    Then("taskTracker.running is called")
-    verify(f.taskTracker).running(appId, status)
-
-    And("that's it")
-    f.verifyNoMoreInteractions()
-  }
-
-  test("processing running update for running task") {
+  test("processing update succeeds") {
     val f = new Fixture
 
     Given("a running task and a working taskTracker")
     val existingTask = runningMarathonTask
     val status = runningTaskStatus.toBuilder.setState(TaskState.TASK_RUNNING).build()
-    f.taskTracker.statusUpdate(appId, status) returns Future.successful(Some(MarathonTask.getDefaultInstance))
+    f.taskTracker.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns Future.successful(())
 
     When("processUpdate is called")
     f.step.processUpdate(
@@ -126,13 +41,14 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     f.verifyNoMoreInteractions()
   }
 
-  test("processing running update for staged task fails") {
+  test("processing update fails") {
     val f = new Fixture
 
     Given("a running task and a broken taskTracker")
     val existingTask = stagedMarathonTask
     val status = runningTaskStatus.toBuilder.setState(TaskState.TASK_RUNNING).build()
-    f.taskTracker.running(appId, status) returns Future.failed(new RuntimeException("I'm broken"))
+    f.taskTracker.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns
+      Future.failed(new RuntimeException("I'm broken"))
 
     When("processUpdate is called")
     val eventualFailure = f.step.processUpdate(
@@ -142,8 +58,8 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
       status
     ).failed.futureValue
 
-    Then("taskTracker.running is called")
-    verify(f.taskTracker).running(appId, status)
+    Then("taskTracker.statusUpdate is called")
+    verify(f.taskTracker).statusUpdate(appId, status)
 
     And("the failure is propagated")
     eventualFailure.getMessage should equal("I'm broken")

@@ -318,7 +318,7 @@ class MarathonSchedulerService @Inject() (
     // Note that abdication command will be ran upon driver shutdown.
     leader.set(false)
     stopDriver()
-    taskTracker.clear()
+    taskTracker.clearCache()
   }
 
   private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = {

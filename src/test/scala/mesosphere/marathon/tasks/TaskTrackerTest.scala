@@ -40,7 +40,7 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
   test("SerializeAndDeserialize") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
-    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
 
     val deserializedTask = taskTracker.fetchTask(sampleTask.getId)
 
@@ -51,7 +51,7 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
   test("StoreAndFetchTask") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
-    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
 
     val fetchedTask = taskTracker.fetchTask(sampleTask.getId)
 
@@ -63,9 +63,9 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     val task2 = makeSampleTask(TEST_APP_NAME)
     val task3 = makeSampleTask(TEST_APP_NAME)
 
-    taskTracker.store(TEST_APP_NAME, task1).futureValue
-    taskTracker.store(TEST_APP_NAME, task2).futureValue
-    taskTracker.store(TEST_APP_NAME, task3).futureValue
+    taskTracker.created(TEST_APP_NAME, task1).futureValue
+    taskTracker.created(TEST_APP_NAME, task2).futureValue
+    taskTracker.created(TEST_APP_NAME, task3).futureValue
 
     val testAppTasks = taskTracker.fetchApp(TEST_APP_NAME).tasks
 
@@ -77,21 +77,20 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
 
   test("Clear state of TaskTracker") {
     val task1 = makeSampleTask(TEST_APP_NAME)
-    taskTracker.store(TEST_APP_NAME, task1).futureValue
-    val testAppTasks = taskTracker.get(TEST_APP_NAME)
-    taskTracker.apps should have size 1
-    taskTracker.clear()
-    taskTracker.apps should have size 0
+    taskTracker.created(TEST_APP_NAME, task1).futureValue
+    taskTracker.cachedApps should have size 1
+    taskTracker.clearCache()
+    taskTracker.cachedApps should have size 0
   }
 
   test("TaskLifecycle") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
     // CREATE TASK
-    taskTracker.created(TEST_APP_NAME, sampleTask)
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
 
     shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
-    stateShouldNotContainKey(state, sampleTask.getId)
+    stateShouldContainKey(state, sampleTask.getId)
 
     // TASK STATUS UPDATE
     val startingTaskStatus = makeTaskStatus(sampleTask.getId, TaskState.TASK_STARTING)
@@ -105,17 +104,17 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     // TASK RUNNING
     val runningTaskStatus: TaskStatus = makeTaskStatus(sampleTask.getId, TaskState.TASK_RUNNING)
 
-    taskTracker.running(TEST_APP_NAME, runningTaskStatus).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, runningTaskStatus).futureValue
 
     shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.getId)
     taskTracker.get(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK STILL RUNNING
-    val res = taskTracker.running(TEST_APP_NAME, runningTaskStatus)
-    ScalaFutures.whenReady(res.failed) { e =>
-      assert(e.getMessage == s"Task for ID ${sampleTask.getId} already running, ignoring")
-    }
+    val updatedRunningTaskStatus = runningTaskStatus.toBuilder.setTimestamp(123).build()
+    taskTracker.statusUpdate(TEST_APP_NAME, updatedRunningTaskStatus).futureValue
+    shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    assert(taskTracker.get(TEST_APP_NAME).head.getStatus == runningTaskStatus)
 
     // TASK TERMINATED
     taskTracker.terminated(TEST_APP_NAME, sampleTask.getId).futureValue
@@ -128,13 +127,31 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     assert(!taskTracker.contains(TEST_APP_NAME), "App was not removed")
 
-    // ERRONEOUS MESSAGE
+    // ERRONEOUS MESSAGE, TASK DOES NOT EXIST ANYMORE
     val erroneousStatus = makeTaskStatus(sampleTask.getId, TaskState.TASK_LOST)
 
-    val taskOption = taskTracker.statusUpdate(TEST_APP_NAME, erroneousStatus).futureValue
+    val failure = taskTracker.statusUpdate(TEST_APP_NAME, erroneousStatus).failed.futureValue
+    assert(failure.getMessage.contains("does not exist"))
+  }
 
-    // Empty option means this message was discarded since there was no matching task
-    assert(taskOption.isEmpty, "Task was able to be updated and was not removed")
+  test("TASK_FAILED status update will expunge task") { testStatusUpdateForTerminalState(TaskState.TASK_FAILED) }
+  test("TASK_FINISHED status update will expunge task") { testStatusUpdateForTerminalState(TaskState.TASK_FINISHED) }
+  test("TASK_LOST status update will expunge task") { testStatusUpdateForTerminalState(TaskState.TASK_LOST) }
+  test("TASK_KILLED status update will expunge task") { testStatusUpdateForTerminalState(TaskState.TASK_KILLED) }
+  test("TASK_ERROR status update will expunge task") { testStatusUpdateForTerminalState(TaskState.TASK_ERROR) }
+
+  private[this] def testStatusUpdateForTerminalState(taskState: TaskState) {
+    val sampleTask = makeSampleTask(TEST_APP_NAME)
+    val terminalStatusUpdate = makeTaskStatus(sampleTask.getId, taskState)
+
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
+    shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    stateShouldContainKey(state, sampleTask.getId)
+
+    taskTracker.statusUpdate(TEST_APP_NAME, terminalStatusUpdate).futureValue
+
+    shouldNotContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    stateShouldNotContainKey(state, sampleTask.getId)
   }
 
   test("UnknownTasks") {
@@ -142,9 +159,9 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     // don't call taskTracker.created, but directly running
     val runningTaskStatus: TaskStatus = makeTaskStatus(sampleTask.getId, TaskState.TASK_RUNNING)
-    val res = taskTracker.running(TEST_APP_NAME, runningTaskStatus)
+    val res = taskTracker.statusUpdate(TEST_APP_NAME, runningTaskStatus)
     ScalaFutures.whenReady(res.failed) { e =>
-      assert(e.getMessage == s"No staged task for ID ${sampleTask.getId}, ignoring")
+      assert(e.getMessage == s"task [${sampleTask.getId}] of app [/foo] does not exist")
     }
     shouldNotContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
     stateShouldNotContainKey(state, sampleTask.getId)
@@ -162,23 +179,23 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     val app3_task2 = makeSampleTask(appName3)
     val app3_task3 = makeSampleTask(appName3)
 
-    taskTracker.created(appName1, app1_task1)
-    taskTracker.running(appName1, makeTaskStatus(app1_task1.getId)).futureValue
+    taskTracker.created(appName1, app1_task1).futureValue
+    taskTracker.statusUpdate(appName1, makeTaskStatus(app1_task1.getId)).futureValue
 
-    taskTracker.created(appName1, app1_task2)
-    taskTracker.running(appName1, makeTaskStatus(app1_task2.getId)).futureValue
+    taskTracker.created(appName1, app1_task2).futureValue
+    taskTracker.statusUpdate(appName1, makeTaskStatus(app1_task2.getId)).futureValue
 
-    taskTracker.created(appName2, app2_task1)
-    taskTracker.running(appName2, makeTaskStatus(app2_task1.getId)).futureValue
+    taskTracker.created(appName2, app2_task1).futureValue
+    taskTracker.statusUpdate(appName2, makeTaskStatus(app2_task1.getId)).futureValue
 
-    taskTracker.created(appName3, app3_task1)
-    taskTracker.running(appName3, makeTaskStatus(app3_task1.getId)).futureValue
+    taskTracker.created(appName3, app3_task1).futureValue
+    taskTracker.statusUpdate(appName3, makeTaskStatus(app3_task1.getId)).futureValue
 
-    taskTracker.created(appName3, app3_task2)
-    taskTracker.running(appName3, makeTaskStatus(app3_task2.getId)).futureValue
+    taskTracker.created(appName3, app3_task2).futureValue
+    taskTracker.statusUpdate(appName3, makeTaskStatus(app3_task2.getId)).futureValue
 
-    taskTracker.created(appName3, app3_task3)
-    taskTracker.running(appName3, makeTaskStatus(app3_task3.getId)).futureValue
+    taskTracker.created(appName3, app3_task3).futureValue
+    taskTracker.statusUpdate(appName3, makeTaskStatus(app3_task3.getId)).futureValue
 
     assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
 
@@ -208,22 +225,27 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     val orphanedTask2 = makeSampleTask(ORPHANED_APP_NAME)
     val orphanedTask3 = makeSampleTask(ORPHANED_APP_NAME)
 
-    taskTracker.store(ORPHANED_APP_NAME, orphanedTask1).futureValue
-    taskTracker.store(ORPHANED_APP_NAME, orphanedTask2).futureValue
-    taskTracker.store(ORPHANED_APP_NAME, orphanedTask3).futureValue
+    taskTracker.created(ORPHANED_APP_NAME, orphanedTask1).futureValue
+    taskTracker.created(ORPHANED_APP_NAME, orphanedTask2).futureValue
+    taskTracker.created(ORPHANED_APP_NAME, orphanedTask3).futureValue
+
+    // clear in-memory state
+    taskTracker.clearCache()
 
     val task1 = makeSampleTask(TEST_APP_NAME)
     val task2 = makeSampleTask(TEST_APP_NAME)
     val task3 = makeSampleTask(TEST_APP_NAME)
 
-    taskTracker.created(TEST_APP_NAME, task1)
-    taskTracker.running(TEST_APP_NAME, makeTaskStatus(task1.getId)).futureValue
+    taskTracker.created(TEST_APP_NAME, task1).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, makeTaskStatus(task1.getId)).futureValue
 
-    taskTracker.created(TEST_APP_NAME, task2)
-    taskTracker.running(TEST_APP_NAME, makeTaskStatus(task2.getId)).futureValue
+    taskTracker.created(TEST_APP_NAME, task2).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, makeTaskStatus(task2.getId)).futureValue
 
-    taskTracker.created(TEST_APP_NAME, task3)
-    taskTracker.running(TEST_APP_NAME, makeTaskStatus(task3.getId)).futureValue
+    taskTracker.created(TEST_APP_NAME, task3).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, makeTaskStatus(task3.getId)).futureValue
+
+    assert(state.allIds().futureValue.size == 6, "Expect 6 tasks before expungeOrphanedTasks")
 
     taskTracker.expungeOrphanedTasks()
 
@@ -247,8 +269,8 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
-    taskTracker.running(TEST_APP_NAME, status).futureValue
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
@@ -268,8 +290,8 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
       .setHealthy(true)
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
-    taskTracker.running(TEST_APP_NAME, status).futureValue
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
@@ -288,8 +310,8 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
-    taskTracker.running(TEST_APP_NAME, status).futureValue
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
@@ -301,7 +323,7 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     taskTracker.statusUpdate(TEST_APP_NAME, newStatus).futureValue
 
-    verify(state, times(1)).update(any())
+    verify(state, times(1)).delete(any())
   }
 
   test("Should store if health changed") {
@@ -313,8 +335,8 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
       .setHealthy(true)
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
-    taskTracker.running(TEST_APP_NAME, status).futureValue
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
@@ -338,15 +360,15 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
       .setHealthy(true)
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
-    taskTracker.running(TEST_APP_NAME, status).futureValue
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     reset(state)
 
     val newStatus = status.toBuilder
-      .setState(Protos.TaskState.TASK_FAILED)
+      .setState(Protos.TaskState.TASK_RUNNING)
       .setHealthy(false)
       .build()
 
@@ -363,8 +385,8 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
-    taskTracker.running(TEST_APP_NAME, status).futureValue
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
@@ -387,15 +409,15 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskTracker.store(TEST_APP_NAME, sampleTask).futureValue
-    taskTracker.running(TEST_APP_NAME, status).futureValue
+    taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
+    taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskTracker.statusUpdate(TEST_APP_NAME, status).futureValue
 
     reset(state)
 
     val newStatus = status.toBuilder
-      .setState(Protos.TaskState.TASK_FAILED)
+      .setState(Protos.TaskState.TASK_RUNNING)
       .setHealthy(false)
       .build()
 
@@ -412,6 +434,9 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     val clock = ConstantClock(Timestamp.now())
     val now = clock.now()
+
+    def statusBuilder(id: String, state: TaskState) =
+      TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(id)).setState(state)
 
     val overdueUnstagedTask = MarathonTask.newBuilder()
       .setId("unstaged")
@@ -434,29 +459,29 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
       // When using MarathonTasks.makeTask, this would be set to a made up value
       // This test shall explicitly make sure that the task gets selected even if it is unlikely old
       .setStagedAt(now - 10.days)
-      .setStatus(TaskStatus.newBuilder().setState(TaskState.TASK_STAGING).buildPartial())
+      .setStatus(statusBuilder("overdueStagedTask", TaskState.TASK_STAGING))
       .buildPartial()
 
     val stagedTask = MarathonTask.newBuilder()
       .setId("staged")
-      .setStatus(TaskStatus.newBuilder().setState(TaskState.TASK_STAGING).buildPartial())
+      .setStatus(statusBuilder("staged", TaskState.TASK_STAGING))
       .setStagedAt(now - 10.seconds)
       .buildPartial()
 
     val runningTask = MarathonTask.newBuilder()
       .setId("running")
-      .setStatus(TaskStatus.newBuilder().setState(TaskState.TASK_RUNNING).buildPartial())
+      .setStatus(statusBuilder("running", TaskState.TASK_STAGING))
       .setStagedAt(now - 5.seconds)
       .setStartedAt(now - 2.seconds)
       .buildPartial()
 
     Given("Several somehow overdue tasks plus some not overdue tasks")
-    taskTracker.created(TEST_APP_NAME, unconfirmedOverdueTask)
-    taskTracker.created(TEST_APP_NAME, unconfirmedNotOverdueTask)
-    taskTracker.created(TEST_APP_NAME, overdueUnstagedTask)
-    taskTracker.created(TEST_APP_NAME, overdueStagedTask)
-    taskTracker.created(TEST_APP_NAME, stagedTask)
-    taskTracker.created(TEST_APP_NAME, runningTask)
+    taskTracker.created(TEST_APP_NAME, unconfirmedOverdueTask).futureValue
+    taskTracker.created(TEST_APP_NAME, unconfirmedNotOverdueTask).futureValue
+    taskTracker.created(TEST_APP_NAME, overdueUnstagedTask).futureValue
+    taskTracker.created(TEST_APP_NAME, overdueStagedTask).futureValue
+    taskTracker.created(TEST_APP_NAME, stagedTask).futureValue
+    taskTracker.created(TEST_APP_NAME, runningTask).futureValue
 
     When("We check which tasks should be killed because they're not yet staged or unconfirmed")
     val overdueTasks = taskTracker.determineOverdueTasks(now)

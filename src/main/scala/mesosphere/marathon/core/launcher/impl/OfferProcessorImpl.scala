@@ -114,9 +114,8 @@ private[launcher] class OfferProcessorImpl(
       log.info("Save task [{}]", task.marathonTask.getId)
       val taskId = task.marathonTask.getId
       val appId = TaskIdUtil.appId(taskId)
-      taskTracker.created(appId, task.marathonTask)
       taskTracker
-        .store(appId, task.marathonTask)
+        .created(appId, task.marathonTask)
         .map(_ => Some(task))
         .recoverWith {
           case NonFatal(e) =>

@@ -20,8 +20,8 @@ import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
-import org.scalatest.{ Matchers, GivenWhenThen }
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -84,8 +84,7 @@ class TaskStatusUpdateProcessorImplTest
 
     Given("a known task")
     f.taskTracker.fetchTask(update.wrapped.taskId.getValue) returns Some(marathonTask)
-    f.taskTracker.terminated(appId, update.wrapped.taskId.getValue) returns
-      Future.successful(Some(marathonTask))
+    f.taskTracker.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns Future.successful(())
     f.appRepository.app(appId, version) returns Future.successful(Some(app))
     And("and a cooperative launchQueue")
     f.launchQueue.notifyOfTaskUpdate(any) returns Future.successful(None)
@@ -95,7 +94,7 @@ class TaskStatusUpdateProcessorImplTest
 
     Then("we expect that the appropriate taskTracker methods have been called")
     verify(f.taskTracker).fetchTask(update.wrapped.taskId.getValue)
-    verify(f.taskTracker).terminated(appId, update.wrapped.taskId.getValue)
+    verify(f.taskTracker).statusUpdate(appId, status)
 
     And("the healthCheckManager got informed")
     verify(f.healthCheckManager).update(status, version)

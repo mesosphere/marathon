@@ -17,11 +17,11 @@ import mesosphere.util.Logging
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.{ Protos => mesos }
 import org.rogach.scallop.ScallopConf
+import org.scalatest.concurrent.ScalaFutures
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
+class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with Logging {
 
   var hcManager: MarathonHealthCheckManager = _
   var taskTracker: TaskTracker = _
@@ -77,8 +77,8 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
       .setVersion(version.toString)
       .build
 
-    taskTracker.created(appId, marathonTask)
-    taskTracker.running(appId, taskStatus)
+    taskTracker.created(appId, marathonTask).futureValue
+    taskTracker.statusUpdate(appId, taskStatus).futureValue
 
     taskId
   }
@@ -122,12 +122,12 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
-    taskTracker.created(appId, marathonTask)
-    taskTracker.running(appId, taskStatus)
+    taskTracker.created(appId, marathonTask).futureValue
+    taskTracker.statusUpdate(appId, taskStatus).futureValue
 
     hcManager.add(appId, version, healthCheck)
 
-    val status1 = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
+    val status1 = hcManager.status(appId, taskId.getValue).futureValue
     assert(status1 == Seq(Health(taskId.getValue)))
 
     // send unhealthy task status
@@ -135,7 +135,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
       hcManager.update(taskStatus.toBuilder.setHealthy(false).build, version)
     }
 
-    val Seq(health2) = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
+    val Seq(health2) = hcManager.status(appId, taskId.getValue).futureValue
     assert(health2.lastFailure.isDefined)
     assert(health2.lastSuccess.isEmpty)
 
@@ -144,7 +144,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
       hcManager.update(taskStatus.toBuilder.setHealthy(true).build, version)
     }
 
-    val Seq(health3) = Await.result(hcManager.status(appId, taskId.getValue), 5.seconds)
+    val Seq(health3) = hcManager.status(appId, taskId.getValue).futureValue
     assert(health3.lastFailure.isDefined)
     assert(health3.lastSuccess.isDefined)
     assert(health3.lastSuccess > health3.lastFailure)
@@ -163,7 +163,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     val task2 = makeRunningTask(appId, version)
     val task3 = makeRunningTask(appId, version)
 
-    def statuses = Await.result(hcManager.statuses(appId), 5.seconds)
+    def statuses = hcManager.statuses(appId).futureValue
 
     statuses.foreach {
       case (_, health) => assert(health.isEmpty)
@@ -228,17 +228,17 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
         .build
     }
     def startTask(appId: PathId, task: MarathonTask, version: Timestamp, healthChecks: Set[HealthCheck]) = {
-      Await.result(appRepository.store(AppDefinition(
+      appRepository.store(AppDefinition(
         id = appId,
         versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
-      )), 2.second)
-      taskTracker.created(appId, task)
-      Await.result(taskTracker.running(appId, taskStatus(task)), 2.second)
+      )).futureValue
+      taskTracker.created(appId, task).futureValue
+      taskTracker.statusUpdate(appId, taskStatus(task)).futureValue
     }
-    def startTask_i(i: Int): MarathonTask = startTask(appId, tasks(i), versions(i), healthChecks(i))
+    def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: MarathonTask) =
-      Await.result(taskTracker.terminated(appId, task.getId), 2.second)
+      taskTracker.terminated(appId, task.getId).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath
@@ -248,7 +248,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
       .build
     val otherHealthChecks = Set(HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds))
     startTask(otherAppId, otherTask, Timestamp(42), otherHealthChecks)
-    hcManager.addAllFor(Await.result(appRepository.currentVersion(otherAppId), 2.second).get)
+    hcManager.addAllFor(appRepository.currentVersion(otherAppId).futureValue.get)
     assert(hcManager.list(otherAppId) == otherHealthChecks)
 
     // start task 0 without running health check
@@ -263,14 +263,14 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     val captured1 = captureEvents.forBlock {
       assert(hcManager.list(appId) == Set())
       startTask_i(1)
-      Await.result(hcManager.reconcileWith(appId), 2.second)
+      hcManager.reconcileWith(appId).futureValue
     }
     assert(captured1.map(_.eventType) == Vector("add_health_check_event"))
     assert(hcManager.list(appId) == healthChecks(1))
 
     // reconcileWith leaves health check running
     val captured2 = captureEvents.forBlock {
-      Await.result(hcManager.reconcileWith(appId), 2.second)
+      hcManager.reconcileWith(appId).futureValue
     }
     assert(captured2.isEmpty)
     assert(hcManager.list(appId) == healthChecks(1))
@@ -278,7 +278,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     // reconcileWith starts health checks of task 2 and leaves those of task 1 running
     val captured3 = captureEvents.forBlock {
       startTask_i(2)
-      Await.result(hcManager.reconcileWith(appId), 2.second)
+      hcManager.reconcileWith(appId).futureValue
     }
     assert(captured3.map(_.eventType) == Vector("add_health_check_event", "add_health_check_event"))
     assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2))
@@ -287,7 +287,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     val captured4 = captureEvents.forBlock {
       stopTask(appId, tasks(1))
       assert(hcManager.list(appId) == healthChecks(1) ++ healthChecks(2))
-      Await.result(hcManager.reconcileWith(appId), 2.second)
+      hcManager.reconcileWith(appId).futureValue
     }
     assert(captured4.map(_.eventType) == Vector("remove_health_check_event"))
     assert(hcManager.list(appId) == healthChecks(2))
@@ -296,7 +296,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
     val captured5 = captureEvents.forBlock {
       stopTask(appId, tasks(2))
       assert(hcManager.list(appId) == healthChecks(2))
-      Await.result(hcManager.reconcileWith(appId), 2.second)
+      hcManager.reconcileWith(appId).futureValue
     }
     assert(captured5.map(_.eventType) == Vector.empty)
     assert(hcManager.list(appId) == healthChecks(2))
