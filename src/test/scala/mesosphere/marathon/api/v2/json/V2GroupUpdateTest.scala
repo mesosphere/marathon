@@ -15,7 +15,7 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
       )),
       V2GroupUpdate(
         "apps".toPath,
-        Set(V2AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../foo".toPath, "/test".toPath)))
+        Set(V2AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
       )
     )
     )
@@ -35,7 +35,7 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     apps.get.apps should have size 1
     val app = apps.get.apps.head
     app.id.toString should be ("/apps/app1")
-    app.dependencies should be (Set("/apps/app1/d1".toPath, "/apps/foo".toPath, "/test".toPath))
+    app.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
   }
 
   test("A group update can be applied to existing entries") {
@@ -55,7 +55,7 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
         ),
         V2GroupUpdate(
           "apps".toPath,
-          Set(V2AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../foo".toPath, "/test".toPath)))
+          Set(V2AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
         )
       )
     )
@@ -77,7 +77,7 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     apps.get.apps should have size 1
     val app = apps.get.apps.head
     app.id.toString should be ("/apps/app1")
-    app.dependencies should be (Set("/apps/app1/d1".toPath, "/apps/foo".toPath, "/test".toPath))
+    app.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
   }
 
   test("V2GroupUpdate will update a Group correctly") {
@@ -131,5 +131,26 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     intercept[IllegalArgumentException] {
       update(V2Group(Group.empty), Timestamp.now())
     }
+  }
+
+  test("Relative path of a dependency, should be relative to group and not to the app") {
+    Given("A group with two apps. Second app is dependend of first.")
+    val update = V2GroupUpdate(PathId.empty, Set.empty[V2AppDefinition], Set(
+      V2GroupUpdate(
+        "test-group".toPath,
+        Set(V2AppDefinition("test-app1".toPath),
+          V2AppDefinition("test-app2".toPath, dependencies = Set("test-app1".toPath)))
+      )
+    ))
+
+    When("The update is performed")
+    val result = update(V2Group(Group.empty), Timestamp.now()).toGroup()
+
+    Then("The update is applied correctly")
+    val group = result.group("test-group".toRootPath)
+    group should be('defined)
+    group.get.apps should have size 2
+    val dependentApp = group.get.app("/test-group/test-app2".toPath).get
+    dependentApp.dependencies should be (Set("/test-group/test-app1".toPath))
   }
 }
