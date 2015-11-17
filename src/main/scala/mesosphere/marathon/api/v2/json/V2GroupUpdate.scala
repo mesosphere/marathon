@@ -38,7 +38,7 @@ case class V2GroupUpdate(
 
   def toApp(gid: PathId, app: V2AppDefinition, version: Timestamp): V2AppDefinition = {
     val appId = app.id.canonicalPath(gid)
-    app.copy(id = appId, dependencies = app.dependencies.map(_.canonicalPath(appId)), version = version)
+    app.copy(id = appId, dependencies = app.dependencies.map(_.canonicalPath(gid)), version = version)
   }
 
   def toGroup(gid: PathId, version: Timestamp): V2Group = V2Group(
