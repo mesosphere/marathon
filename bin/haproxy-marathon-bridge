@@ -62,6 +62,9 @@ function install_haproxy_system {
   elif [ -e "/etc/system-release" ] && (grep -q "Amazon Linux AMI" "/etc/system-release")
   then
     os="AmazonAMI"
+  elif [ -e "/etc/SuSE-release" ]
+  then
+    os="SuSE"
   fi
      
   if [[ $os == "CentOS" ]] || [[ $os == "RHEL" ]] || [[ $os == "AmazonAMI" ]] || [[ $os == "OracleServer" ]]
@@ -72,6 +75,10 @@ function install_haproxy_system {
   then 
     sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
     sudo sed -i 's/^ENABLED=0/ENABLED=1/' /etc/default/haproxy
+  elif [[ $os == "SuSE" ]]
+  then
+    sudo zypper -n --no-gpg-checks --non-interactive install --auto-agree-with-licenses haproxy
+    sudo chkconfig haproxy on
   else 
     echo "$os is not a supported OS for this feature."
     exit 1
