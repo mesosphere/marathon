@@ -35,7 +35,7 @@ require_arg() {
 }
 
 # Filter out MARATHON_APP* env variables. All MARATHON_XXX=yyy variables are interpreted as --xxx yyy application parameter
-for env_op in `env | grep -v ^MARATHON_APP | grep ^MARATHON_ | awk '{gsub(/MARATHON_/,""); gsub(/=/," "); printf("%s%s ", "--", tolower($1)); print $2 }'`; do
+for env_op in `env | grep -v ^MARATHON_APP | grep ^MARATHON_ | awk '{gsub(/MARATHON_/,""); gsub(/=/," "); printf("%s%s ", "--", tolower($1)); $1=""; print $0 }'`; do
   addApplication "$env_op"
 done
 
