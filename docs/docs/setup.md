@@ -1,8 +1,8 @@
 ---
-title: Configuration Tips for Marathon
+title: Setup Recommendations for Marathon
 ---
 
-# Configuration Tips for Marathon
+# Setup Recommendations for Marathon
 
 This sections contains tips how to setup Marathon. E.g. you might need to tweak the configuration of Marathon
 to run well in certain cloud environments. You are invited to contribute your tips to our documentation!
