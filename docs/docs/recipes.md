@@ -189,3 +189,69 @@ since `0.7.4`).  Requires Mesos version `0.20.0` or later.
   "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
 }
 ```
+
+## Constraining task placement / static partitioning
+
+Usually, Marathon decides where to start your application tasks without your interference.
+That is desirable because it truly makes your infrastructure easily scalable. All resources are treated equally. 
+However, there are times when you want
+to separate some machines from the common pool and ascertain that only some special tasks are scheduled there. For
+example,
+
+* you might have some nodes with publicly reachable network addresses. You only want to start tasks there
+  that make use of public addresses.
+* you have some nodes with special hardware such as very fast SSDs or GPUs that you do not want to waste for
+  regular tasks.
+  
+### Using roles
+
+You can configure some of your Mesos agents such that they offer their resources only to a specific
+Mesos role. Only Mesos frameworks (such as Marathon) that are configured for this specific Mesos role will get
+offers for these resources. The advantage is that you can prevent accidental usage of these resources 
+by other Mesos frameworks this way.
+
+Configuring Marathon: `--mesos_role yourrole`
+
+Configuring Mesos Master: `--roles=<...other roles...>,yourrole`
+
+Configuring the Mesos Agents in question: Either use `--default_role yourrole` to assign all resources of that
+agent to your role or use the `--resources` configuration to assign individual resources to that role (such
+as a certain port range). See
+[the Mesos command line documentation](http://mesos.apache.org/documentation/latest/configuration/) for details.
+
+### Preventing Accidental Usage of Special Roles inside Marathon
+
+With the base setup, all Marathon applications will by default use all resources either assigned to the 
+unspecific "*" role or the role you specified with `--mesos_role`. One way to ensure that only special tasks 
+are run on these nodes is to use a separate Marathon instance for these. Another way is to configure
+Marathon such that it will ignore your special roles for apps by default and then explicitly configure the
+exceptions as shown below.
+
+Configuring Marathon to ignore the special resources by default: `--default_accepted_resource_roles '*'` (make sure
+that you quote the "*" correctly)
+
+Configure an app to run on top of resources of your special role:
+
+```javascript
+{
+    "id": "/my.special.app",
+    "acceptedResourceRoles": [ "yourrole" ]
+    // ... more config ...
+}
+```
+
+### Limitations of Static Partitioning with Roles
+
+The biggest limitation is that one framework can currently only be assigned to one role. So if you have
+multiple types of special nodes you cannot handle them within one framework — you need to have separate frameworks
+for them. Another limitation is that you have to reconfigure your Mesos master and some of your agents.
+
+### Using constraints
+
+You can use constraints to restrict where to run the tasks for your apps. See 
+[constraints]({ site.baseurl }}/docs/constraints.html) for details.
+
+The advantages are that you only have to provide appropriate attributes on the Mesos agents. The disadvantages
+are that nothing prevents another framework to schedule tasks on these agents and consume all resources that
+you need for your special tasks. Inside of Marathon, you have to make sure that all non-special apps are
+constraint to NOT use the special nodes.
