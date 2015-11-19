@@ -6,9 +6,10 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.health.HealthCheckActor.AppHealth
+import mesosphere.marathon.health.{ Health, HealthCheckManager, HealthCheck }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
+import mesosphere.marathon.state.{ Timestamp, AppDefinition, UpgradeStrategy }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.TaskReplaceActor.RetryKills
 import org.apache.mesos.Protos.{ Status, TaskID }
@@ -22,7 +23,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.{ Future, Await, Promise }
 
 class TaskReplaceActorTest
     extends TestKit(ActorSystem("System"))
@@ -38,12 +39,16 @@ class TaskReplaceActorTest
   }
 
   test("Replace without health checks") {
-    val app = AppDefinition(id = "myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(id = id, instances = 5, upgradeStrategy = UpgradeStrategy(0.0),
+      versionInfo = versionInfo)
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
@@ -62,6 +67,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))
@@ -80,17 +86,21 @@ class TaskReplaceActorTest
   }
 
   test("Replace with health checks") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
     val app = AppDefinition(
-      id = "myApp".toPath,
+      id = id,
       instances = 5,
       healthChecks = Set(HealthCheck()),
-      upgradeStrategy = UpgradeStrategy(0.0))
+      upgradeStrategy = UpgradeStrategy(0.0),
+      versionInfo = versionInfo)
 
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
@@ -109,6 +119,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))
@@ -127,13 +138,17 @@ class TaskReplaceActorTest
   }
 
   test("Replace and scale down from more than new minCapacity") {
-    val app = AppDefinition(id = "myApp".toPath, instances = 2, upgradeStrategy = UpgradeStrategy(1.0))
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(id = id, instances = 2, upgradeStrategy = UpgradeStrategy(1.0),
+      versionInfo = versionInfo)
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
@@ -152,6 +167,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))
@@ -173,11 +189,14 @@ class TaskReplaceActorTest
   }
 
   test("Replace with minimum running tasks") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
     val app = AppDefinition(
-      id = "myApp".toPath,
+      id = id,
       instances = 3,
       healthChecks = Set(HealthCheck()),
-      upgradeStrategy = UpgradeStrategy(0.5)
+      upgradeStrategy = UpgradeStrategy(0.5),
+      versionInfo = versionInfo
     )
 
     val driver = mock[SchedulerDriver]
@@ -186,6 +205,7 @@ class TaskReplaceActorTest
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     var oldTaskCount = 3
 
@@ -208,6 +228,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))
@@ -243,11 +264,14 @@ class TaskReplaceActorTest
   }
 
   test("Replace with rolling upgrade without over-capacity") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
     val app = AppDefinition(
-      id = "myApp".toPath,
+      id = id,
       instances = 3,
       healthChecks = Set(HealthCheck()),
-      upgradeStrategy = UpgradeStrategy(0.5, 0.0)
+      upgradeStrategy = UpgradeStrategy(0.5, 0.0),
+      versionInfo = versionInfo
     )
 
     val driver = mock[SchedulerDriver]
@@ -256,6 +280,7 @@ class TaskReplaceActorTest
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     var oldTaskCount = 3
 
@@ -278,6 +303,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))
@@ -317,11 +343,14 @@ class TaskReplaceActorTest
   }
 
   test("Replace with rolling upgrade with minimal over-capacity") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
     val app = AppDefinition(
-      id = "myApp".toPath,
+      id = id,
       instances = 3,
       healthChecks = Set(HealthCheck()),
-      upgradeStrategy = UpgradeStrategy(1.0, 0.0) // 1 task over-capacity is ok
+      upgradeStrategy = UpgradeStrategy(1.0, 0.0), // 1 task over-capacity is ok
+      versionInfo = versionInfo
     )
 
     val driver = mock[SchedulerDriver]
@@ -330,6 +359,7 @@ class TaskReplaceActorTest
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     var oldTaskCount = 3
 
@@ -352,6 +382,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))
@@ -389,11 +420,14 @@ class TaskReplaceActorTest
   }
 
   test("Replace with rolling upgrade with 2/3 over-capacity") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
     val app = AppDefinition(
-      id = "myApp".toPath,
+      id = id,
       instances = 3,
       healthChecks = Set(HealthCheck()),
-      upgradeStrategy = UpgradeStrategy(1.0, 0.7)
+      upgradeStrategy = UpgradeStrategy(1.0, 0.7),
+      versionInfo = versionInfo
     )
 
     val driver = mock[SchedulerDriver]
@@ -402,6 +436,7 @@ class TaskReplaceActorTest
     val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     var oldTaskCount = 3
 
@@ -424,6 +459,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))
@@ -460,13 +496,307 @@ class TaskReplaceActorTest
     expectTerminated(ref)
   }
 
+  test("Resume replace after failover") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(
+      id = id,
+      instances = 5,
+      healthChecks = Set(HealthCheck()),
+      upgradeStrategy = UpgradeStrategy(0.0),
+      versionInfo = versionInfo)
+
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").setVersion(versionInfo.version.toString).build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").setVersion(versionInfo.version.toString).build()
+    val taskOld = MarathonTask.newBuilder().setId("taskOld_id").build()
+    val queue = mock[LaunchQueue]
+    val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
+    val health1 = mock[Health]
+    val health2 = mock[Health]
+
+    when(health1.alive).thenReturn(false)
+    when(health2.alive).thenReturn(false)
+    when(health1.taskId).thenReturn("taskA_id")
+    when(health2.taskId).thenReturn("taskB_id")
+    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskOld))
+    when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+        Status.DRIVER_RUNNING
+      }
+    })
+
+    val promise = Promise[Unit]()
+
+    val ref = TestActorRef(
+      new TaskReplaceActor(
+        driver,
+        queue,
+        tracker,
+        healthCheckManager,
+        system.eventStream,
+        app,
+        promise))
+
+    watch(ref)
+
+    ref ! AppHealth(collection.immutable.Seq(health1, health2))
+
+    for (i <- 0 until app.instances)
+      ref ! HealthStatusChanged(app.id, s"task_$i", app.version.toString, alive = true)
+
+    Await.result(promise.future, 5.seconds)
+    verify(queue, never()).resetDelay(app)
+    verify(driver).killTask(TaskID.newBuilder().setValue(taskOld.getId).build())
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+
+    expectTerminated(ref)
+  }
+
+  test("Resume replace after failover with some healthy") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(
+      id = id,
+      instances = 5,
+      healthChecks = Set(HealthCheck()),
+      upgradeStrategy = UpgradeStrategy(0.0),
+      versionInfo = versionInfo)
+
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").setVersion(versionInfo.version.toString).build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").setVersion(versionInfo.version.toString).build()
+    val taskOld = MarathonTask.newBuilder().setId("taskOld_id").setVersion("1970-01-01T00:00:00.000Z").build()
+    val queue = mock[LaunchQueue]
+    val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
+    val health1 = mock[Health]
+    val health2 = mock[Health]
+
+    when(health1.alive).thenReturn(true)
+    when(health2.alive).thenReturn(true)
+    when(health1.taskId).thenReturn("taskA_id")
+    when(health2.taskId).thenReturn("taskB_id")
+    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskOld))
+    when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+        Status.DRIVER_RUNNING
+      }
+    })
+
+    val promise = Promise[Unit]()
+
+    val ref = TestActorRef(
+      new TaskReplaceActor(
+        driver,
+        queue,
+        tracker,
+        healthCheckManager,
+        system.eventStream,
+        app,
+        promise))
+
+    watch(ref)
+
+    ref ! AppHealth(collection.immutable.Seq(health1, health2))
+
+    for (i <- 0 until app.instances - 2)
+      ref ! HealthStatusChanged(app.id, s"task_$i", app.version.toString, alive = true)
+
+    Await.result(promise.future, 5.seconds)
+    verify(queue, never()).resetDelay(app)
+    verify(driver).killTask(TaskID.newBuilder().setValue(taskOld.getId).build())
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+
+    expectTerminated(ref)
+  }
+
+  test("Resume replace after failover minhealth 1") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(
+      id = id,
+      instances = 2,
+      healthChecks = Set(HealthCheck()),
+      upgradeStrategy = UpgradeStrategy(1.0),
+      versionInfo = versionInfo)
+
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").setVersion(versionInfo.version.toString).build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").setVersion(versionInfo.version.toString).build()
+    val taskOld = MarathonTask.newBuilder().setId("taskOld_id").setVersion("1970-01-01T00:00:00.000Z").build()
+    val queue = mock[LaunchQueue]
+    val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
+    val health1 = mock[Health]
+    val health2 = mock[Health]
+
+    when(health1.alive).thenReturn(true)
+    when(health2.alive).thenReturn(true)
+    when(health1.taskId).thenReturn("taskA_id")
+    when(health2.taskId).thenReturn("taskB_id")
+    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskOld))
+    when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+        Status.DRIVER_RUNNING
+      }
+    })
+
+    val promise = Promise[Unit]()
+
+    val ref = TestActorRef(
+      new TaskReplaceActor(
+        driver,
+        queue,
+        tracker,
+        healthCheckManager,
+        system.eventStream,
+        app,
+        promise))
+
+    watch(ref)
+
+    ref ! AppHealth(collection.immutable.Seq(health1, health2))
+
+    Await.result(promise.future, 5.seconds)
+    verify(queue, never()).resetDelay(app)
+    verify(driver).killTask(TaskID.newBuilder().setValue(taskOld.getId).build())
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+
+    expectTerminated(ref)
+  }
+
+  test("Resume replace only kill") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(
+      id = id,
+      instances = 2,
+      healthChecks = Set(HealthCheck()),
+      upgradeStrategy = UpgradeStrategy(0.0),
+      versionInfo = versionInfo)
+
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").setVersion(versionInfo.version.toString).build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").setVersion(versionInfo.version.toString).build()
+    val taskOld = MarathonTask.newBuilder().setId("taskOld_id").setVersion("1970-01-01T00:00:00.000Z").build()
+    val queue = mock[LaunchQueue]
+    val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
+    val health1 = mock[Health]
+    val health2 = mock[Health]
+
+    when(health1.alive).thenReturn(true)
+    when(health2.alive).thenReturn(true)
+    when(health1.taskId).thenReturn("taskA_id")
+    when(health2.taskId).thenReturn("taskB_id")
+    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB, taskOld))
+    when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+        system.eventStream.publish(update)
+        Status.DRIVER_RUNNING
+      }
+    })
+
+    val promise = Promise[Unit]()
+
+    val ref = TestActorRef(
+      new TaskReplaceActor(
+        driver,
+        queue,
+        tracker,
+        healthCheckManager,
+        system.eventStream,
+        app,
+        promise))
+
+    watch(ref)
+
+    ref ! AppHealth(collection.immutable.Seq(health1, health2))
+
+    Await.result(promise.future, 5.seconds)
+    verify(queue, never()).resetDelay(app)
+    verify(driver).killTask(TaskID.newBuilder().setValue(taskOld.getId).build())
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+
+    expectTerminated(ref)
+  }
+
+  test("Resume replace noop") {
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(
+      id = id,
+      instances = 2,
+      healthChecks = Set(HealthCheck()),
+      upgradeStrategy = UpgradeStrategy(0.0),
+      versionInfo = versionInfo)
+
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTask.newBuilder().setId("taskA_id").setVersion(versionInfo.version.toString).build()
+    val taskB = MarathonTask.newBuilder().setId("taskB_id").setVersion(versionInfo.version.toString).build()
+    val queue = mock[LaunchQueue]
+    val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
+    val health1 = mock[Health]
+    val health2 = mock[Health]
+
+    when(health1.alive).thenReturn(true)
+    when(health2.alive).thenReturn(true)
+    when(health1.taskId).thenReturn("taskA_id")
+    when(health2.taskId).thenReturn("taskB_id")
+    when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
+
+    val promise = Promise[Unit]()
+
+    val ref = TestActorRef(
+      new TaskReplaceActor(
+        driver,
+        queue,
+        tracker,
+        healthCheckManager,
+        system.eventStream,
+        app,
+        promise))
+
+    watch(ref)
+
+    ref ! AppHealth(collection.immutable.Seq(health1, health2))
+
+    Await.result(promise.future, 5.seconds)
+    verify(queue, never()).resetDelay(app)
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
+    verify(driver, never()).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+
+    expectTerminated(ref)
+  }
+
   test("Cancelled") {
-    val app = AppDefinition(id = "myApp".toPath, instances = 2)
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(id = id, instances = 2, versionInfo = versionInfo)
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
 
@@ -477,6 +807,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))
@@ -493,12 +824,16 @@ class TaskReplaceActorTest
   }
 
   test("Retry outstanding kills") {
-    val app = AppDefinition(id = "myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(id = id, instances = 5, upgradeStrategy = UpgradeStrategy(0.0),
+      versionInfo = versionInfo)
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
@@ -525,6 +860,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))
@@ -546,12 +882,16 @@ class TaskReplaceActorTest
   }
 
   test("Wait until the tasks are killed") {
-    val app = AppDefinition(id = "myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
+    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val id = "myApp".toPath
+    val app = AppDefinition(id = id, instances = 5, upgradeStrategy = UpgradeStrategy(0.0),
+      versionInfo = versionInfo)
     val driver = mock[SchedulerDriver]
     val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
+    val healthCheckManager = mock[HealthCheckManager]
 
     when(tracker.get(app.id)).thenReturn(Set(taskA, taskB))
 
@@ -562,6 +902,7 @@ class TaskReplaceActorTest
         driver,
         queue,
         tracker,
+        healthCheckManager,
         system.eventStream,
         app,
         promise))

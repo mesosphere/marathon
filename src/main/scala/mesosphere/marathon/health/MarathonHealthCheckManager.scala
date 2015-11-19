@@ -187,6 +187,15 @@ class MarathonHealthCheckManager @Inject() (
       }
     }
 
+  override def requestHealth(
+    appId: PathId,
+    appVersion: Timestamp,
+    requester: ActorRef): Unit = {
+    listActive(appId, appVersion).foreach { activeHealthCheck =>
+      activeHealthCheck.actor.tell(GetAppHealth, requester)
+    }
+  }
+
   override def status(
     appId: PathId,
     taskId: String): Future[Seq[Health]] = {
