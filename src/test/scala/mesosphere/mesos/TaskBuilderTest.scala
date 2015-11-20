@@ -2,24 +2,25 @@ package mesosphere.mesos
 
 import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
+import mesosphere.marathon.Protos.{Constraint, MarathonTask}
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
-import mesosphere.mesos.protos.{ Resource, TaskID, _ }
-import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-import org.apache.mesos.Protos.{ Offer, _ }
-import org.joda.time.{ DateTime, DateTimeZone }
+import mesosphere.marathon.state._
+import mesosphere.marathon.tasks.{MarathonTasks, TaskTracker}
+import mesosphere.mesos.protos.{Resource, TaskID, _}
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo
+import org.apache.mesos.Protos.{Offer, _}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
+import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
-class TaskBuilderTest extends MarathonSpec {
+class TaskBuilderTest extends MarathonSpec with Matchers {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -120,7 +121,7 @@ class TaskBuilderTest extends MarathonSpec {
 
     def resourceOpt(name: String) = taskInfo.getResourcesList.asScala.find(_.getName == name)
 
-    assert(resourceOpt("disk") == None)
+    assert(resourceOpt("disk").isEmpty)
   }
 
   test("build creates task with appropriate resource share also preserves role") {
@@ -181,8 +182,8 @@ class TaskBuilderTest extends MarathonSpec {
 
     val expectedLabels = Labels.newBuilder.addAllLabels(
       labels.map {
-        case (key, value) =>
-          Label.newBuilder.setKey(key).setValue(value).build()
+        case (mKey, mValue) =>
+          Label.newBuilder.setKey(mKey).setValue(mValue).build()
       }.asJava
     ).build()
     assert(taskInfo.hasLabels)
@@ -228,6 +229,85 @@ class TaskBuilderTest extends MarathonSpec {
     }
 
     // TODO test for resources etc.
+  }
+
+  test("BuildIfMatchesWithNetwork") {
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
+      .addResources(ScalarResource("cpus", 1))
+      .addResources(ScalarResource("mem", 128))
+      .addResources(ScalarResource("disk", 2000))
+      .build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "testApp".toPath,
+        args = Some(Seq("a", "b", "c")),
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        network = Some(
+          NetworkInterface(
+            groups = Seq("a", "b", "c"),
+            labels = Map(
+              "foo" -> "bar",
+              "baz" -> "buzz"
+            )
+          )
+        )
+      )
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+
+    taskInfo.hasExecutor should be (false)
+    taskInfo.hasContainer should be (true)
+    val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
+    networkInfos.size should be (1)
+    networkInfos.head.getGroupsList.asScala should be (Seq("a", "b", "c"))
+  }
+
+  test("BuildIfMatchesWithNetworkAndCustomExecutor") {
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
+      .addResources(ScalarResource("cpus", 1))
+      .addResources(ScalarResource("mem", 128))
+      .addResources(ScalarResource("disk", 2000))
+      .build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "testApp".toPath,
+        args = Some(Seq("a", "b", "c")),
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        executor = "/custom/executor",
+        network = Some(
+          NetworkInterface(
+            groups = Seq("a", "b", "c"),
+            labels = Map(
+              "foo" -> "bar",
+              "baz" -> "buzz"
+            )
+          )
+        )
+      )
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+
+    taskInfo.hasContainer should be (false)
+    taskInfo.hasExecutor should be (true)
+    taskInfo.getExecutor.hasContainer should be (true)
+    val networkInfos = taskInfo.getExecutor.getContainer.getNetworkInfosList.asScala
+    networkInfos.size should be (1)
+    networkInfos.head.getGroupsList.asScala should be (Seq("a", "b", "c"))
+    networkInfos.head.getLabels.getLabelsList.asScala.map(_.getKey) should be (Seq("foo", "baz"))
   }
 
   test("BuildIfMatchesWithCommandAndExecutor") {
@@ -388,7 +468,7 @@ class TaskBuilderTest extends MarathonSpec {
         executor = "//cmd",
         container = Some(Container(
           docker = Some(Docker(
-            network = Some(Network.BRIDGE),
+            network = Some(DockerInfo.Network.BRIDGE),
             portMappings = Some(Seq(
               PortMapping(containerPort = 0, hostPort = 0, servicePort = 9000, protocol = "tcp")
             ))
@@ -760,7 +840,7 @@ class TaskBuilderTest extends MarathonSpec {
         app = AppDefinition(
           container = Some(Container(
             docker = Some(Docker(
-              network = Some(Network.BRIDGE),
+              network = Some(DockerInfo.Network.BRIDGE),
               portMappings = Some(Seq(
                 PortMapping(containerPort = 8080, hostPort = 0, servicePort = 9000, protocol = "tcp"),
                 PortMapping(containerPort = 8081, hostPort = 0, servicePort = 9000, protocol = "tcp")
@@ -787,7 +867,7 @@ class TaskBuilderTest extends MarathonSpec {
           ports = Seq(22, 23),
           container = Some(Container(
             docker = Some(Docker(
-              network = Some(Network.BRIDGE),
+              network = Some(DockerInfo.Network.BRIDGE),
               portMappings = Some(Seq(
                 PortMapping(containerPort = 8080, hostPort = 0, servicePort = 9000, protocol = "tcp"),
                 PortMapping(containerPort = 8081, hostPort = 0, servicePort = 9000, protocol = "tcp")

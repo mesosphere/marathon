@@ -109,6 +109,29 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     read should be(app)
   }
 
+  test("NETWORK to proto and back again") {
+    val app = AppDefinition(
+      id = "app-with-network-isolation".toPath,
+      cmd = Some("sleep 30"),
+      network = Some(
+        NetworkInterface(
+          groups = Seq("a", "b", "c"),
+          labels = Map(
+            "foo" -> "bar",
+            "baz" -> "buzz"
+          )
+        )
+      )
+    )
+
+    val proto = app.toProto
+    proto.getId should be("app-with-network-isolation")
+    proto.hasNetwork should be (true)
+
+    val read = AppDefinition().mergeFromProto(proto)
+    read should be(app)
+  }
+
   test("MergeFromProto") {
     val cmd = mesos.CommandInfo.newBuilder
       .setValue("bash foo-*/start -Dhttp.port=$PORT")
