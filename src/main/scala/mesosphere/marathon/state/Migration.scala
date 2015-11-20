@@ -74,6 +74,7 @@ class Migration @Inject() (
           s"Migration for storage: ${from.str} to current: ${current.str}: " +
             s"apply change for version: ${migrateVersion.str} "
         )
+        // FIXME: That applies all steps in parallel!
         change.apply().map(_ => migrateVersion)
     }
     Future.sequence(result)
@@ -336,7 +337,10 @@ class MigrationTo0_13(taskRepository: TaskRepository, store: PersistentStore) {
     }
 
     entityStore.names().flatMap { keys =>
+      log.info("Found {} tasks to migrate", keys.size)
       Future.sequence(keys.map(migrateKey)).map(_ => ())
+    }.map { _ =>
+      log.info("Completed 0.13 migration")
     }
   }
 
