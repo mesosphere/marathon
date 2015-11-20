@@ -159,7 +159,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(tracker.count(app.id)).thenReturn(0)
     when(repo.store(any())).thenReturn(Future.successful(app))
 
-    val statusUpdateEvent = MesosStatusUpdateEvent("", taskA.getId, "TASK_FAILED", "", app.id, "", Nil, app.version.toString)
+    val statusUpdateEvent = MesosStatusUpdateEvent("", taskA.getId, "TASK_FAILED", "", app.id, "", "", Nil, app.version.toString)
 
     when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -204,7 +204,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(tracker.count(app.id)).thenReturn(0)
     when(repo.store(any())).thenReturn(Future.successful(app))
 
-    val statusUpdateEvent = MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString)
+    val statusUpdateEvent = MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", app.id, "", "", Nil, app.version.toString)
 
     when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -285,7 +285,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", app.id, "", Nil, app.version.toString))
+        system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", app.id, "", "", Nil, app.version.toString))
         Status.DRIVER_RUNNING
       }
     })

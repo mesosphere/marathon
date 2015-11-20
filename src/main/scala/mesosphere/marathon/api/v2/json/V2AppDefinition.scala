@@ -1,14 +1,14 @@
 package mesosphere.marathon.api.v2.json
 
-import java.lang.{ Double => JDouble, Integer => JInt }
+import java.lang.{Double => JDouble, Integer => JInt}
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.validation.FieldConstraints._
-import mesosphere.marathon.api.validation.{ PortIndices, ValidV2AppDefinition }
+import mesosphere.marathon.api.validation.{PortIndices, ValidV2AppDefinition}
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state._
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -65,6 +65,8 @@ case class V2AppDefinition(
 
     acceptedResourceRoles: Option[Set[String]] = None,
 
+    network: Option[NetworkInterface] = None,
+
     version: Timestamp = Timestamp.now(),
 
     versionInfo: Option[V2AppDefinition.VersionInfo] = None) extends Timestamped {
@@ -95,7 +97,7 @@ case class V2AppDefinition(
       backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container,
       healthChecks = healthChecks, dependencies = dependencies, upgradeStrategy = upgradeStrategy,
       labels = labels, acceptedResourceRoles = acceptedResourceRoles,
-      versionInfo = appVersionInfo
+      network = network, versionInfo = appVersionInfo
     )
   }
 
@@ -124,6 +126,6 @@ object V2AppDefinition {
       backoff = app.backoff, backoffFactor = app.backoffFactor, maxLaunchDelay = app.maxLaunchDelay,
       container = app.container, healthChecks = app.healthChecks, dependencies = app.dependencies,
       upgradeStrategy = app.upgradeStrategy, labels = app.labels, acceptedResourceRoles = app.acceptedResourceRoles,
-      version = app.version, versionInfo = maybeVersionInfo)
+      network = app.network, version = app.version, versionInfo = maybeVersionInfo)
   }
 }

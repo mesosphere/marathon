@@ -49,8 +49,8 @@ class TaskKillActorTest
 
     watch(ref)
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", PathId.empty, "", Nil, ""))
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.getId, "TASK_KILLED", "", PathId.empty, "", Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", PathId.empty, "", "", Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.getId, "TASK_KILLED", "", PathId.empty, "", "", Nil, ""))
 
     Await.result(promise.future, 5.seconds) should be(())
     verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
@@ -133,8 +133,8 @@ class TaskKillActorTest
 
     ref ! SynchronizeTasks
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", PathId.empty, "", Nil, ""))
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.getId, "TASK_KILLED", "", PathId.empty, "", Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.getId, "TASK_KILLED", "", PathId.empty, "", "", Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.getId, "TASK_KILLED", "", PathId.empty, "", "", Nil, ""))
 
     Await.result(promise.future, 5.seconds) should be(())
     verify(driver, times(2)).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
