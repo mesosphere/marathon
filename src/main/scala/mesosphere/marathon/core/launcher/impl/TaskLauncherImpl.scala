@@ -24,6 +24,9 @@ private[launcher] class TaskLauncherImpl(
   override def launchTasks(offerID: OfferID, taskInfos: Seq[TaskInfo]): Boolean = {
     val launched = withDriver(s"launchTasks($offerID)") { driver =>
       import scala.collection.JavaConverters._
+      if (log.isDebugEnabled) {
+        log.debug(s"Launching tasks on $offerID:\n${taskInfos.mkString("\n")}")
+      }
       driver.launchTasks(Collections.singleton(offerID), taskInfos.asJava)
     }
     if (launched) {

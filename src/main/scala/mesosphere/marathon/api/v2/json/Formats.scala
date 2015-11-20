@@ -12,8 +12,9 @@ import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container.{ Docker, Volume }
 import mesosphere.marathon.state._
+import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.upgrade._
-import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => mesos }
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
@@ -51,7 +52,8 @@ trait Formats
     with ContainerFormats
     with DeploymentFormats
     with EventFormats
-    with EventSubscribersFormats {
+    with EventSubscribersFormats
+    with IpAddressFormats {
   import scala.collection.JavaConverters._
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
@@ -67,10 +69,43 @@ trait Formats
     )
   }
 
+  implicit lazy val networkInfoProtocolWrites = Writes[mesos.NetworkInfo.Protocol] { protocol =>
+    JsString(protocol.name)
+  }
+
+  private[this] val allowedProtocolString =
+    mesos.NetworkInfo.Protocol.values().toSeq.map(_.getDescriptorForType.getName).mkString(", ")
+
+  implicit lazy val networkInfoProtocolReads = Reads[mesos.NetworkInfo.Protocol] { json =>
+    json.validate[String].flatMap { protocolString: String =>
+
+      Option(mesos.NetworkInfo.Protocol.valueOf(protocolString)) match {
+        case Some(protocol) => JsSuccess(protocol)
+        case None =>
+          JsError(s"'$protocolString' is not a valid protocol. Allowed values: $allowedProtocolString")
+      }
+
+    }
+  }
+
+  implicit lazy val ipAddressFormat: Format[mesos.NetworkInfo.IPAddress] = {
+    def toIpAddress(ipAddress: String, protocol: mesos.NetworkInfo.Protocol): mesos.NetworkInfo.IPAddress =
+      mesos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ipAddress).setProtocol(protocol).build()
+
+    def toTuple(ipAddress: mesos.NetworkInfo.IPAddress): (String, mesos.NetworkInfo.Protocol) =
+      (ipAddress.getIpAddress, ipAddress.getProtocol)
+
+    (
+      (__ \ "ipAddress").format[String] ~
+      (__ \ "protocol").format[mesos.NetworkInfo.Protocol]
+    )(toIpAddress, toTuple)
+  }
+
   implicit lazy val MarathonTaskWrites: Writes[MarathonTask] = Writes { task =>
     Json.obj(
       "id" -> task.getId,
       "host" -> (if (task.hasHost) task.getHost else JsNull),
+      "ipAddresses" -> MarathonTasks.ipAddresses(task),
       "ports" -> task.getPortsList.asScala,
       "startedAt" -> (if (task.getStartedAt != 0) Timestamp(task.getStartedAt) else JsNull),
       "stagedAt" -> (if (task.getStagedAt != 0) Timestamp(task.getStagedAt) else JsNull),
@@ -163,8 +198,8 @@ trait Formats
 trait ContainerFormats {
   import Formats._
 
-  implicit lazy val NetworkFormat: Format[Network] =
-    enumFormat(Network.valueOf, str => s"$str is not a valid network type")
+  implicit lazy val DockerNetworkFormat: Format[DockerInfo.Network] =
+    enumFormat(DockerInfo.Network.valueOf, str => s"$str is not a valid network type")
 
   implicit lazy val PortMappingFormat: Format[Docker.PortMapping] = (
     (__ \ "containerPort").formatNullable[Integer].withDefault(0) ~
@@ -175,7 +210,7 @@ trait ContainerFormats {
 
   implicit lazy val DockerFormat: Format[Docker] = (
     (__ \ "image").format[String] ~
-    (__ \ "network").formatNullable[Network] ~
+    (__ \ "network").formatNullable[DockerInfo.Network] ~
     (__ \ "portMappings").formatNullable[Seq[Docker.PortMapping]] ~
     (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
     (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
@@ -199,6 +234,18 @@ trait ContainerFormats {
     (__ \ "volumes").formatNullable[Seq[Volume]].withDefault(Nil) ~
     (__ \ "docker").formatNullable[Docker]
   )(Container(_, _, _), unlift(Container.unapply))
+}
+
+trait IpAddressFormats {
+  import Formats._
+
+  implicit lazy val NetworkProtocolFormat: Format[mesos.NetworkInfo.Protocol] =
+    enumFormat(mesos.NetworkInfo.Protocol.valueOf, str => s"$str is not a valid protocol")
+
+  implicit lazy val IpAddressFormat: Format[IpAddress] = (
+    (__ \ "groups").formatNullable[Seq[String]].withDefault(Nil) ~
+    (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
+  )(IpAddress(_, _), unlift(IpAddress.unapply))
 }
 
 trait DeploymentFormats {
@@ -227,7 +274,6 @@ trait DeploymentFormats {
         _.map { case (k, v) => new java.net.URL(k) -> v }
       ),
     Writes[Map[java.net.URL, String]] { m =>
-      val mapped = m.map { case (k, v) => k.toString -> v }
       Json.toJson(m)
     }
   )
@@ -341,7 +387,7 @@ trait HealthCheckFormats {
     )
   }
 
-  implicit lazy val ProtocolFormat: Format[Protocol] =
+  implicit lazy val HealthCheckProtocolFormat: Format[Protocol] =
     enumFormat(Protocol.valueOf, str => s"$str is not a valid protocol")
 
   implicit lazy val HealthCheckFormat: Format[HealthCheck] = {
@@ -412,7 +458,6 @@ trait V2Formats {
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(AppDefinition.DefaultConstraints) ~
       (__ \ "uris").readNullable[Seq[String]].withDefault(AppDefinition.DefaultUris) ~
       (__ \ "storeUrls").readNullable[Seq[String]].withDefault(AppDefinition.DefaultStoreUrls) ~
-      (__ \ "ports").readNullable[Seq[Integer]](uniquePorts).withDefault(AppDefinition.DefaultPorts) ~
       (__ \ "requirePorts").readNullable[Boolean].withDefault(AppDefinition.DefaultRequirePorts) ~
       (__ \ "backoffSeconds").readNullable[Long].withDefault(AppDefinition.DefaultBackoff.toSeconds).asSeconds ~
       (__ \ "backoffFactor").readNullable[Double].withDefault(AppDefinition.DefaultBackoffFactor) ~
@@ -421,27 +466,50 @@ trait V2Formats {
       (__ \ "container").readNullable[Container] ~
       (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(AppDefinition.DefaultHealthChecks) ~
       (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies)
-    )(V2AppDefinition(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { app =>
+    )((
+        id, cmd, args, maybeString, env, instances, cpus, mem, disk, executor, constraints, uris, storeUrls,
+        requirePorts, backoff, backoffFactor, maxLaunchDelay, container, checks, dependencies
+      ) => V2AppDefinition(
+        id = id, cmd = cmd, args = args, user = maybeString, env = env, instances = instances, cpus = cpus,
+        mem = mem, disk = disk, executor = executor, constraints = constraints, uris = uris,
+        storeUrls = storeUrls, ports = Nil,
+        requirePorts = requirePorts, backoff = backoff,
+        backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container, healthChecks = checks,
+        dependencies = dependencies
+      )).flatMap { app =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
+          maybePorts: Option[Seq[Integer]],
           upgradeStrategy: UpgradeStrategy,
           labels: Map[String, String],
           acceptedResourceRoles: Option[Set[String]],
+          ipAddress: Option[IpAddress],
           version: Timestamp)
 
         val extraReads: Reads[ExtraFields] =
           (
+            (__ \ "ports").readNullable[Seq[Integer]](uniquePorts) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(AppDefinition.DefaultUpgradeStrategy) ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
+            (__ \ "ipAddress").readNullable[IpAddress] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now())
           )(ExtraFields)
+            .filter(ValidationError("You cannot specify both an IP address and ports")) { extra =>
+              extra.maybePorts.forall(_.isEmpty) || extra.ipAddress.isEmpty
+            }
 
         extraReads.map { extraFields =>
+          // Normally, our default is one port. If an ipAddress is defined that would lead to an error
+          // if left unchanged.
+          def defaultPorts: Seq[Integer] = if (extraFields.ipAddress.isDefined) Nil else AppDefinition.DefaultPorts
+
           app.copy(
+            ports = extraFields.maybePorts.getOrElse(defaultPorts),
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             acceptedResourceRoles = extraFields.acceptedResourceRoles,
+            ipAddress = extraFields.ipAddress,
             version = extraFields.version,
             versionInfo = None
           )
@@ -499,6 +567,7 @@ trait V2Formats {
         "upgradeStrategy" -> app.upgradeStrategy,
         "labels" -> app.labels,
         "acceptedResourceRoles" -> app.acceptedResourceRoles,
+        "ipAddress" -> app.ipAddress,
         "version" -> app.version
       )
 

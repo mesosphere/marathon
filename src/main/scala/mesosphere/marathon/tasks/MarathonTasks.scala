@@ -8,7 +8,6 @@ import org.apache.mesos.Protos.Attribute
 import scala.collection.JavaConverters._
 
 object MarathonTasks {
-
   /*
    * Despite its name, stagedAt is set on task creation and before the TASK_STAGED notification from Mesos. This is
    * important because we periodically check for any tasks with an old stagedAt timestamp and kill them (See
@@ -31,5 +30,21 @@ object MarathonTasks {
       .setStagedAt(now.toDateTime.getMillis)
       .setSlaveId(slaveId)
       .build
+  }
+
+  def ipAddresses(task: MarathonTask): Seq[Protos.NetworkInfo.IPAddress] = {
+    task.getNetworksList.asScala.flatMap(_.getIpAddressesList.asScala.toList)
+  }
+
+  /**
+    * Returns the IP address (as string) to use connect to the task.
+    *
+    * If the supplied task has at least one NetworkInfo with an IP address
+    * filled in, this function returns the first such address.
+    *
+    * In all other cases, this function returns the slave host address.
+    */
+  def effectiveIpAddress(task: MarathonTask): String = {
+    ipAddresses(task).map(_.getIpAddress).headOption.getOrElse(task.getHost)
   }
 }

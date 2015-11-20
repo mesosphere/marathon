@@ -3,6 +3,7 @@ package mesosphere.marathon.api
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 import org.apache.mesos.Protos.TaskState
+
 import scala.collection.JavaConverters._
 
 object EndpointsHelper {
@@ -17,14 +18,14 @@ object EndpointsHelper {
     apps: Seq[AppDefinition],
     delimiter: String): String = {
     val sb = new StringBuilder
-    for (app <- apps) {
+    for (app <- apps if app.ipAddress.isEmpty) {
       val cleanId = app.id.safePath.replaceAll("\\s+", "_")
       val tasks = taskTracker.get(app.id)
 
       val servicePorts = app.servicePorts
 
       if (servicePorts.isEmpty) {
-        sb.append(s"${cleanId}$delimiter $delimiter")
+        sb.append(s"$cleanId$delimiter $delimiter")
         for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
           sb.append(s"${task.getHost} ")
         }
