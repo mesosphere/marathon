@@ -28,6 +28,10 @@ trait Mockito extends MockitoSugar {
     M.verifyNoMoreInteractions(mocks: _*)
   }
 
+  def reset(mocks: AnyRef*): Unit = {
+    M.reset(mocks: _*)
+  }
+
   class MockAnswer[T](function: Array[AnyRef] => T) extends Answer[T] {
     def answer(invocation: InvocationOnMock): T = {
       function(invocation.getArguments)
