@@ -5,7 +5,7 @@ import akka.testkit.{ ImplicitSender, TestActorRef, TestKit }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, Timestamp }
-import org.apache.mesos.Protos.TaskState
+import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
@@ -79,14 +79,24 @@ class HistoryActorTest
     verify(failureRepo, times(0)).store(any(), any())
   }
 
-  private def statusMessage(state: TaskState) = MesosStatusUpdateEvent(
-    slaveId = "slaveId",
-    taskId = "taskId",
-    taskStatus = state.name(),
-    message = "message",
-    appId = "appId".toPath,
-    host = "host",
-    ports = Nil,
-    version = Timestamp.now().toString
-  )
+  private def statusMessage(state: TaskState) = {
+    val ipAddress: NetworkInfo.IPAddress =
+      NetworkInfo.IPAddress
+        .newBuilder()
+        .setIpAddress("123.123.123.123")
+        .setProtocol(NetworkInfo.Protocol.IPv4)
+        .build()
+
+    MesosStatusUpdateEvent(
+      slaveId = "slaveId",
+      taskId = "taskId",
+      taskStatus = state.name(),
+      message = "message",
+      appId = "appId".toPath,
+      host = "host",
+      ipAddresses = Seq(ipAddress),
+      ports = Nil,
+      version = Timestamp.now().toString
+    )
+  }
 }

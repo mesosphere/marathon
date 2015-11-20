@@ -32,9 +32,62 @@ in the overview have been consolidated to make them easier to understand. Additi
 deployment table have been updated inline with the applications list view.
 
 #### IP-per-task UI
-Some changes have been made in order to support IP-per-task in the API. The relevenant part of the app
+Some changes have been made in order to support IP-per-task in the API. The relevant part of the app
 definition is exposed in the configuration page, and the `ipAddresses` field is integrated in the task
 detail view.
+
+#### Health Checks: allow port instead of portIndex
+Previously, the port to be used for health checks could only be specified by supplying a port index.  Now it
+can also be specified directly using the new `port` field.
+
+#### EXPERIMENTAL: IP-per-task support
+
+This can drastically simplify service discovery, since you can use
+[mesos-dns](https://github.com/mesosphere/mesos-dns) to rely on DNS for service discovery. This enables your
+applications to use address-only (A) DNS records in combination with known ports to connect to other
+services -- as you would do it in a traditional static cluster environment.
+
+You can request an IP-per-task with default settings like this:
+
+```javascript
+{
+  "id": "/i-have-my-own-ip",
+  // ... more settings ...
+  "ipAddress": {}
+}
+```
+
+Marathon passes down the request for the IP to Mesos. You have to make sure that you installed & configured
+the appropriate
+[Network Isolation Modules](https://docs.google.com/document/d/17mXtAmdAXcNBwp_JfrxmZcQrs7EO6ancSbejrqjLQ0g) &
+IP Access Manager (IPAM) modules in Mesos. The Marathon support for this feature requires Mesos v0.26.
+
+If an application requires IP-per-task, then it can not request ports to be allocated in the slave.
+
+Currently, this feature does not work in combination with Docker containers. We might still change some
+aspects of the API and we appreciate your feedback.
+
+#### EXPERIMENTAL: Network security groups
+
+If your IP Access Manager (IPAM) supports it, you can refine your IP configuration using network security
+groups and labels:
+
+```javascript
+{
+  "id": "/i-have-my-own-ip",
+  // ... more settings ...
+  "ipAddress": {
+    "groups": ["production"],
+    "labels": {
+      "some-meaningful-config": "potentially interpreted by the IPAM"
+    }
+  }
+}
+```
+
+Network security groups only allow network traffic between tasks that have at least one of their configured
+groups in common. This makes it easy to disallow your staging environment to interfere with production
+traffic.
 
 ### Fixed issues
 - #2505 - Provide memory and cpu as environment variables in docker containers

@@ -5,6 +5,7 @@ import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.upgrade.DeploymentPlan
+import org.apache.mesos.Protos
 import play.api.libs.json._
 
 /**

@@ -109,6 +109,30 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     read should be(app)
   }
 
+  test("ipAddress to proto and back again") {
+    val app = AppDefinition(
+      id = "app-with-ip-address".toPath,
+      cmd = Some("sleep 30"),
+      ports = Nil,
+      ipAddress = Some(
+        IpAddress(
+          groups = Seq("a", "b", "c"),
+          labels = Map(
+            "foo" -> "bar",
+            "baz" -> "buzz"
+          )
+        )
+      )
+    )
+
+    val proto = app.toProto
+    proto.getId should be("app-with-ip-address")
+    proto.hasIpAddress should be (true)
+
+    val read = AppDefinition().mergeFromProto(proto)
+    read should be(app)
+  }
+
   test("MergeFromProto") {
     val cmd = mesos.CommandInfo.newBuilder
       .setValue("bash foo-*/start -Dhttp.port=$PORT")

@@ -1,21 +1,47 @@
 {
-  "id": "/tools/docker/registry",
-  "instances": 1,
-  "cpus": 0.5,
-  "mem": 4096,
+  "id": "/foo",
+  "instances": 2,
+  "cmd": "sleep 1000",
+  "cpus": 0.1,
   "disk": 0,
-  "executor": "",
-  "constraints": [],
-  "uris": [],
-  "storeUrls": [],
-  "ports": [
-    5000
+  "mem": 16,
+  "acceptedResourceRoles": [
+    "mesos_role"
   ],
-  "requirePorts": false,
-  "backoffSeconds": 1,
+  "args": [
+    "sleep",
+    "100"
+  ],
   "backoffFactor": 1.15,
-  "maxLaunchDelaySeconds": 3600,
+  "backoffSeconds": 1,
+  "constraints": [
+    [
+      "hostname",
+      "LIKE",
+      "srv2.*"
+    ]
+  ],
   "container": {
+    "docker": {
+      "forcePullImage": false,
+      "image": "mesosphere:marathon/latest",
+      "network": "BRIDGE",
+      "parameters": [
+        {
+          "key": "name",
+          "value": "kdc"
+        }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 0,
+          "protocol": "tcp",
+          "servicePort": 10019
+        }
+      ],
+      "privileged": false
+    },
     "type": "DOCKER",
     "volumes": [
       {
@@ -23,28 +49,50 @@
         "hostPath": "/hdd/tools/docker/registry",
         "mode": "RW"
       }
-    ],
-    "docker": {
-      "image": "registry",
-      "network": "BRIDGE",
-      "portMappings": [
-        {
-          "containerPort": 5000,
-          "hostPort": 0,
-          "servicePort": 5000,
-          "protocol": "tcp"
-        }
-      ],
-      "privileged": false,
-      "parameters": [],
-      "forcePullImage": false
+    ]
+  },
+  "dependencies": [
+    "/prod/group"
+  ],
+  "env": {
+    "XPS1": "Test",
+    "XPS2": "Rest"
+  },
+  "executor": "",
+  "healthChecks": [
+    {
+      "gracePeriodSeconds": 300,
+      "ignoreHttp1xx": false,
+      "intervalSeconds": 20,
+      "maxConsecutiveFailures": 3,
+      "path": "/",
+      "portIndex": 0,
+      "protocol": "HTTP",
+      "timeoutSeconds": 20
+    }
+  ],
+  "labels": {
+    "owner": "zeus",
+    "note": "Away from olympus"
+  },
+  "maxLaunchDelaySeconds": 3600,
+  "network": {
+    "groups": [ "dev" ],
+    "labels": {
+      "environment": "dev"
     }
   },
-  "healthChecks": [],
-  "dependencies": [],
+  "ports": [
+    0
+  ],
+  "requirePorts": false,
+  "storeUrls": [],
   "upgradeStrategy": {
-    "minimumHealthCapacity": 1,
-    "maximumOverCapacity": 1
+    "maximumOverCapacity": 1,
+    "minimumHealthCapacity": 1
   },
-  "version": "2015-08-19T21:26:47.616Z"
+  "uris": [
+    "https://foo.com/setup.py"
+  ],
+  "user": "root"
 }

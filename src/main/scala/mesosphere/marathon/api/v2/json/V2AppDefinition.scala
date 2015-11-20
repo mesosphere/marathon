@@ -65,6 +65,8 @@ case class V2AppDefinition(
 
     acceptedResourceRoles: Option[Set[String]] = None,
 
+    ipAddress: Option[IpAddress] = None,
+
     version: Timestamp = Timestamp.now(),
 
     versionInfo: Option[V2AppDefinition.VersionInfo] = None) extends Timestamped {
@@ -79,7 +81,7 @@ case class V2AppDefinition(
 
   /**
     * Returns the canonical internal representation of this API-specific
-    * application defintion.
+    * application definition.
     */
   def toAppDefinition: AppDefinition = {
     val appVersionInfo = versionInfo match {
@@ -95,7 +97,7 @@ case class V2AppDefinition(
       backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container,
       healthChecks = healthChecks, dependencies = dependencies, upgradeStrategy = upgradeStrategy,
       labels = labels, acceptedResourceRoles = acceptedResourceRoles,
-      versionInfo = appVersionInfo
+      ipAddress = ipAddress, versionInfo = appVersionInfo
     )
   }
 
@@ -124,6 +126,6 @@ object V2AppDefinition {
       backoff = app.backoff, backoffFactor = app.backoffFactor, maxLaunchDelay = app.maxLaunchDelay,
       container = app.container, healthChecks = app.healthChecks, dependencies = app.dependencies,
       upgradeStrategy = app.upgradeStrategy, labels = app.labels, acceptedResourceRoles = app.acceptedResourceRoles,
-      version = app.version, versionInfo = maybeVersionInfo)
+      ipAddress = app.ipAddress, version = app.version, versionInfo = maybeVersionInfo)
   }
 }

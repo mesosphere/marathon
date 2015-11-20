@@ -11,7 +11,8 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
-import play.api.libs.json.Json
+import play.api.data.validation.ValidationError
+import play.api.libs.json.{ JsError, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -435,5 +436,84 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       """
     val readResult4 = fromJson(json4)
     assert(readResult4.copy(version = app4.version) == app4)
+  }
+
+  test("Read app with ip address") {
+    val app = V2AppDefinition(
+      id = "app-with-network-isolation".toPath,
+      cmd = Some("python3 -m http.server 8080"),
+      ports = Nil,
+      ipAddress = Some(IpAddress(
+        groups = Seq("a", "b", "c"),
+        labels = Map(
+          "foo" -> "bar",
+          "baz" -> "buzz"
+        )
+      ))
+    )
+
+    val json =
+      """
+      {
+        "id": "app-with-network-isolation",
+        "cmd": "python3 -m http.server 8080",
+        "ipAddress": {
+          "groups": ["a", "b", "c"],
+          "labels": {
+            "foo": "bar",
+            "baz": "buzz"
+          }
+        }
+      }
+      """
+
+    val readResult = fromJson(json)
+
+    assert(readResult.copy(version = app.version) == app)
+  }
+
+  test("Read app with ip address and an empty ports list") {
+    val app = V2AppDefinition(
+      id = "app-with-network-isolation".toPath,
+      cmd = Some("python3 -m http.server 8080"),
+      ports = Nil,
+      ipAddress = Some(IpAddress())
+    )
+
+    val json =
+      """
+      {
+        "id": "app-with-network-isolation",
+        "cmd": "python3 -m http.server 8080",
+        "ports": [],
+        "ipAddress": {}
+      }
+      """
+
+    val readResult = fromJson(json)
+
+    assert(readResult.copy(version = app.version) == app)
+  }
+
+  test("App may not have non-empty ports and ipAddress") {
+    val json =
+      """
+      {
+        "id": "app-with-network-isolation",
+        "cmd": "python3 -m http.server 8080",
+        "ports": [0],
+        "ipAddress": {
+          "groups": ["a", "b", "c"],
+          "labels": {
+            "foo": "bar",
+            "baz": "buzz"
+          }
+        }
+      }
+      """
+
+    import Formats._
+    val result = Json.fromJson[V2AppDefinition](Json.parse(json))
+    assert(result == JsError(ValidationError("You cannot specify both an IP address and ports")))
   }
 }
