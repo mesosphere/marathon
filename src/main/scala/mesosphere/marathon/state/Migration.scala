@@ -68,16 +68,15 @@ class Migration @Inject() (
       val msg = s"Migration from versions < $minSupportedStorageVersion is not supported. Your version: $from"
       throw new MigrationFailedException(msg)
     }
-    val result = migrations.filter(_._1 > from).sortBy(_._1).map {
-      case (migrateVersion, change) =>
+    migrations.filter(_._1 > from).sortBy(_._1).foldLeft(Future.successful(List.empty[StorageVersion])) {
+      case (resultsFuture, (migrateVersion, change)) => resultsFuture.flatMap { res =>
         log.info(
           s"Migration for storage: ${from.str} to current: ${current.str}: " +
             s"apply change for version: ${migrateVersion.str} "
         )
-        // FIXME: That applies all steps in parallel!
-        change.apply().map(_ => migrateVersion)
+        change.apply().map(_ => res :+ migrateVersion)
+      }
     }
-    Future.sequence(result)
   }
 
   def initializeStore(): Future[Unit] = store match {
