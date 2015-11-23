@@ -345,4 +345,37 @@ class MarathonSchedulerServiceTest
     verify(candidate.get, Mockito.timeout(1000)).offerLeadership(schedulerService)
     leader.get() should be (false)
   }
+
+  test("Abdicate leadership when driver ends with error") {
+    when(frameworkIdUtil.fetch()).thenReturn(None)
+    candidate = Some(mock[Candidate])
+    val driver = mock[SchedulerDriver]
+    val driverFactory = mock[SchedulerDriverFactory]
+
+    val schedulerService = new MarathonSchedulerService(
+      leadershipCoordinator,
+      healthCheckManager,
+      candidate,
+      config,
+      frameworkIdUtil,
+      leader,
+      appRepository,
+      taskTracker,
+      driverFactory,
+      system,
+      migration,
+      schedulerActor,
+      events
+    )
+
+    when(leadershipCoordinator.prepareForStart()).thenReturn(Future.successful(()))
+    when(driverFactory.createDriver()).thenReturn(driver)
+
+    when(driver.run()).thenThrow(new RuntimeException("driver failure"))
+
+    schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
+
+    verify(candidate.get, Mockito.timeout(1000)).offerLeadership(schedulerService)
+    leader.get() should be (false)
+  }
 }
