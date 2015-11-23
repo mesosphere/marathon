@@ -866,15 +866,17 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   private def assertTaskInfo(taskInfo: TaskInfo, taskPorts: Seq[Long], offer: Offer): Unit = {
-    val range = taskInfo.getResourcesList.asScala
-      .find(r => r.getName == Resource.PORTS)
-      .map(r => r.getRanges.getRange(0))
-    assert(range.isDefined)
+    val portsFromTaskInfo = {
+      val asScalaRanges = for {
+        resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
+        range <- resource.getRanges.getRangeList.asScala
+      } yield range.getBegin to range.getEnd
+      asScalaRanges.flatMap(_.iterator).toSet
+    }
+    assert(portsFromTaskInfo == taskPorts.toSet)
+
     // The taskName is the elements of the path, reversed, and joined by dots
     assert("frontend.product" == taskInfo.getName)
-    assert(2 == taskPorts.size)
-    assert(taskPorts.head == range.get.getBegin.toInt)
-    assert(taskPorts(1) == range.get.getEnd.toInt)
 
     assert(!taskInfo.hasExecutor)
     assert(taskInfo.hasCommand)
