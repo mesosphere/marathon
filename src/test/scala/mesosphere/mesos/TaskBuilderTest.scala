@@ -24,6 +24,30 @@ class TaskBuilderTest extends MarathonSpec {
   import mesosphere.mesos.protos.Implicits._
 
   test("BuildIfMatches") {
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+
+    val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        executor = "//cmd",
+        ports = Seq(8080, 8081)
+      )
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+    assertTaskInfo(taskInfo, taskPorts, offer)
+
+    assert(!taskInfo.hasLabels)
+  }
+
+  test("BuildIfMatches works with duplicated resources") {
     val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
       .addResources(ScalarResource("cpus", 1))
       .addResources(ScalarResource("mem", 128))
@@ -132,11 +156,7 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("BuildIfMatchesWithLabels") {
-    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
-      .addResources(ScalarResource("cpus", 1))
-      .addResources(ScalarResource("mem", 128))
-      .addResources(ScalarResource("disk", 2000))
-      .build
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
     val labels = Map("foo" -> "bar", "test" -> "test")
 
@@ -170,11 +190,7 @@ class TaskBuilderTest extends MarathonSpec {
   }
 
   test("BuildIfMatchesWithArgs") {
-    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
-      .addResources(ScalarResource("cpus", 1))
-      .addResources(ScalarResource("mem", 128))
-      .addResources(ScalarResource("disk", 2000))
-      .build
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
     val task: Option[(TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
@@ -360,9 +376,6 @@ class TaskBuilderTest extends MarathonSpec {
     val offer = makeBasicOfferWithRole(
       cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31000, role = "*"
     )
-      .addResources(ScalarResource("cpus", 1, "*"))
-      .addResources(ScalarResource("mem", 128, "*"))
-      .addResources(ScalarResource("disk", 1000, "*"))
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
