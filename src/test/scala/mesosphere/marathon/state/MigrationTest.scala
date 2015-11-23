@@ -10,11 +10,12 @@ import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import mesosphere.util.Mockito
 import mesosphere.util.state.memory.InMemoryEntity
 import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 
-class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWhenThen {
+class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWhenThen with ScalaFutures {
 
   test("migrations can be filtered by version") {
     val f = new Fixture
@@ -45,6 +46,26 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
 
     f.migration.migrate()
     verify(f.store, atLeastOnce).initialize()
+  }
+
+  test("migration is executed sequentially") {
+    val f = new Fixture
+
+    f.groupRepo.rootGroup() returns Future.successful(None)
+    f.groupRepo.store(any, any) returns Future.successful(Group.empty)
+    f.store.load("internal:storage:version") returns Future.successful(None)
+    f.store.create(any, any) returns Future.successful(mock[PersistentEntity])
+    f.store.update(any) returns Future.successful(mock[PersistentEntity])
+    f.store.allIds() returns Future.successful(Seq.empty)
+    f.store.initialize() returns Future.successful(())
+    f.store.load(any) returns Future.successful(None)
+    f.appRepo.apps() returns Future.successful(Seq.empty)
+    f.appRepo.allPathIds() returns Future.successful(Seq.empty)
+    f.groupRepo.group("root") returns Future.successful(None)
+
+    val result = f.migration.applyMigrationSteps(StorageVersions(0, 0, 0)).futureValue
+    result should not be 'empty
+    result should be(f.migration.migrations.map(_._1))
   }
 
   test("applyMigrationSteps throws an error for unsupported versions") {
