@@ -23,11 +23,12 @@ import scala.concurrent.Future
 class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
     extends EntityStore[T] with LeadershipCallback with VersionedEntry {
 
-  private[state] val cache = new TrieMap[String, Option[T]]()
+  @volatile
+  private[state] var cacheOpt: Option[TrieMap[String, Option[T]]] = None
   private[this] implicit val ec = ThreadPoolContext.context
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  override def fetch(key: String): Future[Option[T]] = {
+  override def fetch(key: String): Future[Option[T]] = directOrCached(store.fetch(key)) { cache =>
     if (noVersionKey(key)) {
       Future.successful{
         cache.get(key) match {
@@ -47,26 +48,33 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
     }
   }
 
-  override def modify(key: String, onSuccess: (T) => Unit = _ => ())(update: Update): Future[T] = {
-    def onModified(t: T): Unit = {
-      cache.update(key, if (noVersionKey(key)) Some(t) else None)
-      onSuccess(t)
+  override def modify(key: String, onSuccess: (T) => Unit = _ => ())(update: Update): Future[T] =
+    directOrCached(store.modify(key, onSuccess)(update)) { cache =>
+      def onModified(t: T): Unit = {
+        cache.update(key, if (noVersionKey(key)) Some(t) else None)
+        onSuccess(t)
+      }
+      store.modify(key, onModified)(update)
     }
-    store.modify(key, onModified)(update)
+
+  override def names(): Future[Seq[String]] = directOrCached(store.names()) { cache =>
+    Future.successful(cache.keySet.toSeq)
   }
 
-  override def names(): Future[Seq[String]] = Future.successful(cache.keySet.toSeq)
-
-  override def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] = {
-    def onExpunged(): Unit = {
-      cache.remove(key)
-      onSuccess()
+  override def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] =
+    directOrCached(store.expunge(key, onSuccess)) { cache =>
+      def onExpunged(): Unit = {
+        cache.remove(key)
+        onSuccess()
+      }
+      store.expunge(key, onExpunged)
     }
-    store.expunge(key, onExpunged)
-  }
 
+  /**
+    * Preloads the cache. This assumes that there are no concurrent modifications.
+    */
   override def onElected: Future[Unit] = {
-    cache.clear()
+    val cache = new TrieMap[String, Option[T]]()
 
     def preloadEntry(nextName: String): Future[Unit] = {
       store.fetch(nextName).map {
@@ -92,14 +100,25 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
       preloadEntries(unversionedNames)
     }
 
-    store.names().flatMap(handleEntries)
+    store.names().flatMap(handleEntries).map(_ => cacheOpt = Some(cache))
   }
 
   override def onDefeated: Future[Unit] = {
     log.debug(s"$store Clear all cached entries")
-    cache.clear()
+    cacheOpt = None
     Future.successful(())
   }
 
   override def toString: String = s"EntityStoreCache($store)"
+
+  /**
+    * Execute direct if have not preloaded the data yet. (this should only happen during migration)
+    * Execute cached if we have the preloaded data.
+    */
+  private[this] def directOrCached[R](direct: => R)(cached: TrieMap[String, Option[T]] => R): R = {
+    cacheOpt match {
+      case Some(cache) => cached(cache)
+      case None        => direct
+    }
+  }
 }
