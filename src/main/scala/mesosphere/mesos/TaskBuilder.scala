@@ -217,7 +217,12 @@ class TaskBuilder(app: AppDefinition,
         val networkLabels = Labels.newBuilder().addAllLabels(network.labels.map {
           case (key, value) => Label.newBuilder.setKey(key).setValue(value).build()
         }.asJava)
-        builder.addNetworkInfos(NetworkInfo.newBuilder().addAllGroups(network.groups.asJava).setLabels(networkLabels))
+        val networkInfo: NetworkInfo.Builder =
+          NetworkInfo.newBuilder()
+            .addAllGroups(network.groups.asJava)
+            .setLabels(networkLabels)
+            .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
+        builder.addNetworkInfos(networkInfo)
       }
 
       // Set container type to MESOS by default (this is a required field)
