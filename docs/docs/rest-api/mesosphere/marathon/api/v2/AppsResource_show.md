@@ -188,7 +188,6 @@ Transfer-Encoding: chunked
                 "intervalSeconds": 10,
                 "maxConsecutiveFailures": 6,
                 "path": "/machinehealth",
-                "portIndex": 0,
                 "overridePort": 3333,
                 "protocol": "HTTP",
                 "timeoutSeconds": 10

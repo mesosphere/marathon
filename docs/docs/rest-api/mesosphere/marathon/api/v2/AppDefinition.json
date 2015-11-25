@@ -198,7 +198,7 @@
                         "minimum": 0,
                         "type": "integer"
                     },
-                    "overridePort": {
+                    "port": {
                         "maximum": 65535,
                         "minimum": 0,
                         "type": "integer"

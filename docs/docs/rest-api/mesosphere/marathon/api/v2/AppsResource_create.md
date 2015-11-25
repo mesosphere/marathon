@@ -86,7 +86,7 @@ Here is an example of an application JSON which includes all fields.
             "path": "/machinehealth",
             "gracePeriodSeconds": 3,
             "intervalSeconds": 10,
-            "overridePort": 3333,
+            "port": 3333,
             "timeoutSeconds": 10,
             "maxConsecutiveFailures": 3
         },

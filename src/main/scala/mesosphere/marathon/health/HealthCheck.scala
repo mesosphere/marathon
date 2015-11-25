@@ -5,7 +5,7 @@ import java.lang.{ Integer => JInt }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.validation.ValidHealthCheck
-import mesosphere.marathon.state.{ Timestamp, MarathonState, Command }
+import mesosphere.marathon.state.{ Command, MarathonState, Timestamp }
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.concurrent.duration._
@@ -17,7 +17,7 @@ case class HealthCheck(
 
   protocol: Protocol = HealthCheck.DefaultProtocol,
 
-  portIndex: JInt = HealthCheck.DefaultPortIndex,
+  portIndex: Option[Int] = HealthCheck.DefaultPortIndex,
 
   command: Option[Command] = HealthCheck.DefaultCommand,
 
@@ -27,17 +27,16 @@ case class HealthCheck(
 
   timeout: FiniteDuration = HealthCheck.DefaultTimeout,
 
-  maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures,
+  maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
 
   ignoreHttp1xx: Boolean = HealthCheck.DefaultIgnoreHttp1xx,
 
-  overridePort: Option[JInt] = HealthCheck.DefaultOverridePort)
+  port: Option[Int] = HealthCheck.DefaultPort)
     extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
   def toProto: Protos.HealthCheckDefinition = {
     val builder = Protos.HealthCheckDefinition.newBuilder
       .setProtocol(this.protocol)
-      .setPortIndex(this.portIndex)
       .setGracePeriodSeconds(this.gracePeriod.toSeconds.toInt)
       .setIntervalSeconds(this.interval.toSeconds.toInt)
       .setTimeoutSeconds(this.timeout.toSeconds.toInt)
@@ -48,7 +47,8 @@ case class HealthCheck(
 
     path foreach builder.setPath
 
-    overridePort foreach { p => builder.setOverridePort(p.toInt) }
+    portIndex foreach { p => builder.setPortIndex(p.toInt) }
+    port foreach { p => builder.setPort(p.toInt) }
 
     builder.build
   }
@@ -58,7 +58,13 @@ case class HealthCheck(
       path =
         if (proto.hasPath) Some(proto.getPath) else None,
       protocol = proto.getProtocol,
-      portIndex = proto.getPortIndex,
+      portIndex =
+        if (proto.hasPortIndex)
+          Some(proto.getPortIndex)
+        else if (!proto.hasPort && proto.getProtocol != Protocol.COMMAND)
+          Some(0) // backward compatibility, this used to be the default value in marathon.proto
+        else
+          None,
       command =
         if (proto.hasCommand) Some(Command("").mergeFromProto(proto.getCommand))
         else None,
@@ -67,8 +73,7 @@ case class HealthCheck(
       interval = proto.getIntervalSeconds.seconds,
       maxConsecutiveFailures = proto.getMaxConsecutiveFailures,
       ignoreHttp1xx = proto.getIgnoreHttp1Xx,
-      overridePort =
-        if (proto.hasOverridePort) Some(proto.getOverridePort) else None
+      port = if (proto.hasPort) Some(proto.getPort) else None
     )
 
   def mergeFromProto(bytes: Array[Byte]): HealthCheck =
@@ -108,7 +113,7 @@ case class HealthCheck(
 object HealthCheck {
   val DefaultPath = None
   val DefaultProtocol = Protocol.HTTP
-  val DefaultPortIndex = 0
+  val DefaultPortIndex = None
   val DefaultCommand = None
   // Dockers can take a long time to download, so default to a fairly long wait.
   val DefaultGracePeriod = 5.minutes
@@ -116,5 +121,5 @@ object HealthCheck {
   val DefaultTimeout = 20.seconds
   val DefaultMaxConsecutiveFailures = 3
   val DefaultIgnoreHttp1xx = false
-  val DefaultOverridePort = None
+  val DefaultPort = None
 }

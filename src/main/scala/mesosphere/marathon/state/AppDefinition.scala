@@ -83,7 +83,7 @@ case class AppDefinition(
   def portIndicesAreValid(): Boolean = {
     val validPortIndices = hostPorts.indices
     healthChecks.forall { hc =>
-      hc.protocol == Protocol.COMMAND || (validPortIndices contains hc.portIndex)
+      hc.protocol == Protocol.COMMAND || hc.portIndex.forall(validPortIndices.contains(_))
     }
   }
 

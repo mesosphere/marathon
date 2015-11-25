@@ -185,7 +185,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
         ))
       )),
       ports = Nil,
-      healthChecks = Set(HealthCheck(portIndex = 1))
+      healthChecks = Set(HealthCheck(portIndex = Some(1)))
     )
     shouldNotViolate(
       app,
@@ -212,7 +212,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     validateJsonSchema(app, false) // missing image
 
     app = correct.copy(
-      healthChecks = Set(HealthCheck(portIndex = 1))
+      healthChecks = Set(HealthCheck(portIndex = Some(1)))
     )
     shouldViolate(
       app,
@@ -289,11 +289,111 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(
         Container(docker = Some(Container.Docker("group/image")))
       ),
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(HealthCheck(portIndex = Some(0))),
       dependencies = Set(PathId("/prod/product/backend")),
       upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.75)
     )
     JsonTestHelper.assertSerializationRoundtripWorks(app3)
+  }
+
+  test("SerializationRoundtrip preserves portIndex") {
+    import Formats._
+
+    val app3 = V2AppDefinition(
+      id = PathId("/prod/product/frontend/my-app"),
+      cmd = Some("sleep 30"),
+      ports = Seq(9001, 9002),
+      healthChecks = Set(HealthCheck(portIndex = Some(1)))
+    )
+    JsonTestHelper.assertSerializationRoundtripWorks(app3)
+  }
+
+  test("Reading V2AppDefinition adds portIndex if you have ports") {
+    import Formats._
+
+    val app = V2AppDefinition(
+      id = PathId("/prod/product/frontend/my-app"),
+      cmd = Some("sleep 30"),
+      ports = Seq(9001, 9002),
+      healthChecks = Set(HealthCheck())
+    )
+
+    val json = Json.toJson(app)
+    val reread = Json.fromJson[V2AppDefinition](json).get
+
+    reread.healthChecks.headOption should be(defined)
+    reread.healthChecks.head.portIndex should be(Some(0))
+  }
+
+  test("Reading V2AppDefinition does not add portIndex if there are no ports") {
+    import Formats._
+
+    val app = V2AppDefinition(
+      id = PathId("/prod/product/frontend/my-app"),
+      cmd = Some("sleep 30"),
+      ports = Seq(),
+      healthChecks = Set(HealthCheck())
+    )
+
+    val json = Json.toJson(app)
+    val reread = Json.fromJson[V2AppDefinition](json).get
+
+    reread.healthChecks.headOption should be(defined)
+    reread.healthChecks.head.portIndex should be(None)
+  }
+
+  test("Reading V2AppDefinition adds portIndex if you have at least one portMapping") {
+    import Formats._
+
+    val app = V2AppDefinition(
+      id = PathId("/prod/product/frontend/my-app"),
+      cmd = Some("sleep 30"),
+      ports = Seq(),
+      container = Some(
+        Container(
+          docker = Some(
+            Docker(
+              portMappings = Some(
+                Seq(Docker.PortMapping())
+              )
+            )
+          )
+        )
+      ),
+      healthChecks = Set(HealthCheck())
+    )
+
+    val json = Json.toJson(app)
+    val reread = Json.fromJson[V2AppDefinition](json).get
+
+    reread.healthChecks.headOption should be(defined)
+    reread.healthChecks.head.portIndex should be(Some(0))
+  }
+
+  test("Reading V2AppDefinition does not add portIndex if there are no ports nor portMappings") {
+    import Formats._
+
+    val app = V2AppDefinition(
+      id = PathId("/prod/product/frontend/my-app"),
+      cmd = Some("sleep 30"),
+      ports = Seq(),
+      container = Some(
+        Container(
+          docker = Some(
+            Docker(
+              portMappings = Some(Seq.empty)
+            )
+          )
+        )
+      ),
+      healthChecks = Set(HealthCheck())
+    )
+
+    val json = Json.toJson(app)
+    val reread = Json.fromJson[V2AppDefinition](json).get
+
+    reread.healthChecks.headOption should be(defined)
+    reread.healthChecks.head.portIndex should be(None)
   }
 
   test("Read app with container definition and port mappings") {

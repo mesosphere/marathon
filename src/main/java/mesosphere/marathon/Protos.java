@@ -905,13 +905,13 @@ public final class Protos {
      */
     mesosphere.marathon.Protos.HealthCheckDefinition.Protocol getProtocol();
 
-    // required uint32 portIndex = 2 [default = 0];
+    // optional uint32 portIndex = 2;
     /**
-     * <code>required uint32 portIndex = 2 [default = 0];</code>
+     * <code>optional uint32 portIndex = 2;</code>
      */
     boolean hasPortIndex();
     /**
-     * <code>required uint32 portIndex = 2 [default = 0];</code>
+     * <code>optional uint32 portIndex = 2;</code>
      */
     int getPortIndex();
 
@@ -1006,15 +1006,15 @@ public final class Protos {
      */
     boolean getIgnoreHttp1Xx();
 
-    // optional uint32 overridePort = 10;
+    // optional uint32 port = 10;
     /**
-     * <code>optional uint32 overridePort = 10;</code>
+     * <code>optional uint32 port = 10;</code>
      */
-    boolean hasOverridePort();
+    boolean hasPort();
     /**
-     * <code>optional uint32 overridePort = 10;</code>
+     * <code>optional uint32 port = 10;</code>
      */
-    int getOverridePort();
+    int getPort();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.HealthCheckDefinition}
@@ -1128,7 +1128,7 @@ public final class Protos {
             }
             case 80: {
               bitField0_ |= 0x00000200;
-              overridePort_ = input.readUInt32();
+              port_ = input.readUInt32();
               break;
             }
           }
@@ -1287,17 +1287,17 @@ public final class Protos {
       return protocol_;
     }
 
-    // required uint32 portIndex = 2 [default = 0];
+    // optional uint32 portIndex = 2;
     public static final int PORTINDEX_FIELD_NUMBER = 2;
     private int portIndex_;
     /**
-     * <code>required uint32 portIndex = 2 [default = 0];</code>
+     * <code>optional uint32 portIndex = 2;</code>
      */
     public boolean hasPortIndex() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required uint32 portIndex = 2 [default = 0];</code>
+     * <code>optional uint32 portIndex = 2;</code>
      */
     public int getPortIndex() {
       return portIndex_;
@@ -1460,20 +1460,20 @@ public final class Protos {
       return ignoreHttp1Xx_;
     }
 
-    // optional uint32 overridePort = 10;
-    public static final int OVERRIDEPORT_FIELD_NUMBER = 10;
-    private int overridePort_;
+    // optional uint32 port = 10;
+    public static final int PORT_FIELD_NUMBER = 10;
+    private int port_;
     /**
-     * <code>optional uint32 overridePort = 10;</code>
+     * <code>optional uint32 port = 10;</code>
      */
-    public boolean hasOverridePort() {
+    public boolean hasPort() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
     /**
-     * <code>optional uint32 overridePort = 10;</code>
+     * <code>optional uint32 port = 10;</code>
      */
-    public int getOverridePort() {
-      return overridePort_;
+    public int getPort() {
+      return port_;
     }
 
     private void initFields() {
@@ -1486,7 +1486,7 @@ public final class Protos {
       maxConsecutiveFailures_ = 3;
       command_ = org.apache.mesos.Protos.CommandInfo.getDefaultInstance();
       ignoreHttp1Xx_ = false;
-      overridePort_ = 0;
+      port_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1494,10 +1494,6 @@ public final class Protos {
       if (isInitialized != -1) return isInitialized == 1;
 
       if (!hasProtocol()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasPortIndex()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -1542,7 +1538,7 @@ public final class Protos {
         output.writeBool(9, ignoreHttp1Xx_);
       }
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        output.writeUInt32(10, overridePort_);
+        output.writeUInt32(10, port_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -1591,7 +1587,7 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(10, overridePort_);
+          .computeUInt32Size(10, port_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1732,7 +1728,7 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000080);
         ignoreHttp1Xx_ = false;
         bitField0_ = (bitField0_ & ~0x00000100);
-        overridePort_ = 0;
+        port_ = 0;
         bitField0_ = (bitField0_ & ~0x00000200);
         return this;
       }
@@ -1805,7 +1801,7 @@ public final class Protos {
         if (((from_bitField0_ & 0x00000200) == 0x00000200)) {
           to_bitField0_ |= 0x00000200;
         }
-        result.overridePort_ = overridePort_;
+        result.port_ = port_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1851,8 +1847,8 @@ public final class Protos {
         if (other.hasIgnoreHttp1Xx()) {
           setIgnoreHttp1Xx(other.getIgnoreHttp1Xx());
         }
-        if (other.hasOverridePort()) {
-          setOverridePort(other.getOverridePort());
+        if (other.hasPort()) {
+          setPort(other.getPort());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1860,10 +1856,6 @@ public final class Protos {
 
       public final boolean isInitialized() {
         if (!hasProtocol()) {
-          
-          return false;
-        }
-        if (!hasPortIndex()) {
           
           return false;
         }
@@ -1931,22 +1923,22 @@ public final class Protos {
         return this;
       }
 
-      // required uint32 portIndex = 2 [default = 0];
+      // optional uint32 portIndex = 2;
       private int portIndex_ ;
       /**
-       * <code>required uint32 portIndex = 2 [default = 0];</code>
+       * <code>optional uint32 portIndex = 2;</code>
        */
       public boolean hasPortIndex() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required uint32 portIndex = 2 [default = 0];</code>
+       * <code>optional uint32 portIndex = 2;</code>
        */
       public int getPortIndex() {
         return portIndex_;
       }
       /**
-       * <code>required uint32 portIndex = 2 [default = 0];</code>
+       * <code>optional uint32 portIndex = 2;</code>
        */
       public Builder setPortIndex(int value) {
         bitField0_ |= 0x00000002;
@@ -1955,7 +1947,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>required uint32 portIndex = 2 [default = 0];</code>
+       * <code>optional uint32 portIndex = 2;</code>
        */
       public Builder clearPortIndex() {
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -2344,35 +2336,35 @@ public final class Protos {
         return this;
       }
 
-      // optional uint32 overridePort = 10;
-      private int overridePort_ ;
+      // optional uint32 port = 10;
+      private int port_ ;
       /**
-       * <code>optional uint32 overridePort = 10;</code>
+       * <code>optional uint32 port = 10;</code>
        */
-      public boolean hasOverridePort() {
+      public boolean hasPort() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
       /**
-       * <code>optional uint32 overridePort = 10;</code>
+       * <code>optional uint32 port = 10;</code>
        */
-      public int getOverridePort() {
-        return overridePort_;
+      public int getPort() {
+        return port_;
       }
       /**
-       * <code>optional uint32 overridePort = 10;</code>
+       * <code>optional uint32 port = 10;</code>
        */
-      public Builder setOverridePort(int value) {
+      public Builder setPort(int value) {
         bitField0_ |= 0x00000200;
-        overridePort_ = value;
+        port_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional uint32 overridePort = 10;</code>
+       * <code>optional uint32 port = 10;</code>
        */
-      public Builder clearOverridePort() {
+      public Builder clearPort() {
         bitField0_ = (bitField0_ & ~0x00000200);
-        overridePort_ = 0;
+        port_ = 0;
         onChanged();
         return this;
       }
@@ -21525,85 +21517,85 @@ public final class Protos {
       "\030\001 \002(\t\022:\n\010operator\030\002 \002(\0162(.mesosphere.ma" +
       "rathon.Constraint.Operator\022\r\n\005value\030\003 \001(" +
       "\t\"G\n\010Operator\022\n\n\006UNIQUE\020\000\022\010\n\004LIKE\020\001\022\013\n\007C" +
-      "LUSTER\020\002\022\014\n\010GROUP_BY\020\003\022\n\n\006UNLIKE\020\004\"\221\003\n\025H" +
+      "LUSTER\020\002\022\014\n\010GROUP_BY\020\003\022\n\n\006UNLIKE\020\004\"\206\003\n\025H" +
       "ealthCheckDefinition\022E\n\010protocol\030\001 \002(\01623" +
       ".mesosphere.marathon.HealthCheckDefiniti" +
-      "on.Protocol\022\024\n\tportIndex\030\002 \002(\r:\0010\022\036\n\022gra" +
-      "cePeriodSeconds\030\003 \001(\r:\00215\022\033\n\017intervalSec",
-      "onds\030\004 \001(\r:\00210\022\032\n\016timeoutSeconds\030\005 \001(\r:\002" +
-      "20\022\017\n\004path\030\006 \001(\t:\001/\022!\n\026maxConsecutiveFai" +
-      "lures\030\007 \001(\r:\0013\022#\n\007command\030\010 \001(\0132\022.mesos." +
-      "CommandInfo\022\034\n\rignoreHttp1xx\030\t \001(\010:\005fals" +
-      "e\022\024\n\014overridePort\030\n \001(\r\"5\n\010Protocol\022\010\n\004H" +
-      "TTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND\020\002\022\t\n\005HTTPS\020\003\"\323" +
-      "\006\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030" +
-      "\002 \002(\0132\022.mesos.CommandInfo\022\021\n\tinstances\030\003" +
-      " \002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Resource" +
-      "\022\023\n\013description\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013",
-      "constraints\030\007 \003(\0132\037.mesosphere.marathon." +
-      "Constraint\022\022\n\010executor\030\010 \002(\t:\000\022>\n\022OBSOLE" +
-      "TE_container\030\n \001(\0132\".mesosphere.marathon" +
-      ".ContainerInfo\022)\n\007version\030\013 \001(\t:\0301970-01" +
-      "-01T00:00:00.000Z\022@\n\014healthChecks\030\014 \003(\0132" +
-      "*.mesosphere.marathon.HealthCheckDefinit" +
-      "ion\022\025\n\007backoff\030\r \001(\003:\0041000\022\033\n\rbackoffFac" +
-      "tor\030\016 \001(\001:\0041.15\022G\n\017upgradeStrategy\030\017 \001(\013" +
-      "2..mesosphere.marathon.UpgradeStrategyDe" +
-      "finition\022\024\n\014dependencies\030\020 \003(\t\022\021\n\tstoreU",
-      "rls\030\021 \003(\t\022\034\n\rrequire_ports\030\022 \001(\010:\005false\022" +
-      "=\n\tcontainer\030\023 \001(\0132*.mesosphere.marathon" +
-      ".ExtendedContainerInfo\022 \n\006labels\030\024 \003(\0132\020" +
-      ".mesos.Parameter\022\037\n\016maxLaunchDelay\030\025 \001(\003" +
-      ":\0073600000\022A\n\025acceptedResourceRoles\030\026 \001(\013" +
-      "2\".mesosphere.marathon.ResourceRoles\022\027\n\017" +
-      "last_scaling_at\030\027 \001(\003\022\035\n\025last_config_cha" +
-      "nge_at\030\030 \001(\003\"\035\n\rResourceRoles\022\014\n\004role\030\001 " +
-      "\003(\t\"\241\002\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host" +
-      "\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004 \003(",
-      "\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001(\003\022\022" +
-      "\n\nstarted_at\030\006 \001(\003\022,\n\021OBSOLETE_statuses\030" +
-      "\007 \003(\0132\021.mesos.TaskStatus\022)\n\007version\030\010 \001(" +
-      "\t:\0301970-01-01T00:00:00.000Z\022!\n\006status\030\t " +
-      "\001(\0132\021.mesos.TaskStatus\022\037\n\007slaveId\030\n \001(\0132" +
-      "\016.mesos.SlaveID\"M\n\013MarathonApp\022\014\n\004name\030\001" +
-      " \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.maratho" +
-      "n.MarathonTask\"1\n\rContainerInfo\022\017\n\005image" +
-      "\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\237\004\n\025ExtendedCo" +
-      "ntainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Contai",
-      "nerInfo.Type\022\036\n\007volumes\030\002 \003(\0132\r.mesos.Vo" +
-      "lume\022E\n\006docker\030\003 \001(\01325.mesosphere.marath" +
-      "on.ExtendedContainerInfo.DockerInfo\032\365\002\n\n" +
-      "DockerInfo\022\r\n\005image\030\001 \002(\t\022>\n\007network\030\002 \001" +
-      "(\0162\'.mesos.ContainerInfo.DockerInfo.Netw" +
-      "ork:\004HOST\022X\n\rport_mappings\030\003 \003(\0132A.mesos" +
-      "phere.marathon.ExtendedContainerInfo.Doc" +
-      "kerInfo.PortMapping\022\031\n\nprivileged\030\004 \001(\010:" +
-      "\005false\022$\n\nparameters\030\005 \003(\0132\020.mesos.Param" +
-      "eter\022\030\n\020force_pull_image\030\006 \001(\010\032c\n\013PortMa",
-      "pping\022\021\n\thost_port\030\001 \002(\r\022\026\n\016container_po" +
-      "rt\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\027\n\014service_po" +
-      "rt\030d \001(\r:\0010\")\n\020EventSubscribers\022\025\n\rcallb" +
-      "ack_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005majo" +
-      "r\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"Z\n" +
-      "\031UpgradeStrategyDefinition\022\035\n\025minimumHea" +
-      "lthCapacity\030\001 \002(\001\022\036\n\023maximumOverCapacity" +
-      "\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(" +
-      "\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesos" +
-      "phere.marathon.ServiceDefinition\0224\n\006grou",
-      "ps\030\004 \003(\0132$.mesosphere.marathon.GroupDefi" +
-      "nition\022\024\n\014dependencies\030\005 \003(\t\"\245\001\n\030Deploym" +
-      "entPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007version" +
-      "\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosphere.ma" +
-      "rathon.GroupDefinition\0224\n\006target\030\005 \002(\0132$" +
-      ".mesosphere.marathon.GroupDefinition\"\306\001\n" +
-      "\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030" +
-      "\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.me" +
-      "sos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host" +
-      "\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007",
-      " \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n" +
-      "\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(" +
-      "\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005fa" +
-      "lseB\035\n\023mesosphere.marathonB\006Protos"
+      "on.Protocol\022\021\n\tportIndex\030\002 \001(\r\022\036\n\022graceP" +
+      "eriodSeconds\030\003 \001(\r:\00215\022\033\n\017intervalSecond",
+      "s\030\004 \001(\r:\00210\022\032\n\016timeoutSeconds\030\005 \001(\r:\00220\022" +
+      "\017\n\004path\030\006 \001(\t:\001/\022!\n\026maxConsecutiveFailur" +
+      "es\030\007 \001(\r:\0013\022#\n\007command\030\010 \001(\0132\022.mesos.Com" +
+      "mandInfo\022\034\n\rignoreHttp1xx\030\t \001(\010:\005false\022\014" +
+      "\n\004port\030\n \001(\r\"5\n\010Protocol\022\010\n\004HTTP\020\000\022\007\n\003TC" +
+      "P\020\001\022\013\n\007COMMAND\020\002\022\t\n\005HTTPS\020\003\"\323\006\n\021ServiceD" +
+      "efinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002 \002(\0132\022.mes" +
+      "os.CommandInfo\022\021\n\tinstances\030\003 \002(\r\022\"\n\tres" +
+      "ources\030\004 \003(\0132\017.mesos.Resource\022\023\n\013descrip" +
+      "tion\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013constraints",
+      "\030\007 \003(\0132\037.mesosphere.marathon.Constraint\022" +
+      "\022\n\010executor\030\010 \002(\t:\000\022>\n\022OBSOLETE_containe" +
+      "r\030\n \001(\0132\".mesosphere.marathon.ContainerI" +
+      "nfo\022)\n\007version\030\013 \001(\t:\0301970-01-01T00:00:0" +
+      "0.000Z\022@\n\014healthChecks\030\014 \003(\0132*.mesospher" +
+      "e.marathon.HealthCheckDefinition\022\025\n\007back" +
+      "off\030\r \001(\003:\0041000\022\033\n\rbackoffFactor\030\016 \001(\001:\004" +
+      "1.15\022G\n\017upgradeStrategy\030\017 \001(\0132..mesosphe" +
+      "re.marathon.UpgradeStrategyDefinition\022\024\n" +
+      "\014dependencies\030\020 \003(\t\022\021\n\tstoreUrls\030\021 \003(\t\022\034",
+      "\n\rrequire_ports\030\022 \001(\010:\005false\022=\n\tcontaine" +
+      "r\030\023 \001(\0132*.mesosphere.marathon.ExtendedCo" +
+      "ntainerInfo\022 \n\006labels\030\024 \003(\0132\020.mesos.Para" +
+      "meter\022\037\n\016maxLaunchDelay\030\025 \001(\003:\0073600000\022A" +
+      "\n\025acceptedResourceRoles\030\026 \001(\0132\".mesosphe" +
+      "re.marathon.ResourceRoles\022\027\n\017last_scalin" +
+      "g_at\030\027 \001(\003\022\035\n\025last_config_change_at\030\030 \001(" +
+      "\003\"\035\n\rResourceRoles\022\014\n\004role\030\001 \003(\t\"\241\002\n\014Mar" +
+      "athonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005p" +
+      "orts\030\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos.A",
+      "ttribute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_a" +
+      "t\030\006 \001(\003\022,\n\021OBSOLETE_statuses\030\007 \003(\0132\021.mes" +
+      "os.TaskStatus\022)\n\007version\030\010 \001(\t:\0301970-01-" +
+      "01T00:00:00.000Z\022!\n\006status\030\t \001(\0132\021.mesos" +
+      ".TaskStatus\022\037\n\007slaveId\030\n \001(\0132\016.mesos.Sla" +
+      "veID\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tas" +
+      "ks\030\002 \003(\0132!.mesosphere.marathon.MarathonT" +
+      "ask\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n" +
+      "\007options\030\002 \003(\014\"\237\004\n\025ExtendedContainerInfo" +
+      "\022\'\n\004type\030\001 \002(\0162\031.mesos.ContainerInfo.Typ",
+      "e\022\036\n\007volumes\030\002 \003(\0132\r.mesos.Volume\022E\n\006doc" +
+      "ker\030\003 \001(\01325.mesosphere.marathon.Extended" +
+      "ContainerInfo.DockerInfo\032\365\002\n\nDockerInfo\022" +
+      "\r\n\005image\030\001 \002(\t\022>\n\007network\030\002 \001(\0162\'.mesos." +
+      "ContainerInfo.DockerInfo.Network:\004HOST\022X" +
+      "\n\rport_mappings\030\003 \003(\0132A.mesosphere.marat" +
+      "hon.ExtendedContainerInfo.DockerInfo.Por" +
+      "tMapping\022\031\n\nprivileged\030\004 \001(\010:\005false\022$\n\np" +
+      "arameters\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020for" +
+      "ce_pull_image\030\006 \001(\010\032c\n\013PortMapping\022\021\n\tho",
+      "st_port\030\001 \002(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n" +
+      "\010protocol\030\003 \001(\t\022\027\n\014service_port\030d \001(\r:\0010" +
+      "\")\n\020EventSubscribers\022\025\n\rcallback_urls\030\001 " +
+      "\003(\t\"=\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005" +
+      "minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"Z\n\031UpgradeStr" +
+      "ategyDefinition\022\035\n\025minimumHealthCapacity" +
+      "\030\001 \002(\001\022\036\n\023maximumOverCapacity\030\002 \001(\001:\0011\"\260" +
+      "\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versio" +
+      "n\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere.marat" +
+      "hon.ServiceDefinition\0224\n\006groups\030\004 \003(\0132$.",
+      "mesosphere.marathon.GroupDefinition\022\024\n\014d" +
+      "ependencies\030\005 \003(\t\"\245\001\n\030DeploymentPlanDefi" +
+      "nition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010o" +
+      "riginal\030\004 \002(\0132$.mesosphere.marathon.Grou" +
+      "pDefinition\0224\n\006target\030\005 \002(\0132$.mesosphere" +
+      ".marathon.GroupDefinition\"\306\001\n\013TaskFailur" +
+      "e\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mes" +
+      "os.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.TaskSta" +
+      "te\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n" +
+      "\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007sla",
+      "veId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStoreEnt" +
+      "ry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030" +
+      "\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005falseB\035\n\023meso" +
+      "sphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21621,7 +21613,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_HealthCheckDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_HealthCheckDefinition_descriptor,
-              new java.lang.String[] { "Protocol", "PortIndex", "GracePeriodSeconds", "IntervalSeconds", "TimeoutSeconds", "Path", "MaxConsecutiveFailures", "Command", "IgnoreHttp1Xx", "OverridePort", });
+              new java.lang.String[] { "Protocol", "PortIndex", "GracePeriodSeconds", "IntervalSeconds", "TimeoutSeconds", "Path", "MaxConsecutiveFailures", "Command", "IgnoreHttp1Xx", "Port", });
           internal_static_mesosphere_marathon_ServiceDefinition_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new

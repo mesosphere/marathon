@@ -350,14 +350,14 @@ trait HealthCheckFormats {
     (
       (__ \ "path").formatNullable[String] ~
       (__ \ "protocol").formatNullable[Protocol].withDefault(DefaultProtocol) ~
-      (__ \ "portIndex").formatNullable[Integer].withDefault(DefaultPortIndex) ~
+      (__ \ "portIndex").formatNullable[Int] ~
       (__ \ "command").formatNullable[Command] ~
       (__ \ "gracePeriodSeconds").formatNullable[Long].withDefault(DefaultGracePeriod.toSeconds).asSeconds ~
       (__ \ "intervalSeconds").formatNullable[Long].withDefault(DefaultInterval.toSeconds).asSeconds ~
       (__ \ "timeoutSeconds").formatNullable[Long].withDefault(DefaultTimeout.toSeconds).asSeconds ~
-      (__ \ "maxConsecutiveFailures").formatNullable[Integer].withDefault(DefaultMaxConsecutiveFailures) ~
+      (__ \ "maxConsecutiveFailures").formatNullable[Int].withDefault(DefaultMaxConsecutiveFailures) ~
       (__ \ "ignoreHttp1xx").formatNullable[Boolean].withDefault(DefaultIgnoreHttp1xx) ~
-      (__ \ "overridePort").formatNullable[Integer]
+      (__ \ "port").formatNullable[Int]
     )(HealthCheck.apply, unlift(HealthCheck.unapply))
   }
 }
@@ -447,6 +447,23 @@ trait V2Formats {
           )
         }
       }
+  }.map(addHealthCheckPortIndexIfNecessary)
+
+  /**
+    * Ensure backwards compatibility by adding portIndex to health checks when necessary.
+    *
+    * In the past, healthCheck.portIndex was required and had a default value 0. When we introduced healthCheck.port, we
+    * made it optional (also with ip-per-container in mind) and we have to re-add it in cases where it makes sense.
+    */
+  private[this] def addHealthCheckPortIndexIfNecessary(v2App: V2AppDefinition): V2AppDefinition = {
+    val hasPortMappings = v2App.container.exists(_.docker.exists(_.portMappings.exists(_.nonEmpty)))
+    val portIndexesMakeSense = v2App.ports.nonEmpty || hasPortMappings
+    v2App.copy(healthChecks = v2App.healthChecks.map { healthCheck =>
+      def needsDefaultPortIndex =
+        healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty && healthCheck.protocol != Protocol.COMMAND
+      if (portIndexesMakeSense && needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
+      else healthCheck
+    })
   }
 
   implicit lazy val V2AppDefinitionWrites: Writes[V2AppDefinition] = {
