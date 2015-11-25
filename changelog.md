@@ -1,3 +1,13 @@
+## Changes from 0.13.0 to 0.14.0
+
+### Overview
+
+#### Use mesos 0.25
+
+This version of Marathon uses mesos 0.25 - the latest stable version at the time of writing.
+All integration tests are run against this version of Mesos.
+
+
 ## Changes from 0.11.1 to 0.13.0
 
 ### Breaking Changes
