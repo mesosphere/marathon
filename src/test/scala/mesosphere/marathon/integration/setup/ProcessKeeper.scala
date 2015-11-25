@@ -57,7 +57,7 @@ object ProcessKeeper {
     FileUtils.forceMkdir(mesosWorkDirFile)
     startProcess(
       "mesos",
-      Process(Seq("mesos-local", "--ip=127.0.0.1"), cwd = None, ENV_MESOS_WORK_DIR -> mesosWorkDirForMesos),
+      Process(Seq("mesos-local", "--ip=127.0.0.1"), cwd = None, ENV_MESOS_WORK_DIR -> mesosWorkDirForMesos, "MESOS_LAUNCHER" -> "posix"),
       upWhen = _.toLowerCase.contains("registered with master"))
   }
 
