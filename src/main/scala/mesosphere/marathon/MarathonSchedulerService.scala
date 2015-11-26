@@ -202,6 +202,12 @@ class MarathonSchedulerService @Inject() (
   }
 
   def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = {
+
+    def executeAbdicationCommand() = abdicateCmdOption match {
+      case Some(cmd) => cmd.execute()
+      case _         => leader.set(false)
+    }
+
     log.info("Running driver")
 
     // The following block asynchronously runs the driver. Note that driver.run()
@@ -221,10 +227,7 @@ class MarathonSchedulerService @Inject() (
         //
         // If we don't have a abdication command we simply mark ourselves as
         // not the leader
-        abdicateCmdOption match {
-          case Some(cmd) => cmd.execute()
-          case _         => leader.set(false)
-        }
+        executeAbdicationCommand()
 
         // If we are shutting down then don't offer leadership. But if we
         // aren't then the driver was stopped via external means. For example,
@@ -235,6 +238,7 @@ class MarathonSchedulerService @Inject() (
         }
       case Failure(t) =>
         log.error("Exception while running driver", t)
+        abdicateAfterFailure(() => executeAbdicationCommand(), runAbdicationCommand = true)
     }
   }
 
@@ -291,17 +295,7 @@ class MarathonSchedulerService @Inject() (
     catch {
       case NonFatal(e) => // catch Scala and Java exceptions
         log.error("Failed to take over leadership", e)
-
-        increaseOfferLeadershipBackOff()
-
-        abdicateLeadership()
-
-        if (!driverHandlesAbdication) {
-          // here the driver is not running yet and therefore it cannot execute
-          // the abdication command and offer the leadership. So we do it here
-          abdicateCmd.execute()
-          offerLeadership()
-        }
+        abdicateAfterFailure(() => abdicateCmd.execute(), runAbdicationCommand = !driverHandlesAbdication)
     }
   }
   //End Leader interface
@@ -420,5 +414,19 @@ class MarathonSchedulerService @Inject() (
       },
       reconciliationInitialDelay.toMillis + reconciliationInterval.toMillis
     )
+  }
+
+  private def abdicateAfterFailure(abdicationCommand: () => Unit, runAbdicationCommand: Boolean): Unit = {
+
+    increaseOfferLeadershipBackOff()
+
+    abdicateLeadership()
+
+    // here the driver is not running yet and therefore it cannot execute
+    // the abdication command and offer the leadership. So we do it here
+    if (runAbdicationCommand) {
+      abdicationCommand()
+      offerLeadership()
+    }
   }
 }
