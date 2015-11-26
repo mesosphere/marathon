@@ -43,6 +43,7 @@ message HealthCheckDefinition {
   optional uint32 maxConsecutiveFailures = 7 [default = 3];
   optional mesos.CommandInfo command = 8;
   optional bool ignoreHttp1xx = 9 [default = false];
+  optional uint32 overridePort = 10;
 }
 
 message ServiceDefinition {

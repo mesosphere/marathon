@@ -29,7 +29,9 @@ case class HealthCheck(
 
   maxConsecutiveFailures: JInt = HealthCheck.DefaultMaxConsecutiveFailures,
 
-  ignoreHttp1xx: Boolean = HealthCheck.DefaultIgnoreHttp1xx)
+  ignoreHttp1xx: Boolean = HealthCheck.DefaultIgnoreHttp1xx,
+
+  overridePort: Option[JInt] = HealthCheck.DefaultOverridePort)
     extends MarathonState[Protos.HealthCheckDefinition, HealthCheck] {
 
   def toProto: Protos.HealthCheckDefinition = {
@@ -45,6 +47,8 @@ case class HealthCheck(
     command foreach { c => builder.setCommand(c.toProto) }
 
     path foreach builder.setPath
+
+    overridePort foreach { p => builder.setOverridePort(p.toInt) }
 
     builder.build
   }
@@ -62,7 +66,9 @@ case class HealthCheck(
       timeout = proto.getTimeoutSeconds.seconds,
       interval = proto.getIntervalSeconds.seconds,
       maxConsecutiveFailures = proto.getMaxConsecutiveFailures,
-      ignoreHttp1xx = proto.getIgnoreHttp1Xx
+      ignoreHttp1xx = proto.getIgnoreHttp1Xx,
+      overridePort =
+        if (proto.hasOverridePort) Some(proto.getOverridePort) else None
     )
 
   def mergeFromProto(bytes: Array[Byte]): HealthCheck =
@@ -110,4 +116,5 @@ object HealthCheck {
   val DefaultTimeout = 20.seconds
   val DefaultMaxConsecutiveFailures = 3
   val DefaultIgnoreHttp1xx = false
+  val DefaultOverridePort = None
 }
