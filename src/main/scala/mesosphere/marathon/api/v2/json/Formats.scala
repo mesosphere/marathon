@@ -53,7 +53,7 @@ trait Formats
     with DeploymentFormats
     with EventFormats
     with EventSubscribersFormats
-    with NetworkFormats {
+    with IpAddressFormats {
   import scala.collection.JavaConverters._
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
@@ -209,16 +209,16 @@ trait ContainerFormats {
   )(Container(_, _, _), unlift(Container.unapply))
 }
 
-trait NetworkFormats {
+trait IpAddressFormats {
   import Formats._
 
   implicit lazy val NetworkProtocolFormat: Format[mesos.NetworkInfo.Protocol] =
     enumFormat(mesos.NetworkInfo.Protocol.valueOf, str => s"$str is not a valid protocol")
 
-  implicit lazy val NetworkFormat: Format[NetworkInterface] = (
+  implicit lazy val IpAddressFormat: Format[IpAddress] = (
     (__ \ "groups").formatNullable[Seq[String]].withDefault(Nil) ~
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
-  )(NetworkInterface(_, _), unlift(NetworkInterface.unapply))
+  )(IpAddress(_, _), unlift(IpAddress.unapply))
 }
 
 trait DeploymentFormats {
@@ -445,7 +445,7 @@ trait V2Formats {
           upgradeStrategy: UpgradeStrategy,
           labels: Map[String, String],
           acceptedResourceRoles: Option[Set[String]],
-          network: Option[NetworkInterface],
+          ipAddress: Option[IpAddress],
           version: Timestamp)
 
         val extraReads: Reads[ExtraFields] =
@@ -453,7 +453,7 @@ trait V2Formats {
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(AppDefinition.DefaultUpgradeStrategy) ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
-            (__ \ "network").readNullable[NetworkInterface] ~
+            (__ \ "ipAddress").readNullable[IpAddress] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now())
           )(ExtraFields)
 
@@ -462,7 +462,7 @@ trait V2Formats {
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             acceptedResourceRoles = extraFields.acceptedResourceRoles,
-            network = extraFields.network,
+            ipAddress = extraFields.ipAddress,
             version = extraFields.version,
             versionInfo = None
           )
@@ -503,7 +503,7 @@ trait V2Formats {
         "upgradeStrategy" -> app.upgradeStrategy,
         "labels" -> app.labels,
         "acceptedResourceRoles" -> app.acceptedResourceRoles,
-        "network" -> app.network,
+        "ipAddress" -> app.ipAddress,
         "version" -> app.version
       )
 

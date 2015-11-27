@@ -45,7 +45,7 @@ message HealthCheckDefinition {
   optional bool ignoreHttp1xx = 9 [default = false];
 }
 
-message Network {
+message IpAddress {
   repeated string groups = 1;
   repeated mesos.Label labels = 2;
 
@@ -76,7 +76,7 @@ message ServiceDefinition {
   optional ResourceRoles acceptedResourceRoles = 22;
   optional int64 last_scaling_at = 23;
   optional int64 last_config_change_at = 24;
-  optional Network network = 25;
+  optional IpAddress ipAddress = 25;
 }
 
 message ResourceRoles {

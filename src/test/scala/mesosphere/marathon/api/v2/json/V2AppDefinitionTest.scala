@@ -337,11 +337,11 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     assert(readResult4.copy(version = app4.version) == app4)
   }
 
-  test("Read app with network info") {
+  test("Read app with ip address") {
     val app = V2AppDefinition(
       id = "app-with-network-isolation".toPath,
       cmd = Some("python3 -m http.server 8080"),
-      network = Some(NetworkInterface(
+      ipAddress = Some(IpAddress(
         groups = Seq("a", "b", "c"),
         labels = Map(
           "foo" -> "bar",
@@ -357,7 +357,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       {
         "id": "app-with-network-isolation",
         "cmd": "python3 -m http.server 8080",
-        "network": {
+        "ipAddress": {
           "groups": ["a", "b", "c"],
           "labels": {
             "foo": "bar",

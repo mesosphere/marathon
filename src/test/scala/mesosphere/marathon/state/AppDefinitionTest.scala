@@ -109,12 +109,12 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     read should be(app)
   }
 
-  test("NETWORK to proto and back again") {
+  test("ipAddress to proto and back again") {
     val app = AppDefinition(
-      id = "app-with-network-isolation".toPath,
+      id = "app-with-ip-address".toPath,
       cmd = Some("sleep 30"),
-      network = Some(
-        NetworkInterface(
+      ipAddress = Some(
+        IpAddress(
           groups = Seq("a", "b", "c"),
           labels = Map(
             "foo" -> "bar",
@@ -125,8 +125,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     val proto = app.toProto
-    proto.getId should be("app-with-network-isolation")
-    proto.hasNetwork should be (true)
+    proto.getId should be("app-with-ip-address")
+    proto.hasIpAddress should be (true)
 
     val read = AppDefinition().mergeFromProto(proto)
     read should be(app)

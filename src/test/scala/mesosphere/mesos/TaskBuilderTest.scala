@@ -2,16 +2,16 @@ package mesosphere.mesos
 
 import com.google.common.collect.Lists
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.Protos.{Constraint, MarathonTask}
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{MarathonTasks, TaskTracker}
-import mesosphere.mesos.protos.{Resource, TaskID, _}
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
+import mesosphere.mesos.protos.{ Resource, TaskID, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
-import org.apache.mesos.Protos.{Offer, _}
-import org.joda.time.{DateTime, DateTimeZone}
+import org.apache.mesos.Protos.{ Offer, _ }
+import org.joda.time.{ DateTime, DateTimeZone }
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
@@ -246,8 +246,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         cpus = 1.0,
         mem = 64.0,
         disk = 1.0,
-        network = Some(
-          NetworkInterface(
+        ipAddress = Some(
+          IpAddress(
             groups = Seq("a", "b", "c"),
             labels = Map(
               "foo" -> "bar",
@@ -285,8 +285,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         mem = 64.0,
         disk = 1.0,
         executor = "/custom/executor",
-        network = Some(
-          NetworkInterface(
+        ipAddress = Some(
+          IpAddress(
             groups = Seq("a", "b", "c"),
             labels = Map(
               "foo" -> "bar",

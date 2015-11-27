@@ -173,7 +173,7 @@ class TaskBuilder(app: AppDefinition,
   }
 
   protected def computeContainerInfo(ports: Seq[Long]): Option[ContainerInfo] = {
-    if (app.container.isEmpty && app.network.isEmpty) None
+    if (app.container.isEmpty && app.ipAddress.isEmpty) None
     else {
       val builder = ContainerInfo.newBuilder
 
@@ -213,14 +213,14 @@ class TaskBuilder(app: AppDefinition,
       }
 
       // Set NetworkInfo if necessary
-      app.network.foreach { network =>
-        val networkLabels = Labels.newBuilder().addAllLabels(network.labels.map {
+      app.ipAddress.foreach { ipAddress =>
+        val ipAddressLabels = Labels.newBuilder().addAllLabels(ipAddress.labels.map {
           case (key, value) => Label.newBuilder.setKey(key).setValue(value).build()
         }.asJava)
         val networkInfo: NetworkInfo.Builder =
           NetworkInfo.newBuilder()
-            .addAllGroups(network.groups.asJava)
-            .setLabels(networkLabels)
+            .addAllGroups(ipAddress.groups.asJava)
+            .setLabels(ipAddressLabels)
             .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
         builder.addNetworkInfos(networkInfo)
       }
