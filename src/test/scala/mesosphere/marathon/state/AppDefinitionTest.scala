@@ -133,6 +133,33 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     read should be(app)
   }
 
+  test("ipAddress discovery to proto and back again") {
+    val app = AppDefinition(
+      id = "app-with-ip-address".toPath,
+      cmd = Some("sleep 30"),
+      ports = Nil,
+      ipAddress = Some(
+        IpAddress(
+          groups = Seq("a", "b", "c"),
+          labels = Map(
+            "foo" -> "bar",
+            "baz" -> "buzz"
+          ),
+          discoveryInfo = DiscoveryInfo(
+            ports = Vector(DiscoveryInfo.Port(name = "http", number = 80, protocol = "tcp"))
+          )
+        )
+      )
+    )
+
+    val proto = app.toProto
+
+    proto.getIpAddress.hasDiscoveryInfo should be (true)
+    proto.getIpAddress.getDiscoveryInfo.getPortsList.size() should be (1)
+    val read = AppDefinition().mergeFromProto(proto)
+    read should equal(app)
+  }
+
   test("MergeFromProto") {
     val cmd = mesos.CommandInfo.newBuilder
       .setValue("bash foo-*/start -Dhttp.port=$PORT")

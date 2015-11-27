@@ -76,8 +76,19 @@
     "note": "Away from olympus"
   },
   "maxLaunchDelaySeconds": 3600,
-  "network": {
-    "groups": [ "dev" ],
+  "ipAddress": {
+    "discovery": {
+      "ports": [
+        {
+          "number": 8080,
+          "name": "rest_endpoint",
+          "protocol": "tcp"
+        }
+      ]
+    },
+    "groups": [
+      "dev"
+    ],
     "labels": {
       "environment": "dev"
     }

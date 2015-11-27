@@ -7,6 +7,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ModelValidation
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
@@ -438,9 +439,9 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     assert(readResult4.copy(version = app4.version) == app4)
   }
 
-  test("Read app with ip address") {
+  test("Read app with ip address and discovery info") {
     val app = V2AppDefinition(
-      id = "app-with-network-isolation".toPath,
+      id = "app-with-ip-address".toPath,
       cmd = Some("python3 -m http.server 8080"),
       ports = Nil,
       ipAddress = Some(IpAddress(
@@ -448,14 +449,60 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
         labels = Map(
           "foo" -> "bar",
           "baz" -> "buzz"
+        ),
+        discoveryInfo = DiscoveryInfo(
+          ports = Seq(Port(name = "http", number = 80, protocol = "tcp"))
         )
-      ))
+      )),
+      maxLaunchDelay = 3600.seconds
     )
 
     val json =
       """
       {
-        "id": "app-with-network-isolation",
+        "id": "app-with-ip-address",
+        "cmd": "python3 -m http.server 8080",
+        "ipAddress": {
+          "groups": ["a", "b", "c"],
+          "labels": {
+            "foo": "bar",
+            "baz": "buzz"
+          },
+          "discovery": {
+            "ports": [
+              { "name": "http", "number": 80, "protocol": "tcp" }
+            ]
+          }
+        },
+        "maxLaunchDelaySeconds": 3600
+      }
+      """
+
+    val readResult = fromJson(json)
+
+    assert(readResult.copy(version = app.version) == app)
+  }
+
+  test("Read app with ip address without discovery info") {
+    val app = V2AppDefinition(
+      id = "app-with-ip-address".toPath,
+      cmd = Some("python3 -m http.server 8080"),
+      ports = Nil,
+      ipAddress = Some(IpAddress(
+        groups = Seq("a", "b", "c"),
+        labels = Map(
+          "foo" -> "bar",
+          "baz" -> "buzz"
+        ),
+        discoveryInfo = DiscoveryInfo.empty
+      )),
+      maxLaunchDelay = 3600.seconds
+    )
+
+    val json =
+      """
+      {
+        "id": "app-with-ip-address",
         "cmd": "python3 -m http.server 8080",
         "ipAddress": {
           "groups": ["a", "b", "c"],

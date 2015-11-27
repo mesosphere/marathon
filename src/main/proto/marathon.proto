@@ -49,6 +49,11 @@ message HealthCheckDefinition {
 message IpAddress {
   repeated string groups = 1;
   repeated mesos.Label labels = 2;
+  optional DiscoveryInfo discoveryInfo = 3;
+}
+
+message DiscoveryInfo {
+  repeated mesos.Port ports = 1;
 }
 
 message ServiceDefinition {

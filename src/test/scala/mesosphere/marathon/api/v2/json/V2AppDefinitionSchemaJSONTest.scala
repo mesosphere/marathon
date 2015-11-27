@@ -49,4 +49,47 @@ class V2AppDefinitionSchemaJSONTest extends MarathonSpec with GivenWhenThen {
     Then("validation should succeed")
     MarathonTestHelper.validateJsonSchemaForString(json, valid = true)
   }
+
+  test("discoveryInfo ports WITH a correct protocol should be accepted") {
+    Given("an app definition WITH a discovery info with a TCP and a UDP port")
+    val json =
+      """
+        |{
+        |  "id": "/test",
+        |  "cmd": "echo hi",
+        |  "ipAddress": {
+        |    "discovery": {
+        |      "ports": [
+        |        {"name": "dns", "number": 53, "protocol": "udp"},
+        |        {"name": "http", "number": 80, "protocol": "tcp"}
+        |      ]
+        |    }
+        |  }
+        |}
+      """.stripMargin
+
+    Then("validation should succeed")
+    MarathonTestHelper.validateJsonSchemaForString(json, valid = true)
+  }
+
+  test("discoveryInfo ports WITH an incorrect protocol should be rejected") {
+    Given("an app definition WITH a discovery info with a FOO protocol port")
+    val json =
+      """
+        |{
+        |  "id": "/test",
+        |  "cmd": "echo hi",
+        |  "ipAddress": {
+        |    "discovery": {
+        |      "ports": [
+        |        {"name": "dns", "number": 53, "protocol": "foo"}
+        |      ]
+        |    }
+        |  }
+        |}
+      """.stripMargin
+
+    Then("validation should succeed")
+    MarathonTestHelper.validateJsonSchemaForString(json, valid = false)
+  }
 }
