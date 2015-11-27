@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{ IpAddress, AppDefinition, PathId, DiscoveryInfo }
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
@@ -99,8 +99,6 @@ class TaskBuilder(app: AppDefinition,
         Label.newBuilder.setKey(key).setValue(value).build()
     }
 
-    val containerProto = computeContainerInfo(ports)
-
     val taskId = newTaskId(app.id)
     val builder = TaskInfo.newBuilder
       // Use a valid hostname to make service discovery easier
@@ -109,6 +107,9 @@ class TaskBuilder(app: AppDefinition,
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
+
+    val discoveryInfoProto = computeDiscoveryInfo(app)
+    discoveryInfoProto.map(builder.setDiscovery)
 
     if (app.disk != 0) {
       // This is only supported since Mesos 0.22.0 and will result in TASK_LOST messages in combination
@@ -125,6 +126,7 @@ class TaskBuilder(app: AppDefinition,
 
     portsResources.foreach(builder.addResources(_))
 
+    val containerProto = computeContainerInfo(ports)
     val envPrefix: Option[String] = config.envVarsPrefix.get
     executor match {
       case CommandExecutor() =>
@@ -170,6 +172,25 @@ class TaskBuilder(app: AppDefinition,
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
 
     Some(builder.build -> ports)
+  }
+
+  protected def computeDiscoveryInfo(app: AppDefinition): Option[org.apache.mesos.Protos.DiscoveryInfo] = {
+    // TODO (gkleiman@): fill in DiscoveryInfo even if an app doesn't request an IP-per-task
+    app.ipAddress match {
+      case Some(IpAddress(_, _, DiscoveryInfo(ports))) if ports.nonEmpty =>
+        val builder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
+
+        builder.setName(app.id.toHostname)
+        // TODO(gkleiman@) define the default visibility
+        builder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
+
+        val portsProto = org.apache.mesos.Protos.Ports.newBuilder
+        portsProto.addAllPorts(ports.map(_.toProto).asJava)
+        builder.setPorts(portsProto)
+
+        Some(builder.build)
+      case _ => None
+    }
   }
 
   protected def computeContainerInfo(ports: Seq[Long]): Option[ContainerInfo] = {

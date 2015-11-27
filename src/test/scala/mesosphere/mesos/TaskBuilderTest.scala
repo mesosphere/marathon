@@ -2,12 +2,12 @@ package mesosphere.mesos
 
 import com.google.common.collect.Lists
 import com.google.protobuf.TextFormat
-import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskTracker }
+import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.mesos.protos.{ Resource, TaskID, _ }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -259,6 +259,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val (taskInfo, taskPorts) = task.get
 
+    taskInfo.hasDiscovery should be (false)
     taskInfo.hasExecutor should be (false)
     taskInfo.hasContainer should be (true)
 
@@ -309,6 +310,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val (taskInfo, taskPorts) = task.get
 
+    taskInfo.hasDiscovery should be (false)
     taskInfo.hasContainer should be (false)
     taskInfo.hasExecutor should be (true)
     taskInfo.getExecutor.hasContainer should be (true)
@@ -329,6 +331,77 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .build
     TextFormat.shortDebugString(networkInfos.head) should equal(TextFormat.shortDebugString(networkInfoProto))
     networkInfos.head should equal(networkInfoProto)
+  }
+
+  test("BuildIfMatchesWithIpAddressAndDiscoveryInfo") {
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        args = Some(Seq("a", "b", "c")),
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        ports = Nil,
+        ipAddress = Some(
+          IpAddress(
+            groups = Seq("a", "b", "c"),
+            labels = Map(
+              "foo" -> "bar",
+              "baz" -> "buzz"
+            ),
+            discoveryInfo = DiscoveryInfo(
+              ports = Seq(DiscoveryInfo.Port(name = "http", number = 80, protocol = "tcp"))
+            )
+          )
+        )
+      )
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+
+    taskInfo.hasExecutor should be (false)
+    taskInfo.hasContainer should be (true)
+
+    val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
+    networkInfos.size should be (1)
+
+    val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
+      .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
+      .addAllGroups(Seq("a", "b", "c").asJava)
+      .setLabels(
+        MesosProtos.Labels.newBuilder.addAllLabels(
+          Seq(
+            MesosProtos.Label.newBuilder.setKey("foo").setValue("bar").build,
+            MesosProtos.Label.newBuilder.setKey("baz").setValue("buzz").build
+          ).asJava
+        ))
+      .build
+    TextFormat.shortDebugString(networkInfos.head) should equal(TextFormat.shortDebugString(networkInfoProto))
+    networkInfos.head should equal(networkInfoProto)
+
+    taskInfo.hasDiscovery should be (true)
+    val discoveryInfo = taskInfo.getDiscovery
+
+    val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
+      .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      .setName(taskInfo.getName)
+      .setPorts(
+        MesosProtos.Ports.newBuilder
+          .addPorts(
+            MesosProtos.Port.newBuilder
+              .setName("http")
+              .setNumber(80)
+              .setProtocol("tcp")
+              .build)
+          .build)
+      .build
+    TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
+    discoveryInfo should equal(discoveryInfoProto)
   }
 
   test("BuildIfMatchesWithCommandAndExecutor") {
