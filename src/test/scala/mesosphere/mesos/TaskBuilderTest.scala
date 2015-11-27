@@ -231,12 +231,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     // TODO test for resources etc.
   }
 
-  test("BuildIfMatchesWithNetwork") {
-    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
-      .addResources(ScalarResource("cpus", 1))
-      .addResources(ScalarResource("mem", 128))
-      .addResources(ScalarResource("disk", 2000))
-      .build
+  test("BuildIfMatchesWithIpAddress") {
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
     val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
@@ -270,11 +266,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("BuildIfMatchesWithNetworkAndCustomExecutor") {
-    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
-      .addResources(ScalarResource("cpus", 1))
-      .addResources(ScalarResource("mem", 128))
-      .addResources(ScalarResource("disk", 2000))
-      .build
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
     val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
@@ -344,11 +336,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("BuildIfMatchesWithArgsAndExecutor") {
-    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
-      .addResources(ScalarResource("cpus", 1))
-      .addResources(ScalarResource("mem", 128))
-      .addResources(ScalarResource("disk", 2000))
-      .build
+    val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
     val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
       offer,
