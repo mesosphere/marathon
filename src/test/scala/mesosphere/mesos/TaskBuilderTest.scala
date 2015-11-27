@@ -1,7 +1,7 @@
 package mesosphere.mesos
 
 import com.google.common.collect.Lists
-import mesosphere.marathon.MarathonSpec
+import com.google.protobuf.TextFormat
 import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -260,12 +260,26 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     taskInfo.hasExecutor should be (false)
     taskInfo.hasContainer should be (true)
+
     val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
     networkInfos.size should be (1)
-    networkInfos.head.getGroupsList.asScala should be (Seq("a", "b", "c"))
+
+    val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
+      .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
+      .addAllGroups(Seq("a", "b", "c").asJava)
+      .setLabels(
+        MesosProtos.Labels.newBuilder.addAllLabels(
+          Seq(
+            MesosProtos.Label.newBuilder.setKey("foo").setValue("bar").build,
+            MesosProtos.Label.newBuilder.setKey("baz").setValue("buzza").build
+          ).asJava
+        ))
+      .build
+    TextFormat.shortDebugString(networkInfos.head) should equal(TextFormat.shortDebugString(networkInfoProto))
+    networkInfos.head should equal(networkInfoProto)
   }
 
-  test("BuildIfMatchesWithNetworkAndCustomExecutor") {
+  test("BuildIfMatchesWithIpAddressAndCustomExecutor") {
     val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
     val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
@@ -296,10 +310,23 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     taskInfo.hasContainer should be (false)
     taskInfo.hasExecutor should be (true)
     taskInfo.getExecutor.hasContainer should be (true)
+
     val networkInfos = taskInfo.getExecutor.getContainer.getNetworkInfosList.asScala
     networkInfos.size should be (1)
-    networkInfos.head.getGroupsList.asScala should be (Seq("a", "b", "c"))
-    networkInfos.head.getLabels.getLabelsList.asScala.map(_.getKey) should be (Seq("foo", "baz"))
+
+    val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
+      .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
+      .addAllGroups(Seq("a", "b", "c").asJava)
+      .setLabels(
+        MesosProtos.Labels.newBuilder.addAllLabels(
+          Seq(
+            MesosProtos.Label.newBuilder.setKey("foo").setValue("bar").build,
+            MesosProtos.Label.newBuilder.setKey("baz").setValue("buzza").build
+          ).asJava
+        ))
+      .build
+    TextFormat.shortDebugString(networkInfos.head) should equal(TextFormat.shortDebugString(networkInfoProto))
+    networkInfos.head should equal(networkInfoProto)
   }
 
   test("BuildIfMatchesWithCommandAndExecutor") {
