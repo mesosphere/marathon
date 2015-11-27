@@ -241,6 +241,34 @@
                     "description": "Key value pair for meta data on that network interface.",
                     "properties": {},
                     "additionalProperties": true
+                },
+                "discovery": {
+                    "type": "object",
+                    "description": "Information useful for service discovery",
+                    "properties": {
+                        "ports": {
+                            "type": "array",
+                            "description": "Array of objects describing the ports exposed by each task",
+                            "items": {
+                                "type": "object",
+                                "description": "Port",
+                                "properties": {
+                                    "number": {
+                                        "maximum": 65535,
+                                        "minimum": 0,
+                                        "type": "integer",
+                                        "description": "The port number"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Name of the port",
+                                        "pattern": "^[a-z][a-z0-9]*$"
+                                    },
+                                    ""
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
