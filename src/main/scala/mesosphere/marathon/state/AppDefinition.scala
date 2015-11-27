@@ -69,7 +69,7 @@ case class AppDefinition(
 
   acceptedResourceRoles: Option[Set[String]] = None,
 
-  network: Option[NetworkInterface] = None,
+  ipAddress: Option[IpAddress] = None,
 
   versionInfo: VersionInfo = VersionInfo.NoVersion)
 
@@ -129,9 +129,9 @@ case class AppDefinition(
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
 
-    network.foreach { n =>
+    ipAddress.foreach { n =>
       val netLabels = n.labels.map { case (key, value) => mesos.Label.newBuilder().setKey(key).setValue(value).build() }
-      builder.setNetwork(Protos.Network.newBuilder
+      builder.setIpAddress(Protos.IpAddress.newBuilder
         .addAllGroups(n.groups.asJava)
         .addAllLabels(netLabels.asJava)
       )
@@ -205,7 +205,7 @@ case class AppDefinition(
       else
         OnlyVersion(Timestamp(proto.getVersion))
 
-    val networkOption = if (proto.hasNetwork) Some(NetworkInterface.fromProto(proto.getNetwork)) else None
+    val networkOption = if (proto.hasIpAddress) Some(IpAddress.fromProto(proto.getIpAddress)) else None
 
     AppDefinition(
       id = proto.getId.toPath,
@@ -235,7 +235,7 @@ case class AppDefinition(
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
-      network = networkOption
+      ipAddress = networkOption
     )
   }
 

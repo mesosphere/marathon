@@ -341,7 +341,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     val app = V2AppDefinition(
       id = "app-with-network-isolation".toPath,
       cmd = Some("python3 -m http.server 8080"),
-      network = Some(NetworkInterface(
+      network = Some(IpAddress(
         groups = Seq("a", "b", "c"),
         labels = Map(
           "foo" -> "bar",
