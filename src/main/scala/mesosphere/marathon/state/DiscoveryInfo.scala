@@ -21,12 +21,14 @@ object DiscoveryInfo {
     )
   }
 
-  case class Port(number: Int, name: String, protocol: Port.Protocol) {
+  case class Port(number: Int, name: String, protocol: String) {
+    require(protocol == "tcp" || protocol == "udp", "protocol can only be 'tcp' or 'udp'")
+
     def toProto: MesosProtos.Port = {
       MesosProtos.Port.newBuilder
         .setNumber(number)
         .setName(name)
-        .setProtocol(protocol.protoString)
+        .setProtocol(protocol)
         .build
     }
   }
@@ -36,27 +38,8 @@ object DiscoveryInfo {
       Port(
         number = proto.getNumber,
         name = proto.getName,
-        protocol = Protocol.fromProto(proto.getProtocol)
+        protocol = proto.getProtocol
       )
-    }
-
-    sealed trait Protocol {
-      def protoString: String
-    }
-
-    object Protocol {
-      val all: Set[Protocol] = Set(TCP, UDP)
-      private[this] val fromProtoString: Map[String, Protocol] = all.map(protocol => protocol.protoString -> protocol).toMap
-      def fromProto(protoString: String): Protocol = {
-        fromProtoString.getOrElse(protoString, throw new IllegalArgumentException(s"Invalid protocol: $protoString"))
-      }
-    }
-
-    case object TCP extends Protocol {
-      override def protoString: String = "tcp"
-    }
-    case object UDP extends Protocol {
-      override def protoString: String = "udp"
     }
   }
 }
