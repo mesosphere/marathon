@@ -9,7 +9,7 @@ import org.apache.mesos.{ Protos => mesos }
 case class IpAddress(
     groups: Seq[String] = Nil,
     labels: Map[String, String] = Map.empty[String, String],
-    discoveryInfo: DiscoveryInfo = DiscoveryInfo.empty) {
+    discoveryInfo: DiscoveryInfo = DiscoveryInfo.Empty) {
 
   def toProto: Protos.IpAddress = {
     val builder = Protos.IpAddress.newBuilder
@@ -31,7 +31,7 @@ object IpAddress {
       labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
       discoveryInfo =
         if (proto.hasDiscoveryInfo) DiscoveryInfo.fromProto(proto.getDiscoveryInfo)
-        else DiscoveryInfo.empty
+        else DiscoveryInfo.Empty
     )
   }
 }
