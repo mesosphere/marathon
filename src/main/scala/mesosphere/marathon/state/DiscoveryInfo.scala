@@ -13,7 +13,7 @@ case class DiscoveryInfo(ports: Seq[DiscoveryInfo.Port] = Seq.empty) {
 }
 
 object DiscoveryInfo {
-  val empty = DiscoveryInfo()
+  object Empty extends DiscoveryInfo
 
   def fromProto(proto: Protos.DiscoveryInfo): DiscoveryInfo = {
     DiscoveryInfo(
