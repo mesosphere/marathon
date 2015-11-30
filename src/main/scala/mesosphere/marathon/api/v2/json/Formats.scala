@@ -212,13 +212,24 @@ trait ContainerFormats {
 trait IpAddressFormats {
   import Formats._
 
-  implicit lazy val NetworkProtocolFormat: Format[mesos.NetworkInfo.Protocol] =
-    enumFormat(mesos.NetworkInfo.Protocol.valueOf, str => s"$str is not a valid protocol")
+  implicit lazy val PortFormat: Format[DiscoveryInfo.Port] = (
+    (__ \ "number").format[Int] ~
+    (__ \ "name").format[String] ~
+    (__ \ "protocol").format[String]
+  )(DiscoveryInfo.Port(_, _, _), unlift(DiscoveryInfo.Port.unapply))
+
+  implicit lazy val DiscoveryInfoFormat: Format[DiscoveryInfo] = Format(
+    (__ \ "ports").read[Seq[DiscoveryInfo.Port]].map(DiscoveryInfo(_)),
+    Writes[DiscoveryInfo] { discoveryInfo =>
+      Json.obj("ports" -> discoveryInfo.ports.map(PortFormat.writes))
+    }
+  )
 
   implicit lazy val IpAddressFormat: Format[IpAddress] = (
     (__ \ "groups").formatNullable[Seq[String]].withDefault(Nil) ~
-    (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
-  )(IpAddress(_, _), unlift(IpAddress.unapply))
+    (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
+    (__ \ "discovery").formatNullable[DiscoveryInfo].withDefault(DiscoveryInfo.Empty)
+  )(IpAddress(_, _, _), unlift(IpAddress.unapply))
 }
 
 trait DeploymentFormats {

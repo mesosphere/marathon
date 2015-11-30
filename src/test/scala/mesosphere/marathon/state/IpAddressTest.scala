@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import mesosphere.marathon.Protos
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
@@ -30,6 +30,16 @@ class IpAddressTest extends MarathonSpec with Matchers {
       )
     )
 
+    lazy val ipAddressWithDiscoveryInfo = IpAddress(
+      groups = Vector("a", "b", "c"),
+      labels = Map(
+        "foo" -> "bar",
+        "baz" -> "buzz"
+      ),
+      discoveryInfo = DiscoveryInfo(
+        ports = Vector(DiscoveryInfo.Port(name = "http", number = 80, protocol = "tcp"))
+      )
+    )
   }
 
   def fixture(): Fixture = new Fixture
@@ -38,7 +48,11 @@ class IpAddressTest extends MarathonSpec with Matchers {
     // this is slightly artificial, since every IpAddress should have at least one group
     val f = fixture()
     val proto = f.defaultIpAddress.toProto
-    proto should be(Protos.IpAddress.getDefaultInstance)
+
+    // The default IpAddress has an empty DiscoveryInfo
+    val defaultIpAddressProto =
+      Protos.IpAddress.newBuilder().setDiscoveryInfo(Protos.DiscoveryInfo.getDefaultInstance).build()
+    proto should be(defaultIpAddressProto)
   }
 
   test("ToProto with groups") {
@@ -54,6 +68,25 @@ class IpAddressTest extends MarathonSpec with Matchers {
     proto.getGroupsList.asScala should equal(f.ipAddressWithGroupsAndLabels.groups)
     proto.getLabelsList.asScala.map(kv => kv.getKey -> kv.getValue).toMap should
       equal(f.ipAddressWithGroupsAndLabels.labels)
+  }
+
+  test("ToProto with groups and labels and discovery") {
+    val f = fixture()
+    val proto = f.ipAddressWithDiscoveryInfo.toProto
+
+    val portProto = MesosProtos.Port.newBuilder
+      .setName("http")
+      .setNumber(80)
+      .setProtocol("tcp")
+      .build
+    val discoveryInfoProto = Protos.DiscoveryInfo.newBuilder
+      .addPorts(portProto)
+      .build
+
+    proto.getGroupsList.asScala should equal(f.ipAddressWithGroupsAndLabels.groups)
+    proto.getLabelsList.asScala.map(kv => kv.getKey -> kv.getValue).toMap should
+      equal(f.ipAddressWithGroupsAndLabels.labels)
+    proto.getDiscoveryInfo should equal(discoveryInfoProto)
   }
 
   test("ConstructFromProto with default proto") {
@@ -77,11 +110,33 @@ class IpAddressTest extends MarathonSpec with Matchers {
     val f = fixture()
     val protoWithGroupsAndLabels = Protos.IpAddress.newBuilder
       .addAllGroups(Seq("a", "b", "c").asJava)
-      .addLabels(mesos.Label.newBuilder.setKey("foo").setValue("bar"))
-      .addLabels(mesos.Label.newBuilder.setKey("baz").setValue("buzz"))
+      .addLabels(MesosProtos.Label.newBuilder.setKey("foo").setValue("bar"))
+      .addLabels(MesosProtos.Label.newBuilder.setKey("baz").setValue("buzz"))
       .build
     val result = IpAddress.fromProto(protoWithGroupsAndLabels)
     result should equal(f.ipAddressWithGroupsAndLabels)
+  }
+
+  test("ConstructFromProto with groups and labels and discovery") {
+    val f = fixture()
+
+    val portProto = MesosProtos.Port.newBuilder
+      .setName("http")
+      .setNumber(80)
+      .setProtocol("tcp")
+      .build
+    val discoveryInfoProto = Protos.DiscoveryInfo.newBuilder
+      .addPorts(portProto)
+      .build
+
+    val protoWithDiscovery = Protos.IpAddress.newBuilder
+      .addAllGroups(Seq("a", "b", "c").asJava)
+      .addLabels(MesosProtos.Label.newBuilder.setKey("foo").setValue("bar"))
+      .addLabels(MesosProtos.Label.newBuilder.setKey("baz").setValue("buzz"))
+      .setDiscoveryInfo(discoveryInfoProto)
+      .build
+    val result = IpAddress.fromProto(protoWithDiscovery)
+    result should equal(f.ipAddressWithDiscoveryInfo)
   }
 
   test("JSON Serialization round-trip defaultIpAddress") {
@@ -97,6 +152,11 @@ class IpAddressTest extends MarathonSpec with Matchers {
   test("JSON Serialization round-trip ipAddressWithGroupsAndLabels") {
     val f = fixture()
     JsonTestHelper.assertSerializationRoundtripWorks(f.ipAddressWithGroupsAndLabels)
+  }
+
+  test("JSON Serialization round-trip ipAddressWithDiscoveryInfo") {
+    val f = fixture()
+    JsonTestHelper.assertSerializationRoundtripWorks(f.ipAddressWithDiscoveryInfo)
   }
 
   private[this] def fromJson(json: String): IpAddress = {
