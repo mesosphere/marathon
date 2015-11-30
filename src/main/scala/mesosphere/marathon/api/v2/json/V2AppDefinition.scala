@@ -81,7 +81,7 @@ case class V2AppDefinition(
 
   /**
     * Returns the canonical internal representation of this API-specific
-    * application defintion.
+    * application definition.
     */
   def toAppDefinition: AppDefinition = {
     val appVersionInfo = versionInfo match {
