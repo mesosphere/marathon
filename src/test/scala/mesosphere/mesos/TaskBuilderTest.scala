@@ -271,7 +271,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         MesosProtos.Labels.newBuilder.addAllLabels(
           Seq(
             MesosProtos.Label.newBuilder.setKey("foo").setValue("bar").build,
-            MesosProtos.Label.newBuilder.setKey("baz").setValue("buzza").build
+            MesosProtos.Label.newBuilder.setKey("baz").setValue("buzz").build
           ).asJava
         ))
       .build
@@ -321,7 +321,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         MesosProtos.Labels.newBuilder.addAllLabels(
           Seq(
             MesosProtos.Label.newBuilder.setKey("foo").setValue("bar").build,
-            MesosProtos.Label.newBuilder.setKey("baz").setValue("buzza").build
+            MesosProtos.Label.newBuilder.setKey("baz").setValue("buzz").build
           ).asJava
         ))
       .build
