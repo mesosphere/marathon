@@ -254,8 +254,6 @@ by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
 ###### Health Check Options
 
 * `command`: Command to run in order to determine the health of a task.
-  _Note: only used if `protocol == "COMMAND"`, and only available if Marathon is
-  started with the `--executor_health_checks` flag.
 * `gracePeriodSeconds` (Optional. Default: 15): Health check failures are
   ignored within this number of seconds of the task being started or until the
   task becomes healthy for the first time.
