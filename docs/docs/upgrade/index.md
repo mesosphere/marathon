@@ -27,7 +27,7 @@ Upgrading to a newer version of Marathon should be executed in the following ord
 
 ## Upgrading to 0.13
 
-Release Notes: https://github.com/mesosphere/marathon/releases/tag/v0.13.0-RC1
+Release Notes: https://github.com/mesosphere/marathon/releases/tag/v0.13.0
 
 Tasks keys and storage format in ZooKeeper changed in a backward incompatible fashion.
 Zookeeper compression is implemented and enabled by default. Older versions will not be able to read compressed entities.
