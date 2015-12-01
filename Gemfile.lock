@@ -85,6 +85,3 @@ DEPENDENCIES
   pygments.rb
   rdiscount
   redcarpet
-
-BUNDLED WITH
-   1.10.3
