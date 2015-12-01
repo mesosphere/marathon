@@ -232,6 +232,26 @@
       "minimum": 0,
       "type": "integer"
     },
+    "ipAddress": {
+      "type": "object",
+      "description": "If an application definition includes the 'ipAddress' field, then Marathon will request a per-task IP from Mesos. A separate ports/portMappings configuration is then disallowed.",
+      "properties": {
+        "groups": {
+          "type": "array",
+          "description": "Array of network groups. One IP address can belong to zero or more network groups. The idea is that containers can only reach containers with which they share at least one network group.",
+          "items": {
+            "type": "string",
+            "description": "The name of the network group"
+          }
+        },
+        "labels": {
+          "type": "object",
+          "description": "Key value pair for meta data on that network interface.",
+          "properties": {},
+          "additionalProperties": true
+        }
+      }
+    },
     "labels": {
       "additionalProperties": {
         "type": "string"

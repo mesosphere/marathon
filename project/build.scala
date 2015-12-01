@@ -268,6 +268,7 @@ object Dependencies {
     graphite % "compile",
     datadog % "compile",
     marathonApiConsole % "compile",
+    doNotUseMe % "compile",
 
     // test
     Test.diffson % "test",
@@ -341,6 +342,7 @@ object Dependency {
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
   val graphite = "io.dropwizard.metrics" % "metrics-graphite" % V.Graphite
   val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
+  val doNotUseMe = "org.apache.mesos" % "mesos" % "0.25.1.donotuse"
 
 
   object Test {

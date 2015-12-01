@@ -12,7 +12,7 @@ import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
-import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.JavaConverters._
@@ -68,6 +68,8 @@ case class AppDefinition(
   labels: Map[String, String] = AppDefinition.DefaultLabels,
 
   acceptedResourceRoles: Option[Set[String]] = None,
+
+  ipAddress: Option[IpAddress] = None,
 
   versionInfo: VersionInfo = VersionInfo.NoVersion)
 
@@ -126,6 +128,14 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
+
+    ipAddress.foreach { n =>
+      val netLabels = n.labels.map { case (key, value) => mesos.Label.newBuilder().setKey(key).setValue(value).build() }
+      builder.setIpAddress(Protos.IpAddress.newBuilder
+        .addAllGroups(n.groups.asJava)
+        .addAllLabels(netLabels.asJava)
+      )
+    }
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
@@ -195,6 +205,8 @@ case class AppDefinition(
       else
         OnlyVersion(Timestamp(proto.getVersion))
 
+    val networkOption = if (proto.hasIpAddress) Some(IpAddress.fromProto(proto.getIpAddress)) else None
+
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -222,7 +234,8 @@ case class AppDefinition(
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
-      dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet
+      dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
+      ipAddress = networkOption
     )
   }
 
@@ -230,7 +243,7 @@ case class AppDefinition(
     for {
       c <- container
       d <- c.docker
-      n <- d.network if n == Network.BRIDGE
+      n <- d.network if n == DockerInfo.Network.BRIDGE
       pms <- d.portMappings
     } yield pms
 

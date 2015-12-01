@@ -63,10 +63,10 @@ class AppStopActorTest
     )
 
     val statusUpdateEventA =
-      MesosStatusUpdateEvent("", "task_a", "TASK_FAILED", "", app.id, "", Nil, app.version.toString)
+      MesosStatusUpdateEvent("", "task_a", "TASK_FAILED", "", app.id, "", "", Nil, app.version.toString)
 
     val statusUpdateEventB =
-      MesosStatusUpdateEvent("", "task_b", "TASK_LOST", "", app.id, "", Nil, app.version.toString)
+      MesosStatusUpdateEvent("", "task_b", "TASK_LOST", "", app.id, "", "", Nil, app.version.toString)
 
     val Some(taskFailureA) =
       TaskFailure.FromMesosStatusUpdateEvent(statusUpdateEventA)

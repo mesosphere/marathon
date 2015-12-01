@@ -86,6 +86,7 @@ class HistoryActorTest
     message = "message",
     appId = "appId".toPath,
     host = "host",
+    containerAddress = "123.123.123.123",
     ports = Nil,
     version = Timestamp.now().toString
   )

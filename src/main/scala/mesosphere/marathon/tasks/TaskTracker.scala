@@ -144,7 +144,11 @@ class TaskTracker @Inject() (
         removeTask(app, task.getId)
         Future.successful(())
       case TASK_RUNNING if !task.hasStartedAt => // was staged, is now running
-        updateTask(task.toBuilder.setStartedAt(System.currentTimeMillis).setStatus(status).build())
+        val builder = task.toBuilder
+        builder.setStartedAt(System.currentTimeMillis).setStatus(status)
+        builder.setStatus(status)
+        if (status.hasContainerStatus) builder.addAllNetworks(status.getContainerStatus.getNetworkInfosList)
+        updateTask(builder.build())
       case _ =>
         updateTaskOnStateChange(task)
     }
