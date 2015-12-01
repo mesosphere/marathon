@@ -20,4 +20,4 @@ questions.
 
 The
 ["**marathon**" Stack Overflow tag](https://stackoverflow.com/questions/tagged/marathon)
-is for specific questions that can be solved with a small amount code.
+is for specific questions that can be solved with a small amount of code.
