@@ -14,6 +14,7 @@ import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsArray
 
+import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
@@ -163,6 +164,26 @@ class AppDeployIntegrationTest
     Given("a new app")
     val app = v2AppProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
       copy(healthChecks = Set(healthCheck))
+    val check = appProxyCheck(app.id, "v1", true)
+
+    When("The app is deployed")
+    val result = marathon.createAppV2(app)
+
+    Then("The app is created")
+    result.code should be (201) //Created
+    extractDeploymentIds(result) should have size 1
+    waitForEvent("deployment_success")
+    check.pingSince(5.seconds) should be (true) //make sure, the app has really started
+  }
+
+  test("create a simple app with http health checks using port instead of portIndex") {
+    Given("a new app")
+    val app = v2AppProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
+      copy(
+        ports = immutable.Seq[Integer](31000),
+        requirePorts = true,
+        healthChecks = Set(healthCheck.copy(port = Some(31000)))
+      )
     val check = appProxyCheck(app.id, "v1", true)
 
     When("The app is deployed")

@@ -42,7 +42,7 @@ class HealthCheckWorkerActorTest
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
 
-    ref ! HealthCheckJob(task, HealthCheck(protocol = Protocol.TCP))
+    ref ! HealthCheckJob(task, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }
@@ -69,7 +69,7 @@ class HealthCheckWorkerActorTest
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
 
-    ref ! HealthCheckJob(task, HealthCheck(protocol = Protocol.TCP))
+    ref ! HealthCheckJob(task, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }
@@ -82,4 +82,16 @@ class HealthCheckWorkerActorTest
     expectTerminated(ref)
   }
 
+  test("getPort") {
+    val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
+
+    val check = new HealthCheck(port = Some(1234))
+    val task = Protos.MarathonTask
+      .newBuilder
+      .setHost("fakehostname")
+      .setId("test_id")
+      .addPorts(4321)
+      .build()
+    assert(ref.underlyingActor.getPort(task, check) == Some(1234))
+  }
 }

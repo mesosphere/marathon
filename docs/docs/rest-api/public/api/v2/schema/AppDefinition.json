@@ -208,6 +208,11 @@
           "path": {
             "type": "string"
           },
+          "port": {
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
           "portIndex": {
             "minimum": 0,
             "type": "integer"

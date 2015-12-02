@@ -198,6 +198,11 @@
                         "minimum": 0,
                         "type": "integer"
                     },
+                    "port": {
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                    },
                     "path": {
                         "type": "string"
                     },

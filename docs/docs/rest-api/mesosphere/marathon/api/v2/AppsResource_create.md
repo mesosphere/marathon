@@ -82,6 +82,15 @@ Here is an example of an application JSON which includes all fields.
             "maxConsecutiveFailures": 3
         },
         {
+            "protocol": "HTTP",
+            "path": "/machinehealth",
+            "gracePeriodSeconds": 3,
+            "intervalSeconds": 10,
+            "port": 3333,
+            "timeoutSeconds": 10,
+            "maxConsecutiveFailures": 3
+        },
+        {
             "protocol": "TCP",
             "gracePeriodSeconds": 3,
             "intervalSeconds": 5,
