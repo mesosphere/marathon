@@ -74,7 +74,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       "ports",
       "Elements must be unique"
     )
-    validateJsonSchema(app, false)
+    validateJsonSchema(app, true)
 
     val correct = V2AppDefinition(id = "test".toPath)
 
