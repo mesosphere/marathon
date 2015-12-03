@@ -80,6 +80,14 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
     update.transitiveApps.flatMap(_.ports.filter(x => x >= 10 && x <= 20)) should have size 2
   }
 
+  //regression for #2743
+  test("Reassign dynamic service ports specified in the container") {
+    val from = Group(PathId.empty, Set(AppDefinition("/app1".toPath, ports = Seq(10, 11))))
+    val to = Group(PathId.empty, Set(AppDefinition("/app1".toPath, ports = Seq(10, 0, 11))))
+    val update = manager(minServicePort = 10, maxServicePort = 20).assignDynamicServicePorts(from, to)
+    update.app("/app1".toPath).get.ports should be(Seq(10, 12, 11))
+  }
+
   // Regression test for #1365
   test("Export non-dynamic service ports specified in the container to the ports field") {
     import Container.Docker

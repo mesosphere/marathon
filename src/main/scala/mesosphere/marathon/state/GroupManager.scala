@@ -218,14 +218,16 @@ class GroupManager @Singleton @Inject() (
     }
 
     def assignPorts(app: AppDefinition): AppDefinition = {
-      val alreadyAssigned = mutable.Queue(
+      //all ports that are already assigned in old app definition, but not used in the new definition
+      //if the app uses dynamic ports (0), it will get always the same ports assigned
+      val assignedAndAvailable = mutable.Queue(
         from.app(app.id)
-          .map(_.ports.filter(p => portRange.contains(p)))
+          .map(_.ports.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
           .getOrElse(Nil): _*
       )
 
       def nextFreeAppPort: JInt =
-        if (alreadyAssigned.nonEmpty) alreadyAssigned.dequeue()
+        if (assignedAndAvailable.nonEmpty) assignedAndAvailable.dequeue()
         else nextGlobalFreePort
 
       val servicePorts: Seq[JInt] = app.servicePorts.map { port =>
