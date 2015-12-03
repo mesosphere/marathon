@@ -162,6 +162,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [SmartProcure](https://smartprocure.us/)
 * [Strava](https://www.strava.com)
 * [trivago](http://www.trivago.com/)
+* [VANAD Enovation](http://www.vanadenovation.nl/)
 * [Viadeo](http://www.viadeo.com)
 * [Wikia](http://www.wikia.com/Wikia)
 * [WooRank](https://www.woorank.com/)
