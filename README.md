@@ -148,6 +148,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Indix](http://www.indix.com/)
 * [ING](http://www.ing.com/)
 * [iQIYI](http://www.iqiyi.com/)
+* [LaunchKey](https://launchkey.com/)
 * [Measurence](http://www.measurence.com/)
 * [Motus](http://www.motus.com/)
 * [OpenTable](http://www.opentable.com/)
