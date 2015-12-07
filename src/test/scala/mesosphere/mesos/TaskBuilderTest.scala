@@ -596,7 +596,11 @@ class TaskBuilderTest extends MarathonSpec {
       env == Map(
         "MESOS_TASK_ID" -> "taskId",
         "MARATHON_APP_ID" -> "/app",
-        "MARATHON_APP_VERSION" -> "2015-02-03T12:30:00.000Z"
+        "MARATHON_APP_VERSION" -> "2015-02-03T12:30:00.000Z",
+        "MARATHON_APP_RESOURCE_CPUS" -> AppDefinition.DefaultCpus.toString,
+        "MARATHON_APP_RESOURCE_MEM" -> AppDefinition.DefaultMem.toString,
+        "MARATHON_APP_RESOURCE_DISK" -> AppDefinition.DefaultDisk.toString,
+        "MARATHON_APP_LABELS" -> ""
       )
     )
   }
@@ -611,7 +615,14 @@ class TaskBuilderTest extends MarathonSpec {
         docker = Some(Docker(
           image = "myregistry/myimage:version"
         ))
-      ))
+      )),
+      cpus = 10.0,
+      mem = 256.0,
+      disk = 128.0,
+      labels = Map(
+        "LABEL1" -> "VALUE1",
+        "LABEL2" -> "VALUE2"
+      )
     )
     val env = TaskBuilder.taskContextEnv(app = app, Some(taskId))
 
@@ -620,7 +631,42 @@ class TaskBuilderTest extends MarathonSpec {
         "MESOS_TASK_ID" -> "taskId",
         "MARATHON_APP_ID" -> "/app",
         "MARATHON_APP_VERSION" -> "2015-02-03T12:30:00.000Z",
-        "MARATHON_APP_DOCKER_IMAGE" -> "myregistry/myimage:version"
+        "MARATHON_APP_DOCKER_IMAGE" -> "myregistry/myimage:version",
+        "MARATHON_APP_RESOURCE_CPUS" -> "10.0",
+        "MARATHON_APP_RESOURCE_MEM" -> "256.0",
+        "MARATHON_APP_RESOURCE_DISK" -> "128.0",
+        "MARATHON_APP_LABELS" -> "LABEL1 LABEL2",
+        "MARATHON_APP_LABEL_LABEL1" -> "VALUE1",
+        "MARATHON_APP_LABEL_LABEL2" -> "VALUE2"
+      )
+    )
+  }
+
+  test("TaskContextEnv will provide label env safety") {
+
+    // will exceed max length for sure
+    val longLabel = "longlabel" * TaskBuilder.maxVariableLength
+    var longValue = "longvalue" * TaskBuilder.maxEnvironmentVarLength
+
+    val app = AppDefinition(
+      labels = Map(
+        "label" -> "VALUE1",
+        "label-with-invalid-chars" -> "VALUE2",
+        "other--label\\--\\a" -> "VALUE3",
+        longLabel -> "value for long label",
+        "label-long" -> longValue
+      )
+    )
+
+    val env = TaskBuilder.taskContextEnv(app = app, Some(TaskID("taskId")))
+      .filterKeys(_.startsWith("MARATHON_APP_LABEL"))
+
+    assert(
+      env == Map(
+        "MARATHON_APP_LABELS" -> "OTHER_LABEL_A LABEL LABEL_WITH_INVALID_CHARS",
+        "MARATHON_APP_LABEL_LABEL" -> "VALUE1",
+        "MARATHON_APP_LABEL_LABEL_WITH_INVALID_CHARS" -> "VALUE2",
+        "MARATHON_APP_LABEL_OTHER_LABEL_A" -> "VALUE3"
       )
     )
   }
@@ -749,7 +795,9 @@ class TaskBuilderTest extends MarathonSpec {
       command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
     val nonPrefixedEnvVars = env.filterKeys(!_.startsWith("P_"))
-    val whiteList = Seq("MESOS_TASK_ID", "MARATHON_APP_ID", "MARATHON_APP_VERSION")
+
+    val whiteList = Seq("MESOS_TASK_ID", "MARATHON_APP_ID", "MARATHON_APP_VERSION", "MARATHON_APP_RESOURCE_CPUS",
+      "MARATHON_APP_RESOURCE_MEM", "MARATHON_APP_RESOURCE_DISK", "MARATHON_APP_LABELS")
 
     assert(nonPrefixedEnvVars.keySet.forall(whiteList.contains))
   }
