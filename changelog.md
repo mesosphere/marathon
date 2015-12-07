@@ -1,12 +1,19 @@
 ## Changes from 0.13.0 to 0.14.0
 
+### Recommended Mesos version is 0.26.0
+
+We tested this release against Mesos version 0.26.0. Thus, this is the recommended Mesos version for this
+release.
+
 ### Overview
 
-#### Use mesos 0.25
+#### Health Checks: allow port instead of portIndex
+Previously, the port to be used for health checks could only be specified by supplying a port index.  Now it
+can also be specified directly using the new `port` field.
 
-This version of Marathon uses mesos 0.25 - the latest stable version at the time of writing.
-All integration tests are run against this version of Mesos.
-
+### Fixed issues
+- #2558 - If driver finishes with error, Marathon does not abdicate
+- #2734 - Invalid validation for multiple ports
 
 ## Changes from 0.11.1 to 0.13.0
 
