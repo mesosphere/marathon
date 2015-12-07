@@ -11,9 +11,29 @@ release.
 Previously, the port to be used for health checks could only be specified by supplying a port index.  Now it
 can also be specified directly using the new `port` field.
 
+#### Improved search in the UI
+Previously, the user could search through applications using a field which filtered all applications, 
+In 0.14.0 we replace the filter with a search which leads to a detailed search result view. There are
+various improvements in the search interaction, including the user being returned to their former group
+context after the search term has been cleared.
+
+#### Better health status feedback
+The health bars in the application list view are now provided in the application detail view. The tooltips
+in the overview have been consolidated to make them easier to understand. Additionally, the styles of the
+deployment table have been updated inline with the applications list view.
+
+#### IP-per-task UI
+Some changes have been made in order to support IP-per-task in the API. The relevenant part of the app
+definition is exposed in the configuration page, and the `ipAddresses` field is integrated in the task
+detail view.
+
+#### 
+
 ### Fixed issues
 - #2558 - If driver finishes with error, Marathon does not abdicate
 - #2734 - Invalid validation for multiple ports
+- #2720 - Disabled button has wrong colour
+- #2647 - Application cmd override causes application to restart repeatedly
 
 ## Changes from 0.11.1 to 0.13.0
 
