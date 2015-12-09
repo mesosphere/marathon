@@ -57,14 +57,11 @@ object V2Group {
                                 (implicit validator: Validator[V2Group]): Validator[V2Group] = {
     new Validator[V2Group] {
       override def apply(group: V2Group): Result = {
-        conf.maxApps.get.map { num =>
-          RuleViolation(group,
+        conf.maxApps.get.filter(group.toGroup().transitiveApps.size > _).map { num =>
+          Failure(Set(RuleViolation(group,
             s"""This Marathon instance may only handle up to $num Apps!
-                |(Override with command line option --max_apps)""".stripMargin,None)
-        } match {
-          case Some(v) => Failure(Set(v))
-          case _ => Success
-        }
+                |(Override with command line option --max_apps)""".stripMargin, None)))
+        } getOrElse Success
       } and validator(group)
     }
   }
