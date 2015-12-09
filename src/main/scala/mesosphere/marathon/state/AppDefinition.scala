@@ -20,6 +20,8 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
+import com.wix.accord.dsl._
+
 case class AppDefinition(
 
   id: PathId = AppDefinition.DefaultId,
@@ -433,7 +435,6 @@ object AppDefinition {
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
-  import com.wix.accord.dsl._
   implicit val appDefinitionValidator = validator[AppDefinition] { appDef =>
     appDef.id is valid
     appDef.dependencies is valid
