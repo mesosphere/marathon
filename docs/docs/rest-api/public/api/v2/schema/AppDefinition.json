@@ -297,12 +297,43 @@
       "type": "object",
       "description": "If an application definition includes the 'ipAddress' field, then Marathon will request a per-task IP from Mesos. A separate ports/portMappings configuration is then disallowed.",
       "properties": {
+        "discovery": {
+          "type": "object",
+          "description": "Information useful for service discovery.",
+          "properties": {
+            "ports": {
+              "type": "array",
+              "description": "Array of objects describing the ports exposed by each task.",
+              "items": {
+                "type": "object",
+                "description": "Port",
+                "properties": {
+                  "number": {
+                    "maximum": 65535,
+                    "minimum": 0,
+                    "type": "integer",
+                    "description": "The port number."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the port.",
+                    "pattern": "^[a-z][a-z0-9-]*$"
+                  },
+                  "protocol": {
+                    "enum": ["tcp", "udp"],
+                    "description": "Protocol of the port (one of ['tcp', 'udp'])."
+                  }
+                }
+              }
+            }
+          }
+        },
         "groups": {
           "type": "array",
           "description": "Array of network groups. One IP address can belong to zero or more network groups. The idea is that containers can only reach containers with which they share at least one network group.",
           "items": {
             "type": "string",
-            "description": "The name of the network group"
+            "description": "The name of the network group."
           }
         },
         "labels": {
