@@ -14,6 +14,8 @@ import org.apache.mesos.{ Protos => mesos }
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
+import com.wix.accord.dsl._
+
 @PortIndices
 @ValidV2AppDefinition
 case class V2AppDefinition(
@@ -128,7 +130,6 @@ object V2AppDefinition {
       version = app.version, versionInfo = maybeVersionInfo)
   }
 
-  import com.wix.accord.dsl._
   implicit val appDefinitionValidator = validator[V2AppDefinition] { appDef =>
     appDef.id is valid
     appDef.dependencies is valid
