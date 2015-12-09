@@ -78,10 +78,12 @@ object V2GroupUpdate {
   def hasOnlyOneDefinedOption[A <: Product: ClassTag, B]: Validator[A] =
   new Validator[A] {
     def apply( product: A ) = {
-      if (product.productIterator.count {
+      val n = product.productIterator.count {
         case Some(_) => true
         case _ => false
-      } <= 1)
+      }
+
+      if (n <= 1)
         Success
       else
         Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties", None)))
