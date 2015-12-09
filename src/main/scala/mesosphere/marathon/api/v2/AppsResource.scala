@@ -69,27 +69,26 @@ class AppsResource @Inject() (
              @DefaultValue("false")@QueryParam("force") force: Boolean,
              @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     withValid(Json.parse(body).as[V2AppDefinition].withCanonizedIds()) { appDef =>
-      withValid(appDef.toAppDefinition) { app =>
-        doIfAuthorized(req, resp, CreateAppOrGroup, app.id) { identity =>
-          def createOrThrow(opt: Option[AppDefinition]) = opt
-            .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
-            .getOrElse(app)
+      val app = appDef.toAppDefinition
+      doIfAuthorized(req, resp, CreateAppOrGroup, app.id) { identity =>
+        def createOrThrow(opt: Option[AppDefinition]) = opt
+          .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
+          .getOrElse(app)
 
-          val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
+        val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
 
-          val appWithDeployments = AppInfo(
-            app,
-            maybeCounts = Some(TaskCounts.zero),
-            maybeTasks = Some(Seq.empty),
-            maybeDeployments = Some(Seq(Identifiable(plan.id)))
-          )
+        val appWithDeployments = AppInfo(
+          app,
+          maybeCounts = Some(TaskCounts.zero),
+          maybeTasks = Some(Seq.empty),
+          maybeDeployments = Some(Seq(Identifiable(plan.id)))
+        )
 
-          maybePostEvent(req, appWithDeployments.app)
-          Response
-            .created(new URI(app.id.toString))
-            .entity(jsonString(appWithDeployments))
-            .build()
-        }
+        maybePostEvent(req, appWithDeployments.app)
+        Response
+          .created(new URI(app.id.toString))
+          .entity(jsonString(appWithDeployments))
+          .build()
       }
     }
   }
