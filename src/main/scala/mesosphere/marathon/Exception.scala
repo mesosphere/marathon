@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import com.wix.accord.{Failure, Violation}
 import mesosphere.marathon.state.PathId
 
 //scalastyle:off null
@@ -29,6 +30,8 @@ case class CanceledActionException(msg: String) extends Exception(msg)
 
 case class ConflictingChangeException(msg: String) extends Exception(msg)
 
+case class ValidationFailedException(obj: Any, failure: Failure) extends Exception("Validation failed")
+
 /*
  * Task upgrade specific exceptions
  */
@@ -56,3 +59,4 @@ class ResolveArtifactsCanceledException(msg: String) extends DeploymentFailedExc
  */
 class StoreCommandFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
 class MigrationFailedException(msg: String, cause: Throwable = null) extends Exception(msg, cause)
+

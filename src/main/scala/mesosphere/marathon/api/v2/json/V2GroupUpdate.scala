@@ -1,7 +1,12 @@
 package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble }
+import com.wix.accord.{RuleViolation, Failure, Success, Validator}
+import com.wix.accord.dsl._
 import mesosphere.marathon.state._
+import mesosphere.marathon.api.v2.Validation._
+
+import scala.reflect.ClassTag
 
 case class V2GroupUpdate(
     id: Option[PathId],
@@ -58,4 +63,28 @@ object V2GroupUpdate {
     V2GroupUpdate(Some(id), if (apps.isEmpty) None else Some(apps), if (groups.isEmpty) None else Some(groups))
   }
   def empty(id: PathId): V2GroupUpdate = V2GroupUpdate(Some(id))
+
+  implicit val v2GroupUpdateValidator: Validator[V2GroupUpdate] = validator[V2GroupUpdate] { group =>
+    group is notNull
+
+    group.version is hasOnlyOneDefinedOption
+    group.scaleBy is hasOnlyOneDefinedOption
+
+    group.id is optional(PathId.validChild(group.id.map(_.canonicalPath(PathId.empty)).getOrElse(PathId.empty)))
+    group.apps is valid
+    group.groups is valid
+  }
+
+  def hasOnlyOneDefinedOption[A <: Product: ClassTag, B]: Validator[A] =
+  new Validator[A] {
+    def apply( product: A ) = {
+      if (product.productIterator.count {
+        case Some(_) => true
+        case _ => false
+      } <= 1)
+        Success
+      else
+        Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties", None)))
+    }
+  }
 }

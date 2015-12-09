@@ -88,4 +88,37 @@ object PathId {
     def toPath: PathId = PathId(stringPath)
     def toRootPath: PathId = PathId(stringPath).canonicalPath()
   }
+
+  /**
+    * This regular expression is used to validate each path segment of an ID.
+    *
+    * If you change this, please also change "pathType" in AppDefinition.json and
+    * notify the maintainers of the DCOS CLI.
+    */
+  private[this] val ID_PATH_SEGMENT_PATTERN =
+    "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
+
+  import com.wix.accord.dsl._
+  implicit val pathIdValidator = validator[PathId] { pathId =>
+    pathId.path.each should matchRegex(ID_PATH_SEGMENT_PATTERN.pattern)
+    // pathId is validChild(pathId.parent)
+  }
+
+  import com.wix.accord._
+  import scala.util.Try
+  def validChild(parent: PathId): Validator[PathId] = {
+    new Validator[PathId] {
+      override def apply(child: PathId): Result = {
+        Try(child.canonicalPath(parent)) match {
+          case scala.util.Success(p) =>
+            if (p.parent != PathId.empty && p.parent != parent) Failure(Set(
+              RuleViolation(child, s"identifier $child is not child of $parent. Hint: use relative paths.", None)
+            ))
+            else Success
+          case scala.util.Failure(_) => Failure(Set(
+            RuleViolation(child, s"canonical path can not be computed for $parent", None)))
+        }
+      }
+    }
+  }
 }

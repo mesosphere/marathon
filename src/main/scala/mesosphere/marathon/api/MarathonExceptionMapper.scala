@@ -8,17 +8,13 @@ import com.google.inject.Singleton
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.TimeoutException
-import mesosphere.marathon.{
-  AppLockedException,
-  BadRequestException,
-  ConflictingChangeException,
-  UnknownAppException
-}
+import mesosphere.marathon.{ Exception=>_, _ }
 import com.sun.jersey.api.NotFoundException
 import com.fasterxml.jackson.core.JsonParseException
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
-import play.api.libs.json.{ Json, JsObject, JsResultException }
+import play.api.libs.json.{JsValue, Json, JsObject, JsResultException}
+import mesosphere.marathon.api.v2.Validation._
 
 @Provider
 @Singleton
@@ -53,6 +49,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: BadRequestException          => 400 // Bad Request
     case e: JsonParseException           => 400 // Bad Request
     case e: JsResultException            => 400 // Bad Request
+    case e: ValidationFailedException    => 400 // Bad Request
     case e: ConstraintViolationException => 422 // Unprocessable entity
     case e: JsonMappingException         => 400 // Bad Request
     case e: WebApplicationException      => e.getResponse.getStatus
@@ -60,7 +57,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     //scalastyle:on
   }
 
-  private def entity(exception: Exception): JsObject = exception match {
+  private def entity(exception: Exception): JsValue = exception match {
     case e: NotFoundException =>
       Json.obj("message" -> s"URI not found: ${e.getNotFoundUri.getRawPath}")
     case e: AppLockedException =>
@@ -99,6 +96,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
         "message" -> e.getMessage,
         "errors" -> e.getConstraintViolations.asScala.map(violationToError)
       )
+    case ValidationFailedException(obj, failure) => Json.toJson(failure)
     case e: WebApplicationException =>
       //scalastyle:off null
       if (Status.fromStatusCode(e.getResponse.getStatus) != null) {

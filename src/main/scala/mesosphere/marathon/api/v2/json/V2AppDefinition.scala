@@ -3,6 +3,7 @@ package mesosphere.marathon.api.v2.json
 import java.lang.{ Double => JDouble, Integer => JInt }
 
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidV2AppDefinition }
 import mesosphere.marathon.health.HealthCheck
@@ -125,5 +126,13 @@ object V2AppDefinition {
       container = app.container, healthChecks = app.healthChecks, dependencies = app.dependencies,
       upgradeStrategy = app.upgradeStrategy, labels = app.labels, acceptedResourceRoles = app.acceptedResourceRoles,
       version = app.version, versionInfo = maybeVersionInfo)
+  }
+
+  import com.wix.accord.dsl._
+  implicit val appDefinitionValidator = validator[V2AppDefinition] { appDef =>
+    appDef.id is valid
+    appDef.dependencies is valid
+    appDef.upgradeStrategy is valid
+    appDef.storeUrls is every(urlsCanBeResolvedValidator)
   }
 }
