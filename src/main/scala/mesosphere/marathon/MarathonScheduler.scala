@@ -6,8 +6,6 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.tracker.TaskStatusUpdateProcessor
 import mesosphere.marathon.event._
 import mesosphere.marathon.tasks._
@@ -114,12 +112,15 @@ class MarathonScheduler @Inject() (
   }
 
   override def error(driver: SchedulerDriver, message: String) {
-    log.warn("Error: %s".format(message))
+    log.warn(s"Error: $message\n" +
+      s"In case Mesos does not allow registration with the current frameworkId, " +
+      s"delete the ZooKeeper Node: ${config.zkPath}/state/framework:id\n" +
+      s"CAUTION: if you remove this node, all tasks started with the current frameworkId will be orphaned!")
 
     // Currently, it's pretty hard to disambiguate this error from other causes of framework errors.
     // Watch MESOS-2522 which will add a reason field for framework errors to help with this.
-    // For now the frameworkId is removed for all messages.
-    val removeFrameworkId = true
+    // For now the frameworkId is never removed!
+    val removeFrameworkId = false
     suicide(removeFrameworkId)
   }
 
