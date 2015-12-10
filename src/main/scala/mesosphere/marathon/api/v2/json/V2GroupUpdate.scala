@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble }
-import com.wix.accord.{RuleViolation, Failure, Success, Validator}
+import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v2.Validation._
@@ -67,8 +67,8 @@ object V2GroupUpdate {
   implicit val v2GroupUpdateValidator: Validator[V2GroupUpdate] = validator[V2GroupUpdate] { group =>
     group is notNull
 
-    group.version is hasOnlyOneDefinedOption
-    group.scaleBy is hasOnlyOneDefinedOption
+    group.version is notEmpty and hasOnlyOneDefinedOption
+    group.scaleBy is notEmpty and hasOnlyOneDefinedOption
 
     group.id is optional(PathId.validChild(group.id.map(_.canonicalPath(PathId.empty)).getOrElse(PathId.empty)))
     group.apps is valid
@@ -83,7 +83,7 @@ object V2GroupUpdate {
         case _ => false
       }
 
-      if (n <= 1)
+      if (n == 1)
         Success
       else
         Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties", None)))
