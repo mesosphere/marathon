@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.v2
 
-import java.net.{URLConnection, HttpURLConnection, URL}
+import java.net.{ URLConnection, HttpURLConnection, URL }
 
 import com.wix.accord._
 import mesosphere.marathon.ValidationFailedException
@@ -11,9 +11,9 @@ import scala.util.Try
 
 object Validation {
 
-  def validate[T](t: T)(implicit validator:Validator[T]): Result = validator.apply(t)
-  def validateOrThrow[T](t: T)(implicit validator:Validator[T]): T = validate(t) match {
-    case Success => t
+  def validate[T](t: T)(implicit validator: Validator[T]): Result = validator.apply(t)
+  def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
+    case Success    => t
     case f: Failure => throw new ValidationFailedException(t, f)
   }
 
@@ -31,7 +31,7 @@ object Validation {
           case ((item, f: Failure), pos: Int) => GroupViolation(item, "not valid", Some(s"[$pos]"), f.violations)
         }
 
-        if(violations.isEmpty) Success
+        if (violations.isEmpty) Success
         else Failure(Set(GroupViolation(seq, "seq contains elements, which are not valid", None, violations.toSet)))
       }
     }
@@ -39,17 +39,19 @@ object Validation {
 
   implicit lazy val failureWrites: Writes[Failure] = Writes { f =>
     // TODO AW: get rid of toSeq
-    Json.obj("errors" -> {f.violations.size match {
-      case 1 => violationToJsValue(f.violations.head)
-      case _ => JsArray(f.violations.toSeq.map(violationToJsValue(_)))
-    }})
+    Json.obj("errors" -> {
+      f.violations.size match {
+        case 1 => violationToJsValue(f.violations.head)
+        case _ => JsArray(f.violations.toSeq.map(violationToJsValue(_)))
+      }
+    })
   }
 
   implicit lazy val ruleViolationWrites: Writes[RuleViolation] = Writes { v =>
-      Json.obj(
-        "attribute" -> v.description,
-        "error" -> v.constraint
-      )
+    Json.obj(
+      "attribute" -> v.description,
+      "error" -> v.constraint
+    )
   }
 
   implicit lazy val groupViolationWrites: Writes[GroupViolation] = Writes { v =>
@@ -68,7 +70,7 @@ object Validation {
 
   private def concatPath(parent: String, child: Option[String], parentSeq: Boolean): String = {
     // TODO AW: fix not point in array issue
-    child.map(c => parent + { if(parentSeq) "." else "." } + c).getOrElse(parent)
+    child.map(c => parent + { if (parentSeq) "." else "." } + c).getOrElse(parent)
   }
 
   private def violationToJsValue(violation: Violation,
@@ -91,7 +93,7 @@ object Validation {
           new URL(url).openConnection() match {
             case http: HttpURLConnection =>
               http.setRequestMethod("HEAD")
-              if(http.getResponseCode == HttpURLConnection.HTTP_OK) Success
+              if (http.getResponseCode == HttpURLConnection.HTTP_OK) Success
               else Failure(Set(RuleViolation(url, "url could not be resolved", None)))
             case other: URLConnection =>
               other.getInputStream
@@ -101,6 +103,20 @@ object Validation {
           Failure(Set(RuleViolation(url, "url could not be resolved", None)))
         )
       }
+    }
+  }
+
+  def getAllRuleConstrains(r: Result): Seq[String] = {
+    def loop(v: Violation): Seq[String] = {
+      v match {
+        case g: GroupViolation => g.children.flatMap(c => loop(c)).toSeq
+        case r: RuleViolation => Seq(r.constraint)
+      }
+    }
+
+    r match {
+      case f: Failure => f.violations.flatMap(loop).toSeq
+      case _ => Seq.empty[String]
     }
   }
 }

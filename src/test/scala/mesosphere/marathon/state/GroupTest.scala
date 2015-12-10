@@ -1,9 +1,6 @@
 package mesosphere.marathon.state
-// TODO AW: test
-/*
-import javax.validation.ConstraintViolation
 
-import mesosphere.marathon.api.v2.ModelValidation
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.V2Group
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
@@ -11,6 +8,8 @@ import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
+
+// import com.wix.accord.scalatest.ResultMatchers
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -186,7 +185,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
-      ModelValidation.checkGroup(V2Group(changed)) should be('empty)
+      validate(V2Group(changed)).isSuccess should be (true)
     }
 
     it("cannot replace a group with apps by an app definition") {
@@ -216,9 +215,9 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested", "/some/nested/path2/app"))
 
       Then("the conflict will be detected by our V2 API model validation")
-      val constraintViolations: Iterable[ConstraintViolation[V2Group]] = ModelValidation.checkGroup(V2Group(changed))
-      constraintViolations should be('nonEmpty)
-      constraintViolations.map(_.getMessage) should be(Set("Groups and Applications may not have the same identifier: /some/nested"))
+      val result = validate(V2Group(changed))
+      result.isFailure should be(true)
+      getAllRuleConstrains(result) should be (Seq("Groups and Applications may not have the same identifier: /some/nested"))
     }
 
     it("can marshal and unmarshal from to protos") {
@@ -378,4 +377,3 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
     }
   }
 }
-*/ 

@@ -1,6 +1,5 @@
 package mesosphere.marathon.health
-// TODO AW: test
-/*
+
 import akka.actor._
 import akka.event.EventStream
 import akka.testkit.EventFilter
@@ -308,4 +307,3 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with Logging {
 
   def captureEvents = new CaptureEvents(eventStream)
 }
-*/ 

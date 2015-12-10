@@ -1,6 +1,5 @@
 package mesosphere.marathon.tasks
-// TODO AW: test
-/*
+
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
 import mesosphere.FutureTestSupport._
@@ -518,4 +517,3 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     assert(state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was not found in state")
   }
 }
-*/

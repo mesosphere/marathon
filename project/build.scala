@@ -275,7 +275,6 @@ object Dependencies {
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test"
-    // TODO AW: import
     // Test.wixAccordScalaTest % "test"
   ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
 }
@@ -308,11 +307,11 @@ object Dependency {
     val DataDog = "1.1.3"
     val Logback = "1.1.3"
     val WixAccord = "0.5"
-    val WixAccordScalaTest = "0.5"
 
     // test deps versions
     val Mockito = "1.9.5"
     val ScalaTest = "2.1.7"
+    val WixAccordScalaTest = "0.5"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -354,7 +353,6 @@ object Dependency {
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
     val diffson = "org.gnieh" %% "diffson" % V.Diffson
-    // TODO AW: import
-    // val wixAccordScalaTest = "com.wix" %% "accord-scalatest" % V.WixAccordScalaTest
+    val wixAccordScalaTest = "com.wix" %% "accord-scalatest" % V.WixAccordScalaTest
   }
 }

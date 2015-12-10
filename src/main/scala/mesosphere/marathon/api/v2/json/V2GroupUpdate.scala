@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble }
-import com.wix.accord.{RuleViolation, Failure, Success, Validator}
+import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v2.Validation._
@@ -76,17 +76,17 @@ object V2GroupUpdate {
   }
 
   def hasOnlyOneDefinedOption[A <: Product: ClassTag, B]: Validator[A] =
-  new Validator[A] {
-    def apply( product: A ) = {
-      val n = product.productIterator.count {
-        case Some(_) => true
-        case _ => false
-      }
+    new Validator[A] {
+      def apply(product: A) = {
+        val n = product.productIterator.count {
+          case Some(_) => true
+          case _       => false
+        }
 
-      if (n <= 1)
-        Success
-      else
-        Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties", None)))
+        if (n <= 1)
+          Success
+        else
+          Failure(Set(RuleViolation(product, s"not allowed in conjunction with other properties.", None)))
+      }
     }
-  }
 }
