@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import com.google.protobuf.{ TextFormat, ByteString }
+import com.google.protobuf.{ ByteString, TextFormat }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
@@ -16,6 +16,7 @@ import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
+import scala.collection.mutable
 
 class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => TaskID,
@@ -208,6 +209,10 @@ class TaskBuilder(app: AppDefinition,
 
 object TaskBuilder {
 
+  val maxEnvironmentVarLength = 512
+  val labelEnvironmentKeyPrefix = "MARATHON_APP_LABEL_"
+  val maxVariableLength = maxEnvironmentVarLength - labelEnvironmentKeyPrefix.length
+
   def commandInfo(app: AppDefinition,
                   taskId: Option[TaskID],
                   host: Option[String],
@@ -318,10 +323,26 @@ object TaskBuilder {
         "MESOS_TASK_ID" -> taskId.map(_.getValue),
         "MARATHON_APP_ID" -> Some(app.id.toString),
         "MARATHON_APP_VERSION" -> Some(app.version.toString),
-        "MARATHON_APP_DOCKER_IMAGE" -> app.container.flatMap(_.docker.map(_.image))
+        "MARATHON_APP_DOCKER_IMAGE" -> app.container.flatMap(_.docker.map(_.image)),
+        "MARATHON_APP_RESOURCE_CPUS" -> Some(app.cpus.toString),
+        "MARATHON_APP_RESOURCE_MEM" -> Some(app.mem.toString),
+        "MARATHON_APP_RESOURCE_DISK" -> Some(app.disk.toString)
       ).collect {
           case (key, Some(value)) => key -> value
-        }.toMap
+        }.toMap ++ labelsToEnvVars(app.labels)
     }
+  }
+
+  def labelsToEnvVars(labels: Map[String, String]): Map[String, String] = {
+    def escape(name: String): String = name.replaceAll("[^a-zA-Z0-9_]+", "_").toUpperCase
+
+    val validLabels = labels.collect {
+      case (key, value) if key.length < maxVariableLength
+        && value.length < maxEnvironmentVarLength => escape(key) -> value
+    }
+
+    val names = Map("MARATHON_APP_LABELS" -> validLabels.keys.mkString(" "))
+    val values = validLabels.map { case (key, value) => s"$labelEnvironmentKeyPrefix$key" -> value }
+    names ++ values
   }
 }
