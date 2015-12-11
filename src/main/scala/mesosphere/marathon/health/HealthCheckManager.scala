@@ -1,5 +1,6 @@
 package mesosphere.marathon.health
 
+import akka.actor.ActorRef
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 
 import org.apache.mesos.Protos.TaskStatus
@@ -52,6 +53,12 @@ trait HealthCheckManager {
     * from Mesos.
     */
   def update(taskStatus: TaskStatus, version: Timestamp): Unit
+
+  /**
+    * Requests the health of all tasks of the supplied appId and appVersion.
+    * Sends an AppHealth message to requester.
+    */
+  def requestHealth(appId: PathId, appVersion: Timestamp, requester: ActorRef): Unit
 
   /**
     * Returns the health status of the supplied task.

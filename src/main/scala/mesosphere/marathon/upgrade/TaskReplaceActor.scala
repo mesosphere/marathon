@@ -5,10 +5,13 @@ import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.health.HealthCheckActor.AppHealth
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
+import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.mutable
@@ -19,19 +22,21 @@ class TaskReplaceActor(
     driver: SchedulerDriver,
     taskQueue: LaunchQueue,
     taskTracker: TaskTracker,
+    healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     app: AppDefinition,
     promise: Promise[Unit]) extends Actor with ActorLogging {
   import context.dispatcher
 
-  val tasksToKill = taskTracker.get(app.id)
+  val newTasks = taskTracker.get(app.id).filter(_.getVersion == app.version.toString)
   val appId = app.id
   val version = app.version.toString
   var healthy = Set.empty[String]
-  var newTasksStarted: Int = 0
-  var oldTaskIds = tasksToKill.map(_.getId)
+  var newTasksStarted: Int = newTasks.size
+  var oldTaskIds = taskTracker.get(app.id).map(_.getId) -- newTasks.map(_.getId)
   val toKill = oldTaskIds.to[mutable.Queue]
   var maxCapacity = (app.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
+  val minHealthy = (app.instances * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
   var outstandingKills = Set.empty[String]
   val periodicalRetryKills: Cancellable = context.system.scheduler.schedule(15.seconds, 15.seconds, self, RetryKills)
 
@@ -39,24 +44,30 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[HealthStatusChanged])
 
-    val minHealthy = (app.instances * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
-    val nrToKillImmediately = math.max(0, toKill.size - minHealthy)
+    if (app.healthChecks.nonEmpty)
+      healthCheckManager.requestHealth(appId, app.version, self)
+    else
+      healthy = newTasks.filter(_.getStatus.getState == TASK_RUNNING).map(_.getId)
+
+    if (newTasksStarted != 0) {
+      log.info(s"Resuming task replace with: started new tasks: $newTasksStarted, old tasks to kill: ${toKill.size}")
+    }
+    else {
+      log.info("Resetting the backoff delay before restarting the app")
+      taskQueue.resetDelay(app)
+    }
+
+    val nrToKillImmediately = killOldTasks()
 
     // make sure at least one task can be started to get the ball rolling
     if (nrToKillImmediately == 0 && maxCapacity == app.instances)
       maxCapacity += 1
 
     log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} of ${app.id.toString} leave " +
-      s"$minHealthy tasks running, maximum capacity $maxCapacity, killing $nrToKillImmediately tasks immediately")
-
-    for (_ <- 0 until nrToKillImmediately) {
-      killNextOldTask()
-    }
+      s"$minHealthy tasks running, maximum capacity $maxCapacity, killed $nrToKillImmediately tasks immediately")
 
     reconcileNewTasks()
-
-    log.info("Resetting the backoff delay before restarting the app")
-    taskQueue.resetDelay(app)
+    checkFinished()
   }
 
   override def postStop(): Unit = {
@@ -84,6 +95,15 @@ class TaskReplaceActor(
   }
 
   def healthCheckingBehavior: Receive = {
+    case AppHealth(healths) =>
+      healths foreach { health =>
+        log.info(s"Received requested AppHealth for ${health.taskId}, alive: ${health.alive}.")
+        if (health.alive)
+          healthy += health.taskId
+      }
+      killOldTasks()
+      checkFinished()
+
     case HealthStatusChanged(`appId`, taskId, `version`, true, _, _) if !healthy(taskId) =>
       handleStartedTask(taskId)
   }
@@ -123,6 +143,14 @@ class TaskReplaceActor(
     healthy += taskId
     killNextOldTask(Some(taskId))
     checkFinished()
+  }
+
+  def killOldTasks(): Int = {
+    val nrToKillImmediately = math.max(0, toKill.size - (minHealthy - healthy.size))
+    for (_ <- 0 until nrToKillImmediately) {
+      killNextOldTask()
+    }
+    nrToKillImmediately
   }
 
   def killNextOldTask(maybeNewTaskId: Option[String] = None): Unit = {

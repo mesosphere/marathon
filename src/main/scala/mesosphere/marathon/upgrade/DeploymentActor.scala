@@ -174,6 +174,7 @@ private class DeploymentActor(
             driver,
             taskQueue,
             taskTracker,
+            healthCheckManager,
             eventBus,
             app,
             promise)))
