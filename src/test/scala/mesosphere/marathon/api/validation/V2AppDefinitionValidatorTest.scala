@@ -1,12 +1,12 @@
 package mesosphere.marathon.api.validation
-// TODO AW: test
-/*
+
 import javax.validation.ConstraintValidatorContext
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ValidationFailedException, MarathonSpec}
 import mesosphere.marathon.Protos.HealthCheckDefinition
 import mesosphere.marathon.api.v2.{ ModelValidation, BeanValidation }
 import mesosphere.marathon.api.v2.json.V2AppDefinition
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ Command, Container, PathId }
 import org.scalatest.Matchers
@@ -31,7 +31,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId(id),
       cmd = Some("true"))
 
-    BeanValidation.requireValid(ModelValidation.checkAppConstraints(app, app.id.parent))
+    validate(app).isSuccess should be(true)
 
     validateJsonSchema(app)
   }
@@ -86,9 +86,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId(id),
       cmd = Some("true"))
 
-    an[IllegalArgumentException] should be thrownBy {
-      ModelValidation.checkAppConstraints(app, app.id.parent)
-    }
+    validate(app).isFailure should be(true)
 
     validateJsonSchema(app)
   }
@@ -109,7 +107,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       cmd = Some("true")
     )
 
-    ModelValidation.checkAppConstraints(app, app.id.parent) should not be empty
+    validate(app).isFailure should be(true)
 
     validateJsonSchema(app, valid = false)
   }
@@ -233,4 +231,3 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
     validateJsonSchema(app, false)
   }
 }
-*/ 

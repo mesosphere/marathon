@@ -4,6 +4,9 @@ import mesosphere.marathon.plugin
 
 import scala.language.implicitConversions
 
+import com.wix.accord.dsl._
+import com.wix.accord._
+
 case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[PathId] with plugin.PathId {
 
   def root: String = path.headOption.getOrElse("")
@@ -98,24 +101,22 @@ object PathId {
   private[this] val ID_PATH_SEGMENT_PATTERN =
     "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
 
-  import com.wix.accord.dsl._
   implicit val pathIdValidator = validator[PathId] { pathId =>
-    pathId.path.each should matchRegex(ID_PATH_SEGMENT_PATTERN.pattern)
-    // pathId is validChild(pathId.parent)
+    pathId.path.each should matchRegexFully(ID_PATH_SEGMENT_PATTERN.pattern)
+    pathId is validChild(pathId.parent)
   }
 
-  import com.wix.accord._
-  import scala.util.Try
   def validChild(parent: PathId): Validator[PathId] = {
     new Validator[PathId] {
       override def apply(child: PathId): Result = {
-        Try(child.canonicalPath(parent)) match {
-          case scala.util.Success(p) =>
-            if (p.parent != PathId.empty && p.parent != parent) Failure(Set(
-              RuleViolation(child, s"identifier $child is not child of $parent. Hint: use relative paths.", None)
-            ))
-            else Success
-          case scala.util.Failure(_) => Failure(Set(
+        try {
+          val p = child.canonicalPath(parent)
+          if (parent != PathId.empty && p.parent != parent) Failure(Set(
+            RuleViolation(child, s"identifier $child is not child of $parent. Hint: use relative paths.", None)
+          ))
+          else Success
+        } catch {
+          case e: Exception => Failure(Set(
             RuleViolation(child, s"canonical path can not be computed for $parent", None)))
         }
       }
