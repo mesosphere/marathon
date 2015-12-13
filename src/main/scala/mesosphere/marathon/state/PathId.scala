@@ -109,15 +109,21 @@ object PathId {
   def validChild(parent: PathId): Validator[PathId] = {
     new Validator[PathId] {
       override def apply(child: PathId): Result = {
-        try {
-          val p = child.canonicalPath(parent)
-          if (parent != PathId.empty && p.parent != parent) Failure(Set(
-            RuleViolation(child, s"identifier $child is not child of $parent. Hint: use relative paths.", None)
-          ))
-          else Success
-        } catch {
-          case e: Exception => Failure(Set(
-            RuleViolation(child, s"canonical path can not be computed for $parent", None)))
+        parent match {
+          case e if e == "".toPath =>
+            println("EMPTY")
+            Success
+          case _ =>
+            try {
+              val p = child.canonicalPath(parent)
+              if (parent != PathId.empty && p.parent != parent) Failure(Set(
+                RuleViolation(child, s"identifier $child is not child of $parent. Hint: use relative paths.", None)
+              ))
+              else Success
+            } catch {
+              case e: Exception => Failure(Set(
+                RuleViolation(child, s"canonical path can not be computed for $parent", None)))
+            }
         }
       }
     }
