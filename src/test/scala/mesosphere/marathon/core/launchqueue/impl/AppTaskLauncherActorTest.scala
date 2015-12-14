@@ -1,36 +1,30 @@
 package mesosphere.marathon.core.launchqueue.impl
 
-import akka.actor.{ Terminated, Cancellable, ActorContext, Props, ActorRef, ActorSystem }
+import akka.actor.{ ActorContext, ActorRef, ActorSystem, Cancellable, Props, Terminated }
+import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import OfferMatcher.MatchedTasks
-import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
+import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedTasks
+import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.base.util.TaskLaunchSourceDelegate.TaskLaunchRejected
-import mesosphere.marathon.core.matcher.base.util.{ TaskLaunchSourceDelegate, ActorOfferMatcher }
-import mesosphere.marathon.core.task.bus.{ TaskStatusUpdateTestHelper, TaskStatusObservables }
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
-import mesosphere.marathon.integration.setup.WaitTestSupport
-import mesosphere.marathon.state.{ Timestamp, AppDefinition, PathId }
+import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
-import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
-import mesosphere.marathon.{ SameAsSeq, Protos, MarathonSpec, MarathonTestHelper }
-import mesosphere.util.state.PersistentEntity
+import mesosphere.marathon.tasks.{ TaskTracker, TaskFactory, TaskTrackerImpl }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos, SameAsSeq }
 import org.mockito
-import org.mockito.{ Matchers, Mockito }
-import org.mockito.Mockito.when
-import org.scalatest.Matchers
-import org.scalatest.{ Matchers, GivenWhenThen }
-import rx.lang.scala.Subject
-import rx.lang.scala.subjects.PublishSubject
-import scala.concurrent.{ Future, Await }
+import org.mockito.Mockito
+import org.scalatest.GivenWhenThen
+
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import akka.pattern.ask
 
 /**
   * Also check LaunchQueueModuleTest which tests the interplay of the AppTaskLauncherActor

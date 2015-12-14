@@ -10,7 +10,7 @@ import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
-import org.apache.mesos.Protos.{ TaskState, TaskID, TaskStatus }
+import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -46,7 +46,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val taskId = status.getTaskId
     val appId = taskIdUtil.appId(taskId)
 
-    val maybeTask = taskTracker.fetchTask(taskId.getValue)
+    val maybeTask = taskTracker.getTask(appId, taskId.getValue)
 
     maybeTask match {
       case Some(task) =>

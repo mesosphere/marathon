@@ -9,7 +9,7 @@ import akka.util.Timeout
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl }
 import org.mockito.Mockito
 
 import scala.concurrent.Await
@@ -64,8 +64,7 @@ class RateLimiterActorTest extends MarathonSpec {
     taskTracker = mock[TaskTracker]
     appRepository = mock[AppRepository]
     updateReceiver = TestProbe()
-    val props = RateLimiterActor.props(
-      rateLimiter, taskTracker, appRepository, updateReceiver.ref)
+    val props = RateLimiterActor.props(rateLimiter, appRepository, updateReceiver.ref)
     limiterRef = actorSystem.actorOf(props, "limiter")
   }
 

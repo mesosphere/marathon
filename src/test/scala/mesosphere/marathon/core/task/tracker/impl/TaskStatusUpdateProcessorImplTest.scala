@@ -15,7 +15,7 @@ import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskUpdater, TaskTracker, TaskIdUtil, TaskTrackerImpl }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
@@ -35,13 +35,13 @@ class TaskStatusUpdateProcessorImplTest
     val update = origUpdate.withTaskId(status.getTaskId)
 
     Given("an unknown task")
-    f.taskTracker.fetchTask(update.wrapped.taskId.getValue) returns None
+    f.taskTracker.getTask(appId, update.wrapped.taskId.getValue) returns None
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).fetchTask(update.wrapped.taskId.getValue)
+    verify(f.taskTracker).getTask(appId, update.wrapped.taskId.getValue)
 
     And("the task kill gets initiated")
     verify(f.schedulerDriver).killTask(status.getTaskId)
@@ -60,13 +60,13 @@ class TaskStatusUpdateProcessorImplTest
     val update = origUpdate.withTaskId(status.getTaskId)
 
     Given("an unknown task")
-    f.taskTracker.fetchTask(update.wrapped.taskId.getValue) returns None
+    f.taskTracker.getTask(appId, update.wrapped.taskId.getValue) returns None
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).fetchTask(update.wrapped.taskId.getValue)
+    verify(f.taskTracker).getTask(appId, update.wrapped.taskId.getValue)
 
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
@@ -83,8 +83,8 @@ class TaskStatusUpdateProcessorImplTest
     val update = origUpdate.withTaskId(status.getTaskId)
 
     Given("a known task")
-    f.taskTracker.fetchTask(update.wrapped.taskId.getValue) returns Some(marathonTask)
-    f.taskTracker.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns Future.successful(())
+    f.taskTracker.getTask(appId, update.wrapped.taskId.getValue) returns Some(marathonTask)
+    f.taskUpdater.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns Future.successful(())
     f.appRepository.app(appId, version) returns Future.successful(Some(app))
     And("and a cooperative launchQueue")
     f.launchQueue.notifyOfTaskUpdate(any) returns Future.successful(None)
@@ -93,8 +93,8 @@ class TaskStatusUpdateProcessorImplTest
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).fetchTask(update.wrapped.taskId.getValue)
-    verify(f.taskTracker).statusUpdate(appId, status)
+    verify(f.taskTracker).getTask(appId, update.wrapped.taskId.getValue)
+    verify(f.taskUpdater).statusUpdate(appId, status)
 
     And("the healthCheckManager got informed")
     verify(f.healthCheckManager).update(status, version)
@@ -145,6 +145,7 @@ class TaskStatusUpdateProcessorImplTest
     lazy val taskIdUtil: TaskIdUtil.type = TaskIdUtil
     lazy val healthCheckManager: HealthCheckManager = mock[HealthCheckManager]
     lazy val taskTracker: TaskTracker = mock[TaskTracker]
+    lazy val taskUpdater: TaskUpdater = mock[TaskUpdater]
     lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
     lazy val marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder = {
       val holder = new MarathonSchedulerDriverHolder
@@ -154,7 +155,7 @@ class TaskStatusUpdateProcessorImplTest
 
     lazy val notifyHealthCheckManager = new NotifyHealthCheckManagerStepImpl(healthCheckManager)
     lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueue, appRepository)
-    lazy val updateTaskTrackerStep = new UpdateTaskTrackerStepImpl(taskTracker)
+    lazy val updateTaskTrackerStep = new UpdateTaskTrackerStepImpl(taskUpdater)
     lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus)
     lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueue)
     lazy val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitter)

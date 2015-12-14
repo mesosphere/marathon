@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.appinfo.impl
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.appinfo.{ TaskStatsByVersion, TaskStats, AppInfo, EnrichedTask, TaskCounts }
+import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }

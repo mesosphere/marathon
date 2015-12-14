@@ -16,7 +16,7 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.AppRepository
-import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskFactory, TaskTrackerImpl }
 import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
 
 import scala.util.Random
@@ -36,7 +36,7 @@ class CoreModuleImpl @Inject() (
     actorSystem: ActorSystem,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     appRepository: AppRepository,
-    taskTracker: TaskTracker,
+    taskTracker: TaskTrackerImpl,
     taskFactory: TaskFactory,
     leaderInfo: LeaderInfo,
     clock: Clock) extends CoreModule {
@@ -52,7 +52,7 @@ class CoreModuleImpl @Inject() (
   // TASKS
 
   override lazy val taskBusModule = new TaskBusModule()
-  override lazy val taskTrackerModule = new TaskTrackerModule(leadershipModule, clock)
+  override lazy val taskTrackerModule = new TaskTrackerModule(marathonConf, leadershipModule, clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
 
@@ -67,7 +67,7 @@ class CoreModuleImpl @Inject() (
     clock, metrics, marathonConf,
 
     // external guicedependencies
-    taskTracker,
+    taskCreator = taskTracker,
     marathonSchedulerDriverHolder,
 
     // internal core dependencies

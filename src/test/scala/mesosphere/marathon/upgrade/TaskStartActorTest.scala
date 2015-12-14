@@ -11,7 +11,7 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTrackerImpl }
 import mesosphere.marathon.{ MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
@@ -34,7 +34,7 @@ class TaskStartActorTest
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
   var launchQueue: LaunchQueue = _
-  var taskTracker: TaskTracker = _
+  var taskTracker: TaskTrackerImpl = _
   var metrics: Metrics = _
 
   before {

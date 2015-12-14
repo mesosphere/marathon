@@ -3,7 +3,7 @@ package mesosphere.marathon.core.task.tracker.impl.steps
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil, TaskUpdater }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
@@ -24,7 +24,7 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     Given("a running task and a working taskTracker")
     val existingTask = runningMarathonTask
     val status = runningTaskStatus.toBuilder.setState(TaskState.TASK_RUNNING).build()
-    f.taskTracker.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns Future.successful(())
+    f.taskUpdater.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns Future.successful(())
 
     When("processUpdate is called")
     f.step.processUpdate(
@@ -35,7 +35,7 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     ).futureValue
 
     Then("taskTracker.statusUpdate is called")
-    verify(f.taskTracker).statusUpdate(appId, status)
+    verify(f.taskUpdater).statusUpdate(appId, status)
 
     And("that's it")
     f.verifyNoMoreInteractions()
@@ -47,7 +47,7 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     Given("a running task and a broken taskTracker")
     val existingTask = stagedMarathonTask
     val status = runningTaskStatus.toBuilder.setState(TaskState.TASK_RUNNING).build()
-    f.taskTracker.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns
+    f.taskUpdater.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns
       Future.failed(new RuntimeException("I'm broken"))
 
     When("processUpdate is called")
@@ -59,7 +59,7 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     ).failed.futureValue
 
     Then("taskTracker.statusUpdate is called")
-    verify(f.taskTracker).statusUpdate(appId, status)
+    verify(f.taskUpdater).statusUpdate(appId, status)
 
     And("the failure is propagated")
     eventualFailure.getMessage should equal("I'm broken")
@@ -98,7 +98,7 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
   private[this] val runningMarathonTask = stagedMarathonTask.toBuilder.setStartedAt(2).build()
 
   class Fixture {
-    lazy val taskTracker = mock[TaskTracker]
+    lazy val taskUpdater = mock[TaskUpdater]
     lazy val driver = mock[SchedulerDriver]
     lazy val driverOpt = Some(driver)
     lazy val driverHolder = {
@@ -107,10 +107,10 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
       ret
     }
 
-    lazy val step = new UpdateTaskTrackerStepImpl(taskTracker)
+    lazy val step = new UpdateTaskTrackerStepImpl(taskUpdater)
 
     def verifyNoMoreInteractions(): Unit = {
-      noMoreInteractions(taskTracker)
+      noMoreInteractions(taskUpdater)
       noMoreInteractions(driver)
     }
   }

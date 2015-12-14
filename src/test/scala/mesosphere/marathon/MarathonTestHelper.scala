@@ -12,7 +12,7 @@ import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, TaskRepository, AppDefinition, MarathonStore, MarathonTaskState, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, MarathonTasks, TaskTracker }
+import mesosphere.marathon.tasks._
 import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.{ CommandInfo, TaskID, TaskInfo, Offer }
 import mesosphere.util.state.PersistentStore
@@ -159,7 +159,7 @@ trait MarathonTestHelper {
   def createTaskTracker(
     store: PersistentStore = new InMemoryStore,
     config: MarathonConf = defaultConfig(),
-    metrics: Metrics = new Metrics(new MetricRegistry)): TaskTracker = {
+    metrics: Metrics = new Metrics(new MetricRegistry)): TaskTrackerImpl = {
 
     val metrics = new Metrics(new MetricRegistry)
     val taskRepo = new TaskRepository(
@@ -171,7 +171,7 @@ trait MarathonTestHelper {
       metrics
     )
 
-    new TaskTracker(taskRepo, defaultConfig())
+    new TaskTrackerImpl(taskRepo, defaultConfig())
   }
 
   def dummyTask(appId: PathId) = MarathonTask.newBuilder()

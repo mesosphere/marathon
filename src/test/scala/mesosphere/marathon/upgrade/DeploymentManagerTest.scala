@@ -12,7 +12,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment }
 import mesosphere.marathon.{ MarathonConf, MarathonTestHelper, SchedulerActions }

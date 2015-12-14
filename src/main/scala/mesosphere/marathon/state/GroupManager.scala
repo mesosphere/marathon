@@ -11,7 +11,6 @@ import mesosphere.marathon.api.v2.{ BeanValidation, ModelValidation }
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, ModuleNames, PortRangeExhaustedException }
 import mesosphere.util.SerializeExecution
@@ -30,7 +29,6 @@ import scala.util.{ Failure, Success }
 class GroupManager @Singleton @Inject() (
     @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: SerializeExecution,
     scheduler: MarathonSchedulerService,
-    taskTracker: TaskTracker,
     groupRepo: GroupRepository,
     appRepo: AppRepository,
     storage: StorageProvider,

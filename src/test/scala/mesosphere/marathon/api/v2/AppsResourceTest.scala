@@ -12,7 +12,7 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl, TaskTrackerImpl$ }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.{ GivenWhenThen, Matchers }
