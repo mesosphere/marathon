@@ -47,17 +47,17 @@ object V2Group {
     group.id is valid
     group.apps is valid
     group.groups is valid
-    group.groups is noAppsAndGroupsWithSameName(group.apps)
+    group is noAppsAndGroupsWithSameName
     group.dependencies is noCyclicDependencies(group)
 
     group is validPorts
   }
 
-  def v2GroupWithConfigValidator(conf: MarathonConf)
+  def v2GroupWithConfigValidator(maxApps: Option[Int])
                                 (implicit validator: Validator[V2Group]): Validator[V2Group] = {
     new Validator[V2Group] {
       override def apply(group: V2Group): Result = {
-        conf.maxApps.get.filter(group.toGroup().transitiveApps.size > _).map { num =>
+        maxApps.map(group.toGroup().transitiveApps.size > _).map { num =>
           Failure(Set(RuleViolation(group,
             s"""This Marathon instance may only handle up to $num Apps!
                 |(Override with command line option --max_apps)""".stripMargin, None)))
@@ -66,14 +66,14 @@ object V2Group {
     }
   }
 
-  private def noAppsAndGroupsWithSameName(apps: Set[V2AppDefinition]): Validator[Set[V2Group]] =
-    new Validator[Set[V2Group]] {
-      def apply( groups: Set[V2Group] ) = {
-        val groupIds = groups.map(_.id)
-        val clashingIds = apps.map(_.id).intersect(groupIds)
+  private def noAppsAndGroupsWithSameName: Validator[V2Group] =
+    new Validator[V2Group] {
+      def apply( group: V2Group ) = {
+        val groupIds = group.groups.map(_.id)
+        val clashingIds = group.apps.map(_.id).intersect(groupIds)
 
         if (clashingIds.isEmpty) Success
-        else Failure(Set(RuleViolation(groups,
+        else Failure(Set(RuleViolation(group,
           s"Groups and Applications may not have the same identifier: ${clashingIds.mkString(", ")}", None)))
       }
     }
