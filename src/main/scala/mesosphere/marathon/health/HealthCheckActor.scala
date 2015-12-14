@@ -10,17 +10,17 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.protos.TaskID
 
+//TODO find a better name
 class HealthCheckActor(
     appId: PathId,
     appVersion: String,
-    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    marathonScheduler: MarathonScheduler,
+
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
-    eventBus: EventStream) extends Actor with ActorLogging {
+    healthCheckAppActor: ActorRef) extends Actor with ActorLogging {
 
   import context.dispatcher
-  import mesosphere.marathon.health.HealthCheckActor.{ GetTaskHealth, _ }
+  import mesosphere.marathon.health.HealthCheckActor._
   import mesosphere.marathon.health.HealthCheckWorker.HealthCheckJob
   import mesosphere.mesos.protos.Implicits._
 
@@ -105,11 +105,15 @@ class HealthCheckActor(
     if (consecutiveFailures >= maxFailures && maxFailures > 0) {
       log.info(f"Detected unhealthy task ${task.getId} of app [$appId] version [$appVersion] on host ${task.getHost}")
 
+
+      //TODO move this to the HealthCheckAppActor
       // kill the task
-      marathonSchedulerDriverHolder.driver.foreach { driver =>
-        log.info(s"Send kill request for task ${task.getId} on host ${task.getHost} to driver")
-        driver.killTask(TaskID(task.getId))
-      }
+//      marathonSchedulerDriverHolder.driver.foreach { driver =>
+//        log.info(s"Send kill request for task ${task.getId} on host ${task.getHost} to driver")
+//        driver.killTask(TaskID(task.getId))
+//      }
+
+      healthCheckAppActor ! health.copy(healthy = false)
     }
   }
 
@@ -125,10 +129,6 @@ class HealthCheckActor(
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   def receive: Receive = {
-    case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
-
-    case GetAppHealth =>
-      sender() ! AppHealth(taskHealth.values.toSeq)
 
     case Tick =>
       purgeStatusOfDoneTasks()
@@ -138,7 +138,7 @@ class HealthCheckActor(
     case result: HealthResult if result.version == appVersion =>
       log.info("Received health result for app [{}] version [{}]: [{}]", appId, appVersion, result)
       val taskId = result.taskId
-      val health = taskHealth.getOrElse(taskId, Health(taskId))
+      val health = taskHealth.getOrElse(taskId, Health(taskId, true))
 
       val newHealth = result match {
         case Healthy(_, _, _) =>
@@ -151,7 +151,8 @@ class HealthCheckActor(
                 health
               }
               else {
-                eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
+                //TODO move this to HealthCheckAppActor
+                //eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
                 checkConsecutiveFailures(task, health)
                 health.update(result)
               }
@@ -163,15 +164,16 @@ class HealthCheckActor(
 
       taskHealth += (taskId -> newHealth)
 
-      if (health.alive != newHealth.alive) {
-        eventBus.publish(
-          HealthStatusChanged(
-            appId = appId,
-            taskId = taskId,
-            version = result.version,
-            alive = newHealth.alive)
-        )
-      }
+      //TODO move this to HealthCheckAppActor
+//      if (health.alive != newHealth.alive) {
+//        eventBus.publish(
+//          HealthStatusChanged(
+//            appId = appId,
+//            taskId = taskId,
+//            version = result.version,
+//            alive = newHealth.alive)
+//        )
+//      }
 
     case result: HealthResult =>
       log.warning(s"Ignoring health result [$result] due to version mismatch.")
@@ -180,10 +182,10 @@ class HealthCheckActor(
 }
 
 object HealthCheckActor {
+
+  def props(appVersion: String, healthCheck: HealthCheck, healthCheckAppActor: ActorRef) =
+    Props(classOf[HealthCheckActor], appVersion, healthCheck, healthCheckAppActor)
   // self-sent every healthCheck.intervalSeconds
   case object Tick
-  case class GetTaskHealth(taskId: String)
-  case object GetAppHealth
 
-  case class AppHealth(health: Seq[Health])
 }

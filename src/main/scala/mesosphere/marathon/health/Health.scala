@@ -4,6 +4,7 @@ import mesosphere.marathon.state.Timestamp
 
 case class Health(
     taskId: String,
+    healthy: Boolean, //TODO pay attention to maxConsecutiveFailures and gracePeriod
     firstSuccess: Option[Timestamp] = None,
     lastSuccess: Option[Timestamp] = None,
     lastFailure: Option[Timestamp] = None,
@@ -16,6 +17,7 @@ case class Health(
 
   def update(result: HealthResult): Health = result match {
     case Healthy(_, _, time) => copy(
+      healthy = true,
       firstSuccess = firstSuccess.orElse(Some(time)),
       lastSuccess = Some(time),
       consecutiveFailures = 0
