@@ -409,20 +409,6 @@ class MarathonSchedulerService @Inject() (
       reconciliationInitialDelay.toMillis,
       reconciliationInterval.toMillis
     )
-
-    // Tasks are only expunged once after the application launches
-    // Wait until reconciliation is definitely finished so that we are guaranteed
-    // to have loaded in all apps
-    timer.schedule(
-      new TimerTask {
-        def run() {
-          if (leader.get()) {
-            taskTracker.expungeOrphanedTasks()
-          }
-        }
-      },
-      reconciliationInitialDelay.toMillis + reconciliationInterval.toMillis
-    )
   }
 
   private def abdicateAfterFailure(abdicationCommand: () => Unit, runAbdicationCommand: Boolean): Unit = {

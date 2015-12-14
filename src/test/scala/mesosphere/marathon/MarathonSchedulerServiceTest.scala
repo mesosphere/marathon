@@ -138,7 +138,6 @@ class MarathonSchedulerServiceTest
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
     verify(mockTimer).schedule(any[TimerTask](), mockEq(ReconciliationDelay), mockEq(ReconciliationInterval))
-    verify(mockTimer).schedule(any(), mockEq(ReconciliationDelay + ReconciliationInterval))
   }
 
   test("Cancel timer when defeated") {
@@ -206,7 +205,6 @@ class MarathonSchedulerServiceTest
 
     verify(mockTimer, times(2)).schedule(any(), mockEq(ScaleAppsDelay), mockEq(ScaleAppsInterval))
     verify(mockTimer, times(2)).schedule(any[TimerTask](), mockEq(ReconciliationDelay), mockEq(ReconciliationInterval))
-    verify(mockTimer, times(2)).schedule(any(), mockEq(ReconciliationDelay + ReconciliationInterval))
     verify(mockTimer).cancel()
   }
 

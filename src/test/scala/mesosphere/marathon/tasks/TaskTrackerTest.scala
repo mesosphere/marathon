@@ -218,49 +218,6 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     assert(app3Tasks.size == 3, "Incorrect number of tasks")
   }
 
-  test("ExpungeOrphanedTasks") {
-    val ORPHANED_APP_NAME = "orphanedApp".toRootPath
-
-    val orphanedTask1 = makeSampleTask(ORPHANED_APP_NAME)
-    val orphanedTask2 = makeSampleTask(ORPHANED_APP_NAME)
-    val orphanedTask3 = makeSampleTask(ORPHANED_APP_NAME)
-
-    taskTracker.created(ORPHANED_APP_NAME, orphanedTask1).futureValue
-    taskTracker.created(ORPHANED_APP_NAME, orphanedTask2).futureValue
-    taskTracker.created(ORPHANED_APP_NAME, orphanedTask3).futureValue
-
-    // clear in-memory state
-    taskTracker.clearCache()
-
-    val task1 = makeSampleTask(TEST_APP_NAME)
-    val task2 = makeSampleTask(TEST_APP_NAME)
-    val task3 = makeSampleTask(TEST_APP_NAME)
-
-    taskTracker.created(TEST_APP_NAME, task1).futureValue
-    taskTracker.statusUpdate(TEST_APP_NAME, makeTaskStatus(task1.getId)).futureValue
-
-    taskTracker.created(TEST_APP_NAME, task2).futureValue
-    taskTracker.statusUpdate(TEST_APP_NAME, makeTaskStatus(task2.getId)).futureValue
-
-    taskTracker.created(TEST_APP_NAME, task3).futureValue
-    taskTracker.statusUpdate(TEST_APP_NAME, makeTaskStatus(task3.getId)).futureValue
-
-    assert(state.allIds().futureValue.size == 6, "Expect 6 tasks before expungeOrphanedTasks")
-
-    taskTracker.expungeOrphanedTasks()
-
-    val names = state.allIds().futureValue
-
-    assert(names.size == 3, "Orphaned tasks were not correctly expunged")
-    assert(!taskTracker.contains(ORPHANED_APP_NAME), "Orphaned app should not exist in TaskTracker")
-
-    val tasks = taskTracker.getTasks(TEST_APP_NAME)
-
-    shouldContainTask(tasks, task1)
-    shouldContainTask(tasks, task2)
-    shouldContainTask(tasks, task3)
-  }
-
   test("Should not store if state did not change (no health present)") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
     val status = Protos.TaskStatus
