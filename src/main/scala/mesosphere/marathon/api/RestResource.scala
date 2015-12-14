@@ -51,7 +51,7 @@ trait RestResource {
 
   protected def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 
-  //scalastyle:off method.length
+  //scalastyle:off cyclomatic.complexity method.length
   protected def withValid[T](t: T, description: Option[String] = None)
                             (fn:T => Response)
                             (implicit validator: Validator[T]): Response = {
