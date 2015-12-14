@@ -1,12 +1,9 @@
 package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
-import mesosphere.marathon.MarathonConf
 import com.wix.accord.dsl._
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
+import mesosphere.marathon.state.{Group, PathId, Timestamp}
 import mesosphere.marathon.api.v2.Validation._
-
-import scala.reflect.ClassTag
 
 case class V2Group(
     id: PathId,
