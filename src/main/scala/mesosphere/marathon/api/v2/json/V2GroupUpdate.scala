@@ -70,7 +70,7 @@ object V2GroupUpdate {
     group.version is hasOnlyOneDefinedOption
     group.scaleBy is hasOnlyOneDefinedOption
 
-    group.id is optional(PathId.validChild(group.id.map(_.canonicalPath(PathId.empty)).getOrElse(PathId.empty)))
+    group.id is valid
     group.apps is valid
     group.groups is valid
   }

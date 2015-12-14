@@ -48,7 +48,7 @@ object V2Group {
     group.apps is valid
     group.groups is valid
     group is noAppsAndGroupsWithSameName
-    group.dependencies is noCyclicDependencies(group)
+    (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
 
     group is validPorts
   }
@@ -57,7 +57,7 @@ object V2Group {
                                 (implicit validator: Validator[V2Group]): Validator[V2Group] = {
     new Validator[V2Group] {
       override def apply(group: V2Group): Result = {
-        maxApps.map(group.toGroup().transitiveApps.size > _).map { num =>
+        maxApps.filter(group.toGroup().transitiveApps.size > _).map { num =>
           Failure(Set(RuleViolation(group,
             s"""This Marathon instance may only handle up to $num Apps!
                 |(Override with command line option --max_apps)""".stripMargin, None)))

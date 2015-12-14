@@ -116,7 +116,7 @@ object PathId {
             try {
               val p = child.canonicalPath(parent)
               if (parent != PathId.empty && p.parent != parent) Failure(Set(
-                RuleViolation(child, s"identifier $child is not child of $parent. Hint: use relative paths.", None)
+                RuleViolation(child, s"identifier $child is not child of $parent. Actual parent: ${p.parent}. Hint: use relative paths.", None)
               ))
               else Success
             } catch {
