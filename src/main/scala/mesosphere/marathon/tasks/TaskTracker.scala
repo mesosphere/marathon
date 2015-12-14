@@ -44,19 +44,14 @@ class TaskTracker @Inject() (
 
   private[tasks] val cachedApps = TrieMap[PathId, InternalApp]()
 
-  // FIXME: remove, see documented deficiencies above
-  def get(appId: PathId): Set[MarathonTask] =
-    getTasks(appId).toSet
-
   def getTasks(appId: PathId): Iterable[MarathonTask] = {
     getTaskMap(appId).values
   }
 
+  def getTask(appId: PathId, taskId: String): Option[MarathonTask] = getTaskMap(appId).get(taskId)
+
   def getVersion(appId: PathId, taskId: String): Option[Timestamp] =
-    get(appId).collectFirst {
-      case mt: MarathonTask if mt.getId == taskId =>
-        Timestamp(mt.getVersion)
-    }
+    getTask(appId, taskId).map(task => Timestamp(task.getVersion))
 
   private[this] def getTaskMap(appId: PathId): TrieMap[String, MarathonTask] =
     getInternalApp(appId).tasks
@@ -267,9 +262,9 @@ object TaskTracker {
       var tasks: TrieMap[String, MarathonTask],
       var shutdown: Boolean) {
 
-    def toApp: App = App(appName, tasks.values.toSet, shutdown)
+    def toApp: App = App(appName, tasks.values.to[Vector], shutdown)
   }
 
-  case class App(appName: PathId, tasks: Set[MarathonTask], shutdown: Boolean)
+  case class App(appName: PathId, tasks: Iterable[MarathonTask], shutdown: Boolean)
 
 }

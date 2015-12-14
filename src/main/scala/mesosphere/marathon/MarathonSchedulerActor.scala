@@ -407,7 +407,7 @@ class SchedulerActions(
     healthCheckManager.removeAllFor(app.id)
 
     log.info(s"Stopping app ${app.id}")
-    val tasks = taskTracker.get(app.id)
+    val tasks = taskTracker.getTasks(app.id)
 
     for (task <- tasks) {
       log.info(s"Killing task ${task.getId}")
@@ -442,7 +442,7 @@ class SchedulerActions(
         log.info("Syncing tasks for all apps")
 
         val knownTaskStatuses = appIds.flatMap { appId =>
-          taskTracker.get(appId).collect {
+          taskTracker.getTasks(appId).collect {
             case task: Protos.MarathonTask if task.hasStatus => task.getStatus
             case task: Protos.MarathonTask => // staged tasks, which have no status yet
               taskStatus(task)
@@ -454,7 +454,7 @@ class SchedulerActions(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          for (orphanTask <- taskTracker.get(unknownAppId)) {
+          for (orphanTask <- taskTracker.getTasks(unknownAppId)) {
             log.info(s"Killing task ${orphanTask.getId}")
             driver.killTask(protos.TaskID(orphanTask.getId))
           }

@@ -89,7 +89,7 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     // CREATE TASK
     taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
 
-    shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    shouldContainTask(taskTracker.getTasks(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.getId)
 
     // TASK STATUS UPDATE
@@ -97,24 +97,24 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
 
     taskTracker.statusUpdate(TEST_APP_NAME, startingTaskStatus).futureValue
 
-    shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    shouldContainTask(taskTracker.getTasks(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.getId)
-    taskTracker.get(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
+    taskTracker.getTasks(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
 
     // TASK RUNNING
     val runningTaskStatus: TaskStatus = makeTaskStatus(sampleTask.getId, TaskState.TASK_RUNNING)
 
     taskTracker.statusUpdate(TEST_APP_NAME, runningTaskStatus).futureValue
 
-    shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    shouldContainTask(taskTracker.getTasks(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.getId)
-    taskTracker.get(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
+    taskTracker.getTasks(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK STILL RUNNING
     val updatedRunningTaskStatus = runningTaskStatus.toBuilder.setTimestamp(123).build()
     taskTracker.statusUpdate(TEST_APP_NAME, updatedRunningTaskStatus).futureValue
-    shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
-    assert(taskTracker.get(TEST_APP_NAME).head.getStatus == runningTaskStatus)
+    shouldContainTask(taskTracker.getTasks(TEST_APP_NAME), sampleTask)
+    assert(taskTracker.getTasks(TEST_APP_NAME).head.getStatus == runningTaskStatus)
 
     // TASK TERMINATED
     taskTracker.terminated(TEST_APP_NAME, sampleTask.getId).futureValue
@@ -145,12 +145,12 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     val terminalStatusUpdate = makeTaskStatus(sampleTask.getId, taskState)
 
     taskTracker.created(TEST_APP_NAME, sampleTask).futureValue
-    shouldContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    shouldContainTask(taskTracker.getTasks(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.getId)
 
     taskTracker.statusUpdate(TEST_APP_NAME, terminalStatusUpdate).futureValue
 
-    shouldNotContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    shouldNotContainTask(taskTracker.getTasks(TEST_APP_NAME), sampleTask)
     stateShouldNotContainKey(state, sampleTask.getId)
   }
 
@@ -163,7 +163,7 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     ScalaFutures.whenReady(res.failed) { e =>
       assert(e.getMessage == s"task [${sampleTask.getId}] of app [/foo] does not exist")
     }
-    shouldNotContainTask(taskTracker.get(TEST_APP_NAME), sampleTask)
+    shouldNotContainTask(taskTracker.getTasks(TEST_APP_NAME), sampleTask)
     stateShouldNotContainKey(state, sampleTask.getId)
   }
 
@@ -254,7 +254,7 @@ class TaskTrackerTest extends MarathonSpec with Matchers with GivenWhenThen {
     assert(names.size == 3, "Orphaned tasks were not correctly expunged")
     assert(!taskTracker.contains(ORPHANED_APP_NAME), "Orphaned app should not exist in TaskTracker")
 
-    val tasks = taskTracker.get(TEST_APP_NAME)
+    val tasks = taskTracker.getTasks(TEST_APP_NAME)
 
     shouldContainTask(tasks, task1)
     shouldContainTask(tasks, task2)

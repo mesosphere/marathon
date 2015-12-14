@@ -24,12 +24,12 @@ class TaskReplaceActor(
     promise: Promise[Unit]) extends Actor with ActorLogging {
   import context.dispatcher
 
-  val tasksToKill = taskTracker.get(app.id)
+  val tasksToKill = taskTracker.getTasks(app.id)
   val appId = app.id
   val version = app.version.toString
   var healthy = Set.empty[String]
   var newTasksStarted: Int = 0
-  var oldTaskIds = tasksToKill.map(_.getId)
+  var oldTaskIds = tasksToKill.map(_.getId).toSet
   val toKill = oldTaskIds.to[mutable.Queue]
   var maxCapacity = (app.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
   var outstandingKills = Set.empty[String]

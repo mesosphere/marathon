@@ -32,4 +32,6 @@ object MarathonTasks {
       .setSlaveId(slaveId)
       .build
   }
+
+  def taskMap(tasks: Iterable[MarathonTask]): Map[String, MarathonTask] = tasks.map(task => task.getId -> task).toMap
 }

@@ -52,7 +52,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.get(appId) returns Set(task1, task2)
+    taskTracker.getTasks(appId) returns Set(task1, task2)
     taskKiller.kill(any, any) returns Future.successful(toKill)
 
     val response = appsTaskResource.deleteOne(appId.root, task1.getId, scale = false, force = false, auth.request, auth.response)
@@ -79,7 +79,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     )
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.get(appId) returns Set(task1, task2)
+    taskTracker.getTasks(appId) returns Set(task1, task2)
     taskTracker.contains(appId) returns true
     healthCheckManager.statuses(appId) returns Future.successful(
       collection.immutable.Map("" -> collection.immutable.Seq())

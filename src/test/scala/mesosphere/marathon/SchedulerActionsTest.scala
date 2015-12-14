@@ -42,7 +42,7 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
     val app = AppDefinition(id = PathId("/myapp"))
 
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
-    when(taskTracker.get(app.id)).thenReturn(Set.empty[Protos.MarathonTask])
+    when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[Protos.MarathonTask])
 
     val res = scheduler.stopApp(mock[SchedulerDriver], app)
 
@@ -102,7 +102,7 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
 
     val app = AppDefinition(id = PathId("/myapp"))
 
-    when(taskTracker.get(app.id)).thenReturn(Set(runningTask, stagedTask, stagedTaskWithSlaveId))
+    when(taskTracker.getTasks(app.id)).thenReturn(Set(runningTask, stagedTask, stagedTaskWithSlaveId))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
     when(taskTracker.list).thenReturn(Map(
       app.id -> TaskTracker.App(app.id, Set(runningTask, stagedTask, stagedTaskWithSlaveId), shutdown = false)
@@ -133,7 +133,7 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
 
     val app = AppDefinition(id = PathId("/myapp"))
 
-    when(taskTracker.get(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
     when(repo.allPathIds()).thenReturn(Future.successful(Seq()))
     when(taskTracker.list).thenReturn(Map.empty[PathId, TaskTracker.App])
 
@@ -177,8 +177,8 @@ class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with Marat
     val app = AppDefinition(id = PathId("/myapp"))
     val orphanedApp = AppDefinition(id = PathId("/orphan"))
 
-    when(taskTracker.get(app.id)).thenReturn(Set(task))
-    when(taskTracker.get(orphanedApp.id)).thenReturn(Set(orphanedTask))
+    when(taskTracker.getTasks(app.id)).thenReturn(Set(task))
+    when(taskTracker.getTasks(orphanedApp.id)).thenReturn(Set(orphanedTask))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
     when(taskTracker.list).thenReturn(Map(
       app.id -> TaskTracker.App(app.id, Set(task), shutdown = false),

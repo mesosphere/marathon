@@ -22,7 +22,7 @@ final case class StartApplication(app: AppDefinition, scaleTo: Int) extends Depl
 // application is started, but the instance count should be changed
 final case class ScaleApplication(app: AppDefinition,
                                   scaleTo: Int,
-                                  sentencedToDeath: Option[Set[MarathonTask]] = None) extends DeploymentAction
+                                  sentencedToDeath: Option[Iterable[MarathonTask]] = None) extends DeploymentAction
 
 // application is started, but shall be completely stopped
 final case class StopApplication(app: AppDefinition) extends DeploymentAction
@@ -193,7 +193,7 @@ object DeploymentPlan {
     * from the topology of the target group's dependency graph.
     */
   def dependencyOrderedSteps(original: Group, target: Group,
-                             toKill: Map[PathId, Set[MarathonTask]]): Seq[DeploymentStep] = {
+                             toKill: Map[PathId, Iterable[MarathonTask]]): Seq[DeploymentStep] = {
     val originalApps: Map[PathId, AppDefinition] =
       original.transitiveApps.map(app => app.id -> app).toMap
 
@@ -238,7 +238,7 @@ object DeploymentPlan {
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Set[MarathonTask]] = Map.empty): DeploymentPlan = {
+    toKill: Map[PathId, Iterable[MarathonTask]] = Map.empty): DeploymentPlan = {
 
     // Lookup maps for original and target apps.
     val originalApps: Map[PathId, AppDefinition] =

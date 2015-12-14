@@ -87,7 +87,7 @@ class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.get(appId).foreach { task =>
+    taskTracker.getTasks(appId).foreach { task =>
       if (task.getVersion == appVersion && task.hasStartedAt) {
         log.debug("Dispatching health check job for task [{}]", task.getId)
         val worker: ActorRef = context.actorOf(workerProps)
@@ -144,7 +144,7 @@ class HealthCheckActor(
         case Healthy(_, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _) =>
-          taskTracker.get(appId).find(_.getId == taskId) match {
+          taskTracker.getTask(appId, taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
                 // Don't update health
