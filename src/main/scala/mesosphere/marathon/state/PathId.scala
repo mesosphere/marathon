@@ -111,7 +111,6 @@ object PathId {
       override def apply(child: PathId): Result = {
         parent match {
           case e if e == "".toPath =>
-            println("EMPTY")
             Success
           case _ =>
             try {

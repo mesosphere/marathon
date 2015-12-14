@@ -106,17 +106,33 @@ object Validation {
     }
   }
 
-  def getAllRuleConstrains(r: Result): Seq[String] = {
-    def loop(v: Violation): Seq[String] = {
+  def elementsAreUnique[A]: Validator[Seq[A]] = {
+    new Validator[Seq[A]] {
+      def apply(seq: Seq[A]) = {
+        if (seq.size == seq.distinct.size) Success
+        else Failure(Set(RuleViolation(seq, "Elements must be unique", None)))
+      }
+    }
+  }
+
+  case class ViolationMessageAndProperty(message: String, property: Option[String]) {
+    override def toString: String = s"Property: $property Message: $message"
+  }
+
+  def getAllRuleConstrains(r: Result): Seq[ViolationMessageAndProperty] = {
+    def loop(v: Violation, prop: Option[String]): Seq[ViolationMessageAndProperty] = {
       v match {
-        case g: GroupViolation => g.children.flatMap(c => loop(c)).toSeq
-        case r: RuleViolation => Seq(r.constraint)
+        case g: GroupViolation =>
+          g.children.flatMap { c =>
+            val nextProp = prop.map(p => Some(s"$p.${c.description.getOrElse("")}")).getOrElse(c.description)
+            loop(c, nextProp)}.toSeq
+        case r: RuleViolation => Seq(ViolationMessageAndProperty(r.constraint, prop))
       }
     }
 
     r match {
-      case f: Failure => f.violations.flatMap(loop).toSeq
-      case _ => Seq.empty[String]
+      case f: Failure => f.violations.flatMap(v => loop(v, v.description)).toSeq
+      case _ => Seq.empty[ViolationMessageAndProperty]
     }
   }
 }

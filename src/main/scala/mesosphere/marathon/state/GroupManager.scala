@@ -164,7 +164,7 @@ class GroupManager @Singleton @Inject() (
       to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
       _ = {
         // TODO AW: test
-        validateOrThrow(V2Group(to))(validator = V2Group.v2GroupWithConfigValidator(config))
+        validateOrThrow(V2Group(to))(validator = V2Group.v2GroupWithConfigValidator(config.maxApps.get))
       }
       plan = DeploymentPlan(from, to, resolve, version, toKill)
       _ = log.info(s"Computed new deployment plan:\n$plan")

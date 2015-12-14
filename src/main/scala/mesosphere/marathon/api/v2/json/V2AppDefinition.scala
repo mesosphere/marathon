@@ -2,13 +2,16 @@ package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble, Integer => JInt }
 
+import com.wix.accord._
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.api.validation.{ PortIndices, ValidV2AppDefinition }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state._
+import mesosphere.marathon.state.PathId._
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.immutable.Seq
@@ -135,5 +138,36 @@ object V2AppDefinition {
     appDef.dependencies is valid
     appDef.upgradeStrategy is valid
     appDef.storeUrls is every(urlsCanBeResolvedValidator)
+    appDef.ports.filterNot { _ == AppDefinition.RandomPortValue } as "ports" is elementsAreUnique
+    appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
+    appDef is containsCmdArgsContainerValidator
+    appDef is portIndicesAreValid
+  }
+
+  private def containsCmdArgsContainerValidator: Validator[V2AppDefinition] = {
+    new Validator[V2AppDefinition] {
+      override def apply(app: V2AppDefinition): Result = {
+        val cmd = app.cmd.nonEmpty
+        val args = app.args.nonEmpty
+        val container = app.container.exists(_ != Container.Empty)
+        if((cmd ^ args) || (!(cmd || args) && container)) Success
+        else Failure(Set(RuleViolation(app,
+          "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.", None)))
+      }
+    }
+  }
+
+  private def portIndicesAreValid: Validator[V2AppDefinition] = {
+    new Validator[V2AppDefinition] {
+      override def apply(app: V2AppDefinition): Result = {
+        val appDef = app.toAppDefinition
+        val validPortIndices = appDef.hostPorts.indices
+        if(appDef.healthChecks.forall { hc =>
+          hc.protocol == Protocol.COMMAND || (validPortIndices contains hc.portIndex)
+        }) Success
+        else Failure(Set(RuleViolation(app,
+          "Health check port indices must address an element of the ports array or container port mappings.", None)))
+      }
+    }
   }
 }

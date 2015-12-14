@@ -5,7 +5,7 @@ import java.lang.{ Double => JDouble, Integer => JInt }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
@@ -436,9 +436,6 @@ object AppDefinition {
     AppDefinition().mergeFromProto(proto)
 
   implicit val appDefinitionValidator = validator[AppDefinition] { appDef =>
-    appDef.id is valid
-    appDef.dependencies is valid
-    appDef.upgradeStrategy is valid
-    appDef.storeUrls is every(urlsCanBeResolvedValidator)
+    V2AppDefinition(appDef) is valid
   }
 }
