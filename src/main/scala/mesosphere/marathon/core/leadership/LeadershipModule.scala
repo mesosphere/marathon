@@ -1,11 +1,9 @@
 package mesosphere.marathon.core.leadership
 
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
-import mesosphere.marathon.core.leadership.impl.{
-  LeadershipCoordinatorDelegate,
-  LeadershipCoordinatorActor,
-  WhenLeaderActor
-}
+import com.twitter.common.zookeeper.ZooKeeperClient
+import mesosphere.marathon.LeadershipAbdication
+import mesosphere.marathon.core.leadership.impl._
 
 /**
   * This module provides a utility function for starting actors only when our instance is the current leader.
@@ -14,7 +12,7 @@ import mesosphere.marathon.core.leadership.impl.{
   * In addition, it exports the coordinator which coordinates the activity performed when elected or stopped.
   * The leadership election logic needs to call the appropriate methods for this module to work.
   */
-class LeadershipModule(actorRefFactory: ActorRefFactory) {
+class LeadershipModule(actorRefFactory: ActorRefFactory, zk: ZooKeeperClient, leader: LeadershipAbdication) {
 
   private[this] var whenLeaderRefs = Set.empty[ActorRef]
   private[this] var started: Boolean = false
@@ -50,4 +48,9 @@ class LeadershipModule(actorRefFactory: ActorRefFactory) {
     val actorRef = actorRefFactory.actorOf(props, "leaderShipCoordinator")
     new LeadershipCoordinatorDelegate(actorRef)
   }
+
+  /**
+    * Register this actor by default.
+    */
+  startWhenLeader(AbdicateOnConnectionLossActor.props(zk, leader), "AbdicateOnConnectionLoss")
 }

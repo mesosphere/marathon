@@ -1,7 +1,6 @@
 package mesosphere.marathon
 
 import java.util.concurrent.CountDownLatch
-
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
@@ -53,23 +52,31 @@ trait LeadershipCallback {
 }
 
 /**
+  * Minimal trait to abdicate leadership from external components (e.g. zk connection listener)
+  */
+trait LeadershipAbdication {
+  def abdicateLeadership(): Unit
+}
+
+/**
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
-    leadershipCoordinator: LeadershipCoordinator,
-    healthCheckManager: HealthCheckManager,
-    @Named(ModuleNames.CANDIDATE) candidate: Option[Candidate],
-    config: MarathonConf,
-    frameworkIdUtil: FrameworkIdUtil,
-    @Named(ModuleNames.LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
-    appRepository: AppRepository,
-    taskTracker: TaskTracker,
-    driverFactory: SchedulerDriverFactory,
-    system: ActorSystem,
-    migration: Migration,
-    @Named("schedulerActor") schedulerActor: ActorRef,
-    @Named(EventModule.busName) eventStream: EventStream,
-    leadershipCallbacks: Seq[LeadershipCallback] = Seq.empty) extends AbstractExecutionThreadService with Leader {
+  leadershipCoordinator: LeadershipCoordinator,
+  healthCheckManager: HealthCheckManager,
+  @Named(ModuleNames.CANDIDATE) candidate: Option[Candidate],
+  config: MarathonConf,
+  frameworkIdUtil: FrameworkIdUtil,
+  @Named(ModuleNames.LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
+  appRepository: AppRepository,
+  taskTracker: TaskTracker,
+  driverFactory: SchedulerDriverFactory,
+  system: ActorSystem,
+  migration: Migration,
+  @Named("schedulerActor") schedulerActor: ActorRef,
+  @Named(EventModule.busName) eventStream: EventStream,
+  leadershipCallbacks: Seq[LeadershipCallback] = Seq.empty)
+    extends AbstractExecutionThreadService with Leader with LeadershipAbdication {
 
   import mesosphere.util.ThreadPoolContext.context
 
@@ -329,12 +336,14 @@ class MarathonSchedulerService @Inject() (
   }
 
   def abdicateLeadership(): Unit = {
-    log.info("Abdicating")
+    if (leader.get()) {
+      log.info("Abdicating")
 
-    leadershipCoordinator.stop()
+      leadershipCoordinator.stop()
 
-    // To abdicate we defeat our leadership
-    defeatLeadership()
+      // To abdicate we defeat our leadership
+      defeatLeadership()
+    }
   }
 
   var offerLeadershipBackOff = 0.5.seconds
