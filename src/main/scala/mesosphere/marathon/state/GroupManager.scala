@@ -107,7 +107,7 @@ class GroupManager @Singleton @Inject() (
     fn: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Set[MarathonTask]] = Map.empty): Future[DeploymentPlan] =
+    toKill: Map[PathId, Iterable[MarathonTask]] = Map.empty): Future[DeploymentPlan] =
     upgrade(gid, _.update(gid, fn, version), version, force, toKill)
 
   /**
@@ -126,7 +126,7 @@ class GroupManager @Singleton @Inject() (
     fn: Option[AppDefinition] => AppDefinition,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Set[MarathonTask] = Set.empty): Future[DeploymentPlan] =
+    toKill: Iterable[MarathonTask] = Iterable.empty): Future[DeploymentPlan] =
     upgrade(appId.parent, _.updateApp(appId, fn, version), version, force, Map(appId -> toKill))
 
   private def upgrade(
@@ -134,7 +134,7 @@ class GroupManager @Singleton @Inject() (
     change: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Set[MarathonTask]] = Map.empty): Future[DeploymentPlan] = serializeUpdates {
+    toKill: Map[PathId, Iterable[MarathonTask]] = Map.empty): Future[DeploymentPlan] = serializeUpdates {
 
     log.info(s"Upgrade group id:$gid version:$version with force:$force")
 

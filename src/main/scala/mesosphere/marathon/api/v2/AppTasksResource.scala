@@ -42,7 +42,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
       def tasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
         id <- appIds
         health = result(healthCheckManager.statuses(id))
-        task <- taskTracker.get(id)
+        task <- taskTracker.getTasks(id)
       } yield EnrichedTask(id, task, health.getOrElse(task.getId, Nil))
 
       val matchingApps = appId match {
@@ -81,8 +81,10 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                  @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     doIfAuthorized(req, resp, KillTask, appId.toRootPath) { implicit principal =>
       val pathId = appId.toRootPath
-      def findToKill(appTasks: Set[MarathonTask]): Set[MarathonTask] = Option(host).fold(appTasks) { hostname =>
-        appTasks.filter(_.getHost == hostname || hostname == "*")
+      def findToKill(appTasks: Iterable[MarathonTask]): Iterable[MarathonTask] = {
+        Option(host).fold(appTasks) { hostname =>
+          appTasks.filter(_.getHost == hostname || hostname == "*")
+        }
       }
 
       if (scale) {
@@ -107,7 +109,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                 @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     val pathId = appId.toRootPath
     doIfAuthorized(req, resp, KillTask, appId.toRootPath) { implicit principal =>
-      def findToKill(appTasks: Set[MarathonTask]): Set[MarathonTask] = appTasks.find(_.getId == id).toSet
+      def findToKill(appTasks: Iterable[MarathonTask]): Iterable[MarathonTask] = appTasks.find(_.getId == id)
 
       if (scale) {
         val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
@@ -121,7 +123,9 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
     }
   }
 
-  private def reqToResponse(future: Future[Set[MarathonTask]])(toResponse: Set[MarathonTask] => Response): Response = {
+  private def reqToResponse(
+    future: Future[Iterable[MarathonTask]])(toResponse: Iterable[MarathonTask] => Response): Response = {
+
     import scala.concurrent.ExecutionContext.Implicits.global
     val response = future.map {
       toResponse

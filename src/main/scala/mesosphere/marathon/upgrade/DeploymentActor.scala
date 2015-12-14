@@ -115,9 +115,9 @@ private class DeploymentActor(
     promise.future
   }
 
-  def scaleApp(app: AppDefinition, scaleTo: Int, toKill: Option[Set[MarathonTask]]): Future[Unit] = {
-    val runningTasks = taskTracker.get(app.id)
-    def killToMeetConstraints(notSentencedAndRunning: Set[MarathonTask], toKillCount: Int) =
+  def scaleApp(app: AppDefinition, scaleTo: Int, toKill: Option[Iterable[MarathonTask]]): Future[Unit] = {
+    val runningTasks = taskTracker.getTasks(app.id)
+    def killToMeetConstraints(notSentencedAndRunning: Iterable[MarathonTask], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(

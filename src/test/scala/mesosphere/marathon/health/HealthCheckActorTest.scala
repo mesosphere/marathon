@@ -29,7 +29,7 @@ class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultE
       .setVersion(appVersion)
       .build()
 
-    when(tracker.get(appId)).thenReturn(Set(task))
+    when(tracker.getTasks(appId)).thenReturn(Set(task))
 
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val actor = TestActorRef[HealthCheckActor](

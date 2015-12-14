@@ -15,9 +15,12 @@ class TaskKiller @Inject() (
     groupManager: GroupManager,
     service: MarathonSchedulerService) {
 
-  def kill(appId: PathId, findToKill: (Set[MarathonTask] => Set[MarathonTask])): Future[Set[MarathonTask]] = {
+  def kill(
+    appId: PathId,
+    findToKill: (Iterable[MarathonTask] => Iterable[MarathonTask])): Future[Iterable[MarathonTask]] = {
+
     if (taskTracker.contains(appId)) {
-      val tasks = taskTracker.get(appId)
+      val tasks = taskTracker.getTasks(appId)
       val toKill = findToKill(tasks)
       service.killTasks(appId, toKill)
       Future.successful(toKill)
@@ -28,12 +31,12 @@ class TaskKiller @Inject() (
   }
 
   def killAndScale(appId: PathId,
-                   findToKill: (Set[MarathonTask] => Set[MarathonTask]),
+                   findToKill: (Iterable[MarathonTask] => Iterable[MarathonTask]),
                    force: Boolean): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.get(appId))), force)
+    killAndScale(Map(appId -> findToKill(taskTracker.getTasks(appId))), force)
   }
 
-  def killAndScale(appTasks: Map[PathId, Set[MarathonTask]], force: Boolean): Future[DeploymentPlan] = {
+  def killAndScale(appTasks: Map[PathId, Iterable[MarathonTask]], force: Boolean): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
       appTasks.get(app.id).fold(app) { toKill => app.copy(instances = app.instances - toKill.size) }
     }

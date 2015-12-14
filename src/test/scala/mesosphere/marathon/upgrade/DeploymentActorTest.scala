@@ -78,10 +78,10 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(tracker.get(app1.id)).thenReturn(Set(task1_1, task1_2))
-    when(tracker.get(app2.id)).thenReturn(Set(task2_1))
-    when(tracker.get(app3.id)).thenReturn(Set(task3_1))
-    when(tracker.get(app4.id)).thenReturn(Set(task4_1))
+    when(tracker.getTasks(app1.id)).thenReturn(Set(task1_1, task1_2))
+    when(tracker.getTasks(app2.id)).thenReturn(Set(task2_1))
+    when(tracker.getTasks(app3.id)).thenReturn(Set(task3_1))
+    when(tracker.getTasks(app4.id)).thenReturn(Set(task4_1))
 
     when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -174,7 +174,7 @@ class DeploymentActorTest
     val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(0).build()
     val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(1000).build()
 
-    when(tracker.get(app.id)).thenReturn(Set(task1_1, task1_2))
+    when(tracker.getTasks(app.id)).thenReturn(Set(task1_1, task1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -247,7 +247,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(tracker.get(app.id)).thenReturn(Set[MarathonTask]())
+    when(tracker.getTasks(app.id)).thenReturn(Set[MarathonTask]())
 
     try {
       TestActorRef(
@@ -291,7 +291,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 
-    when(tracker.get(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
+    when(tracker.getTasks(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
 
     when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
