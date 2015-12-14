@@ -1,65 +1,71 @@
 package mesosphere.marathon.api.v2.json
-// TODO AW: test
-/*
+
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.ModelValidation
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
-import org.scalatest.Matchers
+import org.scalatest.{Matchers}
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
+import com.wix.accord._
+import mesosphere.marathon.api.v2.Validation.getAllRuleConstrains
 
 class V2AppDefinitionTest extends MarathonSpec with Matchers {
 
   test("Validation") {
-    def shouldViolate(app: V2AppDefinition, path: String, template: String) = {
-      val violations = ModelValidation.checkAppConstraints(app, PathId.empty)
-      assert(
-        violations.exists { v =>
-          v.getPropertyPath.toString == path && v.getMessageTemplate == template
-        },
-        s"Violations:\n${violations.mkString}"
-      )
+    def shouldViolate(app: V2AppDefinition, path: String, template: String): Unit = {
+      validate(app) match {
+        case Success => fail()
+        case f: Failure =>
+          val violations = getAllRuleConstrains(f)
+          assert(violations.exists { v =>
+            v.property.contains(path) && v.message == template
+          },
+            s"Violations:\n${violations.mkString}"
+          )
+      }
     }
 
-    def shouldNotViolate(app: V2AppDefinition, path: String, template: String) = {
-      val violations = ModelValidation.checkAppConstraints(app, PathId.empty)
-      assert(
-        !violations.exists { v =>
-          v.getPropertyPath.toString == path && v.getMessageTemplate == template
-        },
-        s"Violations:\n${violations.mkString}"
-      )
+    def shouldNotViolate(app: V2AppDefinition, path: String, template: String): Unit = {
+      validate(app) match {
+        case Success =>
+        case f: Failure =>
+          val violations = getAllRuleConstrains(f)
+          assert(!violations.exists { v =>
+            v.property.contains(path) && v.message == template
+          },
+            s"Violations:\n${violations.mkString}"
+          )
+      }
     }
 
     var app = V2AppDefinition(id = "a b".toRootPath)
-    val idError = "path contains invalid characters (allowed: lowercase letters, digits, hyphens, \".\", \"..\")"
+    val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
     validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "id.path", idError)
 
     app = app.copy(id = "a#$%^&*b".toRootPath)
     validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "id.path", idError)
 
     app = app.copy(id = "-dash-disallowed-at-start".toRootPath)
     validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "id.path", idError)
 
     app = app.copy(id = "dash-disallowed-at-end-".toRootPath)
     validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "id.path", idError)
 
     app = app.copy(id = "uppercaseLettersNoGood".toRootPath)
     validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "id.path", idError)
 
     app = V2AppDefinition(id = "test".toPath, instances = -3, ports = Seq(9000, 8080, 9000))
     shouldViolate(
@@ -69,7 +75,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     )
     validateJsonSchema(app, false)
 
-    app = V2AppDefinition(id = "test".toPath, ports = Seq(0, 0, 8080))
+    app = V2AppDefinition(id = "test".toPath, ports = Seq(0, 0, 8080), cmd = Some("true"))
     shouldNotViolate(
       app,
       "ports",
@@ -115,7 +121,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(
       app,
       "executor",
-      "{javax.validation.constraints.Pattern.message}"
+      "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'"
     )
     validateJsonSchema(app, false)
 
@@ -123,14 +129,14 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(
       app,
       "executor",
-      "{javax.validation.constraints.Pattern.message}"
+      "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'"
     )
     validateJsonSchema(app, false)
 
     app = correct.copy(cmd = Some("command"), args = Some(Seq("a", "b", "c")))
     shouldViolate(
       app,
-      "",
+      "value",
       "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
     validateJsonSchema(app, false)
@@ -138,7 +144,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(cmd = None, args = Some(Seq("a", "b", "c")))
     shouldNotViolate(
       app,
-      "",
+      "value",
       "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
     validateJsonSchema(app)
@@ -147,7 +153,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(
       app,
       "upgradeStrategy.minimumHealthCapacity",
-      "is greater than 1"
+      "got 1.2, expected between 0.0 and 1.0"
     )
     validateJsonSchema(app, false)
 
@@ -155,7 +161,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(
       app,
       "upgradeStrategy.maximumOverCapacity",
-      "is greater than 1"
+      "got 1.2, expected between 0.0 and 1.0"
     )
     validateJsonSchema(app, false)
 
@@ -163,7 +169,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(
       app,
       "upgradeStrategy.minimumHealthCapacity",
-      "is less than 0"
+      "got -1.2, expected between 0.0 and 1.0"
     )
     validateJsonSchema(app, false)
 
@@ -171,7 +177,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(
       app,
       "upgradeStrategy.maximumOverCapacity",
-      "is less than 0"
+      "got -1.2, expected between 0.0 and 1.0"
     )
     validateJsonSchema(app, false)
 
@@ -217,7 +223,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldViolate(
       app,
-      "",
+      "value",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
     validateJsonSchema(app)
@@ -338,4 +344,3 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     assert(readResult4.copy(version = app4.version) == app4)
   }
 }
-*/ 
