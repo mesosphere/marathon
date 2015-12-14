@@ -39,10 +39,10 @@ import org.apache.zookeeper.ZooDefs.Ids
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.Await
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
-import scala.collection.immutable.Seq
 
 object ModuleNames {
   final val CANDIDATE = "CANDIDATE"
@@ -84,6 +84,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[MarathonLeaderInfoMetrics]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
+    bind(classOf[LeadershipAbdication]).to(classOf[MarathonSchedulerService])
     bind(classOf[LeaderInfo]).to(classOf[MarathonLeaderInfo]).in(Scopes.SINGLETON)
     bind(classOf[TaskFactory]).to(classOf[DefaultTaskFactory]).in(Scopes.SINGLETON)
 

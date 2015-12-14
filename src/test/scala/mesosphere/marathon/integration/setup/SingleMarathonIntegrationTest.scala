@@ -59,6 +59,12 @@ trait SingleMarathonIntegrationTest
     def toTestPath: PathId = testBasePath.append(path)
   }
 
+  protected def startZooKeeperProcess(port: Int = config.zkPort,
+                                      path: String = "/tmp/foo/single",
+                                      wipeWorkDir: Boolean = true): Unit = {
+    ProcessKeeper.startZooKeeper(port, path, wipeWorkDir)
+  }
+
   override protected def beforeAll(configMap: ConfigMap): Unit = {
     log.info("Setting up local mesos/marathon infrastructure...")
     configOption = Some(IntegrationTestConfig(configMap))
@@ -69,7 +75,7 @@ trait SingleMarathonIntegrationTest
       ProcessKeeper.shutdown()
 
       log.info("Setting up local mesos/marathon infrastructure...")
-      ProcessKeeper.startZooKeeper(config.zkPort, "/tmp/foo/single")
+      startZooKeeperProcess()
       ProcessKeeper.startMesosLocal()
       cleanMarathonState()
 

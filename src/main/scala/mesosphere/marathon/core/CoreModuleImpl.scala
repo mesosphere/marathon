@@ -2,6 +2,7 @@ package mesosphere.marathon.core
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
+import com.twitter.common.zookeeper.ZooKeeperClient
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
@@ -16,7 +17,7 @@ import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
 
 import scala.util.Random
 
@@ -28,6 +29,8 @@ import scala.util.Random
   */
 class CoreModuleImpl @Inject() (
     // external dependencies still wired by guice
+    zk: ZooKeeperClient,
+    leader: LeadershipAbdication,
     marathonConf: MarathonConf,
     metrics: Metrics,
     actorSystem: ActorSystem,
@@ -44,7 +47,7 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val shutdownHookModule = ShutdownHooks()
   private[this] lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
-  override lazy val leadershipModule = new LeadershipModule(actorsModule.actorRefFactory)
+  override lazy val leadershipModule = new LeadershipModule(actorsModule.actorRefFactory, zk, leader)
 
   // TASKS
 

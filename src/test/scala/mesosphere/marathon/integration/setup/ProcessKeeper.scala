@@ -27,7 +27,7 @@ import scala.util.{ Failure, Success, Try }
 object ProcessKeeper {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
-  private[this] var processes = List.empty[Process]
+  private[this] var processes = Map.empty[String, Process]
   private[this] var services = List.empty[Service]
 
   private[this] val ENV_MESOS_WORK_DIR: String = "MESOS_WORK_DIR"
@@ -42,11 +42,13 @@ object ProcessKeeper {
     }
   }
 
-  def startZooKeeper(port: Int, workDir: String) {
+  def startZooKeeper(port: Int, workDir: String, wipeWorkDir: Boolean = true) {
     val args = "-Dzookeeper.jmx.log4j.disable=true" :: "org.apache.zookeeper.server.ZooKeeperServerMain" :: port.toString :: workDir :: Nil
     val workDirFile = new File(workDir)
-    FileUtils.deleteDirectory(workDirFile)
-    FileUtils.forceMkdir(workDirFile)
+    if (wipeWorkDir) {
+      FileUtils.deleteDirectory(workDirFile)
+      FileUtils.forceMkdir(workDirFile)
+    }
     startJavaProcess("zookeeper", heapInMegs = 256, args, new File("."), sys.env, _.contains("binding to port"))
   }
 
@@ -129,7 +131,7 @@ object ProcessKeeper {
     val upOrExited = Future.firstCompletedOf(Seq(up.future, processExitCode))(ExecutionContext.global)
     Try(Await.result(upOrExited, timeout)) match {
       case Success(result) =>
-        processes = process :: processes
+        processes += name -> process
         result match {
           case ProcessExited =>
             throw new IllegalStateException(s"Process $name exited before coming up. Give up. $processBuilder")
@@ -169,38 +171,28 @@ object ProcessKeeper {
     }
   }
 
-  def stopAllProcesses(): Unit = {
-
-    def waitForProcessesToFinish(): Unit = {
-      processes.foreach(p => Try(p.destroy()))
-
+  def stopProcess(name: String): Unit = {
+    import mesosphere.util.ThreadPoolContext.context
+    log.info(s"Stop Process $name")
+    val process = processes(name)
+    def killProcess: Int = {
       // Unfortunately, there seem to be race conditions in Process.exitValue.
       // Thus this ugly workaround.
-      val waitForExitInThread = new Thread() {
-        override def run(): Unit = {
-          processes.foreach(_.exitValue())
-        }
-      }
-      waitForExitInThread.start()
-      try {
-        waitForExitInThread.join(1000)
-      }
-      finally {
-        waitForExitInThread.interrupt()
-      }
+      Await.result(Future {
+        Try(process.destroy())
+        process.exitValue()
+      }, 5.seconds)
     }
+    //retry on fail
+    Try(killProcess) recover { case _ => killProcess } match {
+      case Success(value)       => processes -= name
+      case Failure(NonFatal(e)) => log.error("giving up waiting for processes to finish", e)
+    }
+  }
 
-    try waitForProcessesToFinish()
-    catch {
-      case NonFatal(e) =>
-        log.error("while waiting for processes to finish", e)
-        try waitForProcessesToFinish()
-        catch {
-          case NonFatal(e) =>
-            log.error("giving up waiting for processes to finish", e)
-        }
-    }
-    processes = Nil
+  def stopAllProcesses(): Unit = {
+    processes.keys.foreach(stopProcess)
+    processes = Map.empty
   }
 
   def startService(service: Service): Unit = {
