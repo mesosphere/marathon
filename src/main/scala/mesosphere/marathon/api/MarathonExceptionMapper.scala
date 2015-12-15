@@ -1,6 +1,5 @@
 package mesosphere.marathon.api
 
-import javax.validation.{ ConstraintViolation, ConstraintViolationException }
 import javax.ws.rs.ext.{ Provider, ExceptionMapper }
 import javax.ws.rs.core.{ MediaType, Response }
 import com.fasterxml.jackson.databind.JsonMappingException
@@ -50,7 +49,6 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     case e: JsonParseException           => 400 // Bad Request
     case e: JsResultException            => 400 // Bad Request
     case e: ValidationFailedException    => 400 // Bad Request
-    case e: ConstraintViolationException => 422 // Unprocessable entity
     case e: JsonMappingException         => 400 // Bad Request
     case e: WebApplicationException      => e.getResponse.getStatus
     case _                               => 500 // Internal server error
@@ -82,19 +80,6 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       Json.obj(
         "message" -> s"Invalid JSON",
         "details" -> errors
-      )
-    case e: ConstraintViolationException =>
-      def violationToError(violation: ConstraintViolation[_]): JsObject = {
-        Json.obj(
-          "attribute" -> violation.getPropertyPath.toString,
-          "error" -> violation.getMessage
-        )
-      }
-
-      import scala.collection.JavaConverters._
-      Json.obj(
-        "message" -> e.getMessage,
-        "errors" -> e.getConstraintViolations.asScala.map(violationToError)
       )
     case ValidationFailedException(obj, failure) => Json.toJson(failure)
     case e: WebApplicationException =>

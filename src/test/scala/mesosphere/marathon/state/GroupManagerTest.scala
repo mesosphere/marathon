@@ -1,7 +1,6 @@
 package mesosphere.marathon.state
 
 import java.util.concurrent.atomic.AtomicInteger
-import javax.validation.ConstraintViolationException
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
@@ -9,7 +8,7 @@ import akka.testkit.TestKit
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.tasks.TaskTracker
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
+import mesosphere.marathon._
 import mesosphere.util.SerializeExecution
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ times, verify, when }
@@ -155,7 +154,7 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
     when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
     when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
 
-    intercept[ConstraintViolationException] {
+    intercept[ValidationFailedException] {
       Await.result(f.manager.update(group.id, _ => group), 3.seconds)
     }.printStackTrace()
 
