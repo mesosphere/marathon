@@ -103,27 +103,29 @@ object PathId {
 
   implicit val pathIdValidator = validator[PathId] { pathId =>
     pathId.path.each should matchRegexFully(ID_PATH_SEGMENT_PATTERN.pattern)
-    pathId is validChild(pathId.parent)
+    pathId is validChild
   }
 
-  def validChild(parent: PathId): Validator[PathId] = {
+  /**
+    * Check if path's parent, if it exists, is a valid parent indeed.
+    * @return
+    */
+  def validChild: Validator[PathId] = {
     new Validator[PathId] {
-      override def apply(child: PathId): Result = {
-        if(parent == "".toPath) Success
+      override def apply(pathId: PathId): Result = {
+        if (pathId.parent == "".toPath) Success
         else {
-          try {
-            val p = child.canonicalPath(parent)
-            if (parent != PathId.empty && p.parent != parent) Failure(Set(
-              RuleViolation(child,
-                s"""identifier $child is not child of $parent.
+          if (pathId.parent.absolute) {
+            val p = pathId.canonicalPath(pathId.parent)
+            if (pathId.parent != PathId.empty && p.parent != pathId.parent) Failure(Set(
+              RuleViolation(pathId,
+                s"""identifier $pathId is not child of ${pathId.parent}.
                     |Actual parent: ${p.parent}.
                     |Hint: use relative paths.""".stripMargin, None)
             ))
             else Success
-          } catch {
-            case e: Exception => Failure(Set(
-              RuleViolation(child, s"canonical path can not be computed for $parent", None)))
           }
+          else Failure(Set(RuleViolation(pathId.parent, "path of parent should be absolute", None)))
         }
       }
     }
