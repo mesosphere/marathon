@@ -1,10 +1,9 @@
 package mesosphere.marathon.core.leadership.impl
 
-import akka.actor.{ PoisonPill, ActorSystem, Props, Status }
+import akka.actor.{ ActorSystem, PoisonPill, Props, Status }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.leadership.PreparationMessages
-import scala.concurrent.duration._
 
 class WhenLeaderActorTest extends MarathonSpec {
   test("when suspended, respond to all unknown messages with failures") {
@@ -22,7 +21,7 @@ class WhenLeaderActorTest extends MarathonSpec {
   }
 
   test("when suspended with preparedOnStart==true, change to active on start") {
-    val ref = whenLeaderRef(preparedOnStart = true)
+    val ref = whenLeaderRef()
     val probe = TestProbe()
     probe.send(ref, PreparationMessages.PrepareForStart)
     childProbe.expectMsgClass(classOf[ProbeActor.PreStart])
@@ -33,26 +32,9 @@ class WhenLeaderActorTest extends MarathonSpec {
     probe.expectMsg("Hi, too!")
   }
 
-  test("when suspended with preparedOnStart==false, do not send messages to child before prepared") {
-    val ref = whenLeaderRef(preparedOnStart = false)
-    val probe = TestProbe()
-    probe.send(ref, PreparationMessages.PrepareForStart)
-    probe.send(ref, "Hi!")
-
-    val childRef = childProbe.expectMsgClass(classOf[ProbeActor.PreStart]).self
-    childProbe.expectMsg(PreparationMessages.PrepareForStart)
-    childProbe.expectNoMsg(0.seconds)
-    childProbe.send(ref, PreparationMessages.Prepared(childRef))
-    childProbe.expectMsg("Hi!")
-    childProbe.reply("Hi, too!")
-
-    probe.expectMsg(PreparationMessages.Prepared(ref))
-    probe.expectMsg("Hi, too!")
-  }
-
   test("when active, answer PrepareForStart immediately") {
     val probe = TestProbe()
-    val ref = whenLeaderRef(preparedOnStart = false)
+    val ref = whenLeaderRef()
     ref.underlying.become(ref.underlyingActor.active(childRef = childProbe.ref))
     probe.send(ref, PreparationMessages.PrepareForStart)
     probe.expectMsg(PreparationMessages.Prepared(ref))
@@ -60,7 +42,7 @@ class WhenLeaderActorTest extends MarathonSpec {
 
   test("when starting, stop") {
     val probe = TestProbe()
-    val ref = whenLeaderRef(preparedOnStart = false)
+    val ref = whenLeaderRef()
     ref.underlying.become(ref.underlyingActor.starting(coordinatorRef = probe.ref, childRef = childProbe.ref))
     probe.send(ref, WhenLeaderActor.Stop)
     val failure = probe.expectMsgClass(classOf[Status.Failure])
@@ -70,14 +52,14 @@ class WhenLeaderActorTest extends MarathonSpec {
 
   test("when active, stop") {
     val probe = TestProbe()
-    val ref = whenLeaderRef(preparedOnStart = false)
+    val ref = whenLeaderRef()
     ref.underlying.become(ref.underlyingActor.active(childProbe.ref))
     probe.send(ref, WhenLeaderActor.Stop)
     probe.expectMsg(WhenLeaderActor.Stopped)
   }
 
   test("when dying, stash messages") {
-    val ref = whenLeaderRef(preparedOnStart = true)
+    val ref = whenLeaderRef()
     val probe = TestProbe()
 
     val dyingProbe = TestProbe()
@@ -103,8 +85,8 @@ class WhenLeaderActorTest extends MarathonSpec {
   private[this] implicit var actorSystem: ActorSystem = _
   private[this] var childProbe: TestProbe = _
   private[this] var childProps: Props = _
-  private[this] def whenLeaderRef(preparedOnStart: Boolean = true): TestActorRef[WhenLeaderActor] = {
-    val whenLeaderProps: Props = WhenLeaderActor.props(childProps, preparedOnStart)
+  private[this] def whenLeaderRef(): TestActorRef[WhenLeaderActor] = {
+    val whenLeaderProps: Props = WhenLeaderActor.props(childProps)
     TestActorRef(whenLeaderProps, "whenLeader")
   }
 

@@ -6,10 +6,8 @@ import mesosphere.marathon.core.leadership.PreparationMessages.{ PrepareForStart
 import mesosphere.marathon.core.leadership.impl.WhenLeaderActor.{ Stop, Stopped }
 
 private[leadership] object WhenLeaderActor {
-  def props(childProps: Props, preparedOnStart: Boolean = true): Props = {
-    Props(
-      new WhenLeaderActor(childProps, preparedOnStart)
-    )
+  def props(childProps: Props): Props = {
+    Props(new WhenLeaderActor(childProps))
   }
 
   case object Stop
@@ -19,7 +17,7 @@ private[leadership] object WhenLeaderActor {
 /**
   * Wraps an actor which is only started when we are currently the leader.
   */
-private class WhenLeaderActor(childProps: => Props, preparedOnStart: Boolean)
+private class WhenLeaderActor(childProps: => Props)
     extends Actor with ActorLogging with Stash {
 
   private[this] var leadershipCycle = 1
@@ -30,14 +28,8 @@ private class WhenLeaderActor(childProps: => Props, preparedOnStart: Boolean)
     case PrepareForStart =>
       val childRef = context.actorOf(childProps, leadershipCycle.toString)
       leadershipCycle += 1
-      if (preparedOnStart) {
-        sender() ! Prepared(self)
-        context.become(active(childRef))
-      }
-      else {
-        childRef ! PrepareForStart
-        context.become(starting(sender(), childRef))
-      }
+      sender() ! Prepared(self)
+      context.become(active(childRef))
 
     case Stop => sender() ! Stopped
 

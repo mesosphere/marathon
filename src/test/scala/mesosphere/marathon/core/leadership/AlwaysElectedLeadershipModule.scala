@@ -22,7 +22,7 @@ object AlwaysElectedLeadershipModule extends Mockito {
 
 private class AlwaysElectedLeadershipModule(actorRefFactory: ActorRefFactory, zk: ZooKeeperClient, leader: LeadershipAbdication)
     extends LeadershipModule(actorRefFactory, zk, leader) {
-  override def startWhenLeader(props: Props, name: String, preparedOnStart: Boolean = true): ActorRef =
+  override def startWhenLeader(props: Props, name: String): ActorRef =
     actorRefFactory.actorOf(props, name)
   override def coordinator(): LeadershipCoordinator = ???
 }

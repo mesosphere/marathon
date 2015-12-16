@@ -25,14 +25,11 @@ class LeadershipModule(actorRefFactory: ActorRefFactory, zk: ZooKeeperClient, le
     *
     * @param props the props to create the actor
     * @param name the name of the actor (the wrapping actor will be named like this)
-    * @param considerPreparedOnStart whether the actor is ready to receive messages as soon as it is started.
-    *                                if false, the actor expects a PreparationMessages.PrepareToStart message
-    *                                and is assumed to be ready when it replies with PreparationMessages.Prepared.
     * @return
     */
-  def startWhenLeader(props: Props, name: String, considerPreparedOnStart: Boolean = true): ActorRef = {
+  def startWhenLeader(props: Props, name: String): ActorRef = {
     require(!started, "already started")
-    val proxyProps = WhenLeaderActor.props(props, considerPreparedOnStart)
+    val proxyProps = WhenLeaderActor.props(props)
     val actorRef = actorRefFactory.actorOf(proxyProps, name)
     whenLeaderRefs += actorRef
     actorRef
