@@ -1,11 +1,16 @@
 package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble }
+import com.wix.accord._
+import com.wix.accord.dsl._
 import mesosphere.marathon.state._
+import mesosphere.marathon.api.v2.Validation._
+
+import scala.reflect.ClassTag
 
 case class V2GroupUpdate(
     id: Option[PathId],
-    apps: Option[Set[V2AppDefinition]] = None,
+    apps: Option[Set[AppDefinition]] = None,
     groups: Option[Set[V2GroupUpdate]] = None,
     dependencies: Option[Set[PathId]] = None,
     scaleBy: Option[Double] = None,
@@ -31,14 +36,16 @@ case class V2GroupUpdate(
         .map(update => update.toGroup(update.groupId.canonicalPath(current.id), timestamp))
       groupUpdates.toSet ++ groupAdditions
     }
-    val effectiveApps: Set[V2AppDefinition] = apps.getOrElse(current.apps).map(toApp(current.id, _, timestamp))
+    val effectiveApps: Set[AppDefinition] = apps.getOrElse(current.apps).map(toApp(current.id, _, timestamp))
     val effectiveDependencies = dependencies.fold(current.dependencies)(_.map(_.canonicalPath(current.id)))
     V2Group(current.id, effectiveApps, effectiveGroups, effectiveDependencies, timestamp)
   }
 
-  def toApp(gid: PathId, app: V2AppDefinition, version: Timestamp): V2AppDefinition = {
+  def toApp(gid: PathId, app: AppDefinition, version: Timestamp): AppDefinition = {
     val appId = app.id.canonicalPath(gid)
-    app.copy(id = appId, dependencies = app.dependencies.map(_.canonicalPath(gid)), version = version)
+    app.copy(id = appId, dependencies = app.dependencies.map(_.canonicalPath(gid)),
+      // TODO AW: is this correct?
+      versionInfo = AppDefinition.VersionInfo.OnlyVersion(version))
   }
 
   def toGroup(gid: PathId, version: Timestamp): V2Group = V2Group(
@@ -51,11 +58,37 @@ case class V2GroupUpdate(
 }
 
 object V2GroupUpdate {
-  def apply(id: PathId, apps: Set[V2AppDefinition]): V2GroupUpdate = {
+  def apply(id: PathId, apps: Set[AppDefinition]): V2GroupUpdate = {
     V2GroupUpdate(Some(id), if (apps.isEmpty) None else Some(apps))
   }
-  def apply(id: PathId, apps: Set[V2AppDefinition], groups: Set[V2GroupUpdate]): V2GroupUpdate = {
+  def apply(id: PathId, apps: Set[AppDefinition], groups: Set[V2GroupUpdate]): V2GroupUpdate = {
     V2GroupUpdate(Some(id), if (apps.isEmpty) None else Some(apps), if (groups.isEmpty) None else Some(groups))
   }
   def empty(id: PathId): V2GroupUpdate = V2GroupUpdate(Some(id))
+
+  implicit val v2GroupUpdateValidator: Validator[V2GroupUpdate] = validator[V2GroupUpdate] { group =>
+    group is notNull
+
+    group.version is hasOnlyOneDefinedOption
+    group.scaleBy is hasOnlyOneDefinedOption
+
+    group.id is valid
+    group.apps is valid
+    group.groups is valid
+  }
+
+  def hasOnlyOneDefinedOption[A <: Product: ClassTag, B]: Validator[A] =
+    new Validator[A] {
+      def apply(product: A) = {
+        val n = product.productIterator.count {
+          case Some(_) => true
+          case _       => false
+        }
+
+        if (n <= 1)
+          Success
+        else
+          Failure(Set(RuleViolation(product, s"not allowed in conjunction with other properties.", None)))
+      }
+    }
 }

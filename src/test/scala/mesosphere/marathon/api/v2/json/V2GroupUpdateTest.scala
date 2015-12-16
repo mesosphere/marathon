@@ -9,13 +9,13 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
   test("A group update can be applied to an empty group") {
     Given("An empty group with updates")
     val group = V2Group(Group.empty)
-    val update = V2GroupUpdate(PathId.empty, Set.empty[V2AppDefinition], Set(
-      V2GroupUpdate("test".toPath, Set.empty[V2AppDefinition], Set(
+    val update = V2GroupUpdate(PathId.empty, Set.empty[AppDefinition], Set(
+      V2GroupUpdate("test".toPath, Set.empty[AppDefinition], Set(
         V2GroupUpdate.empty("foo".toPath)
       )),
       V2GroupUpdate(
         "apps".toPath,
-        Set(V2AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
+        Set(AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
       )
     )
     )
@@ -41,21 +41,21 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
   test("A group update can be applied to existing entries") {
     Given("A group with updates of existing nodes")
     val actual = V2Group(PathId.empty, groups = Set(
-      V2Group("/test".toPath, apps = Set(V2AppDefinition("/test/bla".toPath))),
+      V2Group("/test".toPath, apps = Set(AppDefinition("/test/bla".toPath))),
       V2Group("/apps".toPath, groups = Set(V2Group("/apps/foo".toPath)))
     ))
     val update = V2GroupUpdate(
       PathId.empty,
-      Set.empty[V2AppDefinition],
+      Set.empty[AppDefinition],
       Set(
         V2GroupUpdate(
           "test".toPath,
-          Set.empty[V2AppDefinition],
+          Set.empty[AppDefinition],
           Set(V2GroupUpdate.empty("foo".toPath))
         ),
         V2GroupUpdate(
           "apps".toPath,
-          Set(V2AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
+          Set(AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
         )
       )
     )
@@ -85,21 +85,21 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     val current = V2Group(
       "/test".toPath,
       groups = Set(
-        V2Group("/test/group1".toPath, Set(V2AppDefinition("/test/group1/app1".toPath))),
-        V2Group("/test/group2".toPath, Set(V2AppDefinition("/test/group2/app2".toPath)))
+        V2Group("/test/group1".toPath, Set(AppDefinition("/test/group1/app1".toPath))),
+        V2Group("/test/group2".toPath, Set(AppDefinition("/test/group2/app2".toPath)))
       )
     )
 
     When("A group update is applied")
     val update = V2GroupUpdate(
       "/test".toPath,
-      Set.empty[V2AppDefinition],
+      Set.empty[AppDefinition],
       Set(
-        V2GroupUpdate("/test/group1".toPath, Set(V2AppDefinition("/test/group1/app3".toPath))),
+        V2GroupUpdate("/test/group1".toPath, Set(AppDefinition("/test/group1/app3".toPath))),
         V2GroupUpdate(
           "/test/group3".toPath,
-          Set.empty[V2AppDefinition],
-          Set(V2GroupUpdate("/test/group3/sub1".toPath, Set(V2AppDefinition("/test/group3/sub1/app4".toPath))))
+          Set.empty[AppDefinition],
+          Set(V2GroupUpdate("/test/group3/sub1".toPath, Set(AppDefinition("/test/group3/sub1/app4".toPath))))
         )
       )
     )
@@ -135,11 +135,11 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
 
   test("Relative path of a dependency, should be relative to group and not to the app") {
     Given("A group with two apps. Second app is dependend of first.")
-    val update = V2GroupUpdate(PathId.empty, Set.empty[V2AppDefinition], Set(
+    val update = V2GroupUpdate(PathId.empty, Set.empty[AppDefinition], Set(
       V2GroupUpdate(
         "test-group".toPath,
-        Set(V2AppDefinition("test-app1".toPath),
-          V2AppDefinition("test-app2".toPath, dependencies = Set("test-app1".toPath)))
+        Set(AppDefinition("test-app1".toPath),
+          AppDefinition("test-app2".toPath, dependencies = Set("test-app1".toPath)))
       )
     ))
 

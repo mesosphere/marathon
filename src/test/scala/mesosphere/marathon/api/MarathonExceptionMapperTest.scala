@@ -1,4 +1,5 @@
 package mesosphere.marathon.api
+/*
 
 import javax.validation.ConstraintViolationException
 
@@ -90,3 +91,4 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
     (firstError \ "error").as[String] should be("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
   }
 }
+*/

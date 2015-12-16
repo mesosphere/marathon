@@ -8,7 +8,7 @@ import javax.ws.rs.core.{ Context, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2Group, V2GroupUpdate }
+import mesosphere.marathon.api.v2.json.{ V2Group, V2GroupUpdate }
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
@@ -61,8 +61,8 @@ class GroupsResource @Inject() (
         }
       }
       id match {
-        case ListApps(gid)              => groupResponse(gid.toRootPath, _.transitiveApps.map(V2AppDefinition(_)))
-        case ListRootApps()             => groupResponse(PathId.empty, _.transitiveApps.map(V2AppDefinition(_)))
+        case ListApps(gid)              => groupResponse(gid.toRootPath, _.transitiveApps)
+        case ListRootApps()             => groupResponse(PathId.empty, _.transitiveApps)
         case ListVersionsRE(gid)        => ok(jsonString(result(groupManager.versions(gid.toRootPath))))
         case ListRootVersionRE()        => ok(jsonString(result(groupManager.versions(PathId.empty))))
         case GetVersionRE(gid, version) => groupResponse(gid.toRootPath, V2Group(_), version = Some(Timestamp(version)))
@@ -100,14 +100,14 @@ class GroupsResource @Inject() (
                      body: Array[Byte],
                      @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     doIfAuthorized(req, resp, CreateAppOrGroup, id.toRootPath) { implicit identity =>
-      val update = Json.parse(body).as[V2GroupUpdate]
-      BeanValidation.requireValid(ModelValidation.checkGroupUpdate(update, needsId = true))
-      val effectivePath = update.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
-      val current = result(groupManager.rootGroup()).findGroup(_.id == effectivePath)
-      if (current.isDefined)
-        throw ConflictingChangeException(s"Group $effectivePath is already created. Use PUT to change this group.")
-      val (deployment, path, version) = updateOrCreate(id.toRootPath, update, force)
-      deploymentResult(deployment, Response.created(new URI(path.toString)))
+      withValid(Json.parse(body).as[V2GroupUpdate]) { update =>
+        val effectivePath = update.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
+        val current = result(groupManager.rootGroup()).findGroup(_.id == effectivePath)
+        if (current.isDefined)
+          throw ConflictingChangeException(s"Group $effectivePath is already created. Use PUT to change this group.")
+        val (deployment, path, version) = updateOrCreate(id.toRootPath, update, force)
+        deploymentResult(deployment, Response.created(new URI(path.toString)))
+      }
     }
   }
 
@@ -136,21 +136,21 @@ class GroupsResource @Inject() (
              body: Array[Byte],
              @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     doIfAuthorized(req, resp, UpdateAppOrGroup, id.toRootPath) { implicit identity =>
-      val update = Json.parse(body).as[V2GroupUpdate]
-      BeanValidation.requireValid(ModelValidation.checkGroupUpdate(update, needsId = false))
-      if (dryRun) {
-        val planFuture = groupManager.group(id.toRootPath).map { maybeOldGroup =>
-          val oldGroup = maybeOldGroup.getOrElse(Group.empty)
-          Json.obj(
-            "steps" -> DeploymentPlan(oldGroup, update.apply(V2Group(oldGroup), Timestamp.now()).toGroup()).steps
-          )
-        }
+      withValid(Json.parse(body).as[V2GroupUpdate]) { update =>
+        if (dryRun) {
+          val planFuture = groupManager.group(id.toRootPath).map { maybeOldGroup =>
+            val oldGroup = maybeOldGroup.getOrElse(Group.empty)
+            Json.obj(
+              "steps" -> DeploymentPlan(oldGroup, update.apply(V2Group(oldGroup), Timestamp.now()).toGroup()).steps
+            )
+          }
 
-        ok(result(planFuture).toString())
-      }
-      else {
-        val (deployment, _, _) = updateOrCreate(id.toRootPath, update, force)
-        deploymentResult(deployment)
+          ok(result(planFuture).toString())
+        }
+        else {
+          val (deployment, _, _) = updateOrCreate(id.toRootPath, update, force)
+          deploymentResult(deployment)
+        }
       }
     }
   }

@@ -6,7 +6,7 @@ import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container._
-import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state._
 import mesosphere.marathon.state.PathId._
 import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.Json
@@ -143,12 +143,13 @@ class V2AppUpdateTest extends MarathonSpec {
   }
 
   test("acceptedResourceRoles of update is only applied when != None") {
-    val app = V2AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Some(Set("a")))
+    val app = AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Some(Set("a")))
 
-    val unchanged = V2AppUpdate().apply(app).copy(version = app.version)
+    // TODO AW: is this correct?
+    val unchanged = V2AppUpdate().apply(app).copy(versionInfo = app.versionInfo)
     assert(unchanged == app)
 
-    val changed = V2AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(version = app.version)
+    val changed = V2AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(versionInfo = app.versionInfo)
     assert(changed == app.copy(acceptedResourceRoles = Some(Set("b"))))
   }
 }

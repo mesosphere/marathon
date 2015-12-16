@@ -1,16 +1,15 @@
 package mesosphere.marathon.api.v2
 
 import java.util
-import javax.validation.ConstraintViolationException
 
 import akka.event.EventStream
 import mesosphere.marathon._
-import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.test.Mockito
@@ -31,8 +30,9 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
   test("Create a new app successfully") {
     Given("An app and group")
-    val app = V2AppDefinition(id = PathId("/app"), cmd = Some("cmd"), version = clock.now())
-    val group = Group(PathId("/"), Set(app.toAppDefinition))
+    // TODO AW: is this correct?
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = VersionInfo.OnlyVersion(clock.now()))
+    val group = Group(PathId("/"), Set(app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -47,7 +47,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
     And("the JSON is as expected, including a newly generated version")
     val expected = AppInfo(
-      app.toAppDefinition,
+      app,
       maybeTasks = Some(immutable.Seq.empty),
       maybeCounts = Some(TaskCounts.zero),
       maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -57,14 +57,15 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
   test("Create a new app fails with Validation errors") {
     Given("An app with validation errors")
-    val app = V2AppDefinition(id = PathId("/app"))
-    val group = Group(PathId("/"), Set(app.toAppDefinition))
+    val app = AppDefinition(id = PathId("/app"))
+    val group = Group(PathId("/"), Set(app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
     Then("A constraint violation exception is thrown")
-    intercept[ConstraintViolationException] { appsResource.create(body, false, auth.request, auth.response) }
+    val response = appsResource.create(body, false, auth.request, auth.response)
+    response.getStatus should be(422)
   }
 
   test("Create a new app with float instance count fails") {

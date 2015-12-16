@@ -1,13 +1,16 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2GroupUpdate }
+import mesosphere.marathon.api.v2.json.V2GroupUpdate
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.scalatest.{ BeforeAndAfterAll, Matchers, OptionValues }
+
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.json.V2Group
 
 import scala.collection.immutable.Seq
 
@@ -20,64 +23,58 @@ class ModelValidationTest
   test("A group update should pass validation") {
     val update = V2GroupUpdate(id = Some("/a/b/c".toPath))
 
-    val violations = ModelValidation.checkGroupUpdate(update, true)
-    violations should have size 0
+    validate(update).isSuccess should be(true)
   }
 
   test("A group can not be updated to have more than the configured number of apps") {
     val group = Group("/".toPath, Set(
-      createServicePortApp("/a".toPath, 0).toAppDefinition,
-      createServicePortApp("/b".toPath, 0).toAppDefinition,
-      createServicePortApp("/c".toPath, 0).toAppDefinition
+      createServicePortApp("/a".toPath, 0),
+      createServicePortApp("/b".toPath, 0),
+      createServicePortApp("/c".toPath, 0)
     ))
 
-    val validations = ModelValidation.checkGroup(group, "", PathId.empty, maxApps = Some(2))
-    validations should not be Nil
-    validations.find(_.getMessage.contains("This Marathon instance may only handle up to 2 Apps!")) should be ('defined)
+    val failedResult = V2Group.v2GroupWithConfigValidator(Some(2)).apply(V2Group(group))
+    failedResult.isFailure should be(true)
+    Validation.getAllRuleConstrains(failedResult)
+      .find(v => v.message.contains("This Marathon instance may only handle up to 2 Apps!")) should be ('defined)
 
-    val noValidations = ModelValidation.checkGroup(group, "", PathId.empty, maxApps = Some(10))
-    noValidations should be('empty)
+    val successfulResult = V2Group.v2GroupWithConfigValidator(Some(10)).apply(V2Group(group))
+    successfulResult.isSuccess should be(true)
   }
 
   test("Model validation should catch new apps that conflict with service ports in existing apps") {
     val existingApp = createServicePortApp("/app1".toPath, 3200)
-    val group = Group(id = PathId.empty, apps = Set(existingApp.toAppDefinition))
+    val conflictingApp = createServicePortApp("/app2".toPath, 3200)
 
-    val conflictingApp = createServicePortApp("/app2".toPath, 3200).toAppDefinition
-    val validations = ModelValidation.checkAppConflicts(conflictingApp, group)
+    val group = Group(id = PathId.empty, apps = Set(existingApp, conflictingApp))
+    val result = validate(V2Group(group))
 
-    validations should not be Nil
+    Validation.getAllRuleConstrains(result).exists(v => v.message == "Requested service port 3200 conflicts with a service port in app /app2") should be(true)
   }
 
   test("Model validation should allow new apps that do not conflict with service ports in existing apps") {
 
     val existingApp = createServicePortApp("/app1".toPath, 3200)
-    val group = Group(id = PathId.empty, apps = Set(existingApp.toAppDefinition))
+    val conflictingApp = createServicePortApp("/app2".toPath, 3201)
 
-    val conflictingApp = createServicePortApp("/app2".toPath, 3201).toAppDefinition
-    val validations = ModelValidation.checkAppConflicts(conflictingApp, group)
+    val group = Group(id = PathId.empty, apps = Set(existingApp, conflictingApp))
+    val result = validate(V2Group(group))
 
-    validations should be(Nil)
+    result.isSuccess should be(true)
   }
 
   test("Model validation should check for application conflicts") {
     val existingApp = createServicePortApp("/app1".toPath, 3200)
-    val group = Group(id = PathId.empty, apps = Set(existingApp.toAppDefinition))
+    val conflictingApp = existingApp.copy(id = "/app2".toPath)
 
-    val conflictingApp = existingApp.copy(id = "/app2".toPath).toAppDefinition
-    val validations = ModelValidation.checkAppConflicts(conflictingApp, group)
+    val group = Group(id = PathId.empty, apps = Set(existingApp, conflictingApp))
+    val result = validate(V2Group(group))
 
-    validations should not be Nil
-  }
-
-  test("Null groups should be validated correctly") {
-    val result = ModelValidation.checkGroupUpdate(null, needsId = true)
-    result should have size 1
-    result.head.getMessage should be("Given group is empty!")
+    Validation.getAllRuleConstrains(result).exists(v => v.message == "Requested service port 3200 conflicts with a service port in app /app2") should be(true)
   }
 
   private def createServicePortApp(id: PathId, servicePort: Int) =
-    V2AppDefinition(
+    AppDefinition(
       id,
       container = Some(Container(
         docker = Some(Docker(

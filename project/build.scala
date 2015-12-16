@@ -268,6 +268,7 @@ object Dependencies {
     graphite % "compile",
     datadog % "compile",
     marathonApiConsole % "compile",
+    wixAccord % "compile",
 
     // test
     Test.diffson % "test",
@@ -304,6 +305,7 @@ object Dependency {
     val Graphite = "3.1.2"
     val DataDog = "1.1.3"
     val Logback = "1.1.3"
+    val WixAccord = "0.5"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -341,6 +343,7 @@ object Dependency {
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
   val graphite = "io.dropwizard.metrics" % "metrics-graphite" % V.Graphite
   val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
+  val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
 
 
   object Test {

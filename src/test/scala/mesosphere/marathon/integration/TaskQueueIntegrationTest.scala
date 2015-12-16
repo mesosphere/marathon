@@ -2,7 +2,6 @@ package mesosphere.marathon.integration
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.AppDefinition
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -26,7 +25,7 @@ class TaskQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIn
     val c = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Operator.CLUSTER).setValue("na").build()
     val appId = testBasePath / "app"
     val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, ports = List.empty)
-    val create = marathon.createAppV2(V2AppDefinition(app))
+    val create = marathon.createAppV2(app)
     create.code should be (201) // Created
 
     Then("the app shows up in the task queue")

@@ -4,10 +4,10 @@ import java.io.File
 import java.util.Date
 
 import akka.actor.ActorSystem
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate, V2Group, V2GroupUpdate }
+import mesosphere.marathon.api.v2.json.{ V2AppUpdate, V2Group, V2GroupUpdate }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import org.slf4j.LoggerFactory
 import spray.client.pipelining._
 import spray.http._
@@ -21,8 +21,8 @@ import scala.concurrent.duration._
   * GET /apps will deliver something like Apps instead of List[App]
   * Needed for dumb jackson.
   */
-case class ITAppDefinition(app: V2AppDefinition)
-case class ITListAppsResult(apps: Seq[V2AppDefinition])
+case class ITAppDefinition(app: AppDefinition)
+case class ITListAppsResult(apps: Seq[AppDefinition])
 case class ITAppVersions(versions: Seq[Timestamp])
 case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITDeploymentPlan(version: String, deploymentId: String)
@@ -34,7 +34,7 @@ case class ITLeaderResult(leader: String)
 case class ITListDeployments(deployments: Seq[ITDeployment])
 
 case class ITQueueDelay(timeLeftSeconds: Int, overdue: Boolean)
-case class ITQueueItem(app: V2AppDefinition, count: Int, delay: ITQueueDelay)
+case class ITQueueItem(app: AppDefinition, count: Int, delay: ITQueueDelay)
 case class ITTaskQueue(queue: List[ITQueueItem])
 
 case class ITDeployment(id: String, affectedApps: Seq[String])
@@ -84,7 +84,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
 
   //app resource ----------------------------------------------
 
-  def listAppsInBaseGroup: RestResult[List[V2AppDefinition]] = {
+  def listAppsInBaseGroup: RestResult[List[AppDefinition]] = {
     val pipeline = marathonSendReceive ~> read[ITListAppsResult]
     val res = result(pipeline(Get(s"$url/v2/apps")), waitTime)
     res.map(_.apps.toList.filter(app => isInBaseGroup(app.id)))
@@ -98,9 +98,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Get(getUrl)), waitTime)
   }
 
-  def createAppV2(app: V2AppDefinition): RestResult[V2AppDefinition] = {
+  def createAppV2(app: AppDefinition): RestResult[AppDefinition] = {
     requireInBaseGroup(app.id)
-    val pipeline = marathonSendReceive ~> read[V2AppDefinition]
+    val pipeline = marathonSendReceive ~> read[AppDefinition]
     result(pipeline(Post(s"$url/v2/apps", app)), waitTime)
   }
 
@@ -131,9 +131,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Get(s"$url/v2/apps$id/versions")), waitTime)
   }
 
-  def appVersion(id: PathId, version: Timestamp): RestResult[V2AppDefinition] = {
+  def appVersion(id: PathId, version: Timestamp): RestResult[AppDefinition] = {
     requireInBaseGroup(id)
-    val pipeline = marathonSendReceive ~> read[V2AppDefinition]
+    val pipeline = marathonSendReceive ~> read[AppDefinition]
     result(pipeline(Get(s"$url/v2/apps$id/versions/$version")), waitTime)
   }
 
