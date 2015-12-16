@@ -448,6 +448,60 @@ trait V2Formats {
       }
   }
 
+  implicit lazy val AppDefinitionReads: Reads[AppDefinition] = {
+    val executorPattern = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r
+
+    (
+      (__ \ "id").read[PathId].filterNot(_.isRoot) ~
+      (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
+      (__ \ "args").readNullable[Seq[String]] ~
+      (__ \ "user").readNullable[String] ~
+      (__ \ "env").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultEnv) ~
+      (__ \ "instances").readNullable[Integer](minValue(0)).withDefault(AppDefinition.DefaultInstances) ~
+      (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)).withDefault(AppDefinition.DefaultCpus) ~
+      (__ \ "mem").readNullable[JDouble].withDefault(AppDefinition.DefaultMem) ~
+      (__ \ "disk").readNullable[JDouble].withDefault(AppDefinition.DefaultDisk) ~
+      (__ \ "executor").readNullable[String](Reads.pattern(executorPattern))
+      .withDefault(AppDefinition.DefaultExecutor) ~
+      (__ \ "constraints").readNullable[Set[Constraint]].withDefault(AppDefinition.DefaultConstraints) ~
+      (__ \ "uris").readNullable[Seq[String]].withDefault(AppDefinition.DefaultUris) ~
+      (__ \ "storeUrls").readNullable[Seq[String]].withDefault(AppDefinition.DefaultStoreUrls) ~
+      (__ \ "ports").readNullable[Seq[Integer]](uniquePorts).withDefault(AppDefinition.DefaultPorts) ~
+      (__ \ "requirePorts").readNullable[Boolean].withDefault(AppDefinition.DefaultRequirePorts) ~
+      (__ \ "backoffSeconds").readNullable[Long].withDefault(AppDefinition.DefaultBackoff.toSeconds).asSeconds ~
+      (__ \ "backoffFactor").readNullable[Double].withDefault(AppDefinition.DefaultBackoffFactor) ~
+      (__ \ "maxLaunchDelaySeconds").readNullable[Long]
+      .withDefault(AppDefinition.DefaultMaxLaunchDelay.toSeconds).asSeconds ~
+      (__ \ "container").readNullable[Container] ~
+      (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(AppDefinition.DefaultHealthChecks) ~
+      (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies)
+    )(AppDefinition(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { app =>
+        // necessary because of case class limitations (good for another 21 fields)
+        case class ExtraFields(
+          upgradeStrategy: UpgradeStrategy,
+          labels: Map[String, String],
+          acceptedResourceRoles: Option[Set[String]],
+          version: Timestamp)
+
+        val extraReads: Reads[ExtraFields] =
+          (
+            (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(AppDefinition.DefaultUpgradeStrategy) ~
+            (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
+            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
+            (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now())
+          )(ExtraFields)
+
+        extraReads.map { extraFields =>
+          app.copy(
+            upgradeStrategy = extraFields.upgradeStrategy,
+            labels = extraFields.labels,
+            acceptedResourceRoles = extraFields.acceptedResourceRoles
+          // TODO AW: get extraFields.version in here
+          )
+        }
+      }
+  }
+
   implicit lazy val V2AppDefinitionWrites: Writes[V2AppDefinition] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
@@ -488,13 +542,65 @@ trait V2Formats {
     }
   }
 
-  implicit lazy val VersionInfoWrites: Writes[V2AppDefinition.VersionInfo] =
+  implicit lazy val AppDefinitionWrites: Writes[AppDefinition] = {
+    implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
+      JsNumber(d.toSeconds)
+    }
+
+    Writes[AppDefinition] { app =>
+      val appJson: JsObject = Json.obj(
+        "id" -> app.id.toString,
+        "cmd" -> app.cmd,
+        "args" -> app.args,
+        "user" -> app.user,
+        "env" -> app.env,
+        "instances" -> app.instances,
+        "cpus" -> app.cpus,
+        "mem" -> app.mem,
+        "disk" -> app.disk,
+        "executor" -> app.executor,
+        "constraints" -> app.constraints,
+        "uris" -> app.uris,
+        "storeUrls" -> app.storeUrls,
+        // the ports field was written incorrectly in old code if a container was specified
+        // it should contain the service ports
+        "ports" -> app.servicePorts,
+        "requirePorts" -> app.requirePorts,
+        "backoffSeconds" -> app.backoff,
+        "backoffFactor" -> app.backoffFactor,
+        "maxLaunchDelaySeconds" -> app.maxLaunchDelay,
+        "container" -> app.container,
+        "healthChecks" -> app.healthChecks,
+        "dependencies" -> app.dependencies,
+        "upgradeStrategy" -> app.upgradeStrategy,
+        "labels" -> app.labels,
+        "acceptedResourceRoles" -> app.acceptedResourceRoles,
+        "version" -> app.version,
+        "versionInfo" -> Json.toJson(app.versionInfo)
+      )
+      appJson
+    }
+  }
+
+  implicit lazy val V2VersionInfoWrites: Writes[V2AppDefinition.VersionInfo] =
     Writes {
       case V2AppDefinition.VersionInfo(lastScalingAt, lastConfigChangeAt) =>
         Json.obj(
           "lastScalingAt" -> lastScalingAt,
           "lastConfigChangeAt" -> lastConfigChangeAt
         )
+    }
+
+  implicit lazy val VersionInfoWrites: Writes[AppDefinition.VersionInfo] =
+    Writes[AppDefinition.VersionInfo] {
+      case AppDefinition.VersionInfo.FullVersionInfo(_, lastScalingAt, lastConfigChangeAt) =>
+        Json.obj(
+          "lastScalingAt" -> lastScalingAt,
+          "lastConfigChangeAt" -> lastConfigChangeAt
+        )
+      // TODO AW: not sure if JsNull is the right choice here
+      case AppDefinition.VersionInfo.OnlyVersion(_) => JsNull
+      case AppDefinition.VersionInfo.NoVersion => JsNull
     }
 
   implicit lazy val TaskCountsWrites: Writes[TaskCounts] =

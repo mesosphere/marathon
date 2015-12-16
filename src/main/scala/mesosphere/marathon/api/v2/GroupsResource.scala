@@ -100,7 +100,6 @@ class GroupsResource @Inject() (
                      body: Array[Byte],
                      @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     doIfAuthorized(req, resp, CreateAppOrGroup, id.toRootPath) { implicit identity =>
-      // TODO AW: test
       withValid(Json.parse(body).as[V2GroupUpdate]) { update =>
         val effectivePath = update.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
         val current = result(groupManager.rootGroup()).findGroup(_.id == effectivePath)
@@ -137,7 +136,6 @@ class GroupsResource @Inject() (
              body: Array[Byte],
              @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     doIfAuthorized(req, resp, UpdateAppOrGroup, id.toRootPath) { implicit identity =>
-      // TODO AW: test
       withValid(Json.parse(body).as[V2GroupUpdate]) { update =>
         if (dryRun) {
           val planFuture = groupManager.group(id.toRootPath).map { maybeOldGroup =>

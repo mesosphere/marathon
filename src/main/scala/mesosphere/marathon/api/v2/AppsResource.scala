@@ -4,13 +4,12 @@ import java.net.URI
 import javax.inject.{ Inject, Named }
 import javax.servlet.http.{ HttpServletResponse, HttpServletRequest }
 import javax.ws.rs._
-import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate }
+import mesosphere.marathon.api.v2.json.V2AppUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
@@ -68,8 +67,7 @@ class AppsResource @Inject() (
   def create(body: Array[Byte],
              @DefaultValue("false")@QueryParam("force") force: Boolean,
              @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    withValid(Json.parse(body).as[V2AppDefinition].withCanonizedIds()) { appDef =>
-      val app = appDef.toAppDefinition
+    withValid(Json.parse(body).as[AppDefinition].withCanonizedIds()) { app =>
       doIfAuthorized(req, resp, CreateAppOrGroup, app.id) { identity =>
         def createOrThrow(opt: Option[AppDefinition]) = opt
           .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
@@ -133,7 +131,6 @@ class AppsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     val appId = id.toRootPath
-    // TODO AW: test
     withValid(Json.parse(body).as[V2AppUpdate].copy(id = Some(appId))) { app =>
       doIfAuthorized(req, resp, UpdateAppOrGroup, appId) { identity =>
         val now = clock.now()
@@ -215,9 +212,8 @@ class AppsResource @Inject() (
                              existing: Option[AppDefinition],
                              appUpdate: V2AppUpdate,
                              newVersion: Timestamp): AppDefinition = {
-    // TODO AW: test
-    def createApp() = validateOrThrow(V2AppDefinition(appUpdate(AppDefinition(appId)))).toAppDefinition
-    def updateApp(current: AppDefinition) = validateOrThrow(V2AppDefinition(appUpdate(current))).toAppDefinition
+    def createApp() = validateOrThrow(appUpdate(AppDefinition(appId)))
+    def updateApp(current: AppDefinition) = validateOrThrow(appUpdate(current))
     def rollback(version: Timestamp) = service.getApp(appId, version).getOrElse(throw new UnknownAppException(appId))
     def updateOrRollback(current: AppDefinition) = appUpdate.version.map(rollback).getOrElse(updateApp(current))
 

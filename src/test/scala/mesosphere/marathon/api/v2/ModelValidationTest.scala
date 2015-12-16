@@ -23,7 +23,6 @@ class ModelValidationTest
   test("A group update should pass validation") {
     val update = V2GroupUpdate(id = Some("/a/b/c".toPath))
 
-    // TODO AW: test
     validate(update).isSuccess should be(true)
   }
 
@@ -34,7 +33,6 @@ class ModelValidationTest
       createServicePortApp("/c".toPath, 0).toAppDefinition
     ))
 
-    // TODO AW: test
     val failedResult = V2Group.v2GroupWithConfigValidator(Some(2)).apply(V2Group(group))
     failedResult.isFailure should be(true)
     Validation.getAllRuleConstrains(failedResult)

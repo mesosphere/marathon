@@ -1,9 +1,9 @@
 package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Integer => JInt, Double => JDouble }
-import java.net.{ URLConnection, HttpURLConnection, URL }
 
-import mesosphere.marathon.api.v2.json.V2AppDefinition.VersionInfo
+import com.wix.accord.dsl._
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
@@ -123,8 +123,6 @@ case class V2AppUpdate(
 }
 
 object V2AppUpdate {
-  import com.wix.accord.dsl._
-  import mesosphere.marathon.api.v2.Validation._
   implicit val appUpdateValidator = validator[V2AppUpdate] { appUp =>
     appUp.id is valid
     appUp.dependencies is valid
