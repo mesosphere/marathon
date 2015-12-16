@@ -14,7 +14,7 @@ addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.7.5")
 addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.7.0-SNAPSHOT")
 
 // === deploy fat JARs, restart processes, https://github.com/sbt/sbt-assembly (e.g. `assembly` command)
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.11.2")
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.1")
 
 // === release process, https://github.com/sbt/sbt-release (e.g. `release` command)
 addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8.3")
