@@ -217,21 +217,6 @@ class TaskTracker @Inject() (
     toKill.toIterable
   }
 
-  // FIXME: Should be removed, see deficiencies above and #2620
-  def expungeOrphanedTasks(): Unit = {
-    // Remove tasks that don't have any tasks associated with them. Expensive!
-    log.info("Expunging orphaned tasks from store")
-    val stateTaskKeys = Await.result(repo.allIds(), timeout)
-    val appsTaskKeys = cachedApps.values.flatMap(_.tasks.keys).toSet
-
-    for (stateTaskKey <- stateTaskKeys) {
-      if (!appsTaskKeys.contains(stateTaskKey)) {
-        log.info(s"Expunging orphaned task with key $stateTaskKey")
-        Await.result(repo.expunge(stateTaskKey), timeout)
-      }
-    }
-  }
-
   // FIXME: See deficiencies above, should probably be replaced by preloading all tasks on elected
   private[tasks] def fetchApp(appId: PathId): InternalApp = {
     log.debug(s"Fetching app from store $appId")
