@@ -10,7 +10,7 @@ import scala.reflect.ClassTag
 
 case class V2GroupUpdate(
     id: Option[PathId],
-    apps: Option[Set[V2AppDefinition]] = None,
+    apps: Option[Set[AppDefinition]] = None,
     groups: Option[Set[V2GroupUpdate]] = None,
     dependencies: Option[Set[PathId]] = None,
     scaleBy: Option[Double] = None,
@@ -36,14 +36,15 @@ case class V2GroupUpdate(
         .map(update => update.toGroup(update.groupId.canonicalPath(current.id), timestamp))
       groupUpdates.toSet ++ groupAdditions
     }
-    val effectiveApps: Set[V2AppDefinition] = apps.getOrElse(current.apps).map(toApp(current.id, _, timestamp))
+    val effectiveApps: Set[AppDefinition] = apps.getOrElse(current.apps).map(toApp(current.id, _, timestamp))
     val effectiveDependencies = dependencies.fold(current.dependencies)(_.map(_.canonicalPath(current.id)))
     V2Group(current.id, effectiveApps, effectiveGroups, effectiveDependencies, timestamp)
   }
 
-  def toApp(gid: PathId, app: V2AppDefinition, version: Timestamp): V2AppDefinition = {
+  def toApp(gid: PathId, app: AppDefinition, version: Timestamp): AppDefinition = {
     val appId = app.id.canonicalPath(gid)
-    app.copy(id = appId, dependencies = app.dependencies.map(_.canonicalPath(gid)), version = version)
+    app.copy(id = appId, dependencies = app.dependencies.map(_.canonicalPath(gid)))
+    // TODO AW: what about version? , version = version)
   }
 
   def toGroup(gid: PathId, version: Timestamp): V2Group = V2Group(
@@ -56,10 +57,10 @@ case class V2GroupUpdate(
 }
 
 object V2GroupUpdate {
-  def apply(id: PathId, apps: Set[V2AppDefinition]): V2GroupUpdate = {
+  def apply(id: PathId, apps: Set[AppDefinition]): V2GroupUpdate = {
     V2GroupUpdate(Some(id), if (apps.isEmpty) None else Some(apps))
   }
-  def apply(id: PathId, apps: Set[V2AppDefinition], groups: Set[V2GroupUpdate]): V2GroupUpdate = {
+  def apply(id: PathId, apps: Set[AppDefinition], groups: Set[V2GroupUpdate]): V2GroupUpdate = {
     V2GroupUpdate(Some(id), if (apps.isEmpty) None else Some(apps), if (groups.isEmpty) None else Some(groups))
   }
   def empty(id: PathId): V2GroupUpdate = V2GroupUpdate(Some(id))

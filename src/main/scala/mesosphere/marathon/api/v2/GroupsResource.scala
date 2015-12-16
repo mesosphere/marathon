@@ -8,7 +8,7 @@ import javax.ws.rs.core.{ Context, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2Group, V2GroupUpdate }
+import mesosphere.marathon.api.v2.json.{ V2Group, V2GroupUpdate }
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
@@ -61,8 +61,8 @@ class GroupsResource @Inject() (
         }
       }
       id match {
-        case ListApps(gid)              => groupResponse(gid.toRootPath, _.transitiveApps.map(V2AppDefinition(_)))
-        case ListRootApps()             => groupResponse(PathId.empty, _.transitiveApps.map(V2AppDefinition(_)))
+        case ListApps(gid)              => groupResponse(gid.toRootPath, _.transitiveApps)
+        case ListRootApps()             => groupResponse(PathId.empty, _.transitiveApps)
         case ListVersionsRE(gid)        => ok(jsonString(result(groupManager.versions(gid.toRootPath))))
         case ListRootVersionRE()        => ok(jsonString(result(groupManager.versions(PathId.empty))))
         case GetVersionRE(gid, version) => groupResponse(gid.toRootPath, V2Group(_), version = Some(Timestamp(version)))

@@ -2,12 +2,12 @@ package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.state.{ Group, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
 import mesosphere.marathon.api.v2.Validation._
 
 case class V2Group(
     id: PathId,
-    apps: Set[V2AppDefinition] = V2Group.defaultApps,
+    apps: Set[AppDefinition] = V2Group.defaultApps,
     groups: Set[V2Group] = V2Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion) {
@@ -19,7 +19,7 @@ case class V2Group(
   def toGroup(): Group =
     Group(
       id = id,
-      apps = apps.map(_.toAppDefinition),
+      apps = apps,
       groups = groups.map(_.toGroup),
       dependencies = dependencies,
       version = version
@@ -29,13 +29,13 @@ case class V2Group(
 
 object V2Group {
 
-  val defaultApps: Set[V2AppDefinition] = Set.empty
+  val defaultApps: Set[AppDefinition] = Set.empty
   val defaultGroups: Set[V2Group] = Set.empty
 
   def apply(group: Group): V2Group =
     V2Group(
       id = group.id,
-      apps = group.apps.map(V2AppDefinition(_)),
+      apps = group.apps,
       groups = group.groups.map(V2Group(_)),
       dependencies = group.dependencies,
       version = group.version)
@@ -86,7 +86,7 @@ object V2Group {
     new Validator[V2Group] {
       override def apply(group: V2Group): Result = {
         val groupViolations = group.apps.flatMap { app =>
-          val ruleViolations = app.toAppDefinition.containerServicePorts.toSeq.flatMap { servicePorts =>
+          val ruleViolations = app.containerServicePorts.toSeq.flatMap { servicePorts =>
             for {
               existingApp <- group.toGroup().transitiveApps.toList
               if existingApp.id != app.id // in case of an update, do not compare the app against itself

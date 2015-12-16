@@ -78,17 +78,10 @@ case class V2AppUpdate(
   }
 
   /**
-    * Returns the supplied [[mesosphere.marathon.state.AppDefinition]] after
-    * updating its members with respect to this update request.
-    */
-  def apply(app: AppDefinition): AppDefinition =
-    apply(V2AppDefinition(app)).toAppDefinition
-
-  /**
-    * Returns the supplied [[mesosphere.marathon.api.v2.json.V2AppDefinition]]
+    * Returns the supplied [[mesosphere.marathon.state.AppDefinition]]
     * after updating its members with respect to this update request.
     */
-  def apply(app: V2AppDefinition): V2AppDefinition = app.copy(
+  def apply(app: AppDefinition): AppDefinition = app.copy(
     id = app.id,
     cmd = cmd.orElse(app.cmd),
     args = args.orElse(app.args),
@@ -112,8 +105,9 @@ case class V2AppUpdate(
     dependencies = dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy = upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels = labels.getOrElse(app.labels),
-    acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles),
-    version = version.getOrElse(app.version)
+    acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles)
+    // TODO AW: what about version?
+    // version = version.getOrElse(app.version)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): V2AppUpdate = copy(

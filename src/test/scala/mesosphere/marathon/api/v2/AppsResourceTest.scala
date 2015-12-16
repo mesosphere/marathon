@@ -4,7 +4,6 @@ import java.util
 
 import akka.event.EventStream
 import mesosphere.marathon._
-import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
@@ -30,8 +29,8 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
   test("Create a new app successfully") {
     Given("An app and group")
-    val app = V2AppDefinition(id = PathId("/app"), cmd = Some("cmd"), version = clock.now())
-    val group = Group(PathId("/"), Set(app.toAppDefinition))
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd")) // TODO AW: version?, version = clock.now())
+    val group = Group(PathId("/"), Set(app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -46,7 +45,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
     And("the JSON is as expected, including a newly generated version")
     val expected = AppInfo(
-      app.toAppDefinition,
+      app,
       maybeTasks = Some(immutable.Seq.empty),
       maybeCounts = Some(TaskCounts.zero),
       maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -56,8 +55,8 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
   test("Create a new app fails with Validation errors") {
     Given("An app with validation errors")
-    val app = V2AppDefinition(id = PathId("/app"))
-    val group = Group(PathId("/"), Set(app.toAppDefinition))
+    val app = AppDefinition(id = PathId("/app"))
+    val group = Group(PathId("/"), Set(app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)

@@ -1,5 +1,5 @@
 package mesosphere.marathon.api.v2.json
-
+/*
 import java.lang.{ Double => JDouble, Integer => JInt }
 
 import com.wix.accord._
@@ -173,3 +173,4 @@ object V2AppDefinition {
     }
   }
 }
+*/
