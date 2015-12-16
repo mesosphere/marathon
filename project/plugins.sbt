@@ -32,7 +32,7 @@ addSbtPlugin("io.spray" % "sbt-revolver" % "0.8.0")
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.8.0")
 
 // === helps to resolve dependencies from and publish to Amazon S3 buckets (private or public), https://github.com/ohnosequences/sbt-s3-resolver
-addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.10.1")
+addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.13.1")
 
 // === code coverage tool, https://github.com/scoverage/sbt-scoverage
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.3.3")

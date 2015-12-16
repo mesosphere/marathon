@@ -1,6 +1,5 @@
 import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import ohnosequences.sbt.SbtS3Resolver
-import ohnosequences.sbt.SbtS3Resolver._
 import sbt._
 import Keys._
 import sbtassembly.AssemblyPlugin._
@@ -220,12 +219,12 @@ object MarathonBuild extends Build {
     }
   )
 
-  lazy val publishSettings = S3Resolver.defaults ++ Seq(
-    publishTo := Some(s3resolver.value(
+  lazy val publishSettings = SbtS3Resolver.projectSettings ++ Seq(
+    publishTo := Some(SbtS3Resolver.autoImport.s3resolver.value(
       "Mesosphere Public Repo (S3)",
-      s3("downloads.mesosphere.io/maven")
+      SbtS3Resolver.autoImport.s3("downloads.mesosphere.io/maven")
     )),
-    SbtS3Resolver.s3credentials := new InstanceProfileCredentialsProvider()
+    SbtS3Resolver.autoImport.s3credentials := new InstanceProfileCredentialsProvider()
   )
 }
 
