@@ -3,6 +3,7 @@ package mesosphere.marathon.api.v2.json
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.state.AppDefinition.VersionInfo.{ NoVersion, OnlyVersion, FullVersionInfo }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.scalatest.Matchers
@@ -42,7 +43,8 @@ class V2AppDefinitionFormatsTest
     (r1 \ "id").get should equal (JsString("app1"))
     (r1 \ "cmd").get should equal (JsString("sleep 10"))
     (r1 \ "version").get should equal (JsString("1970-01-01T00:00:00.001Z"))
-    (r1 \ "versionInfo").asOpt[JsObject] should equal(None)
+    // TODO AW: versionInfo always exists
+    // (r1 \ "versionInfo").asOpt[JsObject] should equal(None)
 
     // check default values
     (r1 \ "args").asOpt[Seq[String]] should equal (None)
@@ -89,7 +91,13 @@ class V2AppDefinitionFormatsTest
     r1.id should equal (a1.id)
     r1.cmd should equal (a1.cmd)
     r1.version should equal (Timestamp(1))
-    r1.versionInfo should equal (None)
+    // TODO AW: versionInfo is never None
+    // r1.versionInfo should equal (None)
+    r1.versionInfo match {
+      case VersionInfo.FullVersionInfo(_, _, _) => fail()
+      case VersionInfo.OnlyVersion(_)           =>
+      case VersionInfo.NoVersion                => fail()
+    }
     // check default values
     r1.args should equal (DefaultArgs)
     r1.user should equal (DefaultUser)
@@ -125,7 +133,13 @@ class V2AppDefinitionFormatsTest
         |  }
         |}""".stripMargin).as[AppDefinition]
 
-    app.versionInfo should equal (None)
+    // TODO AW: is this correct?
+    // app.versionInfo should equal (None)
+    app.versionInfo match {
+      case FullVersionInfo(_, _, _) => fail()
+      case OnlyVersion(_)           =>
+      case NoVersion                => fail()
+    }
   }
 
   test("FromJSON should fail for empty id") {
