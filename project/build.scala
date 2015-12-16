@@ -136,7 +136,7 @@ object MarathonBuild extends Build {
   )
 
   lazy val asmSettings = assemblySettings ++ Seq(
-    mergeStrategy in assembly <<= (mergeStrategy in assembly) { old =>
+    assemblyMergeStrategy in assembly <<= (assemblyMergeStrategy in assembly) { old =>
       {
         case "application.conf"                                             => MergeStrategy.concat
         case "META-INF/jersey-module-version"                               => MergeStrategy.first
@@ -146,7 +146,7 @@ object MarathonBuild extends Build {
         case x                                                              => old(x)
       }
     },
-    excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+    assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
       val exclude = Set(
         "commons-beanutils-1.7.0.jar",
         "stax-api-1.0.1.jar",
