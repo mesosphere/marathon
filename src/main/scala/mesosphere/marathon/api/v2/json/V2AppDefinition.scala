@@ -143,6 +143,7 @@ object V2AppDefinition {
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsContainerValidator
     appDef is portIndicesAreValid
+    appDef.instances.intValue should be >= 0
   }
 
   private def containsCmdArgsContainerValidator: Validator[V2AppDefinition] = {
