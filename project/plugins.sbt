@@ -29,14 +29,14 @@ addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.5.0")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.8.0")
 
 // === support for Scalastyle, https://github.com/scalastyle/scalastyle-sbt-plugin, http://www.scalastyle.org/sbt.html (e.g. `scalastyle` command)
-addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.7.0")
+addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.8.0")
 
 // === helps to resolve dependencies from and publish to Amazon S3 buckets (private or public), https://github.com/ohnosequences/sbt-s3-resolver
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.10.1")
 
 // === code coverage tool, https://github.com/scoverage/sbt-scoverage
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.0.4")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.3.3")
 
 // === uploads scala code coverage to https://coveralls.io and integrates with Travis CI, https://github.com/scoverage/sbt-coveralls
-addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.0.0")
+addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.0.3")
 
