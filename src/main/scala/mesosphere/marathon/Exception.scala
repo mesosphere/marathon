@@ -30,6 +30,11 @@ case class CanceledActionException(msg: String) extends Exception(msg)
 
 case class ConflictingChangeException(msg: String) extends Exception(msg)
 
+/**
+  * Is thrown if an object validation is not successful.
+  * @param obj object which is not valid
+  * @param failure validation information kept in a [[com.wix.accord.Failure]] object
+  */
 case class ValidationFailedException(obj: Any, failure: Failure) extends Exception("Validation failed")
 
 /*

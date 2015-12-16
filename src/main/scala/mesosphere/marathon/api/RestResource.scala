@@ -52,12 +52,23 @@ trait RestResource {
   protected def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 
   //scalastyle:off
+  /**
+    * Checks if the implicit validator yields a valid result.
+    * @param t object to validate
+    * @param description optional description which might be injected into the failure message
+    * @param fn function to execute after successful validation
+    * @param validator validator to use
+    * @tparam T type of object
+    * @return returns a 422 response if there is a failure due to validation. Executes fn function if successful.
+    */
   protected def withValid[T](t: T, description: Option[String] = None)(fn: T => Response)(implicit validator: Validator[T]): Response = {
     //scalastyle:on
     validator(t) match {
       case f: Failure =>
         val entity = Json.toJson(description.map(f.withDescription).getOrElse(f)).toString
-        Response.status(Status.BAD_REQUEST).entity(entity).build()
+        //scalastyle:off magic.number
+        Response.status(422).entity(entity).build()
+      //scalastyle:on
       case Success => fn(t)
     }
   }
