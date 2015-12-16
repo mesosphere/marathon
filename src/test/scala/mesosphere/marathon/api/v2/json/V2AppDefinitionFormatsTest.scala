@@ -20,8 +20,8 @@ class V2AppDefinitionFormatsTest
     val a1 = AppDefinition(
       id = "app1".toPath,
       cmd = Some("sleep 10")
-      // TODO AW: what about version?
-      // version = Timestamp(1)
+    // TODO AW: what about version?
+    // version = Timestamp(1)
     )
 
     val j1 = Json.parse("""

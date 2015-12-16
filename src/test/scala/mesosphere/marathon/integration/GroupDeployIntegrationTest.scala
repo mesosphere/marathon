@@ -2,7 +2,7 @@ package mesosphere.marathon.integration
 
 import mesosphere.marathon.api.v2.json.V2GroupUpdate
 import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationHealthCheck, SingleMarathonIntegrationTest, WaitTestSupport }
-import mesosphere.marathon.state.{AppDefinition, PathId, UpgradeStrategy}
+import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
 import org.apache.http.HttpStatus
 import org.scalatest._
 import spray.http.DateTime

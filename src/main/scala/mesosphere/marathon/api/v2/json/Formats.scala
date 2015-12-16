@@ -496,7 +496,7 @@ trait V2Formats {
         )
       // TODO AW: not sure if JsNull is the right choice here
       case AppDefinition.VersionInfo.OnlyVersion(_) => JsNull
-      case AppDefinition.VersionInfo.NoVersion => JsNull
+      case AppDefinition.VersionInfo.NoVersion      => JsNull
     }
 
   implicit lazy val TaskCountsWrites: Writes[TaskCounts] =

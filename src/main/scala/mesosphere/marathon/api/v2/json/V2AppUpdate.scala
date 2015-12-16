@@ -106,8 +106,8 @@ case class V2AppUpdate(
     upgradeStrategy = upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels = labels.getOrElse(app.labels),
     acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles)
-    // TODO AW: what about version?
-    // version = version.getOrElse(app.version)
+  // TODO AW: what about version?
+  // version = version.getOrElse(app.version)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): V2AppUpdate = copy(

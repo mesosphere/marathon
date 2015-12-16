@@ -4,7 +4,7 @@ import java.io.File
 
 import mesosphere.marathon.api.v2.json.V2AppUpdate
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json._

@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import mesosphere.marathon.api.v2.json.{ V2AppUpdate, V2Group, V2GroupUpdate }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import org.slf4j.LoggerFactory
 import spray.client.pipelining._
 import spray.http._

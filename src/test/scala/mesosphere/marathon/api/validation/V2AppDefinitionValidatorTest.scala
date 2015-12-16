@@ -6,7 +6,7 @@ import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.HealthCheckDefinition
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{AppDefinition, Command, Container, PathId}
+import mesosphere.marathon.state.{ AppDefinition, Command, Container, PathId }
 import org.scalatest.Matchers
 import mesosphere.marathon.api.v2.Validation._
 
