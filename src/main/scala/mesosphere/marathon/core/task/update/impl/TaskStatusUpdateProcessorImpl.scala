@@ -1,11 +1,11 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon.core.task.update.impl
 
 import javax.inject.Inject
 
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.tracker.{ TaskStatusUpdateProcessor, TaskStatusUpdateStep }
+import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskStatusUpdateStep }
 import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.{ PathId, Timestamp }

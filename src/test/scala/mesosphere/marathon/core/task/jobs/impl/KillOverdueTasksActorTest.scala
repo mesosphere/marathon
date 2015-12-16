@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon.core.task.jobs.impl
 
 import akka.actor._
 import akka.testkit.TestProbe
@@ -50,7 +50,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
     actorSystem.shutdown()
     actorSystem.awaitTermination()
 
-    verifyNoMoreInteractions(taskTracker, driver)
+    noMoreInteractions(taskTracker, driver)
   }
 
   test("no overdue tasks") {

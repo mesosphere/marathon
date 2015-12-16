@@ -1,15 +1,15 @@
-package mesosphere.marathon.core.task.tracker
+package mesosphere.marathon.core.task.jobs
 
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.core.task.tracker.impl.KillOverdueTasksActor
+import mesosphere.marathon.core.task.jobs.impl.KillOverdueTasksActor
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
 
 /**
-  * This module provides some glue between the task tracker, status updates and various components in the application.
+  * This module contains periodically running jobs interacting with the task tracker.
   */
-class TaskTrackerModule(config: MarathonConf, leadershipModule: LeadershipModule, clock: Clock) {
+class TaskJobsModule(config: MarathonConf, leadershipModule: LeadershipModule, clock: Clock) {
   def killOverdueTasks(
     taskTracker: TaskTracker,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder): Unit = {

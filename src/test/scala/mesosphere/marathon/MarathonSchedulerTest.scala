@@ -7,7 +7,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskStatusEmitter
-import mesosphere.marathon.core.task.tracker.TaskStatusUpdateProcessor
+import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.AppRepository

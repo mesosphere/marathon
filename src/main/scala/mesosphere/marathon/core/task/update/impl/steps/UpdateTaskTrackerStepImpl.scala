@@ -1,8 +1,8 @@
-package mesosphere.marathon.core.task.tracker.impl.steps
+package mesosphere.marathon.core.task.update.impl.steps
 
 import com.google.inject.Inject
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskUpdater
 import org.apache.mesos.Protos.TaskStatus

@@ -1,11 +1,11 @@
-package mesosphere.marathon.core.task.tracker.impl.steps
+package mesosphere.marathon.core.task.update.impl.steps
 
 import javax.inject.Named
 
 import akka.event.EventStream
 import com.google.inject.Inject
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.event.{ EventModule, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.MarathonTasks

@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.task.tracker.impl.steps
+package mesosphere.marathon.core.task.update.impl.steps
 
 import javax.inject.Named
 
@@ -6,7 +6,7 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory

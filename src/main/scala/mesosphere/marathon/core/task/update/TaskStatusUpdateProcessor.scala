@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.task.tracker
+package mesosphere.marathon.core.task.update
 
 import org.apache.mesos.Protos.TaskStatus
 
