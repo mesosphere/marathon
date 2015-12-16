@@ -150,7 +150,7 @@ object V2AppDefinition {
         val cmd = app.cmd.nonEmpty
         val args = app.args.nonEmpty
         val container = app.container.exists(_ != Container.Empty)
-        if((cmd ^ args) || (!(cmd || args) && container)) Success
+        if ((cmd ^ args) || (!(cmd || args) && container)) Success
         else Failure(Set(RuleViolation(app,
           "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.", None)))
       }
@@ -162,7 +162,7 @@ object V2AppDefinition {
       override def apply(app: V2AppDefinition): Result = {
         val appDef = app.toAppDefinition
         val validPortIndices = appDef.hostPorts.indices
-        if(appDef.healthChecks.forall { hc =>
+        if (appDef.healthChecks.forall { hc =>
           hc.protocol == Protocol.COMMAND || (validPortIndices contains hc.portIndex)
         }) Success
         else Failure(Set(RuleViolation(app,

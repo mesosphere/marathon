@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.state.{Group, PathId, Timestamp}
+import mesosphere.marathon.state.{ Group, PathId, Timestamp }
 import mesosphere.marathon.api.v2.Validation._
 
 case class V2Group(
@@ -50,8 +50,7 @@ object V2Group {
     group is validPorts
   }
 
-  def v2GroupWithConfigValidator(maxApps: Option[Int])
-                                (implicit validator: Validator[V2Group]): Validator[V2Group] = {
+  def v2GroupWithConfigValidator(maxApps: Option[Int])(implicit validator: Validator[V2Group]): Validator[V2Group] = {
     new Validator[V2Group] {
       override def apply(group: V2Group): Result = {
         maxApps.filter(group.toGroup().transitiveApps.size > _).map { num =>
@@ -65,7 +64,7 @@ object V2Group {
 
   private def noAppsAndGroupsWithSameName: Validator[V2Group] =
     new Validator[V2Group] {
-      def apply( group: V2Group ) = {
+      def apply(group: V2Group) = {
         val groupIds = group.groups.map(_.id)
         val clashingIds = group.apps.map(_.id).intersect(groupIds)
 
@@ -77,7 +76,7 @@ object V2Group {
 
   private def noCyclicDependencies(group: V2Group): Validator[Set[PathId]] =
     new Validator[Set[PathId]] {
-      def apply( dependencies: Set[PathId] ) = {
+      def apply(dependencies: Set[PathId]) = {
         if (group.toGroup().hasNonCyclicDependencies) Success
         else Failure(Set(RuleViolation(group, "Dependency graph has cyclic dependencies", None)))
       }
@@ -99,11 +98,11 @@ object V2Group {
               None)
           }
 
-          if(ruleViolations.isEmpty) None
+          if (ruleViolations.isEmpty) None
           else Some(GroupViolation(app, "app contains conflicting ports", None, ruleViolations.toSet))
         }
 
-        if(groupViolations.isEmpty) Success
+        if (groupViolations.isEmpty) Success
         else Failure(groupViolations.toSet)
       }
     }

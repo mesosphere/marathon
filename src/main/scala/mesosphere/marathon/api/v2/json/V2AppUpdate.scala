@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Integer => JInt, Double => JDouble }
-import java.net.{URLConnection, HttpURLConnection, URL}
+import java.net.{ URLConnection, HttpURLConnection, URL }
 
 import mesosphere.marathon.api.v2.json.V2AppDefinition.VersionInfo
 import mesosphere.marathon.api.validation.FieldConstraints._

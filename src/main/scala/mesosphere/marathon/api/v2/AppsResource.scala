@@ -160,7 +160,7 @@ class AppsResource @Inject() (
         def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
           update.id match {
             case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, version), version)
-            case None => group
+            case None     => group
           }
         }
         deploymentResult(result(groupManager.update(PathId.empty, updateGroup, version, force)))

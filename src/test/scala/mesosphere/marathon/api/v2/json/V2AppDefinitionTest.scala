@@ -9,7 +9,8 @@ import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
-import org.scalatest.{Matchers}
+
+import org.scalatest.{ Matchers }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq

@@ -52,9 +52,7 @@ trait RestResource {
   protected def result[T](fn: Awaitable[T]): T = Await.result(fn, config.zkTimeoutDuration)
 
   //scalastyle:off
-  protected def withValid[T](t: T, description: Option[String] = None)
-                            (fn:T => Response)
-                            (implicit validator: Validator[T]): Response = {
+  protected def withValid[T](t: T, description: Option[String] = None)(fn: T => Response)(implicit validator: Validator[T]): Response = {
     //scalastyle:on
     validator(t) match {
       case f: Failure =>

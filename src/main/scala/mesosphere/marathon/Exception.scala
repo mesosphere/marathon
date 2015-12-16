@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import com.wix.accord.{Failure, Violation}
+import com.wix.accord.{ Failure, Violation }
 import mesosphere.marathon.state.PathId
 
 //scalastyle:off null

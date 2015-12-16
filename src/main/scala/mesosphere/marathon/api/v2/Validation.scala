@@ -125,14 +125,15 @@ object Validation {
         case g: GroupViolation =>
           g.children.flatMap { c =>
             val nextProp = prop.map(p => Some(s"$p.${c.description.getOrElse("")}")).getOrElse(c.description)
-            loop(c, nextProp)}.toSeq
+            loop(c, nextProp)
+          }.toSeq
         case r: RuleViolation => Seq(ViolationMessageAndProperty(r.constraint, prop))
       }
     }
 
     r match {
       case f: Failure => f.violations.flatMap(v => loop(v, v.description)).toSeq
-      case _ => Seq.empty[ViolationMessageAndProperty]
+      case _          => Seq.empty[ViolationMessageAndProperty]
     }
   }
 }
