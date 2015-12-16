@@ -36,7 +36,6 @@ object MarathonBuild extends Build {
     id = "marathon",
     base = file("."),
     settings = baseSettings ++
-      //buildInfoSettings ++
       asmSettings ++
       customReleaseSettings ++
       formatSettings ++
