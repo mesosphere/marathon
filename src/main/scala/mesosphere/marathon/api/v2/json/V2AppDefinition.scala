@@ -19,6 +19,7 @@ import scala.concurrent.duration._
 
 import com.wix.accord.dsl._
 
+// TODO AW: delete this one
 @PortIndices
 @ValidV2AppDefinition
 case class V2AppDefinition(
