@@ -7,12 +7,12 @@ import com.google.inject.Singleton
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.TimeoutException
-import mesosphere.marathon.{ Exception=>_, _ }
+import mesosphere.marathon.{ Exception => _, _ }
 import com.sun.jersey.api.NotFoundException
 import com.fasterxml.jackson.core.JsonParseException
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
-import play.api.libs.json.{JsValue, Json, JsObject, JsResultException}
+import play.api.libs.json.{ JsValue, Json, JsObject, JsResultException }
 import mesosphere.marathon.api.v2.Validation._
 
 @Provider
@@ -40,18 +40,18 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
   //scalastyle:off magic.number cyclomatic.complexity
   private def statusCode(exception: Exception): Int = exception match {
     //scalastyle:off magic.number
-    case e: IllegalArgumentException     => 422 // Unprocessable entity
-    case e: TimeoutException             => 503 // Service Unavailable
-    case e: UnknownAppException          => 404 // Not found
-    case e: AppLockedException           => 409 // Conflict
-    case e: ConflictingChangeException   => 409 // Conflict
-    case e: BadRequestException          => 400 // Bad Request
-    case e: JsonParseException           => 400 // Bad Request
-    case e: JsResultException            => 400 // Bad Request
-    case e: ValidationFailedException    => 400 // Bad Request
-    case e: JsonMappingException         => 400 // Bad Request
-    case e: WebApplicationException      => e.getResponse.getStatus
-    case _                               => 500 // Internal server error
+    case e: IllegalArgumentException   => 422 // Unprocessable entity
+    case e: TimeoutException           => 503 // Service Unavailable
+    case e: UnknownAppException        => 404 // Not found
+    case e: AppLockedException         => 409 // Conflict
+    case e: ConflictingChangeException => 409 // Conflict
+    case e: BadRequestException        => 400 // Bad Request
+    case e: JsonParseException         => 400 // Bad Request
+    case e: JsResultException          => 400 // Bad Request
+    case e: ValidationFailedException  => 422 // Bad Request
+    case e: JsonMappingException       => 400 // Bad Request
+    case e: WebApplicationException    => e.getResponse.getStatus
+    case _                             => 500 // Internal server error
     //scalastyle:on
   }
 
