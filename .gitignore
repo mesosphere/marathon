@@ -1,14 +1,37 @@
+# === This file contains a list of files that will be ignored by GIT. 
+
+# === uncategorized
 bin/run-tests-config.sh
-.idea
-*.iml
-docker-volumes
-target
-.reviewboardrc
 dependency-reduced-pom.xml
 node_modules
-.project
-.classpath
-.settings
 .Rproj.user
 start.sh
+
+# === Review Board (https://www.reviewboard.org/) specific files
+.reviewboardrc
+
+# === Docker (https://www.docker.com/) specific files
+docker-volumes
+
+# === SBT (http://www.scala-sbt.org/) and scalac (http://www.scala-lang.org/) secific files
+target
+.project
+.history
+.cache/
+.lib/
+
+# === Scala-IDE (http://scala-ide.org/) and Eclipse (https://eclipse.org/downloads/) specific files
+.classpath
+.settings
+.scala_dependencies
+.worksheet
+
+# === IntelliJ Idea IDE (https://www.jetbrains.com/idea/) specific files
+*.iml
+.idea
+.idea_modules
+projectFilesBackup
+
+# === OS X (Mac) specific files
 .DS_Store
+
