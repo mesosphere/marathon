@@ -63,7 +63,8 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
     Then("A constraint violation exception is thrown")
-    intercept[ValidationFailedException] { appsResource.create(body, false, auth.request, auth.response) }
+    val response = appsResource.create(body, false, auth.request, auth.response)
+    response.getStatus should be(400)
   }
 
   test("Create a new app with float instance count fails") {
