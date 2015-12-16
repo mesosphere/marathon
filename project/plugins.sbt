@@ -23,7 +23,7 @@ addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
 
 // === make compile-time (SBT) information available at run-time, https://github.com/sbt/sbt-buildinfo
-addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.3.2")
+addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.5.0")
 
 // === super-fast development turnaround, https://github.com/spray/sbt-revolver
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.7.2")

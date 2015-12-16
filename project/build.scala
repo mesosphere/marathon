@@ -10,7 +10,9 @@ import com.typesafe.sbt.SbtScalariform._
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
 import scalariform.formatter.preferences._
-import sbtbuildinfo.Plugin._
+import sbtbuildinfo.BuildInfoPlugin._
+import sbtbuildinfo._
+import sbtbuildinfo.BuildInfoKeys._
 import spray.revolver.RevolverPlugin.Revolver.{ settings => revolverSettings }
 import sbtrelease.ReleaseStateTransformations._
 import sbtrelease.ReleasePlugin.autoImport.ReleaseStep
@@ -34,7 +36,7 @@ object MarathonBuild extends Build {
     id = "marathon",
     base = file("."),
     settings = baseSettings ++
-      buildInfoSettings ++
+      //buildInfoSettings ++
       asmSettings ++
       customReleaseSettings ++
       formatSettings ++
@@ -48,7 +50,6 @@ object MarathonBuild extends Build {
         unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
         libraryDependencies ++= Dependencies.root,
         parallelExecution in Test := false,
-        sourceGenerators in Compile <+= buildInfo,
         buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
         buildInfoPackage := "mesosphere.marathon",
         fork in Test := true
