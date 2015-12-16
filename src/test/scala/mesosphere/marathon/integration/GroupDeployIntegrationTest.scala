@@ -257,7 +257,7 @@ class GroupDeployIntegrationTest
     val result = marathon.createGroup(group)
 
     Then("An unsuccessfull response has been posted, with an error indicating cyclic dependencies")
-    (result.entityJson \\ "error").head.as[String] should include("cyclic dependencies")
+    (result.entityJson \\ "error").filter(j => j.as[String].contains("cyclic dependencies")) should have size 1
   }
 
   test("Applications with dependencies get deployed in the correct order") {
