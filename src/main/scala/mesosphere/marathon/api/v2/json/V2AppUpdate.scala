@@ -7,6 +7,8 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.state.AppDefinition.VersionInfo
+import mesosphere.marathon.state.AppDefinition.VersionInfo.{ NoVersion, OnlyVersion }
 import mesosphere.marathon.state.{
   AppDefinition,
   Container,
@@ -105,9 +107,9 @@ case class V2AppUpdate(
     dependencies = dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy = upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels = labels.getOrElse(app.labels),
-    acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles)
-  // TODO AW: what about version?
-  // version = version.getOrElse(app.version)
+    acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles),
+    // TODO AW: is this correct?
+    versionInfo = version.map(OnlyVersion).getOrElse(NoVersion)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): V2AppUpdate = copy(

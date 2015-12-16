@@ -343,7 +343,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       """
     val readResult4 = fromJson(json4)
 
-    // TODO AW: what about version
-    // assert(readResult4.copy(version = app4.version) == app4)
+    // TODO AW: is this correct?
+    assert(readResult4.copy(versionInfo = app4.versionInfo) == app4)
   }
 }

@@ -19,9 +19,9 @@ class V2AppDefinitionFormatsTest
   object Fixture {
     val a1 = AppDefinition(
       id = "app1".toPath,
-      cmd = Some("sleep 10")
-    // TODO AW: what about version?
-    // version = Timestamp(1)
+      cmd = Some("sleep 10"),
+      // TODO AW: is this correct?
+      versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(1))
     )
 
     val j1 = Json.parse("""
@@ -68,17 +68,16 @@ class V2AppDefinitionFormatsTest
   }
 
   test("ToJson should serialize full version info") {
-    // TODO AW: what about version?
-    /*
+    // TODO AW: is this correct?
     import Fixture._
 
-    val r1 = Json.toJson(a1.copy(versionInfo = Some(AppDefinition.VersionInfo(
+    val r1 = Json.toJson(a1.copy(versionInfo = AppDefinition.VersionInfo.FullVersionInfo(
+      version = Timestamp(3),
       lastScalingAt = Timestamp(2),
       lastConfigChangeAt = Timestamp(1)
-    ))))
+    )))
     (r1 \ "versionInfo" \ "lastScalingAt").as[String] should equal("1970-01-01T00:00:00.002Z")
     (r1 \ "versionInfo" \ "lastConfigChangeAt").as[String] should equal("1970-01-01T00:00:00.001Z")
-    */
   }
 
   test("FromJson") {

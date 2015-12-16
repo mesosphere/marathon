@@ -440,8 +440,9 @@ trait V2Formats {
           app.copy(
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
-            acceptedResourceRoles = extraFields.acceptedResourceRoles
-          // TODO AW: get extraFields.version in here
+            acceptedResourceRoles = extraFields.acceptedResourceRoles,
+            // TODO AW: is this correct?
+            versionInfo = AppDefinition.VersionInfo.OnlyVersion(extraFields.version)
           )
         }
       }
@@ -494,9 +495,19 @@ trait V2Formats {
           "lastScalingAt" -> lastScalingAt,
           "lastConfigChangeAt" -> lastConfigChangeAt
         )
-      // TODO AW: not sure if JsNull is the right choice here
-      case AppDefinition.VersionInfo.OnlyVersion(_) => JsNull
-      case AppDefinition.VersionInfo.NoVersion      => JsNull
+      // TODO AW: is this correct?
+      case AppDefinition.VersionInfo.OnlyVersion(version) =>
+        val ver = AppDefinition.VersionInfo.forNewConfig(version)
+        Json.obj(
+          "lastScalingAt" -> ver.lastScalingAt,
+          "lastConfigChangeAt" -> ver.lastConfigChangeAt
+        )
+      case AppDefinition.VersionInfo.NoVersion =>
+        val ver = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+        Json.obj(
+          "lastScalingAt" -> ver.lastScalingAt,
+          "lastConfigChangeAt" -> ver.lastConfigChangeAt
+        )
     }
 
   implicit lazy val TaskCountsWrites: Writes[TaskCounts] =
