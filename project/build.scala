@@ -1,19 +1,21 @@
 import com.amazonaws.auth.InstanceProfileCredentialsProvider
 import ohnosequences.sbt.SbtS3Resolver
-import ohnosequences.sbt.SbtS3Resolver._
 import sbt._
 import Keys._
-import sbtassembly.Plugin._
-import AssemblyKeys._
+import sbtassembly.AssemblyPlugin._
+import sbtassembly.AssemblyKeys._
+import sbtassembly.MergeStrategy
 import com.typesafe.sbt.SbtScalariform._
 import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
 import scalariform.formatter.preferences._
-import sbtbuildinfo.Plugin._
-import spray.revolver.RevolverPlugin.Revolver.{ settings => revolverSettings }
-import sbtrelease._
-import ReleasePlugin._
-import ReleaseStateTransformations._
+import sbtbuildinfo.BuildInfoPlugin._
+import sbtbuildinfo._
+import sbtbuildinfo.BuildInfoKeys._
+import spray.revolver.RevolverPlugin.autoImport.revolverSettings
+import sbtrelease.ReleaseStateTransformations._
+import sbtrelease.ReleasePlugin.autoImport.ReleaseStep
+import sbtrelease.ReleasePlugin.autoImport.releaseProcess
 
 object MarathonBuild extends Build {
   lazy val pluginInterface: Project = Project(
@@ -33,7 +35,6 @@ object MarathonBuild extends Build {
     id = "marathon",
     base = file("."),
     settings = baseSettings ++
-      buildInfoSettings ++
       asmSettings ++
       customReleaseSettings ++
       formatSettings ++
@@ -47,7 +48,6 @@ object MarathonBuild extends Build {
         unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
         libraryDependencies ++= Dependencies.root,
         parallelExecution in Test := false,
-        sourceGenerators in Compile <+= buildInfo,
         buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
         buildInfoPackage := "mesosphere.marathon",
         fork in Test := true
@@ -135,7 +135,7 @@ object MarathonBuild extends Build {
   )
 
   lazy val asmSettings = assemblySettings ++ Seq(
-    mergeStrategy in assembly <<= (mergeStrategy in assembly) { old =>
+    assemblyMergeStrategy in assembly <<= (assemblyMergeStrategy in assembly) { old =>
       {
         case "application.conf"                                             => MergeStrategy.concat
         case "META-INF/jersey-module-version"                               => MergeStrategy.first
@@ -145,7 +145,7 @@ object MarathonBuild extends Build {
         case x                                                              => old(x)
       }
     },
-    excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+    assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
       val exclude = Set(
         "commons-beanutils-1.7.0.jar",
         "stax-api-1.0.1.jar",
@@ -182,8 +182,8 @@ object MarathonBuild extends Build {
    * -setNextVersion
    * -commitNextVersion
    */
-  lazy val customReleaseSettings = releaseSettings ++ Seq(
-    ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+  lazy val customReleaseSettings = Seq(
+    releaseProcess := Seq[ReleaseStep](
       checkSnapshotDependencies,
       inquireVersions,
       runTest,
@@ -219,12 +219,12 @@ object MarathonBuild extends Build {
     }
   )
 
-  lazy val publishSettings = S3Resolver.defaults ++ Seq(
-    publishTo := Some(s3resolver.value(
+  lazy val publishSettings = SbtS3Resolver.projectSettings ++ Seq(
+    publishTo := Some(SbtS3Resolver.autoImport.s3resolver.value(
       "Mesosphere Public Repo (S3)",
-      s3("downloads.mesosphere.io/maven")
+      SbtS3Resolver.autoImport.s3("downloads.mesosphere.io/maven")
     )),
-    SbtS3Resolver.s3credentials := new InstanceProfileCredentialsProvider()
+    SbtS3Resolver.autoImport.s3credentials := new InstanceProfileCredentialsProvider()
   )
 }
 
