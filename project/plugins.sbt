@@ -26,7 +26,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.5.0")
 
 // === super-fast development turnaround, https://github.com/spray/sbt-revolver
-addSbtPlugin("io.spray" % "sbt-revolver" % "0.7.2")
+addSbtPlugin("io.spray" % "sbt-revolver" % "0.8.0")
 
 // === support for Scalastyle, https://github.com/scalastyle/scalastyle-sbt-plugin, http://www.scalastyle.org/sbt.html (e.g. `scalastyle` command)
 addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.7.0")

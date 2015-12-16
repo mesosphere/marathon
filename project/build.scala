@@ -13,7 +13,7 @@ import scalariform.formatter.preferences._
 import sbtbuildinfo.BuildInfoPlugin._
 import sbtbuildinfo._
 import sbtbuildinfo.BuildInfoKeys._
-import spray.revolver.RevolverPlugin.Revolver.{ settings => revolverSettings }
+import spray.revolver.RevolverPlugin.autoImport.revolverSettings
 import sbtrelease.ReleaseStateTransformations._
 import sbtrelease.ReleasePlugin.autoImport.ReleaseStep
 import sbtrelease.ReleasePlugin.autoImport.releaseProcess
