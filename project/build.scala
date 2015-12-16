@@ -12,9 +12,9 @@ import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
 import spray.revolver.RevolverPlugin.Revolver.{ settings => revolverSettings }
-import sbtrelease._
-import ReleasePlugin._
-import ReleaseStateTransformations._
+import sbtrelease.ReleaseStateTransformations._
+import sbtrelease.ReleasePlugin.autoImport.ReleaseStep
+import sbtrelease.ReleasePlugin.autoImport.releaseProcess
 
 object MarathonBuild extends Build {
   lazy val pluginInterface: Project = Project(
@@ -183,8 +183,8 @@ object MarathonBuild extends Build {
    * -setNextVersion
    * -commitNextVersion
    */
-  lazy val customReleaseSettings = releaseSettings ++ Seq(
-    ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+  lazy val customReleaseSettings = Seq(
+    releaseProcess := Seq[ReleaseStep](
       checkSnapshotDependencies,
       inquireVersions,
       runTest,

@@ -17,7 +17,7 @@ addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.7.0-SNAPSHOT")
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.1")
 
 // === release process, https://github.com/sbt/sbt-release (e.g. `release` command)
-addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8.3")
+addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.0")
 
 // === automatic code format before each compilation, https://github.com/sbt/sbt-scalariform (e.g. `scalariformFormat` command)
 addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
