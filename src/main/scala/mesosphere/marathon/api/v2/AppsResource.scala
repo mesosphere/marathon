@@ -9,7 +9,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate }
+import mesosphere.marathon.api.v2.json.V2AppUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
@@ -23,6 +23,9 @@ import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
+
+// Accord validation
+import Validation._
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -64,26 +67,27 @@ class AppsResource @Inject() (
   def create(body: Array[Byte],
              @DefaultValue("false")@QueryParam("force") force: Boolean,
              @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    val app = validateApp(Json.parse(body).as[V2AppDefinition].withCanonizedIds().toAppDefinition)
-    doIfAuthorized(req, resp, CreateAppOrGroup, app.id) { identity =>
-      def createOrThrow(opt: Option[AppDefinition]) = opt
-        .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
-        .getOrElse(app)
+    withValid(Json.parse(body).as[AppDefinition].withCanonizedIds()) { app =>
+      doIfAuthorized(req, resp, CreateAppOrGroup, app.id) { identity =>
+        def createOrThrow(opt: Option[AppDefinition]) = opt
+          .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
+          .getOrElse(app)
 
-      val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
+        val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
 
-      val appWithDeployments = AppInfo(
-        app,
-        maybeCounts = Some(TaskCounts.zero),
-        maybeTasks = Some(Seq.empty),
-        maybeDeployments = Some(Seq(Identifiable(plan.id)))
-      )
+        val appWithDeployments = AppInfo(
+          app,
+          maybeCounts = Some(TaskCounts.zero),
+          maybeTasks = Some(Seq.empty),
+          maybeDeployments = Some(Seq(Identifiable(plan.id)))
+        )
 
-      maybePostEvent(req, appWithDeployments.app)
-      Response
-        .created(new URI(app.id.toString))
-        .entity(jsonString(appWithDeployments))
-        .build()
+        maybePostEvent(req, appWithDeployments.app)
+        Response
+          .created(new URI(app.id.toString))
+          .entity(jsonString(appWithDeployments))
+          .build()
+      }
     }
   }
 
@@ -127,18 +131,17 @@ class AppsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     val appId = id.toRootPath
-    doIfAuthorized(req, resp, UpdateAppOrGroup, appId) { identity =>
-      val appUpdate = Json.parse(body).as[V2AppUpdate].copy(id = Some(appId))
-      BeanValidation.requireValid(ModelValidation.checkUpdate(appUpdate, needsId = false))
+    withValid(Json.parse(body).as[V2AppUpdate].copy(id = Some(appId))) { app =>
+      doIfAuthorized(req, resp, UpdateAppOrGroup, appId) { identity =>
+        val now = clock.now()
+        val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, app, now), now, force))
 
-      val now = clock.now()
-      val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, appUpdate, now), now, force))
-
-      val response = plan.original.app(appId)
-        .map(_ => Response.ok())
-        .getOrElse(Response.created(new URI(appId.toString)))
-      maybePostEvent(req, plan.target.app(appId).get)
-      deploymentResult(plan, response)
+        val response = plan.original.app(appId)
+          .map(_ => Response.ok())
+          .getOrElse(Response.created(new URI(appId.toString)))
+        maybePostEvent(req, plan.target.app(appId).get)
+        deploymentResult(plan, response)
+      }
     }
   }
 
@@ -147,17 +150,18 @@ class AppsResource @Inject() (
   def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean,
                       body: Array[Byte],
                       @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    val updates = Json.parse(body).as[Seq[V2AppUpdate]].map(_.withCanonizedIds())
-    BeanValidation.requireValid(ModelValidation.checkUpdates(updates))
-    doIfAuthorized(req, resp, UpdateAppOrGroup, updates.flatMap(_.id): _*) { identity =>
-      val version = clock.now()
-      def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
-        update.id match {
-          case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, version), version)
-          case None     => group
+
+    withValid(Json.parse(body).as[Seq[V2AppUpdate]].map(_.withCanonizedIds())) { updates =>
+      doIfAuthorized(req, resp, UpdateAppOrGroup, updates.flatMap(_.id): _*) { identity =>
+        val version = clock.now()
+        def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
+          update.id match {
+            case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, version), version)
+            case None     => group
+          }
         }
+        deploymentResult(result(groupManager.update(PathId.empty, updateGroup, version, force)))
       }
-      deploymentResult(result(groupManager.update(PathId.empty, updateGroup, version, force)))
     }
   }
 
@@ -208,8 +212,8 @@ class AppsResource @Inject() (
                              existing: Option[AppDefinition],
                              appUpdate: V2AppUpdate,
                              newVersion: Timestamp): AppDefinition = {
-    def createApp() = validateApp(appUpdate(AppDefinition(appId)))
-    def updateApp(current: AppDefinition) = validateApp(appUpdate(current))
+    def createApp() = validateOrThrow(appUpdate(AppDefinition(appId)))
+    def updateApp(current: AppDefinition) = validateOrThrow(appUpdate(current))
     def rollback(version: Timestamp) = service.getApp(appId, version).getOrElse(throw new UnknownAppException(appId))
     def updateOrRollback(current: AppDefinition) = appUpdate.version.map(rollback).getOrElse(updateApp(current))
 
@@ -220,13 +224,6 @@ class AppsResource @Inject() (
       case None =>
         createApp()
     }
-  }
-
-  private def validateApp(app: AppDefinition): AppDefinition = {
-    BeanValidation.requireValid(ModelValidation.checkAppConstraints(V2AppDefinition(app), app.id.parent))
-    val conflicts = ModelValidation.checkAppConflicts(app, result(groupManager.rootGroup()))
-    if (conflicts.nonEmpty) throw new ConflictingChangeException(conflicts.mkString(","))
-    app
   }
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =

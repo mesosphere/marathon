@@ -124,14 +124,14 @@ class DeploymentFormatsTest extends MarathonSpec {
 
   def genTimestamp = Timestamp.now()
 
-  def genApp = V2AppDefinition(id = genId)
+  def genApp = AppDefinition(id = genId)
 
   def genStep = DeploymentStep(actions = Seq(
-    StartApplication(genApp.toAppDefinition, genInt),
-    ScaleApplication(genApp.toAppDefinition, genInt),
-    StopApplication(genApp.toAppDefinition),
-    RestartApplication(genApp.toAppDefinition),
-    ResolveArtifacts(genApp.toAppDefinition, Map.empty)
+    StartApplication(genApp, genInt),
+    ScaleApplication(genApp, genInt),
+    StopApplication(genApp),
+    RestartApplication(genApp),
+    ResolveArtifacts(genApp, Map.empty)
   ))
 
   def genGroup(children: Set[V2Group] = Set.empty) =

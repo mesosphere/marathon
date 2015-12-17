@@ -8,7 +8,6 @@ import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, TaskRepository, AppDefinition, MarathonStore, MarathonTaskState, Timestamp }
@@ -141,7 +140,7 @@ trait MarathonTestHelper {
     factory.getJsonSchema(appDefinition)
   }
 
-  def validateJsonSchema(app: V2AppDefinition, valid: Boolean = true) {
+  def validateJsonSchema(app: AppDefinition, valid: Boolean = true) {
     import mesosphere.marathon.api.v2.json.Formats._
     // TODO: Revalidate the decision to disallow null values in schema
     // Possible resolution: Do not render null values in our formats by default anymore.

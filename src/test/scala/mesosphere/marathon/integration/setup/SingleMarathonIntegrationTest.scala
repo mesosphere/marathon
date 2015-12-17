@@ -2,7 +2,6 @@ package mesosphere.marathon.integration.setup
 
 import java.io.File
 
-import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import org.apache.commons.io.FileUtils
@@ -161,10 +160,7 @@ trait SingleMarathonIntegrationTest
     file.getAbsolutePath
   }
 
-  def v2AppProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): V2AppDefinition =
-    V2AppDefinition(appProxy(appId, versionId, instances, withHealth, dependencies))
-
-  private[this] def appProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean, dependencies: Set[PathId]): AppDefinition = {
+  def appProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
     val mainInvocation = appProxyMainInvocation
     val exec = Some(s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; $mainInvocation $appId $versionId http://localhost:${config.httpPort}/health$appId/$versionId""")
     val health = if (withHealth) Set(HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)) else Set.empty[HealthCheck]

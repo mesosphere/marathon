@@ -214,7 +214,7 @@ trait DeploymentFormats {
 
   implicit lazy val V2GroupUpdateFormat: Format[V2GroupUpdate] = (
     (__ \ "id").formatNullable[PathId] ~
-    (__ \ "apps").formatNullable[Set[V2AppDefinition]] ~
+    (__ \ "apps").formatNullable[Set[AppDefinition]] ~
     (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[V2GroupUpdate]]]) ~
     (__ \ "dependencies").formatNullable[Set[PathId]] ~
     (__ \ "scaleBy").formatNullable[Double] ~
@@ -251,7 +251,7 @@ trait EventFormats {
     Json.obj(
       "clientIp" -> event.clientIp,
       "uri" -> event.uri,
-      "appDefinition" -> V2AppDefinition(event.appDefinition),
+      "appDefinition" -> event.appDefinition,
       "eventType" -> event.eventType,
       "timestamp" -> event.timestamp
     )
@@ -394,7 +394,7 @@ trait V2Formats {
     }
   )
 
-  implicit lazy val V2AppDefinitionReads: Reads[V2AppDefinition] = {
+  implicit lazy val AppDefinitionReads: Reads[AppDefinition] = {
     val executorPattern = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r
 
     (
@@ -421,7 +421,7 @@ trait V2Formats {
       (__ \ "container").readNullable[Container] ~
       (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(AppDefinition.DefaultHealthChecks) ~
       (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies)
-    )(V2AppDefinition(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { app =>
+    )(AppDefinition(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { app =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
           upgradeStrategy: UpgradeStrategy,
@@ -442,8 +442,8 @@ trait V2Formats {
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             acceptedResourceRoles = extraFields.acceptedResourceRoles,
-            version = extraFields.version,
-            versionInfo = None
+            // TODO AW: is this correct?
+            versionInfo = AppDefinition.VersionInfo.OnlyVersion(extraFields.version)
           )
         }
       }
@@ -466,12 +466,12 @@ trait V2Formats {
     })
   }
 
-  implicit lazy val V2AppDefinitionWrites: Writes[V2AppDefinition] = {
+  implicit lazy val AppDefinitionWrites: Writes[AppDefinition] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
     }
 
-    Writes[V2AppDefinition] { app =>
+    Writes[AppDefinition] { app =>
       val appJson: JsObject = Json.obj(
         "id" -> app.id.toString,
         "cmd" -> app.cmd,
@@ -488,7 +488,7 @@ trait V2Formats {
         "storeUrls" -> app.storeUrls,
         // the ports field was written incorrectly in old code if a container was specified
         // it should contain the service ports
-        "ports" -> app.toAppDefinition.servicePorts,
+        "ports" -> app.servicePorts,
         "requirePorts" -> app.requirePorts,
         "backoffSeconds" -> app.backoff,
         "backoffFactor" -> app.backoffFactor,
@@ -499,19 +499,32 @@ trait V2Formats {
         "upgradeStrategy" -> app.upgradeStrategy,
         "labels" -> app.labels,
         "acceptedResourceRoles" -> app.acceptedResourceRoles,
-        "version" -> app.version
+        "version" -> app.version,
+        "versionInfo" -> Json.toJson(app.versionInfo)
       )
-
-      app.versionInfo.fold(appJson)(versionInfo => appJson + ("versionInfo" -> Json.toJson(versionInfo)))
+      appJson
     }
   }
 
-  implicit lazy val VersionInfoWrites: Writes[V2AppDefinition.VersionInfo] =
-    Writes {
-      case V2AppDefinition.VersionInfo(lastScalingAt, lastConfigChangeAt) =>
+  implicit lazy val VersionInfoWrites: Writes[AppDefinition.VersionInfo] =
+    Writes[AppDefinition.VersionInfo] {
+      case AppDefinition.VersionInfo.FullVersionInfo(_, lastScalingAt, lastConfigChangeAt) =>
         Json.obj(
           "lastScalingAt" -> lastScalingAt,
           "lastConfigChangeAt" -> lastConfigChangeAt
+        )
+      // TODO AW: is this correct?
+      case AppDefinition.VersionInfo.OnlyVersion(version) =>
+        val ver = AppDefinition.VersionInfo.forNewConfig(version)
+        Json.obj(
+          "lastScalingAt" -> ver.lastScalingAt,
+          "lastConfigChangeAt" -> ver.lastConfigChangeAt
+        )
+      case AppDefinition.VersionInfo.NoVersion =>
+        val ver = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+        Json.obj(
+          "lastScalingAt" -> ver.lastScalingAt,
+          "lastConfigChangeAt" -> ver.lastConfigChangeAt
         )
     }
 
@@ -570,7 +583,7 @@ trait V2Formats {
 
   implicit lazy val ExtendedAppInfoWrites: Writes[AppInfo] =
     Writes { info =>
-      val appJson = V2AppDefinitionWrites.writes(V2AppDefinition(info.app)).as[JsObject]
+      val appJson = AppDefinitionWrites.writes(info.app).as[JsObject]
 
       val maybeJson = Seq[Option[JsObject]](
         info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
@@ -637,7 +650,7 @@ trait V2Formats {
 
   implicit lazy val V2GroupFormat: Format[V2Group] = (
     (__ \ "id").format[PathId] ~
-    (__ \ "apps").formatNullable[Set[V2AppDefinition]].withDefault(V2Group.defaultApps) ~
+    (__ \ "apps").formatNullable[Set[AppDefinition]].withDefault(V2Group.defaultApps) ~
     (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[V2Group]]]).withDefault(V2Group.defaultGroups) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)

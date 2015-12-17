@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2Group, V2GroupUpdate }
+import mesosphere.marathon.api.v2.json.{ V2Group, V2GroupUpdate }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
@@ -29,7 +29,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
 
   test("dry run update") {
 
-    val app = V2AppDefinition(id = "/test/app".toRootPath, cmd = Some("test cmd"))
+    val app = AppDefinition(id = "/test/app".toRootPath, cmd = Some("test cmd"))
     val update = V2GroupUpdate(id = Some("/test".toRootPath), apps = Some(Set(app)))
 
     groupManager.group(update.groupId) returns Future.successful(None)

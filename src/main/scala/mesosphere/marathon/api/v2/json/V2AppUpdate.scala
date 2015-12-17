@@ -2,10 +2,13 @@ package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Integer => JInt, Double => JDouble }
 
-import mesosphere.marathon.api.v2.json.V2AppDefinition.VersionInfo
+import com.wix.accord.dsl._
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.state.AppDefinition.VersionInfo
+import mesosphere.marathon.state.AppDefinition.VersionInfo.{ NoVersion, OnlyVersion }
 import mesosphere.marathon.state.{
   AppDefinition,
   Container,
@@ -77,17 +80,10 @@ case class V2AppUpdate(
   }
 
   /**
-    * Returns the supplied [[mesosphere.marathon.state.AppDefinition]] after
-    * updating its members with respect to this update request.
-    */
-  def apply(app: AppDefinition): AppDefinition =
-    apply(V2AppDefinition(app)).toAppDefinition
-
-  /**
-    * Returns the supplied [[mesosphere.marathon.api.v2.json.V2AppDefinition]]
+    * Returns the supplied [[mesosphere.marathon.state.AppDefinition]]
     * after updating its members with respect to this update request.
     */
-  def apply(app: V2AppDefinition): V2AppDefinition = app.copy(
+  def apply(app: AppDefinition): AppDefinition = app.copy(
     id = app.id,
     cmd = cmd.orElse(app.cmd),
     args = args.orElse(app.args),
@@ -112,11 +108,21 @@ case class V2AppUpdate(
     upgradeStrategy = upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels = labels.getOrElse(app.labels),
     acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles),
-    version = version.getOrElse(app.version)
+    // TODO AW: is this correct?
+    versionInfo = version.map(OnlyVersion).getOrElse(NoVersion)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): V2AppUpdate = copy(
     id = id.map(_.canonicalPath(base)),
     dependencies = dependencies.map(_.map(_.canonicalPath(base)))
   )
+}
+
+object V2AppUpdate {
+  implicit val appUpdateValidator = validator[V2AppUpdate] { appUp =>
+    appUp.id is valid
+    appUp.dependencies is valid
+    appUp.upgradeStrategy is valid
+    appUp.storeUrls is optional(every(urlsCanBeResolvedValidator))
+  }
 }

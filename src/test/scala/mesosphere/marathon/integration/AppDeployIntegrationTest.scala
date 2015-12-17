@@ -6,7 +6,7 @@ import java.util.UUID
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate }
+import mesosphere.marathon.api.v2.json.V2AppUpdate
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.{ AppDefinition, Command, PathId }
@@ -32,7 +32,7 @@ class AppDeployIntegrationTest
 
   test("create a simple app without health checks") {
     Given("a new app")
-    val app = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
 
     When("The app is deployed")
     val result = marathon.createAppV2(app)
@@ -45,7 +45,7 @@ class AppDeployIntegrationTest
   }
 
   test("backoff delays are reset on configuration changes") {
-    val app: V2AppDefinition = createAFailingAppResultingInBackOff()
+    val app: AppDefinition = createAFailingAppResultingInBackOff()
 
     When("we force deploy a working configuration")
     val deployment2 = marathon.updateApp(app.id, V2AppUpdate(cmd = Some("sleep 120; true")), force = true)
@@ -59,7 +59,7 @@ class AppDeployIntegrationTest
   }
 
   test("backoff delays are NOT reset on scaling changes") {
-    val app: V2AppDefinition = createAFailingAppResultingInBackOff()
+    val app: AppDefinition = createAFailingAppResultingInBackOff()
 
     When("we force deploy a scale change")
     val deployment2 = marathon.updateApp(app.id, V2AppUpdate(instances = Some(3)), force = true)
@@ -74,7 +74,7 @@ class AppDeployIntegrationTest
   }
 
   test("restarting an app with backoff delay starts immediately") {
-    val app: V2AppDefinition = createAFailingAppResultingInBackOff()
+    val app: AppDefinition = createAFailingAppResultingInBackOff()
 
     When("we force a restart")
     val deployment2 = marathon.restartApp(app.id, force = true)
@@ -89,10 +89,10 @@ class AppDeployIntegrationTest
     statuses2 should contain("TASK_FAILED")
   }
 
-  private[this] def createAFailingAppResultingInBackOff(): V2AppDefinition = {
+  private[this] def createAFailingAppResultingInBackOff(): AppDefinition = {
     Given("a new app")
     val app =
-      v2AppProxy(testBasePath / s"app${UUID.randomUUID()}", "v1", instances = 1, withHealth = false)
+      appProxy(testBasePath / s"app${UUID.randomUUID()}", "v1", instances = 1, withHealth = false)
         .copy(
           cmd = Some("false"),
           backoff = 1.hour,
@@ -130,7 +130,7 @@ class AppDeployIntegrationTest
 
   test("increase the app count metric when an app is created") {
     Given("a new app")
-    val app = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
 
     var appCount = (marathon.metrics().entityJson \ "gauges" \ "service.mesosphere.marathon.app.count" \ "value").as[Int]
     appCount should be (0)
@@ -147,7 +147,7 @@ class AppDeployIntegrationTest
   test("create a simple app without health checks via secondary (proxying)") {
     if (!config.useExternalSetup) {
       Given("a new app")
-      val app = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+      val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
 
       When("The app is deployed")
       val result = marathonProxy.createAppV2(app)
@@ -162,7 +162,7 @@ class AppDeployIntegrationTest
 
   test("create a simple app with http health checks") {
     Given("a new app")
-    val app = v2AppProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
+    val app = appProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
       copy(healthChecks = Set(healthCheck))
     val check = appProxyCheck(app.id, "v1", true)
 
@@ -198,7 +198,7 @@ class AppDeployIntegrationTest
 
   test("create a simple app with tcp health checks") {
     Given("a new app")
-    val app = v2AppProxy(testBasePath / "tcp-app", "v1", instances = 1, withHealth = false).
+    val app = appProxy(testBasePath / "tcp-app", "v1", instances = 1, withHealth = false).
       copy(healthChecks = Set(healthCheck.copy(protocol = Protocol.TCP)))
 
     When("The app is deployed")
@@ -212,7 +212,7 @@ class AppDeployIntegrationTest
 
   test("create a simple app with command health checks") {
     Given("a new app")
-    val app = v2AppProxy(testBasePath / "command-app", "v1", instances = 1, withHealth = false).
+    val app = appProxy(testBasePath / "command-app", "v1", instances = 1, withHealth = false).
       copy(healthChecks = Set(healthCheck.copy(protocol = Protocol.COMMAND, command = Some(Command("true")))))
 
     When("The app is deployed")
@@ -227,7 +227,7 @@ class AppDeployIntegrationTest
   test("list running apps and tasks") {
     Given("a new app is deployed")
     val appId = testBasePath / "app"
-    val app = v2AppProxy(appId, "v1", instances = 2, withHealth = false)
+    val app = appProxy(appId, "v1", instances = 2, withHealth = false)
     marathon.createAppV2(app).code should be (201) //Created
 
     When("the deployment has finished")
@@ -247,7 +247,7 @@ class AppDeployIntegrationTest
     Given("a new app that is not healthy")
     val appId = testBasePath / "failing"
     val check = appProxyCheck(appId, "v1", state = false)
-    val app = v2AppProxy(appId, "v1", instances = 1, withHealth = true)
+    val app = appProxy(appId, "v1", instances = 1, withHealth = true)
 
     When("The app is deployed")
     val create = marathon.createAppV2(app)
@@ -276,14 +276,14 @@ class AppDeployIntegrationTest
   test("update an app") {
     Given("a new app")
     val appId = testBasePath / "app"
-    val v1 = v2AppProxy(appId, "v1", instances = 1, withHealth = true)
+    val v1 = appProxy(appId, "v1", instances = 1, withHealth = true)
     marathon.createAppV2(v1).code should be (201)
     waitForEvent("deployment_success")
     val before = marathon.tasks(appId)
 
     When("The app is updated")
     val check = appProxyCheck(appId, "v2", state = true)
-    val update = marathon.updateApp(v1.id, V2AppUpdate(cmd = v2AppProxy(appId, "v2", 1).cmd))
+    val update = marathon.updateApp(v1.id, V2AppUpdate(cmd = appProxy(appId, "v2", 1).cmd))
 
     Then("The app gets updated")
     update.code should be (200)
@@ -294,7 +294,7 @@ class AppDeployIntegrationTest
 
   test("scale an app up and down") {
     Given("a new app")
-    val app = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app).code should be (201)
     waitForEvent("deployment_success")
 
@@ -318,7 +318,7 @@ class AppDeployIntegrationTest
   test("restart an app") {
     Given("a new app")
     val appId = testBasePath / "app"
-    val v1 = v2AppProxy(appId, "v1", instances = 1, withHealth = false)
+    val v1 = appProxy(appId, "v1", instances = 1, withHealth = false)
     marathon.createAppV2(v1).code should be (201)
     waitForEvent("deployment_success")
     val before = marathon.tasks(appId)
@@ -336,7 +336,7 @@ class AppDeployIntegrationTest
 
   test("list app versions") {
     Given("a new app")
-    val v1 = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val v1 = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     val createResponse = marathon.createAppV2(v1)
     createResponse.code should be (201)
     waitForEvent("deployment_success")
@@ -352,7 +352,7 @@ class AppDeployIntegrationTest
 
   test("correctly version apps") {
     Given("a new app")
-    val v1 = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val v1 = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     val createResponse = marathon.createAppV2(v1)
     createResponse.code should be (201)
     val originalVersion = createResponse.value.version
@@ -378,7 +378,7 @@ class AppDeployIntegrationTest
 
   test("kill a task of an App") {
     Given("a new app")
-    val app = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app).code should be (201)
     waitForEvent("deployment_success")
     val taskId = marathon.tasks(app.id).value.head.id
@@ -395,7 +395,7 @@ class AppDeployIntegrationTest
 
   test("kill a task of an App with scaling") {
     Given("a new app")
-    val app = v2AppProxy(testBasePath / "app", "v1", instances = 2, withHealth = false)
+    val app = appProxy(testBasePath / "app", "v1", instances = 2, withHealth = false)
     marathon.createAppV2(app).code should be (201)
     waitForEvent("deployment_success")
     val taskId = marathon.tasks(app.id).value.head.id
@@ -411,7 +411,7 @@ class AppDeployIntegrationTest
 
   test("kill all tasks of an App") {
     Given("a new app with multiple tasks")
-    val app = v2AppProxy(testBasePath / "app", "v1", instances = 2, withHealth = false)
+    val app = appProxy(testBasePath / "app", "v1", instances = 2, withHealth = false)
     marathon.createAppV2(app).code should be (201)
     waitForEvent("deployment_success")
 
@@ -426,7 +426,7 @@ class AppDeployIntegrationTest
 
   test("kill all tasks of an App with scaling") {
     Given("a new app with multiple tasks")
-    val app = v2AppProxy(testBasePath / "tokill", "v1", instances = 2, withHealth = false)
+    val app = appProxy(testBasePath / "tokill", "v1", instances = 2, withHealth = false)
     marathon.createAppV2(app).code should be (201)
     waitForEvent("deployment_success")
     marathon.app(app.id).value.app.instances should be (2)
@@ -444,7 +444,7 @@ class AppDeployIntegrationTest
 
   test("delete an application") {
     Given("a new app with one task")
-    val app = v2AppProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app).code should be (201)
     waitForEvent("deployment_success")
 
@@ -462,11 +462,11 @@ class AppDeployIntegrationTest
     log.info("new app")
     val appIdPath: PathId = testBasePath / "/test/app"
     val appId: String = appIdPath.toString
-    val app = v2AppProxy(appIdPath, "v1", instances = 2, withHealth = false)
+    val app = appProxy(appIdPath, "v1", instances = 2, withHealth = false)
 
     When("the app gets posted")
     log.info("new app")
-    val createdApp: RestResult[V2AppDefinition] = marathon.createAppV2(app)
+    val createdApp: RestResult[AppDefinition] = marathon.createAppV2(app)
 
     Then("the app is created and a success event arrives eventually")
     log.info("new app")
@@ -518,7 +518,7 @@ class AppDeployIntegrationTest
     val appId = testBasePath / "app"
     val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, ports = List.empty)
 
-    val create = marathon.createAppV2(V2AppDefinition(app))
+    val create = marathon.createAppV2(app)
     create.code should be (201) // Created
     val deploymentId = extractDeploymentIds(create).head
 
@@ -543,7 +543,7 @@ class AppDeployIntegrationTest
     val appId = testBasePath / "app"
     val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, ports = List.empty)
 
-    val create = marathon.createAppV2(V2AppDefinition(app))
+    val create = marathon.createAppV2(app)
     create.code should be (201) // Created
     val deploymentId = extractDeploymentIds(create).head
 
@@ -567,7 +567,7 @@ class AppDeployIntegrationTest
 
   def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)
 
-  def extractDeploymentIds(app: RestResult[V2AppDefinition]): Seq[String] = {
+  def extractDeploymentIds(app: RestResult[AppDefinition]): Seq[String] = {
     try {
       for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
         yield (deployment \ "id").as[String]
