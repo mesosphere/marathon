@@ -7,12 +7,21 @@ release.
 
 ### Overview
 
+#### Expose additional app definition variables
+The following environment variables are now available to the tasks:
+
+- `MARATHON_APP_RESOURCE_CPUS` contains the value of the app definition `cpus` value.
+- `MARATHON_APP_RESOURCE_MEM` contains the value of the app definition `mem` value, expressed in megabytes.
+- `MARATHON_APP_RESOURCE_DISK`  value of the app definition `disk` value, expressed in megabytes.
+- `MARATHON_APP_LABELS` contains list of labels of the corresponding app definition. For example: `label1 label2 label3`
+- `MARATHON_APP_LABEL_NAME` contains value of label "NAME" of the corresponding app definition.
+
 #### Health Checks: allow port instead of portIndex
 Previously, the port to be used for health checks could only be specified by supplying a port index.  Now it
 can also be specified directly using the new `port` field.
 
 #### Improved search in the UI
-Previously, the user could search through applications using a field which filtered all applications, 
+Previously, the user could search through applications using a field which filtered all applications,
 In 0.14.0 we replace the filter with a search which leads to a detailed search result view. There are
 various improvements in the search interaction, including the user being returned to their former group
 context after the search term has been cleared.
@@ -27,13 +36,15 @@ Some changes have been made in order to support IP-per-task in the API. The rele
 definition is exposed in the configuration page, and the `ipAddresses` field is integrated in the task
 detail view.
 
-#### 
-
 ### Fixed issues
+- #2505 - Provide memory and cpu as environment variables in docker containers
+- #2509 - Leadership not abdicated on ZK connection loss
 - #2558 - If driver finishes with error, Marathon does not abdicate
-- #2734 - Invalid validation for multiple ports
-- #2720 - Disabled button has wrong colour
+- #2620 - Remove dubious functionality to remove orphaned tasks from TaskTracker storage
 - #2647 - Application cmd override causes application to restart repeatedly
+- #2720 - Disabled button has wrong colour
+- #2734 - Invalid validation for multiple ports
+- #2818 - Remove `Set[MarathonTask]` from TaskTracker
 
 ## Changes from 0.11.1 to 0.13.0
 
