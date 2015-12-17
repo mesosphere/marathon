@@ -35,8 +35,8 @@ addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.7.0")
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.10.1")
 
 // === code coverage tool, https://github.com/scoverage/sbt-scoverage
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.0.4")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.3.3")
 
 // === uploads scala code coverage to https://coveralls.io and integrates with Travis CI, https://github.com/scoverage/sbt-coveralls
-addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.0.0")
+addSbtPlugin("org.scoverage" % "sbt-coveralls" % "1.0.3")
 
