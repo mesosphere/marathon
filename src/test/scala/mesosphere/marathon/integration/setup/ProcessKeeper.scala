@@ -12,6 +12,7 @@ import org.apache.commons.io.FileUtils
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.ListMap
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
 import scala.sys.ShutdownHookThread
@@ -27,7 +28,7 @@ import scala.util.{ Failure, Success, Try }
 object ProcessKeeper {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
-  private[this] var processes = Map.empty[String, Process]
+  private[this] var processes = ListMap.empty[String, Process]
   private[this] var services = List.empty[Service]
 
   private[this] val ENV_MESOS_WORK_DIR: String = "MESOS_WORK_DIR"
@@ -191,8 +192,8 @@ object ProcessKeeper {
   }
 
   def stopAllProcesses(): Unit = {
-    processes.keys.foreach(stopProcess)
-    processes = Map.empty
+    processes.keys.toSeq.reverse.foreach(stopProcess)
+    processes = ListMap.empty
   }
 
   def startService(service: Service): Unit = {
