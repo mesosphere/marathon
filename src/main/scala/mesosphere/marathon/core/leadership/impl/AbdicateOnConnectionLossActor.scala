@@ -39,13 +39,13 @@ private[impl] class AbdicateOnConnectionLossActor(zk: ZooKeeperClient,
     zk.unregister(watcher)
   }
 
-  def disconnected(): Unit = {
-    log.warning("ZooKeeper connection has been dropped. Abdicate Leadership.")
+  def disconnected(event: WatchedEvent): Unit = {
+    log.warning(s"ZooKeeper connection has been dropped. Abdicate Leadership: $event")
     leader.abdicateLeadership()
   }
 
   override def receive: Receive = {
-    case event: WatchedEvent if connectionDropped.contains(event.getState) => disconnected()
+    case event: WatchedEvent if connectionDropped.contains(event.getState) => disconnected(event)
     case event: WatchedEvent => log.info(s"Received ZooKeeper Status event: $event")
   }
 }
