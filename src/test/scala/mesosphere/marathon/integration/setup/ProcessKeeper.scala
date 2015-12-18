@@ -66,7 +66,8 @@ object ProcessKeeper {
 
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String],
                     mainClass: String = "mesosphere.marathon.Main",
-                    startupLine: String = "Started ServerConnector"): Process = {
+                    startupLine: String = "Started ServerConnector",
+                    processName: String = "marathon"): Process = {
 
     val debugArgs = List(
       "-Dakka.loglevel=DEBUG",
@@ -82,7 +83,7 @@ object ProcessKeeper {
     FileUtils.forceMkdir(mesosWorkDirFile)
 
     startJavaProcess(
-      "marathon", heapInMegs = 512, debugArgs ++ argsWithMain, cwd,
+      processName, heapInMegs = 512, debugArgs ++ argsWithMain, cwd,
       env + (ENV_MESOS_WORK_DIR -> mesosWorkDir),
       upWhen = _.contains(startupLine))
   }
@@ -102,6 +103,8 @@ object ProcessKeeper {
   }
 
   def startProcess(name: String, processBuilder: ProcessBuilder, upWhen: String => Boolean, timeout: Duration = 30.seconds): Process = {
+    require(!processes.contains(name), s"Process with $name already started")
+
     sealed trait ProcessState
     case object ProcessIsUp extends ProcessState
     case object ProcessExited extends ProcessState
@@ -132,11 +135,12 @@ object ProcessKeeper {
     val upOrExited = Future.firstCompletedOf(Seq(up.future, processExitCode))(ExecutionContext.global)
     Try(Await.result(upOrExited, timeout)) match {
       case Success(result) =>
-        processes += name -> process
         result match {
           case ProcessExited =>
             throw new IllegalStateException(s"Process $name exited before coming up. Give up. $processBuilder")
-          case ProcessIsUp => log.info(s"Process $name is up and running. ${processes.size} processes in total.")
+          case ProcessIsUp =>
+            processes += name -> process
+            log.info(s"Process $name is up and running. ${processes.size} processes in total.")
         }
       case Failure(_) =>
         process.destroy()
@@ -180,8 +184,10 @@ object ProcessKeeper {
       // Unfortunately, there seem to be race conditions in Process.exitValue.
       // Thus this ugly workaround.
       Await.result(Future {
-        Try(process.destroy())
-        process.exitValue()
+        scala.concurrent.blocking {
+          Try(process.destroy())
+          process.exitValue()
+        }
       }, 5.seconds)
     }
     //retry on fail
@@ -189,6 +195,7 @@ object ProcessKeeper {
       case Success(value)       => processes -= name
       case Failure(NonFatal(e)) => log.error("giving up waiting for processes to finish", e)
     }
+    log.info(s"Stop Process $name: Done")
   }
 
   def stopAllProcesses(): Unit = {
@@ -216,6 +223,7 @@ object ProcessKeeper {
     log.info(s"Cleaning up Processes $processes and Services $services")
     stopAllProcesses()
     stopAllServices()
+    log.info(s"Cleaning up Processes $processes and Services $services: Done")
   }
 
   val shutDownHook: ShutdownHookThread = sys.addShutdownHook {
