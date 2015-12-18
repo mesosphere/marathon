@@ -21,20 +21,25 @@ Previously, the port to be used for health checks could only be specified by sup
 can also be specified directly using the new `port` field.
 
 #### Improved search in the UI
-Previously, the user could search through applications using a field which filtered all applications,
+Previously, the user could search through applications using a field which filtered all applications.
 In 0.14.0 we replace the filter with a search which leads to a detailed search result view. There are
 various improvements in the search interaction, including the user being returned to their former group
 context after the search term has been cleared.
 
 #### Better health status feedback
 The health bars in the application list view are now provided in the application detail view. The tooltips
-in the overview have been consolidated to make them easier to understand. Additionally, the styles of the
-deployment table have been updated inline with the applications list view.
+in the overview have been consolidated to make them easier to understand. The styles of the deployment table 
+have been updated inline with the applications list view. Additionally, it's possible to filter apps by their
+health status in the UI. 
 
 #### IP-per-task UI
 Some changes have been made in order to support IP-per-task in the API. The relevenant part of the app
 definition is exposed in the configuration page, and the `ipAddresses` field is integrated in the task
-detail view.
+detail view. 
+
+#### Direct task log downloads for in the UI
+The `stderr` and `stdout` logs can now be downloaded directly from the task view in the UI. The contents of 
+each task's sandbox is displayed and files are offered for direct download. 
 
 ### Fixed issues
 - #2505 - Provide memory and cpu as environment variables in docker containers
@@ -45,6 +50,8 @@ detail view.
 - #2720 - Disabled button has wrong colour
 - #2734 - Invalid validation for multiple ports
 - #2818 - Remove `Set[MarathonTask]` from TaskTracker
+- #2755 - Memory leak in Marathon UI
+- #2812 - Cannot change configuration of Marathon app after deployment
 
 ## Changes from 0.11.1 to 0.13.0
 
