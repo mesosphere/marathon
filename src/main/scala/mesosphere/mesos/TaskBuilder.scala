@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{ IpAddress, AppDefinition, PathId, DiscoveryInfo }
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
@@ -109,6 +109,9 @@ class TaskBuilder(app: AppDefinition,
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
 
+    val discoveryInfoProto = computeDiscoveryInfo(app)
+    discoveryInfoProto.map(builder.setDiscovery)
+
     if (app.disk != 0) {
       // This is only supported since Mesos 0.22.0 and will result in TASK_LOST messages in combination
       // with older mesos versions. So if the user leaves this untouched, we will NOT pass it to
@@ -124,40 +127,7 @@ class TaskBuilder(app: AppDefinition,
 
     portsResources.foreach(builder.addResources(_))
 
-    val containerProto: Option[ContainerInfo] =
-      app.container.map { c =>
-        val portMappings = c.docker.map { d =>
-          d.portMappings.map { pms =>
-            pms zip ports map {
-              case (mapping, port) =>
-                // Use case: containerPort = 0 and hostPort = 0
-                //
-                // For apps that have their own service registry and require p2p communication,
-                // they will need to advertise
-                // the externally visible ports that their components come up on.
-                // Since they generally know there container port and advertise that, this is
-                // fixed most easily if the container port is the same as the externally visible host
-                // port.
-                if (mapping.containerPort == 0) {
-                  mapping.copy(hostPort = port.toInt, containerPort = port.toInt)
-                }
-                else {
-                  mapping.copy(hostPort = port.toInt)
-                }
-            }
-          }
-        }
-        val containerWithPortMappings = portMappings match {
-          case None => c
-          case Some(newMappings) => c.copy(
-            docker = c.docker.map {
-              _.copy(portMappings = newMappings)
-            }
-          )
-        }
-        containerWithPortMappings.toMesos()
-      }
-
+    val containerProto = computeContainerInfo(ports)
     val envPrefix: Option[String] = config.envVarsPrefix.get
     executor match {
       case CommandExecutor() =>
@@ -203,6 +173,86 @@ class TaskBuilder(app: AppDefinition,
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
 
     Some(builder.build -> ports)
+  }
+
+  protected def computeDiscoveryInfo(app: AppDefinition): Option[org.apache.mesos.Protos.DiscoveryInfo] = {
+    // TODO (gkleiman@): fill in DiscoveryInfo even if an app doesn't request an IP-per-task
+    app.ipAddress match {
+      case Some(IpAddress(_, _, DiscoveryInfo(ports))) if ports.nonEmpty =>
+        val builder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
+
+        builder.setName(app.id.toHostname)
+        // TODO(gkleiman@) define the default visibility
+        builder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
+
+        val portsProto = org.apache.mesos.Protos.Ports.newBuilder
+        portsProto.addAllPorts(ports.map(_.toProto).asJava)
+        builder.setPorts(portsProto)
+
+        Some(builder.build)
+      case _ => None
+    }
+  }
+
+  protected def computeContainerInfo(ports: Seq[Long]): Option[ContainerInfo] = {
+    if (app.container.isEmpty && app.ipAddress.isEmpty) None
+    else {
+      val builder = ContainerInfo.newBuilder
+
+      // Fill in Docker container details if necessary
+      app.container.foreach { c =>
+        val portMappings = c.docker.map { d =>
+          d.portMappings.map { pms =>
+            pms zip ports map {
+              case (mapping, port) =>
+                // Use case: containerPort = 0 and hostPort = 0
+                //
+                // For apps that have their own service registry and require p2p communication,
+                // they will need to advertise
+                // the externally visible ports that their components come up on.
+                // Since they generally know there container port and advertise that, this is
+                // fixed most easily if the container port is the same as the externally visible host
+                // port.
+                if (mapping.containerPort == 0) {
+                  mapping.copy(hostPort = port.toInt, containerPort = port.toInt)
+                }
+                else {
+                  mapping.copy(hostPort = port.toInt)
+                }
+            }
+          }
+        }
+
+        val containerWithPortMappings = portMappings match {
+          case None => c
+          case Some(newMappings) => c.copy(
+            docker = c.docker.map {
+              _.copy(portMappings = newMappings)
+            }
+          )
+        }
+        builder.mergeFrom(containerWithPortMappings.toMesos())
+      }
+
+      // Set NetworkInfo if necessary
+      app.ipAddress.foreach { ipAddress =>
+        val ipAddressLabels = Labels.newBuilder().addAllLabels(ipAddress.labels.map {
+          case (key, value) => Label.newBuilder.setKey(key).setValue(value).build()
+        }.asJava)
+        val networkInfo: NetworkInfo.Builder =
+          NetworkInfo.newBuilder()
+            .addAllGroups(ipAddress.groups.asJava)
+            .setLabels(ipAddressLabels)
+            .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
+        builder.addNetworkInfos(networkInfo)
+      }
+
+      // Set container type to MESOS by default (this is a required field)
+      if (!builder.hasType)
+        builder.setType(ContainerInfo.Type.MESOS)
+
+      Some(builder.build)
+    }
   }
 
 }
@@ -260,14 +310,14 @@ object TaskBuilder {
     builder.build
   }
 
-  private def isExtract(stringuri: String): Boolean = {
-    stringuri.endsWith(".tgz") ||
-      stringuri.endsWith(".tar.gz") ||
-      stringuri.endsWith(".tbz2") ||
-      stringuri.endsWith(".tar.bz2") ||
-      stringuri.endsWith(".txz") ||
-      stringuri.endsWith(".tar.xz") ||
-      stringuri.endsWith(".zip")
+  private def isExtract(stringUri: String): Boolean = {
+    stringUri.endsWith(".tgz") ||
+      stringUri.endsWith(".tar.gz") ||
+      stringUri.endsWith(".tbz2") ||
+      stringUri.endsWith(".tar.bz2") ||
+      stringUri.endsWith(".txz") ||
+      stringUri.endsWith(".tar.xz") ||
+      stringUri.endsWith(".zip")
   }
 
   def environment(vars: Map[String, String]): Environment = {

@@ -8,6 +8,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
 import mesosphere.marathon.event.{ EventModule, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.tasks.MarathonTasks
 import org.apache.mesos.Protos.TaskState.{
   TASK_ERROR,
   TASK_FAILED,
@@ -61,6 +62,7 @@ class PostToEventStreamStepImpl @Inject() (
         if (status.hasMessage) status.getMessage else "",
         appId,
         task.getHost,
+        MarathonTasks.ipAddresses(task),
         task.getPortsList.asScala,
         task.getVersion,
         timestamp = timestamp.toString

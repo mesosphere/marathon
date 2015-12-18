@@ -12,7 +12,7 @@ import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
-import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.JavaConverters._
@@ -69,11 +69,15 @@ case class AppDefinition(
 
   acceptedResourceRoles: Option[Set[String]] = None,
 
+  ipAddress: Option[IpAddress] = None,
+
   versionInfo: VersionInfo = VersionInfo.NoVersion)
 
     extends MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
+
+  require(ipAddress.isEmpty || ports.isEmpty, "IP address and ports are not allowed at the same time")
 
   /**
     * Returns true if all health check port index values are in the range
@@ -126,6 +130,8 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
+
+    ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
@@ -195,6 +201,8 @@ case class AppDefinition(
       else
         OnlyVersion(Timestamp(proto.getVersion))
 
+    val ipAddressOption = if (proto.hasIpAddress) Some(IpAddress.fromProto(proto.getIpAddress)) else None
+
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -222,7 +230,8 @@ case class AppDefinition(
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
-      dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet
+      dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
+      ipAddress = ipAddressOption
     )
   }
 
@@ -230,7 +239,7 @@ case class AppDefinition(
     for {
       c <- container
       d <- c.docker
-      n <- d.network if n == Network.BRIDGE
+      n <- d.network if n == DockerInfo.Network.BRIDGE
       pms <- d.portMappings
     } yield pms
 

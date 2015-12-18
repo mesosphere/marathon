@@ -6,7 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event.{ MesosStatusUpdateEvent, MarathonEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil }
 import mesosphere.marathon.test.{ CaptureLogEvents, CaptureEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
@@ -39,14 +39,15 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     events should have size 1
     events should be (Seq(
       MesosStatusUpdateEvent(
-        slaveId.getValue,
-        taskId.getValue,
-        status.getState.name,
-        taskStatusMessage,
-        appId,
-        host,
-        portsList.asJava.asScala,
-        version.toString,
+        slaveId = slaveId.getValue,
+        taskId = taskId.getValue,
+        taskStatus = status.getState.name,
+        message = taskStatusMessage,
+        appId = appId,
+        host = host,
+        ipAddresses = Nil,
+        ports = portsList.asJava.asScala,
+        version = version.toString,
         timestamp = updateTimestamp.toString
       )
     ))
@@ -105,14 +106,15 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     events should have size 1
     events should be (Seq(
       MesosStatusUpdateEvent(
-        slaveId.getValue,
-        taskId.getValue,
-        status.getState.name,
-        taskStatusMessage,
-        appId,
-        host,
-        portsList.asJava.asScala,
-        version.toString,
+        slaveId = slaveId.getValue,
+        taskId = taskId.getValue,
+        taskStatus = status.getState.name,
+        message = taskStatusMessage,
+        appId = appId,
+        host = host,
+        ipAddresses = Nil,
+        ports = portsList.asJava.asScala,
+        version = version.toString,
         timestamp = updateTimestamp.toString
       )
     ))
