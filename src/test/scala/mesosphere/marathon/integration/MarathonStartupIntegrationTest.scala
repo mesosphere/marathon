@@ -19,7 +19,8 @@ class MarathonStartupIntegrationTest extends IntegrationFunSuite
       cwd,
       env,
       List("--http_port", config.marathonBasePort.toString, "--zk", config.zk, "--master", config.master),
-      startupLine = "Failed to start all services."
+      startupLine = "Failed to start all services.",
+      processName = "marathonFail"
     )
 
     Then("the new process should fail and exit with an error code")
