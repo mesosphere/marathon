@@ -10,6 +10,9 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.mesos.protos.TaskID
 
+/**
+  * @param updatesListener if set then will receive all [[HealthCheckActor#TaskHealthUpdate]]
+  */
 class HealthCheckActor(
     appId: PathId,
     appVersion: String,
@@ -17,7 +20,8 @@ class HealthCheckActor(
     marathonScheduler: MarathonScheduler,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
-    eventBus: EventStream) extends Actor with ActorLogging {
+    eventBus: EventStream,
+    updatesListener: Option[ActorRef]) extends Actor with ActorLogging {
 
   import context.dispatcher
   import mesosphere.marathon.health.HealthCheckActor.{ GetTaskHealth, _ }
@@ -25,7 +29,7 @@ class HealthCheckActor(
   import mesosphere.mesos.protos.Implicits._
 
   var nextScheduledCheck: Option[Cancellable] = None
-  var taskHealth = Map[String, Health]()
+  var taskHealth = Map[TaskId, Health]()
 
   val workerProps = Props[HealthCheckWorkerActor]
 
@@ -122,9 +126,15 @@ class HealthCheckActor(
       task.getStartedAt + healthCheck.gracePeriod.toMillis > System.currentTimeMillis()
   }
 
+  //TODO: this actor will blow if somebody will accidentally send unrecognized message, if this is intentional then
+  //TODO: we need to be sure if parent actor is ready to handle that; otherwise we can catch any unsupported message
+  //TODO: and log as a warning (just add
+  //TODO: case unsupportedMessage => log.warning(s"""received unsupported message
+  //TODO: ${unsupportedMessage.getClass.getName}: "$unsupportedMessage""""))
+  //
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
-  def receive: Receive = {
+  override def receive: Receive = {
     case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
 
     case GetAppHealth =>
@@ -163,6 +173,17 @@ class HealthCheckActor(
 
       taskHealth += (taskId -> newHealth)
 
+      updatesListener.map { updatesListener =>
+
+        val healthCheckActor = HealthCheckActor.TaskHealthChange(
+          taskId,
+          healthCheck,
+          previousHealth = taskHealth.get(taskId),
+          currentHealth = newHealth)
+
+        if (healthCheckActor.previousHealth != healthCheckActor.currentHealth) updatesListener ! healthCheckActor
+      }
+
       if (health.alive != newHealth.alive) {
         eventBus.publish(
           HealthStatusChanged(
@@ -180,10 +201,23 @@ class HealthCheckActor(
 }
 
 object HealthCheckActor {
-  // self-sent every healthCheck.intervalSeconds
-  case object Tick
-  case class GetTaskHealth(taskId: String)
+
+  /**
+    * Self-sent every healthCheck.intervalSeconds.
+    */
+  protected case object Tick
+
+  case class GetTaskHealth(taskId: TaskId)
   case object GetAppHealth
 
   case class AppHealth(health: Seq[Health])
+
+  /**
+    * Will be automatically emitted on every update to listener actor (passed via constructor).
+    */
+  case class TaskHealthChange(taskId: TaskId,
+                              healthCheck: HealthCheck,
+                              previousHealth: Option[Health],
+                              currentHealth: Health)
+
 }

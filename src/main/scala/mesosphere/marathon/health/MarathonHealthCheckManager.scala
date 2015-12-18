@@ -34,7 +34,7 @@ class MarathonHealthCheckManager @Inject() (
     healthCheck: HealthCheck,
     actor: ActorRef)
 
-  protected[this] var appHealthChecks: RWLock[mutable.Map[PathId, Map[Timestamp, Set[ActiveHealthCheck]]]] =
+  protected[this] val appHealthChecks: RWLock[mutable.Map[PathId, Map[Timestamp, Set[ActiveHealthCheck]]]] =
     RWLock(mutable.Map.empty.withDefaultValue(Map.empty.withDefaultValue(Set.empty)))
 
   override def list(appId: PathId): Set[HealthCheck] =
@@ -59,11 +59,16 @@ class MarathonHealthCheckManager @Inject() (
 
       else {
         log.info(s"Adding health check for app [$appId] and version [$appVersion]: [$healthCheck]")
-        val ref = system.actorOf(
-          Props(classOf[HealthCheckActor],
-            appId, appVersion.toString, driverHolder, scheduler, healthCheck, taskTracker, eventBus))
+
+        val props = Props(new HealthCheckActor(
+          appId, appVersion.toString, driverHolder, scheduler, healthCheck, taskTracker, eventBus, None)
+        )
+
+        //TODO: if child actor would fail this information would go straight into main guard and I am not sure if that
+        //TODO: expected behaviour, maybe MarathonHealthCheckManager should be notified about failure?
+        val actorRef = system.actorOf(props)
         val newHealthChecksForApp =
-          healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
+          healthChecksForApp + ActiveHealthCheck(healthCheck, actorRef)
 
         val appMap = ahcs(appId) + (appVersion -> newHealthChecksForApp)
         ahcs += appId -> appMap
