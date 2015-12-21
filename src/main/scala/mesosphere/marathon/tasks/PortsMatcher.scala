@@ -74,7 +74,7 @@ class PortsMatcher(
     */
   private[this] def findPortsInOffer(requiredPorts: Seq[Integer], failLog: Boolean): Option[Seq[PortWithRole]] = {
     takeEnoughPortsOrNone(expectedSize = requiredPorts.size) {
-      requiredPorts.sorted.iterator.map { (port: Integer) =>
+      requiredPorts.iterator.map { (port: Integer) =>
         offeredPortRanges.find(_.contains(port)).map { offeredRange =>
           PortWithRole(offeredRange.role, port)
         } orElse {
