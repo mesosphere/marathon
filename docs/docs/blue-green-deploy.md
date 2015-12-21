@@ -13,7 +13,7 @@ In a production environment, you would typically script this process and integra
 ## Requirements
 
 - A Marathon-based app with health checks that accurately reflect the health of the application.
-- The app must expose a metric endpoint to determine whether the app has any pending operations. For example, the application could expose a global atomic counter of the number of currently queued DB transactions.
+- The app must expose a metric endpoint to determine whether the app has any pending operations. For example, the application could expose a global atomic gauge of the number of currently queued DB transactions.
 - The [jq] (https://stedolan.github.io/jq/) command-line JSON processor. 
 - If you are using open source Mesos, [configure the DCOS CLI] ( https://github.com/mesosphere/dcos-cli#using-the-cli-without-dcos).
 
