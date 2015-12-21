@@ -66,6 +66,16 @@ class PortsMatcherTest extends MarathonSpec {
     assert(matcher.portRanges.get.map(_.role) == Seq("*"))
   }
 
+  // #2865 Multiple explicit ports are mixed up in task json
+  test("get ports with requirePorts preserves the ports order") {
+    val app = AppDefinition(ports = Seq(100, 80), requirePorts = true)
+    val offer = makeBasicOffer(beginPort = 70, endPort = 200).build
+    val matcher = new PortsMatcher(app, offer, acceptedResourceRoles = Set("*"))
+
+    assert(matcher.matches)
+    assert(matcher.ports == Seq(100, 80))
+  }
+
   test("get ports from multiple resources, preserving role") {
     val app = AppDefinition(ports = Seq(80, 81, 82, 83, 84))
     val portsResource = RangesResource(

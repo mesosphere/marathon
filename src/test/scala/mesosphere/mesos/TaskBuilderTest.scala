@@ -1056,6 +1056,40 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   }
 
+  // #2865 Multiple explicit ports are mixed up in task json
+  test("build with requirePorts preserves the port order") {
+    val offer = makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 25000, endPort = 26000).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        ports = Seq(25552, 25551),
+        requirePorts = true
+      )
+    )
+
+    val Some((taskInfo, _)) = task
+
+    val env: Map[String, String] =
+      taskInfo.getCommand.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
+
+    assert("25552" == env("PORT0"))
+    assert("25552" == env("PORT_25552"))
+    assert("25551" == env("PORT1"))
+    assert("25551" == env("PORT_25551"))
+
+    val portsFromTaskInfo = {
+      val asScalaRanges = for {
+        resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
+        range <- resource.getRanges.getRangeList.asScala
+      } yield range.getBegin to range.getEnd
+      asScalaRanges.flatMap(_.iterator).toList
+    }
+    assert(portsFromTaskInfo == Seq(25552, 25551))
+  }
+
   def buildIfMatches(
     offer: Offer,
     app: AppDefinition,
