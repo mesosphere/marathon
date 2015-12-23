@@ -716,14 +716,16 @@ trait V2Formats {
           upgradeStrategy: Option[UpgradeStrategy],
           labels: Option[Map[String, String]],
           version: Option[Timestamp],
-          acceptedResourceRoles: Option[Set[String]])
+          acceptedResourceRoles: Option[Set[String]],
+          ipAddress: Option[IpAddress])
 
         val extraReads: Reads[ExtraFields] =
           (
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]] ~
             (__ \ "version").readNullable[Timestamp] ~
-            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty)
+            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
+            (__ \ "ipAddress").readNullable[IpAddress]
           )(ExtraFields)
 
         extraReads.map { extraFields =>
@@ -731,7 +733,8 @@ trait V2Formats {
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             version = extraFields.version,
-            acceptedResourceRoles = extraFields.acceptedResourceRoles
+            acceptedResourceRoles = extraFields.acceptedResourceRoles,
+            ipAddress = extraFields.ipAddress
           )
         }
 

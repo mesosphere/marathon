@@ -5,7 +5,6 @@ import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.upgrade.DeploymentPlan
-import org.apache.mesos.Protos
 import play.api.libs.json._
 
 /**
@@ -79,7 +78,8 @@ object V2TestFormats {
       "upgradeStrategy" -> update.upgradeStrategy,
       "labels" -> update.labels,
       "version" -> update.version,
-      "acceptedResourceRoles" -> update.acceptedResourceRoles
+      "acceptedResourceRoles" -> update.acceptedResourceRoles,
+      "ipAddress" -> update.ipAddress
     )
   }
 }
