@@ -130,7 +130,7 @@ In the following example application definition, we will focus on a simple Docke
 }
 ```
 
-Since launching Docker-based apps is currently not directly supported by the Marathon UI, we will use the [HTTP API]({{ site.baseurl }}/docs/rest-api.html) to deploy the app `basic-3`:
+In this example, we are going to use the [HTTP API]({{ site.baseurl }}/docs/rest-api.html) to deploy the app `basic-3`:
 
 ```sh
 curl -X POST http://10.141.141.10:8080/v2/apps -d @basic-3.json -H "Content-type: application/json"
