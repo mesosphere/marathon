@@ -62,7 +62,7 @@ give us feedback (particularly on violations of the versioning policy).
 To launch Marathon in *production mode*, you need to have both
 ZooKeeper and Mesos running. The following command launches
 Marathon in *production mode*. Point your web browser to
-`localhost:8080` and you should see the Marathon UI.
+`localhost:8080` and you should see the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html).
 
 ``` console
 $ ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
