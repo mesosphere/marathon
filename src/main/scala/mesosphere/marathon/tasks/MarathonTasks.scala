@@ -1,7 +1,7 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Attribute
 
@@ -39,13 +39,20 @@ object MarathonTasks {
   /**
     * Returns the IP address (as string) to use connect to the task.
     *
-    * If the supplied task has at least one NetworkInfo with an IP address
-    * filled in, this function returns the first such address.
+    * If the supplied app has a non-empty IpAddress and the task has at least one NetworkInfo with an IP address filled
+    * in, this function returns the first such address.
     *
     * In all other cases, this function returns the slave host address.
     */
-  def effectiveIpAddress(task: MarathonTask): String = {
-    ipAddresses(task).map(_.getIpAddress).headOption.getOrElse(task.getHost)
+  def effectiveIpAddress(app: AppDefinition, task: MarathonTask): String = {
+    val maybeContainerIp: Option[String] = ipAddresses(task).map(_.getIpAddress).headOption
+
+    maybeContainerIp match {
+      case Some(ipAddress) if app.ipAddress.isDefined =>
+        ipAddress
+      case _ =>
+        task.getHost
+    }
   }
 
   def taskMap(tasks: Iterable[MarathonTask]): Map[String, MarathonTask] = tasks.map(task => task.getId -> task).toMap

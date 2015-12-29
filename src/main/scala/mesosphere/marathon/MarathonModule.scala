@@ -75,6 +75,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[ZooKeeperClient]).toInstance(zk)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
+    bind(classOf[ZookeeperConf]).toInstance(conf)
 
     // needs to be eager to break circular dependencies
     bind(classOf[SchedulerCallbacks]).to(classOf[SchedulerCallbacksServiceAdapter]).asEagerSingleton()

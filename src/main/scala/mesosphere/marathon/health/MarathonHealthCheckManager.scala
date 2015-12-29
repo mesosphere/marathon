@@ -12,14 +12,14 @@ import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthChec
 import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
-import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.{ ZookeeperConf, MarathonScheduler, MarathonSchedulerDriverHolder }
 import mesosphere.util.RWLock
 import mesosphere.util.ThreadPoolContext.context
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.collection.immutable.{ Map, Seq }
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
 class MarathonHealthCheckManager @Inject() (
@@ -28,7 +28,8 @@ class MarathonHealthCheckManager @Inject() (
     driverHolder: MarathonSchedulerDriverHolder,
     @Named(EventModule.busName) eventBus: EventStream,
     taskTracker: TaskTracker,
-    appRepository: AppRepository) extends HealthCheckManager {
+    appRepository: AppRepository,
+    zkConf: ZookeeperConf) extends HealthCheckManager {
 
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,
@@ -59,16 +60,22 @@ class MarathonHealthCheckManager @Inject() (
 
       else {
         log.info(s"Adding health check for app [$appId] and version [$appVersion]: [$healthCheck]")
-        val ref = system.actorOf(
-          Props(classOf[HealthCheckActor],
-            appId, appVersion.toString, driverHolder, scheduler, healthCheck, taskTracker, eventBus))
-        val newHealthChecksForApp =
-          healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
+        Await.result(appRepository.app(appId, appVersion), zkConf.zkTimeoutDuration) match {
+          case Some(app: AppDefinition) =>
+            val ref = system.actorOf(
+              Props(
+                classOf[HealthCheckActor],
+                app, driverHolder, scheduler, healthCheck, taskTracker, eventBus))
+            val newHealthChecksForApp =
+              healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 
-        val appMap = ahcs(appId) + (appVersion -> newHealthChecksForApp)
-        ahcs += appId -> appMap
+            val appMap = ahcs(appId) + (appVersion -> newHealthChecksForApp)
+            ahcs += appId -> appMap
 
-        eventBus.publish(AddHealthCheck(appId, appVersion, healthCheck))
+            eventBus.publish(AddHealthCheck(appId, appVersion, healthCheck))
+          case None =>
+            log.warn(s"Couldn't add health check for app [$appId] and version [$appVersion] - app definition not found")
+        }
       }
     }
 

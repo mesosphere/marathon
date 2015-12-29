@@ -1,15 +1,22 @@
 package mesosphere.marathon.tasks
 
-import scala.collection.JavaConverters._
+import java.lang.{ Integer => JInt }
+
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos._
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, IpAddress, Timestamp }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
+
+import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 
 class MarathonTasksTest extends MarathonSpec with Matchers {
 
   class Fixture {
+    val appWithoutIpAddress = AppDefinition(id = "/foo/bar".toPath, ipAddress = None)
+    val appWithIpAddress = AppDefinition(id = "/foo/bar".toPath, ports = Seq.empty[JInt], ipAddress = Some(IpAddress()))
 
     val networkWithoutIp = mesos.NetworkInfo.newBuilder.build()
 
@@ -80,20 +87,30 @@ class MarathonTasksTest extends MarathonSpec with Matchers {
       .build
   }
 
-  test("Compute effectiveIpAddress for MarathonTask instances without their own IP addresses") {
+  test("effectiveIpAddress returns the agent address for MarathonTask instances without their own IP addresses") {
     val f = new Fixture
-    MarathonTasks.effectiveIpAddress(f.taskWithoutIp) should equal ("agent1.mesos")
+    MarathonTasks.effectiveIpAddress(f.appWithIpAddress, f.taskWithoutIp) should equal ("agent1.mesos")
+    MarathonTasks.effectiveIpAddress(f.appWithoutIpAddress, f.taskWithoutIp) should equal ("agent1.mesos")
   }
 
-  test("Compute effectiveIpAddress for MarathonTask instances with one NetworkInfo") {
+  test("effectiveIpAddress returns the container ip for MarathonTask instances with one NetworkInfo (if the app requests an IP)") {
     val f = new Fixture
-    MarathonTasks.effectiveIpAddress(f.taskWithOneIp) should equal ("123.123.123.123")
+    MarathonTasks.effectiveIpAddress(f.appWithIpAddress, f.taskWithOneIp) should equal ("123.123.123.123")
   }
 
-  test("Compute effectiveIpAddress for MarathonTask instances with multiple NetworkInfos") {
+  test("effectiveIpAddress returns the first container ip for for MarathonTask instances with multiple NetworkInfos (if the app requests an IP)") {
     val f = new Fixture
-    MarathonTasks.effectiveIpAddress(f.taskWithMultipleNetworksAndOneIp) should equal ("123.123.123.123")
-    MarathonTasks.effectiveIpAddress(f.taskWithMultipleNetworkAndNoIp) should equal ("agent1.mesos")
+    MarathonTasks.effectiveIpAddress(f.appWithIpAddress, f.taskWithMultipleNetworksAndOneIp) should equal ("123.123.123.123")
+  }
+
+  test("effectiveIpAddress falls back to the agent IP") {
+    val f = new Fixture
+    MarathonTasks.effectiveIpAddress(f.appWithIpAddress, f.taskWithMultipleNetworkAndNoIp) should equal("agent1.mesos")
+  }
+
+  test("effectiveIpAddress returns the agent ip for MarathonTask instances with one NetworkInfo (if the app does NOT request an IP)") {
+    val f = new Fixture
+    MarathonTasks.effectiveIpAddress(f.appWithoutIpAddress, f.taskWithOneIp) should equal ("agent1.mesos")
   }
 
   test("ipAddresses returns an empty list for MarathonTask instances with no IPs") {
