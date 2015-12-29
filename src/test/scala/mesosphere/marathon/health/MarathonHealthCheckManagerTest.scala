@@ -30,6 +30,8 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
 
   implicit var system: ActorSystem = _
 
+  val appId = "test".toRootPath
+
   before {
     val metrics = new Metrics(new MetricRegistry)
 
@@ -56,7 +58,8 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
       new MarathonSchedulerDriverHolder,
       eventStream,
       taskTracker,
-      appRepository
+      appRepository,
+      config
     )
   }
 
@@ -96,18 +99,19 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
   }
 
   test("Add") {
+    val app: AppDefinition = AppDefinition(id = appId)
+    appRepository.store(app).futureValue
+
     val healthCheck = HealthCheck()
-    val version = Timestamp(1024)
-    hcManager.add("test".toRootPath, version, healthCheck)
-    assert(hcManager.list("test".toRootPath).size == 1)
+    hcManager.add(appId, app.version, healthCheck)
+    assert(hcManager.list(appId).size == 1)
   }
 
   test("Update") {
-    val appId = "test".toRootPath
+    val app: AppDefinition = AppDefinition(id = appId)
+    appRepository.store(app).futureValue
 
     val taskId = TaskIdUtil.newTaskId(appId)
-
-    val version = Timestamp(1024)
 
     val taskStatus = mesos.TaskStatus.newBuilder
       .setTaskId(taskId)
@@ -117,7 +121,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
 
     val marathonTask = MarathonTask.newBuilder
       .setId(taskId.getValue)
-      .setVersion(version.toString)
+      .setVersion(app.version.toString)
       .build
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
@@ -125,14 +129,14 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
     taskTracker.created(appId, marathonTask).futureValue
     taskTracker.statusUpdate(appId, taskStatus).futureValue
 
-    hcManager.add(appId, version, healthCheck)
+    hcManager.add(appId, app.version, healthCheck)
 
     val status1 = hcManager.status(appId, taskId.getValue).futureValue
     assert(status1 == Seq(Health(taskId.getValue)))
 
     // send unhealthy task status
     EventFilter.info(start = "Received health result for app", occurrences = 1).intercept {
-      hcManager.update(taskStatus.toBuilder.setHealthy(false).build, version)
+      hcManager.update(taskStatus.toBuilder.setHealthy(false).build, app.version)
     }
 
     val Seq(health2) = hcManager.status(appId, taskId.getValue).futureValue
@@ -141,7 +145,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
 
     // send healthy task status
     EventFilter.info(start = "Received health result for app", occurrences = 1).intercept {
-      hcManager.update(taskStatus.toBuilder.setHealthy(true).build, version)
+      hcManager.update(taskStatus.toBuilder.setHealthy(true).build, app.version)
     }
 
     val Seq(health3) = hcManager.status(appId, taskId.getValue).futureValue
@@ -151,9 +155,8 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
   }
 
   test("statuses") {
-    val appId = "test".toRootPath
     val app: AppDefinition = AppDefinition(id = appId)
-    appRepository.store(app)
+    appRepository.store(app).futureValue
     val version = app.version
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
@@ -208,7 +211,6 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
   }
 
   test("reconcileWith") {
-    val appId = "test".toRootPath
     def taskStatus(task: MarathonTask, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
       mesos.TaskStatus.newBuilder
         .setTaskId(mesos.TaskID.newBuilder()
