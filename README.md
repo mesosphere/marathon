@@ -44,11 +44,33 @@ We heartily welcome external contributions to Marathon's documentation. Document
 
 ## Setting Up And Running Marathon
 
+### Dependencies
+Marathon has the following compile-time dependencies:
+* sbt - A build tool for scala. You can find the instructions for installing sbt for Mac OS X and Linux over [here](http://www.scala-sbt.org/0.13/tutorial/Setup.html).
+* JDK 1.8+
+
+For run-time, Marathon has the following dependencies:
+* libmesos - JNI bindings for talking to Apache Mesos master. Look at the *Install Mesos* section for instructions to get libmesos.
+* Apache Zookeeper - You can have a spearate Zookeeper installation specifically for Marathon, or you can use the same Zookeeper used by Mesos.
+
 ### Installation
 
 #### Install Mesos
+Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are two options for installing Apache Mesos. 
 
-Marathon requires Mesos installed on the same machine in order to use a shared library. Instructions on how to install prepackaged releases of Mesos are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/).
+##### Installing Mesos from prepackaged releases 
+Instructions on how to install prepackaged releases of Mesos are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/).
+
+##### Building Mesos from source
+**NOTE:** *Choose this option only if building Marathon from source, else there might be version incompatibility between pre-packaged releases of Marathon and Mesos built from source.*
+
+You can find the instructions for compiling Mesos from source in the [Apache Mesos getting started docs](http://mesos.apache.org/gettingstarted/). If you want Mesos to install libraries and executables in a non-default location use the --prefix option during configuration as follows:
+
+```console
+./configure --prefix=<path to Mesos installation>
+```
+
+The `make install` will install libmesos (libmesos.so on Linux and libmesos.dylib on Mac OS X) in the install directory.
 
 #### Install Marathon
 
