@@ -9,10 +9,10 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{ AppDefinition, Command, PathId }
+import mesosphere.marathon.integration.setup.MarathonFacade._
+import mesosphere.marathon.state._
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
-import play.api.libs.json.JsArray
 
 import scala.collection.immutable
 import scala.concurrent.duration._
@@ -566,15 +566,4 @@ class AppDeployIntegrationTest
   }
 
   def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)
-
-  def extractDeploymentIds(app: RestResult[AppDefinition]): Seq[String] = {
-    try {
-      for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
-        yield (deployment \ "id").as[String]
-    }
-    catch {
-      case NonFatal(e) =>
-        throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
-    }
-  }
 }

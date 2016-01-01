@@ -9,7 +9,7 @@ FROM java:8-jdk
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
     echo "deb http://repos.mesosphere.io/debian jessie main" | tee /etc/apt/sources.list.d/mesosphere.list && \
     apt-get update && \
-    apt-get install --no-install-recommends -y --force-yes mesos=0.26.0-0.2.145.debian81
+    apt-get install --no-install-recommends -y --force-yes mesos=0.26.0-0.2.145.debian81 lxc
 
 # Install sbt manually
 COPY ./project/build.properties /marathon/project/build.properties
@@ -18,6 +18,9 @@ RUN eval $(sed s/sbt.version/SBT_VERSION/ </marathon/project/build.properties) &
     wget -P /usr/local/bin/ https://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/$SBT_VERSION/sbt-launch.jar
 COPY project/sbt /usr/local/bin/
 RUN chmod +x /usr/local/bin/sbt
+
+ARG DOCKER_VERSION=latest
+RUN curl -o /usr/bin/docker https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VERSION} && chmod +x /usr/bin/docker
 
 WORKDIR /marathon
 
