@@ -54,7 +54,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * <span class="label label-default">v0.13.0</span> `--[disable_]ha` (Optional. Default: enabled):
     Run Marathon in HA mode with leader election.
     Allows starting an arbitrary number of other Marathons but all need to be
-    started in HA mode. This mode requires a running ZooKeeper. See `--master`.
+    started in HA mode. This mode requires a running ZooKeeper.
 * `--hostname` (Optional. Default: hostname of machine): The advertised hostname
     that is used for the communication with the mesos master.
     The value is also stored in the persistent store so another standby host can redirect to the elected leader.
