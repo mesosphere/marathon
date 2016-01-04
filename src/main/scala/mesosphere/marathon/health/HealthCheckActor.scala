@@ -5,14 +5,13 @@ import akka.event.EventStream
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder }
 import mesosphere.mesos.protos.TaskID
 
 class HealthCheckActor(
-    appId: PathId,
-    appVersion: String,
+    app: AppDefinition,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     marathonScheduler: MarathonScheduler,
     healthCheck: HealthCheck,
@@ -32,8 +31,8 @@ class HealthCheckActor(
   override def preStart(): Unit = {
     log.info(
       "Starting health check actor for app [{}] version [{}] and healthCheck [{}]",
-      appId,
-      appVersion,
+      app.id,
+      app.version,
       healthCheck
     )
     scheduleNextHealthCheck()
@@ -42,8 +41,8 @@ class HealthCheckActor(
   override def preRestart(reason: Throwable, message: Option[Any]): Unit =
     log.info(
       "Restarting health check actor for app [{}] version [{}] and healthCheck [{}]",
-      appId,
-      appVersion,
+      app.id,
+      app.version,
       healthCheck
     )
 
@@ -51,8 +50,8 @@ class HealthCheckActor(
     nextScheduledCheck.forall { _.cancel() }
     log.info(
       "Stopped health check actor for app [{}] version [{}] and healthCheck [{}]",
-      appId,
-      appVersion,
+      app.id,
+      app.version,
       healthCheck
     )
   }
@@ -60,11 +59,11 @@ class HealthCheckActor(
   def purgeStatusOfDoneTasks(): Unit = {
     log.debug(
       "Purging health status of done tasks for app [{}] version [{}] and healthCheck [{}]",
-      appId,
-      appVersion,
+      app.id,
+      app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.getTasks(appId).map(_.getId).toSet
+    val activeTaskIds = taskTracker.getTasks(app.id).map(_.getId).toSet
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
     taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
@@ -74,8 +73,8 @@ class HealthCheckActor(
     if (healthCheck.protocol != Protocol.COMMAND) {
       log.debug(
         "Scheduling next health check for app [{}] version [{}] and healthCheck [{}]",
-        appId,
-        appVersion,
+        app.id,
+        app.version,
         healthCheck
       )
       nextScheduledCheck = Some(
@@ -87,11 +86,11 @@ class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.getTasks(appId).foreach { task =>
-      if (task.getVersion == appVersion && task.hasStartedAt) {
+    taskTracker.getTasks(app.id).foreach { task =>
+      if (task.getVersion == app.version.toString && task.hasStartedAt) {
         log.debug("Dispatching health check job for task [{}]", task.getId)
         val worker: ActorRef = context.actorOf(workerProps)
-        worker ! HealthCheckJob(task, healthCheck)
+        worker ! HealthCheckJob(app, task, healthCheck)
       }
     }
   }
@@ -103,7 +102,7 @@ class HealthCheckActor(
 
     // ignore failures if maxFailures == 0
     if (consecutiveFailures >= maxFailures && maxFailures > 0) {
-      log.info(f"Detected unhealthy task ${task.getId} of app [$appId] version [$appVersion] on host ${task.getHost}")
+      log.info(f"Detected unhealthy task ${task.getId} of app [$app.id] version [$app.version] on host ${task.getHost}")
 
       // kill the task
       marathonSchedulerDriverHolder.driver.foreach { driver =>
@@ -135,8 +134,8 @@ class HealthCheckActor(
       dispatchJobs()
       scheduleNextHealthCheck()
 
-    case result: HealthResult if result.version == appVersion =>
-      log.info("Received health result for app [{}] version [{}]: [{}]", appId, appVersion, result)
+    case result: HealthResult if result.version == app.version.toString =>
+      log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
       val taskId = result.taskId
       val health = taskHealth.getOrElse(taskId, Health(taskId))
 
@@ -144,14 +143,14 @@ class HealthCheckActor(
         case Healthy(_, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _) =>
-          taskTracker.getTask(appId, taskId) match {
+          taskTracker.getTask(app.id, taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
                 // Don't update health
                 health
               }
               else {
-                eventBus.publish(FailedHealthCheck(appId, taskId, healthCheck))
+                eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
                 checkConsecutiveFailures(task, health)
                 health.update(result)
               }
@@ -166,7 +165,7 @@ class HealthCheckActor(
       if (health.alive != newHealth.alive) {
         eventBus.publish(
           HealthStatusChanged(
-            appId = appId,
+            appId = app.id,
             taskId = taskId,
             version = result.version,
             alive = newHealth.alive)

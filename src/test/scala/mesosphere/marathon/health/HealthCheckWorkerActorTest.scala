@@ -1,15 +1,17 @@
 package mesosphere.marathon.health
 
-import java.net.{ ServerSocket, InetAddress }
+import java.net.{ InetAddress, ServerSocket }
 
-import akka.actor.{ Props, ActorSystem }
+import akka.actor.{ ActorSystem, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef, TestKit }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.{ Protos, MarathonSpec }
+import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.{ MarathonSpec, Protos }
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 
 class HealthCheckWorkerActorTest
     extends TestKit(ActorSystem("System"))
@@ -18,8 +20,8 @@ class HealthCheckWorkerActorTest
     with Matchers
     with BeforeAndAfterAll {
 
-  import mesosphere.util.ThreadPoolContext.context
   import HealthCheckWorker._
+  import mesosphere.util.ThreadPoolContext.context
 
   override def afterAll {
     TestKit.shutdownActorSystem(system)
@@ -41,8 +43,8 @@ class HealthCheckWorkerActorTest
       .build()
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-
-    ref ! HealthCheckJob(task, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
+    val app = AppDefinition(id = "test_id".toPath)
+    ref ! HealthCheckJob(app, task, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }
@@ -68,8 +70,8 @@ class HealthCheckWorkerActorTest
       .build()
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
-
-    ref ! HealthCheckJob(task, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
+    val app = AppDefinition(id = "test_id".toPath)
+    ref ! HealthCheckJob(app, task, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }
