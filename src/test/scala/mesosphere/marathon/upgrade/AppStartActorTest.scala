@@ -6,7 +6,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl, TaskTrackerImpl$ }
+import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.tasks.{ TaskTracker }
 import mesosphere.marathon.{ AppStartCanceledException, MarathonSpec, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verify
@@ -17,7 +18,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
 
 class AppStartActorTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with MarathonSpec
     with Matchers
     with BeforeAndAfterAll

@@ -70,6 +70,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
 
   after {
     system.shutdown()
+    system.awaitTermination()
   }
 
   def makeRunningTask(appId: PathId, version: Timestamp) = {

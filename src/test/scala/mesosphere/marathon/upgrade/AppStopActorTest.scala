@@ -5,7 +5,8 @@ import akka.testkit.{ TestActorRef, TestKit }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.event.{ AppTerminatedEvent, HistoryActor, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure, TaskFailureRepository }
-import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl }
+import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.tasks.{ TaskTracker }
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
 import mesosphere.marathon.{ MarathonSpec, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
@@ -18,7 +19,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
 
 class AppStopActorTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with MarathonSpec
     with Matchers
     with BeforeAndAfterAll

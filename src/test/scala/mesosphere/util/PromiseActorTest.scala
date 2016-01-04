@@ -3,20 +3,16 @@ package mesosphere.util
 import akka.testkit.{ TestProbe, TestActorRef, TestKit }
 import akka.actor.{ Status, Props, ActorSystem }
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.test.MarathonActorSupport
 import org.scalatest.{ Matchers, BeforeAndAfterAll }
 import scala.concurrent.{ Future, Await, Promise }
 import scala.concurrent.duration._
 
 class PromiseActorTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with MarathonSpec
     with BeforeAndAfterAll
     with Matchers {
-
-  override def afterAll(): Unit = {
-    super.afterAll()
-    system.shutdown()
-  }
 
   test("Success") {
     val promise = Promise[Any]()

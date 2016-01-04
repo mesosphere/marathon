@@ -3,9 +3,9 @@ package mesosphere.marathon
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{ Timer, TimerTask }
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.ActorRef
 import akka.event.EventStream
-import akka.testkit.{ TestKit, TestProbe }
+import akka.testkit.TestProbe
 import com.codahale.metrics.MetricRegistry
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Group.JoinException
@@ -17,6 +17,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppRepository, MarathonStore, Migration }
 import mesosphere.marathon.tasks.TaskTrackerImpl
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
 import org.apache.mesos.{ Protos => mesos, SchedulerDriver }
@@ -64,7 +65,7 @@ object MarathonSchedulerServiceTest {
 }
 
 class MarathonSchedulerServiceTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with MarathonSpec
     with BeforeAndAfterAll
     with Matchers {

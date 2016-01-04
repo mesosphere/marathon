@@ -1,6 +1,5 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.ActorSystem
 import akka.testkit.{ TestActorRef, TestKit }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.TaskUpgradeCanceledException
@@ -9,6 +8,7 @@ import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.TaskReplaceActor.RetryKills
 import org.apache.mesos.Protos.{ Status, TaskID }
@@ -25,17 +25,12 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
 
 class TaskReplaceActorTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with FunSuiteLike
     with Matchers
     with Eventually
     with BeforeAndAfterAll
     with MockitoSugar {
-
-  override def afterAll(): Unit = {
-    super.afterAll()
-    system.shutdown()
-  }
 
   test("Replace without health checks") {
     val app = AppDefinition(id = "myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))

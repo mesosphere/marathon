@@ -14,15 +14,9 @@ object ShutdownHooks {
   def apply(): ShutdownHooks = new DefaultShutdownHooks
 }
 
-private class DefaultShutdownHooks extends ShutdownHooks {
+private[base] class BaseShutdownHooks extends ShutdownHooks {
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] var shutdownHooks = List.empty[() => Unit]
-
-  Runtime.getRuntime.addShutdownHook(new Thread() {
-    override def run(): Unit = {
-      shutdown()
-    }
-  })
 
   override def onShutdown(block: => Unit): Unit = {
     shutdownHooks +:= { () => block }
@@ -37,4 +31,15 @@ private class DefaultShutdownHooks extends ShutdownHooks {
     }
     shutdownHooks = Nil
   }
+}
+
+/**
+  * Extends BaseShutdownHooks by ensuring that the hooks are run when the VM shuts down.
+  */
+private class DefaultShutdownHooks extends BaseShutdownHooks {
+  Runtime.getRuntime.addShutdownHook(new Thread() {
+    override def run(): Unit = {
+      shutdown()
+    }
+  })
 }

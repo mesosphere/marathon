@@ -8,6 +8,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ PathId, TaskRepository }
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import mesosphere.util.state.PersistentStore
@@ -17,12 +18,12 @@ import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
 import scala.collection._
 
-class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen {
-
+class TaskTrackerImplTest extends MarathonActorSupport with MarathonSpec with Matchers with GivenWhenThen
+    with BeforeAndAfterAll {
   val TEST_APP_NAME = "foo".toRootPath
   var taskTracker: TaskTrackerImpl = null
   var state: PersistentStore = null

@@ -1,8 +1,9 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{ TestKit, TestActorRef }
-import akka.actor.{ Props, ActorSystem }
-import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl, TaskTrackerImpl$ }
+import mesosphere.marathon.tasks.{ TaskTracker }
+import akka.actor.Props
+import akka.testkit.TestActorRef
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, Matchers, FunSuiteLike }
 import org.apache.mesos.SchedulerDriver
@@ -18,7 +19,7 @@ import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 
 class TaskKillActorTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with FunSuiteLike
     with Matchers
     with BeforeAndAfterAll
@@ -31,11 +32,6 @@ class TaskKillActorTest
   before {
     taskTracker = mock[TaskTracker]
     driver = mock[SchedulerDriver]
-  }
-
-  override def afterAll(): Unit = {
-    super.afterAll()
-    system.shutdown()
   }
 
   test("Kill tasks") {

@@ -1,16 +1,15 @@
 package mesosphere.marathon.core.launchqueue.impl
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.state.{ Timestamp, AppDefinition }
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.test.MarathonActorSupport
 import org.scalatest.Matchers
 
 import scala.concurrent.duration._
 
-class RateLimiterTest extends TestKit(ActorSystem("system")) with MarathonSpec with Matchers {
+class RateLimiterTest extends MarathonActorSupport with MarathonSpec with Matchers {
   val clock = ConstantClock(Timestamp.now())
 
   test("addDelay") {

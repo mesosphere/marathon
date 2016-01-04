@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import java.util.concurrent.TimeoutException
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.actor.{ ActorRef, Props }
 import akka.event.EventStream
 import akka.testkit._
 import akka.util.Timeout
@@ -16,7 +16,8 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskReconciler, TaskTracker, TaskTrackerImpl }
+import mesosphere.marathon.tasks.{ TaskReconciler, TaskTracker }
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, DeploymentStep, StopApplication }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
@@ -35,7 +36,7 @@ import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
+class MarathonSchedulerActorTest extends MarathonActorSupport
     with MarathonSpec
     with BeforeAndAfterAll
     with Matchers
@@ -567,10 +568,6 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     watch(ref)
     system.stop(ref)
     expectTerminated(ref)
-  }
-
-  override def afterAll(): Unit = {
-    system.shutdown()
   }
 
 }

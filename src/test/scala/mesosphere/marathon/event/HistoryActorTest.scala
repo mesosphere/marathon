@@ -5,6 +5,7 @@ import akka.testkit.{ ImplicitSender, TestActorRef, TestKit }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, Timestamp }
+import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
@@ -12,7 +13,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 class HistoryActorTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with MarathonSpec
     with MockitoSugar
     with BeforeAndAfterAll

@@ -1,13 +1,13 @@
 package mesosphere.util
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.test.MarathonActorSupport
 import org.scalatest.Matchers
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration._
 
-class SerializeExecutionTest extends TestKit(ActorSystem("system")) with MarathonSpec with Matchers {
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
+
+class SerializeExecutionTest extends MarathonActorSupport with MarathonSpec with Matchers {
   test("submit successful futures") {
     val serialize = SerializeExecution(system, "serialize1")
     try {

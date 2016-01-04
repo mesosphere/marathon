@@ -6,16 +6,22 @@ import mesosphere.marathon.health.HealthCheckActorTest.SameThreadExecutionContex
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder, MarathonSpec, Protos }
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
-import org.scalatest.Matchers
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.immutable.Set
 import scala.concurrent.{ ExecutionContext, Future }
 
-class HealthCheckActorTest extends TestKit(ActorSystem(name = "system", defaultExecutionContext = Some(SameThreadExecutionContext))) with MarathonSpec with Matchers {
+class HealthCheckActorTest
+    extends MarathonActorSupport
+    with MarathonSpec with Matchers with BeforeAndAfterAll {
+
+  override lazy implicit val system: ActorSystem =
+    ActorSystem(name = "system", defaultExecutionContext = Some(SameThreadExecutionContext))
 
   // regression test for #934
   test("should not dispatch health checks for staging tasks") {

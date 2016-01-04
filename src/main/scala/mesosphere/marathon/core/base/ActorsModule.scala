@@ -14,7 +14,7 @@ class ActorsModule(shutdownHooks: ShutdownHooks, actorSystem: ActorSystem = Acto
   def actorRefFactory: ActorRefFactory = actorSystem
 
   shutdownHooks.onShutdown {
-    log.info("Shutting down actor system")
+    log.info("Shutting down actor system {}", actorSystem)
     actorSystem.shutdown()
     actorSystem.awaitTermination(10.seconds)
   }

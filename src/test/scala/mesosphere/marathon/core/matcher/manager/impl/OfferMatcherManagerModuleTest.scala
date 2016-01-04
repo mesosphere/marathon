@@ -1,16 +1,15 @@
 package mesosphere.marathon.core.matcher.manager.impl
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.tasks.MarathonTasks
-import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonTestHelper }
-import mesosphere.marathon.core.base.{ Clock, ShutdownHooks }
+import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
-import OfferMatcher.{ TaskLaunchSource, TaskWithSource, MatchedTasks }
+import mesosphere.marathon.core.matcher.base.OfferMatcher
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskLaunchSource, TaskWithSource }
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.test.MarathonShutdownHookSupport
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import org.scalatest.{ BeforeAndAfter, FunSuite }
 
@@ -19,7 +18,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.Random
 
-class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter {
+class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with MarathonShutdownHookSupport {
 
   // FIXME: Missing Tests
   // Adding matcher while matching offers
@@ -123,21 +122,15 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter {
   }
 
   private[this] var module: OfferMatcherManagerModule = _
-  private[this] var shutdownHookModule: ShutdownHooks = _
   private[this] var clock: Clock = _
 
   before {
-    shutdownHookModule = ShutdownHooks()
     clock = Clock()
     val random = Random
-    val actorSystem = AlwaysElectedLeadershipModule(shutdownHookModule)
+    val actorSystem = AlwaysElectedLeadershipModule(shutdownHooks)
     val config = new OfferMatcherManagerConfig {}
     config.afterInit()
     module = new OfferMatcherManagerModule(clock, random, new Metrics(new MetricRegistry), config, actorSystem)
-  }
-
-  after {
-    shutdownHookModule.shutdown()
   }
 
   /**

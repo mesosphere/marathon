@@ -8,6 +8,7 @@ import akka.event.EventStream
 import akka.testkit.TestKit
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.tasks.TaskTrackerImpl
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
 import mesosphere.util.SerializeExecution
@@ -21,7 +22,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar with Matchers with MarathonSpec {
+class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Matchers with MarathonSpec {
 
   val actorId = new AtomicInteger(0)
   def serializeExecutions() = SerializeExecution(system, s"serializeGroupUpdates${actorId.incrementAndGet()}")
