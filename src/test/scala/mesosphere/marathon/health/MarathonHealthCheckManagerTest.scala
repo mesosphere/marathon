@@ -10,7 +10,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, MarathonStore, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.tasks._
 import mesosphere.marathon.test.CaptureEvents
 import mesosphere.marathon.{ MarathonConf, MarathonScheduler, MarathonSchedulerDriverHolder, MarathonSpec }
 import mesosphere.util.Logging
@@ -25,6 +25,8 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
 
   var hcManager: MarathonHealthCheckManager = _
   var taskTracker: TaskTracker = _
+  var taskCreator: TaskCreator = _
+  var taskUpdater: TaskUpdater = _
   var appRepository: AppRepository = _
   var eventStream: EventStream = _
 
@@ -42,7 +44,10 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
 
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
-    taskTracker = createTaskTracker()
+    val taskTrackerImpl: TaskTrackerImpl = createTaskTracker()
+    taskTracker = taskTrackerImpl
+    taskCreator = taskTrackerImpl
+    taskUpdater = taskTrackerImpl
     appRepository = new AppRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), "app:"),
       None,
@@ -77,8 +82,8 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
       .setVersion(version.toString)
       .build
 
-    taskTracker.created(appId, marathonTask).futureValue
-    taskTracker.statusUpdate(appId, taskStatus).futureValue
+    taskCreator.created(appId, marathonTask).futureValue
+    taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     taskId
   }
@@ -122,8 +127,8 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
-    taskTracker.created(appId, marathonTask).futureValue
-    taskTracker.statusUpdate(appId, taskStatus).futureValue
+    taskCreator.created(appId, marathonTask).futureValue
+    taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     hcManager.add(appId, version, healthCheck)
 
@@ -233,12 +238,12 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
         versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )).futureValue
-      taskTracker.created(appId, task).futureValue
-      taskTracker.statusUpdate(appId, taskStatus(task)).futureValue
+      taskCreator.created(appId, task).futureValue
+      taskUpdater.statusUpdate(appId, taskStatus(task)).futureValue
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: MarathonTask) =
-      taskTracker.terminated(appId, task.getId).futureValue
+      taskCreator.terminated(appId, task.getId).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath

@@ -6,7 +6,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl, TaskTrackerImpl$ }
 import mesosphere.marathon.{ AppStartCanceledException, MarathonSpec, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verify

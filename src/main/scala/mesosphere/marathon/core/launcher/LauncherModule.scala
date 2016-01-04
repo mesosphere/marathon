@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ OfferProcessorImpl, TaskLauncherImpl }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.TaskCreator
 
 /**
   * This module contains the glue code between matching tasks to resource offers
@@ -15,7 +15,7 @@ class LauncherModule(
     clock: Clock,
     metrics: Metrics,
     offerProcessorConfig: OfferProcessorConfig,
-    taskTracker: TaskTracker,
+    taskCreator: TaskCreator,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     offerMatcher: OfferMatcher) {
 
@@ -23,7 +23,7 @@ class LauncherModule(
     new OfferProcessorImpl(
       offerProcessorConfig, clock,
       metrics,
-      offerMatcher, taskLauncher, taskTracker)
+      offerMatcher, taskLauncher, taskCreator)
 
   lazy val taskLauncher: TaskLauncher = new TaskLauncherImpl(
     metrics,

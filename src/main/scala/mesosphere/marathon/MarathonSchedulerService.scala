@@ -20,7 +20,7 @@ import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.TaskTrackerImpl
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.PromiseActor
@@ -69,7 +69,7 @@ class MarathonSchedulerService @Inject() (
   frameworkIdUtil: FrameworkIdUtil,
   @Named(ModuleNames.LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
   appRepository: AppRepository,
-  taskTracker: TaskTracker,
+  taskTracker: TaskTrackerImpl,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
   migration: Migration,

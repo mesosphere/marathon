@@ -7,7 +7,7 @@ import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ Group, GroupManager, Timestamp }
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskTracker, MarathonTasks, TaskIdUtil, TaskTrackerImpl }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, MarathonSpec }
@@ -43,8 +43,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     )
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.fetchTask(taskId1) returns Some(task1)
-    taskTracker.fetchTask(taskId2) returns Some(task2)
+    taskTracker.getTask(app1, taskId1) returns Some(task1)
+    taskTracker.getTask(app2, taskId2) returns Some(task2)
     taskKiller.kill(any, any) returns Future.successful(Set.empty[MarathonTask])
 
     When("we ask to kill both tasks")
@@ -86,8 +86,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     )
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.fetchTask(taskId1) returns Some(task1)
-    taskTracker.fetchTask(taskId2) returns Some(task2)
+    taskTracker.getTask(app1, taskId1) returns Some(task1)
+    taskTracker.getTask(app2, taskId2) returns Some(task2)
     taskKiller.killAndScale(any, any) returns Future.successful(deploymentPlan)
 
     When("we ask to kill both tasks")

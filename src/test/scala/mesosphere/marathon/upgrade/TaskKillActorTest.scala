@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestKit, TestActorRef }
 import akka.actor.{ Props, ActorSystem }
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl, TaskTrackerImpl$ }
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, Matchers, FunSuiteLike }
 import org.apache.mesos.SchedulerDriver

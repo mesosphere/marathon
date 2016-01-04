@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos.{ MarathonApp, MarathonTask, StorageVersion }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.StorageVersions._
-import mesosphere.marathon.tasks.TaskTracker.InternalApp
+import mesosphere.marathon.tasks.TaskTrackerImpl.InternalApp
 import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
 import mesosphere.util.ThreadPoolContext.context

@@ -4,7 +4,7 @@ import akka.event.EventStream
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.tasks.TaskTracker
-import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
+import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
 
 import scala.collection.mutable

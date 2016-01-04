@@ -12,18 +12,16 @@ import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor.{
   ResetDelayResponse
 }
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
-import mesosphere.marathon.tasks.TaskTracker
 
 import scala.concurrent.duration._
 
 private[launchqueue] object RateLimiterActor {
   def props(
     rateLimiter: RateLimiter,
-    taskTracker: TaskTracker,
     appRepository: AppRepository,
     launchQueueRef: ActorRef): Props =
     Props(new RateLimiterActor(
-      rateLimiter, taskTracker, appRepository, launchQueueRef
+      rateLimiter, appRepository, launchQueueRef
     ))
 
   case class DelayUpdate(app: AppDefinition, delayUntil: Timestamp)
@@ -40,7 +38,6 @@ private[launchqueue] object RateLimiterActor {
 
 private class RateLimiterActor private (
     rateLimiter: RateLimiter,
-    taskTracker: TaskTracker,
     appRepository: AppRepository,
     launchQueueRef: ActorRef) extends Actor with ActorLogging {
   var cleanup: Cancellable = _

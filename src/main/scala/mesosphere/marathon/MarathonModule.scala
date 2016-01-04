@@ -26,7 +26,7 @@ import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManag
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker, _ }
+import mesosphere.marathon.tasks.{ TaskIdUtil, _ }
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import mesosphere.util.SerializeExecution
 import mesosphere.util.state.memory.InMemoryStore
@@ -102,6 +102,11 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[AtomicBoolean])
       .annotatedWith(Names.named(ModuleNames.LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
+
+    bind(classOf[TaskTracker]).to(classOf[TaskTrackerImpl])
+    bind(classOf[TaskReconciler]).to(classOf[TaskTrackerImpl])
+    bind(classOf[TaskCreator]).to(classOf[TaskTrackerImpl])
+    bind(classOf[TaskUpdater]).to(classOf[TaskTrackerImpl])
   }
 
   @Provides
@@ -181,7 +186,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
-    taskTracker: TaskTracker,
+    taskReconciler: TaskReconciler,
     taskQueue: LaunchQueue,
     frameworkIdUtil: FrameworkIdUtil,
     driverHolder: MarathonSchedulerDriverHolder,
@@ -201,7 +206,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         appRepository,
         groupRepository,
         healthCheckManager,
-        taskTracker,
+        taskReconciler,
         taskQueue,
         eventBus,
         schedulerActor,
@@ -212,7 +217,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       Props(
         new DeploymentManager(
           appRepository,
-          taskTracker,
+          taskReconciler,
           taskQueue,
           schedulerActions,
           storage,
@@ -232,7 +237,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         appRepository,
         deploymentRepository,
         healthCheckManager,
-        taskTracker,
+        taskReconciler,
         taskQueue,
         driverHolder,
         leaderInfo,
@@ -285,8 +290,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
   @Provides
   @Singleton
-  def provideTaskTracker(taskRepo: TaskRepository): TaskTracker = {
-    new TaskTracker(taskRepo, conf)
+  def provideTaskTrackerImpl(taskRepo: TaskRepository): TaskTrackerImpl = {
+    new TaskTrackerImpl(taskRepo, conf)
   }
 
   @Provides
@@ -321,7 +326,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   def provideGroupManager(
     @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: SerializeExecution,
     scheduler: MarathonSchedulerService,
-    taskTracker: TaskTracker,
     groupRepo: GroupRepository,
     appRepo: AppRepository,
     storage: StorageProvider,
@@ -330,7 +334,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     val groupManager: GroupManager = new GroupManager(
       serializeUpdates,
       scheduler,
-      taskTracker,
       groupRepo,
       appRepo,
       storage,

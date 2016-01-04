@@ -8,7 +8,7 @@ import akka.event.EventStream
 import akka.testkit.TestKit
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.TaskTrackerImpl
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
 import mesosphere.util.SerializeExecution
 import org.mockito.Matchers.any
@@ -28,7 +28,6 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
 
   class Fixture {
     lazy val scheduler = mock[MarathonSchedulerService]
-    lazy val taskTracker = mock[TaskTracker]
     lazy val appRepo = mock[AppRepository]
     lazy val groupRepo = mock[GroupRepository]
     lazy val eventBus = mock[EventStream]
@@ -41,7 +40,7 @@ class GroupManagerTest extends TestKit(ActorSystem("System")) with MockitoSugar 
 
     lazy val manager = new GroupManager(
       serializeUpdates = serializeExecutions(), scheduler = scheduler,
-      taskTracker = taskTracker, groupRepo = groupRepo, appRepo = appRepo,
+      groupRepo = groupRepo, appRepo = appRepo,
       storage = provider, config = config, eventBus = eventBus)
 
   }

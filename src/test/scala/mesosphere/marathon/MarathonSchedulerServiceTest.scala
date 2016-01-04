@@ -16,7 +16,7 @@ import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppRepository, MarathonStore, Migration }
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.TaskTrackerImpl
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
 import org.apache.mesos.{ Protos => mesos, SchedulerDriver }
@@ -69,7 +69,6 @@ class MarathonSchedulerServiceTest
     with BeforeAndAfterAll
     with Matchers {
   import MarathonSchedulerServiceTest._
-  import system.dispatcher
 
   private[this] var probe: TestProbe = _
   private[this] var leadershipCoordinator: LeadershipCoordinator = _
@@ -80,7 +79,7 @@ class MarathonSchedulerServiceTest
   private[this] var frameworkIdUtil: FrameworkIdUtil = _
   private[this] var leader: AtomicBoolean = _
   private[this] var appRepository: AppRepository = _
-  private[this] var taskTracker: TaskTracker = _
+  private[this] var taskTracker: TaskTrackerImpl = _
   private[this] var scheduler: MarathonScheduler = _
   private[this] var migration: Migration = _
   private[this] var schedulerActor: ActorRef = _
@@ -96,7 +95,7 @@ class MarathonSchedulerServiceTest
     frameworkIdUtil = mock[FrameworkIdUtil]
     leader = mock[AtomicBoolean]
     appRepository = mock[AppRepository]
-    taskTracker = mock[TaskTracker]
+    taskTracker = mock[TaskTrackerImpl]
     scheduler = mock[MarathonScheduler]
     migration = mock[Migration]
     schedulerActor = probe.ref

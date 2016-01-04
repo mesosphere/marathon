@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.{ AppRepository, PathId }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
-import mesosphere.marathon.tasks.{ TaskFactory, TaskIdUtil, TaskTracker }
+import mesosphere.marathon.tasks._
 import org.apache.mesos.Protos.TaskID
 import org.hamcrest.{ BaseMatcher, Description }
 import org.mockito.Matchers

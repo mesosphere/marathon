@@ -16,7 +16,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.tasks.{ TaskReconciler, TaskTracker, TaskTrackerImpl }
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, DeploymentStep, StopApplication }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
@@ -61,16 +61,16 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
 
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(tracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
-    when(tracker.list).thenReturn(
+    when(taskReconciler.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskReconciler.list).thenReturn(
       mutable.HashMap(
         PathId("nope") -> new TaskTracker.App(
           "nope".toPath,
           tasks,
           false)))
-    when(tracker.getTasks("nope".toPath)).thenReturn(tasks)
+    when(taskReconciler.getTasks("nope".toPath)).thenReturn(tasks)
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
-    when(tracker.count(app.id)).thenReturn(0)
+    when(taskReconciler.count(app.id)).thenReturn(0)
 
     val schedulerActor = createActor()
     try {
@@ -80,7 +80,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
       expectMsg(5.seconds, TasksReconciled)
 
       awaitAssert({
-        verify(tracker).shutdown("nope".toPath)
+        verify(taskReconciler).removeUnknownAppAndItsTasks("nope".toPath)
         verify(driver).killTask(TaskID("task_a"))
       }, 5.seconds, 10.millis)
     }
@@ -95,16 +95,16 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(tracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
-    when(tracker.list).thenReturn(
+    when(taskReconciler.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskReconciler.list).thenReturn(
       mutable.HashMap(
         PathId("nope") -> new TaskTracker.App(
           "nope".toPath,
           tasks,
           false)))
-    when(tracker.getTasks("nope".toPath)).thenReturn(tasks)
+    when(taskReconciler.getTasks("nope".toPath)).thenReturn(tasks)
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
-    when(tracker.count(app.id)).thenReturn(0)
+    when(taskReconciler.count(app.id)).thenReturn(0)
 
     val schedulerActor = createActor()
     try {
@@ -123,10 +123,10 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
-    when(tracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskReconciler.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
 
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
-    when(tracker.count(app.id)).thenReturn(0)
+    when(taskReconciler.count(app.id)).thenReturn(0)
 
     val schedulerActor = createActor()
     try {
@@ -148,15 +148,15 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
-    when(tracker.getTasks(app.id)).thenReturn(Set[MarathonTask](taskA))
-    when(tracker.fetchTask(taskA.getId))
+    when(taskReconciler.getTasks(app.id)).thenReturn(Set[MarathonTask](taskA))
+    when(taskReconciler.getTask(app.id, taskA.getId))
       .thenReturn(Some(taskA))
       .thenReturn(None)
 
     when(repo.currentVersion(app.id))
       .thenReturn(Future.successful(Some(app)))
       .thenReturn(Future.successful(Some(app.copy(instances = 0))))
-    when(tracker.count(app.id)).thenReturn(0)
+    when(taskReconciler.count(app.id)).thenReturn(0)
     when(repo.store(any())).thenReturn(Future.successful(app))
 
     val statusUpdateEvent = MesosStatusUpdateEvent(
@@ -203,15 +203,15 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
-    when(tracker.getTasks(app.id)).thenReturn(Set[MarathonTask](taskA))
-    when(tracker.fetchTask(taskA.getId))
+    when(taskReconciler.getTasks(app.id)).thenReturn(Set[MarathonTask](taskA))
+    when(taskReconciler.getTask(app.id, taskA.getId))
       .thenReturn(Some(taskA))
       .thenReturn(None)
 
     when(repo.currentVersion(app.id))
       .thenReturn(Future.successful(Some(app)))
       .thenReturn(Future.successful(Some(app.copy(instances = 0))))
-    when(tracker.count(app.id)).thenReturn(0)
+    when(taskReconciler.count(app.id)).thenReturn(0)
     when(repo.store(any())).thenReturn(Future.successful(app))
 
     val statusUpdateEvent = MesosStatusUpdateEvent(
@@ -295,7 +295,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
-    when(tracker.getTasks(app.id)).thenReturn(Set(taskA))
+    when(taskReconciler.getTasks(app.id)).thenReturn(Set(taskA))
 
     when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -342,7 +342,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(repo.store(any())).thenReturn(Future.successful(app))
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
-    when(tracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskReconciler.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
     when(repo.expunge(app.id)).thenReturn(Future.successful(Nil))
 
     val schedulerActor = createActor()
@@ -391,7 +391,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
         repo,
         deploymentRepo,
         hcManager,
-        tracker,
+        taskReconciler,
         queue,
         holder,
         leaderInfo,
@@ -421,7 +421,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(repo.store(any())).thenReturn(Future.successful(app))
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
-    when(tracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskReconciler.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
     when(repo.expunge(app.id)).thenReturn(Future.successful(Nil))
 
     val schedulerActor = createActor()
@@ -449,7 +449,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
 
     when(repo.store(any())).thenReturn(Future.successful(app))
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
-    when(tracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskReconciler.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
     when(repo.expunge(app.id)).thenReturn(Future.successful(Nil))
 
     val schedulerActor = TestActorRef(
@@ -460,7 +460,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
         repo,
         deploymentRepo,
         hcManager,
-        tracker,
+        taskReconciler,
         queue,
         holder,
         leaderInfo,
@@ -490,7 +490,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
   var groupRepo: GroupRepository = _
   var deploymentRepo: DeploymentRepository = _
   var hcManager: HealthCheckManager = _
-  var tracker: TaskTracker = _
+  var taskReconciler: TaskReconciler = _
   var queue: LaunchQueue = _
   var frameworkIdUtil: FrameworkIdUtil = _
   var driver: SchedulerDriver = _
@@ -512,7 +512,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     groupRepo = mock[GroupRepository]
     deploymentRepo = mock[DeploymentRepository]
     hcManager = mock[HealthCheckManager]
-    tracker = mock[TaskTracker]
+    taskReconciler = mock[TaskReconciler]
     queue = mock[LaunchQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     storage = mock[StorageProvider]
@@ -520,7 +520,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     leaderInfo = mock[LeaderInfo]
     deploymentManagerProps = schedulerActions => Props(new DeploymentManager(
       repo,
-      tracker,
+      taskReconciler,
       queue,
       schedulerActions,
       storage,
@@ -529,7 +529,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     ))
     historyActorProps = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
     schedulerActions = ref => new SchedulerActions(
-      repo, groupRepo, hcManager, tracker, queue, new EventStream(), ref, mock[MarathonConf])(system.dispatcher)
+      repo, groupRepo, hcManager, taskReconciler, queue, new EventStream(), ref, mock[MarathonConf])(system.dispatcher)
 
     when(deploymentRepo.store(any())).thenAnswer(new Answer[Future[DeploymentPlan]] {
       override def answer(p1: InvocationOnMock): Future[DeploymentPlan] = {
@@ -542,7 +542,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
     when(repo.apps()).thenReturn(Future.successful(Nil))
     when(groupRepo.rootGroup()).thenReturn(Future.successful(None))
     when(queue.get(any[PathId])).thenReturn(None)
-    when(tracker.count(any[PathId])).thenReturn(0)
+    when(taskReconciler.count(any[PathId])).thenReturn(0)
   }
 
   def createActor() = {
@@ -554,7 +554,7 @@ class MarathonSchedulerActorTest extends TestKit(ActorSystem("System"))
         repo,
         deploymentRepo,
         hcManager,
-        tracker,
+        taskReconciler,
         queue,
         holder,
         leaderInfo,
