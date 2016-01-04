@@ -63,9 +63,9 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.appRepo.allPathIds() returns Future.successful(Seq.empty)
     f.groupRepo.group("root") returns Future.successful(None)
 
-    val result = f.migration.applyMigrationSteps(StorageVersions(0, 0, 0)).futureValue
+    val result = f.migration.applyMigrationSteps(StorageVersions(0, 8, 0)).futureValue
     result should not be 'empty
-    result should be(f.migration.migrations.map(_._1))
+    result should be(f.migration.migrations.map(_._1).drop(2))
   }
 
   test("applyMigrationSteps throws an error for unsupported versions") {

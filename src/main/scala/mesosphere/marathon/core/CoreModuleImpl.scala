@@ -14,9 +14,10 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
+import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.AppRepository
-import mesosphere.marathon.tasks.{ TaskFactory, TaskTrackerImpl }
+import mesosphere.marathon.state.{ AppRepository, TaskRepository }
+import mesosphere.marathon.tasks.TaskFactory
 import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
 
 import scala.util.Random
@@ -36,7 +37,7 @@ class CoreModuleImpl @Inject() (
     actorSystem: ActorSystem,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     appRepository: AppRepository,
-    taskTracker: TaskTrackerImpl,
+    taskRepository: TaskRepository,
     taskFactory: TaskFactory,
     leaderInfo: LeaderInfo,
     clock: Clock) extends CoreModule {
@@ -52,6 +53,7 @@ class CoreModuleImpl @Inject() (
   // TASKS
 
   override lazy val taskBusModule = new TaskBusModule()
+  override lazy val taskTrackerModule = new TaskTrackerModule(metrics, marathonConf, leadershipModule, taskRepository)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
@@ -67,7 +69,7 @@ class CoreModuleImpl @Inject() (
     clock, metrics, marathonConf,
 
     // external guicedependencies
-    taskCreator = taskTracker,
+    taskTrackerModule.taskCreator,
     marathonSchedulerDriverHolder,
 
     // internal core dependencies
@@ -83,7 +85,7 @@ class CoreModuleImpl @Inject() (
 
     // external guice dependencies
     appRepository,
-    taskTracker,
+    taskTrackerModule.taskTracker,
     taskFactory
   )
 
@@ -115,7 +117,7 @@ class CoreModuleImpl @Inject() (
   // is created. Changing the wiring order for this feels wrong since it is nicer if it
   // follows architectural logic. Therefore we instantiate them here explicitly.
 
-  taskJobsModule.killOverdueTasks(taskTracker, marathonSchedulerDriverHolder)
+  taskJobsModule.killOverdueTasks(taskTrackerModule.taskTracker, marathonSchedulerDriverHolder)
   maybeOfferReviver
   offerMatcherManagerModule
   launcherModule

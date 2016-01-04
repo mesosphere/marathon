@@ -3,8 +3,8 @@ package mesosphere.marathon.api
 import javax.inject.Inject
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonSchedulerService, UnknownAppException }
 

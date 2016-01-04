@@ -3,9 +3,9 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ Actor, ActorLogging, Cancellable }
 import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
 import org.apache.mesos.{ Protos, SchedulerDriver }
 

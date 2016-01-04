@@ -5,13 +5,12 @@ import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.TaskID
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.apache.mesos.{ Protos => MesosProtos, SchedulerDriver }
-import org.mockito.Matchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.scalatest.GivenWhenThen
@@ -71,7 +70,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
   test("some overdue tasks") {
     Given("one overdue task")
     val mockTask = MarathonTask.newBuilder().setId("someId").buildPartial()
-    val app = TaskTracker.App(PathId("/some"), Iterable(mockTask), shutdown = false)
+    val app = TaskTracker.App(PathId("/some"), Iterable(mockTask))
     taskTracker.list returns Map(app.appName -> app)
 
     When("the check is initiated")
@@ -143,8 +142,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
         overdueStagedTask,
         stagedTask,
         runningTask
-      ),
-      shutdown = false
+      )
     )
     taskTracker.list returns Map(appId -> app)
 

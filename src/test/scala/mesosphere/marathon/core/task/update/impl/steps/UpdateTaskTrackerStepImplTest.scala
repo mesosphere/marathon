@@ -2,8 +2,9 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.tracker.TaskUpdater
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskUpdater }
+import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver

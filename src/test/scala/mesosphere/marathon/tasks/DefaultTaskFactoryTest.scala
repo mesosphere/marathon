@@ -2,6 +2,7 @@ package mesosphere.marathon.tasks
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits.{ slaveIDToProto, taskIDToProto }

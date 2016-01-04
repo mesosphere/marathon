@@ -3,8 +3,8 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor._
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
 import mesosphere.mesos.protos.TaskID
 import org.apache.mesos.Protos.TaskState

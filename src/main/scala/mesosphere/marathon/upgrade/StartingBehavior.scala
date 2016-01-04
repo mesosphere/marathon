@@ -4,9 +4,9 @@ import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ HealthStatusChanged, MarathonHealthCheckEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.TaskTracker
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._

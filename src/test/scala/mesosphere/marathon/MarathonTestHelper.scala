@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
@@ -9,6 +10,8 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.json.V2AppDefinition
+import mesosphere.marathon.core.leadership.{ LeadershipModule, AlwaysElectedLeadershipModule }
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, TaskRepository, AppDefinition, MarathonStore, MarathonTaskState, Timestamp }
@@ -18,6 +21,8 @@ import org.apache.mesos.Protos.{ CommandInfo, TaskID, TaskInfo, Offer }
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
 import play.api.libs.json.Json
+
+import scala.util.Random
 
 trait MarathonTestHelper {
 
@@ -156,10 +161,11 @@ trait MarathonTestHelper {
     assert(validationResult.isSuccess == valid, s"validation errors $validationResult for json:\n$pretty")
   }
 
-  def createTaskTracker(
+  def createTaskTrackerModule(
+    leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
     config: MarathonConf = defaultConfig(),
-    metrics: Metrics = new Metrics(new MetricRegistry)): TaskTrackerImpl = {
+    metrics: Metrics = new Metrics(new MetricRegistry)): TaskTrackerModule = {
 
     val metrics = new Metrics(new MetricRegistry)
     val taskRepo = new TaskRepository(
@@ -171,7 +177,18 @@ trait MarathonTestHelper {
       metrics
     )
 
-    new TaskTrackerImpl(taskRepo, defaultConfig())
+    new TaskTrackerModule(metrics, defaultConfig(), leadershipModule, taskRepo) {
+      // some tests create only one actor system but create multiple task trackers
+      override protected lazy val taskTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
+    }
+  }
+
+  def createTaskTracker(
+    leadershipModule: LeadershipModule,
+    store: PersistentStore = new InMemoryStore,
+    config: MarathonConf = defaultConfig(),
+    metrics: Metrics = new Metrics(new MetricRegistry)): TaskTracker = {
+    createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
   }
 
   def dummyTask(appId: PathId) = MarathonTask.newBuilder()

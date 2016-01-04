@@ -4,8 +4,8 @@ import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ OfferProcessorImpl, TaskLauncherImpl }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
+import mesosphere.marathon.core.task.tracker.TaskCreator
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.tasks.TaskCreator
 
 /**
   * This module contains the glue code between matching tasks to resource offers

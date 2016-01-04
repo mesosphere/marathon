@@ -4,10 +4,11 @@ import java.util.Collections
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ Group, GroupManager, Timestamp }
-import mesosphere.marathon.tasks.{ TaskTracker, MarathonTasks, TaskIdUtil, TaskTrackerImpl }
+import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, MarathonSpec }

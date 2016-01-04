@@ -10,12 +10,13 @@ import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.tracker.{ TaskUpdater, TaskTracker }
 import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskUpdater, TaskTracker, TaskIdUtil, TaskTrackerImpl }
+import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver

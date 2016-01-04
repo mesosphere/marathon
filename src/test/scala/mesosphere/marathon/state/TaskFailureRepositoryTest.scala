@@ -11,7 +11,7 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
   import mesosphere.FutureTestSupport._
 
   test("store and fetch") {
-    Given("an empty repo")
+    Given("an empty taskRepository")
     val f = new Fixture
 
     When("we store a taskFailure")
@@ -25,7 +25,7 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
   }
 
   test("the last store wins") {
-    Given("an empty repo")
+    Given("an empty taskRepository")
     val f = new Fixture
 
     When("we store a taskFailure")
@@ -43,7 +43,7 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
   }
 
   test("expunge works") {
-    Given("an empty repo")
+    Given("an empty taskRepository")
     val f = new Fixture
 
     When("we store a taskFailure")

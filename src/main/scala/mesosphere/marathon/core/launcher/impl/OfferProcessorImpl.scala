@@ -4,9 +4,10 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskWithSource }
+import mesosphere.marathon.core.task.tracker.TaskCreator
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.tasks.{ TaskCreator, TaskIdUtil }
+import mesosphere.marathon.tasks.TaskIdUtil
 import org.apache.mesos.Protos.{ Offer, OfferID }
 import org.slf4j.LoggerFactory
 

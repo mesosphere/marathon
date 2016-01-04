@@ -3,7 +3,7 @@ package mesosphere.marathon.core.task.jobs
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.jobs.impl.KillOverdueTasksActor
-import mesosphere.marathon.tasks.TaskTracker
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
 
 /**

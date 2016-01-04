@@ -12,8 +12,9 @@ import mesosphere.marathon.core.launchqueue.impl.{
 }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, AppRepository }
-import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
+import mesosphere.marathon.tasks.TaskFactory
 
 /**
   * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given AppDefinition.

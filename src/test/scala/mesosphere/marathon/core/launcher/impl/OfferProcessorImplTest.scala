@@ -5,9 +5,10 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskLaunchSource, TaskWithSource }
+import mesosphere.marathon.core.task.tracker.TaskCreator
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskCreator, TaskIdUtil, TaskTrackerImpl }
+import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.Protos.TaskInfo

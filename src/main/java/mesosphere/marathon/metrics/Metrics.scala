@@ -120,5 +120,8 @@ object Metrics {
 
     def setValue(l: Int): Unit = value_.set(l)
     override def getValue: Int = value_.get()
+
+    def increment(): Int = value_.incrementAndGet()
+    def decrement(): Int = value_.decrementAndGet()
   }
 }

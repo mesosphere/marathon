@@ -4,12 +4,12 @@ import akka.testkit.{ TestActorRef, TestKit }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.TaskReplaceActor.RetryKills
 import org.apache.mesos.Protos.{ Status, TaskID }
 import org.apache.mesos.SchedulerDriver

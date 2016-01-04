@@ -81,18 +81,18 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       path should be(PathId("/a/b/c/d/e/f"))
     }
 
-    it("can give the parent path") {
+    it("can give the taskTrackerRef path") {
       Given("base id's")
       val id1 = PathId("/a/b/c")
       val id2 = PathId("/a")
       val id3 = PathId.empty
 
-      When("parent ids get computed")
+      When("taskTrackerRef ids get computed")
       val parent1 = id1.parent
       val parent2 = id2.parent
       val parent3 = id3.parent
 
-      Then("the parent path is correct")
+      Then("the taskTrackerRef path is correct")
       parent1 should be(PathId("/a/b"))
       parent2 should be(PathId.empty)
       parent3 should be(PathId.empty)

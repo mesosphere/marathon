@@ -20,7 +20,6 @@ import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskTrackerImpl
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.PromiseActor
@@ -69,7 +68,6 @@ class MarathonSchedulerService @Inject() (
   frameworkIdUtil: FrameworkIdUtil,
   @Named(ModuleNames.LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
   appRepository: AppRepository,
-  taskTracker: TaskTrackerImpl,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
   migration: Migration,
@@ -319,7 +317,6 @@ class MarathonSchedulerService @Inject() (
     // Note that abdication command will be ran upon driver shutdown.
     leader.set(false)
     stopDriver()
-    taskTracker.clearCache()
   }
 
   private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = {

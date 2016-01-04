@@ -8,10 +8,11 @@ import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
 import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.tasks.{ TaskIdUtil }
 import mesosphere.marathon.{ ZookeeperConf, MarathonScheduler, MarathonSchedulerDriverHolder }
 import mesosphere.util.RWLock
 import mesosphere.util.ThreadPoolContext.context
@@ -200,7 +201,7 @@ class MarathonHealthCheckManager @Inject() (
     import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
-    val maybeAppVersion: Option[Timestamp] = taskTracker.getVersion(appId, taskId)
+    val maybeAppVersion: Option[Timestamp] = taskTracker.getTask(appId, taskId).map(t => Timestamp(t.getVersion))
 
     val taskHealth: Seq[Future[Health]] = maybeAppVersion.map { appVersion =>
       listActive(appId, appVersion).iterator.collect {

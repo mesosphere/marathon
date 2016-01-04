@@ -6,6 +6,7 @@ import com.codahale.metrics.{ ExponentiallyDecayingReservoir, MetricRegistry }
 import com.google.inject.{ Guice, AbstractModule }
 import com.google.inject.matcher.{ AbstractMatcher, Matchers }
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.metrics.Metrics._
 import org.aopalliance.intercept.{ MethodInvocation, MethodInterceptor }
 import org.mockito.ArgumentCaptor
@@ -62,8 +63,8 @@ class MetricsTest
   }
 
   test("Metrics#name should use a dot to separate the class name and the method name") {
-    val expectedName = "service.mesosphere.marathon.tasks.TaskTracker.write-request-time"
-    val actualName = metrics.name("service", classOf[mesosphere.marathon.tasks.TaskTracker], "write-request-time")
+    val expectedName = "service.mesosphere.marathon.core.task.tracker.TaskTracker.write-request-time"
+    val actualName = metrics.name("service", classOf[TaskTracker], "write-request-time")
 
     assert(expectedName.equals(actualName))
   }

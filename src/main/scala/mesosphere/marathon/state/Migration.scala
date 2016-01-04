@@ -3,21 +3,16 @@ package mesosphere.marathon.state
 import java.io.{ ByteArrayInputStream, ObjectInputStream }
 import javax.inject.Inject
 
-import mesosphere.marathon.Protos.{ MarathonApp, MarathonTask, StorageVersion }
+import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.StorageVersions._
-import mesosphere.marathon.tasks.TaskTrackerImpl.InternalApp
 import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
 import mesosphere.util.ThreadPoolContext.context
 import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
-import org.apache.log4j.Logger
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.collection.SortedSet
-import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
@@ -42,14 +37,10 @@ class Migration @Inject() (
     */
   def migrations: List[MigrationAction] = List(
     StorageVersions(0, 5, 0) -> { () =>
-      changeApps(app => app.copy(id = app.id.toString.toLowerCase.replaceAll("_", "-").toRootPath))
+      Future.failed(new IllegalStateException("migration from 0.5.x not supported anymore"))
     },
     StorageVersions(0, 7, 0) -> { () =>
-      for {
-        _ <- changeTasks(app => new InternalApp(app.appName.canonicalPath(), app.tasks, app.shutdown))
-        _ <- changeApps(app => app.copy(id = app.id.canonicalPath()))
-        _ <- putAppsIntoGroup()
-      } yield ()
+      Future.failed(new IllegalStateException("migration from 0.7.x not supported anymore"))
     },
     StorageVersions(0, 11, 0) -> { () =>
       new MigrationTo0_11(groupRepo, appRepo).migrateApps().recover {
@@ -107,7 +98,7 @@ class Migration @Inject() (
   def currentStorageVersion: Future[StorageVersion] = {
     store.load(storageVersionName).map {
       case Some(variable) => StorageVersion.parseFrom(variable.bytes.toArray)
-      case None           => StorageVersions.empty
+      case None           => StorageVersions.current
     }
   }
 
@@ -118,81 +109,6 @@ class Migration @Inject() (
       case None         => store.create(storageVersionName, bytes)
     }.map{ _ => StorageVersions.current }
   }
-
-  // specific migration helper methods
-
-  private def changeApps(fn: AppDefinition => AppDefinition): Future[Any] = {
-    appRepo.apps().flatMap { apps =>
-      val mappedApps = apps.map { app => appRepo.store(fn(app)) }
-      Future.sequence(mappedApps)
-    }
-  }
-
-  private def changeTasks(fn: InternalApp => InternalApp): Future[Any] = {
-    val LEGACY_PREFIX = "tasks:"
-    def fetchApp(appId: PathId): Option[InternalApp] = {
-      Await.result(store.load(LEGACY_PREFIX + appId.safePath), config.zkTimeoutDuration).map { entity =>
-        val source = new ObjectInputStream(new ByteArrayInputStream(entity.bytes.toArray))
-        val fetchedTasks = LegacyTaskMigrationHelper.legacyDeserialize(appId, source).map {
-          case (key, task) =>
-            val builder = task.toBuilder.clearOBSOLETEStatuses()
-            task.getOBSOLETEStatusesList.asScala.lastOption.foreach(builder.setStatus)
-            key -> builder.build()
-        }
-        new InternalApp(appId, fetchedTasks, false)
-      }
-    }
-    def storeApp(app: InternalApp): Future[Seq[MarathonTask]] = {
-      Future.sequence(app.tasks.values.toSeq.map(taskRepo.store))
-    }
-    appRepo.allPathIds().flatMap { apps =>
-      val res = apps.flatMap(fetchApp).map{ app => storeApp(fn(app)) }
-      Future.sequence(res)
-    }
-  }
-
-  private def putAppsIntoGroup(): Future[Any] = {
-    groupRepo.group("root").map(_.getOrElse(Group.empty)).map { group =>
-      appRepo.apps().flatMap { apps =>
-        val updatedGroup = apps.foldLeft(group) { (group, app) =>
-          val updatedApp = app.copy(id = app.id.canonicalPath())
-          group.updateApp(updatedApp.id, _ => updatedApp, Timestamp.now())
-        }
-        groupRepo.store("root", updatedGroup)
-      }
-    }
-  }
-}
-
-object LegacyTaskMigrationHelper {
-
-  private[this] val log = Logger.getLogger(getClass.getName)
-
-  def legacyDeserialize(appId: PathId, source: ObjectInputStream): TrieMap[String, MarathonTask] = {
-    val results = TrieMap[String, MarathonTask]()
-
-    if (source.available > 0) {
-      try {
-        val size = source.readInt
-        val bytes = new Array[Byte](size)
-        source.readFully(bytes)
-        val app = MarathonApp.parseFrom(bytes)
-        if (app.getName != appId.toString) {
-          log.warn(s"App name from task state for $appId is wrong!  Got '${app.getName}' Continuing anyway...")
-        }
-        results ++= app.getTasksList.asScala.map(x => x.getId -> x)
-      }
-      catch {
-        case e: com.google.protobuf.InvalidProtocolBufferException =>
-          log.warn(s"Unable to deserialize task state for $appId", e)
-      }
-    }
-    else {
-      log.warn(s"Unable to deserialize task state for $appId")
-    }
-    results
-  }
-
 }
 
 /**

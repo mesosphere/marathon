@@ -9,10 +9,11 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.api.v2.json.V2AppUpdate
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskReconciler, TaskTracker }
+import TaskTracker.App
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos
@@ -21,6 +22,7 @@ import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.collection.Map
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Promise }
@@ -387,7 +389,7 @@ class SchedulerActions(
     appRepository: AppRepository,
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
-    taskReconciler: TaskReconciler,
+    taskTracker: TaskTracker,
     taskQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
@@ -407,14 +409,13 @@ class SchedulerActions(
     healthCheckManager.removeAllFor(app.id)
 
     log.info(s"Stopping app ${app.id}")
-    val tasks = taskReconciler.getTasks(app.id)
+    val tasks = taskTracker.getTasks(app.id)
 
     for (task <- tasks) {
       log.info(s"Killing task ${task.getId}")
       driver.killTask(protos.TaskID(task.getId))
     }
     taskQueue.purge(app.id)
-    taskReconciler.removeUnknownAppAndItsTasks(app.id)
     taskQueue.resetDelay(app)
     // TODO after all tasks have been killed we should remove the app from taskTracker
 
@@ -442,23 +443,23 @@ class SchedulerActions(
         log.info("Syncing tasks for all apps")
 
         val knownTaskStatuses = appIds.flatMap { appId =>
-          taskReconciler.getTasks(appId).collect {
+          taskTracker.getTasks(appId).collect {
             case task: Protos.MarathonTask if task.hasStatus => task.getStatus
             case task: Protos.MarathonTask => // staged tasks, which have no status yet
               taskStatus(task)
           }
         }
 
-        for (unknownAppId <- taskReconciler.list.keySet -- appIds) {
+        val appList: Map[PathId, App] = taskTracker.list
+        for (unknownAppId <- appList.keySet -- appIds) {
           log.warn(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          for (orphanTask <- taskReconciler.getTasks(unknownAppId)) {
+          for (orphanTask <- appList.get(unknownAppId).map(_.tasks).getOrElse(Iterable.empty)) {
             log.info(s"Killing task ${orphanTask.getId}")
             driver.killTask(protos.TaskID(orphanTask.getId))
           }
-          taskReconciler.removeUnknownAppAndItsTasks(unknownAppId)
         }
 
         log.info("Requesting task reconciliation with the Mesos master")
@@ -507,7 +508,7 @@ class SchedulerActions(
     * Make sure the app is running the correct number of instances
     */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    val currentCount = taskReconciler.count(app.id)
+    val currentCount = taskTracker.count(app.id)
     val targetCount = app.instances
 
     if (targetCount > currentCount) {
@@ -528,7 +529,7 @@ class SchedulerActions(
       log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
       taskQueue.purge(app.id)
 
-      val toKill = taskReconciler.getTasks(app.id).take(currentCount - targetCount)
+      val toKill = taskTracker.getTasks(app.id).take(currentCount - targetCount)
       log.info(s"Killing tasks: ${toKill.map(_.getId)}")
       for (task <- toKill) {
         driver.killTask(protos.TaskID(task.getId))

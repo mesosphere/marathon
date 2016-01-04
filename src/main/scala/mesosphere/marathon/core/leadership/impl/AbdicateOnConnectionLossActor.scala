@@ -3,6 +3,7 @@ package mesosphere.marathon.core.leadership.impl
 import akka.actor.{ Actor, ActorLogging, Props }
 import com.twitter.common.zookeeper.ZooKeeperClient
 import mesosphere.marathon.LeadershipAbdication
+import org.apache.zookeeper.ZooKeeper.States
 import org.apache.zookeeper.{ ZooKeeper, WatchedEvent, Watcher }
 import AbdicateOnConnectionLossActor._
 
