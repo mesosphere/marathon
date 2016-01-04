@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.task.tracker
+package mesosphere.marathon.core.task.update
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.{ PathId, Timestamp }

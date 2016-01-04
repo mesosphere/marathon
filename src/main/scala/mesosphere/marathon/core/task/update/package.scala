@@ -6,4 +6,4 @@ package mesosphere.marathon.core.task
   *
   * Ultimately, the task status update handling code should move into the other entities.
   */
-package object tracker
+package object update

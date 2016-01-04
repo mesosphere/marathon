@@ -8,8 +8,9 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusObservables }
-import mesosphere.marathon.core.task.tracker.impl.TaskStatusUpdateProcessorImpl
-import mesosphere.marathon.core.task.tracker.impl.steps.{
+import mesosphere.marathon.core.task.jobs.TaskJobsModule
+import mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl
+import mesosphere.marathon.core.task.update.impl.steps.{
   ContinueOnErrorStep,
   NotifyHealthCheckManagerStepImpl,
   NotifyLaunchQueueStepImpl,
@@ -19,7 +20,7 @@ import mesosphere.marathon.core.task.tracker.impl.steps.{
   TaskStatusEmitterPublishStepImpl,
   UpdateTaskTrackerStepImpl
 }
-import mesosphere.marathon.core.task.tracker.{ TaskStatusUpdateProcessor, TaskStatusUpdateStep, TaskTrackerModule }
+import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskStatusUpdateStep }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 
 /**
@@ -48,8 +49,7 @@ class CoreGuiceModule extends AbstractModule {
     coreModule.taskBusModule.taskStatusObservables
 
   @Provides @Singleton
-  def taskTrackerModule(coreModule: CoreModule): TaskTrackerModule =
-    coreModule.taskTrackerModule
+  def taskJobsModule(coreModule: CoreModule): TaskJobsModule = coreModule.taskJobsModule
 
   @Provides @Singleton
   final def taskQueue(coreModule: CoreModule): LaunchQueue = coreModule.appOfferMatcherModule.taskQueue

@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon.core.task.jobs.impl
 
 import akka.actor._
 import mesosphere.marathon.Protos.MarathonTask
@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.Iterable
 import scala.concurrent.duration._
 
-private[tracker] object KillOverdueTasksActor {
+private[jobs] object KillOverdueTasksActor {
   def props(
     config: MarathonConf,
     taskTracker: TaskTracker, driverHolder: MarathonSchedulerDriverHolder, clock: Clock): Props = {
@@ -79,7 +79,7 @@ private[tracker] object KillOverdueTasksActor {
     }
   }
 
-  private[tracker] case class Check(maybeAck: Option[ActorRef])
+  private[jobs] case class Check(maybeAck: Option[ActorRef])
 }
 
 private class KillOverdueTasksActor(support: KillOverdueTasksActor.Support) extends Actor with ActorLogging {

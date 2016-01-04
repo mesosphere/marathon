@@ -13,7 +13,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
-import mesosphere.marathon.core.task.tracker.TaskTrackerModule
+import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks.{ TaskFactory, TaskTrackerImpl }
@@ -52,7 +52,7 @@ class CoreModuleImpl @Inject() (
   // TASKS
 
   override lazy val taskBusModule = new TaskBusModule()
-  override lazy val taskTrackerModule = new TaskTrackerModule(marathonConf, leadershipModule, clock)
+  override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
 
@@ -115,7 +115,7 @@ class CoreModuleImpl @Inject() (
   // is created. Changing the wiring order for this feels wrong since it is nicer if it
   // follows architectural logic. Therefore we instantiate them here explicitly.
 
-  taskTrackerModule.killOverdueTasks(taskTracker, marathonSchedulerDriverHolder)
+  taskJobsModule.killOverdueTasks(taskTracker, marathonSchedulerDriverHolder)
   maybeOfferReviver
   offerMatcherManagerModule
   launcherModule

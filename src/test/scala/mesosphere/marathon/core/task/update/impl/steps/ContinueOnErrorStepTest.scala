@@ -1,8 +1,8 @@
-package mesosphere.marathon.core.task.tracker.impl.steps
+package mesosphere.marathon.core.task.update.impl.steps
 
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ Mockito, CaptureLogEvents }
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }

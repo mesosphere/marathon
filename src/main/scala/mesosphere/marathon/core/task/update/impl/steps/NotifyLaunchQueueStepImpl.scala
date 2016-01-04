@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.task.tracker.impl.steps
+package mesosphere.marathon.core.task.update.impl.steps
 
 import javax.inject.Inject
 
@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
-import mesosphere.marathon.core.task.tracker.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus
 

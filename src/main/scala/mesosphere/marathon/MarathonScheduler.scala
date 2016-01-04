@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
-import mesosphere.marathon.core.task.tracker.TaskStatusUpdateProcessor
+import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.event._
 import mesosphere.marathon.tasks._
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }

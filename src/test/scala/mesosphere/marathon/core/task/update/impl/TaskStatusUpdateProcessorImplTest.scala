@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.task.tracker.impl
+package mesosphere.marathon.core.task.update.impl
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
@@ -10,7 +10,7 @@ import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.core.task.tracker.impl.steps._
+import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
