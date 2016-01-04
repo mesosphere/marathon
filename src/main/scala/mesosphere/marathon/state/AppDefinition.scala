@@ -296,7 +296,8 @@ case class AppDefinition(
         dependencies != to.dependencies ||
         upgradeStrategy != to.upgradeStrategy ||
         labels != to.labels ||
-        acceptedResourceRoles != to.acceptedResourceRoles
+        acceptedResourceRoles != to.acceptedResourceRoles ||
+        ipAddress != to.ipAddress
     }
   }
 

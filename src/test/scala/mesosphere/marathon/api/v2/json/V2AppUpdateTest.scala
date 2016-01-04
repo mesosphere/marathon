@@ -6,13 +6,14 @@ import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container._
-import mesosphere.marathon.state.{ Container, PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.Json
 
-import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class V2AppUpdateTest extends MarathonSpec {
@@ -85,7 +86,17 @@ class V2AppUpdateTest extends MarathonSpec {
           "two" -> "bbb",
           "three" -> "ccc"
         )
-      )
+      ),
+      ipAddress = Some(IpAddress(
+        groups = Seq("a", "b", "c"),
+        labels = Map(
+          "foo" -> "bar",
+          "baz" -> "buzz"
+        ),
+        discoveryInfo = DiscoveryInfo(
+          ports = Seq(Port(name = "http", number = 80, protocol = "tcp"))
+        )
+      ))
     )
     JsonTestHelper.assertSerializationRoundtripWorks(update1)
   }
@@ -114,6 +125,35 @@ class V2AppUpdateTest extends MarathonSpec {
         "version": null
       }
     """
+    val readResult2 = fromJsonString(json2)
+    assert(readResult2 == update2)
+  }
+
+  test("Serialization result of empty ipAddress") {
+    val update2 = V2AppUpdate(ipAddress = None)
+    val json2 =
+      """
+      {
+        "cmd": null,
+        "user": null,
+        "env": null,
+        "instances": null,
+        "cpus": null,
+        "mem": null,
+        "disk": null,
+        "executor": null,
+        "constraints": null,
+        "uris": null,
+        "ports": null,
+        "backoffSeconds": null,
+        "backoffFactor": null,
+        "container": null,
+        "healthChecks": null,
+        "dependencies": null,
+        "ipAddress": null,
+        "version": null
+      }
+      """
     val readResult2 = fromJsonString(json2)
     assert(readResult2 == update2)
   }

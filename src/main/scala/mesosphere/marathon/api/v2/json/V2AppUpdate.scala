@@ -1,18 +1,11 @@
 package mesosphere.marathon.api.v2.json
 
-import java.lang.{ Integer => JInt, Double => JDouble }
+import java.lang.{ Double => JDouble, Integer => JInt }
 
-import mesosphere.marathon.api.v2.json.V2AppDefinition.VersionInfo
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.state.{
-  AppDefinition,
-  Container,
-  PathId,
-  UpgradeStrategy,
-  Timestamp
-}
+import mesosphere.marathon.state.{ AppDefinition, Container, IpAddress, PathId, Timestamp, UpgradeStrategy }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
@@ -67,7 +60,9 @@ case class V2AppUpdate(
 
     acceptedResourceRoles: Option[Set[String]] = None,
 
-    version: Option[Timestamp] = None) {
+    version: Option[Timestamp] = None,
+
+    ipAddress: Option[IpAddress] = None) {
 
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
@@ -112,7 +107,8 @@ case class V2AppUpdate(
     upgradeStrategy = upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels = labels.getOrElse(app.labels),
     acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles),
-    version = version.getOrElse(app.version)
+    version = version.getOrElse(app.version),
+    ipAddress = ipAddress.orElse(app.ipAddress)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): V2AppUpdate = copy(
