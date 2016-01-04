@@ -47,7 +47,7 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val shutdownHookModule = ShutdownHooks()
   private[this] lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
-  override lazy val leadershipModule = new LeadershipModule(actorsModule.actorRefFactory, zk, leader)
+  override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory, zk, leader)
 
   // TASKS
 
