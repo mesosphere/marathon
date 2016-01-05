@@ -128,9 +128,13 @@ IP-per-task.
 - #2647 - Application cmd override causes application to restart repeatedly
 - #2720 - Disabled button has wrong colour
 - #2734 - Invalid validation for multiple ports
-- #2818 - Remove `Set[MarathonTask]` from TaskTracker
 - #2755 - Memory leak in Marathon UI
 - #2812 - Cannot change configuration of Marathon app after deployment
+- #2818 - Remove `Set[MarathonTask]` from TaskTracker
+- #2820 - Improve --[disable_]ha documentation
+- #2865 - Multiple explicit ports are mixed up in task json
+- #2870 - Marathon healthchecks on wrong address
+- #2872 - Update IPAddress of a running app is not possible
 
 ## Changes from 0.11.1 to 0.13.0
 
