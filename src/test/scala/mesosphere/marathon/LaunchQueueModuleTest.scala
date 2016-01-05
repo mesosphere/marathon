@@ -10,6 +10,7 @@ import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.{ AppRepository, PathId }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.tasks._
+import mesosphere.marathon.test.MarathonShutdownHookSupport
 import org.apache.mesos.Protos.TaskID
 import org.hamcrest.{ BaseMatcher, Description }
 import org.mockito.Matchers
@@ -20,7 +21,8 @@ import org.scalatest.{ BeforeAndAfter, GivenWhenThen }
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenWhenThen {
+class LaunchQueueModuleTest
+    extends MarathonSpec with BeforeAndAfter with GivenWhenThen with MarathonShutdownHookSupport {
 
   test("empty queue returns no results") {
     When("querying queue")
@@ -168,7 +170,6 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
 
   private[this] val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
 
-  private[this] var shutdownHooks: ShutdownHooks = _
   private[this] var clock: Clock = _
   private[this] var taskBusModule: TaskBusModule = _
   private[this] var offerMatcherManager: DummyOfferMatcherManager = _
@@ -180,7 +181,6 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
   private[this] def taskQueue = module.taskQueue
 
   before {
-    shutdownHooks = ShutdownHooks()
     clock = Clock()
     taskBusModule = new TaskBusModule()
 
@@ -207,7 +207,5 @@ class LaunchQueueModuleTest extends MarathonSpec with BeforeAndAfter with GivenW
     verifyNoMoreInteractions(appRepository)
     verifyNoMoreInteractions(taskTracker)
     verifyNoMoreInteractions(taskFactory)
-
-    shutdownHooks.shutdown()
   }
 }

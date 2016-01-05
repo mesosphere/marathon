@@ -1,7 +1,7 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ ActorSystem, Props }
-import akka.testkit.{ TestActorRef, TestKit }
+import akka.actor.Props
+import akka.testkit.TestActorRef
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
@@ -12,6 +12,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTrackerImpl }
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
@@ -24,12 +25,11 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
 
 class TaskStartActorTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with FunSuiteLike
     with Matchers
     with MockitoSugar
-    with BeforeAndAfter
-    with BeforeAndAfterAll {
+    with BeforeAndAfter {
 
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
@@ -43,11 +43,6 @@ class TaskStartActorTest
     launchQueue = mock[LaunchQueue]
     metrics = new Metrics(new MetricRegistry)
     taskTracker = spy(MarathonTestHelper.createTaskTracker(store = new InMemoryStore, metrics = metrics))
-  }
-
-  override protected def afterAll(): Unit = {
-    super.afterAll()
-    system.shutdown()
   }
 
   for (

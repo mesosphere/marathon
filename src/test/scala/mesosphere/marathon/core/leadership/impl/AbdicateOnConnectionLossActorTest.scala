@@ -3,12 +3,13 @@ package mesosphere.marathon.core.leadership.impl
 import akka.actor.ActorSystem
 import akka.testkit.{ TestActorRef, TestKit }
 import com.twitter.common.zookeeper.ZooKeeperClient
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.{ LeadershipAbdication, MarathonSpec }
 import org.apache.zookeeper.{ ZooKeeper, WatchedEvent, Watcher }
-import org.scalatest.GivenWhenThen
+import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, GivenWhenThen }
 
-class AbdicateOnConnectionLossActorTest extends TestKit(ActorSystem("test")) with MarathonSpec with Mockito with GivenWhenThen {
+class AbdicateOnConnectionLossActorTest
+    extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with BeforeAndAfter {
 
   test("register as zk listener on start") {
     Given("ZK and leader refs")

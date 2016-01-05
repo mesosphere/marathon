@@ -2,30 +2,26 @@ package mesosphere.marathon.health
 
 import java.net.{ InetAddress, ServerSocket }
 
-import akka.actor.{ ActorSystem, Props }
-import akka.testkit.{ ImplicitSender, TestActorRef, TestKit }
+import akka.actor.Props
+import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonSpec, Protos }
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.Matchers
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class HealthCheckWorkerActorTest
-    extends TestKit(ActorSystem("System"))
+    extends MarathonActorSupport
     with ImplicitSender
     with MarathonSpec
-    with Matchers
-    with BeforeAndAfterAll {
+    with Matchers {
 
   import HealthCheckWorker._
   import mesosphere.util.ThreadPoolContext.context
-
-  override def afterAll {
-    TestKit.shutdownActorSystem(system)
-  }
 
   test("A TCP health check should correctly resolve the hostname") {
     val socket = new ServerSocket(0)

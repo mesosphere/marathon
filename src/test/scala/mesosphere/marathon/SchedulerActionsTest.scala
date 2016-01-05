@@ -1,18 +1,18 @@
 package mesosphere.marathon
 
-import akka.actor.ActorSystem
-import akka.testkit.{ TestKit, TestProbe }
+import akka.testkit.TestProbe
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupRepository, PathId }
-import mesosphere.marathon.tasks.{ TaskReconciler, TaskTracker, TaskTrackerImpl, TaskTrackerImpl$ }
+import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.tasks.{ TaskReconciler, TaskTracker }
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.Implicits.{ slaveIDToProto, taskIDToProto }
 import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
-import org.mockito.Mockito.{ times, verify, when, verifyNoMoreInteractions }
+import org.mockito.Mockito.{ times, verify, verifyNoMoreInteractions, when }
 import org.scalatest.Matchers
 import org.scalatest.mock.MockitoSugar
 
@@ -20,7 +20,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class SchedulerActionsTest extends TestKit(ActorSystem("TestSystem")) with MarathonSpec with Matchers with MockitoSugar {
+class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with Matchers with MockitoSugar {
   import system.dispatcher
 
   test("Reset rate limiter if application is stopped") {

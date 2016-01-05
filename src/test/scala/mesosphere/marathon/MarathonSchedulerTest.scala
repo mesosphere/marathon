@@ -2,22 +2,21 @@ package mesosphere.marathon
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import akka.testkit.{ TestKit, TestProbe }
+import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.bus.TaskStatusEmitter
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
-import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.tasks._
-import mesosphere.util.state.{ MutableMesosLeaderInfo, MesosLeaderInfo, FrameworkIdUtil }
+import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.BeforeAndAfterAll
 
-class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with MarathonSpec with BeforeAndAfterAll {
+class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll {
 
   var probe: TestProbe = _
   var repo: AppRepository = _
@@ -56,10 +55,6 @@ class MarathonSchedulerTest extends TestKit(ActorSystem("System")) with Marathon
         override def disconnected(): Unit = {}
       }
     )
-  }
-
-  override def afterAll(): Unit = {
-    system.shutdown()
   }
 
   test("Publishes event when registered") {

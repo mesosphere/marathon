@@ -8,12 +8,12 @@ import akka.event.EventStream
 import akka.testkit.{ EventFilter, ImplicitSender, TestActorRef, TestKit }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.event.{ EventStreamAttached, EventStreamDetached, Subscribe }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
 
-class HttpEventStreamHandleActorTest extends TestKit(ActorSystem())
+class HttpEventStreamHandleActorTest extends MarathonActorSupport
     with MarathonSpec with Matchers with GivenWhenThen with ImplicitSender with BeforeAndAfter with Mockito {
 
   test("A message send to the handle actor will be transferred to the stream handle") {
