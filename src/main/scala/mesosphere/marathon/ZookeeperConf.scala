@@ -36,7 +36,8 @@ trait ZookeeperConf extends ScallopConf {
   )
 
   lazy val zooKeeperCompressionEnabled = toggle("zk_compression",
-    descrYes = "Enable compression of zk nodes, if the size of the node is bigger than the configured threshold.",
+    descrYes =
+      "(Default) Enable compression of zk nodes, if the size of the node is bigger than the configured threshold.",
     descrNo = "Disable compression of zk nodes",
     noshort = true,
     prefix = "disable_",
