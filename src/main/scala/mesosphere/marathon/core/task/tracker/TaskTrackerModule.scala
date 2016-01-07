@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.task.tracker
 
 import akka.actor.ActorRef
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._
 import mesosphere.marathon.metrics.Metrics
@@ -11,6 +12,7 @@ import mesosphere.marathon.state.TaskRepository
   * update the task state ([[TaskUpdater]], [[TaskCreator]]).
   */
 class TaskTrackerModule(
+    clock: Clock,
     metrics: Metrics,
     config: TaskTrackerConfig,
     leadershipModule: LeadershipModule,
@@ -26,12 +28,13 @@ class TaskTrackerModule(
     new TaskOpProcessorImpl(taskTrackerRef, taskRepository, statusUpdateResolver(taskTrackerRef))
   private[this] lazy val taskUpdaterActorMetrics = new TaskUpdateActor.ActorMetrics(metrics)
   private[this] def taskUpdaterActorProps(taskTrackerRef: ActorRef) =
-    TaskUpdateActor.props(taskUpdaterActorMetrics, taskOpProcessor(taskTrackerRef))
+    TaskUpdateActor.props(clock, taskUpdaterActorMetrics, taskOpProcessor(taskTrackerRef))
   private[this] lazy val taskLoader = new TaskLoaderImpl(taskRepository)
   private[this] lazy val taskTrackerActorProps = TaskTrackerActor.props(taskLoader, taskUpdaterActorProps)
   protected lazy val taskTrackerActorName = "taskTracker"
   private[this] lazy val taskTrackerActorRef = leadershipModule.startWhenLeader(
     taskTrackerActorProps, taskTrackerActorName
   )
-  private[this] lazy val taskTrackerCreatorAndUpdater = new TaskCreatorAndUpdaterDelegate(config, taskTrackerActorRef)
+  private[this] lazy val taskTrackerCreatorAndUpdater =
+    new TaskCreatorAndUpdaterDelegate(clock, config, taskTrackerActorRef)
 }

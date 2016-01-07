@@ -24,8 +24,7 @@ import scala.concurrent.{ ExecutionContext, Await, Future }
 private[tracker] class TaskTrackerDelegate(
     metrics: Option[Metrics],
     config: TaskTrackerConfig,
-    taskTrackerRef: ActorRef
-) extends TaskTracker {
+    taskTrackerRef: ActorRef) extends TaskTracker {
 
   override def list: Map[PathId, App] = appDataMapSync.toTaskTrackerAppMap
   override def listAsync()(implicit ec: ExecutionContext): Future[Map[PathId, App]] =

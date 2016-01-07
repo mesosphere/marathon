@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import akka.actor.Status
 import akka.testkit.TestProbe
-import mesosphere.marathon.state.{ PathId, TaskRepository }
+import mesosphere.marathon.state.{ Timestamp, PathId, TaskRepository }
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.test.{ CaptureLogEvents, MarathonActorSupport, Mockito }
 import org.apache.mesos.Protos.TaskStatus
@@ -18,12 +18,17 @@ class TaskOpProcessorImplTest
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  // ignored by the TaskOpProcessorImpl
+  val deadline = Timestamp.zero
+
   test("process noop") {
     val f = new Fixture
     val appId = PathId("/app")
 
     When("the processor processes a noop")
-    val result = f.processor.process(TaskOpProcessor.Operation(testActor, appId, "task1", TaskOpProcessor.Action.Noop))
+    val result = f.processor.process(
+      TaskOpProcessor.Operation(deadline, testActor, appId, "task1", TaskOpProcessor.Action.Noop)
+    )
 
     Then("it replies with unit immediately")
     result.futureValue should be(())
@@ -42,7 +47,7 @@ class TaskOpProcessorImplTest
     When("the processor processes a fail")
     val cause: RuntimeException = new scala.RuntimeException("fail")
     val result = f.processor.process(
-      TaskOpProcessor.Operation(testActor, appId, "task1", TaskOpProcessor.Action.Fail(cause))
+      TaskOpProcessor.Operation(deadline, testActor, appId, "task1", TaskOpProcessor.Action.Fail(cause))
     )
 
     Then("it replies with unit immediately")
@@ -65,7 +70,7 @@ class TaskOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      TaskOpProcessor.Operation(testActor, appId, task.getId, TaskOpProcessor.Action.Update(task))
+      TaskOpProcessor.Operation(deadline, testActor, appId, task.getId, TaskOpProcessor.Action.Update(task))
     )
 
     Then("it replies with unit immediately")
@@ -95,7 +100,7 @@ class TaskOpProcessorImplTest
     var result: Try[Unit] = Failure(new RuntimeException("test executing failed"))
     val logs = CaptureLogEvents.forBlock {
       result = Try(f.processor.process(
-        TaskOpProcessor.Operation(testActor, appId, task.getId, TaskOpProcessor.Action.Update(task))
+        TaskOpProcessor.Operation(deadline, testActor, appId, task.getId, TaskOpProcessor.Action.Update(task))
       ).futureValue) // we need to complete the future here to get all the logs
     }
 
@@ -134,7 +139,7 @@ class TaskOpProcessorImplTest
     var result: Try[Unit] = Failure(new RuntimeException("test executing failed"))
     val logs = CaptureLogEvents.forBlock {
       result = Try(f.processor.process(
-        TaskOpProcessor.Operation(testActor, appId, task.getId, TaskOpProcessor.Action.Update(task))
+        TaskOpProcessor.Operation(deadline, testActor, appId, task.getId, TaskOpProcessor.Action.Update(task))
       ).futureValue) // we need to complete the future here to get all the logs
     }
 
@@ -174,7 +179,7 @@ class TaskOpProcessorImplTest
     var result: Try[Unit] = Failure(new RuntimeException("test executing failed"))
     val logs = CaptureLogEvents.forBlock {
       result = Try(f.processor.process(
-        TaskOpProcessor.Operation(testActor, appId, task.getId, TaskOpProcessor.Action.Update(task))
+        TaskOpProcessor.Operation(deadline, testActor, appId, task.getId, TaskOpProcessor.Action.Update(task))
       ).futureValue) // we need to complete the future here to get all the logs
     }
 
@@ -207,7 +212,7 @@ class TaskOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      TaskOpProcessor.Operation(testActor, appId, taskId, TaskOpProcessor.Action.Expunge)
+      TaskOpProcessor.Operation(deadline, testActor, appId, taskId, TaskOpProcessor.Action.Expunge)
     )
 
     Then("it replies with unit immediately")
@@ -234,7 +239,7 @@ class TaskOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      TaskOpProcessor.Operation(testActor, appId, taskId, TaskOpProcessor.Action.Expunge)
+      TaskOpProcessor.Operation(deadline, testActor, appId, taskId, TaskOpProcessor.Action.Expunge)
     )
 
     Then("it replies with unit immediately")
@@ -266,7 +271,7 @@ class TaskOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      TaskOpProcessor.Operation(testActor, appId, taskId, TaskOpProcessor.Action.Expunge)
+      TaskOpProcessor.Operation(deadline, testActor, appId, taskId, TaskOpProcessor.Action.Expunge)
     )
 
     Then("it replies with unit immediately")
@@ -299,7 +304,7 @@ class TaskOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      TaskOpProcessor.Operation(testActor, appId, taskId, TaskOpProcessor.Action.UpdateStatus(update))
+      TaskOpProcessor.Operation(deadline, testActor, appId, taskId, TaskOpProcessor.Action.UpdateStatus(update))
     )
 
     Then("it replies with unit immediately")

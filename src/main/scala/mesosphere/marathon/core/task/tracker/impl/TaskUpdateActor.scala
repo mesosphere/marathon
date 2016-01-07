@@ -1,17 +1,23 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import java.util.concurrent.TimeoutException
+
 import akka.actor.{ Actor, Props, Status }
 import akka.event.LoggingReceive
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.tracker.impl.TaskUpdateActor.{ ActorMetrics, FinishedTaskOp, ProcessTaskOp }
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.state.Timestamp
+import mesosphere.util.SerializeExecution
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Queue
+import scala.concurrent.Future
 
 object TaskUpdateActor {
-  def props(metrics: ActorMetrics, processor: TaskOpProcessor): Props = {
-    Props(new TaskUpdateActor(metrics, processor))
+  def props(clock: Clock, metrics: ActorMetrics, processor: TaskOpProcessor): Props = {
+    Props(new TaskUpdateActor(clock, metrics, processor))
   }
 
   /** Request that the [[TaskUpdateActor]] should process the given op. */
@@ -26,11 +32,14 @@ object TaskUpdateActor {
     private[this] def name(name: String): String =
       metrics.name(MetricPrefixes.SERVICE, classOf[TaskUpdateActor], name)
 
-    /** the number of queued ops that are not currently processed */
-    val numberOfQueuedOps = metrics.gauge(name("number-of-queued-ops"), new AtomicIntGauge)
+    /** the number of ops that are for tasks that already have an op ready */
+    val numberOfQueuedOps = metrics.gauge(name("delayed-ops"), new AtomicIntGauge)
 
     /** the number of currently processed ops */
-    val numberOfActiveOps = metrics.gauge(name("number-of-active-ops"), new AtomicIntGauge)
+    val numberOfActiveOps = metrics.gauge(name("ready-ops"), new AtomicIntGauge)
+
+    /** the number of ops that we rejected because of a timeout */
+    val timedOutOpsMeter = metrics.meter(name("ops-timeout"))
 
     /** a timer around op processing */
     val processOpTimer = metrics.timer(name("process-op"))
@@ -46,7 +55,10 @@ object TaskUpdateActor {
   * * This actor is spawned as a child of the [[TaskTrackerActor]].
   * * Errors in this actor lead to a restart of the TaskTrackerActor.
   */
-private[impl] class TaskUpdateActor(metrics: ActorMetrics, processor: TaskOpProcessor) extends Actor {
+private[impl] class TaskUpdateActor(
+    clock: Clock,
+    metrics: ActorMetrics,
+    processor: TaskOpProcessor) extends Actor {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   // this has to be a mutable field because we need to access it in postStop()
@@ -73,7 +85,7 @@ private[impl] class TaskUpdateActor(metrics: ActorMetrics, processor: TaskOpProc
   }
 
   def receive: Receive = LoggingReceive {
-    case ProcessTaskOp(op @ TaskOpProcessor.Operation(_, _, taskId, _)) =>
+    case ProcessTaskOp(op @ TaskOpProcessor.Operation(deadline, _, _, taskId, _)) =>
       val oldQueue: Queue[TaskOpProcessor.Operation] = operationsByTaskId(taskId)
       val newQueue = oldQueue :+ op
       operationsByTaskId += taskId -> newQueue
@@ -114,17 +126,23 @@ private[impl] class TaskUpdateActor(metrics: ActorMetrics, processor: TaskOpProc
         + s"$activeCount active, $queuedCount queued.")
 
       import context.dispatcher
-      val processOpFuture =
-        metrics.processOpTimer.timeFuture {
-          val future = processor.process(op)
-          future.map { _ =>
-            log.debug(s"Finished processing ${op.action} for app [${op.appId}] and task [${op.taskId}]")
-            FinishedTaskOp(op)
-          }
+      val future = {
+        if (op.deadline <= clock.now()) {
+          metrics.timedOutOpsMeter.mark()
+          op.sender ! Status.Failure(
+            new TimeoutException(s"Timeout: ${op.action} for app [${op.appId}] and task [${op.taskId}].")
+          )
+          Future.successful(())
         }
+        else
+          metrics.processOpTimer.timeFuture(processor.process(op))
+      }.map { _ =>
+        log.debug(s"Finished processing ${op.action} for app [${op.appId}] and task [${op.taskId}]")
+        FinishedTaskOp(op)
+      }
 
       import akka.pattern.pipe
-      processOpFuture.pipeTo(self)
+      future.pipeTo(self)
     }
   }
 }

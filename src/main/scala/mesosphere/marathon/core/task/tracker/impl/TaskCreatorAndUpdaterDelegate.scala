@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.tracker.{ TaskCreator, TaskTrackerConfig, TaskUpdater }
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskStatus
@@ -14,10 +15,15 @@ import scala.util.control.NonFatal
 /**
   * Implements the [[TaskCreator]]/[[TaskUpdater]] traits by sending messages to the TaskTracker actor.
   */
-private[tracker] class TaskCreatorAndUpdaterDelegate(conf: TaskTrackerConfig, taskTrackerRef: ActorRef)
+private[tracker] class TaskCreatorAndUpdaterDelegate(
+  clock: Clock,
+  conf: TaskTrackerConfig,
+  taskTrackerRef: ActorRef)
     extends TaskCreator with TaskUpdater {
 
   import scala.concurrent.ExecutionContext.Implicits.global
+
+  private[impl] implicit val timeout: Timeout = conf.taskUpdateRequestTimeout().milliseconds
 
   override def created(appId: PathId, task: MarathonTask): Future[MarathonTask] = {
     taskUpdate(appId, task.getId, TaskOpProcessor.Action.Update(task)).map(_ => task)
@@ -31,8 +37,8 @@ private[tracker] class TaskCreatorAndUpdaterDelegate(conf: TaskTrackerConfig, ta
 
   private[this] def taskUpdate(appId: PathId, taskId: String, action: TaskOpProcessor.Action): Future[Unit] = {
     import akka.pattern.ask
-    implicit val timeout: Timeout = conf.taskUpdateRequestTimeout().milliseconds
-    (taskTrackerRef ? TaskTrackerActor.ForwardTaskOp(appId, taskId, action)).mapTo[Unit].recover {
+    val deadline = clock.now + timeout.duration
+    (taskTrackerRef ? TaskTrackerActor.ForwardTaskOp(deadline, appId, taskId, action)).mapTo[Unit].recover {
       case NonFatal(e) =>
         throw new RuntimeException(s"while asking for $action on app [$appId] and task [$taskId]", e)
     }

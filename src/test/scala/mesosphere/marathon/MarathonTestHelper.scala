@@ -10,6 +10,7 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.json.V2AppDefinition
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.{ LeadershipModule, AlwaysElectedLeadershipModule }
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
@@ -177,7 +178,7 @@ trait MarathonTestHelper {
       metrics
     )
 
-    new TaskTrackerModule(metrics, defaultConfig(), leadershipModule, taskRepo) {
+    new TaskTrackerModule(Clock(), metrics, defaultConfig(), leadershipModule, taskRepo) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val taskTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }

@@ -3,7 +3,7 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ Timestamp, PathId }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }
 
@@ -41,7 +41,10 @@ class TaskTrackerActorTest
     f.taskLoader.loadTasks() returns Future.successful(AppDataMap.of(Map.empty))
 
     When("the task tracker actor gets a ForwardTaskOp")
-    f.taskTrackerActor ! TaskTrackerActor.ForwardTaskOp(PathId("/ignored"), "task1", TaskOpProcessor.Action.Noop)
+    val deadline = Timestamp.zero // ignored
+    f.taskTrackerActor ! TaskTrackerActor.ForwardTaskOp(
+      deadline, PathId("/ignored"), "task1", TaskOpProcessor.Action.Noop
+    )
 
     Then("it will eventuall die")
     watch(f.taskTrackerActor)

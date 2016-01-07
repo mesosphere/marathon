@@ -1,11 +1,14 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import akka.actor.Terminated
+import java.util.concurrent.TimeoutException
+
+import akka.actor.{ Status, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }
 
@@ -21,7 +24,9 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val taskId = "task1"
-    val op = TaskOpProcessor.Operation(f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge)
+    val op = TaskOpProcessor.Operation(
+      f.oneSecondInFuture, f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge
+    )
 
     And("a processor that fails immediately")
     val processingFailure: RuntimeException = new scala.RuntimeException("processing failed")
@@ -35,7 +40,44 @@ class TaskUpdateActorTest
 
     And("the exception is escalated and the actor dies")
     watch(f.updateActor)
-    expectMsgClass(classOf[Terminated]).getActor() should equal(f.updateActor)
+    expectMsgClass(classOf[Terminated]).getActor should equal(f.updateActor)
+
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process timeouts are checked") {
+    val f = new Fixture
+
+    Given("an op with an already reached deadline")
+    val appId = PathId("/app")
+    val taskId = "task1"
+    val op = TaskOpProcessor.Operation(
+      f.clock.now, f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge
+    )
+
+    And("a processor that succeeds immediately")
+    f.processor.process(eq(op))(any) returns Future.successful(())
+
+    When("the op is passed to the actor for processing")
+    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(op))
+
+    Then("we the sender gets a timeout exception")
+    val failure = f.opInitiator.expectMsgClass(classOf[Status.Failure])
+    failure.cause.getClass should be(classOf[TimeoutException])
+
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+
+    Given("a processor that processes 'anotherOp' immediately")
+    val anotherOp = op.copy(deadline = f.oneSecondInFuture)
+    f.processor.process(eq(anotherOp))(any) returns Future.successful(())
+
+    When("we process another op, it is not effected")
+    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(anotherOp))
+
+    Then("process op was called")
+    verify(f.processor).process(eq(anotherOp))(any)
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -47,7 +89,9 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val taskId = "task1"
-    val op = TaskOpProcessor.Operation(f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge)
+    val op = TaskOpProcessor.Operation(
+      f.oneSecondInFuture, f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge
+    )
 
     And("a processor that processes it immediately")
     f.processor.process(eq(op))(any) returns Future.successful(())
@@ -72,7 +116,9 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val taskId = "task1"
-    val op = TaskOpProcessor.Operation(f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge)
+    val op = TaskOpProcessor.Operation(
+      f.oneSecondInFuture, f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge
+    )
 
     And("a processor that does not return")
     f.processor.process(eq(op))(any) returns Promise[Unit]().future
@@ -97,9 +143,13 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val task1Id = "task1"
-    val op1 = TaskOpProcessor.Operation(f.opInitiator.ref, appId, task1Id, TaskOpProcessor.Action.Expunge)
+    val op1 = TaskOpProcessor.Operation(
+      f.oneSecondInFuture, f.opInitiator.ref, appId, task1Id, TaskOpProcessor.Action.Expunge
+    )
     val task2Id = "task2"
-    val op2 = TaskOpProcessor.Operation(f.opInitiator.ref, appId, task2Id, TaskOpProcessor.Action.Expunge)
+    val op2 = TaskOpProcessor.Operation(
+      f.oneSecondInFuture, f.opInitiator.ref, appId, task2Id, TaskOpProcessor.Action.Expunge
+    )
 
     And("a processor that does not return")
     val op1Promise: Promise[Unit] = Promise[Unit]()
@@ -141,8 +191,12 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val task1Id = "task1"
-    val op1 = TaskOpProcessor.Operation(f.opInitiator.ref, appId, task1Id, TaskOpProcessor.Action.Expunge)
-    val op2 = TaskOpProcessor.Operation(f.opInitiator.ref, appId, task1Id, TaskOpProcessor.Action.Noop)
+    val op1 = TaskOpProcessor.Operation(
+      f.oneSecondInFuture, f.opInitiator.ref, appId, task1Id, TaskOpProcessor.Action.Expunge
+    )
+    val op2 = TaskOpProcessor.Operation(
+      f.oneSecondInFuture, f.opInitiator.ref, appId, task1Id, TaskOpProcessor.Action.Noop
+    )
 
     And("a processor that does not return")
     val op1Promise: Promise[Unit] = Promise[Unit]()
@@ -191,11 +245,14 @@ class TaskUpdateActorTest
   }
 
   class Fixture {
+    lazy val clock = ConstantClock()
     lazy val opInitiator = TestProbe()
     lazy val metrics = new Metrics(new MetricRegistry)
     lazy val actorMetrics = new TaskUpdateActor.ActorMetrics(metrics)
     lazy val processor = mock[TaskOpProcessor]
-    lazy val updateActor = TestActorRef(new TaskUpdateActor(actorMetrics, processor))
+    lazy val updateActor = TestActorRef(new TaskUpdateActor(clock, actorMetrics, processor))
+
+    def oneSecondInFuture: Timestamp = clock.now() + 1.second
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(processor)

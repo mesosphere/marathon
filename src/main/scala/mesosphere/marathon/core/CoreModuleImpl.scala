@@ -53,7 +53,8 @@ class CoreModuleImpl @Inject() (
   // TASKS
 
   override lazy val taskBusModule = new TaskBusModule()
-  override lazy val taskTrackerModule = new TaskTrackerModule(metrics, marathonConf, leadershipModule, taskRepository)
+  override lazy val taskTrackerModule =
+    new TaskTrackerModule(clock, metrics, marathonConf, leadershipModule, taskRepository)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
