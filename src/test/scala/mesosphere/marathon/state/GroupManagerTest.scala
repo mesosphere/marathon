@@ -3,12 +3,14 @@ package mesosphere.marathon.state
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.event.EventStream
+import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.io.storage.StorageProvider
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.util.{ CapConcurrentExecutionsMetrics, CapConcurrentExecutions }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
 import mesosphere.marathon._
-import mesosphere.util.SerializeExecution
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopConf
@@ -22,7 +24,6 @@ import scala.concurrent.{ Await, Future }
 class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Matchers with MarathonSpec {
 
   val actorId = new AtomicInteger(0)
-  def serializeExecutions() = SerializeExecution(system, s"serializeGroupUpdates${actorId.incrementAndGet()}")
 
   class Fixture {
     lazy val scheduler = mock[MarathonSchedulerService]
@@ -35,6 +36,18 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       conf.afterInit()
       conf
     }
+
+    lazy val metricRegistry = new MetricRegistry()
+    lazy val metrics = new Metrics(metricRegistry)
+    lazy val capMetrics = new CapConcurrentExecutionsMetrics(metrics, classOf[GroupManager])
+
+    def serializeExecutions() = CapConcurrentExecutions(
+      capMetrics,
+      system,
+      s"serializeGroupUpdates${actorId.incrementAndGet()}",
+      maxParallel = 1,
+      maxQueued = 10
+    )
 
     lazy val manager = new GroupManager(
       serializeUpdates = serializeExecutions(), scheduler = scheduler,

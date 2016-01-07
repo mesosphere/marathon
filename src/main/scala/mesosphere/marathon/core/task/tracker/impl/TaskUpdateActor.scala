@@ -8,8 +8,6 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.tracker.impl.TaskUpdateActor.{ ActorMetrics, FinishedTaskOp, ProcessTaskOp }
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
-import mesosphere.marathon.state.Timestamp
-import mesosphere.util.SerializeExecution
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Queue

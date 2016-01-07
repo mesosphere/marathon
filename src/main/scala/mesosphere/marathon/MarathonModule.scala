@@ -29,7 +29,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ TaskIdUtil, _ }
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
-import mesosphere.util.SerializeExecution
+import mesosphere.util.{ CapConcurrentExecutionsMetrics, CapConcurrentExecutions }
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
@@ -307,14 +307,21 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Named(ModuleNames.SERIALIZE_GROUP_UPDATES)
   @Provides
   @Singleton
-  def provideSerializeGroupUpdates(actorRefFactory: ActorRefFactory): SerializeExecution = {
-    SerializeExecution(actorRefFactory, "serializeGroupUpdates")
+  def provideSerializeGroupUpdates(metrics: Metrics, actorRefFactory: ActorRefFactory): CapConcurrentExecutions = {
+    val capMetrics = new CapConcurrentExecutionsMetrics(metrics, classOf[GroupManager])
+    CapConcurrentExecutions(
+      capMetrics,
+      actorRefFactory,
+      "serializeGroupUpdates",
+      maxParallel = 1,
+      maxQueued = conf.internalMaxQueuedRootGroupUpdates()
+    )
   }
 
   @Provides
   @Singleton
   def provideGroupManager(
-    @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: SerializeExecution,
+    @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
     scheduler: MarathonSchedulerService,
     groupRepo: GroupRepository,
     appRepo: AppRepository,
