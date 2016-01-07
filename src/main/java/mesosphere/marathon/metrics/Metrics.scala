@@ -10,6 +10,7 @@ import org.aopalliance.intercept.MethodInvocation
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 /**
   * Utils for timer metrics collection.
@@ -66,11 +67,17 @@ class Metrics @Inject() (val registry: MetricRegistry) {
 }
 
 object Metrics {
-  class Timer(timer: com.codahale.metrics.Timer) {
+  class Timer(private[metrics] val timer: com.codahale.metrics.Timer) {
     def timeFuture[T](future: => Future[T]): Future[T] = {
       val startTime = System.nanoTime()
-      import scala.concurrent.ExecutionContext.Implicits.global
-      val f = future
+      val f =
+        try future
+        catch {
+          case NonFatal(e) =>
+            timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
+            throw e
+        }
+      import mesosphere.util.CallerThreadExecutionContext.callerThreadExecutionContext
       f.onComplete {
         case _ => timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
       }

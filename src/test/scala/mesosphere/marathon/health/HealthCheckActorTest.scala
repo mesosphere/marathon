@@ -2,26 +2,29 @@ package mesosphere.marathon.health
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
-import mesosphere.marathon.health.HealthCheckActorTest.SameThreadExecutionContext
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
 import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder, MarathonSpec, Protos }
+import mesosphere.util.CallerThreadExecutionContext
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.immutable.Set
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 
 class HealthCheckActorTest
     extends MarathonActorSupport
     with MarathonSpec with Matchers with BeforeAndAfterAll {
 
   override lazy implicit val system: ActorSystem =
-    ActorSystem(name = "system", defaultExecutionContext = Some(SameThreadExecutionContext))
+    ActorSystem(
+      name = "system",
+      defaultExecutionContext = Some(CallerThreadExecutionContext.callerThreadExecutionContext)
+    )
 
   // regression test for #934
   test("should not dispatch health checks for staging tasks") {
@@ -95,14 +98,3 @@ class HealthCheckActorTest
   }
 }
 
-object HealthCheckActorTest {
-  object SameThreadExecutionContext extends ExecutionContext {
-    override def execute(runnable: Runnable): Unit = {
-      runnable.run()
-    }
-
-    override def reportFailure(cause: Throwable): Unit = {
-
-    }
-  }
-}
