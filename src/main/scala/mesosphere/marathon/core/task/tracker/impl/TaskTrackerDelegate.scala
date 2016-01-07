@@ -4,6 +4,7 @@ import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.tracker.{ TaskTrackerConfig, TaskTracker }
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.PathId
 import TaskTracker.App
 
@@ -11,7 +12,20 @@ import scala.collection.Map
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Await, Future }
 
-private[tracker] class TaskTrackerDelegate(config: TaskTrackerConfig, taskTrackerRef: ActorRef) extends TaskTracker {
+/**
+  * Provides a [[TaskTracker]] interface to [[TaskTrackerActor]].
+  *
+  * This is used for the "global" TaskTracker trait and it is also
+  * is used internally in this package to communicate with the TaskTracker.
+  *
+  * @param metrics a metrics object if we want to track metrics for this delegate. We only want to track
+  *                metrics for the "global" TaskTracker.
+  */
+private[tracker] class TaskTrackerDelegate(
+    metrics: Option[Metrics],
+    config: TaskTrackerConfig,
+    taskTrackerRef: ActorRef
+) extends TaskTracker {
 
   override def list: Map[PathId, App] = appDataMapSync.toTaskTrackerAppMap
   override def listAsync()(implicit ec: ExecutionContext): Future[Map[PathId, App]] =
@@ -29,7 +43,10 @@ private[tracker] class TaskTrackerDelegate(config: TaskTrackerConfig, taskTracke
   override def getTasksAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]] =
     appDataMapFuture.map(_.getTasks(appId))
 
-  implicit val taskTrackerQueryTimeout: Timeout = config.taskTrackerRequestTimeout().milliseconds
+  private[this] val appDataMapFutureTimer =
+    metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "appDataMapFuture")))
+
+  private[this] implicit val taskTrackerQueryTimeout: Timeout = config.taskTrackerRequestTimeout().milliseconds
 
   private[this] def appDataMapSync: AppDataMap = {
     Await.result(appDataMapFuture, taskTrackerQueryTimeout.duration)
@@ -37,6 +54,7 @@ private[tracker] class TaskTrackerDelegate(config: TaskTrackerConfig, taskTracke
 
   private[impl] def appDataMapFuture: Future[AppDataMap] = {
     import akka.pattern.ask
-    (taskTrackerRef ? TaskTrackerActor.List).mapTo[AppDataMap]
+    def futureCall(): Future[AppDataMap] = (taskTrackerRef ? TaskTrackerActor.List).mapTo[AppDataMap]
+    appDataMapFutureTimer.fold(futureCall())(_.timeFuture(futureCall()))
   }
 }
