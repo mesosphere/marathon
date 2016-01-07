@@ -229,13 +229,5 @@ object ProcessKeeper {
   val shutDownHook: ShutdownHookThread = sys.addShutdownHook {
     shutdown()
   }
-
-  def main(args: Array[String]) {
-    //startMarathon(new File("."), Map("MESOS_NATIVE_LIBRARY" -> "/usr/local/lib/libmesos.dylib"), List("--master", "local", "--event_subscriber", "http_callback"))
-    startZooKeeper(2183, "/tmp/foo")
-    Thread.sleep(10000)
-    stopAllProcesses()
-    //startHttpService(11211, ".")
-  }
 }
 
