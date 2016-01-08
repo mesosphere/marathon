@@ -64,7 +64,10 @@ class AppsResource @Inject() (
   def create(body: Array[Byte],
              @DefaultValue("false")@QueryParam("force") force: Boolean,
              @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
+    val now = clock.now()
     val app = validateApp(Json.parse(body).as[V2AppDefinition].withCanonizedIds().toAppDefinition)
+      .copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(now))
+
     doIfAuthorized(req, resp, CreateAppOrGroup, app.id) { identity =>
       def createOrThrow(opt: Option[AppDefinition]) = opt
         .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
