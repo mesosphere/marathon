@@ -7,7 +7,10 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 object StateMetrics {
-  private[state] class MetricTemplate(metrics: Metrics, prefix: String, nanoTime: () => Long = () => System.nanoTime) {
+  private[state] class MetricTemplate(
+    metrics: Metrics, prefix: String, metricsClass: Class[_],
+    nanoTime: () => Long = () => System.nanoTime
+  ) {
     def timedFuture[T](f: => Future[T]): Future[T] = {
       requestMeter.mark()
       val t0 = nanoTime()
@@ -42,7 +45,7 @@ object StateMetrics {
     private[this] val errorMeter: Meter = metrics.meter(errorMeterName)
     private[this] val durationHistogram: Histogram = metrics.histogram(durationHistogramName)
 
-    private[this] def metricName(name: String): String = metrics.name(MetricPrefixes.SERVICE, getClass, name)
+    private[this] def metricName(name: String): String = metrics.name(MetricPrefixes.SERVICE, metricsClass, name)
   }
 
 }
@@ -51,8 +54,8 @@ trait StateMetrics {
 
   protected val metrics: Metrics
 
-  protected val readMetrics = new StateMetrics.MetricTemplate(metrics, "read", nanoTime)
-  protected val writeMetrics = new StateMetrics.MetricTemplate(metrics, "write", nanoTime)
+  protected val readMetrics = new StateMetrics.MetricTemplate(metrics, "read", getClass, nanoTime)
+  protected val writeMetrics = new StateMetrics.MetricTemplate(metrics, "write", getClass, nanoTime)
 
   protected[this] def timedRead[T](f: => Future[T]): Future[T] = readMetrics.timedFuture(f)
 
