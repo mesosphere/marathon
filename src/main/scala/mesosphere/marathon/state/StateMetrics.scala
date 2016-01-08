@@ -1,37 +1,62 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.{ Histogram, Meter }
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+
+import scala.concurrent.Future
+import scala.util.control.NonFatal
+
+object StateMetrics {
+  private[state] class MetricTemplate(metrics: Metrics, prefix: String, nanoTime: () => Long = () => System.nanoTime) {
+    def timedFuture[T](f: => Future[T]): Future[T] = {
+      requestMeter.mark()
+      val t0 = nanoTime()
+      val result: Future[T] =
+        try f
+        catch {
+          case NonFatal(t) =>
+            // if the function did not even manage to return the Future
+            val t1 = nanoTime()
+            durationHistogram.update((t1 - t0) / 1000000)
+            errorMeter.mark()
+            throw t
+        }
+
+      import mesosphere.util.CallerThreadExecutionContext.callerThreadExecutionContext
+      result.onComplete { _ =>
+        val t1 = nanoTime()
+        durationHistogram.update((t1 - t0) / 1000000)
+      }
+      result.onFailure {
+        case _ => errorMeter.mark()
+      }
+
+      result
+    }
+
+    val requestsMeterName = metricName(s"$prefix-requests")
+    val errorMeterName = metricName(s"$prefix-request-errors")
+    val durationHistogramName = metricName(s"$prefix-request-time")
+
+    private[this] val requestMeter: Meter = metrics.meter(requestsMeterName)
+    private[this] val errorMeter: Meter = metrics.meter(errorMeterName)
+    private[this] val durationHistogram: Histogram = metrics.histogram(durationHistogramName)
+
+    private[this] def metricName(name: String): String = metrics.name(MetricPrefixes.SERVICE, getClass, name)
+  }
+
+}
 
 trait StateMetrics {
 
-  // metrics!
   protected val metrics: Metrics
 
-  private[this] def prefix: String = MetricPrefixes.SERVICE
+  protected val readMetrics = new StateMetrics.MetricTemplate(metrics, "read", nanoTime)
+  protected val writeMetrics = new StateMetrics.MetricTemplate(metrics, "write", nanoTime)
 
-  private[this] val readRequests: Meter = metrics.meter(metrics.name(prefix, getClass, "read-requests"))
-  private[this] val readRequestErrors: Meter = metrics.meter(metrics.name(prefix, getClass, "read-request-errors"))
-  private[this] val readRequestTime: Histogram = metrics.histogram(metrics.name(prefix, getClass, "read-request-time"))
+  protected[this] def timedRead[T](f: => Future[T]): Future[T] = readMetrics.timedFuture(f)
 
-  private[this] val writeRequests: Meter = metrics.meter(metrics.name(prefix, getClass, "write-requests"))
-  private[this] val writeRequestErrors: Meter = metrics.meter(metrics.name(prefix, getClass, "write-request-errors"))
-  private[this] val writeRequestTime: Histogram =
-    metrics.histogram(metrics.name(prefix, getClass, "write-request-time"))
+  protected[this] def timedWrite[T](f: => Future[T]): Future[T] = writeMetrics.timedFuture(f)
 
-  protected[this] def timed[T](hist: Histogram, invocations: Meter, errors: Meter)(f: => T): T = {
-    invocations.mark()
-    try {
-      val t0 = System.nanoTime()
-      val result = f
-      val t1 = System.nanoTime()
-      hist.update((t1 - t0) / 1000000)
-      result
-    }
-    catch { case t: Throwable => errors.mark(); throw t }
-  }
-
-  protected[this] def timedRead[T](f: => T): T = timed(readRequestTime, readRequests, readRequestErrors)(f)
-  protected[this] def timedWrite[T](f: => T): T = timed(writeRequestTime, writeRequests, writeRequestErrors)(f)
-
+  protected def nanoTime(): Long = System.nanoTime()
 }
