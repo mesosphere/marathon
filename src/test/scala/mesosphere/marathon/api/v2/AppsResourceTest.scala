@@ -31,7 +31,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
   test("Create a new app successfully") {
     Given("An app and group")
-    val app = V2AppDefinition(id = PathId("/app"), cmd = Some("cmd"), version = clock.now())
+    val app = V2AppDefinition(id = PathId("/app"), cmd = Some("cmd"), version = Timestamp.zero)
     val group = Group(PathId("/"), Set(app.toAppDefinition))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
@@ -47,7 +47,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
     And("the JSON is as expected, including a newly generated version")
     val expected = AppInfo(
-      app.toAppDefinition,
+      app.toAppDefinition.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
       maybeTasks = Some(immutable.Seq.empty),
       maybeCounts = Some(TaskCounts.zero),
       maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
