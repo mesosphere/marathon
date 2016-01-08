@@ -83,8 +83,8 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     task: MarathonTask,
     mesosStatus: TaskStatus): Future[Unit] = {
     steps.foldLeft(Future.successful(())) { (resultSoFar, nextStep) =>
-      stepTimers(nextStep.name).timeFuture {
-        resultSoFar.flatMap { _ =>
+      resultSoFar.flatMap { _ =>
+        stepTimers(nextStep.name).timeFuture {
           log.debug("Executing {} for [{}]", Array[Object](nextStep.name, mesosStatus.getTaskId.getValue): _*)
           nextStep.processUpdate(timestamp, appId, task, mesosStatus).map { _ =>
             log.debug(
