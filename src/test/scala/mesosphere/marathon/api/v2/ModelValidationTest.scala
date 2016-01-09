@@ -39,6 +39,34 @@ class ModelValidationTest
     noValidations should be('empty)
   }
 
+  test("Model validation should catch new apps in group that conflict with service ports in existing apps") {
+    val existingApp = createServicePortApp("/app1".toPath, 3200)
+    val root = Group(id = PathId.empty, apps = Set(existingApp.toAppDefinition))
+
+    val conflictingApp = createServicePortApp("/a/app2".toPath, 3200)
+    val group = Group(id = "/a".toPath, apps = Set(conflictingApp.toAppDefinition))
+    val validations = ModelValidation.noAppsInGroupWithConflicts(group, "", root)
+
+    validations should not be Nil
+    validations.find(_.getMessage.contains("Requested service port 3200 conflicts with a service port in app /app1")) should be ('defined)
+
+  }
+
+  test("Model validation should catch new apps in group that conflict with service ports in other apps in same group") {
+    val root = Group(id = PathId.empty, apps = Set())
+
+    val group = Group("/".toPath, Set(
+      createServicePortApp("/a".toPath, 3200).toAppDefinition,
+      createServicePortApp("/b".toPath, 3200).toAppDefinition,
+      createServicePortApp("/c".toPath, 0).toAppDefinition
+    ))
+    val validations = ModelValidation.noAppsInGroupWithConflicts(group, "", root)
+
+    validations should not be Nil
+    validations.find(_.getMessage.contains("Requested service port 3200 conflicts with a service port in app /a")) should be ('defined)
+
+  }
+
   test("Model validation should catch new apps that conflict with service ports in existing apps") {
     val existingApp = createServicePortApp("/app1".toPath, 3200)
     val group = Group(id = PathId.empty, apps = Set(existingApp.toAppDefinition))

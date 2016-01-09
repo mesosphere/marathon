@@ -124,6 +124,14 @@ object ModelValidation {
     )
   }
 
+  def noAppsInGroupWithConflicts(group: Group, path: String, root: Group): Iterable[ConstraintViolation[Group]] = {
+    group.apps.flatMap(app => {
+      val conflicts = checkAppConflicts(app, root) ++ checkAppConflicts(app, group)
+      if (conflicts.nonEmpty) Some(violation(group, app, path, conflicts.mkString(",")))
+      else None
+    })
+  }
+
   def noCyclicDependencies(
     group: V2Group,
     path: String): Iterable[ConstraintViolation[V2Group]] = {
