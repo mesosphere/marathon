@@ -45,7 +45,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
 
     Then("the request should be successful")
     result.code should be (200)
-    (result.entityJson \ "message").as[String] should be ("Leadership abdicted")
+    (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
     And("the leader must have changed")
     WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }

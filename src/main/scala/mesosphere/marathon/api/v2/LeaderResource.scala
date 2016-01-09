@@ -32,7 +32,7 @@ class LeaderResource @Inject() (
       case false => notFound("There is no leader")
       case true =>
         schedulerService.abdicateLeadership()
-        ok(jsonObjString("message" -> "Leadership abdicted"))
+        ok(jsonObjString("message" -> "Leadership abdicated"))
     }
   }
 }
