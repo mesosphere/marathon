@@ -138,6 +138,10 @@ class GroupsResource @Inject() (
     doIfAuthorized(req, resp, UpdateAppOrGroup, id.toRootPath) { implicit identity =>
       val update = Json.parse(body).as[V2GroupUpdate]
       BeanValidation.requireValid(ModelValidation.checkGroupUpdate(update, needsId = false))
+      val v2group: V2Group = update.toGroup(id.toRootPath, Timestamp.now())
+      val v2apps = v2group.apps
+      val root = result(groupManager.rootGroup())
+      BeanValidation.requireValid(ModelValidation.noAppsInGroupWithConflicts(v2group.toGroup(), id, root))
       if (dryRun) {
         val planFuture = groupManager.group(id.toRootPath).map { maybeOldGroup =>
           val oldGroup = maybeOldGroup.getOrElse(Group.empty)

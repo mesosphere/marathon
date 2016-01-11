@@ -31,8 +31,10 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
 
     val app = V2AppDefinition(id = "/test/app".toRootPath, cmd = Some("test cmd"))
     val update = V2GroupUpdate(id = Some("/test".toRootPath), apps = Some(Set(app)))
+    val root = Group(PathId("/"), Set())
 
     groupManager.group(update.groupId) returns Future.successful(None)
+    groupManager.rootGroup() returns Future.successful(root)
 
     val body = Json.stringify(Json.toJson(update)).getBytes
     val result = groupsResource.update("/test", force = false, dryRun = true, body, auth.request, auth.response)
