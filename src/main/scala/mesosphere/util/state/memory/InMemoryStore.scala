@@ -12,7 +12,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   * This is intended only for tests - do not use in production!
   * @param ec the execution context to use.
   */
-class InMemoryStore(implicit val ec: ExecutionContext = ThreadPoolContext.context) extends PersistentStore {
+class InMemoryStore(implicit val ec: ExecutionContext = ExecutionContext.Implicits.global) extends PersistentStore {
 
   private[this] val entities = TrieMap.empty[ID, InMemoryEntity]
 

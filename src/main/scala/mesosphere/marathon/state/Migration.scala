@@ -8,7 +8,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
-import mesosphere.util.ThreadPoolContext.context
+import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
 import org.slf4j.LoggerFactory
 

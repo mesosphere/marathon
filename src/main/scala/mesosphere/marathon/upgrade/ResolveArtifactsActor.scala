@@ -24,12 +24,12 @@ class ResolveArtifactsActor(
     with Logging {
 
   import mesosphere.marathon.upgrade.ResolveArtifactsActor.DownloadFinished
-  import mesosphere.util.ThreadPoolContext.{ context => executionContext }
 
   // all downloads that have to be performed by this actor
   var downloads = url2Path.map { case (url, path) => new CancelableDownload(url, storage, path) }
 
   override def preStart(): Unit = {
+    import context.dispatcher
     downloads.map(_.get.map(DownloadFinished) pipeTo self)
     if (url2Path.isEmpty) promise.success(true) // handle empty list
   }

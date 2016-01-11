@@ -41,7 +41,7 @@ class AppsResource @Inject() (
     val authorizer: Authorizer,
     groupManager: GroupManager) extends RestResource with AuthResource {
 
-  import mesosphere.util.ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val ListApps = """^((?:.+/)|)\*$""".r

@@ -2,12 +2,12 @@ package mesosphere.marathon.io
 
 import java.net.URL
 import java.util.UUID
-import scala.concurrent.Future
 
 import mesosphere.marathon.CanceledActionException
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.util.Logging
-import mesosphere.util.ThreadPoolContext.context
+import mesosphere.util.{ Logging, ThreadPoolContext }
+
+import scala.concurrent.Future
 
 /**
   * Download given url to given path of given storage provider.
@@ -38,7 +38,7 @@ final class CancelableDownload(val url: URL, val provider: StorageProvider, val 
       throw new CanceledActionException(s"Download of $path from $url has been canceled")
     }
     this
-  }
+  }(ThreadPoolContext.ioContext)
 
   override def hashCode(): Int = url.hashCode()
   override def equals(other: Any): Boolean = other match {

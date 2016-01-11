@@ -8,7 +8,7 @@ import org.apache.mesos.state.{ State, Variable }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
@@ -16,7 +16,7 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   implicit val timeoutDuration = Timeout(timeout)
-  implicit val ec = ThreadPoolContext.context
+  implicit val ec = ExecutionContext.Implicits.global
   import mesosphere.util.BackToTheFuture.futureToFuture
 
   override def load(key: ID): Future[Option[PersistentEntity]] = {

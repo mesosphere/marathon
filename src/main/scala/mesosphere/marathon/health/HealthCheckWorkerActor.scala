@@ -12,6 +12,7 @@ import mesosphere.marathon.tasks.MarathonTasks
 
 import akka.actor.{ Actor, ActorLogging, PoisonPill }
 import akka.util.Timeout
+import mesosphere.util.ThreadPoolContext
 
 import spray.http._
 import spray.client.pipelining._
@@ -29,7 +30,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   import HealthCheckWorker._
 
   implicit val system = context.system
-  implicit val ec = mesosphere.util.ThreadPoolContext.context // execution context for futures
+  import context.dispatcher // execution context for futures
 
   def receive: Receive = {
     case HealthCheckJob(app, task, check) =>
@@ -114,10 +115,12 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     Future {
       val address = new InetSocketAddress(host, port)
       val socket = new Socket
-      socket.connect(address, timeoutMillis)
-      socket.close()
+      scala.concurrent.blocking {
+        socket.connect(address, timeoutMillis)
+        socket.close()
+      }
       Some(Healthy(task.getId, task.getVersion, Timestamp.now()))
-    }
+    }(ThreadPoolContext.ioContext)
   }
 
   def https(app: AppDefinition, task: MarathonTask, check: HealthCheck, port: Int): Future[Option[HealthResult]] = {

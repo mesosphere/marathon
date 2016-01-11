@@ -8,14 +8,13 @@ import akka.event.EventStream
 import com.google.inject.Singleton
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.v2.json.V2Group
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, ModuleNames, PortRangeExhaustedException }
 import mesosphere.util.SerializeExecution
-import mesosphere.util.ThreadPoolContext.context
+import scala.concurrent.ExecutionContext.Implicits.global
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq

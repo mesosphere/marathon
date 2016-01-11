@@ -15,7 +15,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
-import mesosphere.util.ThreadPoolContext.context
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.{ Json, Writes }
 
 @Path("v2/groups")

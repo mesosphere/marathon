@@ -15,7 +15,7 @@ import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timesta
 import mesosphere.marathon.tasks.{ TaskIdUtil }
 import mesosphere.marathon.{ ZookeeperConf, MarathonScheduler, MarathonSchedulerDriverHolder }
 import mesosphere.util.RWLock
-import mesosphere.util.ThreadPoolContext.context
+import scala.concurrent.ExecutionContext.Implicits.global
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.collection.immutable.{ Map, Seq }

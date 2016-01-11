@@ -196,7 +196,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
     val results = for (_ <- 0 until 1000) yield plusOne()
 
-    implicit val ec = ThreadPoolContext.context
+    implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
     val res = Future.sequence(results)
 
     Await.ready(res, 5.seconds)

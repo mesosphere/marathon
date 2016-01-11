@@ -2,7 +2,7 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.util.ThreadPoolContext.context
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 

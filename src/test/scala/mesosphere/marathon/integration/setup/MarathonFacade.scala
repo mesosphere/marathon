@@ -46,7 +46,7 @@ case class ITDeployment(id: String, affectedApps: Seq[String])
   */
 class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends PlayJsonSupport {
   import SprayHttpResponse._
-  import mesosphere.util.ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   require(baseGroup.absolute)
 

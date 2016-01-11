@@ -17,7 +17,7 @@ class MarathonStore[S <: MarathonState[_, S]](
     newState: () => S,
     prefix: String)(implicit ct: ClassTag[S]) extends EntityStore[S] {
 
-  import ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   private[this] lazy val lockManager = LockManager.create()
