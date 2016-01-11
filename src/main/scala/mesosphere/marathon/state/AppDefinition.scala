@@ -48,6 +48,8 @@ case class AppDefinition(
 
   uris: Seq[String] = AppDefinition.DefaultUris,
 
+  fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
+
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
   ports: Seq[JInt] = AppDefinition.DefaultPorts,
@@ -225,6 +227,7 @@ case class AppDefinition(
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
       env = envMap,
       uris = proto.getCmd.getUrisList.asScala.map(_.getValue).to[Seq],
+      fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
       healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
@@ -288,6 +291,7 @@ case class AppDefinition(
         executor != to.executor ||
         constraints != to.constraints ||
         uris != to.uris ||
+        fetch != to.fetch ||
         storeUrls != to.storeUrls ||
         ports != to.ports ||
         requirePorts != to.requirePorts ||
@@ -414,6 +418,8 @@ object AppDefinition {
   val DefaultConstraints: Set[Constraint] = Set.empty
 
   val DefaultUris: Seq[String] = Seq.empty
+
+  val DefaultFetch: Seq[FetchUri] = FetchUri.empty
 
   val DefaultStoreUrls: Seq[String] = Seq.empty
 

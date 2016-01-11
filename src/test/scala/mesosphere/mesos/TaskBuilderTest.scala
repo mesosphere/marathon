@@ -1038,7 +1038,31 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(uriinfo2.getExtract)
     val uriinfo3 = command.getUris(2)
     assert(uriinfo3.getExtract)
+  }
 
+  test("TaskWillCopyFetchIntoCommand") {
+    val command = TaskBuilder.commandInfo(
+      app = AppDefinition(
+        fetch = Seq(
+          FetchUri(uri = "http://www.example.com", extract = false, cache = true, executable = false),
+          FetchUri(uri = "http://www.example2.com", extract = true, cache = true, executable = true)
+        )
+      ),
+      taskId = Some(TaskID("task-123")),
+      host = Some("host.mega.corp"),
+      ports = Seq(1000, 1001),
+      envPrefix = None
+    )
+
+    assert(command.getUris(0).getValue.contentEquals("http://www.example.com"))
+    assert(command.getUris(0).getCache)
+    assert(!command.getUris(0).getExtract)
+    assert(!command.getUris(0).getExecutable)
+
+    assert(command.getUris(1).getValue.contentEquals("http://www.example2.com"))
+    assert(command.getUris(1).getCache)
+    assert(command.getUris(1).getExtract)
+    assert(command.getUris(1).getExecutable)
   }
 
   // #2865 Multiple explicit ports are mixed up in task json
