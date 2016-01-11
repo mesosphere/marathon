@@ -17,7 +17,6 @@ import scala.concurrent.duration._
 import com.wix.accord.dsl._
 
 case class V2AppDefinition(
-
     id: PathId = AppDefinition.DefaultId,
 
     cmd: Option[String] = AppDefinition.DefaultCmd,
@@ -41,6 +40,8 @@ case class V2AppDefinition(
     constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
     uris: Seq[String] = AppDefinition.DefaultUris,
+
+    fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
 
     storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
@@ -93,7 +94,7 @@ case class V2AppDefinition(
     }
     AppDefinition(
       id = id, cmd = cmd, args = args, user = user, env = env, instances = instances, cpus = cpus,
-      mem = mem, disk = disk, executor = executor, constraints = constraints, uris = uris,
+      mem = mem, disk = disk, executor = executor, constraints = constraints, uris = uris, fetch = fetch,
       storeUrls = storeUrls, ports = ports, requirePorts = requirePorts, backoff = backoff,
       backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container,
       healthChecks = healthChecks, dependencies = dependencies, upgradeStrategy = upgradeStrategy,
@@ -123,7 +124,7 @@ object V2AppDefinition {
     V2AppDefinition(
       id = app.id, cmd = app.cmd, args = app.args, user = app.user, env = app.env, instances = app.instances,
       cpus = app.cpus, mem = app.mem, disk = app.disk, executor = app.executor, constraints = app.constraints,
-      uris = app.uris, storeUrls = app.storeUrls, ports = app.ports, requirePorts = app.requirePorts,
+      uris = app.uris, fetch = app.fetch, storeUrls = app.storeUrls, ports = app.ports, requirePorts = app.requirePorts,
       backoff = app.backoff, backoffFactor = app.backoffFactor, maxLaunchDelay = app.maxLaunchDelay,
       container = app.container, healthChecks = app.healthChecks, dependencies = app.dependencies,
       upgradeStrategy = app.upgradeStrategy, labels = app.labels, acceptedResourceRoles = app.acceptedResourceRoles,
@@ -147,6 +148,8 @@ object V2AppDefinition {
     appDef is containsCmdArgsContainerValidator
     appDef is portIndicesAreValid
     appDef.instances.intValue should be >= 0
+    appDef.fetch is every(fetchUriHasSupportedProtocol)
+    appDef is definitionContainsEitherUrisOrFetch
   }
 
   def filterOutRandomPorts(ports: scala.Seq[JInt]): scala.Seq[JInt] = {
@@ -162,6 +165,23 @@ object V2AppDefinition {
         if ((cmd ^ args) || (!(cmd || args) && container)) Success
         else Failure(Set(RuleViolation(app,
           "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.", None)))
+      }
+    }
+  }
+
+  private def definitionContainsEitherUrisOrFetch: Validator[V2AppDefinition] = {
+    new Validator[V2AppDefinition] {
+      def apply(app: V2AppDefinition): Result = {
+        if (app.fetch.nonEmpty && app.uris.nonEmpty) {
+          Failure(Set(RuleViolation(
+            app,
+            "AppDefinition must either contain a 'fetch' sequence or a 'uri' sequence.",
+            None
+          )))
+        }
+        else {
+          Success
+        }
       }
     }
   }

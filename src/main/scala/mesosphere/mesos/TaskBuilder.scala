@@ -303,6 +303,11 @@ object TaskBuilder {
       })
       builder.addAllUris(uriProtos.asJava)
     }
+
+    if (app.fetch.nonEmpty) {
+      builder.addAllUris(app.fetch.map(_.toProto).asJava)
+    }
+
     //scalastyle:on
 
     app.user.foreach(builder.setUser)

@@ -4,6 +4,8 @@ import java.net.{ URLConnection, HttpURLConnection, URL }
 
 import com.wix.accord._
 import mesosphere.marathon.ValidationFailedException
+import mesosphere.marathon.api.v2.json.V2AppDefinition
+import mesosphere.marathon.state.{ AppDefinition, FetchUri }
 
 import play.api.libs.json._
 
@@ -87,6 +89,25 @@ object Validation {
         }.getOrElse(
           Failure(Set(RuleViolation(url, "url could not be resolved", None)))
         )
+      }
+    }
+  }
+
+  def fetchUriHasSupportedProtocol: Validator[FetchUri] = {
+    lazy val supportedProtocols = Set("http", "https", "ftp", "ftps", "hdfs")
+
+    new Validator[FetchUri] {
+      def apply(uri: FetchUri) = {
+        Try {
+          val value = new URL(uri.uri)
+
+          if (!supportedProtocols.contains(value.getProtocol)) {
+            Failure(Set(RuleViolation(uri.uri, "url has not supported protocol", None)))
+          }
+          else {
+            Success
+          }
+        }.getOrElse(Failure(Set(RuleViolation(uri.uri, "url has invalid syntax", None))))
       }
     }
   }

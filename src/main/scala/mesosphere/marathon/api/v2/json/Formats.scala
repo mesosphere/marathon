@@ -49,6 +49,7 @@ object Formats extends Formats {
 trait Formats
     extends V2Formats
     with HealthCheckFormats
+    with FetchUriFormats
     with ContainerFormats
     with DeploymentFormats
     with EventFormats
@@ -152,7 +153,7 @@ trait Formats
   )
 
   implicit lazy val CommandFormat: Format[Command] = Json.format[Command]
-
+  
   implicit lazy val ParameterFormat: Format[Parameter] = (
     (__ \ "key").format[String] ~
     (__ \ "value").format[String]
@@ -442,6 +443,19 @@ trait HealthCheckFormats {
   }
 }
 
+trait FetchUriFormats {
+  import Formats._
+
+  implicit lazy val FetchUriFormat: Format[FetchUri] = {
+    (
+      (__ \ "uri").format[String] ~
+      (__ \ "executable").formatNullable[Boolean].withDefault(false) ~
+      (__ \ "extract").formatNullable[Boolean].withDefault(true) ~
+      (__ \ "cache").formatNullable[Boolean].withDefault(false)
+    )(FetchUri(_, _, _, _), unlift(FetchUri.unapply))
+  }
+}
+
 trait V2Formats {
   import Formats._
 
@@ -476,7 +490,6 @@ trait V2Formats {
 
   implicit lazy val V2AppDefinitionReads: Reads[V2AppDefinition] = {
     val executorPattern = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r
-
     (
       (__ \ "id").read[PathId].filterNot(_.isRoot) ~
       (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
@@ -491,6 +504,7 @@ trait V2Formats {
       .withDefault(AppDefinition.DefaultExecutor) ~
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(AppDefinition.DefaultConstraints) ~
       (__ \ "uris").readNullable[Seq[String]].withDefault(AppDefinition.DefaultUris) ~
+      (__ \ "fetch").readNullable[Seq[FetchUri]].withDefault(AppDefinition.DefaultFetch) ~
       (__ \ "storeUrls").readNullable[Seq[String]].withDefault(AppDefinition.DefaultStoreUrls) ~
       (__ \ "requirePorts").readNullable[Boolean].withDefault(AppDefinition.DefaultRequirePorts) ~
       (__ \ "backoffSeconds").readNullable[Long].withDefault(AppDefinition.DefaultBackoff.toSeconds).asSeconds ~
@@ -498,21 +512,20 @@ trait V2Formats {
       (__ \ "maxLaunchDelaySeconds").readNullable[Long]
       .withDefault(AppDefinition.DefaultMaxLaunchDelay.toSeconds).asSeconds ~
       (__ \ "container").readNullable[Container] ~
-      (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(AppDefinition.DefaultHealthChecks) ~
-      (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies)
+      (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(AppDefinition.DefaultHealthChecks)
     )((
-        id, cmd, args, maybeString, env, instances, cpus, mem, disk, executor, constraints, uris, storeUrls,
-        requirePorts, backoff, backoffFactor, maxLaunchDelay, container, checks, dependencies
+        id, cmd, args, maybeString, env, instances, cpus, mem, disk, executor, constraints, uris, fetch, storeUrls,
+        requirePorts, backoff, backoffFactor, maxLaunchDelay, container, checks
       ) => V2AppDefinition(
         id = id, cmd = cmd, args = args, user = maybeString, env = env, instances = instances, cpus = cpus,
-        mem = mem, disk = disk, executor = executor, constraints = constraints, uris = uris,
+        mem = mem, disk = disk, executor = executor, constraints = constraints, uris = uris, fetch = fetch,
         storeUrls = storeUrls, ports = Nil,
         requirePorts = requirePorts, backoff = backoff,
-        backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container, healthChecks = checks,
-        dependencies = dependencies
+        backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container, healthChecks = checks
       )).flatMap { app =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
+          dependencies: Set[PathId],
           maybePorts: Option[Seq[Integer]],
           upgradeStrategy: UpgradeStrategy,
           labels: Map[String, String],
@@ -522,6 +535,7 @@ trait V2Formats {
 
         val extraReads: Reads[ExtraFields] =
           (
+            (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies) ~
             (__ \ "ports").readNullable[Seq[Integer]](uniquePorts) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(AppDefinition.DefaultUpgradeStrategy) ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
@@ -539,6 +553,7 @@ trait V2Formats {
           def defaultPorts: Seq[Integer] = if (extraFields.ipAddress.isDefined) Nil else AppDefinition.DefaultPorts
 
           app.copy(
+            dependencies = extraFields.dependencies,
             ports = extraFields.maybePorts.getOrElse(defaultPorts),
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
@@ -587,6 +602,7 @@ trait V2Formats {
         "executor" -> app.executor,
         "constraints" -> app.constraints,
         "uris" -> app.uris,
+        "fetch" -> app.fetch,
         "storeUrls" -> app.storeUrls,
         // the ports field was written incorrectly in old code if a container was specified
         // it should contain the service ports
@@ -701,6 +717,7 @@ trait V2Formats {
       (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)) ~
       (__ \ "constraints").readNullable[Set[Constraint]] ~
       (__ \ "uris").readNullable[Seq[String]] ~
+      (__ \ "fetch").readNullable[Seq[FetchUri]] ~
       (__ \ "storeUrls").readNullable[Seq[String]] ~
       (__ \ "ports").readNullable[Seq[Integer]](uniquePorts) ~
       (__ \ "requirePorts").readNullable[Boolean] ~
@@ -708,11 +725,11 @@ trait V2Formats {
       (__ \ "backoffFactor").readNullable[JDouble] ~
       (__ \ "maxLaunchDelaySeconds").readNullable[Long].map(_.map(_.seconds)) ~
       (__ \ "container").readNullable[Container] ~
-      (__ \ "healthChecks").readNullable[Set[HealthCheck]] ~
-      (__ \ "dependencies").readNullable[Set[PathId]]
+      (__ \ "healthChecks").readNullable[Set[HealthCheck]]
     )(V2AppUpdate(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { update =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
+          dependencies: Option[Set[PathId]],
           upgradeStrategy: Option[UpgradeStrategy],
           labels: Option[Map[String, String]],
           version: Option[Timestamp],
@@ -721,6 +738,7 @@ trait V2Formats {
 
         val extraReads: Reads[ExtraFields] =
           (
+            (__ \ "dependencies").readNullable[Set[PathId]] ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]] ~
             (__ \ "version").readNullable[Timestamp] ~
@@ -730,6 +748,7 @@ trait V2Formats {
 
         extraReads.map { extraFields =>
           update.copy(
+            dependencies = extraFields.dependencies,
             upgradeStrategy = extraFields.upgradeStrategy,
             labels = extraFields.labels,
             version = extraFields.version,

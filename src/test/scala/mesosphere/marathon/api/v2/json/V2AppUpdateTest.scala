@@ -20,20 +20,22 @@ class V2AppUpdateTest extends MarathonSpec {
   import Formats._
   import mesosphere.marathon.integration.setup.V2TestFormats._
 
-  test("Validation") {
-    def shouldViolate(update: V2AppUpdate, path: String, template: String): Unit = {
-      val violations = validate(update)
-      assert(violations.isFailure)
-      assert(ValidationHelper.getAllRuleConstrains(violations).exists(v =>
-        v.property.getOrElse(false) == path && v.message == template
-      ))
-    }
+  def shouldViolate(update: V2AppUpdate, path: String, template: String): Unit = {
+    val violations = validate(update)
+    assert(violations.isFailure)
+    assert(ValidationHelper.getAllRuleConstrains(violations).exists(v =>
+      v.property.getOrElse(false) == path && v.message == template
+    ))
+  }
 
-    def shouldNotViolate(update: V2AppUpdate, path: String, template: String): Unit = {
-      val violations = validate(update)
-      assert(!ValidationHelper.getAllRuleConstrains(violations).exists(v =>
-        v.property.getOrElse(false) == path && v.message == template))
-    }
+  def shouldNotViolate(update: V2AppUpdate, path: String, template: String): Unit = {
+    val violations = validate(update)
+    assert(!ValidationHelper.getAllRuleConstrains(violations).exists(v =>
+
+      v.property.getOrElse(false) == path && v.message == template))
+  }
+
+  test("Validation") {
 
     val update = V2AppUpdate()
 
@@ -47,6 +49,31 @@ class V2AppUpdateTest extends MarathonSpec {
       update.copy(ports = Some(Seq(AppDefinition.RandomPortValue, 8080, AppDefinition.RandomPortValue))),
       "ports",
       "Elements must be unique"
+    )
+  }
+
+  test("Should violate if uris and fetch are provided") {
+    val update = V2AppUpdate().copy(
+      uris = Some(Seq("http://example.com/file1", "http://example.com/file2")),
+      fetch = Some(Seq(new FetchUri(uri = "http://example.com")))
+    )
+
+    shouldViolate(update, "value", "AppUpdate must either contain a fetch sequence or a uri sequence")
+  }
+
+  test("Should not violate if either uris or fetch is provided") {
+    val update = V2AppUpdate();
+
+    shouldNotViolate(
+      update.copy(fetch = Some(Seq(new FetchUri(uri = "http://example.com")))),
+      "value",
+      "AppUpdate must either contain a fetch sequence or a uri sequence"
+    )
+
+    shouldNotViolate(
+      update.copy(uris = Some(Seq("http://example.com/file1", "http://example.com/file2"))),
+      "value",
+      "AppUpdate must either contain a fetch sequence or a uri sequence"
     )
   }
 

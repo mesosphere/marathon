@@ -22,6 +22,7 @@ import com.wix.accord._
 class V2AppDefinitionTest extends MarathonSpec with Matchers {
 
   test("Validation") {
+
     def shouldViolate(app: V2AppDefinition, path: String, template: String): Unit = {
       validate(app) match {
         case Success => fail()
@@ -229,6 +230,37 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       "Health check port indices must address an element of the ports array or container port mappings."
     )
     validateJsonSchema(app)
+
+    app = correct.copy(
+      uris = Seq("http://example.com/file1"),
+      fetch = Seq(new FetchUri(uri = "http://example.com/file1"))
+    )
+
+    shouldViolate(
+      app,
+      "value",
+      "AppDefinition must either contain a 'fetch' sequence or a 'uri' sequence."
+    )
+
+    app = correct.copy(
+      uris = Seq("http://example.com/file1")
+    )
+
+    shouldNotViolate(
+      app,
+      "value",
+      "AppDefinition must either contain a 'fetch' sequence or a 'uri' sequence."
+    )
+
+    app = correct.copy(
+      fetch = Seq(new FetchUri(uri = "http://example.com/file1"))
+    )
+
+    shouldNotViolate(
+      app,
+      "value",
+      "AppDefinition must either contain a 'fetch' sequence or a 'uri' sequence."
+    )
   }
 
   test("SerializationRoundtrip empty") {
@@ -444,6 +476,70 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       """
     val readResult4 = fromJson(json4)
     assert(readResult4.copy(version = app4.version) == app4)
+  }
+
+  test("Read app with fetch definition") {
+
+    val app = V2AppDefinition(
+      id = "app-with-fetch".toPath,
+      cmd = Some("brew update"),
+      fetch = Seq(
+        new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true),
+        new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false)
+      )
+    )
+
+    val json =
+      """
+      {
+        "id": "app-with-fetch",
+        "cmd": "brew update",
+        "fetch": [
+          {
+            "uri": "http://example.com/file1",
+            "executable": false,
+            "extract": true,
+            "cache": true
+          },
+          {
+            "uri": "http://example.com/file2",
+            "executable": true,
+            "extract": false,
+            "cache": false
+          }
+        ]
+      }
+      """
+    val readResult = fromJson(json)
+    assert(readResult.copy(version = app.version) == app)
+  }
+
+  test("Serialize deserialize path with fetch") {
+    val app = V2AppDefinition(
+      id = "app-with-fetch".toPath,
+      cmd = Some("brew update"),
+      fetch = Seq(
+        new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true),
+        new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false)
+      )
+    )
+
+    val proto = app.toAppDefinition.toProto
+
+    val deserializedApp = V2AppDefinition.apply(AppDefinition.fromProto(proto))
+
+    assert(deserializedApp.uris(0) == "http://example.com/file1")
+    assert(deserializedApp.uris(1) == "http://example.com/file2")
+
+    assert(deserializedApp.fetch(0).uri == "http://example.com/file1")
+    assert(deserializedApp.fetch(0).extract)
+    assert(!deserializedApp.fetch(0).executable)
+    assert(deserializedApp.fetch(0).cache)
+
+    assert(deserializedApp.fetch(1).uri == "http://example.com/file2")
+    assert(!deserializedApp.fetch(1).extract)
+    assert(deserializedApp.fetch(1).executable)
+    assert(!deserializedApp.fetch(1).cache)
   }
 
   test("Read app with ip address and discovery info") {
