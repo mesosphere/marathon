@@ -5,6 +5,7 @@ import java.lang.{ Double => JDouble, Integer => JInt }
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
@@ -18,6 +19,8 @@ import org.apache.mesos.{ Protos => mesos }
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
+
+import com.wix.accord.dsl._
 
 case class AppDefinition(
 
@@ -441,4 +444,8 @@ object AppDefinition {
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
+
+  implicit val appDefinitionValidator = validator[AppDefinition] { appDef =>
+    V2AppDefinition(appDef) is valid
+  }
 }

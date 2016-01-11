@@ -6,8 +6,9 @@ import javax.inject.{ Inject, Named }
 
 import akka.event.EventStream
 import com.google.inject.Singleton
+
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.v2.{ BeanValidation, ModelValidation }
+import mesosphere.marathon.api.v2.json.V2Group
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
@@ -21,6 +22,9 @@ import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.json.V2Group._
 
 /**
   * The group manager is the facade for all group related actions.
@@ -155,7 +159,7 @@ class GroupManager @Singleton @Inject() (
       from <- rootGroup()
       (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
       to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
-      _ = BeanValidation.requireValid(ModelValidation.checkGroup(to, "", PathId.empty, config.maxApps.get))
+      _ = validateOrThrow(to)(validator = Group.groupWithConfigValidator(config.maxApps.get))
       plan = DeploymentPlan(from, to, resolve, version, toKill)
       _ = log.info(s"Computed new deployment plan:\n$plan")
       _ <- scheduler.deploy(plan, force)

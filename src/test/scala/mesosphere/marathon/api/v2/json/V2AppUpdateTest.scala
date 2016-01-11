@@ -1,9 +1,8 @@
 package mesosphere.marathon.api.v2.json
 
-import javax.validation.Validation
-
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.DiscoveryInfo.Port
@@ -12,33 +11,40 @@ import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
+
+import mesosphere.marathon.api.v2.Validation._
 
 class V2AppUpdateTest extends MarathonSpec {
   import Formats._
   import mesosphere.marathon.integration.setup.V2TestFormats._
 
   test("Validation") {
-    val validator = Validation.buildDefaultValidatorFactory().getValidator
-
-    def shouldViolate(update: V2AppUpdate, path: String, template: String) = {
-      val violations = validator.validate(update).asScala
-      assert(violations.exists(v =>
-        v.getPropertyPath.toString == path && v.getMessageTemplate == template))
+    def shouldViolate(update: V2AppUpdate, path: String, template: String): Unit = {
+      val violations = validate(update)
+      assert(violations.isFailure)
+      assert(ValidationHelper.getAllRuleConstrains(violations).exists(v =>
+        v.property.getOrElse(false) == path && v.message == template
+      ))
     }
 
-    def shouldNotViolate(update: V2AppUpdate, path: String, template: String) = {
-      val violations = validator.validate(update).asScala
-      assert(!violations.exists(v =>
-        v.getPropertyPath.toString == path && v.getMessageTemplate == template))
+    def shouldNotViolate(update: V2AppUpdate, path: String, template: String): Unit = {
+      val violations = validate(update)
+      assert(!ValidationHelper.getAllRuleConstrains(violations).exists(v =>
+        v.property.getOrElse(false) == path && v.message == template))
     }
 
     val update = V2AppUpdate()
 
     shouldViolate(
       update.copy(ports = Some(Seq(9000, 8080, 9000))),
+      "ports",
+      "Elements must be unique"
+    )
+
+    shouldNotViolate(
+      update.copy(ports = Some(Seq(AppDefinition.RandomPortValue, 8080, AppDefinition.RandomPortValue))),
       "ports",
       "Elements must be unique"
     )

@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.state.{ AppDefinition, Timestamp, PathId, Group }
+import mesosphere.marathon.api.v2.Validation._
 import org.scalatest.{ GivenWhenThen, Matchers, FunSuite }
 import PathId._
 
@@ -15,7 +16,8 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
       )),
       V2GroupUpdate(
         "apps".toPath,
-        Set(V2AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
+        Set(V2AppDefinition("app1".toPath, Some("foo"),
+          dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
       )
     )
     )
@@ -23,6 +25,8 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
 
     When("The update is performed")
     val result = update(group, timestamp).toGroup()
+
+    validate(V2Group(result)).isSuccess should be(true)
 
     Then("The update is applied correctly")
     result.id should be(PathId.empty)
@@ -41,7 +45,7 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
   test("A group update can be applied to existing entries") {
     Given("A group with updates of existing nodes")
     val actual = V2Group(PathId.empty, groups = Set(
-      V2Group("/test".toPath, apps = Set(V2AppDefinition("/test/bla".toPath))),
+      V2Group("/test".toPath, apps = Set(V2AppDefinition("/test/bla".toPath, Some("foo")))),
       V2Group("/apps".toPath, groups = Set(V2Group("/apps/foo".toPath)))
     ))
     val update = V2GroupUpdate(
@@ -55,7 +59,8 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
         ),
         V2GroupUpdate(
           "apps".toPath,
-          Set(V2AppDefinition("app1".toPath, dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
+          Set(V2AppDefinition("app1".toPath, Some("foo"),
+            dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
         )
       )
     )
@@ -63,6 +68,8 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
 
     When("The update is performed")
     val result: Group = update(actual, timestamp).toGroup()
+
+    validate(V2Group(result)).isSuccess should be(true)
 
     Then("The update is applied correctly")
     result.id should be(PathId.empty)
@@ -85,8 +92,8 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     val current = V2Group(
       "/test".toPath,
       groups = Set(
-        V2Group("/test/group1".toPath, Set(V2AppDefinition("/test/group1/app1".toPath))),
-        V2Group("/test/group2".toPath, Set(V2AppDefinition("/test/group2/app2".toPath)))
+        V2Group("/test/group1".toPath, Set(V2AppDefinition("/test/group1/app1".toPath, Some("foo")))),
+        V2Group("/test/group2".toPath, Set(V2AppDefinition("/test/group2/app2".toPath, Some("foo"))))
       )
     )
 
@@ -95,17 +102,20 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
       "/test".toPath,
       Set.empty[V2AppDefinition],
       Set(
-        V2GroupUpdate("/test/group1".toPath, Set(V2AppDefinition("/test/group1/app3".toPath))),
+        V2GroupUpdate("/test/group1".toPath, Set(V2AppDefinition("/test/group1/app3".toPath, Some("foo")))),
         V2GroupUpdate(
           "/test/group3".toPath,
           Set.empty[V2AppDefinition],
-          Set(V2GroupUpdate("/test/group3/sub1".toPath, Set(V2AppDefinition("/test/group3/sub1/app4".toPath))))
+          Set(V2GroupUpdate("/test/group3/sub1".toPath, Set(V2AppDefinition("/test/group3/sub1/app4".toPath,
+            Some("foo")))))
         )
       )
     )
 
     val timestamp = Timestamp.now()
     val result = update(current, timestamp).toGroup()
+
+    validate(V2Group(result)).isSuccess should be(true)
 
     Then("The update is reflected in the current group")
     result.id.toString should be("/test")
@@ -138,13 +148,15 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     val update = V2GroupUpdate(PathId.empty, Set.empty[V2AppDefinition], Set(
       V2GroupUpdate(
         "test-group".toPath,
-        Set(V2AppDefinition("test-app1".toPath),
-          V2AppDefinition("test-app2".toPath, dependencies = Set("test-app1".toPath)))
+        Set(V2AppDefinition("test-app1".toPath, Some("foo")),
+          V2AppDefinition("test-app2".toPath, Some("foo"), dependencies = Set("test-app1".toPath)))
       )
     ))
 
     When("The update is performed")
     val result = update(V2Group(Group.empty), Timestamp.now()).toGroup()
+
+    validate(V2Group(result)).isSuccess should be(true)
 
     Then("The update is applied correctly")
     val group = result.group("test-group".toRootPath)
