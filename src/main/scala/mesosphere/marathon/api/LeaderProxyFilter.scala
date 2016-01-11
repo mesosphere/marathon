@@ -233,6 +233,11 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       }
 
       leaderConnection.addRequestProperty(HEADER_VIA, viaValue)
+      val forwardedFor = Seq(
+        Option(request.getHeader(HEADER_FORWARDED_FOR)),
+        Option(request.getRemoteAddr)
+      ).flatten.mkString(",")
+      leaderConnection.addRequestProperty(HEADER_FORWARDED_FOR, forwardedFor)
     }
 
     def copyRequestBodyToConnection(leaderConnection: HttpURLConnection, request: HttpServletRequest): Unit = {
@@ -337,5 +342,6 @@ object JavaUrlConnectionRequestForwarder {
   val ERROR_STATUS_LOOP: String = "Detected proxying loop."
   val ERROR_STATUS_CONNECTION_REFUSED: String = "Connection to leader refused."
 
+  val HEADER_FORWARDED_FOR: String = "X-Forwarded-For"
   final val NAMED_LEADER_PROXY_SSL_CONTEXT = "JavaUrlConnectionRequestForwarder.SSLContext"
 }
