@@ -190,7 +190,7 @@ class GroupManager @Singleton @Inject() (
         group.updateApps(group.version) { app =>
           if (app.storeUrls.isEmpty) app else {
             val storageUrls = app.storeUrls.map(paths).map(storage.item(_).url)
-            val resolved = app.copy(uris = app.uris ++ storageUrls, storeUrls = Seq.empty)
+            val resolved = app.copy(fetch = app.fetch ++ storageUrls.map(FetchUri.apply(_)), storeUrls = Seq.empty)
             val appDownloads: Map[URL, String] =
               app.storeUrls
                 .flatMap { url => downloads.remove(url).map { path => new URL(url) -> path } }.toMap

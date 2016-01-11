@@ -27,6 +27,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         case Success => fail()
         case f: Failure =>
           val violations = ValidationHelper.getAllRuleConstrains(f)
+
           assert(violations.exists { v =>
             v.property.contains(path) && v.message == template
           },
@@ -223,12 +224,35 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(
       healthChecks = Set(HealthCheck(portIndex = Some(1)))
     )
+
     shouldViolate(
       app,
       "value",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
+
     validateJsonSchema(app)
+
+    app = correct.copy(
+      fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "d://\not-a-uri"))
+    )
+
+    shouldViolate(
+      app,
+      "fetch.[1]",
+      "URI has invalid syntax."
+    )
+
+    validateJsonSchema(app)
+
+    app = correct.copy(
+      fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "/root/file"))
+    )
+
+    shouldNotViolate(app,
+      "fetch.[1]",
+      "URI has invalid syntax."
+    )
   }
 
   test("SerializationRoundtrip empty") {
@@ -288,7 +312,6 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
           .setValue("value")
           .build
       ),
-      uris = Seq("hdfs://path/to/resource.zip"),
       storeUrls = Seq("http://my.org.com/artifacts/foo.bar"),
       ports = Seq(9001, 9002),
       requirePorts = true,
@@ -447,6 +470,87 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(readResult4.copy(versionInfo = app4.versionInfo) == app4)
   }
 
+  test("Read app with fetch definition") {
+
+    val app = AppDefinition(
+      id = "app-with-fetch".toPath,
+      cmd = Some("brew update"),
+      fetch = Seq(
+        new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true),
+        new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false)
+      )
+    )
+
+    val json =
+      """
+      {
+        "id": "app-with-fetch",
+        "cmd": "brew update",
+        "fetch": [
+          {
+            "uri": "http://example.com/file1",
+            "executable": false,
+            "extract": true,
+            "cache": true
+          },
+          {
+            "uri": "http://example.com/file2",
+            "executable": true,
+            "extract": false,
+            "cache": false
+          }
+        ]
+      }
+      """
+    val readResult = fromJson(json)
+    assert(readResult.copy(versionInfo = app.versionInfo) == app)
+  }
+
+  test("Transfer uris to fetch") {
+    val json =
+      """
+      {
+        "id": "app-with-fetch",
+        "cmd": "brew update",
+        "uris": ["http://example.com/file1.tar.gz", "http://example.com/file"]
+      }
+      """
+
+    val app = fromJson(json)
+
+    assert(app.fetch(0).uri == "http://example.com/file1.tar.gz")
+    assert(app.fetch(0).extract)
+
+    assert(app.fetch(1).uri == "http://example.com/file")
+    assert(!app.fetch(1).extract)
+
+  }
+
+  test("Serialize deserialize path with fetch") {
+    val app = AppDefinition(
+      id = "app-with-fetch".toPath,
+      cmd = Some("brew update"),
+      fetch = Seq(
+        new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true),
+        new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false)
+      )
+    )
+
+    val proto = app.toProto
+
+    val deserializedApp = AppDefinition.fromProto(proto)
+
+    assert(deserializedApp.fetch(0).uri == "http://example.com/file1")
+    assert(deserializedApp.fetch(0).extract)
+    assert(!deserializedApp.fetch(0).executable)
+    assert(deserializedApp.fetch(0).cache)
+
+    assert(deserializedApp.fetch(1).uri == "http://example.com/file2")
+    assert(!deserializedApp.fetch(1).extract)
+    assert(deserializedApp.fetch(1).executable)
+    assert(!deserializedApp.fetch(1).cache)
+  }
+
   test("Read app with ip address and discovery info") {
     val app = AppDefinition(
       id = "app-with-ip-address".toPath,
@@ -570,5 +674,20 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     import Formats._
     val result = Json.fromJson[AppDefinition](Json.parse(json))
     assert(result == JsError(ValidationError("You cannot specify both an IP address and ports")))
+  }
+
+  test("App may not have both uris and fetch") {
+    val json =
+      """
+      {
+        "id": "app-with-network-isolation",
+        "uris": ["http://example.com/file1.tar.gz"],
+        "fetch": [{"uri": "http://example.com/file1.tar.gz"}]
+      }
+      """
+
+    import Formats._
+    val result = Json.fromJson[AppDefinition](Json.parse(json))
+    assert(result == JsError(ValidationError("You cannot specify both uris and fetch fields")))
   }
 }

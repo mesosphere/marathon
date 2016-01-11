@@ -47,7 +47,7 @@ case class AppDefinition(
 
   constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
-  uris: Seq[String] = AppDefinition.DefaultUris,
+  fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
 
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
@@ -225,7 +225,7 @@ case class AppDefinition(
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
       env = envMap,
-      uris = proto.getCmd.getUrisList.asScala.map(_.getValue).to[Seq],
+      fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
       healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
@@ -288,7 +288,7 @@ case class AppDefinition(
         disk != to.disk ||
         executor != to.executor ||
         constraints != to.constraints ||
-        uris != to.uris ||
+        fetch != to.fetch ||
         storeUrls != to.storeUrls ||
         ports != to.ports ||
         requirePorts != to.requirePorts ||
@@ -421,6 +421,8 @@ object AppDefinition {
 
   val DefaultUris: Seq[String] = Seq.empty
 
+  val DefaultFetch: Seq[FetchUri] = FetchUri.empty
+
   val DefaultStoreUrls: Seq[String] = Seq.empty
 
   val DefaultPorts: Seq[JInt] = Seq(RandomPortValue)
@@ -468,6 +470,7 @@ object AppDefinition {
     appDef is containsCmdArgsContainerValidator
     appDef is portIndicesAreValid
     appDef.instances.intValue should be >= 0
+    appDef.fetch is every(fetchUriIsValid)
   }
 
   def filterOutRandomPorts(ports: scala.Seq[JInt]): scala.Seq[JInt] = {

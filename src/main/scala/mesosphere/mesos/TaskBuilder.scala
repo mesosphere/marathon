@@ -292,31 +292,13 @@ object TaskBuilder {
       if (app.container.isEmpty) builder.setValue(argv.head)
     }
 
-    //scalastyle:off null
-    if (app.uris != null) {
-      val uriProtos = app.uris.map(uri => {
-        CommandInfo.URI.newBuilder()
-          .setValue(uri)
-          .setExtract(isExtract(uri))
-          .build()
-      })
-      builder.addAllUris(uriProtos.asJava)
+    if (app.fetch.nonEmpty) {
+      builder.addAllUris(app.fetch.map(_.toProto).asJava)
     }
-    //scalastyle:on
 
     app.user.foreach(builder.setUser)
 
     builder.build
-  }
-
-  private def isExtract(stringUri: String): Boolean = {
-    stringUri.endsWith(".tgz") ||
-      stringUri.endsWith(".tar.gz") ||
-      stringUri.endsWith(".tbz2") ||
-      stringUri.endsWith(".tar.bz2") ||
-      stringUri.endsWith(".txz") ||
-      stringUri.endsWith(".tar.xz") ||
-      stringUri.endsWith(".zip")
   }
 
   def environment(vars: Map[String, String]): Environment = {
