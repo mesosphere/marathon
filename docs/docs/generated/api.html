@@ -3057,7 +3057,7 @@ data: {"slaveId":"20150707-153709-201330860-5050-12052-S0","taskId":"test-app.5d
   "message":"There is no leader"
 }
 </code></pre></div></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_leader_delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent"></span>/v2/leader</h4></div><div class="modal-body"><div class="alert alert-info"><p>Causes the current leader to abdicate, triggering a new election.</p></div><ul class="nav nav-tabs"><li><a href="#v2_leader_delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane" id="v2_leader_delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>The abdication message from the current leader.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
-    "message": "Leadership abdicted"
+    "message": "Leadership abdicated"
 }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/404" target="_blank">404</a></h2><p>If there is no current leader.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "message":"There is no leader"
