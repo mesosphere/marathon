@@ -1,7 +1,13 @@
 package mesosphere.marathon.api.v2.json
 
 import java.lang.{ Double => JDouble }
+import com.wix.accord._
+import com.wix.accord.dsl._
 import mesosphere.marathon.state._
+
+import mesosphere.marathon.api.v2.Validation._
+
+import scala.reflect.ClassTag
 
 case class V2GroupUpdate(
     id: Option[PathId],
@@ -58,4 +64,15 @@ object V2GroupUpdate {
     V2GroupUpdate(Some(id), if (apps.isEmpty) None else Some(apps), if (groups.isEmpty) None else Some(groups))
   }
   def empty(id: PathId): V2GroupUpdate = V2GroupUpdate(Some(id))
+
+  implicit val v2GroupUpdateValidator: Validator[V2GroupUpdate] = validator[V2GroupUpdate] { group =>
+    group is notNull
+
+    group.version is theOnlyDefinedOptionIn(group)
+    group.scaleBy is theOnlyDefinedOptionIn(group)
+
+    group.id is valid
+    group.apps is valid
+    group.groups is valid
+  }
 }

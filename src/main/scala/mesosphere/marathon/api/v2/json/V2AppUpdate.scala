@@ -3,7 +3,6 @@ package mesosphere.marathon.api.v2.json
 import java.lang.{ Double => JDouble, Integer => JInt }
 
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.api.validation.FieldConstraints._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, Container, IpAddress, PathId, Timestamp, UpgradeStrategy }
 
@@ -38,7 +37,7 @@ case class V2AppUpdate(
 
     storeUrls: Option[Seq[String]] = None,
 
-    @FieldPortsArray ports: Option[Seq[JInt]] = None,
+    ports: Option[Seq[JInt]] = None,
 
     requirePorts: Option[Boolean] = None,
 
@@ -115,4 +114,16 @@ case class V2AppUpdate(
     id = id.map(_.canonicalPath(base)),
     dependencies = dependencies.map(_.map(_.canonicalPath(base)))
   )
+}
+
+object V2AppUpdate {
+  import com.wix.accord.dsl._
+  import mesosphere.marathon.api.v2.Validation._
+  implicit val appUpdateValidator = validator[V2AppUpdate] { appUp =>
+    appUp.id is valid
+    appUp.dependencies is valid
+    appUp.upgradeStrategy is valid
+    appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
+    appUp.ports is optional(elementsAreUnique(V2AppDefinition.filterOutRandomPorts))
+  }
 }

@@ -1,8 +1,12 @@
 package mesosphere.marathon.state
 
+import com.wix.accord.{ RuleViolation, Failure, Result, Validator }
 import mesosphere.marathon.Protos.GroupDefinition
+import mesosphere.marathon.api.v2.json.V2Group
 import mesosphere.marathon.state.Group._
+import mesosphere.marathon.state.Group.empty
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.PathId.empty
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
@@ -207,5 +211,11 @@ object Group {
   def defaultGroups: Set[Group] = Set.empty
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
+
+  def groupWithConfigValidator(maxApps: Option[Int])(implicit validator: Validator[V2Group]): Validator[Group] = {
+    new Validator[Group] {
+      override def apply(group: Group): Result = V2Group.v2GroupWithConfigValidator(maxApps).apply(V2Group(group))
+    }
+  }
 }
 

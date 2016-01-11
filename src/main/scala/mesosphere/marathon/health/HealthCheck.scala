@@ -2,15 +2,15 @@ package mesosphere.marathon.health
 
 import java.lang.{ Integer => JInt }
 
+import com.wix.accord._
+import com.wix.accord.dsl._
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.validation.ValidHealthCheck
 import mesosphere.marathon.state.{ Command, MarathonState, Timestamp }
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.concurrent.duration._
 
-@ValidHealthCheck
 case class HealthCheck(
 
   path: Option[String] = HealthCheck.DefaultPath,
@@ -122,4 +122,27 @@ object HealthCheck {
   val DefaultMaxConsecutiveFailures = 3
   val DefaultIgnoreHttp1xx = false
   val DefaultPort = None
+
+  implicit val healthCheck = validator[HealthCheck] { hc =>
+    (hc.portIndex.nonEmpty is true) or (hc.port.nonEmpty is true)
+    hc is validProtocol
+  }
+
+  //scalastyle:off
+  private def validProtocol: Validator[HealthCheck] = {
+    new Validator[HealthCheck] {
+      override def apply(hc: HealthCheck): Result = {
+        def eitherPortIndexOrPort: Boolean = hc.portIndex.isDefined ^ hc.port.isDefined
+        val hasCommand = hc.command.isDefined
+        val hasPath = hc.path.isDefined
+        if (hc.protocol match {
+          case Protocol.COMMAND => hasCommand && !hasPath && hc.port.isEmpty
+          case Protocol.HTTP    => !hasCommand && eitherPortIndexOrPort
+          case Protocol.TCP     => !hasCommand && !hasPath && eitherPortIndexOrPort
+          case _                => true
+        }) Success else Failure(Set(RuleViolation(hc, s"HealthCheck is having parameters violation ${hc.protocol} protocol.", None)))
+      }
+    }
+  }
+  //scalastyle:on
 }

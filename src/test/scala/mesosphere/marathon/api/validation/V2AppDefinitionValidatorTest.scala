@@ -2,26 +2,20 @@ package mesosphere.marathon.api.validation
 
 import javax.validation.ConstraintValidatorContext
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ValidationFailedException, MarathonSpec}
 import mesosphere.marathon.Protos.HealthCheckDefinition
-import mesosphere.marathon.api.v2.{ ModelValidation, BeanValidation }
 import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ Command, Container, PathId }
 import org.scalatest.Matchers
+import mesosphere.marathon.api.v2.Validation._
 
 class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
-  var validator: V2AppDefinitionValidator = _
-
-  before {
-    validator = new V2AppDefinitionValidator
-  }
-
   test("only cmd") {
     val app = V2AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"))
-    assert(validator.isValid(app, mock[ConstraintValidatorContext]))
+    validate(app)
     validateJsonSchema(app)
   }
 
@@ -30,8 +24,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId(id),
       cmd = Some("true"))
 
-    BeanValidation.requireValid(ModelValidation.checkAppConstraints(app, app.id.parent))
-
+    validate(app)
     validateJsonSchema(app)
   }
 
@@ -85,9 +78,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId(id),
       cmd = Some("true"))
 
-    an[IllegalArgumentException] should be thrownBy {
-      ModelValidation.checkAppConstraints(app, app.id.parent)
-    }
+    an[ValidationFailedException] should be thrownBy validateOrThrow(app)
 
     validateJsonSchema(app)
   }
@@ -108,7 +99,8 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       cmd = Some("true")
     )
 
-    ModelValidation.checkAppConstraints(app, app.id.parent) should not be empty
+    val result = validate(app)
+    result.isFailure should be(true)
 
     validateJsonSchema(app, valid = false)
   }
@@ -156,7 +148,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
         )
       )
     )
-    assert(validator.isValid(app, mock[ConstraintValidatorContext]))
+    assert(validate(app).isSuccess)
     validateJsonSchema(app)
   }
 
@@ -165,7 +157,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId("/test"),
       cmd = Some("true"),
       acceptedResourceRoles = Some(Set("*")))
-    assert(validator.isValid(app, mock[ConstraintValidatorContext]))
+    assert(validate(app).isSuccess)
     validateJsonSchema(app)
   }
 
@@ -174,7 +166,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId("/test"),
       cmd = Some("true"),
       acceptedResourceRoles = Some(Set("*", "production")))
-    assert(validator.isValid(app, mock[ConstraintValidatorContext]))
+    assert(validate(app).isSuccess)
     validateJsonSchema(app)
   }
 
@@ -182,7 +174,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
     val app = V2AppDefinition(
       id = PathId("/test"),
       args = Some("test" :: Nil))
-    assert(validator.isValid(app, mock[ConstraintValidatorContext]))
+    assert(validate(app).isSuccess)
     validateJsonSchema(app)
   }
 
@@ -192,7 +184,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       container = Some(Container(
         docker = Some(Container.Docker(image = "test/image"))
       )))
-    assert(validator.isValid(app, mock[ConstraintValidatorContext]))
+    assert(validate(app).isSuccess)
     validateJsonSchema(app)
   }
 
@@ -200,7 +192,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
     val app = V2AppDefinition(
       id = PathId("/test"),
       container = Some(Container()))
-    assert(!validator.isValid(app, mock[ConstraintValidatorContext]))
+    assert(validate(app).isFailure)
     validateJsonSchema(app)
   }
 
@@ -209,7 +201,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId("/test"),
       cmd = Some("true"),
       container = Some(Container()))
-    assert(validator.isValid(app, mock[ConstraintValidatorContext]))
+    assert(validate(app).isSuccess)
     validateJsonSchema(app)
   }
 
@@ -218,7 +210,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId("/test"),
       args = Some("test" :: Nil),
       container = Some(Container()))
-    assert(validator.isValid(app, mock[ConstraintValidatorContext]))
+    assert(validate(app).isSuccess)
     validateJsonSchema(app)
   }
 
@@ -228,7 +220,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       cmd = Some("true"),
       args = Some("test" :: Nil),
       container = Some(Container()))
-    assert(!validator.isValid(app, mock[ConstraintValidatorContext]))
+    assert(validate(app).isFailure)
     validateJsonSchema(app, false)
   }
 }

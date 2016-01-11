@@ -1,7 +1,6 @@
 package mesosphere.marathon.api.v2
 
 import java.util
-import javax.validation.ConstraintViolationException
 
 import akka.event.EventStream
 import mesosphere.marathon._
@@ -64,7 +63,8 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
     Then("A constraint violation exception is thrown")
-    intercept[ConstraintViolationException] { appsResource.create(body, false, auth.request, auth.response) }
+    val response = appsResource.create(body, false, auth.request, auth.response)
+    response.getStatus should be(422)
   }
 
   test("Create a new app with float instance count fails") {

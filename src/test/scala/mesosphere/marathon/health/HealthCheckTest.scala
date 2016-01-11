@@ -1,14 +1,14 @@
 package mesosphere.marathon.health
 
-import javax.validation.Validation
-
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.state.Command
 import mesosphere.marathon.{ MarathonSpec, Protos }
 import play.api.libs.json.Json
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
+
+import mesosphere.marathon.api.v2.Validation._
 
 class HealthCheckTest extends MarathonSpec {
 
@@ -263,16 +263,13 @@ class HealthCheckTest extends MarathonSpec {
     assert(readResult == expected)
   }
 
-  val validator = Validation.buildDefaultValidatorFactory().getValidator
-
-  def shouldBeInvalid(hc: HealthCheck) = {
-    val violations = validator.validate(hc).asScala
-    assert(violations.nonEmpty)
+  def shouldBeInvalid(hc: HealthCheck): Unit = {
+    assert(validate(hc).isFailure)
   }
 
-  def shouldBeValid(hc: HealthCheck) = {
-    val violations = validator.validate(hc).asScala
-    assert(violations.isEmpty, s"violations: $violations")
+  def shouldBeValid(hc: HealthCheck): Unit = {
+    val result = validate(hc)
+    assert(result.isSuccess, s"violations: ${ValidationHelper.getAllRuleConstrains(result)}")
   }
 
   test("A default HealthCheck should be valid") {

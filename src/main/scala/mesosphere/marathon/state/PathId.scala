@@ -4,6 +4,9 @@ import mesosphere.marathon.plugin
 
 import scala.language.implicitConversions
 
+import com.wix.accord.dsl._
+import com.wix.accord._
+
 case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[PathId] with plugin.PathId {
 
   def root: String = path.headOption.getOrElse("")
@@ -87,5 +90,52 @@ object PathId {
   implicit class StringPathId(val stringPath: String) extends AnyVal {
     def toPath: PathId = PathId(stringPath)
     def toRootPath: PathId = PathId(stringPath).canonicalPath()
+  }
+
+  /**
+    * This regular expression is used to validate each path segment of an ID.
+    *
+    * If you change this, please also change "pathType" in AppDefinition.json and
+    * notify the maintainers of the DCOS CLI.
+    */
+  private[this] val ID_PATH_SEGMENT_PATTERN =
+    "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
+
+  /**
+    * For external usage. Needed to overwrite the whole description, e.g. id.path -> id.
+    * @return
+    */
+  implicit def pathIdValidator: Validator[PathId] = {
+    new Validator[PathId] {
+      override def apply(pathId: PathId): Result = {
+        validate(pathId.path)(validator = pathId.path.each should matchRegexFully(ID_PATH_SEGMENT_PATTERN.pattern)) and
+          validChild(pathId)
+      }
+    }
+  }
+
+  /**
+    * Check if path's parent, if it exists, is a valid parent indeed.
+    * @return
+    */
+  private def validChild: Validator[PathId] = {
+    new Validator[PathId] {
+      override def apply(pathId: PathId): Result = {
+        if (pathId.parent == "".toPath) Success
+        else if (pathId.parent.absolute) {
+          val p = pathId.canonicalPath(pathId.parent)
+          if (pathId.parent != PathId.empty && p.parent != pathId.parent) Failure(Set(
+            RuleViolation(pathId,
+              s"""identifier $pathId is not child of ${pathId.parent}.
+                    |Actual parent: ${p.parent}.
+                    |Hint: use relative paths.""".
+                stripMargin, None)
+          )
+          )
+          else Success
+        }
+        else Failure(Set(RuleViolation(pathId.parent, "path of parent should be absolute", None)))
+      }
+    }
   }
 }
