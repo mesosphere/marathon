@@ -13,7 +13,7 @@ import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration.Deadline
 
-class TaskCreatorAndUpdaterDelegateTest
+class TaskCreationHandlerAndUpdaterDelegateTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
 
   test("Created succeeds") {
@@ -150,7 +150,7 @@ class TaskCreatorAndUpdaterDelegateTest
     lazy val clock = ConstantClock()
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val taskTrackerProbe = TestProbe()
-    lazy val delegate = new TaskCreatorAndUpdaterDelegate(clock, config, taskTrackerProbe.ref)
+    lazy val delegate = new TaskCreationHandlerAndUpdaterDelegate(clock, config, taskTrackerProbe.ref)
     lazy val timeoutDuration = delegate.timeout.duration
     def timeoutFromNow = clock.now() + timeoutDuration
   }

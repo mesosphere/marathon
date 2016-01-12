@@ -8,7 +8,7 @@ import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
-import mesosphere.marathon.core.task.tracker.{ TaskCreator, TaskUpdater, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskUpdater, TaskTracker }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
@@ -28,7 +28,7 @@ class MarathonHealthCheckManagerTest
 
   var hcManager: MarathonHealthCheckManager = _
   var taskTracker: TaskTracker = _
-  var taskCreator: TaskCreator = _
+  var taskCreationHandler: TaskCreationHandler = _
   var taskUpdater: TaskUpdater = _
   var appRepository: AppRepository = _
   var eventStream: EventStream = _
@@ -54,7 +54,7 @@ class MarathonHealthCheckManagerTest
 
     val taskTrackerModule = createTaskTrackerModule(leadershipModule)
     taskTracker = taskTrackerModule.taskTracker
-    taskCreator = taskTrackerModule.taskCreator
+    taskCreationHandler = taskTrackerModule.taskCreationHandler
     taskUpdater = taskTrackerModule.taskUpdater
 
     appRepository = new AppRepository(
@@ -88,7 +88,7 @@ class MarathonHealthCheckManagerTest
       .setVersion(version.toString)
       .build
 
-    taskCreator.created(appId, marathonTask).futureValue
+    taskCreationHandler.created(appId, marathonTask).futureValue
     taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     taskId
@@ -134,7 +134,7 @@ class MarathonHealthCheckManagerTest
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
-    taskCreator.created(appId, marathonTask).futureValue
+    taskCreationHandler.created(appId, marathonTask).futureValue
     taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     hcManager.add(appId, app.version, healthCheck)
@@ -243,12 +243,12 @@ class MarathonHealthCheckManagerTest
         versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )).futureValue
-      taskCreator.created(appId, task).futureValue
+      taskCreationHandler.created(appId, task).futureValue
       taskUpdater.statusUpdate(appId, taskStatus(task)).futureValue
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: MarathonTask) =
-      taskCreator.terminated(appId, task.getId).futureValue
+      taskCreationHandler.terminated(appId, task.getId).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath

@@ -8,7 +8,7 @@ import scala.concurrent.Future
 /**
   * Notifies the [[TaskTracker]] of task creation and termination.
   */
-trait TaskCreator {
+trait TaskCreationHandler {
   /**
     * Create a new task.
     *

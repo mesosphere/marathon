@@ -9,7 +9,7 @@ import mesosphere.marathon.state.TaskRepository
 
 /**
   * Provides the interfaces to query the current task state ([[TaskTracker]]) and to
-  * update the task state ([[TaskUpdater]], [[TaskCreator]]).
+  * update the task state ([[TaskUpdater]], [[TaskCreationHandler]]).
   */
 class TaskTrackerModule(
     clock: Clock,
@@ -20,7 +20,7 @@ class TaskTrackerModule(
   lazy val taskTracker: TaskTracker = new TaskTrackerDelegate(Some(metrics), config, taskTrackerActorRef)
 
   def taskUpdater: TaskUpdater = taskTrackerCreatorAndUpdater
-  def taskCreator: TaskCreator = taskTrackerCreatorAndUpdater
+  def taskCreationHandler: TaskCreationHandler = taskTrackerCreatorAndUpdater
 
   private[this] def statusUpdateResolver(taskTrackerRef: ActorRef): TaskOpProcessorImpl.StatusUpdateActionResolver =
     new TaskOpProcessorImpl.StatusUpdateActionResolver(new TaskTrackerDelegate(None, config, taskTrackerRef))
@@ -36,5 +36,5 @@ class TaskTrackerModule(
     taskTrackerActorProps, taskTrackerActorName
   )
   private[this] lazy val taskTrackerCreatorAndUpdater =
-    new TaskCreatorAndUpdaterDelegate(clock, config, taskTrackerActorRef)
+    new TaskCreationHandlerAndUpdaterDelegate(clock, config, taskTrackerActorRef)
 }

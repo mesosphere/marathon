@@ -10,7 +10,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   * The TaskTracker exposes the latest known state for every task.
   *
   * It is an read-only interface. For modification, see
-  * * [[TaskCreator]] for creating/removing tasks
+  * * [[TaskCreationHandler]] for creating/removing tasks
   * * [[TaskUpdater]] for updating a task state according to a status update
   *
   * FIXME: To allow introducing the new asynchronous [[TaskTracker]] without needing to

@@ -7,7 +7,7 @@ import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.task.tracker.impl.{ AppData, AppDataMap }
-import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskCreator, TaskUpdater }
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskCreationHandler, TaskUpdater }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ PathId, TaskRepository }
@@ -31,7 +31,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
   val TEST_APP_NAME = "foo".toRootPath
   var taskTracker: TaskTracker = null
-  var taskCreator: TaskCreator = null
+  var taskCreationHandler: TaskCreationHandler = null
   var taskUpdater: TaskUpdater = null
   var state: PersistentStore = null
   val config = defaultConfig()
@@ -42,14 +42,14 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     state = spy(new InMemoryStore)
     val taskTrackerModule = createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), state, config, metrics)
     taskTracker = taskTrackerModule.taskTracker
-    taskCreator = taskTrackerModule.taskCreator
+    taskCreationHandler = taskTrackerModule.taskCreationHandler
     taskUpdater = taskTrackerModule.taskUpdater
   }
 
   test("SerializeAndDeserialize") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
 
     val deserializedTask = taskTracker.getTask(TEST_APP_NAME, sampleTask.getId)
 
@@ -68,7 +68,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   private[this] def testCreatedAndGetTask(call: (TaskTracker, PathId, String) => Option[MarathonTask]): Unit = {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
 
     val fetchedTask = call(taskTracker, TEST_APP_NAME, sampleTask.getId)
 
@@ -88,9 +88,9 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val task2 = makeSampleTask(TEST_APP_NAME / "b")
     val task3 = makeSampleTask(TEST_APP_NAME / "b")
 
-    taskCreator.created(TEST_APP_NAME / "a", task1).futureValue
-    taskCreator.created(TEST_APP_NAME / "b", task2).futureValue
-    taskCreator.created(TEST_APP_NAME / "b", task3).futureValue
+    taskCreationHandler.created(TEST_APP_NAME / "a", task1).futureValue
+    taskCreationHandler.created(TEST_APP_NAME / "b", task2).futureValue
+    taskCreationHandler.created(TEST_APP_NAME / "b", task3).futureValue
 
     val testAppTasks = call(taskTracker)
 
@@ -117,9 +117,9 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val task2 = makeSampleTask(TEST_APP_NAME)
     val task3 = makeSampleTask(TEST_APP_NAME)
 
-    taskCreator.created(TEST_APP_NAME, task1).futureValue
-    taskCreator.created(TEST_APP_NAME, task2).futureValue
-    taskCreator.created(TEST_APP_NAME, task3).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, task1).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, task2).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, task3).futureValue
 
     val testAppTasks = call(taskTracker)
 
@@ -140,7 +140,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   private[this] def testCount(count: (TaskTracker, PathId) => Int): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
 
-    taskCreator.created(TEST_APP_NAME / "a", task1).futureValue
+    taskCreationHandler.created(TEST_APP_NAME / "a", task1).futureValue
 
     count(taskTracker, TEST_APP_NAME / "a") should be(1)
     count(taskTracker, TEST_APP_NAME / "b") should be(0)
@@ -157,7 +157,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   private[this] def testContains(count: (TaskTracker, PathId) => Boolean): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
 
-    taskCreator.created(TEST_APP_NAME / "a", task1).futureValue
+    taskCreationHandler.created(TEST_APP_NAME / "a", task1).futureValue
 
     count(taskTracker, TEST_APP_NAME / "a") should be(true)
     count(taskTracker, TEST_APP_NAME / "b") should be(false)
@@ -167,7 +167,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
     // CREATE TASK
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
 
     shouldContainTask(taskTracker.getTasks(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.getId)
@@ -197,7 +197,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     assert(taskTracker.getTasks(TEST_APP_NAME).head.getStatus == runningTaskStatus)
 
     // TASK TERMINATED
-    taskCreator.terminated(TEST_APP_NAME, sampleTask.getId).futureValue
+    taskCreationHandler.terminated(TEST_APP_NAME, sampleTask.getId).futureValue
 
     stateShouldNotContainKey(state, sampleTask.getId)
 
@@ -222,7 +222,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val sampleTask = makeSampleTask(TEST_APP_NAME)
     val terminalStatusUpdate = makeTaskStatus(sampleTask.getId, taskState)
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
     shouldContainTask(taskTracker.getTasks(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.getId)
 
@@ -260,22 +260,22 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val app3_task2 = makeSampleTask(appName3)
     val app3_task3 = makeSampleTask(appName3)
 
-    taskCreator.created(appName1, app1_task1).futureValue
+    taskCreationHandler.created(appName1, app1_task1).futureValue
     taskUpdater.statusUpdate(appName1, makeTaskStatus(app1_task1.getId)).futureValue
 
-    taskCreator.created(appName1, app1_task2).futureValue
+    taskCreationHandler.created(appName1, app1_task2).futureValue
     taskUpdater.statusUpdate(appName1, makeTaskStatus(app1_task2.getId)).futureValue
 
-    taskCreator.created(appName2, app2_task1).futureValue
+    taskCreationHandler.created(appName2, app2_task1).futureValue
     taskUpdater.statusUpdate(appName2, makeTaskStatus(app2_task1.getId)).futureValue
 
-    taskCreator.created(appName3, app3_task1).futureValue
+    taskCreationHandler.created(appName3, app3_task1).futureValue
     taskUpdater.statusUpdate(appName3, makeTaskStatus(app3_task1.getId)).futureValue
 
-    taskCreator.created(appName3, app3_task2).futureValue
+    taskCreationHandler.created(appName3, app3_task2).futureValue
     taskUpdater.statusUpdate(appName3, makeTaskStatus(app3_task2.getId)).futureValue
 
-    taskCreator.created(appName3, app3_task3).futureValue
+    taskCreationHandler.created(appName3, app3_task3).futureValue
     taskUpdater.statusUpdate(appName3, makeTaskStatus(app3_task3.getId)).futureValue
 
     assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
@@ -307,7 +307,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -328,7 +328,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .setHealthy(true)
       .build()
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -348,7 +348,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -373,7 +373,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .setHealthy(true)
       .build()
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -398,7 +398,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .setHealthy(true)
       .build()
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -423,7 +423,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -447,7 +447,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
-    taskCreator.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue

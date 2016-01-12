@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
-import mesosphere.marathon.core.task.tracker.{ TaskCreator, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTracker }
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.metrics.Metrics
@@ -39,7 +39,7 @@ class TaskStartActorTest
   var scheduler: SchedulerActions = _
   var launchQueue: LaunchQueue = _
   var taskTracker: TaskTracker = _
-  var taskCreator: TaskCreator = _
+  var taskCreationHandler: TaskCreationHandler = _
   var metrics: Metrics = _
 
   before {
@@ -51,7 +51,7 @@ class TaskStartActorTest
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(
       leadershipModule, store = new InMemoryStore, metrics = metrics)
 
-    taskCreator = taskTrackerModule.taskCreator
+    taskCreationHandler = taskTrackerModule.taskCreationHandler
     taskTracker = spy(taskTrackerModule.taskTracker)
   }
 
@@ -140,7 +140,7 @@ class TaskStartActorTest
       .setId(TaskIdUtil.newTaskId(app.id).getValue)
       .setVersion(Timestamp(1024).toString)
       .build
-    taskCreator.created(app.id, task).futureValue
+    taskCreationHandler.created(app.id, task).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -316,7 +316,7 @@ class TaskStartActorTest
       .setId(taskId.getValue)
       .setVersion(Timestamp(1024).toString)
       .build
-    taskCreator.created(app.id, task).futureValue
+    taskCreationHandler.created(app.id, task).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],

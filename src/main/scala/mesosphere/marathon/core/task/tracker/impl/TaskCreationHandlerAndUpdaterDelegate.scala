@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.tracker.{ TaskCreator, TaskTrackerConfig, TaskUpdater }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTrackerConfig, TaskUpdater }
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskStatus
 
@@ -13,13 +13,13 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 /**
-  * Implements the [[TaskCreator]]/[[TaskUpdater]] traits by sending messages to the TaskTracker actor.
+  * Implements the [[TaskCreationHandler]]/[[TaskUpdater]] traits by sending messages to the TaskTracker actor.
   */
-private[tracker] class TaskCreatorAndUpdaterDelegate(
+private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
   clock: Clock,
   conf: TaskTrackerConfig,
   taskTrackerRef: ActorRef)
-    extends TaskCreator with TaskUpdater {
+    extends TaskCreationHandler with TaskUpdater {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
