@@ -457,13 +457,14 @@ trait V2Formats {
   }
 
   implicit lazy val ConstraintFormat: Format[Constraint] = Format(
-    Reads.of[Seq[String]].map { seq =>
-      val builder = Constraint
-        .newBuilder()
-        .setField(seq(0))
-        .setOperator(Operator.valueOf(seq(1)))
-      if (seq.size == 3) builder.setValue(seq(2))
-      builder.build()
+    new Reads[Constraint] {
+      override def reads(json: JsValue): JsResult[Constraint] = json.asOpt[Seq[String]] match {
+        case Some(seq) if seq.size >= 2 && seq.size <= 3 && Operator.values().map(_.toString).contains(seq(1)) =>
+          val builder = Constraint.newBuilder().setField(seq(0)).setOperator(Operator.valueOf(seq(1)))
+          if (seq.size == 3) builder.setValue(seq(2))
+          JsSuccess(builder.build())
+        case _ => JsError("Constraint definition must be an array of strings in format: <key>, <operator>[, value]")
+      }
     },
     Writes[Constraint] { constraint =>
       val builder = Seq.newBuilder[JsString]
