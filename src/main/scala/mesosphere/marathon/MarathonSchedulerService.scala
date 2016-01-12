@@ -105,18 +105,7 @@ class MarathonSchedulerService @Inject() (
   val log = LoggerFactory.getLogger(getClass.getName)
 
   // FIXME: Remove from this class
-  def frameworkId: Option[FrameworkID] = {
-    val fid = frameworkIdUtil.fetch()
-
-    fid match {
-      case Some(id) =>
-        log.info(s"Setting framework ID to ${id.getValue}")
-      case None =>
-        log.info("No previous framework ID found")
-    }
-
-    fid
-  }
+  def frameworkId: Option[FrameworkID] = frameworkIdUtil.fetch()
 
   // This is a little ugly as we are using a mutable variable. But drivers can't
   // be reused (i.e. once stopped they can't be started again. Thus,
