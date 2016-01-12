@@ -346,8 +346,10 @@ class MarathonSchedulerService @Inject() (
     }
   }
 
-  var offerLeadershipBackOff = 0.5.seconds
-  val maximumOfferLeadershipBackOff = 16.seconds
+  lazy val initialOfferLeadershipBackOff = 0.5.seconds
+
+  var offerLeadershipBackOff = initialOfferLeadershipBackOff
+  val maximumOfferLeadershipBackOff = initialOfferLeadershipBackOff * 32
 
   private def increaseOfferLeadershipBackOff() {
     if (offerLeadershipBackOff <= maximumOfferLeadershipBackOff) {
@@ -358,7 +360,7 @@ class MarathonSchedulerService @Inject() (
 
   private def resetOfferLeadershipBackOff() {
     log.info("Reset offerLeadership backoff")
-    offerLeadershipBackOff = 0.5.seconds
+    offerLeadershipBackOff = initialOfferLeadershipBackOff
   }
 
   private def offerLeadership(): Unit = {

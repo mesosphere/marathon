@@ -262,6 +262,7 @@ class MarathonSchedulerServiceTest
       schedulerActor,
       events
     ) {
+      override lazy val initialOfferLeadershipBackOff: FiniteDuration = 1.milliseconds
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
 
@@ -276,7 +277,7 @@ class MarathonSchedulerServiceTest
 
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
-    awaitAssert { verify(candidate.get).offerLeadership(schedulerService) }
+    verify(candidate.get, Mockito.timeout(1000)).offerLeadership(schedulerService)
     leader.get() should be (false)
   }
 
@@ -300,6 +301,7 @@ class MarathonSchedulerServiceTest
       schedulerActor,
       events
     ) {
+      override lazy val initialOfferLeadershipBackOff: FiniteDuration = 1.milliseconds
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
 
@@ -332,6 +334,7 @@ class MarathonSchedulerServiceTest
       schedulerActor,
       events
     ) {
+      override lazy val initialOfferLeadershipBackOff: FiniteDuration = 1.milliseconds
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
 
@@ -364,7 +367,9 @@ class MarathonSchedulerServiceTest
       migration,
       schedulerActor,
       events
-    )
+    ) {
+      override lazy val initialOfferLeadershipBackOff: FiniteDuration = 1.milliseconds
+    }
 
     when(leadershipCoordinator.prepareForStart()).thenReturn(Future.successful(()))
     when(driverFactory.createDriver()).thenReturn(driver)
