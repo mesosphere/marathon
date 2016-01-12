@@ -23,7 +23,7 @@ private[tracker] class TaskCreatorAndUpdaterDelegate(
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private[impl] implicit val timeout: Timeout = conf.taskUpdateRequestTimeout().milliseconds
+  private[impl] implicit val timeout: Timeout = conf.internalTaskUpdateRequestTimeout().milliseconds
 
   override def created(appId: PathId, task: MarathonTask): Future[MarathonTask] = {
     taskUpdate(appId, task.getId, TaskOpProcessor.Action.Update(task)).map(_ => task)

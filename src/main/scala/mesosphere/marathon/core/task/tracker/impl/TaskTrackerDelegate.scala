@@ -45,7 +45,7 @@ private[tracker] class TaskTrackerDelegate(
   private[this] val appDataMapFutureTimer =
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "appDataMapFuture")))
 
-  private[this] implicit val taskTrackerQueryTimeout: Timeout = config.taskTrackerRequestTimeout().milliseconds
+  private[this] implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
   private[this] def appDataMapSync: AppDataMap = {
     Await.result(appDataMapFuture, taskTrackerQueryTimeout.duration)
