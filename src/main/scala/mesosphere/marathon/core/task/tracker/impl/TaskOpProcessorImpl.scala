@@ -10,6 +10,7 @@ import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
+import scala.annotation.tailrec
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
@@ -92,24 +93,36 @@ private[tracker] class TaskOpProcessorImpl(
 
   override def process(op: Operation)(implicit ec: ExecutionContext): Future[Unit] = {
     op.action match {
-      case Action.Update(task) => // used for a create or as a result from a UpdateStatus action
+
+      case Action.Update(task) =>
+        // Used for a create or as a result from a UpdateStatus action.
+        // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         repo.store(task).map { _ =>
           taskTrackerRef ! TaskTrackerActor.TaskUpdated(op.appId, task, TaskTrackerActor.Ack(op.sender))
         }.recoverWith(tryToRecover(op)(expectedTaskState = Some(task)))
-      case Action.Expunge => // used for task termination or as a result from a UpdateStatus action
+      case Action.Expunge =>
+        // Used for task termination or as a result from a UpdateStatus action.
+        // The expunge is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         repo.expunge(op.taskId).map { _ =>
           taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.appId, op.taskId, TaskTrackerActor.Ack(op.sender))
         }.recoverWith(tryToRecover(op)(expectedTaskState = None))
 
       case Action.UpdateStatus(status) =>
         statusUpdateActionResolver.resolve(op.appId, op.taskId, status).flatMap { action: Action =>
+          // Since this action is mapped to another action, we delegate the responsibility to inform
+          // the sender to that other action.
           process(op.copy(action = action))
         }
 
-      case Action.Noop => // used if a task status update does not result in any changes
+      case Action.Noop =>
+        // Used if a task status update does not result in any changes.
+        // Since we did not change the task state, we inform the sender directly of the success of
+        // the operation.
         op.sender ! (())
         Future.successful(())
-      case Action.Fail(cause) => // used if a task status update for a non-existing task is processed
+      case Action.Fail(cause) =>
+        // Used if a task status update for a non-existing task is processed.
+        // Since we did not change the task state, we inform the sender directly of the failed operation.
         op.sender ! Status.Failure(cause)
         Future.successful(())
     }
