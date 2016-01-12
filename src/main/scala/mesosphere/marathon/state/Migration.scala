@@ -36,9 +36,6 @@ class Migration @Inject() (
     * They get applied after the master has been elected.
     */
   def migrations: List[MigrationAction] = List(
-    StorageVersions(0, 5, 0) -> { () =>
-      Future.failed(new IllegalStateException("migration from 0.5.x not supported anymore"))
-    },
     StorageVersions(0, 7, 0) -> { () =>
       Future.failed(new IllegalStateException("migration from 0.7.x not supported anymore"))
     },

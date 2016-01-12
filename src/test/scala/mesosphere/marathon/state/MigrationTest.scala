@@ -25,7 +25,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     val none = f.migration.migrations.filter(_._1 > StorageVersions(Int.MaxValue, 0, 0))
     none should have size 0
 
-    val some = f.migration.migrations.filter(_._1 < StorageVersions(0, 6, 0))
+    val some = f.migration.migrations.filter(_._1 < StorageVersions(0, 10, 0))
     some should have size 1
   }
 
@@ -65,7 +65,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
 
     val result = f.migration.applyMigrationSteps(StorageVersions(0, 8, 0)).futureValue
     result should not be 'empty
-    result should be(f.migration.migrations.map(_._1).drop(2))
+    result should be(f.migration.migrations.map(_._1).drop(1))
   }
 
   test("applyMigrationSteps throws an error for unsupported versions") {
