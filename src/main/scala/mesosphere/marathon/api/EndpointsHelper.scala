@@ -4,10 +4,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.AppDefinition
 import org.apache.mesos.Protos.TaskState
 
-import scala.collection.JavaConverters._
-
 object EndpointsHelper {
-
   /**
     * Produces a script-friendly string representation of the supplied
     * apps' tasks.  The data columns in the result are separated by
@@ -17,28 +14,31 @@ object EndpointsHelper {
     taskTracker: TaskTracker,
     apps: Seq[AppDefinition],
     delimiter: String): String = {
+    val tasksMap = taskTracker.list
+
     val sb = new StringBuilder
     for (app <- apps if app.ipAddress.isEmpty) {
-      val cleanId = app.id.safePath.replaceAll("\\s+", "_")
-      val tasks = taskTracker.getTasks(app.id)
+      val tasks = tasksMap.get(app.id).map(_.tasks).getOrElse(Iterable.empty)
+      val cleanId = app.id.safePath
 
       val servicePorts = app.servicePorts
 
       if (servicePorts.isEmpty) {
-        sb.append(s"$cleanId$delimiter $delimiter")
+        sb.append(cleanId).append(delimiter).append(' ').append(delimiter)
         for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
-          sb.append(s"${task.getHost} ")
+          sb.append(task.getHost).append(' ')
         }
-        sb.append(s"\n")
+        sb.append('\n')
       }
       else {
         for ((port, i) <- servicePorts.zipWithIndex) {
-          sb.append(s"$cleanId$delimiter$port$delimiter")
+          sb.append(cleanId).append(delimiter).append(port).append(delimiter)
+
           for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
-            val ports = task.getPortsList.asScala.lift
-            sb.append(s"${task.getHost}:${ports(i).getOrElse(0)}$delimiter")
+            val taskPort = Option(task.getPortsList.get(i): java.lang.Integer).getOrElse(java.lang.Integer.valueOf(0))
+            sb.append(task.getHost).append(':').append(taskPort).append(delimiter)
           }
-          sb.append("\n")
+          sb.append('\n')
         }
       }
     }

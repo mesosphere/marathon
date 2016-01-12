@@ -57,11 +57,13 @@ class TasksResource @Inject() (
       //scalastyle:on
       val statusSet = statuses.asScala.flatMap(toTaskState).toSet
 
-      val tasks = taskTracker.list.values.view.flatMap { app =>
+      val taskList = taskTracker.list
+
+      val tasks = taskList.values.view.flatMap { app =>
         app.tasks.view.map(t => app.appName -> t)
       }
 
-      val appIds = taskTracker.list.keySet
+      val appIds = taskList.keySet
 
       val appToPorts = appIds.map { appId =>
         appId -> service.getApp(appId).map(_.servicePorts).getOrElse(Nil)
