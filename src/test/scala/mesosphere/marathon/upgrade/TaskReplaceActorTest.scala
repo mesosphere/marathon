@@ -14,6 +14,7 @@ import mesosphere.marathon.upgrade.TaskReplaceActor.RetryKills
 import org.apache.mesos.Protos.{ Status, TaskID }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
+import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
@@ -564,14 +565,17 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref ! MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString)
+      ref.receive(MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString))
 
-    intercept[Exception] {
-      Await.result(promise.future, 5.seconds)
-    }
+    verify(queue, Mockito.timeout(1000)).resetDelay(app)
+    verify(driver, Mockito.timeout(1000)).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
+    verify(driver, Mockito.timeout(1000)).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
 
-    verify(queue).resetDelay(app)
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+    promise.isCompleted should be(false)
+
+    for (oldTask <- Set(taskA, taskB))
+      ref.receive(MesosStatusUpdateEvent("", oldTask.getId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
+
+    Await.result(promise.future, 0.second)
   }
 }
