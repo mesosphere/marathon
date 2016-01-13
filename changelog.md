@@ -28,18 +28,18 @@ context after the search term has been cleared.
 
 #### Better health status feedback
 The health bars in the application list view are now provided in the application detail view. The tooltips
-in the overview have been consolidated to make them easier to understand. The styles of the deployment table 
+in the overview have been consolidated to make them easier to understand. The styles of the deployment table
 have been updated inline with the applications list view. Additionally, it's possible to filter apps by their
-health status in the UI. 
+health status in the UI.
 
 #### IP-per-task UI
 Some changes have been made in order to support IP-per-task in the API. The relevant part of the app
 definition is exposed in the configuration page, and the `ipAddresses` field is integrated in the task
-detail view. 
+detail view.
 
 #### Direct task log downloads for in the UI
-The `stderr` and `stdout` logs can now be downloaded directly from the task view in the UI. The contents of 
-each task's sandbox is displayed and files are offered for direct download. 
+The `stderr` and `stdout` logs can now be downloaded directly from the task view in the UI. The contents of
+each task's sandbox is displayed and files are offered for direct download.
 
 #### Health Checks: allow port instead of portIndex
 Previously, the port to be used for health checks could only be specified by supplying a port index.  Now it
@@ -121,6 +121,7 @@ In the future Marathon will also fill in the DiscoveryInfo message for applicati
 IP-per-task.
 
 ### Fixed issues
+- #2405 - Migration of ZK State to 0.13/0.14 does not work
 - #2505 - Provide memory and cpu as environment variables in docker containers
 - #2509 - Leadership not abdicated on ZK connection loss
 - #2558 - If driver finishes with error, Marathon does not abdicate
