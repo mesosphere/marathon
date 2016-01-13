@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import scala.concurrent.Future
 
 trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics with VersionedEntry {
-  import mesosphere.util.ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   protected def store: EntityStore[T]
   protected def maxVersions: Option[Int]

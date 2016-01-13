@@ -35,7 +35,7 @@ class MarathonScheduler @Inject() (
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
-  import mesosphere.util.ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val zkTimeout = config.zkTimeoutDuration
 

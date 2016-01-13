@@ -25,7 +25,7 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
 
   @volatile
   private[state] var cacheOpt: Option[TrieMap[String, Option[T]]] = None
-  private[this] implicit val ec = ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def fetch(key: String): Future[Option[T]] = directOrCached(store.fetch(key)) { cache =>

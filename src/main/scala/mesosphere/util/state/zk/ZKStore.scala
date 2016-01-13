@@ -15,7 +15,7 @@ import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
 
@@ -23,7 +23,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     with PersistentStoreManagement {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
-  private[this] implicit val ec = ThreadPoolContext.context
+  private[this] implicit val ec = ExecutionContext.Implicits.global
 
   /**
     * Fetch data and return entity.

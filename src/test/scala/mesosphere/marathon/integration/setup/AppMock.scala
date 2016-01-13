@@ -11,7 +11,7 @@ import scala.concurrent.Await._
 import scala.concurrent.duration._
 
 class AppMock(appId: String, version: String, url: String) extends AbstractHandler {
-  import mesosphere.util.ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val system = ActorSystem()
   val pipeline = sendReceive

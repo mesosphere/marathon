@@ -76,7 +76,7 @@ class MarathonSchedulerService @Inject() (
   leadershipCallbacks: Seq[LeadershipCallback] = Seq.empty)
     extends AbstractExecutionThreadService with Leader with LeadershipAbdication {
 
-  import mesosphere.util.ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   implicit val zkTimeout = config.zkTimeoutDuration
 

@@ -177,7 +177,7 @@ object ProcessKeeper {
   }
 
   def stopProcess(name: String): Unit = {
-    import mesosphere.util.ThreadPoolContext.context
+    import mesosphere.util.ThreadPoolContext.ioContext
     log.info(s"Stop Process $name")
     val process = processes(name)
     def killProcess: Int = {

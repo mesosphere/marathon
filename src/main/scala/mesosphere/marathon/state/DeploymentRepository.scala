@@ -11,7 +11,7 @@ class DeploymentRepository(
   val metrics: Metrics)
     extends EntityRepository[DeploymentPlan] with StateMetrics {
 
-  import mesosphere.util.ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   def store(plan: DeploymentPlan): Future[DeploymentPlan] =
     storeWithVersion(plan.id, plan.version, plan)

@@ -21,7 +21,7 @@ class HealthCheckWorkerActorTest
     with Matchers {
 
   import HealthCheckWorker._
-  import mesosphere.util.ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   test("A TCP health check should correctly resolve the hostname") {
     val socket = new ServerSocket(0)

@@ -8,7 +8,7 @@ import scala.concurrent.Future
 
 import org.apache.commons.io.FilenameUtils.getName
 
-import mesosphere.util.ThreadPoolContext.context
+import scala.concurrent.ExecutionContext.Implicits.global
 
 trait PathFun {
 
@@ -40,7 +40,8 @@ trait PathFun {
         http
       case other: URLConnection => other
     }
-    connection.getHeaderFields.asScala.toMap.map { case (key, list) => (key, list.asScala.toList) }
+    scala.concurrent.blocking(connection.getHeaderFields)
+      .asScala.toMap.map { case (key, list) => (key, list.asScala.toList) }
   }
 
 }

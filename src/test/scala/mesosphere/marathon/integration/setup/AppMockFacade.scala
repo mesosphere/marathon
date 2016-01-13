@@ -8,7 +8,7 @@ import scala.concurrent.duration.{ Duration, _ }
 import scala.util.Try
 
 class AppMockFacade(https: Boolean = false, waitTime: Duration = 30.seconds)(implicit system: ActorSystem) {
-  import mesosphere.util.ThreadPoolContext.context
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 

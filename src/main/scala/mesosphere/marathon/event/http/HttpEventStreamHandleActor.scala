@@ -55,14 +55,16 @@ class HttpEventStreamHandleActor(
 
   private[this] def sendAllMessages(): Unit = {
     if (outstanding.nonEmpty) {
-      implicit val ec = ThreadPoolContext.context
       val toSend = outstanding.reverse
       outstanding = List.empty[MarathonEvent]
       context.become(stashEvents)
-      Future {
+      val sendFuture = Future {
         toSend.foreach(event => handle.sendEvent(event.eventType, Json.stringify(eventToJson(event))))
         WorkDone
-      } pipeTo self
+      }(ThreadPoolContext.ioContext)
+
+      import context.dispatcher
+      sendFuture pipeTo self
     }
     else {
       context.become(waitForEvent)
