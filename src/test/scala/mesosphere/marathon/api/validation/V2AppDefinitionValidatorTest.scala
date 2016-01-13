@@ -2,7 +2,7 @@ package mesosphere.marathon.api.validation
 
 import javax.validation.ConstraintValidatorContext
 
-import mesosphere.marathon.{ValidationFailedException, MarathonSpec}
+import mesosphere.marathon.{ ValidationFailedException, MarathonSpec }
 import mesosphere.marathon.Protos.HealthCheckDefinition
 import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheck

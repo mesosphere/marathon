@@ -8,9 +8,8 @@ import scala.util.control.NonFatal
 
 object StateMetrics {
   private[state] class MetricTemplate(
-    metrics: Metrics, prefix: String, metricsClass: Class[_],
-    nanoTime: () => Long = () => System.nanoTime
-  ) {
+      metrics: Metrics, prefix: String, metricsClass: Class[_],
+      nanoTime: () => Long = () => System.nanoTime) {
     def timedFuture[T](f: => Future[T]): Future[T] = {
       requestMeter.mark()
       val t0 = nanoTime()

@@ -7,6 +7,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
+import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 
 /**
   * The exported interface of the [[CoreModuleImpl]].
@@ -18,6 +19,7 @@ trait CoreModule {
   def leadershipModule: LeadershipModule
   def taskBusModule: TaskBusModule
   def taskJobsModule: TaskJobsModule
+  def taskTrackerModule: TaskTrackerModule
   def launcherModule: LauncherModule
   def appOfferMatcherModule: LaunchQueueModule
   def pluginModule: PluginModule

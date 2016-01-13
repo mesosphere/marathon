@@ -1,8 +1,9 @@
 package mesosphere.marathon.api
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, Group, GroupManager, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskTracker, MarathonTasks, TaskTrackerImpl }
+import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ AppLockedException, MarathonSchedulerService, MarathonSpec, UnknownAppException }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto

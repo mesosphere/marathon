@@ -6,6 +6,7 @@ import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueueModu
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskBusModule
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.{ AppRepository, PathId }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask

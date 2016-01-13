@@ -4,9 +4,9 @@ import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 

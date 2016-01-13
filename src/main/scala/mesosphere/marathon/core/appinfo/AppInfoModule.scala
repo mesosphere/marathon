@@ -4,9 +4,9 @@ import com.google.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.impl.{ AppInfoBaseData, DefaultAppInfoService }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppRepository, GroupManager, TaskFailureRepository }
-import mesosphere.marathon.tasks.TaskTracker
 
 /**
   * Provides a service to query information related to apps.

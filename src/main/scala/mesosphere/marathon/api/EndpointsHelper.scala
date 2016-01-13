@@ -1,7 +1,7 @@
 package mesosphere.marathon.api
 
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.TaskTracker
 import org.apache.mesos.Protos.TaskState
 
 import scala.collection.JavaConverters._

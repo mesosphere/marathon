@@ -4,9 +4,10 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskTracker, MarathonTasks, TaskTrackerImpl }
+import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto

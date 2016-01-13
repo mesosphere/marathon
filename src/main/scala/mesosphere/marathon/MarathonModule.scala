@@ -20,6 +20,7 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
 import mesosphere.marathon.event.{ EventModule, HistoryActor }
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
@@ -103,11 +104,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[AtomicBoolean])
       .annotatedWith(Names.named(ModuleNames.LEADER_ATOMIC_BOOLEAN))
       .toInstance(leader)
-
-    bind(classOf[TaskTracker]).to(classOf[TaskTrackerImpl])
-    bind(classOf[TaskReconciler]).to(classOf[TaskTrackerImpl])
-    bind(classOf[TaskCreator]).to(classOf[TaskTrackerImpl])
-    bind(classOf[TaskUpdater]).to(classOf[TaskTrackerImpl])
   }
 
   @Provides
@@ -187,7 +183,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
-    taskReconciler: TaskReconciler,
+    taskTracker: TaskTracker,
     taskQueue: LaunchQueue,
     frameworkIdUtil: FrameworkIdUtil,
     driverHolder: MarathonSchedulerDriverHolder,
@@ -200,14 +196,13 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       case NonFatal(_) => Restart
     }
 
-    import system.dispatcher
-
+    import scala.concurrent.ExecutionContext.Implicits.global
     def createSchedulerActions(schedulerActor: ActorRef): SchedulerActions = {
       new SchedulerActions(
         appRepository,
         groupRepository,
         healthCheckManager,
-        taskReconciler,
+        taskTracker,
         taskQueue,
         eventBus,
         schedulerActor,
@@ -218,7 +213,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
       Props(
         new DeploymentManager(
           appRepository,
-          taskReconciler,
+          taskTracker,
           taskQueue,
           schedulerActions,
           storage,
@@ -238,7 +233,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         appRepository,
         deploymentRepository,
         healthCheckManager,
-        taskReconciler,
+        taskTracker,
         taskQueue,
         driverHolder,
         leaderInfo,
@@ -287,12 +282,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     @Named(ModuleNames.STORE_FRAMEWORK_ID) store: EntityStore[FrameworkId],
     metrics: Metrics): FrameworkIdUtil = {
     new FrameworkIdUtil(store, conf.zkTimeoutDuration)
-  }
-
-  @Provides
-  @Singleton
-  def provideTaskTrackerImpl(taskRepo: TaskRepository): TaskTrackerImpl = {
-    new TaskTrackerImpl(taskRepo, conf)
   }
 
   @Provides
@@ -455,11 +444,12 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideTaskStore(store: PersistentStore, metrics: Metrics): EntityStore[MarathonTaskState] = {
-    entityStore(
+    // intentionally uncached since we cache in the layer above
+    new MarathonStore[MarathonTaskState](
       store,
       metrics,
-      "task:",
-      () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())
+      prefix = "task:",
+      newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())
     )
   }
 

@@ -61,7 +61,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       val allowed = "/test/group2/a".toPath
       val updated = current.updateGroup { group =>
         if (group.id.includes(allowed)) Some(group) //child
-        else if (allowed.includes(group.id)) Some(group.copy(apps = Set.empty, dependencies = Set.empty)) //parent
+        else if (allowed.includes(group.id)) Some(group.copy(apps = Set.empty, dependencies = Set.empty)) //taskTrackerRef
         else None
       }
 

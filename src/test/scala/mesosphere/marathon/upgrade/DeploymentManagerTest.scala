@@ -1,19 +1,20 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.actor.{ ActorRef, Props }
 import akka.event.EventStream
 import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
-import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
+import akka.testkit.{ ImplicitSender, TestActorRef, TestProbe }
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment }
 import mesosphere.marathon.{ MarathonConf, MarathonTestHelper, SchedulerActions }
@@ -53,7 +54,9 @@ class DeploymentManagerTest
     config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
     metrics = new Metrics(new MetricRegistry)
-    taskTracker = MarathonTestHelper.createTaskTracker(new InMemoryStore, config, metrics)
+    taskTracker = MarathonTestHelper.createTaskTracker(
+      AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore, config, metrics
+    )
     scheduler = mock[SchedulerActions]
     storage = mock[StorageProvider]
     appRepo = new AppRepository(

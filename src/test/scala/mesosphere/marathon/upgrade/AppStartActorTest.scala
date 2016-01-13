@@ -1,13 +1,14 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ ActorSystem, Props }
-import akka.testkit.{ TestActorRef, TestKit }
+import akka.actor.{ Props }
+import akka.testkit.{ TestActorRef }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.tasks.{ TaskTracker }
 import mesosphere.marathon.{ AppStartCanceledException, MarathonSpec, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verify
@@ -33,7 +34,7 @@ class AppStartActorTest
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
     taskQueue = mock[LaunchQueue]
-    taskTracker = createTaskTracker()
+    taskTracker = createTaskTracker(AlwaysElectedLeadershipModule.forActorSystem(system))
   }
 
   test("Without Health Checks") {

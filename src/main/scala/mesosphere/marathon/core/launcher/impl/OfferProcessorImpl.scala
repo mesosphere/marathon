@@ -4,9 +4,10 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskWithSource }
+import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.tasks.{ TaskCreator, TaskIdUtil }
+import mesosphere.marathon.tasks.TaskIdUtil
 import org.apache.mesos.Protos.{ Offer, OfferID }
 import org.slf4j.LoggerFactory
 
@@ -22,7 +23,7 @@ private[launcher] class OfferProcessorImpl(
     metrics: Metrics,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
-    taskCreator: TaskCreator) extends OfferProcessor {
+    taskCreationHandler: TaskCreationHandler) extends OfferProcessor {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -96,7 +97,7 @@ private[launcher] class OfferProcessorImpl(
     tasks.foldLeft(Future.successful(())) { (terminatedFuture, nextTask) =>
       terminatedFuture.flatMap { _ =>
         val appId = TaskIdUtil.appId(nextTask.marathonTask.getId)
-        taskCreator.terminated(appId, nextTask.marathonTask.getId).map(_ => ())
+        taskCreationHandler.terminated(appId, nextTask.marathonTask.getId).map(_ => ())
       }
     }.recover {
       case NonFatal(e) =>
@@ -114,7 +115,7 @@ private[launcher] class OfferProcessorImpl(
       log.info("Save task [{}]", task.marathonTask.getId)
       val taskId = task.marathonTask.getId
       val appId = TaskIdUtil.appId(taskId)
-      taskCreator
+      taskCreationHandler
         .created(appId, task.marathonTask)
         .map(_ => Some(task))
         .recoverWith {
@@ -122,7 +123,7 @@ private[launcher] class OfferProcessorImpl(
             savingTasksErrorMeter.mark()
             task.reject(s"storage error: $e")
             log.warn(s"error while storing task $taskId for app [$appId]", e)
-            taskCreator.terminated(appId, taskId).map(_ => None)
+            taskCreationHandler.terminated(appId, taskId).map(_ => None)
         }.map {
           case Some(savedTask) => Some(task)
           case None            => None

@@ -1,22 +1,23 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.tasks.{ TaskTracker }
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.TaskUpgradeCanceledException
+import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import akka.actor.Props
 import akka.testkit.TestActorRef
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
-import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, Matchers, FunSuiteLike }
-import org.apache.mesos.SchedulerDriver
-import org.scalatest.mock.MockitoSugar
-import mesosphere.marathon.Protos.MarathonTask
-import scala.collection.mutable
-import scala.concurrent.{ Await, Promise }
-import scala.concurrent.duration._
-import mesosphere.marathon.event.MesosStatusUpdateEvent
-import org.mockito.Mockito._
 import org.apache.mesos.Protos.TaskID
-import mesosphere.marathon.TaskUpgradeCanceledException
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import org.apache.mesos.SchedulerDriver
+import org.mockito.Mockito._
+import org.scalatest.mock.MockitoSugar
+import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
+
+import scala.collection.mutable
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Promise }
 
 class TaskKillActorTest
     extends MarathonActorSupport

@@ -1,9 +1,9 @@
 package mesosphere.marathon.upgrade
 
 import akka.event.EventStream
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.tasks.TaskTracker
 import org.apache.mesos.{ Protos, SchedulerDriver }
 
 import scala.collection.mutable

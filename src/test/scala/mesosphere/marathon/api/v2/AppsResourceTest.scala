@@ -9,9 +9,10 @@ import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl, TaskTrackerImpl$ }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -20,9 +21,8 @@ import play.api.libs.json.{ JsNumber, Json }
 import scala.collection.immutable
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.language.postfixOps
 import scala.concurrent.duration._
-import PathId._
+import scala.language.postfixOps
 
 class AppsResourceTest extends MarathonSpec with Matchers with Mockito with GivenWhenThen {
 

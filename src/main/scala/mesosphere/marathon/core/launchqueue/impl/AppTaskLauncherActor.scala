@@ -16,9 +16,10 @@ import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskLaunc
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
-import mesosphere.marathon.tasks.{ TaskFactory, TaskTracker }
+import mesosphere.marathon.tasks.TaskFactory
 import org.apache.mesos.Protos.{ TaskID, TaskInfo }
 
 import scala.concurrent.duration._

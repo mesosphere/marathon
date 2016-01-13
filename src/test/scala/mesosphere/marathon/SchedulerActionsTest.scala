@@ -3,10 +3,10 @@ package mesosphere.marathon
 import akka.testkit.TestProbe
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupRepository, PathId }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.tasks.{ TaskReconciler, TaskTracker }
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.Implicits.{ slaveIDToProto, taskIDToProto }
 import mesosphere.mesos.protos.SlaveID
@@ -26,13 +26,13 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
   test("Reset rate limiter if application is stopped") {
     val queue = mock[LaunchQueue]
     val repo = mock[AppRepository]
-    val taskReconciler = mock[TaskReconciler]
+    val taskTracker = mock[TaskTracker]
 
     val scheduler = new SchedulerActions(
       repo,
       mock[GroupRepository],
       mock[HealthCheckManager],
-      taskReconciler,
+      taskTracker,
       queue,
       system.eventStream,
       TestProbe().ref,
@@ -42,7 +42,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val app = AppDefinition(id = PathId("/myapp"))
 
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
-    when(taskReconciler.getTasks(app.id)).thenReturn(Set.empty[Protos.MarathonTask])
+    when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[Protos.MarathonTask])
 
     val res = scheduler.stopApp(mock[SchedulerDriver], app)
 
@@ -56,7 +56,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
   test("Task reconciliation sends known running and staged tasks and empty list") {
     val queue = mock[LaunchQueue]
     val repo = mock[AppRepository]
-    val taskReconciler = mock[TaskReconciler]
+    val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
 
     val runningStatus = TaskStatus.newBuilder
@@ -93,7 +93,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
       repo,
       mock[GroupRepository],
       mock[HealthCheckManager],
-      taskReconciler,
+      taskTracker,
       queue,
       system.eventStream,
       TestProbe().ref,
@@ -102,10 +102,10 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
 
     val app = AppDefinition(id = PathId("/myapp"))
 
-    when(taskReconciler.getTasks(app.id)).thenReturn(Set(runningTask, stagedTask, stagedTaskWithSlaveId))
+    when(taskTracker.getTasks(app.id)).thenReturn(Set(runningTask, stagedTask, stagedTaskWithSlaveId))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(taskReconciler.list).thenReturn(Map(
-      app.id -> TaskTracker.App(app.id, Set(runningTask, stagedTask, stagedTaskWithSlaveId), shutdown = false)
+    when(taskTracker.list).thenReturn(Map(
+      app.id -> TaskTracker.App(app.id, Set(runningTask, stagedTask, stagedTaskWithSlaveId))
     ))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
@@ -117,14 +117,14 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
   test("Task reconciliation only one empty list, when no tasks are present in Marathon") {
     val queue = mock[LaunchQueue]
     val repo = mock[AppRepository]
-    val taskReconciler = mock[TaskReconciler]
+    val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
 
     val scheduler = new SchedulerActions(
       repo,
       mock[GroupRepository],
       mock[HealthCheckManager],
-      taskReconciler,
+      taskTracker,
       queue,
       system.eventStream,
       TestProbe().ref,
@@ -133,9 +133,9 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
 
     val app = AppDefinition(id = PathId("/myapp"))
 
-    when(taskReconciler.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
     when(repo.allPathIds()).thenReturn(Future.successful(Seq()))
-    when(taskReconciler.list).thenReturn(Map.empty[PathId, TaskTracker.App])
+    when(taskTracker.list).thenReturn(Map.empty[PathId, TaskTracker.App])
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
@@ -145,7 +145,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
   test("Kill orphaned task") {
     val queue = mock[LaunchQueue]
     val repo = mock[AppRepository]
-    val taskReconciler = mock[TaskReconciler]
+    val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
 
     val status = TaskStatus.newBuilder
@@ -167,7 +167,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
       repo,
       mock[GroupRepository],
       mock[HealthCheckManager],
-      taskReconciler,
+      taskTracker,
       queue,
       system.eventStream,
       TestProbe().ref,
@@ -177,17 +177,16 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val app = AppDefinition(id = PathId("/myapp"))
     val orphanedApp = AppDefinition(id = PathId("/orphan"))
 
-    when(taskReconciler.getTasks(app.id)).thenReturn(Set(task))
-    when(taskReconciler.getTasks(orphanedApp.id)).thenReturn(Set(orphanedTask))
+    when(taskTracker.getTasks(app.id)).thenReturn(Set(task))
+    when(taskTracker.getTasks(orphanedApp.id)).thenReturn(Set(orphanedTask))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(taskReconciler.list).thenReturn(Map(
-      app.id -> TaskTracker.App(app.id, Set(task), shutdown = false),
-      orphanedApp.id -> TaskTracker.App(orphanedApp.id, Set(orphanedTask, task), shutdown = false)
+    when(taskTracker.list).thenReturn(Map(
+      app.id -> TaskTracker.App(app.id, Set(task)),
+      orphanedApp.id -> TaskTracker.App(orphanedApp.id, Set(orphanedTask, task))
     ))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
     verify(driver, times(1)).killTask(protos.TaskID(orphanedTask.getId))
-    verify(taskReconciler, times(1)).removeUnknownAppAndItsTasks(orphanedApp.id)
   }
 }

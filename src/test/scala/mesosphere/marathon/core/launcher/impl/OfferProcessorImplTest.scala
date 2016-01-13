@@ -5,9 +5,10 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskLaunchSource, TaskWithSource }
+import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskCreator, TaskIdUtil, TaskTrackerImpl }
+import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.Protos.TaskInfo
@@ -36,7 +37,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("a cooperative offerMatcher and taskTracker")
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTasks(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
-      taskCreator.created(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
+      taskCreationHandler.created(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
     }
 
     And("a working taskLauncher")
@@ -55,8 +56,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("the tasks have been stored")
     for (task <- tasksWithSource) {
-      val ordered = inOrder(taskCreator)
-      ordered.verify(taskCreator).created(appId, task.marathonTask)
+      val ordered = inOrder(taskCreationHandler)
+      ordered.verify(taskCreationHandler).created(appId, task.marathonTask)
     }
   }
 
@@ -72,8 +73,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("a cooperative offerMatcher and taskTracker")
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTasks(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
-      taskCreator.created(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
-      taskCreator.terminated(appId, task.marathonTask.getId).asInstanceOf[Future[Unit]] returns
+      taskCreationHandler.created(appId, task.marathonTask) returns Future.successful(dummyTask(appId))
+      taskCreationHandler.terminated(appId, task.marathonTask.getId).asInstanceOf[Future[Unit]] returns
         Future.successful(())
     }
 
@@ -93,9 +94,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("the tasks where first stored and then expunged again")
     for (task <- tasksWithSource) {
-      val ordered = inOrder(taskCreator)
-      ordered.verify(taskCreator).created(appId, task.marathonTask)
-      ordered.verify(taskCreator).terminated(appId, task.marathonTask.getId)
+      val ordered = inOrder(taskCreationHandler)
+      ordered.verify(taskCreationHandler).created(appId, task.marathonTask)
+      ordered.verify(taskCreationHandler).terminated(appId, task.marathonTask.getId)
     }
   }
 
@@ -133,7 +134,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     noMoreInteractions(taskLauncher)
 
     And("no tasks where stored")
-    noMoreInteractions(taskCreator)
+    noMoreInteractions(taskCreationHandler)
   }
 
   test("match successful but first store is so slow that we are hitting storage timeout") {
@@ -152,12 +153,12 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTasks(offerId, tasksWithSource))
 
     for (task <- tasksWithSource) {
-      taskCreator.created(appId, task.marathonTask) answers { args =>
+      taskCreationHandler.created(appId, task.marathonTask) answers { args =>
         // simulate that stores are really slow
         clock += 1.hour
         Future.successful(dummyTask(appId))
       }
-      taskCreator.terminated(appId, task.marathonTask.getId).asInstanceOf[Future[Unit]] returns
+      taskCreationHandler.terminated(appId, task.marathonTask.getId).asInstanceOf[Future[Unit]] returns
         Future.successful(Some(task.marathonTask))
     }
 
@@ -176,12 +177,12 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
     And("the first task was stored")
     for (task <- tasksWithSource.take(1)) {
-      val ordered = inOrder(taskCreator)
-      ordered.verify(taskCreator).created(appId, task.marathonTask)
+      val ordered = inOrder(taskCreationHandler)
+      ordered.verify(taskCreationHandler).created(appId, task.marathonTask)
     }
 
     And("and the second task was not stored")
-    noMoreInteractions(taskCreator)
+    noMoreInteractions(taskCreationHandler)
   }
 
   test("match empty => decline") {
@@ -211,7 +212,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] var clock: ConstantClock = _
   private[this] var offerMatcher: OfferMatcher = _
   private[this] var taskLauncher: TaskLauncher = _
-  private[this] var taskCreator: TaskCreator = _
+  private[this] var taskCreationHandler: TaskCreationHandler = _
   private[this] var conf: OfferProcessorConfig = _
 
   private[this] def createProcessor(): OfferProcessor = {
@@ -221,9 +222,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     clock = ConstantClock()
     offerMatcher = mock[OfferMatcher]
     taskLauncher = mock[TaskLauncher]
-    taskCreator = mock[TaskCreator]
+    taskCreationHandler = mock[TaskCreationHandler]
 
-    new OfferProcessorImpl(conf, clock, new Metrics(new MetricRegistry), offerMatcher, taskLauncher, taskCreator)
+    new OfferProcessorImpl(conf, clock, new Metrics(new MetricRegistry), offerMatcher, taskLauncher, taskCreationHandler)
   }
 
   class DummySource extends TaskLaunchSource {

@@ -3,8 +3,8 @@ package mesosphere.marathon.upgrade
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.TaskTracker
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 

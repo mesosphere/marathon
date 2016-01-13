@@ -11,10 +11,11 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, KillTask }
 import mesosphere.marathon.state.{ GroupManager, PathId }
-import mesosphere.marathon.tasks.{ TaskIdUtil, TaskTracker }
+import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import mesosphere.util.ThreadPoolContext
 import org.apache.mesos.Protos.TaskState

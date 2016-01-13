@@ -8,8 +8,8 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
-import mesosphere.marathon.tasks.{ TaskTracker, TaskTrackerImpl }
 import org.mockito.Mockito
 
 import scala.concurrent.Await

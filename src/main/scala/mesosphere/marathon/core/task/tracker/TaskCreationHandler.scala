@@ -1,4 +1,5 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon.core.task.tracker
+
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.PathId
 
@@ -7,11 +8,12 @@ import scala.concurrent.Future
 /**
   * Notifies the [[TaskTracker]] of task creation and termination.
   */
-trait TaskCreator {
+trait TaskCreationHandler {
   /**
     * Create a new task.
     *
-    * If the task exists already, the returned Future will fail.
+    * If the task exists already, the existing task will be overwritten so make sure
+    * that you generate unique IDs.
     */
   def created(appId: PathId, task: MarathonTask): Future[MarathonTask]
 

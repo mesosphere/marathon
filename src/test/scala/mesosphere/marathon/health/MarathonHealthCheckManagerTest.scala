@@ -7,12 +7,14 @@ import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskUpdater, TaskTracker }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks._
-import mesosphere.marathon.test.CaptureEvents
-import mesosphere.marathon.{ MarathonConf, MarathonScheduler, MarathonSchedulerDriverHolder, MarathonSpec }
+import mesosphere.marathon.test.{ MarathonShutdownHookSupport, CaptureEvents }
+import mesosphere.marathon._
 import mesosphere.util.Logging
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.{ Protos => mesos }
@@ -21,16 +23,18 @@ import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration._
 
-class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with Logging {
+class MarathonHealthCheckManagerTest
+    extends MarathonSpec with ScalaFutures with Logging with MarathonShutdownHookSupport {
 
   var hcManager: MarathonHealthCheckManager = _
   var taskTracker: TaskTracker = _
-  var taskCreator: TaskCreator = _
+  var taskCreationHandler: TaskCreationHandler = _
   var taskUpdater: TaskUpdater = _
   var appRepository: AppRepository = _
   var eventStream: EventStream = _
 
   implicit var system: ActorSystem = _
+  var leadershipModule: LeadershipModule = _
 
   val appId = "test".toRootPath
 
@@ -43,13 +47,16 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
         """akka.loggers = ["akka.testkit.TestEventListener"]"""
       )
     )
+    leadershipModule = AlwaysElectedLeadershipModule(shutdownHooks)
 
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
-    val taskTrackerImpl: TaskTrackerImpl = createTaskTracker()
-    taskTracker = taskTrackerImpl
-    taskCreator = taskTrackerImpl
-    taskUpdater = taskTrackerImpl
+
+    val taskTrackerModule = createTaskTrackerModule(leadershipModule)
+    taskTracker = taskTrackerModule.taskTracker
+    taskCreationHandler = taskTrackerModule.taskCreationHandler
+    taskUpdater = taskTrackerModule.taskUpdater
+
     appRepository = new AppRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), "app:"),
       None,
@@ -68,11 +75,6 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
     )
   }
 
-  after {
-    system.shutdown()
-    system.awaitTermination()
-  }
-
   def makeRunningTask(appId: PathId, version: Timestamp) = {
     val taskId = TaskIdUtil.newTaskId(appId)
 
@@ -86,7 +88,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
       .setVersion(version.toString)
       .build
 
-    taskCreator.created(appId, marathonTask).futureValue
+    taskCreationHandler.created(appId, marathonTask).futureValue
     taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     taskId
@@ -132,7 +134,7 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
-    taskCreator.created(appId, marathonTask).futureValue
+    taskCreationHandler.created(appId, marathonTask).futureValue
     taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     hcManager.add(appId, app.version, healthCheck)
@@ -241,12 +243,12 @@ class MarathonHealthCheckManagerTest extends MarathonSpec with ScalaFutures with
         versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )).futureValue
-      taskCreator.created(appId, task).futureValue
+      taskCreationHandler.created(appId, task).futureValue
       taskUpdater.statusUpdate(appId, taskStatus(task)).futureValue
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: MarathonTask) =
-      taskCreator.terminated(appId, task.getId).futureValue
+      taskCreationHandler.terminated(appId, task.getId).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath
