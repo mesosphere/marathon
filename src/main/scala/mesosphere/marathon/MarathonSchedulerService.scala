@@ -177,7 +177,7 @@ class MarathonSchedulerService @Inject() (
     log.info("Completed run")
   }
 
-  override def triggerShutdown(): Unit = {
+  override def triggerShutdown(): Unit = synchronized {
     log.info("Shutdown triggered")
 
     leader.set(false)
@@ -195,7 +195,7 @@ class MarathonSchedulerService @Inject() (
     super.triggerShutdown()
   }
 
-  def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = {
+  def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = synchronized {
 
     def executeAbdicationCommand() = abdicateCmdOption match {
       case Some(cmd) => cmd.execute()
@@ -236,7 +236,7 @@ class MarathonSchedulerService @Inject() (
     }
   }
 
-  def stopDriver(): Unit = {
+  def stopDriver(): Unit = synchronized {
     log.info("Stopping driver")
 
     // Stopping the driver will cause the driver run() method to return.
@@ -247,7 +247,7 @@ class MarathonSchedulerService @Inject() (
   //End Service interface
 
   //Begin Leader interface, which is required for CandidateImpl.
-  override def onDefeated(): Unit = {
+  override def onDefeated(): Unit = synchronized {
     log.info("Defeated (Leader Interface)")
 
     log.info(s"Call onDefeated leadership callbacks on ${leadershipCallbacks.mkString(", ")}")
@@ -258,7 +258,7 @@ class MarathonSchedulerService @Inject() (
     defeatLeadership()
   }
 
-  override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
+  override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = synchronized {
     var driverHandlesAbdication = false
     try {
       log.info("Elected (Leader Interface)")
@@ -294,13 +294,14 @@ class MarathonSchedulerService @Inject() (
   }
   //End Leader interface
 
-  private def defeatLeadership(): Unit = {
+  private def defeatLeadership(): Unit = synchronized {
     log.info("Defeat leadership")
 
     eventStream.publish(LocalLeadershipEvent.Standby)
 
-    timer.cancel()
+    val oldTimer = timer
     timer = newTimer()
+    oldTimer.cancel()
 
     // Our leadership has been defeated. Thus, update leadership and stop the driver.
     // Note that abdication command will be ran upon driver shutdown.
@@ -308,7 +309,7 @@ class MarathonSchedulerService @Inject() (
     stopDriver()
   }
 
-  private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = {
+  private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = synchronized {
     log.info("Elect leadership")
 
     // We have been elected as leader. Thus, update leadership and run the driver.
@@ -321,7 +322,7 @@ class MarathonSchedulerService @Inject() (
     schedulePeriodicOperations()
   }
 
-  def abdicateLeadership(): Unit = {
+  def abdicateLeadership(): Unit = synchronized {
     if (leader.get()) {
       log.info("Abdicating")
 
@@ -337,19 +338,19 @@ class MarathonSchedulerService @Inject() (
   var offerLeadershipBackOff = initialOfferLeadershipBackOff
   val maximumOfferLeadershipBackOff = initialOfferLeadershipBackOff * 32
 
-  private def increaseOfferLeadershipBackOff() {
+  private def increaseOfferLeadershipBackOff(): Unit = synchronized {
     if (offerLeadershipBackOff <= maximumOfferLeadershipBackOff) {
       offerLeadershipBackOff *= 2
       log.info(s"Increasing offerLeadership backoff to $offerLeadershipBackOff")
     }
   }
 
-  private def resetOfferLeadershipBackOff() {
+  private def resetOfferLeadershipBackOff(): Unit = synchronized {
     log.info("Reset offerLeadership backoff")
     offerLeadershipBackOff = initialOfferLeadershipBackOff
   }
 
-  private def offerLeadership(): Unit = {
+  private def offerLeadership(): Unit = synchronized {
     log.info(s"Will offer leadership after $offerLeadershipBackOff backoff")
     after(offerLeadershipBackOff, system.scheduler)(Future {
       candidate.synchronized {
@@ -369,7 +370,7 @@ class MarathonSchedulerService @Inject() (
     })
   }
 
-  private def schedulePeriodicOperations(): Unit = {
+  private def schedulePeriodicOperations(): Unit = synchronized {
 
     timer.schedule(
       new TimerTask {
@@ -399,7 +400,7 @@ class MarathonSchedulerService @Inject() (
     )
   }
 
-  private def abdicateAfterFailure(abdicationCommand: () => Unit, runAbdicationCommand: Boolean): Unit = {
+  private def abdicateAfterFailure(abdicationCommand: () => Unit, runAbdicationCommand: Boolean): Unit = synchronized {
 
     increaseOfferLeadershipBackOff()
 

@@ -371,6 +371,6 @@ class MarathonSchedulerServiceTest
     schedulerService.onElected(mock[ExceptionalCommand[Group.JoinException]])
 
     verify(candidate.get, Mockito.timeout(1000)).offerLeadership(schedulerService)
-    leader.get() should be (false)
+    leader.get() should be(false)
   }
 }
