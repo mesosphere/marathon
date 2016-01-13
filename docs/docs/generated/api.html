@@ -224,8 +224,8 @@
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/409" target="_blank">409</a></h2><p>There is an already deployed application with this name</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{"message":"An app with id [/existing_app] already exists."}
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/422" target="_blank">422</a></h2><p>The entity send can not be preocessed, since there are validation errors</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
-  "message": "Bean is not valid",
-  "errors": [
+  "message": "Object is not valid",
+  "details": [
     {
       "attribute": "upgradeStrategy.minimumHealthCapacity",
       "error": "is greater than 1"
@@ -651,8 +651,8 @@
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/409" target="_blank">409</a></h2><p>There is an already deployed application with this name</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{"message":"An app with id [/existing_app] already exists."}
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/422" target="_blank">422</a></h2><p>The entity send can not be preocessed, since there are validation errors</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
-  "message": "Bean is not valid",
-  "errors": [
+  "message": "Object is not valid",
+  "details": [
     {
       "attribute": "upgradeStrategy.minimumHealthCapacity",
       "error": "is greater than 1"
@@ -1100,8 +1100,8 @@
  "deployments":[{"id":"97c136bf-5a28-4821-9d94-480d9fbb01c8"}]
 }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/422" target="_blank">422</a></h2><p>The entity send can not be preocessed, since there are validation errors</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
-  "message": "Bean is not valid",
-  "errors": [
+  "message": "Object is not valid",
+  "details": [
     {
       "attribute": "upgradeStrategy.minimumHealthCapacity",
       "error": "is greater than 1"
@@ -1802,8 +1802,8 @@
  "deployments":[{"id":"97c136bf-5a28-4821-9d94-480d9fbb01c8"}]
 }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/422" target="_blank">422</a></h2><p>The entity send can not be preocessed, since there are validation errors</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
-  "message":"Bean is not valid",
-  "errors": [
+  "message":"Object is not valid",
+  "details": [
     {
       "attribute":"apps[0].id",
       "error":"identifier /app is not child of /group. Hint: use relative paths."
@@ -2069,8 +2069,8 @@
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/409" target="_blank">409</a></h2><p>There is an already deployed group with this name</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{"message":"Group / is already created. Use PUT to change this group."}
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/422" target="_blank">422</a></h2><p>The entity send can not be preocessed, since there are validation errors</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
-  "message":"Bean is not valid",
-  "errors": [
+  "message":"Object is not valid",
+  "details": [
     {
       "attribute":"apps[0].id",
       "error":"identifier /app is not child of /group. Hint: use relative paths."
@@ -2604,8 +2604,8 @@
  "deployments":[{"id":"97c136bf-5a28-4821-9d94-480d9fbb01c8"}]
 }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/422" target="_blank">422</a></h2><p>The entity send can not be preocessed, since there are validation errors</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
-  "message":"Bean is not valid",
-  "errors": [
+  "message":"Object is not valid",
+  "details": [
     {
       "attribute":"apps[0].id",
       "error":"identifier /app is not child of /group. Hint: use relative paths."
@@ -2871,8 +2871,8 @@
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/409" target="_blank">409</a></h2><p>There is an already deployed group with this name</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{"message":"Group / is already created. Use PUT to change this group."}
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/422" target="_blank">422</a></h2><p>The entity send can not be preocessed, since there are validation errors</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
-  "message":"Bean is not valid",
-  "errors": [
+  "message":"Object is not valid",
+  "details": [
     {
       "attribute":"apps[0].id",
       "error":"identifier /app is not child of /group. Hint: use relative paths."

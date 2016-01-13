@@ -39,7 +39,8 @@ object Validation {
   }
 
   implicit lazy val failureWrites: Writes[Failure] = Writes { f =>
-    Json.obj("errors" -> f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
+    Json.obj("message" -> "Object is not valid",
+      "details" -> f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
   }
 
   implicit lazy val ruleViolationWrites: Writes[RuleViolation] = Writes { v =>

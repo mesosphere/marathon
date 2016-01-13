@@ -73,8 +73,8 @@ put:
         application/json:
           example: |
             {
-              "message":"Bean is not valid",
-              "errors": [
+              "message":"Object is not valid",
+              "details": [
                 {
                   "attribute":"apps[0].id",
                   "error":"identifier /app is not child of /group. Hint: use relative paths."
@@ -114,8 +114,8 @@ post:
         application/json:
           example: |
             {
-              "message":"Bean is not valid",
-              "errors": [
+              "message":"Object is not valid",
+              "details": [
                 {
                   "attribute":"apps[0].id",
                   "error":"identifier /app is not child of /group. Hint: use relative paths."

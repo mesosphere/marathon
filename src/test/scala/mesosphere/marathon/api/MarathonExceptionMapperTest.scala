@@ -1,12 +1,11 @@
 package mesosphere.marathon.api
-/*
 
 import javax.validation.ConstraintViolationException
 
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.api.v2.BeanValidation
+import mesosphere.marathon.{ValidationFailedException, MarathonSpec}
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.V2AppDefinition
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.state.PathId
 
 import com.fasterxml.jackson.core.JsonParseException
@@ -72,8 +71,7 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
 
   test("Render ConstraintValidationException correctly") {
     Given("A ConstraintValidationException from an invalid app")
-    val violations = BeanValidation.validate(V2AppDefinition(id = PathId("/test")))
-    val ex = intercept[ConstraintViolationException] { BeanValidation.requireValid(violations) }
+    val ex = intercept[ValidationFailedException] { validateOrThrow(V2AppDefinition(id = PathId("/test"))) }
     val mapper = new MarathonExceptionMapper()
 
     When("The mapper creates a response from this exception")
@@ -83,12 +81,11 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
     response.getStatus should be(422)
     val entityString = response.getEntity.asInstanceOf[String]
     val entity = Json.parse(entityString)
-    (entity \ "message").as[String] should be("Bean is not valid")
-    val errors = (entity \ "errors").as[Seq[JsObject]]
+    (entity \ "message").as[String] should be("Object is not valid")
+    val errors = (entity \ "details").as[Seq[JsObject]]
     errors should have size 1
     val firstError = errors.head
-    (firstError \ "attribute").as[String] should be("")
+    (firstError \ "attribute").as[String] should be("value")
     (firstError \ "error").as[String] should be("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
   }
 }
-*/
