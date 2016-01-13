@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import java.io.StreamCorruptedException
 import java.util.UUID
 
 import com.codahale.metrics.MetricRegistry
@@ -23,7 +24,7 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.legacyTaskStore.store(appId, task1).futureValue
     f.legacyTaskStore.store(appId, task2).futureValue
     val names = f.entityStore.names().futureValue
-    names should not be empty
+    names should have size 2
     names should contain (appId.safePath + ":" + task1.getId)
     names should contain (appId.safePath + ":" + task2.getId)
 
@@ -33,12 +34,62 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     Then("the tasks are stored in paths without duplicated appId")
     val taskKeys = f.taskRepo.tasksKeys(appId).futureValue
 
-    taskKeys should not be empty
-    taskKeys.size should be (2)
+    taskKeys should have size 2
     taskKeys should contain (task1.getId)
     taskKeys should not contain f.legacyStoreKey(appId, task1.getId)
     taskKeys should contain (task2.getId)
     taskKeys should not contain f.legacyStoreKey(appId, task2.getId)
+  }
+
+  test("Migrating a migrated task throws an Exception") {
+    val f = new Fixture
+    Given("some tasks that are stored in old path style")
+    val appId = "/test/app1".toRootPath
+    val task1 = dummyTask(appId)
+    f.legacyTaskStore.store(appId, task1).futureValue
+
+    When("we migrate that task")
+    f.migration.migrateKey(f.legacyStoreKey(appId, task1.getId)).futureValue
+
+    Then("migrating it again will throw")
+    val result = f.migration.migrateKey(task1.getId).failed.futureValue
+    result.isInstanceOf[StreamCorruptedException]
+    result.getMessage.contains("invalid stream header")
+  }
+
+  test("Already migrated tasks will be excluded from a subsequent migration attempt") {
+    val f = new Fixture
+    Given("some tasks that are stored in old path style")
+    val appId = "/test/app1".toRootPath
+    val task1 = dummyTask(appId)
+    f.legacyTaskStore.store(appId, task1).futureValue
+    val names = f.entityStore.names().futureValue
+    names should have size 1
+    names should contain (appId.safePath + ":" + task1.getId)
+
+    When("we run the migration")
+    f.migration.migrateTasks().futureValue
+
+    Then("the tasks are stored in paths without duplicated appId")
+    val taskKeys1 = f.taskRepo.tasksKeys(appId).futureValue
+
+    taskKeys1 should have size 1
+
+    When("we add another task in old format")
+    val task2 = dummyTask(appId)
+    f.legacyTaskStore.store(appId, task2).futureValue
+    f.entityStore.names().futureValue should contain (appId.safePath + ":" + task2.getId)
+
+    And("we run the migration again")
+    f.migration.migrateTasks().futureValue
+
+    Then("Only the second task is considered and the first one does not crash the migration")
+    val taskKeys2 = f.taskRepo.tasksKeys(appId).futureValue
+    taskKeys2 should have size 2
+    taskKeys2 should contain (task1.getId)
+    taskKeys2 should not contain f.legacyStoreKey(appId, task1.getId)
+    taskKeys2 should contain (task2.getId)
+    taskKeys2 should not contain f.legacyStoreKey(appId, task2.getId)
   }
 
   class Fixture {

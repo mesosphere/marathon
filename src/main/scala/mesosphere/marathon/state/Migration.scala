@@ -322,24 +322,36 @@ class MigrationTo0_13(taskRepository: TaskRepository, store: PersistentStore) {
   def migrateTasks(): Future[Unit] = {
     log.info("Start 0.13 migration")
 
-    // including 0.12, task keys are in format task:app:app.uuid – the taskId is
-    // already contained the appId. When using the generic EntityRepo, a colon
-    // in the key after the prefix implicitly denotes a versioned entry, so this
-    // had to be changed, even though tasks are not stored with versions.
-    def migrateKey(legacyKey: String): Future[Unit] = {
-      fetchLegacyTask(legacyKey).flatMap {
-        case Some(task) => taskRepository.store(task).flatMap { _ =>
-          entityStore.expunge(legacyKey).map(_ => ())
-        }
-        case _ => Future.failed[Unit](new RuntimeException(s"Unable to load entity with key = $legacyKey"))
-      }
-    }
-
     entityStore.names().flatMap { keys =>
-      log.info("Found {} tasks to migrate", keys.size)
-      Future.sequence(keys.map(migrateKey)).map(_ => ())
+      log.info("Found {} tasks in store", keys.size)
+      // old format is appId:appId.taskId
+      val oldFormatRegex = """^.*:.*\..*$""".r
+      val namesInOldFormat = keys.filter(key => oldFormatRegex.pattern.matcher(key).matches)
+      log.info("{} tasks in old format need to be migrated.", namesInOldFormat.size)
+
+      namesInOldFormat.foldLeft(Future.successful(())) { (f, nextKey) =>
+        f.flatMap(_ => migrateKey(nextKey))
+      }
     }.map { _ =>
       log.info("Completed 0.13 migration")
+    }
+  }
+
+  // including 0.12, task keys are in format task:appId:taskId – the appId is
+  // already contained the task, for example as in
+  // task:my-app:my-app.13cb0cbe-b959-11e5-bb6d-5e099c92de61
+  // where my-app.13cb0cbe-b959-11e5-bb6d-5e099c92de61 is the taskId containing
+  // the appId as prefix. When using the generic EntityRepo, a colon
+  // in the key after the prefix implicitly denotes a versioned entry, so this
+  // had to be changed, even though tasks are not stored with versions. The new
+  // format looks like this:
+  // task:my-app.13cb0cbe-b959-11e5-bb6d-5e099c92de61
+  private[state] def migrateKey(legacyKey: String): Future[Unit] = {
+    fetchLegacyTask(legacyKey).flatMap {
+      case Some(task) => taskRepository.store(task).flatMap { _ =>
+        entityStore.expunge(legacyKey).map(_ => ())
+      }
+      case _ => Future.failed[Unit](new RuntimeException(s"Unable to load entity with key = $legacyKey"))
     }
   }
 
