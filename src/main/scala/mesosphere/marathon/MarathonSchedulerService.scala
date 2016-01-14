@@ -172,7 +172,9 @@ class MarathonSchedulerService @Inject() (
     // Block on the latch which will be countdown only when shutdown has been
     // triggered. This is to prevent run()
     // from exiting.
-    latch.await()
+    scala.concurrent.blocking {
+      latch.await()
+    }
 
     log.info("Completed run")
   }
@@ -207,7 +209,9 @@ class MarathonSchedulerService @Inject() (
     // The following block asynchronously runs the driver. Note that driver.run()
     // blocks until the driver has been stopped (or aborted).
     Future {
-      driver.foreach(_.run())
+      scala.concurrent.blocking {
+        driver.foreach(_.run())
+      }
     } onComplete {
       case Success(_) =>
         log.info("Driver future completed. Executing optional abdication command.")
