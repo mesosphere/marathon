@@ -18,6 +18,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ PathId, TaskRepository, AppDefinition, MarathonStore, MarathonTaskState, Timestamp }
 import mesosphere.marathon.tasks._
 import mesosphere.mesos.protos._
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.apache.mesos.Protos.{ CommandInfo, TaskID, TaskInfo, Offer }
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
@@ -195,6 +196,30 @@ trait MarathonTestHelper {
   def dummyTask(appId: PathId) = MarathonTask.newBuilder()
     .setId(TaskIdUtil.newTaskId(appId).getValue)
     .build()
+
+  def stagedTask(id: String): Protos.MarathonTask = {
+    Protos.MarathonTask
+      .newBuilder()
+      .setId(id)
+      .setStatus(statusForState(MesosProtos.TaskState.TASK_STAGING))
+      .buildPartial()
+  }
+
+  def runningTask(id: String): Protos.MarathonTask = {
+    Protos.MarathonTask
+      .newBuilder()
+      .setId(id)
+      .setStatus(statusForState(MesosProtos.TaskState.TASK_RUNNING))
+      .buildPartial()
+  }
+
+  private[this] def statusForState(state: MesosProtos.TaskState): MesosProtos.TaskStatus = {
+    MesosProtos.TaskStatus
+      .newBuilder()
+      .setState(state)
+      .buildPartial()
+  }
+
 }
 
 object MarathonTestHelper extends MarathonTestHelper

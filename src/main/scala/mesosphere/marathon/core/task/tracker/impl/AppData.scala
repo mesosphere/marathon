@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId
 import org.slf4j.LoggerFactory
@@ -32,9 +33,8 @@ private[impl] case class AppDataMap private (appTasks: Map[PathId, AppData]) {
     task <- app.taskMap.get(taskId)
   } yield task
 
-  def toTaskTrackerAppMap: Map[PathId, TaskTracker.App] = {
-    appTasks.mapValues(_.toTaskTrackerApp)
-  }
+  def toTaskTrackerAppMap: Map[PathId, TaskTracker.App] = appTasks.mapValues(_.toTaskTrackerApp)
+  def tasks: Iterable[MarathonTask] = appTasks.view.flatMap(_._2.tasks)
 }
 
 object AppDataMap {
