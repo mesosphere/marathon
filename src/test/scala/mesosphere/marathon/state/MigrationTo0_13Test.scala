@@ -10,6 +10,7 @@ import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
+import mesosphere.util.state.FrameworkId
 import mesosphere.util.state.memory.InMemoryStore
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -92,6 +93,62 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     taskKeys2 should not contain f.legacyStoreKey(appId, task2.getId)
   }
 
+  test("migrating frameworkId to framework:id") {
+    import FrameworkIdValues._
+    val f = new Fixture
+    val frameworkId = FrameworkId("myFramework")
+
+    Given("a frameworkId under the old key")
+    f.frameworkIdStore.store(oldName, frameworkId).futureValue
+    f.frameworkIdStore.names().futureValue should contain (oldName)
+    f.frameworkIdStore.fetch(oldName).futureValue should be (Some(frameworkId))
+
+    When("we run the migration")
+    f.migration.renameFrameworkId().futureValue
+
+    Then("The old key should be deleted")
+    val namesAfterMigration = f.frameworkIdStore.names().futureValue
+    namesAfterMigration should not contain oldName
+
+    And("The new key should be present and contain the correct value")
+    namesAfterMigration should contain (newName)
+    f.frameworkIdStore.fetch(newName).futureValue should be (Some(frameworkId))
+  }
+
+  test("migrating frameworkId does nothing for non-existent node") {
+    val f = new Fixture
+
+    Given("a non-existing frameworkId")
+    f.frameworkIdStore.names().futureValue should be (empty)
+
+    When("we run the migration")
+    f.migration.renameFrameworkId().futureValue
+
+    Then("Nothing should have happened")
+    f.frameworkIdStore.names().futureValue should be (empty)
+  }
+
+  test("migrating frameworkId is skipped if framework:id already exists") {
+    import FrameworkIdValues._
+    val f = new Fixture
+    val frameworkId = FrameworkId("myFramework")
+
+    Given("An existing framework:id")
+    f.frameworkIdStore.store(newName, frameworkId).futureValue
+    val names = f.frameworkIdStore.names().futureValue
+    names.size should be (1)
+    names should contain (newName)
+
+    When("we run the migration")
+    f.migration.renameFrameworkId().futureValue
+
+    Then("Nothing should have changed")
+    val newNames = f.frameworkIdStore.names().futureValue
+    newNames.size should be (1)
+    newNames should contain (newName)
+    f.frameworkIdStore.fetch(newName).futureValue should be (Some(frameworkId))
+  }
+
   class Fixture {
     lazy val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
     lazy val state = new InMemoryStore
@@ -106,9 +163,21 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
       val metrics = new Metrics(new MetricRegistry)
       new TaskRepository(entityStore, metrics)
     }
+    lazy val frameworkIdStore = new MarathonStore[FrameworkId](
+      store = state,
+      metrics = metrics,
+      newState = () => new FrameworkId(UUID.randomUUID().toString),
+      prefix = "" // don't set the prefix so we don't have to use PersistentStore for testing
+    )
+
     lazy val migration = new MigrationTo0_13(taskRepo, state)
 
     def legacyStoreKey(appId: PathId, taskId: String): String = appId.safePath + ":" + taskId
+  }
+
+  object FrameworkIdValues {
+    val oldName = "frameworkId"
+    val newName = "framework:id"
   }
 
 }
