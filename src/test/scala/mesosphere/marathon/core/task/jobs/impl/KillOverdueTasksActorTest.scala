@@ -6,6 +6,7 @@ import mesosphere.marathon
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.TaskTracker.AppDataMap
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.TaskID
@@ -54,7 +55,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
 
   test("no overdue tasks") {
     Given("no tasks")
-    taskTracker.list returns Map.empty[PathId, TaskTracker.App]
+    taskTracker.list returns AppDataMap.empty
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -71,7 +72,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
     Given("one overdue task")
     val mockTask = MarathonTask.newBuilder().setId("someId").buildPartial()
     val app = TaskTracker.App(PathId("/some"), Iterable(mockTask))
-    taskTracker.list returns Map(app.appName -> app)
+    taskTracker.list returns AppDataMap.of(app)
 
     When("the check is initiated")
     checkActor ! KillOverdueTasksActor.Check(maybeAck = None)
@@ -144,7 +145,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
         runningTask
       )
     )
-    taskTracker.list returns Map(appId -> app)
+    taskTracker.list returns AppDataMap.of(app)
 
     When("We check which tasks should be killed because they're not yet staged or unconfirmed")
     val testProbe = TestProbe()

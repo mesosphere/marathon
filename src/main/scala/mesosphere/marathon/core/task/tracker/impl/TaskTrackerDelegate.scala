@@ -1,16 +1,17 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import java.util.concurrent.TimeoutException
+
 import akka.actor.ActorRef
+import akka.pattern.AskTimeoutException
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.task.tracker.{ TaskTrackerConfig, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.PathId
-import TaskTracker.App
 
-import scala.collection.Map
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Await, Future }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 /**
   * Provides a [[TaskTracker]] interface to [[TaskTrackerActor]].
@@ -26,34 +27,40 @@ private[tracker] class TaskTrackerDelegate(
     config: TaskTrackerConfig,
     taskTrackerRef: ActorRef) extends TaskTracker {
 
-  override def list: Map[PathId, App] = appDataMapSync.toTaskTrackerAppMap
-  override def listAsync()(implicit ec: ExecutionContext): Future[Map[PathId, App]] =
-    appDataMapFuture.map(_.toTaskTrackerAppMap)
-  override def count(appId: PathId): Int = appDataMapSync.getTasks(appId).size
-  override def countAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
-    appDataMapFuture.map(_.getTasks(appId).size)
-  override def getTask(appId: PathId, taskId: String): Option[MarathonTask] = appDataMapSync.getTask(appId, taskId)
-  override def getTaskAsync(appId: PathId, taskId: String)(implicit e: ExecutionContext): Future[Option[MarathonTask]] =
-    appDataMapFuture.map(_.getTask(appId, taskId))
-  override def contains(appId: PathId): Boolean = appDataMapSync.appTasks.contains(appId)
-  override def containsAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
-    appDataMapFuture.map(_.appTasks.contains(appId))
-  override def getTasks(appId: PathId): Iterable[MarathonTask] = appDataMapSync.getTasks(appId)
-  override def getTasksAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]] =
-    appDataMapFuture.map(_.getTasks(appId))
+  override def list: TaskTracker.AppDataMap = {
+    import ExecutionContext.Implicits.global
+    Await.result(listAsync(), taskTrackerQueryTimeout.duration)
 
-  private[this] val appDataMapFutureTimer =
-    metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "appDataMapFuture")))
+  }
+  override def listAsync()(implicit ec: ExecutionContext): Future[TaskTracker.AppDataMap] = {
+    import akka.pattern.ask
+    def futureCall(): Future[TaskTracker.AppDataMap] =
+      (taskTrackerRef ? TaskTrackerActor.List).mapTo[TaskTracker.AppDataMap].recover {
+        case e: AskTimeoutException =>
+          throw new TimeoutException(
+            s"timeout while calling list. If you know what you are doing, you can adjust the timeout " +
+              s"with --${config.internalTaskTrackerRequestTimeout.name}."
+          )
+      }
+    listAsyncTimer.fold(futureCall())(_.timeFuture(futureCall()))
+  }
+
+  override def count(appId: PathId): Int = list.getTasks(appId).size
+  override def countAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
+    listAsync().map(_.getTasks(appId).size)
+  override def getTask(appId: PathId, taskId: String): Option[MarathonTask] = list.getTask(appId, taskId)
+  override def getTaskAsync(appId: PathId, taskId: String)(implicit e: ExecutionContext): Future[Option[MarathonTask]] =
+    listAsync().map(_.getTask(appId, taskId))
+  override def contains(appId: PathId): Boolean = list.appTasks.contains(appId)
+  override def containsAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
+    listAsync().map(_.appTasks.contains(appId))
+  override def getTasks(appId: PathId): Iterable[MarathonTask] = list.getTasks(appId)
+  override def getTasksAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]] =
+    listAsync().map(_.getTasks(appId))
+
+  private[this] val listAsyncTimer =
+    metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "list")))
 
   private[this] implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
-  private[this] def appDataMapSync: AppDataMap = {
-    Await.result(appDataMapFuture, taskTrackerQueryTimeout.duration)
-  }
-
-  private[impl] def appDataMapFuture: Future[AppDataMap] = {
-    import akka.pattern.ask
-    def futureCall(): Future[AppDataMap] = (taskTrackerRef ? TaskTrackerActor.List).mapTo[AppDataMap]
-    appDataMapFutureTimer.fold(futureCall())(_.timeFuture(futureCall()))
-  }
 }

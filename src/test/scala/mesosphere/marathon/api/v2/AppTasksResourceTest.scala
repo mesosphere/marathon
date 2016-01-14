@@ -80,8 +80,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     )
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.getTasks(appId) returns Set(task1, task2)
-    taskTracker.contains(appId) returns true
+    taskTracker.list returns TaskTracker.AppDataMap.of(TaskTracker.App(appId, Iterable(task1, task2)))
     healthCheckManager.statuses(appId) returns Future.successful(
       collection.immutable.Map("" -> collection.immutable.Seq())
     )

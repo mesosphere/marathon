@@ -6,7 +6,6 @@ import mesosphere.FutureTestSupport._
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
-import mesosphere.marathon.core.task.tracker.impl.{ AppData, AppDataMap }
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskCreationHandler, TaskUpdater }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
@@ -83,7 +82,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     testList(_.listAsync().futureValue)
   }
 
-  private[this] def testList(call: TaskTracker => Map[PathId, TaskTracker.App]): Unit = {
+  private[this] def testList(call: TaskTracker => TaskTracker.AppDataMap): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
     val task2 = makeSampleTask(TEST_APP_NAME / "b")
     val task3 = makeSampleTask(TEST_APP_NAME / "b")
@@ -96,12 +95,12 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
     testAppTasks.keySet should be(Set(TEST_APP_NAME / "a", TEST_APP_NAME / "b"))
 
-    testAppTasks(TEST_APP_NAME / "a").appName should equal(TEST_APP_NAME / "a")
-    testAppTasks(TEST_APP_NAME / "b").appName should equal(TEST_APP_NAME / "b")
-    testAppTasks(TEST_APP_NAME / "a").tasks should have size 1
-    testAppTasks(TEST_APP_NAME / "b").tasks should have size 2
-    testAppTasks(TEST_APP_NAME / "a").tasks.map(_.getId).toSet should equal(Set(task1.getId))
-    testAppTasks(TEST_APP_NAME / "b").tasks.map(_.getId).toSet should equal(Set(task2.getId, task3.getId))
+    testAppTasks.appTasks(TEST_APP_NAME / "a").appId should equal(TEST_APP_NAME / "a")
+    testAppTasks.appTasks(TEST_APP_NAME / "b").appId should equal(TEST_APP_NAME / "b")
+    testAppTasks.appTasks(TEST_APP_NAME / "a").tasks should have size 1
+    testAppTasks.appTasks(TEST_APP_NAME / "b").tasks should have size 2
+    testAppTasks.appTasks(TEST_APP_NAME / "a").tasks.map(_.getId).toSet should equal(Set(task1.getId))
+    testAppTasks.appTasks(TEST_APP_NAME / "b").tasks.map(_.getId).toSet should equal(Set(task2.getId, task3.getId))
   }
 
   test("GetTasks") {

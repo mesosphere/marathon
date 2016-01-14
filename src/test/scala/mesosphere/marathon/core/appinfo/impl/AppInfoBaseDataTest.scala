@@ -71,7 +71,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running2 = running1.toBuilder.setId("task2").buildPartial()
     val running3 = running1.toBuilder.setId("task3").buildPartial()
 
-    f.taskTracker.getTasks(app.id) returns Set(running1, running2, running3)
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.taskTracker.listAsync()(global) returns
+      Future.successful(TaskTracker.AppDataMap.of(TaskTracker.App(app.id, Iterable(running1, running2, running3))))
 
     val alive = Health("task2", lastSuccess = Some(Timestamp(1)))
     val unhealthy = Health("task3", lastFailure = Some(Timestamp(1)))
@@ -101,7 +103,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).getTasks(app.id)
+    verify(f.taskTracker, times(1)).listAsync()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -125,7 +127,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
       .buildPartial()
     val running2 = running.toBuilder.setId("task3").buildPartial()
 
-    f.taskTracker.getTasks(app.id) returns Set(staged, running, running2)
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.taskTracker.listAsync()(global) returns
+      Future.successful(TaskTracker.AppDataMap.of(TaskTracker.App(app.id, Iterable(staged, running, running2))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
@@ -144,7 +148,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).getTasks(app.id)
+    verify(f.taskTracker, times(1)).listAsync()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -256,8 +260,10 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
       .buildPartial()
     val running2 = running.toBuilder.setId("task3").buildPartial()
 
+    import scala.concurrent.ExecutionContext.Implicits.global
     val tasks: Set[MarathonTask] = Set(staged, running, running2)
-    f.taskTracker.getTasks(app.id) returns tasks
+    f.taskTracker.listAsync()(global) returns
+      Future.successful(TaskTracker.AppDataMap.of(TaskTracker.App(app.id, tasks)))
 
     val statuses: Map[String, Seq[Health]] = Map(
       "task1" -> Seq(),
@@ -286,7 +292,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     }
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).getTasks(app.id)
+    verify(f.taskTracker, times(1)).listAsync()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)

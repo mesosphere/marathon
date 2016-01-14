@@ -39,10 +39,12 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   def indexJson(@PathParam("appId") appId: String,
                 @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     doIfAuthorized(req, resp, ViewAppOrGroup, appId.toRootPath) { implicit principal =>
+      val taskMap = taskTracker.list
+
       def tasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
         id <- appIds
         health = result(healthCheckManager.statuses(id))
-        task <- taskTracker.getTasks(id)
+        task <- taskMap.getTasks(id)
       } yield EnrichedTask(id, task, health.getOrElse(task.getId, Nil))
 
       val matchingApps = appId match {
@@ -53,7 +55,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
         case _ => Set(appId.toRootPath)
       }
 
-      val running = matchingApps.filter(taskTracker.contains)
+      val running = matchingApps.filter(taskMap.contains)
 
       if (running.isEmpty) unknownApp(appId.toRootPath) else ok(jsonObjString("tasks" -> tasks(running)))
     }

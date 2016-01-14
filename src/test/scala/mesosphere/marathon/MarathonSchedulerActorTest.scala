@@ -63,11 +63,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
     when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
-    when(taskTracker.list).thenReturn(
-      mutable.HashMap(
-        PathId("nope") -> new TaskTracker.App(
-          "nope".toPath,
-          tasks)))
+    when(taskTracker.list).thenReturn(TaskTracker.AppDataMap.of(TaskTracker.App("nope".toPath, tasks)))
     when(taskTracker.getTasks("nope".toPath)).thenReturn(tasks)
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
     when(taskTracker.count(app.id)).thenReturn(0)
@@ -95,11 +91,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
     when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
-    when(taskTracker.list).thenReturn(
-      mutable.HashMap(
-        PathId("nope") -> new TaskTracker.App(
-          "nope".toPath,
-          tasks)))
+    when(taskTracker.list).thenReturn(TaskTracker.AppDataMap.of(TaskTracker.App("nope".toPath, tasks)))
     when(taskTracker.getTasks("nope".toPath)).thenReturn(tasks)
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
     when(taskTracker.count(app.id)).thenReturn(0)

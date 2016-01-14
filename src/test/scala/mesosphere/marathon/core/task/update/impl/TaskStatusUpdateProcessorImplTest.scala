@@ -36,13 +36,14 @@ class TaskStatusUpdateProcessorImplTest
     val update = origUpdate.withTaskId(status.getTaskId)
 
     Given("an unknown task")
-    f.taskTracker.getTask(appId, update.wrapped.taskId.getValue) returns None
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.taskTracker.getTaskAsync(appId, update.wrapped.taskId.getValue)(global) returns Future.successful(None)
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).getTask(appId, update.wrapped.taskId.getValue)
+    verify(f.taskTracker).getTaskAsync(appId, update.wrapped.taskId.getValue)(global)
 
     And("the task kill gets initiated")
     verify(f.schedulerDriver).killTask(status.getTaskId)
@@ -61,13 +62,14 @@ class TaskStatusUpdateProcessorImplTest
     val update = origUpdate.withTaskId(status.getTaskId)
 
     Given("an unknown task")
-    f.taskTracker.getTask(appId, update.wrapped.taskId.getValue) returns None
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.taskTracker.getTaskAsync(appId, update.wrapped.taskId.getValue)(global) returns Future.successful(None)
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).getTask(appId, update.wrapped.taskId.getValue)
+    verify(f.taskTracker).getTaskAsync(appId, update.wrapped.taskId.getValue)(global)
 
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
@@ -84,7 +86,8 @@ class TaskStatusUpdateProcessorImplTest
     val update = origUpdate.withTaskId(status.getTaskId)
 
     Given("a known task")
-    f.taskTracker.getTask(appId, update.wrapped.taskId.getValue) returns Some(marathonTask)
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.taskTracker.getTaskAsync(appId, update.wrapped.taskId.getValue) returns Future.successful(Some(marathonTask))
     f.taskUpdater.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns Future.successful(())
     f.appRepository.app(appId, version) returns Future.successful(Some(app))
     And("and a cooperative launchQueue")
@@ -94,7 +97,7 @@ class TaskStatusUpdateProcessorImplTest
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).getTask(appId, update.wrapped.taskId.getValue)
+    verify(f.taskTracker).getTaskAsync(appId, update.wrapped.taskId.getValue)
     verify(f.taskUpdater).statusUpdate(appId, status)
 
     And("the healthCheckManager got informed")
