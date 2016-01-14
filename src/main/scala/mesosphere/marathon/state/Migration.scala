@@ -364,9 +364,20 @@ class MigrationTo0_13(taskRepository: TaskRepository, store: PersistentStore) {
         _ <- store.delete(oldName)
       } yield ()
     }
-    store.load(oldName).flatMap {
-      case Some(key) => moveKey(key.bytes)
-      case None      => Future.successful(())
+
+    store.load(newName).flatMap {
+      case Some(_) =>
+        log.info("framework:id already exists, no need to migrate")
+        Future.successful(())
+      case None =>
+        store.load(oldName).flatMap {
+          case None =>
+            log.info("no frameworkId stored, no need to migrate")
+            Future.successful(())
+          case Some(entity) =>
+            log.info("migrating frameworkId -> framework:id")
+            moveKey(entity.bytes)
+        }
     }
   }
 
