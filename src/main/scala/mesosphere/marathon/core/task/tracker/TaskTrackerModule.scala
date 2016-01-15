@@ -30,7 +30,9 @@ class TaskTrackerModule(
   private[this] def taskUpdaterActorProps(taskTrackerRef: ActorRef) =
     TaskUpdateActor.props(clock, taskUpdaterActorMetrics, taskOpProcessor(taskTrackerRef))
   private[this] lazy val taskLoader = new TaskLoaderImpl(taskRepository)
-  private[this] lazy val taskTrackerActorProps = TaskTrackerActor.props(taskLoader, taskUpdaterActorProps)
+  private[this] lazy val taskTrackerMetrics = new TaskTrackerActor.ActorMetrics(metrics)
+  private[this] lazy val taskTrackerActorProps =
+    TaskTrackerActor.props(taskTrackerMetrics, taskLoader, taskUpdaterActorProps)
   protected lazy val taskTrackerActorName = "taskTracker"
   private[this] lazy val taskTrackerActorRef = leadershipModule.startWhenLeader(
     taskTrackerActorProps, taskTrackerActorName
