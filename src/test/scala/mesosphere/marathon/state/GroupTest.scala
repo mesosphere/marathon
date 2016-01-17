@@ -2,7 +2,6 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.api.v2.json.V2Group
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
@@ -186,7 +185,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
-      validate(V2Group(changed)).isSuccess should be (true)
+      validate(changed).isSuccess should be (true)
     }
 
     it("cannot replace a group with apps by an app definition") {
@@ -216,7 +215,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested", "/some/nested/path2/app"))
 
       Then("the conflict will be detected by our V2 API model validation")
-      val result = validate(V2Group(changed))
+      val result = validate(changed)
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
         .message should be ("Groups and Applications may not have the same identifier: /some/nested")

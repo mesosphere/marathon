@@ -4,7 +4,6 @@ import com.google.protobuf.{ ByteString, TextFormat }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
-import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ IpAddress, AppDefinition, PathId, DiscoveryInfo }
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
@@ -148,7 +147,7 @@ class TaskBuilder(app: AppDefinition,
         builder.setExecutor(info)
 
         import mesosphere.marathon.api.v2.json.Formats._
-        val appJson = Json.toJson(V2AppDefinition(app))
+        val appJson = Json.toJson(app)
         val appJsonString = Json.stringify(appJson)
         val appJsonByteString = ByteString.copyFromUtf8(appJsonString)
         builder.setData(appJsonByteString)

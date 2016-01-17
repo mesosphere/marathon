@@ -293,14 +293,14 @@ trait DeploymentFormats {
       }
     )
 
-  implicit lazy val V2GroupUpdateFormat: Format[V2GroupUpdate] = (
+  implicit lazy val GroupUpdateFormat: Format[GroupUpdate] = (
     (__ \ "id").formatNullable[PathId] ~
-    (__ \ "apps").formatNullable[Set[V2AppDefinition]] ~
-    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[V2GroupUpdate]]]) ~
+    (__ \ "apps").formatNullable[Set[AppDefinition]] ~
+    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[GroupUpdate]]]) ~
     (__ \ "dependencies").formatNullable[Set[PathId]] ~
     (__ \ "scaleBy").formatNullable[Double] ~
     (__ \ "version").formatNullable[Timestamp]
-  ) (V2GroupUpdate(_, _, _, _, _, _), unlift(V2GroupUpdate.unapply))
+  ) (GroupUpdate(_, _, _, _, _, _), unlift(GroupUpdate.unapply))
 
   implicit lazy val URLToStringMapFormat: Format[Map[java.net.URL, String]] = Format(
     Reads.of[Map[String, String]]
@@ -331,14 +331,20 @@ trait EventFormats {
     Json.obj(
       "clientIp" -> event.clientIp,
       "uri" -> event.uri,
-      "appDefinition" -> V2AppDefinition(event.appDefinition),
+      "appDefinition" -> event.appDefinition,
       "eventType" -> event.eventType,
       "timestamp" -> event.timestamp
     )
   }
 
   implicit lazy val DeploymentPlanWrites: Writes[DeploymentPlan] = Writes { plan =>
-    V2DeploymentPlanWrites.writes(V2DeploymentPlan(plan))
+    Json.obj(
+      "id" -> plan.id,
+      "original" -> plan.original,
+      "target" -> plan.target,
+      "steps" -> plan.steps,
+      "version" -> plan.version
+    )
   }
 
   implicit lazy val SubscribeWrites: Writes[Subscribe] = Json.writes[Subscribe]
@@ -475,7 +481,7 @@ trait V2Formats {
     }
   )
 
-  implicit lazy val V2AppDefinitionReads: Reads[V2AppDefinition] = {
+  implicit lazy val AppDefinitionReads: Reads[AppDefinition] = {
     val executorPattern = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r
 
     (
@@ -504,7 +510,7 @@ trait V2Formats {
     )((
         id, cmd, args, maybeString, env, instances, cpus, mem, disk, executor, constraints, uris, storeUrls,
         requirePorts, backoff, backoffFactor, maxLaunchDelay, container, checks, dependencies
-      ) => V2AppDefinition(
+      ) => AppDefinition(
         id = id, cmd = cmd, args = args, user = maybeString, env = env, instances = instances, cpus = cpus,
         mem = mem, disk = disk, executor = executor, constraints = constraints, uris = uris,
         storeUrls = storeUrls, ports = Nil,
@@ -545,8 +551,7 @@ trait V2Formats {
             labels = extraFields.labels,
             acceptedResourceRoles = extraFields.acceptedResourceRoles,
             ipAddress = extraFields.ipAddress,
-            version = extraFields.version,
-            versionInfo = None
+            versionInfo = AppDefinition.VersionInfo.OnlyVersion(extraFields.version)
           )
         }
       }
@@ -558,10 +563,10 @@ trait V2Formats {
     * In the past, healthCheck.portIndex was required and had a default value 0. When we introduced healthCheck.port, we
     * made it optional (also with ip-per-container in mind) and we have to re-add it in cases where it makes sense.
     */
-  private[this] def addHealthCheckPortIndexIfNecessary(v2App: V2AppDefinition): V2AppDefinition = {
-    val hasPortMappings = v2App.container.exists(_.docker.exists(_.portMappings.exists(_.nonEmpty)))
-    val portIndexesMakeSense = v2App.ports.nonEmpty || hasPortMappings
-    v2App.copy(healthChecks = v2App.healthChecks.map { healthCheck =>
+  private[this] def addHealthCheckPortIndexIfNecessary(app: AppDefinition): AppDefinition = {
+    val hasPortMappings = app.container.exists(_.docker.exists(_.portMappings.exists(_.nonEmpty)))
+    val portIndexesMakeSense = app.ports.nonEmpty || hasPortMappings
+    app.copy(healthChecks = app.healthChecks.map { healthCheck =>
       def needsDefaultPortIndex =
         healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty && healthCheck.protocol != Protocol.COMMAND
       if (portIndexesMakeSense && needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
@@ -569,12 +574,12 @@ trait V2Formats {
     })
   }
 
-  implicit lazy val V2AppDefinitionWrites: Writes[V2AppDefinition] = {
+  implicit lazy val AppDefinitionWrites: Writes[AppDefinition] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
     }
 
-    Writes[V2AppDefinition] { app =>
+    Writes[AppDefinition] { app =>
       val appJson: JsObject = Json.obj(
         "id" -> app.id.toString,
         "cmd" -> app.cmd,
@@ -591,7 +596,7 @@ trait V2Formats {
         "storeUrls" -> app.storeUrls,
         // the ports field was written incorrectly in old code if a container was specified
         // it should contain the service ports
-        "ports" -> app.toAppDefinition.servicePorts,
+        "ports" -> app.servicePorts,
         "requirePorts" -> app.requirePorts,
         "backoffSeconds" -> app.backoff,
         "backoffFactor" -> app.backoffFactor,
@@ -605,18 +610,23 @@ trait V2Formats {
         "ipAddress" -> app.ipAddress,
         "version" -> app.version
       )
-
-      app.versionInfo.fold(appJson)(versionInfo => appJson + ("versionInfo" -> Json.toJson(versionInfo)))
+      Json.toJson(app.versionInfo) match {
+        case JsNull     => appJson
+        case v: JsValue => appJson + ("versionInfo" -> v)
+      }
     }
   }
 
-  implicit lazy val VersionInfoWrites: Writes[V2AppDefinition.VersionInfo] =
-    Writes {
-      case V2AppDefinition.VersionInfo(lastScalingAt, lastConfigChangeAt) =>
+  implicit lazy val VersionInfoWrites: Writes[AppDefinition.VersionInfo] =
+    Writes[AppDefinition.VersionInfo] {
+      case AppDefinition.VersionInfo.FullVersionInfo(_, lastScalingAt, lastConfigChangeAt) =>
         Json.obj(
           "lastScalingAt" -> lastScalingAt,
           "lastConfigChangeAt" -> lastConfigChangeAt
         )
+
+      case AppDefinition.VersionInfo.OnlyVersion(version) => JsNull
+      case AppDefinition.VersionInfo.NoVersion            => JsNull
     }
 
   implicit lazy val TaskCountsWrites: Writes[TaskCounts] =
@@ -674,7 +684,7 @@ trait V2Formats {
 
   implicit lazy val ExtendedAppInfoWrites: Writes[AppInfo] =
     Writes { info =>
-      val appJson = V2AppDefinitionWrites.writes(V2AppDefinition(info.app)).as[JsObject]
+      val appJson = AppDefinitionWrites.writes(info.app).as[JsObject]
 
       val maybeJson = Seq[Option[JsObject]](
         info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
@@ -687,7 +697,7 @@ trait V2Formats {
       maybeJson.foldLeft(appJson)((result, obj) => result ++ obj)
     }
 
-  implicit lazy val V2AppUpdateReads: Reads[V2AppUpdate] = {
+  implicit lazy val V2AppUpdateReads: Reads[AppUpdate] = {
 
     (
       (__ \ "id").readNullable[PathId].filterNot(_.exists(_.isRoot)) ~
@@ -711,7 +721,7 @@ trait V2Formats {
       (__ \ "container").readNullable[Container] ~
       (__ \ "healthChecks").readNullable[Set[HealthCheck]] ~
       (__ \ "dependencies").readNullable[Set[PathId]]
-    )(V2AppUpdate(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { update =>
+    )(AppUpdate(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _)).flatMap { update =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
           upgradeStrategy: Option[UpgradeStrategy],
@@ -742,22 +752,12 @@ trait V2Formats {
       }
   }
 
-  implicit lazy val V2GroupFormat: Format[V2Group] = (
+  implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
-    (__ \ "apps").formatNullable[Set[V2AppDefinition]].withDefault(V2Group.defaultApps) ~
-    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[V2Group]]]).withDefault(V2Group.defaultGroups) ~
+    (__ \ "apps").formatNullable[Set[AppDefinition]].withDefault(Group.defaultApps) ~
+    (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
-  )(V2Group(_, _, _, _, _), unlift(V2Group.unapply))
-
-  implicit lazy val V2DeploymentPlanWrites: Writes[V2DeploymentPlan] = Writes { plan =>
-    Json.obj(
-      "id" -> plan.id,
-      "original" -> plan.original,
-      "target" -> plan.target,
-      "steps" -> plan.steps,
-      "version" -> plan.version
-    )
-  }
+  )(Group(_, _, _, _, _), unlift(Group.unapply))
 }
 

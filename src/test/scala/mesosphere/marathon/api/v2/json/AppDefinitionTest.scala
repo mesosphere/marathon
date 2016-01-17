@@ -19,10 +19,10 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import com.wix.accord._
 
-class V2AppDefinitionTest extends MarathonSpec with Matchers {
+class AppDefinitionTest extends MarathonSpec with Matchers {
 
   test("Validation") {
-    def shouldViolate(app: V2AppDefinition, path: String, template: String): Unit = {
+    def shouldViolate(app: AppDefinition, path: String, template: String): Unit = {
       validate(app) match {
         case Success => fail()
         case f: Failure =>
@@ -35,7 +35,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       }
     }
 
-    def shouldNotViolate(app: V2AppDefinition, path: String, template: String): Unit = {
+    def shouldNotViolate(app: AppDefinition, path: String, template: String): Unit = {
       validate(app) match {
         case Success =>
         case f: Failure =>
@@ -48,7 +48,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       }
     }
 
-    var app = V2AppDefinition(id = "a b".toRootPath)
+    var app = AppDefinition(id = "a b".toRootPath)
     val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
     validateJsonSchema(app, false)
     shouldViolate(app, "id", idError)
@@ -69,7 +69,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     validateJsonSchema(app, false)
     shouldViolate(app, "id", idError)
 
-    app = V2AppDefinition(id = "test".toPath, instances = -3, ports = Seq(9000, 8080, 9000))
+    app = AppDefinition(id = "test".toPath, instances = -3, ports = Seq(9000, 8080, 9000))
     shouldViolate(
       app,
       "ports",
@@ -77,7 +77,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     )
     validateJsonSchema(app, false)
 
-    app = V2AppDefinition(id = "test".toPath, ports = Seq(0, 0, 8080), cmd = Some("true"))
+    app = AppDefinition(id = "test".toPath, ports = Seq(0, 0, 8080), cmd = Some("true"))
     shouldNotViolate(
       app,
       "ports",
@@ -85,7 +85,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     )
     validateJsonSchema(app, true)
 
-    val correct = V2AppDefinition(id = "test".toPath)
+    val correct = AppDefinition(id = "test".toPath)
 
     app = correct.copy(executor = "//cmd")
     shouldNotViolate(
@@ -233,15 +233,15 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
 
   test("SerializationRoundtrip empty") {
     import Formats._
-    val app1 = V2AppDefinition(id = PathId("/test"))
+    val app1 = AppDefinition(id = PathId("/test"))
     assert(app1.cmd.isEmpty)
     assert(app1.args.isEmpty)
     JsonTestHelper.assertSerializationRoundtripWorks(app1)
   }
 
-  private[this] def fromJson(json: String): V2AppDefinition = {
+  private[this] def fromJson(json: String): AppDefinition = {
     import Formats._
-    Json.fromJson[V2AppDefinition](Json.parse(json)).getOrElse(throw new RuntimeException(s"could not parse: $json"))
+    Json.fromJson[AppDefinition](Json.parse(json)).getOrElse(throw new RuntimeException(s"could not parse: $json"))
   }
 
   test("Reading app definition with command health check") {
@@ -271,7 +271,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
   test("SerializationRoundtrip with complex example") {
     import Formats._
 
-    val app3 = V2AppDefinition(
+    val app3 = AppDefinition(
       id = PathId("/prod/product/frontend/my-app"),
       cmd = Some("sleep 30"),
       user = Some("nobody"),
@@ -308,7 +308,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
   test("SerializationRoundtrip preserves portIndex") {
     import Formats._
 
-    val app3 = V2AppDefinition(
+    val app3 = AppDefinition(
       id = PathId("/prod/product/frontend/my-app"),
       cmd = Some("sleep 30"),
       ports = Seq(9001, 9002),
@@ -317,10 +317,10 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     JsonTestHelper.assertSerializationRoundtripWorks(app3)
   }
 
-  test("Reading V2AppDefinition adds portIndex if you have ports") {
+  test("Reading AppDefinition adds portIndex if you have ports") {
     import Formats._
 
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/prod/product/frontend/my-app"),
       cmd = Some("sleep 30"),
       ports = Seq(9001, 9002),
@@ -328,16 +328,16 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     val json = Json.toJson(app)
-    val reread = Json.fromJson[V2AppDefinition](json).get
+    val reread = Json.fromJson[AppDefinition](json).get
 
     reread.healthChecks.headOption should be(defined)
     reread.healthChecks.head.portIndex should be(Some(0))
   }
 
-  test("Reading V2AppDefinition does not add portIndex if there are no ports") {
+  test("Reading AppDefinition does not add portIndex if there are no ports") {
     import Formats._
 
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/prod/product/frontend/my-app"),
       cmd = Some("sleep 30"),
       ports = Seq(),
@@ -345,16 +345,16 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     val json = Json.toJson(app)
-    val reread = Json.fromJson[V2AppDefinition](json).get
+    val reread = Json.fromJson[AppDefinition](json).get
 
     reread.healthChecks.headOption should be(defined)
     reread.healthChecks.head.portIndex should be(None)
   }
 
-  test("Reading V2AppDefinition adds portIndex if you have at least one portMapping") {
+  test("Reading AppDefinition adds portIndex if you have at least one portMapping") {
     import Formats._
 
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/prod/product/frontend/my-app"),
       cmd = Some("sleep 30"),
       ports = Seq(),
@@ -373,16 +373,16 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     val json = Json.toJson(app)
-    val reread = Json.fromJson[V2AppDefinition](json).get
+    val reread = Json.fromJson[AppDefinition](json).get
 
     reread.healthChecks.headOption should be(defined)
     reread.healthChecks.head.portIndex should be(Some(0))
   }
 
-  test("Reading V2AppDefinition does not add portIndex if there are no ports nor portMappings") {
+  test("Reading AppDefinition does not add portIndex if there are no ports nor portMappings") {
     import Formats._
 
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/prod/product/frontend/my-app"),
       cmd = Some("sleep 30"),
       ports = Seq(),
@@ -399,7 +399,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     val json = Json.toJson(app)
-    val reread = Json.fromJson[V2AppDefinition](json).get
+    val reread = Json.fromJson[AppDefinition](json).get
 
     reread.healthChecks.headOption should be(defined)
     reread.healthChecks.head.portIndex should be(None)
@@ -411,7 +411,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
     import mesosphere.marathon.state.Container.Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 
-    val app4 = V2AppDefinition(
+    val app4 = AppDefinition(
       id = "bridged-webapp".toPath,
       cmd = Some("python3 -m http.server 8080"),
       container = Some(Container(
@@ -443,11 +443,12 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       }
       """
     val readResult4 = fromJson(json4)
-    assert(readResult4.copy(version = app4.version) == app4)
+
+    assert(readResult4.copy(versionInfo = app4.versionInfo) == app4)
   }
 
   test("Read app with ip address and discovery info") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = "app-with-ip-address".toPath,
       cmd = Some("python3 -m http.server 8080"),
       ports = Nil,
@@ -487,11 +488,11 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
 
     val readResult = fromJson(json)
 
-    assert(readResult.copy(version = app.version) == app)
+    assert(readResult.copy(versionInfo = app.versionInfo) == app)
   }
 
   test("Read app with ip address without discovery info") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = "app-with-ip-address".toPath,
       cmd = Some("python3 -m http.server 8080"),
       ports = Nil,
@@ -523,11 +524,11 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
 
     val readResult = fromJson(json)
 
-    assert(readResult.copy(version = app.version) == app)
+    assert(readResult.copy(versionInfo = app.versionInfo) == app)
   }
 
   test("Read app with ip address and an empty ports list") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = "app-with-network-isolation".toPath,
       cmd = Some("python3 -m http.server 8080"),
       ports = Nil,
@@ -546,7 +547,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
 
     val readResult = fromJson(json)
 
-    assert(readResult.copy(version = app.version) == app)
+    assert(readResult.copy(versionInfo = app.versionInfo) == app)
   }
 
   test("App may not have non-empty ports and ipAddress") {
@@ -567,7 +568,7 @@ class V2AppDefinitionTest extends MarathonSpec with Matchers {
       """
 
     import Formats._
-    val result = Json.fromJson[V2AppDefinition](Json.parse(json))
+    val result = Json.fromJson[AppDefinition](Json.parse(json))
     assert(result == JsError(ValidationError("You cannot specify both an IP address and ports")))
   }
 }

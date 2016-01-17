@@ -1,12 +1,11 @@
 package mesosphere.marathon.state
 
-import com.wix.accord.{ RuleViolation, Failure, Result, Validator }
+import com.wix.accord._
+import com.wix.accord.dsl._
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.Protos.GroupDefinition
-import mesosphere.marathon.api.v2.json.V2Group
 import mesosphere.marathon.state.Group._
-import mesosphere.marathon.state.Group.empty
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.PathId.empty
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
@@ -212,9 +211,71 @@ object Group {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def groupWithConfigValidator(maxApps: Option[Int])(implicit validator: Validator[V2Group]): Validator[Group] = {
+  implicit val groupValidator: Validator[Group] = validator[Group] { group =>
+    group.id is valid
+    group.apps is valid
+    group.groups is valid
+    group is noAppsAndGroupsWithSameName
+    (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
+
+    group is validPorts
+  }
+
+  def groupWithConfigValidator(maxApps: Option[Int])(implicit validator: Validator[Group]): Validator[Group] = {
     new Validator[Group] {
-      override def apply(group: Group): Result = V2Group.v2GroupWithConfigValidator(maxApps).apply(V2Group(group))
+      override def apply(group: Group): Result = {
+        maxApps.filter(group.transitiveApps.size > _).map { num =>
+          Failure(Set(RuleViolation(group,
+            s"""This Marathon instance may only handle up to $num Apps!
+                |(Override with command line option --max_apps)""".stripMargin, None)))
+        } getOrElse Success
+      } and validator(group)
+    }
+  }
+
+  private def noAppsAndGroupsWithSameName: Validator[Group] =
+    new Validator[Group] {
+      def apply(group: Group) = {
+        val groupIds = group.groups.map(_.id)
+        val clashingIds = group.apps.map(_.id).intersect(groupIds)
+
+        if (clashingIds.isEmpty) Success
+        else Failure(Set(RuleViolation(group,
+          s"Groups and Applications may not have the same identifier: ${clashingIds.mkString(", ")}", None)))
+      }
+    }
+
+  private def noCyclicDependencies(group: Group): Validator[Set[PathId]] =
+    new Validator[Set[PathId]] {
+      def apply(dependencies: Set[PathId]) = {
+        if (group.hasNonCyclicDependencies) Success
+        else Failure(Set(RuleViolation(group, "Dependency graph has cyclic dependencies", None)))
+      }
+    }
+
+  private def validPorts: Validator[Group] = {
+    new Validator[Group] {
+      override def apply(group: Group): Result = {
+        val groupViolations = group.apps.flatMap { app =>
+          val ruleViolations = app.containerServicePorts.toSeq.flatMap { servicePorts =>
+            for {
+              existingApp <- group.transitiveApps.toList
+              if existingApp.id != app.id // in case of an update, do not compare the app against itself
+              existingServicePort <- existingApp.portMappings.toList.flatten.map(_.servicePort)
+              if existingServicePort != 0 // ignore zero ports, which will be chosen at random
+              if servicePorts contains existingServicePort
+            } yield RuleViolation(app.id,
+              s"Requested service port $existingServicePort conflicts with a service port in app ${existingApp.id}",
+              None)
+          }
+
+          if (ruleViolations.isEmpty) None
+          else Some(GroupViolation(app, "app contains conflicting ports", None, ruleViolations.toSet))
+        }
+
+        if (groupViolations.isEmpty) Success
+        else Failure(groupViolations.toSet)
+      }
     }
   }
 }

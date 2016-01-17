@@ -6,7 +6,6 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.plugin.auth.{ Authorizer, Authenticator, ViewAppOrGroup }
 import mesosphere.marathon.state.PathId._
@@ -44,7 +43,7 @@ class AppVersionsResource(service: MarathonSchedulerService,
     doIfAuthorized(req, resp, ViewAppOrGroup, appId.toRootPath) { implicit principal =>
       val id = appId.toRootPath
       val timestamp = Timestamp(version)
-      service.getApp(id, timestamp).map(app => ok(jsonString(V2AppDefinition(app))))
+      service.getApp(id, timestamp).map(app => ok(jsonString(app)))
         .getOrElse(unknownApp(id, Option(timestamp)))
     }
   }

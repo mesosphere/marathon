@@ -6,10 +6,10 @@ import org.scalatest.GivenWhenThen
 /**
   * Tests that test that the given JSON is rejected by the JSON schema.
   *
-  * Since the JSON is not representable by an V2AppDefinition,
+  * Since the JSON is not representable by an AppDefinition,
   * JSON is used directly.
   */
-class V2AppDefinitionSchemaJSONTest extends MarathonSpec with GivenWhenThen {
+class AppDefinitionSchemaJSONTest extends MarathonSpec with GivenWhenThen {
   test("command health checks WITHOUT a nested value should be rejected") {
     Given("an app definition WITHOUT a nested value in command section of a health check")
     val json =

@@ -9,11 +9,8 @@ import play.api.libs.json.{ Writes, JsObject, Json }
 import scala.collection.immutable.Seq
 import org.apache.mesos.{ Protos => mesos }
 
-class V2AppDefinitionAppInfoTest extends MarathonSpec with GivenWhenThen {
+class AppDefinitionAppInfoTest extends MarathonSpec with GivenWhenThen {
   import Formats._
-
-  implicit val appDefinitionWrites: Writes[AppDefinition] =
-    Writes(app => V2AppDefinitionWrites.writes(V2AppDefinition(app)))
 
   val app = AppDefinition(PathId("/test"), cmd = Some("sleep 123"))
 

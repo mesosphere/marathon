@@ -2,11 +2,10 @@ package mesosphere.marathon.api
 
 import javax.validation.ConstraintViolationException
 
-import mesosphere.marathon.{ValidationFailedException, MarathonSpec}
+import mesosphere.marathon.{ ValidationFailedException, MarathonSpec }
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.V2AppDefinition
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
@@ -17,7 +16,7 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
 
   test("Render js result exception correctly") {
     Given("A JsResultException, from an invalid json to object Reads")
-    val ex = intercept[JsResultException] { Json.parse("""{"id":123}""").as[V2AppDefinition] }
+    val ex = intercept[JsResultException] { Json.parse("""{"id":123}""").as[AppDefinition] }
     val mapper = new MarathonExceptionMapper()
 
     When("The mapper creates a response from this exception")
@@ -39,7 +38,7 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
 
   test("Render json parse exception correctly") {
     Given("A JsonParseException, from an invalid json to object Reads")
-    val ex = intercept[JsonParseException] { Json.parse("""{"id":"/test"""").as[V2AppDefinition] }
+    val ex = intercept[JsonParseException] { Json.parse("""{"id":"/test"""").as[AppDefinition] }
     val mapper = new MarathonExceptionMapper()
 
     When("The mapper creates a response from this exception")
@@ -55,7 +54,7 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
 
   test("Render json mapping exception correctly") {
     Given("A JsonMappingException, from an invalid json to object Reads")
-    val ex = intercept[JsonMappingException] { Json.parse("").as[V2AppDefinition] }
+    val ex = intercept[JsonMappingException] { Json.parse("").as[AppDefinition] }
     val mapper = new MarathonExceptionMapper()
 
     When("The mapper creates a response from this exception")
@@ -71,7 +70,7 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
 
   test("Render ConstraintValidationException correctly") {
     Given("A ConstraintValidationException from an invalid app")
-    val ex = intercept[ValidationFailedException] { validateOrThrow(V2AppDefinition(id = PathId("/test"))) }
+    val ex = intercept[ValidationFailedException] { validateOrThrow(AppDefinition(id = PathId("/test"))) }
     val mapper = new MarathonExceptionMapper()
 
     When("The mapper creates a response from this exception")

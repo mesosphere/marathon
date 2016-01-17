@@ -1,9 +1,9 @@
 package mesosphere.marathon.integration.setup
 
-import mesosphere.marathon.api.v2.json.{ V2AppUpdate, V2Group }
+import mesosphere.marathon.api.v2.json.{ AppUpdate, AppUpdate$ }
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ Group, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import play.api.libs.json._
 
@@ -16,8 +16,8 @@ object V2TestFormats {
   implicit lazy val DeploymentPlanReads: Reads[DeploymentPlan] = Reads { js =>
     JsSuccess(
       DeploymentPlan(
-        original = (js \ "original").as[V2Group].toGroup(),
-        target = (js \ "target").as[V2Group].toGroup(),
+        original = (js \ "original").as[Group],
+        target = (js \ "target").as[Group],
         version = (js \ "version").as[Timestamp]).copy(id = (js \ "id").as[String]
         )
     )
@@ -52,7 +52,7 @@ object V2TestFormats {
     JsSuccess(EventSubscribers(urls = (subscribersJson \ "callbackUrls").asOpt[Set[String]].getOrElse(Set.empty)))
   }
 
-  implicit lazy val v2AppUpdateWrite: Writes[V2AppUpdate] = Writes { update =>
+  implicit lazy val v2AppUpdateWrite: Writes[AppUpdate] = Writes { update =>
     Json.obj(
       "id" -> update.id.map(_.toString),
       "cmd" -> update.cmd,

@@ -5,18 +5,18 @@ import mesosphere.marathon.api.v2.Validation._
 import org.scalatest.{ GivenWhenThen, Matchers, FunSuite }
 import PathId._
 
-class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
+class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
 
   test("A group update can be applied to an empty group") {
     Given("An empty group with updates")
-    val group = V2Group(Group.empty)
-    val update = V2GroupUpdate(PathId.empty, Set.empty[V2AppDefinition], Set(
-      V2GroupUpdate("test".toPath, Set.empty[V2AppDefinition], Set(
-        V2GroupUpdate.empty("foo".toPath)
+    val group = Group.empty
+    val update = GroupUpdate(PathId.empty, Set.empty[AppDefinition], Set(
+      GroupUpdate("test".toPath, Set.empty[AppDefinition], Set(
+        GroupUpdate.empty("foo".toPath)
       )),
-      V2GroupUpdate(
+      GroupUpdate(
         "apps".toPath,
-        Set(V2AppDefinition("app1".toPath, Some("foo"),
+        Set(AppDefinition("app1".toPath, Some("foo"),
           dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
       )
     )
@@ -24,9 +24,9 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     val timestamp = Timestamp.now()
 
     When("The update is performed")
-    val result = update(group, timestamp).toGroup()
+    val result = update(group, timestamp)
 
-    validate(V2Group(result)).isSuccess should be(true)
+    validate(result).isSuccess should be(true)
 
     Then("The update is applied correctly")
     result.id should be(PathId.empty)
@@ -44,22 +44,22 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
 
   test("A group update can be applied to existing entries") {
     Given("A group with updates of existing nodes")
-    val actual = V2Group(PathId.empty, groups = Set(
-      V2Group("/test".toPath, apps = Set(V2AppDefinition("/test/bla".toPath, Some("foo")))),
-      V2Group("/apps".toPath, groups = Set(V2Group("/apps/foo".toPath)))
+    val actual = Group(PathId.empty, groups = Set(
+      Group("/test".toPath, apps = Set(AppDefinition("/test/bla".toPath, Some("foo")))),
+      Group("/apps".toPath, groups = Set(Group("/apps/foo".toPath)))
     ))
-    val update = V2GroupUpdate(
+    val update = GroupUpdate(
       PathId.empty,
-      Set.empty[V2AppDefinition],
+      Set.empty[AppDefinition],
       Set(
-        V2GroupUpdate(
+        GroupUpdate(
           "test".toPath,
-          Set.empty[V2AppDefinition],
-          Set(V2GroupUpdate.empty("foo".toPath))
+          Set.empty[AppDefinition],
+          Set(GroupUpdate.empty("foo".toPath))
         ),
-        V2GroupUpdate(
+        GroupUpdate(
           "apps".toPath,
-          Set(V2AppDefinition("app1".toPath, Some("foo"),
+          Set(AppDefinition("app1".toPath, Some("foo"),
             dependencies = Set("d1".toPath, "../test/foo".toPath, "/test".toPath)))
         )
       )
@@ -67,9 +67,9 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     val timestamp = Timestamp.now()
 
     When("The update is performed")
-    val result: Group = update(actual, timestamp).toGroup()
+    val result: Group = update(actual, timestamp)
 
-    validate(V2Group(result)).isSuccess should be(true)
+    validate(result).isSuccess should be(true)
 
     Then("The update is applied correctly")
     result.id should be(PathId.empty)
@@ -87,35 +87,35 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     app.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
   }
 
-  test("V2GroupUpdate will update a Group correctly") {
+  test("GroupUpdate will update a Group correctly") {
     Given("An existing group with two subgroups")
-    val current = V2Group(
+    val current = Group(
       "/test".toPath,
       groups = Set(
-        V2Group("/test/group1".toPath, Set(V2AppDefinition("/test/group1/app1".toPath, Some("foo")))),
-        V2Group("/test/group2".toPath, Set(V2AppDefinition("/test/group2/app2".toPath, Some("foo"))))
+        Group("/test/group1".toPath, Set(AppDefinition("/test/group1/app1".toPath, Some("foo")))),
+        Group("/test/group2".toPath, Set(AppDefinition("/test/group2/app2".toPath, Some("foo"))))
       )
     )
 
     When("A group update is applied")
-    val update = V2GroupUpdate(
+    val update = GroupUpdate(
       "/test".toPath,
-      Set.empty[V2AppDefinition],
+      Set.empty[AppDefinition],
       Set(
-        V2GroupUpdate("/test/group1".toPath, Set(V2AppDefinition("/test/group1/app3".toPath, Some("foo")))),
-        V2GroupUpdate(
+        GroupUpdate("/test/group1".toPath, Set(AppDefinition("/test/group1/app3".toPath, Some("foo")))),
+        GroupUpdate(
           "/test/group3".toPath,
-          Set.empty[V2AppDefinition],
-          Set(V2GroupUpdate("/test/group3/sub1".toPath, Set(V2AppDefinition("/test/group3/sub1/app4".toPath,
+          Set.empty[AppDefinition],
+          Set(GroupUpdate("/test/group3/sub1".toPath, Set(AppDefinition("/test/group3/sub1/app4".toPath,
             Some("foo")))))
         )
       )
     )
 
     val timestamp = Timestamp.now()
-    val result = update(current, timestamp).toGroup()
+    val result = update(current, timestamp)
 
-    validate(V2Group(result)).isSuccess should be(true)
+    validate(result).isSuccess should be(true)
 
     Then("The update is reflected in the current group")
     result.id.toString should be("/test")
@@ -130,33 +130,33 @@ class V2GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
   }
 
   test("A group update should not contain a version") {
-    val update = V2GroupUpdate(None, version = Some(Timestamp.now()))
+    val update = GroupUpdate(None, version = Some(Timestamp.now()))
     intercept[IllegalArgumentException] {
-      update(V2Group(Group.empty), Timestamp.now())
+      update(Group.empty, Timestamp.now())
     }
   }
 
   test("A group update should not contain a scaleBy") {
-    val update = V2GroupUpdate(None, scaleBy = Some(3))
+    val update = GroupUpdate(None, scaleBy = Some(3))
     intercept[IllegalArgumentException] {
-      update(V2Group(Group.empty), Timestamp.now())
+      update(Group.empty, Timestamp.now())
     }
   }
 
   test("Relative path of a dependency, should be relative to group and not to the app") {
     Given("A group with two apps. Second app is dependend of first.")
-    val update = V2GroupUpdate(PathId.empty, Set.empty[V2AppDefinition], Set(
-      V2GroupUpdate(
+    val update = GroupUpdate(PathId.empty, Set.empty[AppDefinition], Set(
+      GroupUpdate(
         "test-group".toPath,
-        Set(V2AppDefinition("test-app1".toPath, Some("foo")),
-          V2AppDefinition("test-app2".toPath, Some("foo"), dependencies = Set("test-app1".toPath)))
+        Set(AppDefinition("test-app1".toPath, Some("foo")),
+          AppDefinition("test-app2".toPath, Some("foo"), dependencies = Set("test-app1".toPath)))
       )
     ))
 
     When("The update is performed")
-    val result = update(V2Group(Group.empty), Timestamp.now()).toGroup()
+    val result = update(Group.empty, Timestamp.now())
 
-    validate(V2Group(result)).isSuccess should be(true)
+    validate(result).isSuccess should be(true)
 
     Then("The update is applied correctly")
     val group = result.group("test-group".toRootPath)

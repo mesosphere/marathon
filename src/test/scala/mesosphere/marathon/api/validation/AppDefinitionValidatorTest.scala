@@ -4,15 +4,15 @@ import javax.validation.ConstraintValidatorContext
 
 import mesosphere.marathon.{ ValidationFailedException, MarathonSpec }
 import mesosphere.marathon.Protos.HealthCheckDefinition
-import mesosphere.marathon.api.v2.json.V2AppDefinition
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ Command, Container, PathId }
+import mesosphere.marathon.state.{ AppDefinition, Command, Container, PathId }
 import org.scalatest.Matchers
 import mesosphere.marathon.api.v2.Validation._
 
-class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
+class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   test("only cmd") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"))
     validate(app)
@@ -20,7 +20,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   private[this] def testValidId(id: String): Unit = {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId(id),
       cmd = Some("true"))
 
@@ -74,7 +74,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   private[this] def testSchemaLessStrictForId(id: String): Unit = {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId(id),
       cmd = Some("true"))
 
@@ -94,7 +94,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   private[this] def testInvalid(id: String): Unit = {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId(id),
       cmd = Some("true")
     )
@@ -138,7 +138,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("only cmd + command health check") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"),
       healthChecks = Set(
@@ -153,7 +153,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("only cmd + acceptedResourceRoles") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"),
       acceptedResourceRoles = Some(Set("*")))
@@ -162,7 +162,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("only cmd + acceptedResourceRoles 2") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"),
       acceptedResourceRoles = Some(Set("*", "production")))
@@ -171,7 +171,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("only args") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       args = Some("test" :: Nil))
     assert(validate(app).isSuccess)
@@ -179,7 +179,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("only container") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       container = Some(Container(
         docker = Some(Container.Docker(image = "test/image"))
@@ -189,7 +189,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("empty container is invalid") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       container = Some(Container()))
     assert(validate(app).isFailure)
@@ -197,7 +197,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("container and cmd") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"),
       container = Some(Container()))
@@ -206,7 +206,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("container and args") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       args = Some("test" :: Nil),
       container = Some(Container()))
@@ -215,7 +215,7 @@ class V2AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("container, cmd and args is not valid") {
-    val app = V2AppDefinition(
+    val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"),
       args = Some("test" :: Nil),

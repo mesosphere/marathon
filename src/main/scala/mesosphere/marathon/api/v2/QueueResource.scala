@@ -7,7 +7,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.v2.json.{ Formats, V2AppDefinition }
+import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -37,7 +37,7 @@ class QueueResource @Inject() (
         case taskCount: LaunchQueue.QueuedTaskCount =>
           val timeLeft = clock.now() until taskCount.backOffUntil
           Json.obj(
-            "app" -> V2AppDefinition(taskCount.app),
+            "app" -> taskCount.app,
             "count" -> taskCount.tasksLeftToLaunch,
             "delay" -> Json.obj(
               "timeLeftSeconds" -> math.max(0, timeLeft.toSeconds), //deadlines can be negative

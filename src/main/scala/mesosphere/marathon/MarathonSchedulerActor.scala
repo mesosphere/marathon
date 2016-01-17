@@ -7,7 +7,7 @@ import akka.event.{ EventStream, LoggingReceive }
 import akka.pattern.ask
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.LeaderInfo
-import mesosphere.marathon.api.v2.json.V2AppUpdate
+import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
@@ -500,7 +500,7 @@ class SchedulerActions(
   private def update(
     driver: SchedulerDriver,
     updatedApp: AppDefinition,
-    appUpdate: V2AppUpdate): Unit = {
+    appUpdate: AppUpdate): Unit = {
     // TODO: implement app instance restart logic
   }
 
