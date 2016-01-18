@@ -2,6 +2,7 @@ package mesosphere.marathon.core.task.update.impl
 
 import javax.inject.Inject
 
+import com.google.inject.name.Names
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
@@ -15,6 +16,10 @@ import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
+
+object TaskStatusUpdateProcessorImpl {
+  lazy val name = Names.named(getClass.getSimpleName)
+}
 
 /**
   * Executes the given TaskStatusUpdateSteps for every update.

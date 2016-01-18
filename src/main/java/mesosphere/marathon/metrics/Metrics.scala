@@ -93,6 +93,8 @@ object Metrics {
         timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
       }
     }
+
+    def invocationCount: Long = timer.getCount
   }
 
   class Histogram(histogram: com.codahale.metrics.Histogram) {

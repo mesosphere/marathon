@@ -6,6 +6,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
+import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import org.rogach.scallop.ScallopConf
 import scala.sys.SystemProperties
 
@@ -15,7 +16,7 @@ trait MarathonConf
     extends ScallopConf with ZookeeperConf with LeaderProxyConf
     with LaunchTokenConfig with OfferMatcherManagerConfig with OfferProcessorConfig with ReviveOffersConfig
     with MarathonSchedulerServiceConfig with LaunchQueueConfig with PluginManagerConfiguration
-    with TaskTrackerConfig {
+    with TaskStatusUpdateConfig with TaskTrackerConfig {
 
   //scalastyle:off magic.number
 
@@ -224,4 +225,13 @@ trait MarathonConf
     descr = "The timeout for preparing the Marathon instance when elected as leader.",
     default = Some(3 * 60 * 1000L) //3 minutes
   )
+
+  lazy val internalMaxQueuedRootGroupUpdates = opt[Int]("max_queued_root_group_updates",
+    descr = "INTERNAL TUNING PARAMETER: " +
+      "The maximum number of root group updates that we queue before rejecting updates.",
+    noshort = true,
+    hidden = true,
+    default = Some(500)
+  )
+
 }
