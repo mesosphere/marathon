@@ -52,7 +52,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val taskId = status.getTaskId
     val appId = taskIdUtil.appId(taskId)
 
-    taskTracker.getTaskAsync(appId, taskId.getValue).flatMap {
+    taskTracker.task(appId, taskId.getValue).flatMap {
       case Some(task) =>
         processUpdate(
           timestamp = now,

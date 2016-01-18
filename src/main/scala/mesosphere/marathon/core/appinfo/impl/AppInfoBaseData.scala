@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.TaskTracker.App
+import mesosphere.marathon.core.task.tracker.TaskTracker.AppTasks
 import mesosphere.marathon.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -50,9 +50,9 @@ class AppInfoBaseData(
     }
   }
 
-  lazy val tasksMapFuture: Future[TaskTracker.AppDataMap] = {
+  lazy val tasksByAppFuture: Future[TaskTracker.TasksByApp] = {
     log.debug("Retrieve tasks")
-    taskTracker.listAsync()
+    taskTracker.tasksByApp()
   }
 
   def appInfoFuture(app: AppDefinition, embed: Set[AppInfo.Embed]): Future[AppInfo] = {
@@ -86,7 +86,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksFuture: Future[Iterable[MarathonTask]] = tasksMapFuture.map(_.getTasks(app.id))
+    lazy val tasksFuture: Future[Iterable[MarathonTask]] = tasksByAppFuture.map(_.appTasks(app.id))
 
     lazy val healthCountsFuture: Future[Map[String, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
@@ -132,7 +132,7 @@ class AppInfoBaseData(
 
       log.debug(s"assembling rich tasks for app [${app.id}]")
 
-      val tasksByIdFuture = tasksMapFuture.map(_.appTasks.get(app.id).map(_.taskMap).getOrElse(Map.empty))
+      val tasksByIdFuture = tasksByAppFuture.map(_.appTasksMap.get(app.id).map(_.taskMap).getOrElse(Map.empty))
       val healthStatusesFutures = healthCheckManager.statuses(app.id)
       for {
         tasksById <- tasksByIdFuture

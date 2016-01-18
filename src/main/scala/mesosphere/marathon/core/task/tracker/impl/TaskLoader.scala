@@ -5,8 +5,8 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import scala.concurrent.Future
 
 /**
-  * Loads all task data into an [[TaskTracker.AppDataMap]].
+  * Loads all task data into an [[TaskTracker.TasksByApp]].
   */
 private[tracker] trait TaskLoader {
-  def loadTasks(): Future[TaskTracker.AppDataMap]
+  def loadTasks(): Future[TaskTracker.TasksByApp]
 }

@@ -4,7 +4,7 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.TaskTracker.AppDataMap
+import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupRepository, PathId }
 import mesosphere.marathon.test.MarathonActorSupport
@@ -43,7 +43,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val app = AppDefinition(id = PathId("/myapp"))
 
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
-    when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[Protos.MarathonTask])
+    when(taskTracker.appTasksSync(app.id)).thenReturn(Set.empty[Protos.MarathonTask])
 
     val res = scheduler.stopApp(mock[SchedulerDriver], app)
 
@@ -103,10 +103,10 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
 
     val app = AppDefinition(id = PathId("/myapp"))
 
-    when(taskTracker.getTasks(app.id)).thenReturn(Set(runningTask, stagedTask, stagedTaskWithSlaveId))
+    when(taskTracker.appTasksSync(app.id)).thenReturn(Set(runningTask, stagedTask, stagedTaskWithSlaveId))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(taskTracker.list).thenReturn(AppDataMap.of(
-      TaskTracker.App(app.id, Set(runningTask, stagedTask, stagedTaskWithSlaveId))
+    when(taskTracker.tasksByAppSync).thenReturn(TasksByApp.of(
+      TaskTracker.AppTasks(app.id, Set(runningTask, stagedTask, stagedTaskWithSlaveId))
     ))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
@@ -134,9 +134,9 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
 
     val app = AppDefinition(id = PathId("/myapp"))
 
-    when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskTracker.appTasksSync(app.id)).thenReturn(Set.empty[MarathonTask])
     when(repo.allPathIds()).thenReturn(Future.successful(Seq()))
-    when(taskTracker.list).thenReturn(AppDataMap.empty)
+    when(taskTracker.tasksByAppSync).thenReturn(TasksByApp.empty)
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
@@ -178,12 +178,12 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val app = AppDefinition(id = PathId("/myapp"))
     val orphanedApp = AppDefinition(id = PathId("/orphan"))
 
-    when(taskTracker.getTasks(app.id)).thenReturn(Set(task))
-    when(taskTracker.getTasks(orphanedApp.id)).thenReturn(Set(orphanedTask))
+    when(taskTracker.appTasksSync(app.id)).thenReturn(Set(task))
+    when(taskTracker.appTasksSync(orphanedApp.id)).thenReturn(Set(orphanedTask))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(taskTracker.list).thenReturn(AppDataMap.of(
-      TaskTracker.App(app.id, Set(task)),
-      TaskTracker.App(orphanedApp.id, Set(orphanedTask, task))
+    when(taskTracker.tasksByAppSync).thenReturn(TasksByApp.of(
+      TaskTracker.AppTasks(app.id, Set(task)),
+      TaskTracker.AppTasks(orphanedApp.id, Set(orphanedTask, task))
     ))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)

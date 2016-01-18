@@ -36,7 +36,7 @@ private[tracker] object TaskOpProcessorImpl {
     def resolve(
       appId: PathId, taskId: String, status: TaskStatus)(
         implicit ec: ExecutionContext): Future[Action] = {
-      directTaskTracker.getTaskAsync(appId, taskId).map {
+      directTaskTracker.task(appId, taskId).map {
         case Some(existingTask) =>
           resolveForExistingTask(existingTask, status)
         case None =>

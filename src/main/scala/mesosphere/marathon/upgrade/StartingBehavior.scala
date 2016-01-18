@@ -75,7 +75,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
       taskQueue.add(app)
 
     case Sync =>
-      val actualSize = taskQueue.get(app.id).map(_.totalTaskCount).getOrElse(taskTracker.count(app.id))
+      val actualSize = taskQueue.get(app.id).map(_.totalTaskCount).getOrElse(taskTracker.countAppTasksSync(app.id))
       val tasksToStartNow = Math.max(scaleTo - actualSize, 0)
       if (tasksToStartNow > 0) {
         log.info(s"Reconciling tasks during app ${app.id.toString} scaling: queuing ${tasksToStartNow} new tasks")

@@ -8,14 +8,14 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.Future
 
 /**
-  * Loads all task data into an [[TaskTracker.AppDataMap]] from a [[TaskRepository]].
+  * Loads all task data into an [[TaskTracker.TasksByApp]] from a [[TaskRepository]].
   */
 private[tracker] class TaskLoaderImpl(repo: TaskRepository) extends TaskLoader {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
-  override def loadTasks(): Future[TaskTracker.AppDataMap] = {
+  override def loadTasks(): Future[TaskTracker.TasksByApp] = {
     for {
       names <- repo.allIds()
       _ = log.info(s"About to load ${names.size} tasks")
@@ -25,9 +25,9 @@ private[tracker] class TaskLoaderImpl(repo: TaskRepository) extends TaskLoader {
       val tasksByApp = tasks.groupBy(task => TaskIdUtil.appId(task.getId))
       val map = tasksByApp.iterator.map {
         case (appId, appTasks) =>
-          appId -> TaskTracker.App(appId, appTasks.map(task => task.getId -> task).toMap)
+          appId -> TaskTracker.AppTasks(appId, appTasks.map(task => task.getId -> task).toMap)
       }.toMap
-      TaskTracker.AppDataMap.of(map)
+      TaskTracker.TasksByApp.of(map)
     }
   }
 }

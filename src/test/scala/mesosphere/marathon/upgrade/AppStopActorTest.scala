@@ -40,7 +40,7 @@ class AppStopActorTest
     val promise = Promise[Unit]()
     val tasks = Set(marathonTask("task_a"), marathonTask("task_b"))
 
-    when(taskTracker.getTasks(app.id)).thenReturn(tasks)
+    when(taskTracker.appTasksSync(app.id)).thenReturn(tasks)
 
     val ref = TestActorRef[AppStopActor](
       Props(
@@ -103,7 +103,7 @@ class AppStopActorTest
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()
 
-    when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskTracker.appTasksSync(app.id)).thenReturn(Set.empty[MarathonTask])
 
     val ref = TestActorRef[AppStopActor](
       Props(
@@ -128,7 +128,7 @@ class AppStopActorTest
     val promise = Promise[Unit]()
     val tasks = Set(marathonTask("task_a"), marathonTask("task_b"))
 
-    when(taskTracker.getTasks(app.id)).thenReturn(tasks)
+    when(taskTracker.appTasksSync(app.id)).thenReturn(tasks)
 
     val ref = TestActorRef[AppStopActor](
       Props(
@@ -157,7 +157,7 @@ class AppStopActorTest
     val promise = Promise[Unit]()
     val tasks = Set(marathonTask("task_a"), marathonTask("task_b"))
 
-    when(taskTracker.getTasks(app.id))
+    when(taskTracker.appTasksSync(app.id))
       .thenReturn(tasks)
       .thenReturn(Set.empty[MarathonTask])
 

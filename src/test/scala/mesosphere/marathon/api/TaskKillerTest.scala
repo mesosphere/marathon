@@ -37,7 +37,7 @@ class TaskKillerTest extends MarathonSpec
 
   test("AppNotFound") {
     val appId = PathId("invalid")
-    when(tracker.contains(appId)).thenReturn(false)
+    when(tracker.hasAppTasksSync(appId)).thenReturn(false)
 
     val result = taskKiller.kill(appId, (tasks) => Set.empty[MarathonTask])
     result.failed.futureValue shouldEqual UnknownAppException(appId)
@@ -45,7 +45,7 @@ class TaskKillerTest extends MarathonSpec
 
   test("AppNotFound with scaling") {
     val appId = PathId("invalid")
-    when(tracker.contains(appId)).thenReturn(false)
+    when(tracker.hasAppTasksSync(appId)).thenReturn(false)
 
     val result = taskKiller.killAndScale(appId, (tasks) => Set.empty[MarathonTask], force = true)
     result.failed.futureValue shouldEqual UnknownAppException(appId)
@@ -65,7 +65,7 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill = Set(task1, task2)
     val originalAppDefinition = AppDefinition(appId, instances = 23)
 
-    when(tracker.contains(appId)).thenReturn(true)
+    when(tracker.hasAppTasksSync(appId)).thenReturn(true)
     when(groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
 
     val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
@@ -89,7 +89,7 @@ class TaskKillerTest extends MarathonSpec
   test("KillRequested without scaling") {
     val appId = PathId(List("my", "app"))
     val tasksToKill = Set(MarathonTask.getDefaultInstance)
-    when(tracker.contains(appId)).thenReturn(true)
+    when(tracker.hasAppTasksSync(appId)).thenReturn(true)
 
     val result = taskKiller.kill(appId, (tasks) => tasksToKill)
     result.futureValue shouldEqual tasksToKill
@@ -110,7 +110,7 @@ class TaskKillerTest extends MarathonSpec
     )
     val tasksToKill = Set(task1, task2)
 
-    when(tracker.contains(appId)).thenReturn(true)
+    when(tracker.hasAppTasksSync(appId)).thenReturn(true)
     when(groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
     val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(Group) => Group])
     val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])

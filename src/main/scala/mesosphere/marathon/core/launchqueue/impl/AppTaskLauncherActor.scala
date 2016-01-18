@@ -106,7 +106,7 @@ private class AppTaskLauncherActor(
     log.info("Started appTaskLaunchActor for {} version {} with initial count {}",
       app.id, app.version, tasksToLaunch)
 
-    val runningTasks = taskTracker.getTasks(app.id)
+    val runningTasks = taskTracker.appTasksSync(app.id)
     tasksMap = runningTasks.map(task => task.getId -> task).toMap
 
     rateLimiterActor ! RateLimiterActor.GetDelay(app)

@@ -13,7 +13,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
-import TaskTracker.App
+import TaskTracker.AppTasks
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos
@@ -135,7 +135,7 @@ class MarathonSchedulerActor private (
       val origSender = sender()
       withLockFor(appId) {
         val promise = Promise[Unit]()
-        val tasksToKill = taskIds.flatMap(taskId => taskTracker.getTask(appId, taskId))
+        val tasksToKill = taskIds.flatMap(taskId => taskTracker.taskSync(appId, taskId))
         context.actorOf(Props(classOf[TaskKillActor], driver, appId, taskTracker, eventBus, tasksToKill, promise))
         val res = for {
           _ <- promise.future
@@ -409,7 +409,7 @@ class SchedulerActions(
     healthCheckManager.removeAllFor(app.id)
 
     log.info(s"Stopping app ${app.id}")
-    val tasks = taskTracker.getTasks(app.id)
+    val tasks = taskTracker.appTasksSync(app.id)
 
     for (task <- tasks) {
       log.info(s"Killing task ${task.getId}")
@@ -443,20 +443,20 @@ class SchedulerActions(
         log.info("Syncing tasks for all apps")
 
         val knownTaskStatuses = appIds.flatMap { appId =>
-          taskTracker.getTasks(appId).collect {
+          taskTracker.appTasksSync(appId).collect {
             case task: Protos.MarathonTask if task.hasStatus => task.getStatus
             case task: Protos.MarathonTask => // staged tasks, which have no status yet
               taskStatus(task)
           }
         }
 
-        val appList = taskTracker.list
-        for (unknownAppId <- appList.keySet -- appIds) {
+        val appList = taskTracker.tasksByAppSync
+        for (unknownAppId <- appList.allAppIdsWithTasks -- appIds) {
           log.warn(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          for (orphanTask <- appList.getTasks(unknownAppId)) {
+          for (orphanTask <- appList.appTasks(unknownAppId)) {
             log.info(s"Killing task ${orphanTask.getId}")
             driver.killTask(protos.TaskID(orphanTask.getId))
           }
@@ -508,7 +508,7 @@ class SchedulerActions(
     * Make sure the app is running the correct number of instances
     */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    val currentCount = taskTracker.count(app.id)
+    val currentCount = taskTracker.countAppTasksSync(app.id)
     val targetCount = app.instances
 
     if (targetCount > currentCount) {
@@ -529,7 +529,7 @@ class SchedulerActions(
       log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
       taskQueue.purge(app.id)
 
-      val toKill = taskTracker.getTasks(app.id).take(currentCount - targetCount)
+      val toKill = taskTracker.appTasksSync(app.id).take(currentCount - targetCount)
       log.info(s"Killing tasks: ${toKill.map(_.getId)}")
       for (task <- toKill) {
         driver.killTask(protos.TaskID(task.getId))

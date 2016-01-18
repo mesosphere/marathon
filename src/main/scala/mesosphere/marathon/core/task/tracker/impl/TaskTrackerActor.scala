@@ -82,11 +82,11 @@ private class TaskTrackerActor(
   override def receive: Receive = initializing
 
   private[this] def initializing: Receive = LoggingReceive.withLabel("initializing") {
-    case appTasks: TaskTracker.AppDataMap =>
+    case appTasks: TaskTracker.TasksByApp =>
       log.info("Task loading complete.")
 
       unstashAll()
-      context.become(withTasks(appTasks, TaskCounts(appTasks.tasks, healthStatuses = Map.empty)))
+      context.become(withTasks(appTasks, TaskCounts(appTasks.allTasks, healthStatuses = Map.empty)))
 
     case Status.Failure(cause) =>
       // escalate this failure
@@ -96,7 +96,7 @@ private class TaskTrackerActor(
       stash()
   }
 
-  private[this] def withTasks(appTasks: TaskTracker.AppDataMap, counts: TaskCounts): Receive = {
+  private[this] def withTasks(appTasks: TaskTracker.TasksByApp, counts: TaskCounts): Receive = {
 
     def becomeWithUpdatedApp(appId: PathId)(taskId: String, newTask: Option[MarathonTask]): Unit = {
       val updatedAppTasks = newTask match {
@@ -105,7 +105,7 @@ private class TaskTrackerActor(
       }
 
       val updatedCounts = {
-        val oldTask = appTasks.getTask(appId, taskId)
+        val oldTask = appTasks.task(appId, taskId)
         // we do ignore health counts
         val oldTaskCount = TaskCounts(oldTask, healthStatuses = Map.empty)
         val newTaskCount = TaskCounts(newTask, healthStatuses = Map.empty)

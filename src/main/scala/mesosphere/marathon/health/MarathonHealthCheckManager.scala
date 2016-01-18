@@ -126,7 +126,7 @@ class MarathonHealthCheckManager @Inject() (
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[MarathonTask] = taskTracker.getTasks(app.id)
+        val tasks: Iterable[MarathonTask] = taskTracker.appTasksSync(app.id)
         val activeAppVersions: Set[String] = tasks.iterator.map(_.getVersion).toSet + app.version.toString
 
         val healthCheckAppVersions: Set[String] = appHealthChecks.writeLock { ahcs =>
@@ -202,7 +202,7 @@ class MarathonHealthCheckManager @Inject() (
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
-      maybeTask <- taskTracker.getTaskAsync(appId, taskId)
+      maybeTask <- taskTracker.task(appId, taskId)
     } yield maybeTask.map(t => Timestamp(t.getVersion))
 
     futureAppVersion.flatMap {
@@ -227,7 +227,7 @@ class MarathonHealthCheckManager @Inject() (
       Future.sequence(futureHealths) map { healths =>
         val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
 
-        taskTracker.getTasks(appId).iterator.map { task =>
+        taskTracker.appTasksSync(appId).iterator.map { task =>
           groupedHealth.get(task.getId) match {
             case Some(xs) => task.getId -> xs.toSeq
             case None     => task.getId -> Nil
