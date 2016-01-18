@@ -5,6 +5,7 @@ import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.TaskCounts
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
@@ -81,7 +82,7 @@ private class TaskTrackerActor(
   override def receive: Receive = initializing
 
   private[this] def initializing: Receive = LoggingReceive.withLabel("initializing") {
-    case appTasks: AppDataMap =>
+    case appTasks: TaskTracker.AppDataMap =>
       log.info("Task loading complete.")
 
       unstashAll()
@@ -95,7 +96,7 @@ private class TaskTrackerActor(
       stash()
   }
 
-  private[this] def withTasks(appTasks: AppDataMap, counts: TaskCounts): Receive = {
+  private[this] def withTasks(appTasks: TaskTracker.AppDataMap, counts: TaskCounts): Receive = {
 
     def becomeWithUpdatedApp(appId: PathId)(taskId: String, newTask: Option[MarathonTask]): Unit = {
       val updatedAppTasks = newTask match {

@@ -4,6 +4,7 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.TaskTracker.AppDataMap
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupRepository, PathId }
 import mesosphere.marathon.test.MarathonActorSupport
@@ -104,8 +105,8 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
 
     when(taskTracker.getTasks(app.id)).thenReturn(Set(runningTask, stagedTask, stagedTaskWithSlaveId))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(taskTracker.list).thenReturn(Map(
-      app.id -> TaskTracker.App(app.id, Set(runningTask, stagedTask, stagedTaskWithSlaveId))
+    when(taskTracker.list).thenReturn(AppDataMap.of(
+      TaskTracker.App(app.id, Set(runningTask, stagedTask, stagedTaskWithSlaveId))
     ))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
@@ -135,7 +136,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
 
     when(taskTracker.getTasks(app.id)).thenReturn(Set.empty[MarathonTask])
     when(repo.allPathIds()).thenReturn(Future.successful(Seq()))
-    when(taskTracker.list).thenReturn(Map.empty[PathId, TaskTracker.App])
+    when(taskTracker.list).thenReturn(AppDataMap.empty)
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
@@ -180,9 +181,9 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     when(taskTracker.getTasks(app.id)).thenReturn(Set(task))
     when(taskTracker.getTasks(orphanedApp.id)).thenReturn(Set(orphanedTask))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(taskTracker.list).thenReturn(Map(
-      app.id -> TaskTracker.App(app.id, Set(task)),
-      orphanedApp.id -> TaskTracker.App(orphanedApp.id, Set(orphanedTask, task))
+    when(taskTracker.list).thenReturn(AppDataMap.of(
+      TaskTracker.App(app.id, Set(task)),
+      TaskTracker.App(orphanedApp.id, Set(orphanedTask, task))
     ))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)

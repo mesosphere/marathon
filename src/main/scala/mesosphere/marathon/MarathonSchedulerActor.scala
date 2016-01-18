@@ -450,13 +450,13 @@ class SchedulerActions(
           }
         }
 
-        val appList: Map[PathId, App] = taskTracker.list
+        val appList = taskTracker.list
         for (unknownAppId <- appList.keySet -- appIds) {
           log.warn(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          for (orphanTask <- appList.get(unknownAppId).map(_.tasks).getOrElse(Iterable.empty)) {
+          for (orphanTask <- appList.getTasks(unknownAppId)) {
             log.info(s"Killing task ${orphanTask.getId}")
             driver.killTask(protos.TaskID(orphanTask.getId))
           }

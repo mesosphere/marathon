@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.TaskRepository
 import mesosphere.marathon.tasks.TaskIdUtil
 import org.slf4j.LoggerFactory
@@ -7,14 +8,14 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.Future
 
 /**
-  * Loads all task data into an [[AppDataMap]] from a [[TaskRepository]].
+  * Loads all task data into an [[TaskTracker.AppDataMap]] from a [[TaskRepository]].
   */
 private[tracker] class TaskLoaderImpl(repo: TaskRepository) extends TaskLoader {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
-  override def loadTasks(): Future[AppDataMap] = {
+  override def loadTasks(): Future[TaskTracker.AppDataMap] = {
     for {
       names <- repo.allIds()
       _ = log.info(s"About to load ${names.size} tasks")
@@ -24,9 +25,9 @@ private[tracker] class TaskLoaderImpl(repo: TaskRepository) extends TaskLoader {
       val tasksByApp = tasks.groupBy(task => TaskIdUtil.appId(task.getId))
       val map = tasksByApp.iterator.map {
         case (appId, appTasks) =>
-          appId -> AppData(appId, appTasks.map(task => task.getId -> task).toMap)
+          appId -> TaskTracker.App(appId, appTasks.map(task => task.getId -> task).toMap)
       }.toMap
-      AppDataMap.of(map)
+      TaskTracker.AppDataMap.of(map)
     }
   }
 }

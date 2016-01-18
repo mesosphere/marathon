@@ -47,7 +47,7 @@ private[jobs] object KillOverdueTasksActor {
       val stagedExpire = nowMillis - config.taskLaunchTimeout()
       val unconfirmedExpire = nowMillis - config.taskLaunchConfirmTimeout()
 
-      val toKill = taskTracker.list.values.flatMap(_.tasks).filter { task =>
+      val toKill = taskTracker.list.tasks.filter { task =>
         /*
        * One would think that !hasStagedAt would be better for querying these tasks. However, the current implementation
        * of [[MarathonTasks.makeTask]] will set stagedAt to a non-zero value close to the current system time.

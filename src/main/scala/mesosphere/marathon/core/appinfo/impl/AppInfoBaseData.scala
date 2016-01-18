@@ -5,11 +5,13 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.TaskTracker.App
 import mesosphere.marathon.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 
+import scala.collection
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -48,6 +50,11 @@ class AppInfoBaseData(
     }
   }
 
+  lazy val tasksMapFuture: Future[TaskTracker.AppDataMap] = {
+    log.debug("Retrieve tasks")
+    taskTracker.listAsync()
+  }
+
   def appInfoFuture(app: AppDefinition, embed: Set[AppInfo.Embed]): Future[AppInfo] = {
     val appData = new AppData(app)
     embed.foldLeft(Future.successful(AppInfo(app))) { (infoFuture, embed) =>
@@ -79,12 +86,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasks: Iterable[MarathonTask] = {
-      log.debug(s"retrieving running tasks for app [${app.id}]")
-      taskTracker.getTasks(app.id)
-    }
-
-    lazy val tasksFuture: Future[Iterable[MarathonTask]] = Future.successful(tasks)
+    lazy val tasksFuture: Future[Iterable[MarathonTask]] = tasksMapFuture.map(_.getTasks(app.id))
 
     lazy val healthCountsFuture: Future[Map[String, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
@@ -129,8 +131,13 @@ class AppInfoBaseData(
       }
 
       log.debug(s"assembling rich tasks for app [${app.id}]")
-      val tasksById: Map[String, MarathonTask] = tasks.map(task => task.getId -> task).toMap
-      healthCheckManager.statuses(app.id).map(statuses => statusesToEnrichedTasks(tasksById, statuses))
+
+      val tasksByIdFuture = tasksMapFuture.map(_.appTasks.get(app.id).map(_.taskMap).getOrElse(Map.empty))
+      val healthStatusesFutures = healthCheckManager.statuses(app.id)
+      for {
+        tasksById <- tasksByIdFuture
+        statuses <- healthStatusesFutures
+      } yield statusesToEnrichedTasks(tasksById, statuses)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while assembling rich tasks for app [${app.id}]", e)
     }

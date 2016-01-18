@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.state.{ PathId, TaskRepository }
 import mesosphere.marathon.test.Mockito
@@ -50,9 +51,9 @@ class TaskLoaderImplTest
 
     Then("the resulting data is correct")
     // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-    val appData1 = AppData(app1Id, Map(app1task1.getId -> app1task1, app1task2.getId -> app1task2))
-    val appData2 = AppData(app2Id, Map(app2task1.getId -> app2task1))
-    val expectedData = AppDataMap.of(Map(app1Id -> appData1, app2Id -> appData2))
+    val appData1 = TaskTracker.App(app1Id, Map(app1task1.getId -> app1task1, app1task2.getId -> app1task2))
+    val appData2 = TaskTracker.App(app2Id, Map(app2task1.getId -> app2task1))
+    val expectedData = TaskTracker.AppDataMap.of(appData1, appData2)
     loaded.futureValue should equal(expectedData)
   }
 

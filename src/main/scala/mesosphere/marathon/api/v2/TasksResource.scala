@@ -59,8 +59,8 @@ class TasksResource @Inject() (
 
       val taskList = taskTracker.list
 
-      val tasks = taskList.values.view.flatMap { app =>
-        app.tasks.view.map(t => app.appName -> t)
+      val tasks = taskList.appTasks.values.view.flatMap { app =>
+        app.tasks.view.map(t => app.appId -> t)
       }
 
       val appIds = taskList.keySet
