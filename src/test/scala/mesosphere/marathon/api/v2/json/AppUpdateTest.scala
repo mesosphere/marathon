@@ -16,12 +16,12 @@ import scala.concurrent.duration._
 
 import mesosphere.marathon.api.v2.Validation._
 
-class V2AppUpdateTest extends MarathonSpec {
+class AppUpdateTest extends MarathonSpec {
   import Formats._
   import mesosphere.marathon.integration.setup.V2TestFormats._
 
   test("Validation") {
-    def shouldViolate(update: V2AppUpdate, path: String, template: String): Unit = {
+    def shouldViolate(update: AppUpdate, path: String, template: String): Unit = {
       val violations = validate(update)
       assert(violations.isFailure)
       assert(ValidationHelper.getAllRuleConstrains(violations).exists(v =>
@@ -29,13 +29,13 @@ class V2AppUpdateTest extends MarathonSpec {
       ))
     }
 
-    def shouldNotViolate(update: V2AppUpdate, path: String, template: String): Unit = {
+    def shouldNotViolate(update: AppUpdate, path: String, template: String): Unit = {
       val violations = validate(update)
       assert(!ValidationHelper.getAllRuleConstrains(violations).exists(v =>
         v.property.getOrElse(false) == path && v.message == template))
     }
 
-    val update = V2AppUpdate()
+    val update = AppUpdate()
 
     shouldViolate(
       update.copy(ports = Some(Seq(9000, 8080, 9000))),
@@ -50,17 +50,17 @@ class V2AppUpdateTest extends MarathonSpec {
     )
   }
 
-  private[this] def fromJsonString(json: String): V2AppUpdate = {
-    Json.fromJson[V2AppUpdate](Json.parse(json)).get
+  private[this] def fromJsonString(json: String): AppUpdate = {
+    Json.fromJson[AppUpdate](Json.parse(json)).get
   }
 
   test("SerializationRoundtrip for empty definition") {
-    val update0 = V2AppUpdate(container = Some(Container.Empty))
+    val update0 = AppUpdate(container = Some(Container.Empty))
     JsonTestHelper.assertSerializationRoundtripWorks(update0)
   }
 
   test("SerializationRoundtrip for extended definition") {
-    val update1 = V2AppUpdate(
+    val update1 = AppUpdate(
       cmd = Some("sleep 60"),
       args = None,
       user = Some("nobody"),
@@ -108,7 +108,7 @@ class V2AppUpdateTest extends MarathonSpec {
   }
 
   test("Serialization result of empty container") {
-    val update2 = V2AppUpdate(container = None)
+    val update2 = AppUpdate(container = None)
     val json2 =
       """
       {
@@ -136,7 +136,7 @@ class V2AppUpdateTest extends MarathonSpec {
   }
 
   test("Serialization result of empty ipAddress") {
-    val update2 = V2AppUpdate(ipAddress = None)
+    val update2 = AppUpdate(ipAddress = None)
     val json2 =
       """
       {
@@ -165,36 +165,36 @@ class V2AppUpdateTest extends MarathonSpec {
   }
 
   test("Empty json corresponds to default instance") {
-    val update3 = V2AppUpdate()
+    val update3 = AppUpdate()
     val json3 = "{}"
     val readResult3 = fromJsonString(json3)
     assert(readResult3 == update3)
   }
 
   test("Args are correctly read") {
-    val update4 = V2AppUpdate(args = Some(Seq("a", "b", "c")))
+    val update4 = AppUpdate(args = Some(Seq("a", "b", "c")))
     val json4 = """{ "args": ["a", "b", "c"] }"""
     val readResult4 = fromJsonString(json4)
     assert(readResult4 == update4)
   }
 
   test("'version' field can only be combined with 'id'") {
-    assert(V2AppUpdate(version = Some(Timestamp.now())).onlyVersionOrIdSet)
+    assert(AppUpdate(version = Some(Timestamp.now())).onlyVersionOrIdSet)
 
-    assert(V2AppUpdate(id = Some("foo".toPath), version = Some(Timestamp.now())).onlyVersionOrIdSet)
+    assert(AppUpdate(id = Some("foo".toPath), version = Some(Timestamp.now())).onlyVersionOrIdSet)
 
     intercept[Exception] {
-      V2AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
+      AppUpdate(cmd = Some("foo"), version = Some(Timestamp.now()))
     }
   }
 
   test("acceptedResourceRoles of update is only applied when != None") {
-    val app = V2AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Some(Set("a")))
+    val app = AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Some(Set("a")))
 
-    val unchanged = V2AppUpdate().apply(app).copy(version = app.version)
+    val unchanged = AppUpdate().apply(app).copy(versionInfo = app.versionInfo)
     assert(unchanged == app)
 
-    val changed = V2AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(version = app.version)
+    val changed = AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(versionInfo = app.versionInfo)
     assert(changed == app.copy(acceptedResourceRoles = Some(Set("b"))))
   }
 }

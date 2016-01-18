@@ -23,7 +23,6 @@ import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.V2Group._
 
 /**
   * The group manager is the facade for all group related actions.

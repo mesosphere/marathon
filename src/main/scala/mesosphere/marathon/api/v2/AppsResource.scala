@@ -10,7 +10,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.{ V2AppDefinition, V2AppUpdate }
+import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
@@ -68,8 +68,8 @@ class AppsResource @Inject() (
              @DefaultValue("false")@QueryParam("force") force: Boolean,
              @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     val now = clock.now()
-    withValid(Json.parse(body).as[V2AppDefinition].withCanonizedIds()) { appDef =>
-      val app = appDef.toAppDefinition.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(now))
+    withValid(Json.parse(body).as[AppDefinition].withCanonizedIds()) { appDef =>
+      val app = appDef.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(now))
       doIfAuthorized(req, resp, CreateAppOrGroup, app.id) { identity =>
         def createOrThrow(opt: Option[AppDefinition]) = opt
           .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
@@ -133,7 +133,7 @@ class AppsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     val appId = id.toRootPath
-    withValid(Json.parse(body).as[V2AppUpdate].copy(id = Some(appId))) { app =>
+    withValid(Json.parse(body).as[AppUpdate].copy(id = Some(appId))) { app =>
       doIfAuthorized(req, resp, UpdateAppOrGroup, appId) { identity =>
         val now = clock.now()
         val plan = result(groupManager.updateApp(appId, updateOrCreate(appId, _, app, now), now, force))
@@ -153,7 +153,7 @@ class AppsResource @Inject() (
                       body: Array[Byte],
                       @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
 
-    withValid(Json.parse(body).as[Seq[V2AppUpdate]].map(_.withCanonizedIds())) { updates =>
+    withValid(Json.parse(body).as[Seq[AppUpdate]].map(_.withCanonizedIds())) { updates =>
       doIfAuthorized(req, resp, UpdateAppOrGroup, updates.flatMap(_.id): _*) { identity =>
         val version = clock.now()
         def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
@@ -212,10 +212,10 @@ class AppsResource @Inject() (
 
   private def updateOrCreate(appId: PathId,
                              existing: Option[AppDefinition],
-                             appUpdate: V2AppUpdate,
+                             appUpdate: AppUpdate,
                              newVersion: Timestamp): AppDefinition = {
-    def createApp() = validateOrThrow(V2AppDefinition(appUpdate(AppDefinition(appId)))).toAppDefinition
-    def updateApp(current: AppDefinition) = validateOrThrow(V2AppDefinition(appUpdate(current))).toAppDefinition
+    def createApp() = validateOrThrow(appUpdate(AppDefinition(appId)))
+    def updateApp(current: AppDefinition) = validateOrThrow(appUpdate(current))
     def rollback(version: Timestamp) = service.getApp(appId, version).getOrElse(throw new UnknownAppException(appId))
     def updateOrRollback(current: AppDefinition) = appUpdate.version.map(rollback).getOrElse(updateApp(current))
 
