@@ -57,13 +57,13 @@ class TasksResource @Inject() (
       //scalastyle:on
       val statusSet = statuses.asScala.flatMap(toTaskState).toSet
 
-      val taskList = taskTracker.list
+      val taskList = taskTracker.tasksByAppSync
 
-      val tasks = taskList.appTasks.values.view.flatMap { app =>
+      val tasks = taskList.appTasksMap.values.view.flatMap { app =>
         app.tasks.view.map(t => app.appId -> t)
       }
 
-      val appIds = taskList.keySet
+      val appIds = taskList.allAppIdsWithTasks
 
       val appToPorts = appIds.map { appId =>
         appId -> service.getApp(appId).map(_.servicePorts).getOrElse(Nil)
@@ -135,7 +135,7 @@ class TasksResource @Inject() (
       }
 
       val taskByApps = taskToAppIds
-        .flatMap { case (taskId, appId) => taskTracker.getTask(appId, taskId) }
+        .flatMap { case (taskId, appId) => taskTracker.taskSync(appId, taskId) }
         .groupBy { x => taskIdUtil.appId(x.getId) }
         .map{ case (app, tasks) => app -> tasks.toSet }
 

@@ -24,7 +24,7 @@ class TaskLoaderImplTest
     verify(f.taskRepository).allIds()
 
     And("our data is empty")
-    loaded.futureValue.appTasks should be(empty)
+    loaded.futureValue.allTasks should be(empty)
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -51,9 +51,9 @@ class TaskLoaderImplTest
 
     Then("the resulting data is correct")
     // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-    val appData1 = TaskTracker.App(app1Id, Map(app1task1.getId -> app1task1, app1task2.getId -> app1task2))
-    val appData2 = TaskTracker.App(app2Id, Map(app2task1.getId -> app2task1))
-    val expectedData = TaskTracker.AppDataMap.of(appData1, appData2)
+    val appData1 = TaskTracker.AppTasks(app1Id, Map(app1task1.getId -> app1task1, app1task2.getId -> app1task2))
+    val appData2 = TaskTracker.AppTasks(app2Id, Map(app2task1.getId -> app2task1))
+    val expectedData = TaskTracker.TasksByApp.of(appData1, appData2)
     loaded.futureValue should equal(expectedData)
   }
 

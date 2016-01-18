@@ -125,7 +125,7 @@ class AppDefinitionFormatsTest
         |  }
         |}""".stripMargin).as[AppDefinition]
 
-    app.versionInfo shouldBe a [OnlyVersion]
+    app.versionInfo shouldBe a[OnlyVersion]
   }
 
   test("FromJSON should fail for empty id") {

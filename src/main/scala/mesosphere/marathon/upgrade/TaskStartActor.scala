@@ -20,7 +20,8 @@ class TaskStartActor(
     val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
-  val nrToStart: Int = scaleTo - taskQueue.get(app.id).map(_.totalTaskCount).getOrElse(taskTracker.count(app.id))
+  val nrToStart: Int =
+    scaleTo - taskQueue.get(app.id).map(_.totalTaskCount).getOrElse(taskTracker.countAppTasksSync(app.id))
 
   override def initializeStart(): Unit = {
     if (nrToStart > 0)

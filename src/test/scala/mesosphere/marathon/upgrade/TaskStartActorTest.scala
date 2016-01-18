@@ -341,7 +341,7 @@ class TaskStartActorTest
     // let existing task die
     // doesn't work because it needs Zookeeper: taskTracker.terminated(app.id, taskStatus)
     // we mock instead
-    when(taskTracker.count(app.id)).thenReturn(0)
+    when(taskTracker.countAppTasksSync(app.id)).thenReturn(0)
     when(launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 4)))
     system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_ERROR", "", app.id, "", Nil, Nil, task.getVersion))
 
@@ -355,7 +355,7 @@ class TaskStartActorTest
 
     // launch 4 of the tasks
     when(launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = app.instances)))
-    when(taskTracker.count(app.id)).thenReturn(4)
+    when(taskTracker.countAppTasksSync(app.id)).thenReturn(4)
     List(0, 1, 2, 3) foreach { i =>
       system.eventStream.publish(MesosStatusUpdateEvent("", s"task-$i", "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString))
     }

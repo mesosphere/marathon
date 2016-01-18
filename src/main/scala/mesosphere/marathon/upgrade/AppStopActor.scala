@@ -16,7 +16,7 @@ class AppStopActor(
     app: AppDefinition,
     val promise: Promise[Unit]) extends StoppingBehavior {
 
-  var idsToKill: mutable.Set[String] = taskTracker.getTasks(app.id).map(_.getId).to[mutable.Set]
+  var idsToKill: mutable.Set[String] = taskTracker.appTasksSync(app.id).map(_.getId).to[mutable.Set]
 
   def appId: PathId = app.id
 

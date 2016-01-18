@@ -27,39 +27,39 @@ private[tracker] class TaskTrackerDelegate(
     config: TaskTrackerConfig,
     taskTrackerRef: ActorRef) extends TaskTracker {
 
-  override def list: TaskTracker.AppDataMap = {
+  override def tasksByAppSync: TaskTracker.TasksByApp = {
     import ExecutionContext.Implicits.global
-    Await.result(listAsync(), taskTrackerQueryTimeout.duration)
+    Await.result(tasksByApp(), taskTrackerQueryTimeout.duration)
 
   }
-  override def listAsync()(implicit ec: ExecutionContext): Future[TaskTracker.AppDataMap] = {
+  override def tasksByApp()(implicit ec: ExecutionContext): Future[TaskTracker.TasksByApp] = {
     import akka.pattern.ask
-    def futureCall(): Future[TaskTracker.AppDataMap] =
-      (taskTrackerRef ? TaskTrackerActor.List).mapTo[TaskTracker.AppDataMap].recover {
+    def futureCall(): Future[TaskTracker.TasksByApp] =
+      (taskTrackerRef ? TaskTrackerActor.List).mapTo[TaskTracker.TasksByApp].recover {
         case e: AskTimeoutException =>
           throw new TimeoutException(
             s"timeout while calling list. If you know what you are doing, you can adjust the timeout " +
               s"with --${config.internalTaskTrackerRequestTimeout.name}."
           )
       }
-    listAsyncTimer.fold(futureCall())(_.timeFuture(futureCall()))
+    tasksByAppTimer.fold(futureCall())(_.timeFuture(futureCall()))
   }
 
-  override def count(appId: PathId): Int = list.getTasks(appId).size
-  override def countAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
-    listAsync().map(_.getTasks(appId).size)
-  override def getTask(appId: PathId, taskId: String): Option[MarathonTask] = list.getTask(appId, taskId)
-  override def getTaskAsync(appId: PathId, taskId: String)(implicit e: ExecutionContext): Future[Option[MarathonTask]] =
-    listAsync().map(_.getTask(appId, taskId))
-  override def contains(appId: PathId): Boolean = list.appTasks.contains(appId)
-  override def containsAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
-    listAsync().map(_.appTasks.contains(appId))
-  override def getTasks(appId: PathId): Iterable[MarathonTask] = list.getTasks(appId)
-  override def getTasksAsync(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]] =
-    listAsync().map(_.getTasks(appId))
+  override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.appTasks(appId).size
+  override def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
+    tasksByApp().map(_.appTasks(appId).size)
+  override def taskSync(appId: PathId, taskId: String): Option[MarathonTask] = tasksByAppSync.task(appId, taskId)
+  override def task(appId: PathId, taskId: String)(implicit e: ExecutionContext): Future[Option[MarathonTask]] =
+    tasksByApp().map(_.task(appId, taskId))
+  override def hasAppTasksSync(appId: PathId): Boolean = tasksByAppSync.hasAppTasks(appId)
+  override def hasAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
+    tasksByApp().map(_.hasAppTasks(appId))
+  override def appTasksSync(appId: PathId): Iterable[MarathonTask] = tasksByAppSync.appTasks(appId)
+  override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]] =
+    tasksByApp().map(_.appTasks(appId))
 
-  private[this] val listAsyncTimer =
-    metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "list")))
+  private[this] val tasksByAppTimer =
+    metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))
 
   private[this] implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 

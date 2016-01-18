@@ -63,7 +63,7 @@ class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.getTasks(app.id).map(_.getId).toSet
+    val activeTaskIds = taskTracker.appTasksSync(app.id).map(_.getId).toSet
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
     taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
@@ -86,7 +86,7 @@ class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.getTasks(app.id).foreach { task =>
+    taskTracker.appTasksSync(app.id).foreach { task =>
       if (task.getVersion == app.version.toString && task.hasStartedAt) {
         log.debug("Dispatching health check job for task [{}]", task.getId)
         val worker: ActorRef = context.actorOf(workerProps)
@@ -143,7 +143,7 @@ class HealthCheckActor(
         case Healthy(_, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _) =>
-          taskTracker.getTask(app.id, taskId) match {
+          taskTracker.taskSync(app.id, taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
                 // Don't update health

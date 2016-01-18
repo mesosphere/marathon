@@ -41,7 +41,7 @@ class TaskTrackerActorTest
       override def updaterProps(trackerRef: ActorRef): Props = failProps
     }
     And("an empty task loader result")
-    f.taskLoader.loadTasks() returns Future.successful(TaskTracker.AppDataMap.empty)
+    f.taskLoader.loadTasks() returns Future.successful(TaskTracker.TasksByApp.empty)
 
     When("the task tracker actor gets a ForwardTaskOp")
     val deadline = Timestamp.zero // ignored
@@ -57,7 +57,7 @@ class TaskTrackerActorTest
   test("taskTrackerActor answers with loaded data (empty)") {
     val f = new Fixture
     Given("an empty task loader result")
-    val appDataMap = TaskTracker.AppDataMap.empty
+    val appDataMap = TaskTracker.TasksByApp.empty
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
     When("the task tracker actor gets a List query")
@@ -73,7 +73,7 @@ class TaskTrackerActorTest
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
     val task = MarathonTestHelper.dummyTask(appId)
-    val appDataMap = TaskTracker.AppDataMap.of(TaskTracker.App(appId, Map(task.getId -> task)))
+    val appDataMap = TaskTracker.TasksByApp.of(TaskTracker.AppTasks(appId, Map(task.getId -> task)))
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
     When("the task tracker actor gets a List query")
@@ -91,8 +91,8 @@ class TaskTrackerActorTest
     val stagedTask = MarathonTestHelper.stagedTask("staged")
     val runningTask1 = MarathonTestHelper.runningTask("running1")
     val runningTask2 = MarathonTestHelper.runningTask("running2")
-    val appDataMap = TaskTracker.AppDataMap.of(
-      TaskTracker.App(appId, Iterable(stagedTask, runningTask1, runningTask2))
+    val appDataMap = TaskTracker.TasksByApp.of(
+      TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
@@ -113,8 +113,8 @@ class TaskTrackerActorTest
     val stagedTask = MarathonTestHelper.stagedTask("staged")
     val runningTask1 = MarathonTestHelper.runningTask("running1")
     val runningTask2 = MarathonTestHelper.runningTask("running2")
-    val appDataMap = TaskTracker.AppDataMap.of(
-      TaskTracker.App(appId, Iterable(stagedTask, runningTask1, runningTask2))
+    val appDataMap = TaskTracker.TasksByApp.of(
+      TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
@@ -143,8 +143,8 @@ class TaskTrackerActorTest
     val stagedTask = MarathonTestHelper.stagedTask("stagedThenRunning")
     val runningTask1 = MarathonTestHelper.runningTask("running1")
     val runningTask2 = MarathonTestHelper.runningTask("running2")
-    val appDataMap = TaskTracker.AppDataMap.of(
-      TaskTracker.App(appId, Iterable(stagedTask, runningTask1, runningTask2))
+    val appDataMap = TaskTracker.TasksByApp.of(
+      TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
@@ -166,8 +166,8 @@ class TaskTrackerActorTest
     val stagedTask = MarathonTestHelper.stagedTask("staged")
     val runningTask1 = MarathonTestHelper.runningTask("running1")
     val runningTask2 = MarathonTestHelper.runningTask("running2")
-    val appDataMap = TaskTracker.AppDataMap.of(
-      TaskTracker.App(appId, Iterable(stagedTask, runningTask1, runningTask2))
+    val appDataMap = TaskTracker.TasksByApp.of(
+      TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 

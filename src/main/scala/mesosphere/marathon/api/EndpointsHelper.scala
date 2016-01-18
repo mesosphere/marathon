@@ -14,11 +14,11 @@ object EndpointsHelper {
     taskTracker: TaskTracker,
     apps: Seq[AppDefinition],
     delimiter: String): String = {
-    val tasksMap = taskTracker.list
+    val tasksMap = taskTracker.tasksByAppSync
 
     val sb = new StringBuilder
     for (app <- apps if app.ipAddress.isEmpty) {
-      val tasks = tasksMap.getTasks(app.id)
+      val tasks = tasksMap.appTasks(app.id)
       val cleanId = app.id.safePath
 
       val servicePorts = app.servicePorts

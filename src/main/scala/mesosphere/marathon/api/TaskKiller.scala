@@ -19,8 +19,8 @@ class TaskKiller @Inject() (
     appId: PathId,
     findToKill: (Iterable[MarathonTask] => Iterable[MarathonTask])): Future[Iterable[MarathonTask]] = {
 
-    if (taskTracker.contains(appId)) {
-      val tasks = taskTracker.getTasks(appId)
+    if (taskTracker.hasAppTasksSync(appId)) {
+      val tasks = taskTracker.appTasksSync(appId)
       val toKill = findToKill(tasks)
       service.killTasks(appId, toKill)
       Future.successful(toKill)
@@ -33,7 +33,7 @@ class TaskKiller @Inject() (
   def killAndScale(appId: PathId,
                    findToKill: (Iterable[MarathonTask] => Iterable[MarathonTask]),
                    force: Boolean): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.getTasks(appId))), force)
+    killAndScale(Map(appId -> findToKill(taskTracker.appTasksSync(appId))), force)
   }
 
   def killAndScale(appTasks: Map[PathId, Iterable[MarathonTask]], force: Boolean): Future[DeploymentPlan] = {
@@ -44,7 +44,7 @@ class TaskKiller @Inject() (
       group.copy(apps = group.apps.map(scaleApp), groups = group.groups.map(updateGroup))
     }
     def killTasks = groupManager.update(PathId.empty, updateGroup, Timestamp.now(), force = force, toKill = appTasks)
-    appTasks.keys.find(id => !taskTracker.contains(id))
+    appTasks.keys.find(id => !taskTracker.hasAppTasksSync(id))
       .map(id => Future.failed(UnknownAppException(id)))
       .getOrElse(killTasks)
   }

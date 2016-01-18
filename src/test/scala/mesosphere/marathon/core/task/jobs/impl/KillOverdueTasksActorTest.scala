@@ -6,7 +6,7 @@ import mesosphere.marathon
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.TaskTracker.AppDataMap
+import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.TaskID
@@ -55,7 +55,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
 
   test("no overdue tasks") {
     Given("no tasks")
-    taskTracker.list returns AppDataMap.empty
+    taskTracker.tasksByAppSync returns TasksByApp.empty
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -63,7 +63,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
     testProbe.expectMsg(3.seconds, Status.Success(()))
 
     Then("eventually list was called")
-    verify(taskTracker).list
+    verify(taskTracker).tasksByAppSync
     And("no kill calls are issued")
     noMoreInteractions(driver)
   }
@@ -71,14 +71,14 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
   test("some overdue tasks") {
     Given("one overdue task")
     val mockTask = MarathonTask.newBuilder().setId("someId").buildPartial()
-    val app = TaskTracker.App(PathId("/some"), Iterable(mockTask))
-    taskTracker.list returns AppDataMap.of(app)
+    val app = TaskTracker.AppTasks(PathId("/some"), Iterable(mockTask))
+    taskTracker.tasksByAppSync returns TasksByApp.of(app)
 
     When("the check is initiated")
     checkActor ! KillOverdueTasksActor.Check(maybeAck = None)
 
     Then("the task kill gets initiated")
-    verify(taskTracker, Mockito.timeout(1000)).list
+    verify(taskTracker, Mockito.timeout(1000)).tasksByAppSync
     import mesosphere.mesos.protos.Implicits._
     verify(driver, Mockito.timeout(1000)).killTask(TaskID("someId"))
   }
@@ -134,7 +134,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
 
     Given("Several somehow overdue tasks plus some not overdue tasks")
     val appId = PathId("/ignored")
-    val app = TaskTracker.App(
+    val app = TaskTracker.AppTasks(
       appId,
       Iterable(
         unconfirmedOverdueTask,
@@ -145,7 +145,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
         runningTask
       )
     )
-    taskTracker.list returns AppDataMap.of(app)
+    taskTracker.tasksByAppSync returns TasksByApp.of(app)
 
     When("We check which tasks should be killed because they're not yet staged or unconfirmed")
     val testProbe = TestProbe()
@@ -153,7 +153,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
     testProbe.expectMsg(3.seconds, Status.Success(()))
 
     Then("The task tracker gets queried")
-    verify(taskTracker).list
+    verify(taskTracker).tasksByAppSync
 
     And("All somehow overdue tasks are killed")
     verify(driver).killTask(MesosProtos.TaskID.newBuilder().setValue(unconfirmedOverdueTask.getId).build())

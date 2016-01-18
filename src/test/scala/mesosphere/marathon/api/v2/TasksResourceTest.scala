@@ -44,8 +44,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     )
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.getTask(app1, taskId1) returns Some(task1)
-    taskTracker.getTask(app2, taskId2) returns Some(task2)
+    taskTracker.taskSync(app1, taskId1) returns Some(task1)
+    taskTracker.taskSync(app2, taskId2) returns Some(task2)
     taskKiller.kill(any, any) returns Future.successful(Set.empty[MarathonTask])
 
     When("we ask to kill both tasks")
@@ -87,8 +87,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     )
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.getTask(app1, taskId1) returns Some(task1)
-    taskTracker.getTask(app2, taskId2) returns Some(task2)
+    taskTracker.taskSync(app1, taskId1) returns Some(task1)
+    taskTracker.taskSync(app2, taskId2) returns Some(task2)
     taskKiller.killAndScale(any, any) returns Future.successful(deploymentPlan)
 
     When("we ask to kill both tasks")
