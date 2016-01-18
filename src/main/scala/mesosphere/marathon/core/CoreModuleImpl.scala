@@ -1,10 +1,13 @@
 package mesosphere.marathon.core
 
+import javax.inject.Provider
+
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.twitter.common.zookeeper.ZooKeeperClient
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.auth.AuthModule
+import mesosphere.marathon.core.autoscale.AutoScaleModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.launcher.LauncherModule
@@ -16,9 +19,15 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppRepository, TaskRepository }
+import mesosphere.marathon.state.{ AppRepository, GroupManagement, TaskRepository }
 import mesosphere.marathon.tasks.TaskFactory
-import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.{
+  LeadershipAbdication,
+  MarathonConf,
+  MarathonSchedulerDriverHolder,
+  MarathonSchedulerService
+}
+import mesosphere.util.state.MesosLeaderInfo
 
 import scala.util.Random
 
@@ -40,6 +49,9 @@ class CoreModuleImpl @Inject() (
     taskRepository: TaskRepository,
     taskFactory: TaskFactory,
     leaderInfo: LeaderInfo,
+    mesosLeaderInfo: MesosLeaderInfo,
+    groupManagerProvider: Provider[GroupManagement],
+    schedulerProvider: Provider[MarathonSchedulerService],
     clock: Clock) extends CoreModule {
 
   // INFRASTRUCTURE LAYER
@@ -75,6 +87,16 @@ class CoreModuleImpl @Inject() (
 
     // internal core dependencies
     offerMatcherManagerModule.globalOfferMatcher)
+
+  val autoScaleModule = new AutoScaleModule(
+    marathonConf,
+    actorSystem,
+    leadershipModule,
+    groupManagerProvider,
+    schedulerProvider,
+    mesosLeaderInfo,
+    taskTrackerModule.taskTracker
+  )
 
   override lazy val appOfferMatcherModule = new LaunchQueueModule(
     marathonConf,

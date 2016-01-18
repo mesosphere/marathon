@@ -12,6 +12,7 @@ import mesosphere.marathon.state.Container.{ Docker, Volume }
 import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.upgrade._
+import mesosphere.mesos.MesosSlaveData
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => mesos }
 import play.api.data.validation.ValidationError
@@ -52,7 +53,8 @@ trait Formats
     with DeploymentFormats
     with EventFormats
     with EventSubscribersFormats
-    with IpAddressFormats {
+    with IpAddressFormats
+    with MesosFormats {
   import scala.collection.JavaConverters._
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
@@ -451,10 +453,40 @@ trait FetchUriFormats {
   }
 }
 
+trait MesosFormats {
+
+  implicit lazy val MesosSlaveDataFormat: Format[MesosSlaveData] = {
+    // mesos attributes values can either hold strings, numbers, booleans etc.
+    implicit lazy val mapReads: Reads[Map[String, String]] = new Reads[Map[String, String]] {
+      override def reads(json: JsValue): JsResult[Map[String, String]] = {
+        def stringify(v: JsValue): String = v match {
+          case JsString(value) => value
+          case value: JsValue  => Json.stringify(value)
+        }
+        json match {
+          case JsObject(props) => JsSuccess(props.map{ case (k, v) => k -> stringify(v) }.toMap)
+          case _               => JsError("Json object expected")
+        }
+      }
+    }
+
+    Json.format[MesosSlaveData]
+  }
+
+}
+
 trait V2Formats {
   import Formats._
 
   implicit lazy val IdentifiableWrites = Json.writes[Identifiable]
+
+  implicit lazy val AutoScalePolicyDefinitionWrites = Json.writes[AutoScalePolicyDefinition]
+  implicit lazy val AutoScalePolicyDefinitionReads: Reads[AutoScalePolicyDefinition] = (
+    (__ \ "name").read[String] ~
+    (__ \ "parameter").readNullable[Map[String, String]].withDefault(Map.empty)
+  )(AutoScalePolicyDefinition(_, _))
+
+  implicit lazy val AutoScaleDefinitionFormat = Json.format[AutoScaleDefinition]
 
   implicit lazy val UpgradeStrategyWrites = Json.writes[UpgradeStrategy]
   implicit lazy val UpgradeStrategyReads: Reads[UpgradeStrategy] = {
@@ -526,6 +558,7 @@ trait V2Formats {
           labels: Map[String, String],
           acceptedResourceRoles: Option[Set[String]],
           ipAddress: Option[IpAddress],
+          autoScale: Option[AutoScaleDefinition],
           version: Timestamp)
 
         val extraReads: Reads[ExtraFields] =
@@ -538,6 +571,7 @@ trait V2Formats {
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
             (__ \ "ipAddress").readNullable[IpAddress] ~
+            (__ \ "autoScale").readNullable[AutoScaleDefinition] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now())
           )(ExtraFields)
             .filter(ValidationError("You cannot specify both uris and fetch fields")) { extra =>
@@ -545,6 +579,9 @@ trait V2Formats {
             }
             .filter(ValidationError("You cannot specify both an IP address and ports")) { extra =>
               extra.maybePorts.forall(_.isEmpty) || extra.ipAddress.isEmpty
+            }
+            .filter(ValidationError("You cannot specify both instances and autoScale")) { extra =>
+              extra.autoScale.isEmpty || app.instances == AppDefinition.DefaultInstances
             }
 
         extraReads.map { extra =>
@@ -557,12 +594,14 @@ trait V2Formats {
 
           app.copy(
             fetch = fetch,
+            instances = extra.autoScale.map(_ => new Integer(0)).getOrElse(app.instances),
             dependencies = extra.dependencies,
             ports = extra.maybePorts.getOrElse(defaultPorts),
             upgradeStrategy = extra.upgradeStrategy,
             labels = extra.labels,
             acceptedResourceRoles = extra.acceptedResourceRoles,
             ipAddress = extra.ipAddress,
+            autoScale = extra.autoScale,
             versionInfo = AppDefinition.VersionInfo.OnlyVersion(extra.version)
           )
         }
@@ -621,6 +660,7 @@ trait V2Formats {
         "labels" -> app.labels,
         "acceptedResourceRoles" -> app.acceptedResourceRoles,
         "ipAddress" -> app.ipAddress,
+        "autoScale" -> app.autoScale,
         "version" -> app.version
       )
       Json.toJson(app.versionInfo) match {
@@ -743,6 +783,7 @@ trait V2Formats {
         dependencies: Option[Set[PathId]],
         upgradeStrategy: Option[UpgradeStrategy],
         labels: Option[Map[String, String]],
+        autoScale: Option[AutoScaleDefinition],
         version: Option[Timestamp],
         acceptedResourceRoles: Option[Set[String]],
         ipAddress: Option[IpAddress])
@@ -754,10 +795,14 @@ trait V2Formats {
           (__ \ "dependencies").readNullable[Set[PathId]] ~
           (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
           (__ \ "labels").readNullable[Map[String, String]] ~
+          (__ \ "autoScale").readNullable[AutoScaleDefinition] ~
           (__ \ "version").readNullable[Timestamp] ~
           (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
           (__ \ "ipAddress").readNullable[IpAddress]
         )(ExtraFields)
+          .filter(ValidationError("You cannot specify both instances and autoScale")) { extra =>
+            extra.autoScale.isEmpty || update.instances.isEmpty
+          }
 
       extraReads.filter(ValidationError("You cannot specify both uris and fetch fields")) {
         extra => !(extra.uris.nonEmpty && extra.fetch.nonEmpty)
@@ -766,6 +811,7 @@ trait V2Formats {
           dependencies = extra.dependencies,
           upgradeStrategy = extra.upgradeStrategy,
           labels = extra.labels,
+          autoScale = extra.autoScale,
           version = extra.version,
           acceptedResourceRoles = extra.acceptedResourceRoles,
           ipAddress = extra.ipAddress,

@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.core.autoscale.AutoScaleConfig
 import mesosphere.marathon.core.flow.{ ReviveOffersConfig, LaunchTokenConfig }
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
@@ -16,7 +17,7 @@ trait MarathonConf
     extends ScallopConf with ZookeeperConf with LeaderProxyConf
     with LaunchTokenConfig with OfferMatcherManagerConfig with OfferProcessorConfig with ReviveOffersConfig
     with MarathonSchedulerServiceConfig with LaunchQueueConfig with PluginManagerConfiguration
-    with TaskStatusUpdateConfig with TaskTrackerConfig {
+    with TaskStatusUpdateConfig with TaskTrackerConfig with AutoScaleConfig {
 
   //scalastyle:off magic.number
 

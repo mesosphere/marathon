@@ -78,6 +78,8 @@ final case class DeploymentPlan(
     // FIXME: check for group change conflicts?
     affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
+  def affects(app: AppDefinition): Boolean = affectedApplicationIds.contains(app.id)
+
   override def toString: String = {
     def appString(app: AppDefinition): String = {
       val cmdString = app.cmd.fold("")(cmd => ", cmd=\"" + cmd + "\"")
