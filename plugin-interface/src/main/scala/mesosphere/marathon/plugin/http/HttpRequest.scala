@@ -31,5 +31,10 @@ trait HttpRequest {
     * @return the values of the query parameter.
     */
   def queryParam(name: String): Seq[String]
+
+  /**
+    * @return IP address of the client that sent the request
+    */
+  def remoteAddr: String
 }
 
