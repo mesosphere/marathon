@@ -5,6 +5,10 @@
 We tested this release against Mesos version 0.26.0. Thus, this is the recommended Mesos version for this
 release.
 
+### Breaking Changes
+Marathon will not start up if there's an error registering with the current framework id. The previous behaviour was to
+register as a new framework. We changed this in order to avoid orphaning the running tasks in case of transient errors.
+
 ### Overview
 
 #### Expose additional app definition variables
@@ -71,6 +75,10 @@ If an application requires IP-per-task, then it can not request ports to be allo
 
 Currently, this feature does not work in combination with Docker containers. We might still change some
 aspects of the API and we appreciate your feedback.
+
+#### Improved migrations from v0.11
+It is now possible to resume interrupted ZooKeeper state migrations. That means that Marathon can now recover from
+transient errors during the migration process.
 
 #### EXPERIMENTAL: Network security groups
 
