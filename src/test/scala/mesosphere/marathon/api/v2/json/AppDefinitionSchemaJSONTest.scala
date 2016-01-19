@@ -92,4 +92,70 @@ class AppDefinitionSchemaJSONTest extends MarathonSpec with GivenWhenThen {
     Then("validation should succeed")
     MarathonTestHelper.validateJsonSchemaForString(json, valid = false)
   }
+
+  test("command constrains WITH array of arrays of strings should succeed") {
+    Given("constrains WITH nested arrays of strings")
+    val json =
+      """
+        |{
+        |  "id": "/test",
+        |  "cmd": "echo hi",
+        |  "constraints": [
+        |    ["rack_id", "LIKE", "rack-[1-3]"],
+        |    ["hostname", "UNIQUE"]
+        |  ]
+        |}
+      """.stripMargin
+
+    Then("validation should succeed")
+    MarathonTestHelper.validateJsonSchemaForString(json, valid = true)
+  }
+
+  test("command constrains WITH unknown constraint should fail") {
+    Given("constrains WITH nested arrays of strings")
+    val json =
+      """
+        |{
+        |  "id": "/test",
+        |  "cmd": "echo hi",
+        |  "constraints": [
+        |    ["rack_id", "NOT LIKE", "rack-[1-3]"],
+        |    ["hostname", "UNIQUE", 1]
+        |  ]
+        |}
+      """.stripMargin
+
+    Then("validation should succeed")
+    MarathonTestHelper.validateJsonSchemaForString(json, valid = false)
+  }
+
+  test("command constrains WITH array of strings and boolean should fail") {
+    Given("constrains WITH nested array of something")
+    val json =
+      """
+        |{
+        |  "id": "/test",
+        |  "cmd": "echo hi",
+        |  "constraints": [["lb", "CLUSTER", true]]
+        |}
+      """.stripMargin
+
+    Then("validation should fail")
+    MarathonTestHelper.validateJsonSchemaForString(json, valid = false)
+  }
+
+  test("command constrains WITH array of one string should fail") {
+    Given("constrains WITH nested array of something")
+    val json =
+      """
+        |{
+        |  "id": "/test",
+        |  "cmd": "echo hi",
+        |  "constraints": [["hostname"]]
+        |}
+      """.stripMargin
+
+    Then("validation should fail")
+    MarathonTestHelper.validateJsonSchemaForString(json, valid = false)
+  }
 }
