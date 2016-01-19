@@ -7,9 +7,9 @@ case class RWLock[T](private val value: T) {
   private[this] val lock = new ReentrantReadWriteLock
 
   private[this] def withLock[U](lock: Lock)(f: T => U): U = {
-    lock.lock() // blocking
-    try { f(value) }
-    finally { lock.unlock() }
+    scala.concurrent.blocking(lock.lock())
+    try f(value)
+    finally lock.unlock()
   }
 
   /**

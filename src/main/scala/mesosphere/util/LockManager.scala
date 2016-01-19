@@ -27,7 +27,9 @@ object LockManager {
     val locks = loadingCache[String]()
     override def executeSequentially[T](key: String)(future: => Future[T])(implicit ec: ExecutionContext): Future[T] = {
       val lock = locks.get(key)
-      lock.acquire()
+      scala.concurrent.blocking {
+        lock.acquire()
+      }
       val result = future
       result.onComplete { _ => lock.release() }
       result
