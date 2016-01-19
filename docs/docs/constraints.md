@@ -76,7 +76,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-It is important to note that Marathon only knows about different values of the attribute (e.g. "rack_id") by analyzing current running tasks. If tasks are not already spread across all possible values, it may be required to specify the number of values in constraints (assuming you know apriori). For example, if you are spreading across 3 racks, use:
+Marathon only knows about different values of the attribute (e.g. "rack_id") by analyzing incoming offers from Mesos. If tasks are not already spread across all possible values, specify the number of values in constraints. If you don't specify the number of values, you might find that the tasks are only distributed in one value, even though you are using the GROUP_BY constraint. For example, if you are spreading across 3 racks, use:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
