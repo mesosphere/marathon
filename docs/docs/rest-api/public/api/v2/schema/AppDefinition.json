@@ -55,9 +55,23 @@
     "constraints": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "array",
+        "items": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "string",
+            "enum": ["UNIQUE", "CLUSTER", "GROUP_BY", "LIKE", "UNLIKE"]
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "minItems": 2,
+        "additionalItems": false
       },
-      "description": "Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY."
+      "description": "Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE."
     },
     "container": {
       "additionalProperties": false,
@@ -472,4 +486,3 @@
   ],
   "type": "object"
 }
-
