@@ -26,6 +26,7 @@ import scala.collection.Map
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
 
 class LockingFailedException(msg: String) extends Exception(msg)
@@ -51,6 +52,7 @@ class MarathonSchedulerActor private (
   var schedulerActions: SchedulerActions = _
   var deploymentManager: ActorRef = _
   var historyActor: ActorRef = _
+  var activeReconciliation: Option[Future[_]] = None
 
   override def preStart(): Unit = {
     schedulerActions = createSchedulerActions(self)
@@ -104,8 +106,26 @@ class MarathonSchedulerActor private (
     case LocalLeadershipEvent.ElectedAsLeader => // ignore
 
     case ReconcileTasks =>
-      schedulerActions.reconcileTasks(driver)
-      sender ! ReconcileTasks.answer
+      import context.dispatcher
+      import akka.pattern.pipe
+      log.info("initiate task reconciliation")
+      val reconcileFuture = activeReconciliation match {
+        case None =>
+          val newFuture = schedulerActions.reconcileTasks(driver)
+          activeReconciliation = Some(newFuture)
+          newFuture.onFailure {
+            case NonFatal(e) => log.error(e, "error while reconciling tasks")
+          }
+          newFuture
+        case Some(active) =>
+          active
+      }
+      reconcileFuture.onComplete(_ => self ! ReconcileFinished)
+      reconcileFuture.map(_ => ReconcileTasks.answer).pipeTo(sender)
+
+    case ReconcileFinished =>
+      log.info("task reconciliation has finished")
+      activeReconciliation = None
 
     case ReconcileHealthChecks =>
       schedulerActions.reconcileHealthChecks()
@@ -340,6 +360,8 @@ object MarathonSchedulerActor {
     def answer: Event = TasksReconciled
   }
 
+  private case object ReconcileFinished
+
   case object ReconcileHealthChecks
 
   case object ScaleApps
@@ -437,26 +459,23 @@ class SchedulerActions(
     * to give Mesos enough time to deliver task updates.
     * @param driver scheduler driver
     */
-  def reconcileTasks(driver: SchedulerDriver): Future[Unit] = {
-    appRepository.allPathIds().map(_.toSet).andThen {
-      case Success(appIds) =>
-        log.info("Syncing tasks for all apps")
-
+  def reconcileTasks(driver: SchedulerDriver): Future[_] = {
+    appRepository.allPathIds().map(_.toSet).flatMap { appIds =>
+      taskTracker.tasksByApp().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>
-          taskTracker.appTasksSync(appId).collect {
+          tasksByApp.appTasks(appId).collect {
             case task: Protos.MarathonTask if task.hasStatus => task.getStatus
             case task: Protos.MarathonTask => // staged tasks, which have no status yet
               taskStatus(task)
           }
         }
 
-        val appList = taskTracker.tasksByAppSync
-        for (unknownAppId <- appList.allAppIdsWithTasks -- appIds) {
+        for (unknownAppId <- tasksByApp.allAppIdsWithTasks -- appIds) {
           log.warn(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          for (orphanTask <- appList.appTasks(unknownAppId)) {
+          for (orphanTask <- tasksByApp.appTasks(unknownAppId)) {
             log.info(s"Killing task ${orphanTask.getId}")
             driver.killTask(protos.TaskID(orphanTask.getId))
           }
@@ -469,10 +488,8 @@ class SchedulerActions(
 
         // in addition to the known statuses send an empty list to get the unknown
         driver.reconcileTasks(java.util.Arrays.asList())
-
-      case Failure(t) =>
-        log.warn("Failed to get task names", t)
-    }.map(_ => ())
+      }
+    }
   }
 
   private def taskStatus(task: Protos.MarathonTask) = {

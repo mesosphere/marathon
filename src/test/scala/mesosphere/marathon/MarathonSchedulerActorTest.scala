@@ -32,8 +32,7 @@ import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.immutable.{ Seq, Set }
-import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ Promise, Future }
 import scala.concurrent.duration._
 
 class MarathonSchedulerActorTest extends MarathonActorSupport
@@ -58,15 +57,16 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   }
 
   test("ReconcileTasks") {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
 
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
-    when(taskTracker.appTasksSync(app.id)).thenReturn(Set.empty[MarathonTask])
-    when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.of(TaskTracker.AppTasks("nope".toPath, tasks)))
-    when(taskTracker.appTasksSync("nope".toPath)).thenReturn(tasks)
+    when(taskTracker.tasksByApp()(org.mockito.Matchers.any())).thenReturn(
+      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks("nope".toPath, tasks)))
+    )
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
-    when(taskTracker.countAppTasksSync(app.id)).thenReturn(0)
 
     val schedulerActor = createActor()
     try {
@@ -474,6 +474,50 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     finally {
       stopActor(schedulerActor)
     }
+  }
+
+  test("Do not run reconciliation concurrently") {
+    val actions = mock[SchedulerActions]
+    schedulerActions = _ => actions
+    val schedulerActor = createActor()
+
+    val reconciliationPromise = Promise[Unit]()
+    when(actions.reconcileTasks(any()).asInstanceOf[Future[Unit]]).thenReturn(reconciliationPromise.future)
+
+    schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+
+    schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+    schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+
+    reconciliationPromise.success(())
+
+    expectMsg(MarathonSchedulerActor.TasksReconciled)
+    expectMsg(MarathonSchedulerActor.TasksReconciled)
+
+    schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+    expectMsg(MarathonSchedulerActor.TasksReconciled)
+
+    verify(actions, times(2)).reconcileTasks(any())
+
+  }
+
+  test("Concurrent reconciliation check is not preventing sequential calls") {
+    val actions = mock[SchedulerActions]
+    schedulerActions = _ => actions
+    val schedulerActor = createActor()
+
+    when(actions.reconcileTasks(any()).asInstanceOf[Future[Unit]]).thenReturn(Future.successful(()))
+
+    schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
+
+    schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+    expectMsg(MarathonSchedulerActor.TasksReconciled)
+    schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+    expectMsg(MarathonSchedulerActor.TasksReconciled)
+    schedulerActor ! MarathonSchedulerActor.ReconcileTasks
+    expectMsg(MarathonSchedulerActor.TasksReconciled)
+
+    verify(actions, times(3)).reconcileTasks(any())
   }
 
   var repo: AppRepository = _
