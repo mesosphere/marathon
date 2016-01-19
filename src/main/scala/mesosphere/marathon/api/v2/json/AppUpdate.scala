@@ -7,9 +7,10 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 
 import mesosphere.marathon.Protos.Constraint
+
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ OnlyVersion, NoVersion }
-import mesosphere.marathon.state.{ AppDefinition, Container, IpAddress, PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state.{ AppDefinition, Container, FetchUri, IpAddress, PathId, Timestamp, UpgradeStrategy }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
@@ -38,7 +39,7 @@ case class AppUpdate(
 
     constraints: Option[Set[Constraint]] = None,
 
-    uris: Option[Seq[String]] = None,
+    fetch: Option[Seq[FetchUri]] = None,
 
     storeUrls: Option[Seq[String]] = None,
 
@@ -91,7 +92,7 @@ case class AppUpdate(
     disk = disk.getOrElse(app.disk),
     executor = executor.getOrElse(app.executor),
     constraints = constraints.getOrElse(app.constraints),
-    uris = uris.getOrElse(app.uris),
+    fetch = fetch.getOrElse(app.fetch),
     storeUrls = storeUrls.getOrElse(app.storeUrls),
     ports = ports.getOrElse(app.ports),
     requirePorts = requirePorts.getOrElse(app.requirePorts),
@@ -121,5 +122,6 @@ object AppUpdate {
     appUp.upgradeStrategy is valid
     appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
     appUp.ports is optional(elementsAreUnique(AppDefinition.filterOutRandomPorts))
+    appUp.fetch is optional(every(fetchUriIsValid))
   }
 }

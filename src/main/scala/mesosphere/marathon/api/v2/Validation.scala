@@ -1,10 +1,10 @@
 package mesosphere.marathon.api.v2
 
-import java.net.{ URLConnection, HttpURLConnection, URL }
+import java.net._
 
 import com.wix.accord._
 import mesosphere.marathon.ValidationFailedException
-
+import mesosphere.marathon.state.FetchUri
 import play.api.libs.json._
 
 import scala.reflect.ClassTag
@@ -88,6 +88,20 @@ object Validation {
         }.getOrElse(
           Failure(Set(RuleViolation(url, "url could not be resolved", None)))
         )
+      }
+    }
+  }
+
+  def fetchUriIsValid: Validator[FetchUri] = {
+    new Validator[FetchUri] {
+      def apply(uri: FetchUri) = {
+        try {
+          new URI(uri.uri)
+          Success
+        }
+        catch {
+          case _: URISyntaxException => Failure(Set(RuleViolation(uri.uri, "URI has invalid syntax.", None)))
+        }
       }
     }
   }

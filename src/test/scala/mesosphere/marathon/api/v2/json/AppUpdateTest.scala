@@ -9,7 +9,8 @@ import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
-import play.api.libs.json.Json
+import play.api.data.validation.ValidationError
+import play.api.libs.json.{ JsError, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -71,7 +72,7 @@ class AppUpdateTest extends MarathonSpec {
       disk = Some(1024.0),
       executor = Some("/opt/executors/bin/some.executor"),
       constraints = Some(Set()),
-      uris = Some(Seq("http://dl.corp.org/prodX-1.2.3.tgz")),
+      fetch = Some(Seq(FetchUri(uri = "http://dl.corp.org/prodX-1.2.3.tgz"))),
       ports = Some(Seq(0, 0)),
       backoff = Some(2.seconds),
       backoffFactor = Some(1.2),
@@ -196,5 +197,20 @@ class AppUpdateTest extends MarathonSpec {
 
     val changed = AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(versionInfo = app.versionInfo)
     assert(changed == app.copy(acceptedResourceRoles = Some(Set("b"))))
+  }
+
+  test("update may not have both uris and fetch") {
+    val json =
+      """
+      {
+        "id": "app-with-network-isolation",
+        "uris": ["http://example.com/file1.tar.gz"],
+        "fetch": [{"uri": "http://example.com/file1.tar.gz"}]
+      }
+      """
+
+    import Formats._
+    val result = Json.fromJson[AppUpdate](Json.parse(json))
+    assert(result == JsError(ValidationError("You cannot specify both uris and fetch fields")))
   }
 }

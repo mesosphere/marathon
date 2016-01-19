@@ -65,7 +65,7 @@ object V2TestFormats {
       "disk" -> update.disk.map(_.toDouble),
       "executor" -> update.executor,
       "constraints" -> update.constraints,
-      "uris" -> update.uris,
+      "fetch" -> update.fetch,
       "storeUrls" -> update.storeUrls,
       "ports" -> update.ports,
       "requirePorts" -> update.requirePorts,

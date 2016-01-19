@@ -13,7 +13,8 @@ class AppDefinitionFormatsTest
     extends MarathonSpec
     with V2Formats
     with HealthCheckFormats
-    with Matchers {
+    with Matchers
+    with FetchUriFormats {
 
   import Formats.PathIdFormat
 
@@ -55,6 +56,7 @@ class AppDefinitionFormatsTest
     (r1 \ "executor").as[String] should equal (DefaultExecutor)
     (r1 \ "constraints").as[Set[Constraint]] should equal (DefaultConstraints)
     (r1 \ "uris").as[Seq[String]] should equal (DefaultUris)
+    (r1 \ "fetch").as[Seq[FetchUri]] should equal (DefaultFetch)
     (r1 \ "storeUrls").as[Seq[String]] should equal (DefaultStoreUrls)
     (r1 \ "ports").as[Seq[Long]] should equal (DefaultPorts.map(_.toInt))
     (r1 \ "requirePorts").as[Boolean] should equal (DefaultRequirePorts)
@@ -100,7 +102,7 @@ class AppDefinitionFormatsTest
     r1.disk should equal (DefaultDisk)
     r1.executor should equal (DefaultExecutor)
     r1.constraints should equal (DefaultConstraints)
-    r1.uris should equal (DefaultUris)
+    r1.fetch should equal (DefaultFetch)
     r1.storeUrls should equal (DefaultStoreUrls)
     r1.ports should equal (DefaultPorts)
     r1.requirePorts should equal (DefaultRequirePorts)

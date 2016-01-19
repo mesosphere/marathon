@@ -1013,32 +1013,29 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(!env.contains("PORT_23"))
   }
 
-  test("TaskNoURIExtraction") {
+  test("TaskWillCopyFetchIntoCommand") {
+    val command = TaskBuilder.commandInfo(
+      app = AppDefinition(
+        fetch = Seq(
+          FetchUri(uri = "http://www.example.com", extract = false, cache = true, executable = false),
+          FetchUri(uri = "http://www.example2.com", extract = true, cache = true, executable = true)
+        )
+      ),
+      taskId = Some(TaskID("task-123")),
+      host = Some("host.mega.corp"),
+      ports = Seq(1000, 1001),
+      envPrefix = None
+    )
 
-    val command =
-      TaskBuilder.commandInfo(
-        app = AppDefinition(
-          id = "testApp".toPath,
-          cpus = 1.0,
-          mem = 64.0,
-          disk = 1.0,
-          executor = "//cmd",
-          uris = Seq("http://www.example.com", "http://www.example.com/test.tgz", "example.tar.gz"),
-          ports = Seq(8080, 8081)
-        ),
-        taskId = Some(TaskID("task-123")),
-        host = Some("host.mega.corp"),
-        ports = Seq(1000, 1001),
-        envPrefix = None
-      )
+    assert(command.getUris(0).getValue.contentEquals("http://www.example.com"))
+    assert(command.getUris(0).getCache)
+    assert(!command.getUris(0).getExtract)
+    assert(!command.getUris(0).getExecutable)
 
-    val uriinfo1 = command.getUris(0)
-    assert(!uriinfo1.getExtract)
-    val uriinfo2 = command.getUris(1)
-    assert(uriinfo2.getExtract)
-    val uriinfo3 = command.getUris(2)
-    assert(uriinfo3.getExtract)
-
+    assert(command.getUris(1).getValue.contentEquals("http://www.example2.com"))
+    assert(command.getUris(1).getCache)
+    assert(command.getUris(1).getExtract)
+    assert(command.getUris(1).getExecutable)
   }
 
   // #2865 Multiple explicit ports are mixed up in task json
