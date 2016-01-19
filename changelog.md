@@ -1,3 +1,13 @@
+## Changes from 0.14.0 to 0.15.0
+
+### Breaking Changes
+
+#### haproxy-marathon-bridge is deprecated and removed from the bin directory
+
+In recent versions we published a simple shell script to update haproxy configuration.
+marathon-lb is the successor of this script and can be found here: https://github.com/mesosphere/marathon-lb
+The script can still be found in the examples directory.
+
 ## Changes from 0.13.0 to 0.14.0
 
 ### Recommended Mesos version is 0.26.0
