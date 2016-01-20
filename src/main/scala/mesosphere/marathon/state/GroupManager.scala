@@ -204,7 +204,7 @@ class GroupManager @Singleton @Inject() (
   //scalastyle:off method.length
   private[state] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = from.transitiveApps.flatMap(_.ports)
+    var taken = to.transitiveApps.flatMap(_.ports)
 
     def nextGlobalFreePort: JInt = synchronized {
       val port = portRange.find(!taken.contains(_))

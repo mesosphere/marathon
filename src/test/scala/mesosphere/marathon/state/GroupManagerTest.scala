@@ -131,6 +131,17 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     update.transitiveApps.flatMap(_.ports.filter(x => x >= 10 && x <= 20)) should have size 5
   }
 
+  // Regression test for #2868
+  test("Don't assign duplicated service ports") {
+    val group = Group(PathId.empty, Set(
+      AppDefinition("/app1".toPath, ports = Seq(0, 10))
+    ))
+    val update = manager(10, 20).assignDynamicServicePorts(Group.empty, group)
+
+    val assignedPorts: Set[Integer] = update.transitiveApps.flatMap(_.ports)
+    assignedPorts should have size 2
+  }
+
   test("If there are not enough ports, a PortExhausted exception is thrown") {
     val group = Group(PathId.empty, Set(
       AppDefinition("/app1".toPath, ports = Seq(0, 0, 0)),
