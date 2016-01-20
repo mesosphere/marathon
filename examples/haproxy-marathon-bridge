@@ -1,3 +1,11 @@
+
+##########################################################
+# DEPRECATION WARNING: This script has been deprecated.  #
+#                                                        #
+# Please use marathon-lb instead:                        #
+# https://github.com/mesosphere/marathon-lb              #
+##########################################################
+
 #!/bin/bash
 set -o errexit -o nounset -o pipefail
 function -h {
