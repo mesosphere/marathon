@@ -106,13 +106,11 @@ case class Group(
   def removeApplication(appId: PathId): Group = copy(apps = apps.filter(_.id != appId))
 
   def makeGroup(gid: PathId): Group = {
-    val restPath = gid.restOf(id)
-    if (gid.isEmpty || restPath.isEmpty) this //group already exists
+    if (gid.isEmpty) this //group already exists
     else {
-      val (change, remaining) = groups.partition(_.id.restOf(id).root == restPath.root)
-      val toUpdate = change.headOption.getOrElse(Group.empty.copy(id = id.append(restPath.rootPath)))
-      val nestedUpdate = if (restPath.isEmpty) toUpdate else toUpdate.makeGroup(restPath.child)
-      this.copy(groups = remaining + nestedUpdate)
+      val (change, remaining) = groups.partition(_.id.restOf(id).root == gid.root)
+      val toUpdate = change.headOption.getOrElse(Group.empty.copy(id = id.append(gid.rootPath)))
+      this.copy(groups = remaining + toUpdate.makeGroup(gid.child))
     }
   }
 
