@@ -224,15 +224,17 @@ class MarathonHealthCheckManager @Inject() (
         ActiveHealthCheck(_, actor) <- ahcs(appId).values.iterator.flatten.toVector
       } yield (actor ? GetAppHealth).mapTo[AppHealth]
 
-      Future.sequence(futureHealths) map { healths =>
+      Future.sequence(futureHealths) flatMap { healths =>
         val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
 
-        taskTracker.appTasksSync(appId).iterator.map { task =>
-          groupedHealth.get(task.getId) match {
-            case Some(xs) => task.getId -> xs.toSeq
-            case None     => task.getId -> Nil
-          }
-        }.toMap
+        taskTracker.appTasks(appId).map { appTasks =>
+          appTasks.iterator.map { task =>
+            groupedHealth.get(task.getId) match {
+              case Some(xs) => task.getId -> xs.toSeq
+              case None     => task.getId -> Nil
+            }
+          }.toMap
+        }
       }
     }
 
