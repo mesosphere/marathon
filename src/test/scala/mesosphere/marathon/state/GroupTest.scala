@@ -376,5 +376,26 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       Then("the cycle is detected")
       current.hasNonCyclicDependencies should equal(false)
     }
+
+    it("can contain a path which has the same name multiple times in it") {
+      Given("a group with subgroups having the same name")
+      val reference: Group = Group("/".toPath, groups = Set(
+        Group("/test".toPath, groups = Set(
+          Group("/test/service".toPath, groups = Set(
+            Group("/test/service/test".toPath, Set(
+              AppDefinition("/test/service/test/app".toPath, cmd = Some("Foobar"))))
+          ))
+        ))
+      ))
+
+      When("App is updated")
+      val app = AppDefinition("/test/service/test/app".toPath, cmd = Some("Foobar"))
+      val group = Group(PathId("/"), Set(app))
+      val updatedGroup = group.updateApp(app.id, { a => app }, Timestamp.zero)
+      val ids = updatedGroup.transitiveGroups.map(_.id)
+
+      Then("All non existing subgroups should be created")
+      ids should equal(reference.transitiveGroups.map(_.id))
+    }
   }
 }
