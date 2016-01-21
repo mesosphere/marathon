@@ -244,9 +244,12 @@ private class OfferMatcherManagerActor private (
     data.sender ! OfferMatcher.MatchedTasks(data.offer.getId, data.tasks, resendThisOffer)
     offerQueues -= data.offer.getId
     metrics.currentOffersGauge.setValue(offerQueues.size)
+    //scalastyle:off magic.number
+    val maxRanges = if (log.isDebugEnabled) 1000 else 10
+    //scalastyle:on magic.number
     log.info(s"Finished processing ${data.offer.getId.getValue}. " +
       s"Matched ${data.tasks.size} tasks after ${data.matchPasses} passes. " +
-      s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala)} left.")
+      s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala, maxRanges)} left.")
   }
 }
 

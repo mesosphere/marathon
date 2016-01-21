@@ -86,6 +86,34 @@ trait MarathonTestHelper {
     offerBuilder
   }
 
+  /**
+    * @param ranges how many port ranges should be included in this offer
+    * @return
+    */
+  def makeBasicOfferWithManyPortRanges(ranges: Int): Offer.Builder = {
+    val role = "*"
+    val cpusResource = ScalarResource(Resource.CPUS, 4.0, role = role)
+    val memResource = ScalarResource(Resource.MEM, 16000, role = role)
+    val diskResource = ScalarResource(Resource.DISK, 1.0, role = role)
+    val portsResource = RangesResource(
+      Resource.PORTS,
+      List.tabulate(ranges)(_ * 2 + 1).map(p => Range(p.toLong, (p + 1).toLong)),
+      role
+    )
+
+    val offerBuilder = Offer.newBuilder
+      .setId(OfferID("1"))
+      .setFrameworkId(FrameworkID("marathon"))
+      .setSlaveId(SlaveID("slave0"))
+      .setHostname("localhost")
+      .addResources(cpusResource)
+      .addResources(memResource)
+      .addResources(diskResource)
+      .addResources(portsResource)
+
+    offerBuilder
+  }
+
   def makeBasicOfferWithRole(cpus: Double, mem: Double, disk: Double,
                              beginPort: Int, endPort: Int, role: String) = {
     val portsResource = RangesResource(
