@@ -151,18 +151,27 @@ object ResourceUtil {
     }
   }
 
-  def displayResource(resource: Resource): String = resource.getType match {
-    case Value.Type.SCALAR => s"${resource.getName} ${resource.getScalar.getValue}"
-    case Value.Type.RANGES =>
-      s"${resource.getName} ${
-        resource.getRanges.getRangeList.asScala.map {
-          range => s"${range.getBegin}->${range.getEnd}"
-        }.mkString(",")
-      }"
-    case other: Value.Type => resource.toString
+
+  def displayResource(resource: Resource, maxRanges: Int): String = {
+    def rangesToString(ranges: Seq[Value.Range]): String = {
+      ranges.map { range => s"${range.getBegin}->${range.getEnd}" }.mkString(",")
+    }
+
+    resource.getType match {
+      case Value.Type.SCALAR => s"${resource.getName} ${resource.getScalar.getValue}"
+      case Value.Type.RANGES =>
+        s"${resource.getName} ${
+          val ranges = resource.getRanges.getRangeList.asScala
+          if (ranges.size > maxRanges)
+            s"${rangesToString(ranges.take(maxRanges))} ... (${ranges.size - maxRanges} more)"
+          else
+            rangesToString(ranges)
+        }"
+      case other: Value.Type => resource.toString
+    }
   }
 
-  def displayResources(resources: Iterable[Resource]): String = {
-    resources.map(displayResource).mkString("; ")
+  def displayResources(resources: Iterable[Resource], maxRanges: Int): String = {
+    resources.map(displayResource(_, maxRanges)).mkString("; ")
   }
 }
