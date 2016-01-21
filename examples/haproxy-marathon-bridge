@@ -1,3 +1,5 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
 
 ##########################################################
 # DEPRECATION WARNING: This script has been deprecated.  #
@@ -6,8 +8,6 @@
 # https://github.com/mesosphere/marathon-lb              #
 ##########################################################
 
-#!/bin/bash
-set -o errexit -o nounset -o pipefail
 function -h {
 cat <<USAGE
  USAGE: $name <marathon host:port>+
@@ -69,13 +69,13 @@ function install_haproxy_system {
     then sudo="sudo"
   fi
 
-  current_path="`dirname \"$0\"`"
-  current_path="`( cd \"$current_path\" && pwd )`"  # absolute path
-  if [ "$current_path/$name" = "$script_path" ]
+  current_path=$(dirname $0)
+  current_path=$(cd $current_path && pwd) ## absolute path
+  if [ $current_path/$name = $script_path ]
   then
     # executing the script from its install location leads to an empty file
     echo "running $name in install mode from the install path $script_path is not supported."
-    exit 1  # fail
+    exit 1 ## fail
   fi
 
   if hash lsb_release 2>/dev/null
