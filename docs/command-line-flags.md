@@ -54,14 +54,14 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * <span class="label label-default">v0.13.0</span> `--[disable_]ha` (Optional. Default: enabled):
     Run Marathon in HA mode with leader election.
     Allows starting an arbitrary number of other Marathons but all need to be
-    started in HA mode. This mode requires a running ZooKeeper. See `--master`.
+    started in HA mode. This mode requires a running ZooKeeper.
 * `--hostname` (Optional. Default: hostname of machine): The advertised hostname
     that is used for the communication with the mesos master.
     The value is also stored in the persistent store so another standby host can redirect to the elected leader.
     _Note: Default is determined by
     [`InetAddress.getLocalHost`](http://docs.oracle.com/javase/7/docs/api/java/net/InetAddress.html#getLocalHost())._
 * `--webui_url` (Optional. Default: None): The url of the Marathon web ui. It
-    is passed to Mesos to be used in links back to the Marathon UI. If not set,
+    is passed to Mesos to be used in links back to the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html). If not set,
     the url to the leading instance will be sent to Mesos.
 * <span class="label label-default">v0.9.0</span> `--leader_proxy_connection_timeout` (Optional. Default: 5000):
     Maximum time, in milliseconds, for connecting to the

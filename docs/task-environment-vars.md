@@ -44,9 +44,17 @@ names through the `--env_vars_prefix` command line flag.
   was used to start this task. For example `2015-04-02T09:37:00.596Z`.
 - `MARATHON_APP_DOCKER_IMAGE` contains the value of the app definition 
   `container.docker.image` value. For example `mesosphere/marathon:latest`, `nginx` or `nginx:1.9.3`.
+- `MARATHON_APP_RESOURCE_CPUS` contains the value of the app definition `cpus` value.
+- `MARATHON_APP_RESOURCE_MEM` contains the value of the app definition `mem` value, expressed in megabytes.
+- `MARATHON_APP_RESOURCE_DISK`  value of the app definition `disk` value, expressed in megabytes.
+- `MARATHON_APP_LABELS` contains list of labels of the corresponding app definition. For example: `label1 label2 label3`
+- `MARATHON_APP_LABEL_NAME` contains value of label "NAME" of the corresponding app definition. 
 
 _Note: No custom prefix will be added to these variable names, even if one is
 specified via the `--env_vars_prefix` command line flag.
+
+_Note: Label name will be sanitized: all characters except a-z A-Z 0-9 _ will be replaced with _. 
+All keys and values longer than 512 chars will be omitted.
 
 ## Task Metadata
 

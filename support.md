@@ -9,6 +9,11 @@ title: Getting Support for Marathon
 Marathon is under constant development by the team at Mesosphere. The team keeps
 an eye on questions in a few places.
 
+### GitHub Issues
+Issues and feature requests can be filed through the [GitHub Issues page](https://github.com/mesosphere/marathon/issues).
+For all requests specific to the **Marathon UI**, we ask you to kindly supply
+the [`gui`](https://github.com/mesosphere/marathon/issues?q=is%3Aopen+is%3Aissue+label%3Agui) label.
+
 ### Marathon Google Group
 
 The

@@ -1690,7 +1690,7 @@ Content-Type: application/json
 Server: Jetty(8.y.z-SNAPSHOT)
 
 {
-    "message": "Leadership abdicted"
+    "message": "Leadership abdicated"
 }
 ```
 

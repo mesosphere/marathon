@@ -181,6 +181,16 @@ Transfer-Encoding: chunked
                 "portIndex": 0,
                 "protocol": "HTTP",
                 "timeoutSeconds": 10
+            },
+            {
+                "command": null,
+                "gracePeriodSeconds": 5,
+                "intervalSeconds": 10,
+                "maxConsecutiveFailures": 6,
+                "path": "/machinehealth",
+                "overridePort": 3333,
+                "protocol": "HTTP",
+                "timeoutSeconds": 10
             }
         ],
         "id": "/toggle",
@@ -211,6 +221,14 @@ Transfer-Encoding: chunked
                         "lastFailure": null,
                         "lastSuccess": "2014-09-13T00:25:07.506Z",
                         "taskId": "toggle.802df2ae-3ad4-11e4-a400-56847afe9799"
+                    },
+                    {
+                        "alive": true,
+                        "consecutiveFailures": 0,
+                        "firstSuccess": "2014-09-13T00:20:28.101Z",
+                        "lastFailure": null,
+                        "lastSuccess": "2014-09-13T00:25:07.506Z",
+                        "taskId": "toggle.802df2ae-3ad4-11e4-a400-56847afe9799"
                     }
                 ],
                 "host": "10.141.141.10",
@@ -232,6 +250,14 @@ Transfer-Encoding: chunked
                         "lastFailure": null,
                         "lastSuccess": "2014-09-13T00:25:07.508Z",
                         "taskId": "toggle.7c99814d-3ad4-11e4-a400-56847afe9799"
+                    },
+                    {
+                        "alive": true,
+                        "consecutiveFailures": 0,
+                        "firstSuccess": "2014-09-13T00:20:28.101Z",
+                        "lastFailure": null,
+                        "lastSuccess": "2014-09-13T00:25:07.506Z",
+                        "taskId": "toggle.802df2ae-3ad4-11e4-a400-56847afe9799"
                     }
                 ],
                 "host": "10.141.141.10",

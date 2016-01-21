@@ -69,6 +69,6 @@ This will enable you to run a local version of Marathon, for development purpose
     $ start-marathon
     ```
 
-10. Load the Marathon UI in your browser: http://10.141.141.10:8080
+10. Load the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html) in your browser: http://10.141.141.10:8080
 
 When you're done, use `vagrant halt` to shut down the Vagrant instance and spare your battery life.

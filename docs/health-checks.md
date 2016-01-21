@@ -65,28 +65,43 @@ more details.
 
 #### Health check options
 
+The first thing you need to decide is the protocol of your health check:
+
+* `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
+  performed. One of "HTTP"/"TCP"/"COMMAND".
+
+HTTP/TCP health checks are executed by Marathon and thus test the reachability from
+the current Marathon leader. COMMAND health checks are locally executed by Mesos on
+the agent running the corresponding task.
+
+Options applicable to every protocol:
+
 * `gracePeriodSeconds` (Optional. Default: 300): Health check failures are
   ignored within this number of seconds or until the task becomes healthy for
   the first time.
 * `intervalSeconds` (Optional. Default: 60): Number of seconds to wait between
   health checks.
-* `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
+* `maxConsecutiveFailures`(Optional. Default: 3): Number of consecutive health
   check failures after which the unhealthy task should be killed. If this value
   is `0`, then tasks will not be killed due to failing this check.
-* `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
-  will provide health  status. Example: "/path/to/health".
-  _Note: only used if `protocol == "HTTP"`._
-* `portIndex` (Optional. Default: 0): Index in this app's `ports` array to be
+* `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
+  health check is considered a failure regardless of the response.
+
+For TCP/HTTP health checks, you need to specify either `port` or `portIndex`:
+
+* `portIndex` (Optional. Default: None): Index in this app's `ports` array to be
   used for health requests. An index is used so the app can use random ports,
   like "[0, 0, 0]" for example, and tasks could be started with port environment
   variables like `$PORT1`.
-* `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
-  performed. One of "HTTP" or "TCP".
-* `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
-  health check is considered a failure regardless of the response.
+* `port` (Optional. Default: None): Port number to be used for health requests.
+
+The following options only apply to HTTP health checks:
+
+* `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
+  will provide health  status. Example: "/path/to/health".
 * `ignoreHttp1xx` (Optional. Default: false): Ignore HTTP informational status
-codes 100 to 199. If the HTTP health check returns one of these, the result is
-discarded and the health status of the task remains unchanged.
+  codes 100 to 199. If the HTTP health check returns one of these, the result is
+  discarded and the health status of the task remains unchanged.
 
 #### Health Lifecycle
 
