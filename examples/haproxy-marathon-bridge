@@ -1,3 +1,5 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
 
 ##########################################################
 # DEPRECATION WARNING: This script has been deprecated.  #
@@ -6,8 +8,6 @@
 # https://github.com/mesosphere/marathon-lb              #
 ##########################################################
 
-#!/bin/bash
-set -o errexit -o nounset -o pipefail
 function -h {
 cat <<USAGE
  USAGE: $name <marathon host:port>+
@@ -64,6 +64,20 @@ function refresh_system_haproxy {
 
 function install_haproxy_system {
 
+  sudo=""
+  if [[ $EUID -ne 0 ]]
+    then sudo="sudo"
+  fi
+
+  current_path=$(dirname $0)
+  current_path=$(cd $current_path && pwd) ## absolute path
+  if [ $current_path/$name = $script_path ]
+  then
+    # executing the script from its install location leads to an empty file
+    echo "running $name in install mode from the install path $script_path is not supported."
+    exit 1 ## fail
+  fi
+
   if hash lsb_release 2>/dev/null
   then
     os=$(lsb_release -si)
@@ -77,16 +91,16 @@ function install_haproxy_system {
      
   if [[ $os == "CentOS" ]] || [[ $os == "RHEL" ]] || [[ $os == "AmazonAMI" ]] || [[ $os == "OracleServer" ]]
   then
-    sudo yum install -y haproxy
-    sudo chkconfig haproxy on
+    $sudo yum install -y haproxy
+    $sudo chkconfig haproxy on
   elif [[ $os == "Ubuntu" ]] || [[ $os == "Debian" ]]
   then 
-    sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
-    sudo sed -i 's/^ENABLED=0/ENABLED=1/' /etc/default/haproxy
+    $sudo env DEBIAN_FRONTEND=noninteractive aptitude install -y haproxy
+    $sudo sed -i 's/^ENABLED=0/ENABLED=1/' /etc/default/haproxy
   elif [[ $os == "SuSE" ]]
   then
-    sudo zypper -n --no-gpg-checks --non-interactive install --auto-agree-with-licenses haproxy
-    sudo chkconfig haproxy on
+    $sudo zypper -n --no-gpg-checks --non-interactive install --auto-agree-with-licenses haproxy
+    $sudo chkconfig haproxy on
   else 
     echo "$os is not a supported OS for this feature."
     exit 1
@@ -95,15 +109,15 @@ function install_haproxy_system {
 }
 
 function install_cronjob {
-  sudo mkdir -p "$(dirname "$cronjob_conf_file")"
-  [[ -f $cronjob_conf_file ]] || sudo touch "$cronjob_conf_file"
+  $sudo mkdir -p "$(dirname "$cronjob_conf_file")"
+  [[ -f $cronjob_conf_file ]] || $sudo touch "$cronjob_conf_file"
   if [[ $# -gt 0 ]]
-  then printf '%s\n' "$@" | sudo dd of="$cronjob_conf_file"
+  then printf '%s\n' "$@" | $sudo dd of="$cronjob_conf_file"
   fi
-  cat "$0" | sudo dd of="$script_path"
-  sudo chmod ug+rx "$script_path"
-  cronjob  | sudo dd of="$cronjob"
-  header   | sudo dd of=/etc/haproxy/"$conf_file"
+  cat "$0" | $sudo dd of="$script_path"
+  $sudo chmod ug+rx "$script_path"
+  cronjob  | $sudo dd of="$cronjob"
+  header   | $sudo dd of=/etc/haproxy/"$conf_file"
 }
 
 function cronjob {
