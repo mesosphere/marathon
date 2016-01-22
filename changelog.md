@@ -13,9 +13,11 @@ The v2 REST API was extended to support the Mesos fetcher cache. This allows use
 that will be copied into the task sandbox prior to running the task, from either a local or external location. For
 details on the fetcher cache's capabilities, please see the fetcher cache [documentation](http://mesos.apache.org/documentation/latest/fetcher/).
 
-#### Migration from Marathon version 0.5 removed
+#### Migration from Marathon version 0.7 or lower removed
 
-It is no longer possible to migrate from Marathon version 0.5.
+It is no longer possible to migrate from Marathon versions prior to version 0.8. If you want to upgrade old
+versions we recommend to do a step by step migration using the latest stable version following your installed version
+and so on.
 
 #### haproxy-marathon-bridge is deprecated and removed from the bin directory
 
@@ -74,6 +76,8 @@ hopefully leads to better error messages in the future.
 - #2989 - Report task count metrics
 - #2868 - Marathon sometimes tries (and fails) to assign duplicated service ports
 - #2938 - Don't log giant port lists
+- #2855 - Create app failed when there're multiple same word in the app id
+- #3051 - Can't add dynamic ports using PUT
 
 ## Changes from 0.13.0 to 0.14.0
 
