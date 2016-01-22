@@ -4,6 +4,7 @@ import java.io.File
 
 import mesosphere.marathon.api.v2.json.{ AppUpdate, AppUpdate$ }
 import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.integration.setup.MarathonFacade._
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
@@ -27,11 +28,6 @@ class SingleAppScalingTest
 
   //clean up state before running the test case
   before(cleanUp())
-
-  def extractDeploymentIds(app: RestResult[AppDefinition]): Seq[String] = {
-    for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
-      yield (deployment \ "id").as[String]
-  }
 
   override def startMarathon(port: Int, args: String*): Unit = {
     val cwd = new File(".")

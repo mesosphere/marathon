@@ -151,7 +151,6 @@ object ResourceUtil {
     }
   }
 
-
   def displayResource(resource: Resource, maxRanges: Int): String = {
     def rangesToString(ranges: Seq[Value.Range]): String = {
       ranges.map { range => s"${range.getBegin}->${range.getEnd}" }.mkString(",")

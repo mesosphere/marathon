@@ -58,9 +58,14 @@ object ProcessKeeper {
     val mesosWorkDirFile: File = new File(mesosWorkDirForMesos)
     FileUtils.deleteDirectory(mesosWorkDirFile)
     FileUtils.forceMkdir(mesosWorkDirFile)
+
+    val mesosEnv = Seq(
+      ENV_MESOS_WORK_DIR -> mesosWorkDirForMesos,
+      "MESOS_LAUNCHER" -> "posix",
+      "MESOS_CONTAINERIZERS" -> "docker,mesos")
     startProcess(
       "mesos",
-      Process(Seq("mesos-local", "--ip=127.0.0.1"), cwd = None, ENV_MESOS_WORK_DIR -> mesosWorkDirForMesos, "MESOS_LAUNCHER" -> "posix"),
+      Process(Seq("mesos-local", "--ip=127.0.0.1"), cwd = None, mesosEnv: _*),
       upWhen = _.toLowerCase.contains("registered with master"))
   }
 

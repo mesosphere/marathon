@@ -9,6 +9,7 @@ import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
 import mesosphere.marathon.state.{ Group, AppDefinition, PathId, Timestamp }
 import org.slf4j.LoggerFactory
+import play.api.libs.json.JsArray
 import spray.client.pipelining._
 import spray.http._
 import spray.httpx.PlayJsonSupport
@@ -16,6 +17,7 @@ import spray.httpx.PlayJsonSupport
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
 /**
   * GET /apps will deliver something like Apps instead of List[App]
@@ -297,5 +299,18 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   def getPath(path: String): RestResult[HttpResponse] = {
     val pipeline = marathonSendReceive ~> responseResult
     result(pipeline(Get(s"$url$path")), waitTime)
+  }
+}
+
+object MarathonFacade {
+  def extractDeploymentIds(app: RestResult[AppDefinition]): scala.collection.Seq[String] = {
+    try {
+      for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
+        yield (deployment \ "id").as[String]
+    }
+    catch {
+      case NonFatal(e) =>
+        throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
+    }
   }
 }
