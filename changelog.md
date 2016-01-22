@@ -1,12 +1,83 @@
 ## Changes from 0.14.0 to 0.15.0
 
-### Breaking Changes
+### Recommended Mesos version is 0.26.0
+
+We tested this release against Mesos version 0.26.0. Thus, this is the recommended Mesos version for this
+release.
+
+### Overview
+
+#### Integration of Mesos Fetcher Cache
+
+The v2 REST API was extended to support the Mesos fetcher cache. This allows users to configure a list of resource URIs
+that will be copied into the task sandbox prior to running the task, from either a local or external location. For
+details on the fetcher cache's capabilities, please see the fetcher cache [documentation](http://mesos.apache.org/documentation/latest/fetcher/).
+
+#### Migration from Marathon version 0.7 or lower removed
+
+It is no longer possible to migrate from Marathon versions prior to version 0.8. If you want to upgrade old
+versions we recommend to do a step by step migration using the latest stable version following your installed version
+and so on.
 
 #### haproxy-marathon-bridge is deprecated and removed from the bin directory
 
 In recent versions we published a simple shell script to update haproxy configuration.
 marathon-lb is the successor of this script and can be found here: https://github.com/mesosphere/marathon-lb
 The script can still be found in the examples directory.
+
+### Under the Hood
+
+There have been a lot of interesting changes which we only summarize for now. In the next days, we will
+follow up with extend documentation about them.
+
+#### New metrics
+
+We will provide some cursory introduction into important metrics soon.
+
+#### Limit concurrent status update processing
+
+We now limit the maximum number of concurrently processed task status updates. If the limit is reached,
+further status updates are queued. The queue is limited, too, so that at some point new status updates
+are rejected and not acknowledged. Eventually, Mesos will resend the status updates that we didn't process.
+
+#### Task state tracking redesign
+
+We have rewritten the component that holds the task states: the `TaskTracker`. We removed the old implementation
+that used concurrent data structures, and now use an actor based implementation. The new implementation is easier to
+reason about and allows explicit concurrency management as described in the last section.
+
+#### Explicit queuing of application configuration updates
+
+Marathon has been serializing updates to the app configuration for a while. We made queuing outstanding 
+configuration requests explicit and also limited the maximum size of the queue.
+
+#### Optimized /v2/tasks (TXT)
+
+Since some service discovery solutions poll this end-point, performance is important. We improved 
+request rates by about 30%.
+
+#### Changes to the threading model
+
+Prior to this release, Marathon would create new threads when needed. Now we switched to a model where we
+have some fixed size thread pools and thread pools that will only grow if too many threads have become blocked.
+This should reduce the number of threads under load.
+
+#### Model validation
+
+Marathon is now utilizing [Accord](http://wix.github.io/accord/), a modern approach to model validation which will
+hopefully leads to better error messages in the future.
+
+### Fixed issues
+- #2918 - Incorrect Step-wise timers in TaskStatusUpdateProcessorImpl
+- #2919 - StateMetrics.timed(Read/Write) incorrectly used for methods returning Futures
+- #2951 - Incorrect Constraint lead to an application exception, but should give an error response
+- #2957 - Unbounded ThreadPool is used for too many operations
+- #2982 - Double offerLeadership invocation after driver failure
+- #2989 - Report task count metrics
+- #2868 - Marathon sometimes tries (and fails) to assign duplicated service ports
+- #2938 - Don't log giant port lists
+- #2855 - Create app failed when there're multiple same word in the app id
+- #3051 - Can't add dynamic ports using PUT
 
 ## Changes from 0.13.0 to 0.14.0
 
