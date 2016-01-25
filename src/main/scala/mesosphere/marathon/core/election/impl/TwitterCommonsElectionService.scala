@@ -92,10 +92,14 @@ class TwitterCommonsElectionService(
       "ZooKeeper timeout too large!"
     )
 
-    val client = new ZooKeeperLeaderElectionClient(
-      Amount.of(config.zooKeeperSessionTimeout().toInt, Time.MILLISECONDS),
-      config.zooKeeperHostAddresses.asJavaCollection
-    )
+    val sessionTimeout = Amount.of(config.zooKeeperSessionTimeout().toInt, Time.MILLISECONDS)
+    val zooKeeperServers = config.zooKeeperHostAddresses.asJavaCollection
+    val client = (config.zkUsername, config.zkPassword) match {
+      case (Some(user), Some(pass)) =>
+        new ZooKeeperClient(sessionTimeout, ZooKeeperClient.digestCredentials(user, pass), zooKeeperServers)
+      case _ =>
+        new ZooKeeperClient(sessionTimeout, zooKeeperServers)
+    }
 
     // Marathon can't do anything useful without a ZK connection
     // so we wait to proceed until one is available

@@ -12,7 +12,7 @@ import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.util.JavaTimer
-import com.twitter.zk.{ NativeConnector, ZkClient }
+import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
@@ -34,7 +34,6 @@ import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore, _ }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.mesos.state.ZooKeeperState
-import org.apache.zookeeper.ZooDefs.Ids
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
@@ -135,9 +134,16 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     def directZK(): PersistentStore = {
       import com.twitter.util.TimeConversions._
       val sessionTimeout = conf.zooKeeperSessionTimeout().millis
-      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true))
+
+      val authInfo = (conf.zkUsername, conf.zkPassword) match {
+        case (Some(user), Some(pass)) => Some(AuthInfo.digest(user, pass))
+        case _ => None
+      }
+
+      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true), authInfo)
+
       val client = ZkClient(connector)
-        .withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
+        .withAcl(conf.zkDefaultCreationACL.asScala)
         .withRetries(3)
       val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
       new ZKStore(client, client(conf.zooKeeperStatePath), compressionConf)

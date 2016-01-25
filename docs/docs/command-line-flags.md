@@ -110,7 +110,10 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Additional callback URLs may also be set dynamically via the REST API.
 * `--zk` (Optional. Default: `zk://localhost:2181/marathon`): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
-* `--zk_max_versions` (Optional. Default: 25): Limit the number of versions stored for one entity.
+    - <span class="label label-default">v1.1.2</span> Format: `zk://user@pass:host1:port1,user@pass:host2:port2,.../path`.
+    When authentication is enabled the default ACL will be changed and all subsequent reads must be done using the same auth.
+* `--zk_max_versions` (Optional. Default: None): Limit the number of versions
+    stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
     in milliseconds.
 *  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 1.800.000 (30 minutes)): Timeout for ZooKeeper
