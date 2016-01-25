@@ -1,11 +1,11 @@
 package mesosphere.marathon.metrics
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.codahale.metrics.{Gauge, MetricRegistry}
 import com.google.inject.Inject
-import mesosphere.marathon.metrics.Metrics.{Histogram, Meter, Timer}
+import mesosphere.marathon.metrics.Metrics.{ Histogram, Meter, Timer, Counter }
 import org.aopalliance.intercept.MethodInvocation
 
 import scala.collection.concurrent.TrieMap
@@ -26,6 +26,10 @@ class Metrics @Inject() (val registry: MetricRegistry) {
     finally {
       timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
     }
+  }
+
+  def counter(name: String): Counter = {
+    new Counter(registry.counter(name))
   }
 
   def timer(name: String): Timer = {
@@ -64,6 +68,11 @@ class Metrics @Inject() (val registry: MetricRegistry) {
 }
 
 object Metrics {
+  class Counter(counter: com.codahale.metrics.Counter) {
+    def inc(): Unit = counter.inc()
+    def dec(): Unit = counter.dec()
+  }
+
   class Timer(timer: com.codahale.metrics.Timer) {
     def apply[T](block: => T): T = {
       val startTime = System.nanoTime()
@@ -74,6 +83,8 @@ object Metrics {
         timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
       }
     }
+
+    def updateMillis(time: Long): Unit = timer.update(time, TimeUnit.MILLISECONDS)
   }
 
   class Histogram(histogram: com.codahale.metrics.Histogram) {
@@ -87,13 +98,9 @@ object Metrics {
   }
 
   class Meter(meter: com.codahale.metrics.Meter) {
-    def mark(): Unit = {
-      meter.mark()
-    }
-
-    def mark(n: Long): Unit = {
-      meter.mark(n)
-    }
+    def mark(): Unit = meter.mark()
+    def mark(n: Long): Unit = meter.mark(n)
+    def mark(n: Int): Unit = meter.mark(n.toLong)
   }
 
   class AtomicIntGauge extends Gauge[Int] {

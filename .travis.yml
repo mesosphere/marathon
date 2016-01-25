@@ -1,6 +1,6 @@
 language: scala
 jdk:
-  - openjdk6
+  - oraclejdk8
 scala:
   - 2.11.5
 script: sbt clean coverage doc test
