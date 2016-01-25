@@ -15,7 +15,7 @@ import com.google.inject.name.Names
 import com.twitter.common.base.Supplier
 import com.twitter.common.zookeeper.{ Candidate, CandidateImpl, Group => ZGroup, ZooKeeperClient }
 import com.twitter.util.JavaTimer
-import com.twitter.zk.{ NativeConnector, ZkClient }
+import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.LeaderInfo
@@ -36,8 +36,6 @@ import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore, _ }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.mesos.state.ZooKeeperState
-import org.apache.zookeeper.ZooDefs
-import org.apache.zookeeper.ZooDefs.Ids
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -149,9 +147,16 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     def directZK(): PersistentStore = {
       import com.twitter.util.TimeConversions._
       val sessionTimeout = conf.zooKeeperSessionTimeout().millis
-      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true))
+
+      val authInfo = (conf.zkUsername, conf.zkPassword) match {
+        case (Some(user), Some(pass)) => Some(AuthInfo.digest(user, pass))
+        case _ => None
+      }
+
+      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true), authInfo)
+
       val client = ZkClient(connector)
-        .withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
+        .withAcl(conf.zkDefaultCreationACL.asScala)
         .withRetries(3)
       val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
       new ZKStore(client, client(conf.zooKeeperStatePath), compressionConf)
@@ -256,7 +261,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   def provideCandidate(zk: ZooKeeperClient, @Named(ModuleNames.HOST_PORT) hostPort: String): Option[Candidate] = {
     if (conf.highlyAvailable()) {
       log.info("Registering in ZooKeeper with hostPort:" + hostPort)
-      val candidate = new CandidateImpl(new ZGroup(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE, conf.zooKeeperLeaderPath),
+      val candidate = new CandidateImpl(new ZGroup(zk, conf.zkDefaultCreationACL, conf.zooKeeperLeaderPath),
         new Supplier[Array[Byte]] {
           def get(): Array[Byte] = {
             hostPort.getBytes("UTF-8")
