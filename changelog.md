@@ -67,6 +67,26 @@ This should reduce the number of threads under load.
 Marathon is now utilizing [Accord](http://wix.github.io/accord/), a modern approach to model validation which will
 hopefully leads to better error messages in the future.
 
+### Marathon UI
+
+A number of very convenient features and improvements made it into this release. 
+
+#### Perform actions directly from the Applications list
+A new contextual dropdown menu in the Applications list gives access to the most useful actions (scale, destroy,
+suspend, etc.) without having to enter an application's detail view. Additionally, it is now possible to perform scale
+and delete operations on entire Groups. 
+
+#### Better feedback
+The feedback dialogs have been completely redesigned to be clearer and more useful, adding three possible color-coded
+severity levels: `info`, `warning` and `error`. In addition, the action button labels have been rephrased for improved
+usability. Buttons that may lead to dangerous actions (such as "force scale") are also not preselected by default anymore.
+
+#### Application Health
+The health status breakdown is now also shown in the application details page.
+
+#### ...and much more
+For the complete set of changes, please refer to the [Marathon UI CHANGELOG](https://github.com/mesosphere/marathon-ui/blob/master/CHANGELOG.md)
+
 ### Fixed issues
 - #2918 - Incorrect Step-wise timers in TaskStatusUpdateProcessorImpl
 - #2919 - StateMetrics.timed(Read/Write) incorrectly used for methods returning Futures
@@ -78,6 +98,13 @@ hopefully leads to better error messages in the future.
 - #2938 - Don't log giant port lists
 - #2855 - Create app failed when there're multiple same word in the app id
 - #3051 - Can't add dynamic ports using PUT
+- #2892 - Version in task detail component shouldn't be localised
+- #2893 - App page component should display the right number of tasks
+- #2949 - AjaxWrapper does't handle TypeError correctly
+- #3605 - Prevent ctrl-c keyboard shortcut from showing the Create modal dialog
+- #3054 - Empty - non set- application attributes are accidentaly submited by the UI
+- #3064 - Labels dropdown menu not showing up
+- #3063 - After scaling a healthy app to 0, it appears to be Infinity% overcapacity
 
 ## Changes from 0.13.0 to 0.14.0
 
