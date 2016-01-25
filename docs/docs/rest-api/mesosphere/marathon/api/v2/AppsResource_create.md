@@ -67,8 +67,9 @@ Here is an example of an application JSON which includes all fields.
     "labels": {
         "environment": "staging"
     },
-    "uris": [
-        "https://raw.github.com/mesosphere/marathon/master/README.md"
+    "fetch": [
+        { "uri": "https://raw.github.com/mesosphere/marathon/master/README.md" },
+        { "uri": "https://foo.com/archive.zip", "executable": false, "extract": true, "cache": true }
     ],
     "dependencies": ["/product/db/mongo", "/product/db", "../../db"],
     "healthChecks": [
@@ -234,8 +235,23 @@ to other services, so we added the ability to place labels on apps
 (for example, you could label apps "staging" and "production" to mark
 services by their position in the pipeline).
 
+##### fetch (Array of Objects)
+
+The list of uris to fetch before the task starts.
+Example:  `{ "uri": "http://get.me" }`
+Example:  `{ "uri": "https://foo.com/archive.zip", "executable": false, "extract": true, "cache": true }`
+On every artifact you can define the following properties:
+
+* `uri`: URI to be fetched by Mesos fetcher module
+* `executable`: Set fetched artifact as executable
+* `extract`: Extract fetched artifact if supported by Mesos fetcher module
+* `cache`: Cache fetched artifact if supported by Mesos fetcher module
+
+For documentation about the mesos fetcher cache, see here: http://mesos.apache.org/documentation/latest/fetcher/
+
 ##### uris (Array of Strings)
 
+__Deprecated__. Use fetch instead.
 URIs defined here are resolved, before the application gets started. If the application has external dependencies, they should be defined here.
 
 ##### dependencies (Array of Strings)
