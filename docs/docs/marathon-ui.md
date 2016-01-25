@@ -66,6 +66,53 @@ True if the `queue` endpoint returns the
 following JSON conditions:
 `queueEntry.delay.overdue === false && queueEntry.delay.timeLeftSeconds > 0`
 
+## Application Health Reference
+It is possible to specify health checks to be run against an application's
+tasks. For instructions on how to set up and use health checks, please refer to the
+[Health Checks page]({{ site.baseurl }}/health-checks.html) page.
+
+<img src="{{ site.baseurl }}/img/marathon-ui-health.png" width="700" alt="Health States in Marathon UI">
+
+An application's task lifecycle always falls into one of the following
+conditions.
+
+#### Healthy
+A task is considered Healthy when all of the supplied Health Checks are
+passing.
+
+-----------
+
+#### Unhealthy
+A task is considered Unhealthy whenever one or more health checks are reported
+as failing.
+
+-----------
+
+#### Staged
+A task is Staged when a launch request has been submitted to the cluster.
+
+-----------
+
+Additionally, the UI introduces the following concepts.
+
+#### Unknown
+When a task is reported as Running but whose health condition cannot be
+determined due to missing Health Checks.
+
+-----------
+
+#### Overcapacity
+Whenever there are more running tasks than the amount of instances requested.
+This happens, for example, when a rolling restart is performed with a deployment
+policy that enforces a draining approach (i.e. new tasks are started before the
+running ones could be destroyed).
+
+-----------
+
+#### Unscheduled
+Whenever a task never manages to reach the Staged status, e.g. when no
+matching offer has been received.
+
 -----------
 
 
