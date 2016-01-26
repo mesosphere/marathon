@@ -5,7 +5,7 @@ import akka.event.LoggingReceive
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ MatchTimeout, OfferData }
@@ -47,7 +47,7 @@ private[manager] object OfferMatcherManagerActor {
       deadline: Timestamp,
       sender: ActorRef,
       matcherQueue: Queue[OfferMatcher],
-      tasks: Seq[TaskWithSource],
+      tasks: Seq[TaskOpWithSource],
       matchPasses: Int = 0,
       resendThisOffer: Boolean = false) {
 
@@ -58,7 +58,7 @@ private[manager] object OfferMatcherManagerActor {
       }
     }
 
-    def addTasks(added: Seq[TaskWithSource]): OfferData = {
+    def addTasks(added: Seq[TaskOpWithSource]): OfferData = {
       val offerResources: Seq[Resource] = offer.getResourcesList.asScala
       val taskResources: Seq[Resource] = added.map(_.taskInfo).flatMap(_.getResourcesList.asScala)
       val leftOverResources = ResourceUtil.consumeResources(offerResources, taskResources)
@@ -133,7 +133,7 @@ private class OfferMatcherManagerActor private (
   private[this] def receiveProcessOffer: Receive = {
     case ActorOfferMatcher.MatchOffer(deadline, offer: Offer) if !offersWanted =>
       log.debug(s"Ignoring offer ${offer.getId.getValue}: No one interested.")
-      sender() ! OfferMatcher.MatchedTasks(offer.getId, Seq.empty, resendThisOffer = false)
+      sender() ! OfferMatcher.MatchedTaskOps(offer.getId, Seq.empty, resendThisOffer = false)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer: Offer) =>
       log.debug(s"Start processing offer ${offer.getId.getValue}")
@@ -156,7 +156,7 @@ private class OfferMatcherManagerActor private (
   }
 
   private[this] def receiveMatchedTasks: Receive = {
-    case OfferMatcher.MatchedTasks(offerId, addedTasks, resendOffer) =>
+    case OfferMatcher.MatchedTaskOps(offerId, addedTasks, resendOffer) =>
       def processAddedTasks(data: OfferData): OfferData = {
         val dataWithTasks = try {
           val (launchTasks, rejectedTasks) =
@@ -234,14 +234,14 @@ private class OfferMatcherManagerActor private (
           .recover {
             case NonFatal(e) =>
               log.warning("Received error from {}", e)
-              MatchedTasks(data.offer.getId, Seq.empty, resendThisOffer = true)
+              MatchedTaskOps(data.offer.getId, Seq.empty, resendThisOffer = true)
           }.pipeTo(self)
       case None => sendMatchResult(data, data.resendThisOffer)
     }
   }
 
   private[this] def sendMatchResult(data: OfferData, resendThisOffer: Boolean): Unit = {
-    data.sender ! OfferMatcher.MatchedTasks(data.offer.getId, data.tasks, resendThisOffer)
+    data.sender ! OfferMatcher.MatchedTaskOps(data.offer.getId, data.tasks, resendThisOffer)
     offerQueues -= data.offer.getId
     metrics.currentOffersGauge.setValue(offerQueues.size)
     //scalastyle:off magic.number

@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTasks, TaskWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
@@ -49,7 +49,7 @@ private[launcher] class OfferProcessorImpl(
     val matchingDeadline = clock.now() + offerMatchingTimeout
     val savingDeadline = matchingDeadline + saveTasksToLaunchTimeout
 
-    val matchFuture: Future[MatchedTasks] = matchTimeMeter.timeFuture {
+    val matchFuture: Future[MatchedTaskOps] = matchTimeMeter.timeFuture {
       offerMatcher.matchOffer(matchingDeadline, offer)
     }
 
@@ -58,18 +58,18 @@ private[launcher] class OfferProcessorImpl(
         case NonFatal(e) =>
           matchErrorsMeter.mark()
           log.error(s"error while matching '${offer.getId.getValue}'", e)
-          MatchedTasks(offer.getId, Seq.empty, resendThisOffer = true)
+          MatchedTaskOps(offer.getId, Seq.empty, resendThisOffer = true)
       }.flatMap {
-        case MatchedTasks(offerId, tasks, resendThisOffer) =>
+        case MatchedTaskOps(offerId, tasks, resendThisOffer) =>
           savingTasksTimeMeter.timeFuture {
             saveTasks(tasks, savingDeadline).map { savedTasks =>
               def notAllSaved: Boolean = savedTasks.size != tasks.size
-              MatchedTasks(offerId, savedTasks, resendThisOffer || notAllSaved)
+              MatchedTaskOps(offerId, savedTasks, resendThisOffer || notAllSaved)
             }
           }
       }.flatMap {
-        case MatchedTasks(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
-        case MatchedTasks(offerId, tasks, _)             => launchTasks(offerId, tasks)
+        case MatchedTaskOps(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
+        case MatchedTaskOps(offerId, tasks, _)             => launchTasks(offerId, tasks)
       }
   }
 
@@ -80,7 +80,7 @@ private[launcher] class OfferProcessorImpl(
     Future.successful(())
   }
 
-  private[this] def launchTasks(offerId: OfferID, tasks: Seq[TaskWithSource]): Future[Unit] = {
+  private[this] def launchTasks(offerId: OfferID, tasks: Seq[TaskOpWithSource]): Future[Unit] = {
     if (taskLauncher.launchTasks(offerId, tasks.map(_.taskInfo))) {
       log.debug("Offer [{}]. Task launch successful", offerId.getValue)
       tasks.foreach(_.accept())
@@ -93,7 +93,7 @@ private[launcher] class OfferProcessorImpl(
     }
   }
 
-  private[this] def removeTasks(tasks: Seq[TaskWithSource]): Future[Unit] = {
+  private[this] def removeTasks(tasks: Seq[TaskOpWithSource]): Future[Unit] = {
     tasks.foldLeft(Future.successful(())) { (terminatedFuture, nextTask) =>
       terminatedFuture.flatMap { _ =>
         val appId = TaskIdUtil.appId(nextTask.marathonTask.getId)
@@ -110,8 +110,8 @@ private[launcher] class OfferProcessorImpl(
     * Saves the given tasks sequentially, evaluating before each save whether the given deadline has been reached
     * already.
     */
-  private[this] def saveTasks(tasks: Seq[TaskWithSource], savingDeadline: Timestamp): Future[Seq[TaskWithSource]] = {
-    def saveTask(task: TaskWithSource): Future[Option[TaskWithSource]] = {
+  private[this] def saveTasks(tasks: Seq[TaskOpWithSource], savingDeadline: Timestamp): Future[Seq[TaskOpWithSource]] = {
+    def saveTask(task: TaskOpWithSource): Future[Option[TaskOpWithSource]] = {
       log.info("Save task [{}]", task.marathonTask.getId)
       val taskId = task.marathonTask.getId
       val appId = TaskIdUtil.appId(taskId)
@@ -130,7 +130,7 @@ private[launcher] class OfferProcessorImpl(
         }
     }
 
-    tasks.foldLeft(Future.successful(Vector.empty[TaskWithSource])) { (savedTasksFuture, nextTask) =>
+    tasks.foldLeft(Future.successful(Vector.empty[TaskOpWithSource])) { (savedTasksFuture, nextTask) =>
       savedTasksFuture.flatMap { savedTasks =>
         if (clock.now() > savingDeadline) {
           savingTasksTimeoutMeter.mark(savedTasks.size.toLong)
