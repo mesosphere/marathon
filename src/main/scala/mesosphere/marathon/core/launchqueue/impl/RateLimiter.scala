@@ -3,7 +3,8 @@ package mesosphere.marathon.core.launchqueue.impl
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
+import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
+import mesosphere.marathon.state.{ RunSpec, PathId, Timestamp }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -13,19 +14,28 @@ import scala.concurrent.duration._
   *
   * We do not keep the delays for every version because that would include scaling changes or manual restarts.
   */
-private[launchqueue] class RateLimiter(clock: Clock) {
+private[launchqueue] class RateLimiter(launchQueueConfig: LaunchQueueConfig, clock: Clock) {
   import RateLimiter._
 
   /** The task launch delays per run spec and their last config change. */
   private[this] var taskLaunchDelays = Map[(PathId, Timestamp), Delay]()
 
-  def cleanUpOverdueDelays(): Unit = {
+  def getMinimumTaskExecutionSeconds: FiniteDuration =
+    launchQueueConfig.minimumTaskExecutionSeconds().seconds
+
+  /**
+    * Reset delay for tasks that have reached the viability
+    * threshold. The deadline indicates when the task has been
+    * launched for the last time.
+    */
+  def resetDelaysOfViableTasks(): Unit = {
     taskLaunchDelays = taskLaunchDelays.filter {
-      case (_, delay) => delay.deadline > clock.now()
+      case (_, delay) =>
+        clock.now() - getMinimumTaskExecutionSeconds < delay.deadline
     }
   }
 
-  def getDelay(spec: RunSpec): Timestamp =
+  def getDeadline(spec: RunSpec): Timestamp =
     // TODO (pods): RunSpec has no versionInfo. Need this?
     taskLaunchDelays.get(spec.id -> spec.versionInfo.lastConfigChangeVersion).map(_.deadline) getOrElse clock.now()
 
@@ -72,7 +82,7 @@ private object RateLimiter {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
   private object Delay {
-    def apply(clock: Clock, runSpec: RunSpec): Delay = Delay(clock, runSpec.backoffStrategy.backoff)
+    def apply(clock: Clock, runSpec: RunSpec): Delay = Delay(clock.now() + runSpec.backoffStrategy.backoff, runSpec.backoffStrategy.backoff)
     def apply(clock: Clock, delay: FiniteDuration): Delay = Delay(clock.now() + delay, delay)
   }
 
