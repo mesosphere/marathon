@@ -134,7 +134,7 @@ class GroupDeployIntegrationTest
     waitForChange(update)
   }
 
-  test("rollback from an upgrade of group") {
+  ignore("rollback from an upgrade of group") {
     Given("A group with one application")
     val gid = "proxy".toRootTestPath
     val appId = gid / "app"

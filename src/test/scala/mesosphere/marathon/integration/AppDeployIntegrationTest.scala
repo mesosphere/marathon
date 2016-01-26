@@ -11,6 +11,7 @@ import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.JsArray
 import spray.httpx.UnsuccessfulResponseException
+import WaitTestSupport._
 
 import scala.concurrent.duration._
 
@@ -317,12 +318,11 @@ class AppDeployIntegrationTest
 
     When("all task of an app are killed")
     val result = marathon.killAllTasksAndScale(app.id)
+    result.code should be (200)
     result.value.version should not be empty
-    waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
-    waitForEventWith("status_update_event", _.info("taskStatus") == "TASK_KILLED")
-    waitForEvent("deployment_success")
 
     Then("All instances of the app get restarted")
+    waitForEvent("deployment_success")
     waitForTasks(app.id, 0)
     marathon.app(app.id).value.app.instances should be (0)
   }
@@ -407,7 +407,7 @@ class AppDeployIntegrationTest
     val deploymentId = extractDeploymentIds(create).head
 
     Then("the deployment can not be finished")
-    marathon.listDeploymentsForBaseGroup().value should have size 1
+    waitUntil("The deployment is visible", 10.second) (marathon.listDeploymentsForBaseGroup().value.size == 1)
 
     When("the deployment is forcefully removed")
     val delete = marathon.deleteDeployment(deploymentId, force = true)
@@ -415,7 +415,7 @@ class AppDeployIntegrationTest
 
     Then("the deployment should be gone")
     waitForEvent("deployment_failed")
-    marathon.listDeploymentsForBaseGroup().value should have size 0
+    waitUntil("The deployment is visible", 10.second) (marathon.listDeploymentsForBaseGroup().value.isEmpty)
 
     Then("the app should still be there")
     marathon.app(appId).code should be (200)
@@ -431,7 +431,7 @@ class AppDeployIntegrationTest
     val deploymentId = extractDeploymentIds(create).head
 
     Then("the deployment can not be finished")
-    marathon.listDeploymentsForBaseGroup().value should have size 1
+    waitUntil("The deployment is visible", 10.second) (marathon.listDeploymentsForBaseGroup().value.size == 1)
 
     When("the deployment is rolled back")
     val delete = marathon.deleteDeployment(deploymentId, force = false)
@@ -440,7 +440,7 @@ class AppDeployIntegrationTest
     Then("the deployment should be gone")
     waitForEvent("deployment_failed")
     waitForEvent("deployment_success")
-    marathon.listDeploymentsForBaseGroup().value should have size 0
+    waitUntil("Deployments get removed from the queue", 10.seconds) (marathon.listDeploymentsForBaseGroup().value.isEmpty)
 
     Then("the app should also be gone")
     val result = intercept[UnsuccessfulResponseException] {
