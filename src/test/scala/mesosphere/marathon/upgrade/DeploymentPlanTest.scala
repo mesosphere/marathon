@@ -179,7 +179,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     Given("an empty group and the same group but now including four independent apps")
     val emptyGroup = Group(id = "/test".toPath)
 
-    val instances: Integer = 10
+    val instances: Int = 10
 
     val apps: Set[AppDefinition] = (1 to 4).map { i =>
       AppDefinition(s"/test/$i".toPath, Some("cmd"), instances = instances)

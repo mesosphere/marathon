@@ -1,7 +1,5 @@
 package mesosphere.marathon.api.v2.json
 
-import java.lang.{ Double => JDouble }
-
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
@@ -107,7 +105,7 @@ trait Formats
       "id" -> task.getId,
       "host" -> (if (task.hasHost) task.getHost else JsNull),
       "ipAddresses" -> MarathonTasks.ipAddresses(task),
-      "ports" -> task.getPortsList.asScala,
+      "ports" -> task.getPortsList.asScala.map(_.intValue),
       "startedAt" -> (if (task.getStartedAt != 0) Timestamp(task.getStartedAt) else JsNull),
       "stagedAt" -> (if (task.getStagedAt != 0) Timestamp(task.getStagedAt) else JsNull),
       "version" -> task.getVersion,
@@ -143,15 +141,6 @@ trait Formats
     Writes[Timestamp] { t => JsString(t.toString) }
   )
 
-  implicit lazy val IntegerFormat: Format[Integer] = Format(
-    Reads.of[Int].map(Int.box),
-    Writes[Integer] { i => JsNumber(i.intValue) }
-  )
-  implicit lazy val DoubleFormat: Format[JDouble] = Format(
-    Reads.of[Double].map(Double.box),
-    Writes[JDouble] { d => JsNumber(d.doubleValue()) }
-  )
-
   implicit lazy val CommandFormat: Format[Command] = Json.format[Command]
 
   implicit lazy val ParameterFormat: Format[Parameter] = (
@@ -163,7 +152,7 @@ trait Formats
  * Helpers
  */
 
-  def uniquePorts: Reads[Seq[Integer]] = Format.of[Seq[Integer]].filter { ports =>
+  def uniquePorts: Reads[Seq[Int]] = Format.of[Seq[Int]].filter { ports =>
     val withoutRandom = ports.filterNot(_ == AppDefinition.RandomPortValue)
     withoutRandom.distinct.size == withoutRandom.size
   }
@@ -203,9 +192,9 @@ trait ContainerFormats {
     enumFormat(DockerInfo.Network.valueOf, str => s"$str is not a valid network type")
 
   implicit lazy val PortMappingFormat: Format[Docker.PortMapping] = (
-    (__ \ "containerPort").formatNullable[Integer].withDefault(0) ~
-    (__ \ "hostPort").formatNullable[Integer].withDefault(0) ~
-    (__ \ "servicePort").formatNullable[Integer].withDefault(0) ~
+    (__ \ "containerPort").formatNullable[Int].withDefault(0) ~
+    (__ \ "hostPort").formatNullable[Int].withDefault(0) ~
+    (__ \ "servicePort").formatNullable[Int].withDefault(0) ~
     (__ \ "protocol").formatNullable[String].withDefault("tcp")
   )(PortMapping(_, _, _, _), unlift(PortMapping.unapply))
 
@@ -471,8 +460,8 @@ trait V2Formats {
   implicit lazy val UpgradeStrategyReads: Reads[UpgradeStrategy] = {
     import mesosphere.marathon.state.AppDefinition._
     (
-      (__ \ "minimumHealthCapacity").readNullable[JDouble].withDefault(DefaultUpgradeStrategy.minimumHealthCapacity) ~
-      (__ \ "maximumOverCapacity").readNullable[JDouble].withDefault(DefaultUpgradeStrategy.maximumOverCapacity)
+      (__ \ "minimumHealthCapacity").readNullable[Double].withDefault(DefaultUpgradeStrategy.minimumHealthCapacity) ~
+      (__ \ "maximumOverCapacity").readNullable[Double].withDefault(DefaultUpgradeStrategy.maximumOverCapacity)
     )(UpgradeStrategy(_, _))
   }
 
@@ -503,10 +492,10 @@ trait V2Formats {
       (__ \ "args").readNullable[Seq[String]] ~
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultEnv) ~
-      (__ \ "instances").readNullable[Integer](minValue(0)).withDefault(AppDefinition.DefaultInstances) ~
-      (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)).withDefault(AppDefinition.DefaultCpus) ~
-      (__ \ "mem").readNullable[JDouble].withDefault(AppDefinition.DefaultMem) ~
-      (__ \ "disk").readNullable[JDouble].withDefault(AppDefinition.DefaultDisk) ~
+      (__ \ "instances").readNullable[Int](minValue(0)).withDefault(AppDefinition.DefaultInstances) ~
+      (__ \ "cpus").readNullable[Double](greaterThan(0.0)).withDefault(AppDefinition.DefaultCpus) ~
+      (__ \ "mem").readNullable[Double].withDefault(AppDefinition.DefaultMem) ~
+      (__ \ "disk").readNullable[Double].withDefault(AppDefinition.DefaultDisk) ~
       (__ \ "executor").readNullable[String](Reads.pattern(executorPattern))
       .withDefault(AppDefinition.DefaultExecutor) ~
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(AppDefinition.DefaultConstraints) ~
@@ -532,7 +521,7 @@ trait V2Formats {
           uris: Seq[String],
           fetch: Seq[FetchUri],
           dependencies: Set[PathId],
-          maybePorts: Option[Seq[Integer]],
+          maybePorts: Option[Seq[Int]],
           upgradeStrategy: UpgradeStrategy,
           labels: Map[String, String],
           acceptedResourceRoles: Option[Set[String]],
@@ -544,7 +533,7 @@ trait V2Formats {
             (__ \ "uris").readNullable[Seq[String]].withDefault(AppDefinition.DefaultUris) ~
             (__ \ "fetch").readNullable[Seq[FetchUri]].withDefault(AppDefinition.DefaultFetch) ~
             (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies) ~
-            (__ \ "ports").readNullable[Seq[Integer]](uniquePorts) ~
+            (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(AppDefinition.DefaultUpgradeStrategy) ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
@@ -561,7 +550,7 @@ trait V2Formats {
         extraReads.map { extra =>
           // Normally, our default is one port. If an ipAddress is defined that would lead to an error
           // if left unchanged.
-          def defaultPorts: Seq[Integer] = if (extra.ipAddress.isDefined) Nil else AppDefinition.DefaultPorts
+          def defaultPorts: Seq[Int] = if (extra.ipAddress.isDefined) Nil else AppDefinition.DefaultPorts
           def fetch: Seq[FetchUri] = if (extra.fetch.nonEmpty) extra.fetch else extra.uris.map {
             uri => FetchUri(uri = uri, extract = FetchUri.isExtract(uri))
           }
@@ -727,17 +716,17 @@ trait V2Formats {
     (__ \ "args").readNullable[Seq[String]] ~
     (__ \ "user").readNullable[String] ~
     (__ \ "env").readNullable[Map[String, String]] ~
-    (__ \ "instances").readNullable[Integer](minValue(0)) ~
-    (__ \ "cpus").readNullable[JDouble](greaterThan(0.0)) ~
-    (__ \ "mem").readNullable[JDouble] ~
-    (__ \ "disk").readNullable[JDouble] ~
+    (__ \ "instances").readNullable[Int](minValue(0)) ~
+    (__ \ "cpus").readNullable[Double](greaterThan(0.0)) ~
+    (__ \ "mem").readNullable[Double] ~
+    (__ \ "disk").readNullable[Double] ~
     (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)) ~
     (__ \ "constraints").readNullable[Set[Constraint]] ~
     (__ \ "storeUrls").readNullable[Seq[String]] ~
-    (__ \ "ports").readNullable[Seq[Integer]](uniquePorts) ~
+    (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
     (__ \ "requirePorts").readNullable[Boolean] ~
     (__ \ "backoffSeconds").readNullable[Long].map(_.map(_.seconds)) ~
-    (__ \ "backoffFactor").readNullable[JDouble] ~
+    (__ \ "backoffFactor").readNullable[Double] ~
     (__ \ "maxLaunchDelaySeconds").readNullable[Long].map(_.map(_.seconds)) ~
     (__ \ "container").readNullable[Container] ~
     (__ \ "healthChecks").readNullable[Set[HealthCheck]]

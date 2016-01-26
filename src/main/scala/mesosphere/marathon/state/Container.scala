@@ -3,7 +3,6 @@ package mesosphere.marathon.state
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.util.Try
-import java.lang.{ Integer => JInt }
 import org.apache.mesos.{ Protos => mesos }
 import mesosphere.marathon.Protos
 
@@ -167,9 +166,9 @@ object Container {
       * @param protocol      Layer 4 protocol to expose (i.e. tcp, udp).
       */
     case class PortMapping(
-        containerPort: JInt = 0,
-        hostPort: JInt = 0,
-        servicePort: JInt = 0,
+        containerPort: Int = 0,
+        hostPort: Int = 0,
+        servicePort: Int = 0,
         protocol: String = "tcp") {
 
       require(protocol == "tcp" || protocol == "udp", "protocol can only be 'tcp' or 'udp'")

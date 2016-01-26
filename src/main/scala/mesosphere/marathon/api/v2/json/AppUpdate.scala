@@ -1,15 +1,10 @@
 package mesosphere.marathon.api.v2.json
 
-import java.net.{ URLConnection, HttpURLConnection, URL }
-import java.lang.{ Double => JDouble, Integer => JInt }
-
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation._
-
 import mesosphere.marathon.Protos.Constraint
-
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.AppDefinition.VersionInfo.{ OnlyVersion, NoVersion }
+import mesosphere.marathon.state.AppDefinition.VersionInfo.{ NoVersion, OnlyVersion }
 import mesosphere.marathon.state.{ AppDefinition, Container, FetchUri, IpAddress, PathId, Timestamp, UpgradeStrategy }
 
 import scala.collection.immutable.Seq
@@ -27,13 +22,13 @@ case class AppUpdate(
 
     env: Option[Map[String, String]] = None,
 
-    instances: Option[JInt] = None,
+    instances: Option[Int] = None,
 
-    cpus: Option[JDouble] = None,
+    cpus: Option[Double] = None,
 
-    mem: Option[JDouble] = None,
+    mem: Option[Double] = None,
 
-    disk: Option[JDouble] = None,
+    disk: Option[Double] = None,
 
     executor: Option[String] = None,
 
@@ -43,13 +38,13 @@ case class AppUpdate(
 
     storeUrls: Option[Seq[String]] = None,
 
-    ports: Option[Seq[JInt]] = None,
+    ports: Option[Seq[Int]] = None,
 
     requirePorts: Option[Boolean] = None,
 
     backoff: Option[FiniteDuration] = None,
 
-    backoffFactor: Option[JDouble] = None,
+    backoffFactor: Option[Double] = None,
 
     maxLaunchDelay: Option[FiniteDuration] = None,
 

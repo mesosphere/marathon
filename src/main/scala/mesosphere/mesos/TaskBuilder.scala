@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ IpAddress, AppDefinition, PathId, DiscoveryInfo }
+import mesosphere.marathon.state.{ AppDefinition, DiscoveryInfo, IpAddress, PathId }
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
@@ -15,7 +15,6 @@ import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-import scala.collection.mutable
 
 class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => TaskID,
@@ -25,7 +24,7 @@ class TaskBuilder(app: AppDefinition,
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
-  def buildIfMatches(offer: Offer, runningTasks: => Iterable[MarathonTask]): Option[(TaskInfo, Seq[Long])] = {
+  def buildIfMatches(offer: Offer, runningTasks: => Iterable[MarathonTask]): Option[(TaskInfo, Seq[Int])] = {
 
     val acceptedResourceRoles: Set[String] = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
 
@@ -81,7 +80,7 @@ class TaskBuilder(app: AppDefinition,
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String,
-                    portsResources: Seq[RangesResource]): Some[(TaskInfo, Seq[Long])] = {
+                    portsResources: Seq[RangesResource]): Some[(TaskInfo, Seq[Int])] = {
 
     val executor: Executor = if (app.executor == "") {
       config.executor
@@ -92,7 +91,7 @@ class TaskBuilder(app: AppDefinition,
 
     val host: Option[String] = Some(offer.getHostname)
 
-    val ports = portsResources.flatMap(_.ranges.flatMap(_.asScala()).to[Seq])
+    val ports = portsResources.flatMap(_.ranges.flatMap(_.asScala()).to[Seq].map(_.toInt))
 
     val labels = app.labels.map {
       case (key, value) =>
@@ -193,7 +192,7 @@ class TaskBuilder(app: AppDefinition,
     }
   }
 
-  protected def computeContainerInfo(ports: Seq[Long]): Option[ContainerInfo] = {
+  protected def computeContainerInfo(ports: Seq[Int]): Option[ContainerInfo] = {
     if (app.container.isEmpty && app.ipAddress.isEmpty) None
     else {
       val builder = ContainerInfo.newBuilder
@@ -213,10 +212,10 @@ class TaskBuilder(app: AppDefinition,
                 // fixed most easily if the container port is the same as the externally visible host
                 // port.
                 if (mapping.containerPort == 0) {
-                  mapping.copy(hostPort = port.toInt, containerPort = port.toInt)
+                  mapping.copy(hostPort = port, containerPort = port)
                 }
                 else {
-                  mapping.copy(hostPort = port.toInt)
+                  mapping.copy(hostPort = port)
                 }
             }
           }
@@ -265,7 +264,7 @@ object TaskBuilder {
   def commandInfo(app: AppDefinition,
                   taskId: Option[TaskID],
                   host: Option[String],
-                  ports: Seq[Long],
+                  ports: Seq[Int],
                   envPrefix: Option[String]): CommandInfo = {
     val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(app.ports)
@@ -293,7 +292,7 @@ object TaskBuilder {
     }
 
     if (app.fetch.nonEmpty) {
-      builder.addAllUris(app.fetch.map(_.toProto).asJava)
+      builder.addAllUris(app.fetch.map(_.toProto()).asJava)
     }
 
     app.user.foreach(builder.setUser)
@@ -312,7 +311,7 @@ object TaskBuilder {
     builder.build()
   }
 
-  def portsEnv(definedPorts: Seq[Integer], assignedPorts: Seq[Long]): Map[String, String] = {
+  def portsEnv(definedPorts: Seq[Int], assignedPorts: Seq[Int]): Map[String, String] = {
     if (assignedPorts.isEmpty) {
       Map.empty
     }

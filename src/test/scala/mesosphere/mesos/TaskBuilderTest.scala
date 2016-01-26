@@ -24,7 +24,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatches") {
     val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -52,7 +52,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .addResources(ScalarResource("disk", 2000))
       .build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -76,7 +76,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("build creates task with appropriate resource share") {
     val offer = makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -105,7 +105,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("build does set disk resource to zero in TaskInfo") {
     val offer = makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -126,7 +126,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000, role = "marathon"
     ).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -158,7 +158,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val labels = Map("foo" -> "bar", "test" -> "test")
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -190,7 +190,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatchesWithArgs") {
     val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -231,7 +231,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatchesWithIpAddress") {
     val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -281,7 +281,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatchesWithIpAddressAndCustomExecutor") {
     val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -333,7 +333,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatchesWithIpAddressAndDiscoveryInfo") {
     val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -408,7 +408,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .addResources(ScalarResource("disk", 2000))
       .build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -437,7 +437,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("BuildIfMatchesWithArgsAndExecutor") {
     val offer = makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -470,7 +470,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -510,7 +510,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "testApp".toPath,
@@ -546,7 +546,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer, AppDefinition(
         id = "testApp".toPath,
         cpus = 1.0,
@@ -1042,7 +1042,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("build with requirePorts preserves the port order") {
     val offer = makeBasicOffer(cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 25000, endPort = 26000).build
 
-    val task: Option[(MesosProtos.TaskInfo, Seq[Long])] = buildIfMatches(
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
@@ -1097,7 +1097,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .build()
   }
 
-  private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Long], offer: Offer): Unit = {
+  private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Int], offer: Offer): Unit = {
     val portsFromTaskInfo = {
       val asScalaRanges = for {
         resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS

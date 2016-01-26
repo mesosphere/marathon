@@ -429,8 +429,6 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
   }
 
   test("Read app with container definition and port mappings") {
-    import java.lang.{ Integer => JInt }
-
     import mesosphere.marathon.state.Container.Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 

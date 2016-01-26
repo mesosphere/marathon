@@ -63,7 +63,7 @@ class PostToEventStreamStepImpl @Inject() (
         appId,
         task.getHost,
         MarathonTasks.ipAddresses(task),
-        task.getPortsList.asScala,
+        task.getPortsList.asScala.map(_.intValue),
         task.getVersion,
         timestamp = timestamp.toString
       )

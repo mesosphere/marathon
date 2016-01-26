@@ -16,7 +16,7 @@ object MarathonTasks {
    */
   def makeTask(id: String,
                host: String,
-               ports: Iterable[Long],
+               ports: Iterable[Int],
                attributes: Iterable[Attribute],
                version: Timestamp,
                now: Timestamp,
@@ -25,7 +25,7 @@ object MarathonTasks {
       .setId(id)
       .setHost(host)
       .setVersion(version.toString())
-      .addAllPorts(ports.map(i => i.toInt: java.lang.Integer).asJava)
+      .addAllPorts(ports.map(i => i: java.lang.Integer).asJava)
       .addAllAttributes(attributes.asJava)
       .setStagedAt(now.toDateTime.getMillis)
       .setSlaveId(slaveId)

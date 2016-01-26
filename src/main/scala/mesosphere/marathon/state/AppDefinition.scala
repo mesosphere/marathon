@@ -1,7 +1,5 @@
 package mesosphere.marathon.state
 
-import java.lang.{ Double => JDouble, Integer => JInt }
-
 import com.wix.accord._
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
@@ -35,13 +33,13 @@ case class AppDefinition(
 
   env: Map[String, String] = AppDefinition.DefaultEnv,
 
-  instances: JInt = AppDefinition.DefaultInstances,
+  instances: Int = AppDefinition.DefaultInstances,
 
-  cpus: JDouble = AppDefinition.DefaultCpus,
+  cpus: Double = AppDefinition.DefaultCpus,
 
-  mem: JDouble = AppDefinition.DefaultMem,
+  mem: Double = AppDefinition.DefaultMem,
 
-  disk: JDouble = AppDefinition.DefaultDisk,
+  disk: Double = AppDefinition.DefaultDisk,
 
   executor: String = AppDefinition.DefaultExecutor,
 
@@ -51,13 +49,13 @@ case class AppDefinition(
 
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
-  ports: Seq[JInt] = AppDefinition.DefaultPorts,
+  ports: Seq[Int] = AppDefinition.DefaultPorts,
 
   requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
 
   backoff: FiniteDuration = AppDefinition.DefaultBackoff,
 
-  backoffFactor: JDouble = AppDefinition.DefaultBackoffFactor,
+  backoffFactor: Double = AppDefinition.DefaultBackoffFactor,
 
   maxLaunchDelay: FiniteDuration = AppDefinition.DefaultMaxLaunchDelay,
 
@@ -119,7 +117,7 @@ case class AppDefinition(
       .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
-      .addAllPorts(ports.asJava)
+      .addAllPorts(ports.map(i => i: Integer).asJava)
       .setRequirePorts(requirePorts)
       .setBackoff(backoff.toMillis)
       .setBackoffFactor(backoffFactor)
@@ -164,9 +162,9 @@ case class AppDefinition(
         v => v.getName -> v.getValue
       }.toMap
 
-    val resourcesMap: Map[String, JDouble] =
+    val resourcesMap: Map[String, Double] =
       proto.getResourcesList.asScala.map {
-        r => r.getName -> (r.getScalar.getValue: JDouble)
+        r => r.getName -> (r.getScalar.getValue: Double)
       }.toMap
 
     val argsOption =
@@ -214,7 +212,7 @@ case class AppDefinition(
       args = argsOption,
       executor = proto.getExecutor,
       instances = proto.getInstances,
-      ports = proto.getPortsList.asScala.to[Seq],
+      ports = proto.getPortsList.asScala.map(_.intValue).to[Seq],
       requirePorts = proto.getRequirePorts,
       backoff = proto.getBackoff.milliseconds,
       backoffFactor = proto.getBackoffFactor,
@@ -425,7 +423,7 @@ object AppDefinition {
 
   val DefaultStoreUrls: Seq[String] = Seq.empty
 
-  val DefaultPorts: Seq[JInt] = Seq(RandomPortValue)
+  val DefaultPorts: Seq[Int] = Seq(RandomPortValue)
 
   val DefaultRequirePorts: Boolean = false
 
@@ -473,7 +471,7 @@ object AppDefinition {
     appDef.fetch is every(fetchUriIsValid)
   }
 
-  def filterOutRandomPorts(ports: scala.Seq[JInt]): scala.Seq[JInt] = {
+  def filterOutRandomPorts(ports: scala.Seq[Int]): scala.Seq[Int] = {
     ports.filterNot(_ == AppDefinition.RandomPortValue)
   }
 

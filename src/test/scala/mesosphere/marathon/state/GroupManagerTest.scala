@@ -118,7 +118,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     ))
     val update = manager(minServicePort = 90, maxServicePort = 900).assignDynamicServicePorts(Group.empty, group)
     update.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
-    update.transitiveApps.flatMap(_.ports) should equal (Set(80, 81).map(Integer.valueOf))
+    update.transitiveApps.flatMap(_.ports) should equal (Set(80, 81))
   }
 
   test("Already taken ports will not be used") {
@@ -138,7 +138,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     ))
     val update = manager(10, 20).assignDynamicServicePorts(Group.empty, group)
 
-    val assignedPorts: Set[Integer] = update.transitiveApps.flatMap(_.ports)
+    val assignedPorts: Set[Int] = update.transitiveApps.flatMap(_.ports)
     assignedPorts should have size 2
   }
 
@@ -152,7 +152,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     ))
     val result = manager(10, 20).assignDynamicServicePorts(originalGroup, updatedGroup)
 
-    val assignedPorts: Set[Integer] = result.transitiveApps.flatMap(_.ports)
+    val assignedPorts: Set[Int] = result.transitiveApps.flatMap(_.ports)
     println(assignedPorts.mkString((",")))
     assignedPorts should have size 3
   }

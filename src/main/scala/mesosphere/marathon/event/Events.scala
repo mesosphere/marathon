@@ -213,7 +213,7 @@ case class MesosStatusUpdateEvent(
   appId: PathId,
   host: String,
   ipAddresses: Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress],
-  ports: Iterable[Integer],
+  ports: Iterable[Int],
   version: String,
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
