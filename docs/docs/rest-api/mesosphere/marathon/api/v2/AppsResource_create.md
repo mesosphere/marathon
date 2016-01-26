@@ -237,7 +237,8 @@ services by their position in the pipeline).
 
 ##### fetch (Array of Objects)
 
-The list of uris to fetch before the task starts.
+Since <span class="label label-default">v0.15.0</span>: The list of URIs to
+fetch before the task starts.
 Example:  `{ "uri": "http://get.me" }`
 Example:  `{ "uri": "https://foo.com/archive.zip", "executable": false, "extract": true, "cache": true }`
 On every artifact you can define the following properties:
@@ -251,7 +252,7 @@ For documentation about the mesos fetcher cache, see here: http://mesos.apache.o
 
 ##### uris (Array of Strings)
 
-__Deprecated__. Use fetch instead.
+Since <span class="label label-default">v0.15.0</span>: __Deprecated__ . Use fetch instead.
 URIs defined here are resolved, before the application gets started. If the application has external dependencies, they should be defined here.
 
 ##### dependencies (Array of Strings)
