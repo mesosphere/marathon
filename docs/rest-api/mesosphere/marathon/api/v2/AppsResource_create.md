@@ -252,6 +252,7 @@ For documentation about the mesos fetcher cache, see here: http://mesos.apache.o
 
 ##### uris (Array of Strings)
 
+Since <span class="label label-default">v0.15.0</span>: __Deprecated__ . Use fetch instead.
 URIs defined here are resolved, before the application gets started. If the application has external dependencies, they should be defined here.
 
 ##### dependencies (Array of Strings)
