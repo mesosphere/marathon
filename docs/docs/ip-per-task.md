@@ -6,10 +6,10 @@ title: IP-per-task
 
 <div class="alert alert-danger" role="alert">
   <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Available in Marathon Version 0.14.0+ <br/>
-    The IP-per-task functionality is considered experimental, so use htis
+    The IP-per-task functionality is considered experimental, so use this
     feature at your own risk. We might add, change, or delete any
     functionality described in this document, including the API. We
-    appreciate [your feedback](https://github.com/mesosphere/marathon/issues/2709)!
+    appreciate <a href="https://github.com/mesosphere/marathon/issues/2709">your feedback</a> !
 </div>
 
 
