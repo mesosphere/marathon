@@ -8,6 +8,7 @@ import akka.util.Timeout
 import com.google.inject.name.Named
 import com.google.inject.{ AbstractModule, Provides, Scopes }
 import mesosphere.marathon.ModuleNames.STORE_EVENT_SUBSCRIBERS
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe }
 import mesosphere.marathon.state.EntityStore
 import org.rogach.scallop.ScallopConf
@@ -24,8 +25,17 @@ trait HttpEventConfiguration extends ScallopConf {
     required = false,
     noshort = true).map(parseHttpEventEndpoints)
 
+  lazy val httpEventCallbackSlowConsumerTimeout = opt[Long]("http_event_callback_slow_consumer_timeout",
+    descr = "A http event callback consumer is considered slow, if the delivery takes longer than this timeout (ms)",
+    required = false,
+    noshort = true,
+    default = Some(10.seconds.toMillis)
+  )
+
   private[this] def parseHttpEventEndpoints(str: String): List[String] =
     str.split(',').map(_.trim).toList
+
+  def slowConsumerTimeout: FiniteDuration = httpEventCallbackSlowConsumerTimeout().millis
 }
 
 class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends AbstractModule {
@@ -33,6 +43,7 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
   val log = LoggerFactory.getLogger(getClass.getName)
 
   def configure() {
+    bind(classOf[HttpEventActor.HttpEventActorMetrics]).in(Scopes.SINGLETON)
     bind(classOf[HttpCallbackEventSubscriber]).asEagerSingleton()
     bind(classOf[HttpCallbackSubscriptionService]).in(Scopes.SINGLETON)
     bind(classOf[HttpEventConfiguration]).toInstance(httpEventConfiguration)
@@ -41,8 +52,10 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
   @Provides
   @Named(HttpEventModule.StatusUpdateActor)
   def provideStatusUpdateActor(system: ActorSystem,
-                               @Named(HttpEventModule.SubscribersKeeperActor) subscribersKeeper: ActorRef): ActorRef = {
-    system.actorOf(Props(new HttpEventActor(subscribersKeeper)))
+                               @Named(HttpEventModule.SubscribersKeeperActor) subscribersKeeper: ActorRef,
+                               metrics: HttpEventActor.HttpEventActorMetrics,
+                               clock: Clock): ActorRef = {
+    system.actorOf(Props(new HttpEventActor(httpEventConfiguration, subscribersKeeper, metrics, clock)))
   }
 
   @Provides

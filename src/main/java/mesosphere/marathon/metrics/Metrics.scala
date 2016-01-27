@@ -5,15 +5,17 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.codahale.metrics.{Gauge, MetricRegistry}
 import com.google.inject.Inject
-import mesosphere.marathon.metrics.Metrics.{Histogram, Meter, Timer}
+import mesosphere.marathon.metrics.Metrics.{ Histogram, Meter, Timer, Counter }
 import org.aopalliance.intercept.MethodInvocation
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
+import scala.util.control.NonFatal
 
 /**
-  * Utils for timer metrics collection.
-  */
+ * Utils for timer metrics collection.
+ */
 class Metrics @Inject() (val registry: MetricRegistry) {
   private[this] val classNameCache = TrieMap[Class[_], String]()
 
@@ -27,6 +29,10 @@ class Metrics @Inject() (val registry: MetricRegistry) {
     finally {
       timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
     }
+  }
+
+  def counter(name: String): Counter = {
+    new Counter(registry.counter(name))
   }
 
   def timer(name: String): Timer = {
@@ -66,17 +72,28 @@ class Metrics @Inject() (val registry: MetricRegistry) {
 }
 
 object Metrics {
-  class Timer(timer: com.codahale.metrics.Timer) {
+  class Counter(counter: com.codahale.metrics.Counter) {
+    def inc(): Unit = counter.inc()
+    def dec(): Unit = counter.dec()
+  }
+
+  class Timer(private[metrics] val timer: com.codahale.metrics.Timer) {
     def timeFuture[T](future: => Future[T]): Future[T] = {
       val startTime = System.nanoTime()
+      val f =
+        try future
+        catch {
+          case NonFatal(e) =>
+            timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
+            throw e
+        }
       import scala.concurrent.ExecutionContext.Implicits.global
-      val f = future
       f.onComplete {
         case _ => timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
       }
       f
     }
-    
+
     def apply[T](block: => T): T = {
       val startTime = System.nanoTime()
       try {
@@ -86,6 +103,9 @@ object Metrics {
         timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
       }
     }
+
+    def update(duration: FiniteDuration): Unit = timer.update(duration.toMillis, TimeUnit.MILLISECONDS)
+    def invocationCount: Long = timer.getCount
   }
 
   class Histogram(histogram: com.codahale.metrics.Histogram) {
@@ -99,13 +119,9 @@ object Metrics {
   }
 
   class Meter(meter: com.codahale.metrics.Meter) {
-    def mark(): Unit = {
-      meter.mark()
-    }
-
-    def mark(n: Long): Unit = {
-      meter.mark(n)
-    }
+    def mark(): Unit = meter.mark()
+    def mark(n: Long): Unit = meter.mark(n)
+    def mark(n: Int): Unit = meter.mark(n.toLong)
   }
 
   class AtomicIntGauge extends Gauge[Int] {
@@ -113,5 +129,8 @@ object Metrics {
 
     def setValue(l: Int): Unit = value_.set(l)
     override def getValue: Int = value_.get()
+
+    def increment(): Int = value_.incrementAndGet()
+    def decrement(): Int = value_.decrementAndGet()
   }
 }

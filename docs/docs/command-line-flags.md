@@ -132,8 +132,11 @@ The core functionality flags can be also set by environment variable `MARATHON_O
    64 KB): Threshold in bytes, when compression is applied to the zk node
 * <span class="label label-default">v0.11.1</span> `--max_apps` (Optional):
     The maximum number of applications that may be created.
-* <span class="label label-default">v0.12.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
-    
+* <span class="label label-default">v0.13.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
+* <span class="label label-default">v0.13.0</span> `--on_elected_prepare_timeout` (Optional. Default: 3 minutes):
+    The timeout for preparing the Marathon instance when elected as leader.
+* <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
+    A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
 ## Tuning Flags for Offer Matching/Launching Tasks
 
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
