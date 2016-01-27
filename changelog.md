@@ -167,6 +167,7 @@ This allows for globally available extensions (e.g. the store cache).
 - #2494 - Remove mentions of Marathon gem from docs 
 - #2459 - Framework Id not visible in the UI 
 - #2477 - Marathon forgets all tasks on restart
+- #3047 - Event callbacks hold on to unresponsive hosts
 
 ------------------------------------------------------------
 
