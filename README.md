@@ -27,7 +27,7 @@ Using Marathon versions 0.7.0+ and Mesos 0.20.0+, you can [deploy, run and scale
 * *[Service Discovery &amp; Load Balancing](https://mesosphere.github.io/marathon/docs/service-discovery-load-balancing.html)* via HAProxy or the events API (see below).
 * *[Health Checks](https://mesosphere.github.io/marathon/docs/health-checks.html)*: check your application's health via HTTP or TCP checks.
 * *[Event Subscription](https://mesosphere.github.io/marathon/docs/rest-api.html#event-subscriptions)* lets you supply an HTTP endpoint to receive notifications, for example to integrate with an external load balancer.
-* *Web UI*
+* *[Marathon UI](https://mesosphere.github.io/marathon/docs/marathon-ui.html)*
 * *[JSON/REST API](https://mesosphere.github.io/marathon/docs/rest-api.html)* for easy integration and scriptability
 * *Basic Auth* and *SSL*
 * *Metrics*: available at `/metrics` in JSON format
@@ -56,9 +56,9 @@ For run-time, Marathon has the following dependencies:
 ### Installation
 
 #### Install Mesos
-Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are two options for installing Apache Mesos. 
+Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are two options for installing Apache Mesos.
 
-##### Installing Mesos from prepackaged releases 
+##### Installing Mesos from prepackaged releases
 Instructions on how to install prepackaged releases of Mesos are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 ##### Building Mesos from source
@@ -239,4 +239,3 @@ and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit
 .NET Profiler</a>,
 innovative and intelligent tools for profiling Java and .NET
 applications.
-
