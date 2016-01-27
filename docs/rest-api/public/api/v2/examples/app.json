@@ -97,13 +97,13 @@
     0
   ],
   "requirePorts": false,
-  "storeUrls": [],
   "upgradeStrategy": {
     "maximumOverCapacity": 1,
     "minimumHealthCapacity": 1
   },
-  "uris": [
-    "https://foo.com/setup.py"
+  "fetch": [
+    { "uri": "https://foo.com/setup.py" },
+    { "uri": "https://foo.com/archive.zip", "executable": false, "extract": true, "cache": true }
   ],
   "user": "root"
 }

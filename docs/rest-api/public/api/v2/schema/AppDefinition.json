@@ -224,30 +224,23 @@
         "additionalProperties": false,
         "properties": {
           "uri": {
-            "value": {
-              "type": "string",
-              "description": "URI to be fetched by Mesos fetcher module"
-            }
+            "type": "string",
+            "description": "URI to be fetched by Mesos fetcher module"
           },
           "executable": {
-            "value": {
-              "type": "boolean",
-              "description": "Set fetched artifact as executable"
-            }
+            "type": "boolean",
+            "description": "Set fetched artifact as executable"
           },
           "extract": {
-            "value": {
-              "type": "boolean",
-              "description": "Extract fetched artifact if supported by Mesos fetcher module"
-            }
+            "type": "boolean",
+            "description": "Extract fetched artifact if supported by Mesos fetcher module"
           },
           "cache": {
-            "value": {
-              "type": "boolean",
-              "description": "Cache fetched artifact if supported by Mesos fetcher module"
-            }
+            "type": "boolean",
+            "description": "Cache fetched artifact if supported by Mesos fetcher module"
           }
-        }
+        },
+        "required": [ "uri" ]
       }
     },
     "healthChecks": {
