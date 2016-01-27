@@ -144,6 +144,7 @@ IP-per-task.
 - #2865 - Multiple explicit ports are mixed up in task json
 - #2870 - Marathon healthchecks on wrong address
 - #2872 - Update IPAddress of a running app is not possible
+- #3047 - Event callbacks hold on to unresponsive hosts
 
 ## Changes from 0.11.1 to 0.13.0
 
