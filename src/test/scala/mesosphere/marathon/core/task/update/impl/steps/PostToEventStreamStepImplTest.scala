@@ -4,10 +4,10 @@ import akka.event.EventStream
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.event.{ MesosStatusUpdateEvent, MarathonEvent }
+import mesosphere.marathon.event.{ MarathonEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil }
-import mesosphere.marathon.test.{ CaptureLogEvents, CaptureEvents }
+import mesosphere.marathon.tasks.TaskIdUtil
+import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
@@ -46,7 +46,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         appId = appId,
         host = host,
         ipAddresses = Nil,
-        ports = portsList.asJava.asScala,
+        ports = portsList,
         version = version.toString,
         timestamp = updateTimestamp.toString
       )
@@ -113,7 +113,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         appId = appId,
         host = host,
         ipAddresses = Nil,
-        ports = portsList.asJava.asScala,
+        ports = portsList,
         version = version.toString,
         timestamp = updateTimestamp.toString
       )
@@ -129,7 +129,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
   private[this] val appId = PathId("/test")
   private[this] val taskId = TaskIdUtil.newTaskId(appId)
   private[this] val host = "some.host.local"
-  private[this] val portsList = Seq(10, 11, 12).map(java.lang.Integer.valueOf(_))
+  private[this] val portsList = Seq(10, 11, 12)
   private[this] val version = Timestamp(1)
   private[this] val updateTimestamp = Timestamp(100)
   private[this] val taskStatusMessage = "some update"
@@ -148,7 +148,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       .newBuilder()
       .setId(taskId.getValue)
       .setHost(host)
-      .addAllPorts(portsList.asJava)
+      .addAllPorts(portsList.map(i => i: Integer).asJava)
       .setVersion(version.toString)
       .build()
 

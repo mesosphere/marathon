@@ -1,7 +1,5 @@
 package mesosphere.marathon.health
 
-import java.lang.{ Integer => JInt }
-
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos

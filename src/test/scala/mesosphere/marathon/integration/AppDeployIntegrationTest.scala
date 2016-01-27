@@ -1,6 +1,5 @@
 package mesosphere.marathon.integration
 
-import java.lang.{ Double => JDouble }
 import java.util.UUID
 
 import mesosphere.marathon.Protos
@@ -180,7 +179,7 @@ class AppDeployIntegrationTest
     Given("a new app")
     val app = appProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
       copy(
-        ports = immutable.Seq[Integer](31000),
+        ports = immutable.Seq[Int](31000),
         requirePorts = true,
         healthChecks = Set(healthCheck.copy(port = Some(31000)))
       )
@@ -359,7 +358,7 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
 
     When("A resource specification is updated")
-    val updatedDisk: JDouble = v1.disk + 1.0
+    val updatedDisk: Double = v1.disk + 1.0
     val appUpdate = AppUpdate(Option(v1.id), disk = Option(updatedDisk))
     val updateResponse = marathon.updateApp(v1.id, appUpdate)
     updateResponse.code should be (200)

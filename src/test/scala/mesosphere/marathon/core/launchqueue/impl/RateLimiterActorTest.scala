@@ -1,7 +1,5 @@
 package mesosphere.marathon.core.launchqueue.impl
 
-import java.lang.Double
-
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.pattern.ask
 import akka.testkit.TestProbe

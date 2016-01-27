@@ -1,6 +1,5 @@
 package mesosphere.marathon.state
 
-import java.lang.{ Integer => JInt }
 import java.net.URL
 import javax.inject.{ Inject, Named }
 
@@ -206,7 +205,7 @@ class GroupManager @Singleton @Inject() (
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.ports) ++ to.transitiveApps.flatMap(_.ports)
 
-    def nextGlobalFreePort: JInt = synchronized {
+    def nextGlobalFreePort: Int = synchronized {
       val port = portRange.find(!taken.contains(_))
         .getOrElse(throw new PortRangeExhaustedException(
           config.localPortMin(),
@@ -226,12 +225,12 @@ class GroupManager @Singleton @Inject() (
           .getOrElse(Nil): _*
       )
 
-      def nextFreeAppPort: JInt =
+      def nextFreeAppPort: Int =
         if (assignedAndAvailable.nonEmpty) assignedAndAvailable.dequeue()
         else nextGlobalFreePort
 
-      val servicePorts: Seq[JInt] = app.servicePorts.map { port =>
-        if (port == 0) nextFreeAppPort else new JInt(port)
+      val servicePorts: Seq[Int] = app.servicePorts.map { port =>
+        if (port == 0) nextFreeAppPort else port
       }
 
       // defined only if there are port mappings
@@ -260,7 +259,7 @@ class GroupManager @Singleton @Inject() (
         case app: AppDefinition if app.hasDynamicPort => assignPorts(app)
         case app: AppDefinition =>
           // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-          app.copy(ports = app.servicePorts.map(Integer.valueOf))
+          app.copy(ports = app.servicePorts)
       }
 
     dynamicApps.foldLeft(to) { (group, app) =>

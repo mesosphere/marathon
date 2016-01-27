@@ -38,11 +38,11 @@ class PortsMatcher(
   /**
     * @return the resulting assigned (host) ports.
     */
-  def ports: Seq[Long] = for {
+  def ports: Seq[Int] = for {
     resource <- portRanges.getOrElse(Nil)
     range <- resource.ranges
     port <- range.asScala()
-  } yield port
+  } yield port.toInt
 
   private[this] def portsWithRoles: Option[Seq[PortWithRole]] = {
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
@@ -72,9 +72,9 @@ class PortsMatcher(
   /**
     * Try to find supplied ports in offer. Returns `None` if not all ports were found.
     */
-  private[this] def findPortsInOffer(requiredPorts: Seq[Integer], failLog: Boolean): Option[Seq[PortWithRole]] = {
+  private[this] def findPortsInOffer(requiredPorts: Seq[Int], failLog: Boolean): Option[Seq[PortWithRole]] = {
     takeEnoughPortsOrNone(expectedSize = requiredPorts.size) {
-      requiredPorts.iterator.map { (port: Integer) =>
+      requiredPorts.iterator.map { (port: Int) =>
         offeredPortRanges.find(_.contains(port)).map { offeredRange =>
           PortWithRole(offeredRange.role, port)
         } orElse {
@@ -107,7 +107,7 @@ class PortsMatcher(
   private[this] def mappedPortRanges(mappings: Seq[PortMapping]): Option[Seq[PortWithRole]] = {
     takeEnoughPortsOrNone(expectedSize = mappings.size) {
       // non-dynamic hostPorts from port mappings
-      val hostPortsFromMappings: Set[Integer] = mappings.iterator.map(_.hostPort).filter(_ != 0).toSet
+      val hostPortsFromMappings: Set[Int] = mappings.iterator.map(_.hostPort).filter(_ != 0).toSet
 
       // available ports without the ports that have been preset in the port mappings
       val availablePortsWithoutStaticHostPorts: Iterator[PortWithRole] =

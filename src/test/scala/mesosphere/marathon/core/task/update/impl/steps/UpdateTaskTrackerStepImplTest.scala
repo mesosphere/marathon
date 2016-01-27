@@ -73,7 +73,7 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
   private[this] val appId = PathId("/test")
   private[this] val taskId = TaskIdUtil.newTaskId(appId)
   private[this] val host = "some.host.local"
-  private[this] val portsList = Seq(10, 11, 12).map(java.lang.Integer.valueOf(_))
+  private[this] val portsList = Seq(10, 11, 12)
   private[this] val version = Timestamp(1)
   private[this] val updateTimestamp = Timestamp(100)
   private[this] val taskStatusMessage = "some update"
@@ -92,7 +92,7 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
       .newBuilder()
       .setId(taskId.getValue)
       .setHost(host)
-      .addAllPorts(portsList.asJava)
+      .addAllPorts(portsList.map(i => i: Integer).asJava)
       .setVersion(version.toString)
       .build()
 
