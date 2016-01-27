@@ -17,7 +17,8 @@ import TaskTracker.AppTasks
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos
-import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
+import mesosphere.util.CallerThreadExecutionContext
+import org.apache.mesos.Protos.{ Status, TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
@@ -108,19 +109,23 @@ class MarathonSchedulerActor private (
     case ReconcileTasks =>
       import context.dispatcher
       import akka.pattern.pipe
-      log.info("initiate task reconciliation")
       val reconcileFuture = activeReconciliation match {
         case None =>
+          log.info("initiate task reconciliation")
           val newFuture = schedulerActions.reconcileTasks(driver)
           activeReconciliation = Some(newFuture)
           newFuture.onFailure {
             case NonFatal(e) => log.error(e, "error while reconciling tasks")
           }
           newFuture
+            // the self notification MUST happen before informing the initiator
+            // if we want to ensure that we trigger a new reconciliation for
+            // the first call after the last ReconcileTasks.answer has been received.
+            .andThen { case _ => self ! ReconcileFinished }
         case Some(active) =>
+          log.info("task reconciliation still active, reusing result")
           active
       }
-      reconcileFuture.onComplete(_ => self ! ReconcileFinished)
       reconcileFuture.map(_ => ReconcileTasks.answer).pipeTo(sender)
 
     case ReconcileFinished =>
@@ -459,7 +464,7 @@ class SchedulerActions(
     * to give Mesos enough time to deliver task updates.
     * @param driver scheduler driver
     */
-  def reconcileTasks(driver: SchedulerDriver): Future[_] = {
+  def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
     appRepository.allPathIds().map(_.toSet).flatMap { appIds =>
       taskTracker.tasksByApp().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>

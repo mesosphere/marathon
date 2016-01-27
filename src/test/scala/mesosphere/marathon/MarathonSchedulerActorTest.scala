@@ -512,8 +512,10 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     schedulerActor ! MarathonSchedulerActor.ReconcileTasks
     expectMsg(MarathonSchedulerActor.TasksReconciled)
+
     schedulerActor ! MarathonSchedulerActor.ReconcileTasks
     expectMsg(MarathonSchedulerActor.TasksReconciled)
+
     schedulerActor ! MarathonSchedulerActor.ReconcileTasks
     expectMsg(MarathonSchedulerActor.TasksReconciled)
 
