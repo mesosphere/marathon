@@ -28,8 +28,14 @@ trait DebugConf extends ScallopConf {
   lazy val enableDebugTracing = debugTracing() || deprecatedDebugTracing()
 
   lazy val metrics = toggle("metrics",
-    descrYes = "(Default) Enable metric measurement of service method calls.",
-    descrNo = "Disable metric measurement of service method calls.",
+    descrYes =
+      "(Default) Expose the execution time of service method calls using code instrumentation" +
+        " via the metrics endpoint (/metrics). This might noticeably degrade performance" +
+        " but can help finding performance problems.",
+    descrNo =
+      "Disable exposing execution time of service method calls using code instrumentation" +
+        " via the metrics endpoing (/metrics). " +
+        "This does not turn off reporting of other metrics.",
     default = Some(true),
     noshort = true,
     prefix = "disable_")

@@ -30,7 +30,8 @@ Using Marathon versions 0.7.0+ and Mesos 0.20.0+, you can [deploy, run and scale
 * *Web UI*
 * *[JSON/REST API](https://mesosphere.github.io/marathon/docs/rest-api.html)* for easy integration and scriptability
 * *Basic Auth* and *SSL*
-* *Metrics*: available at `/metrics` in JSON format
+* *[Metrics](https://mesosphere.github.io/marathon/docs/metrics.html)*:
+  query them at `/metrics` in JSON format or push them to graphite/statsd/datadog.
 
 ## Documentation
 
@@ -56,9 +57,9 @@ For run-time, Marathon has the following dependencies:
 ### Installation
 
 #### Install Mesos
-Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are two options for installing Apache Mesos. 
+Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are two options for installing Apache Mesos.
 
-##### Installing Mesos from prepackaged releases 
+##### Installing Mesos from prepackaged releases
 Instructions on how to install prepackaged releases of Mesos are available [in the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 ##### Building Mesos from source
@@ -239,4 +240,3 @@ and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit
 .NET Profiler</a>,
 innovative and intelligent tools for profiling Java and .NET
 applications.
-
