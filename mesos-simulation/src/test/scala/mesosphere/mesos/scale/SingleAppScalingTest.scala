@@ -74,7 +74,7 @@ class SingleAppScalingTest
     createStopApp(100)
   }
 
-  test("application scaling") {
+  ignore("application scaling") {
     // This test has a lot of logging output. Thus all log statements are prefixed with XXX
     // for better grepability.
 
