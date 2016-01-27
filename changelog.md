@@ -98,6 +98,7 @@ For the complete set of changes, please refer to the [Marathon UI CHANGELOG](htt
 - #2938 - Don't log giant port lists
 - #2855 - Create app failed when there're multiple same word in the app id
 - #3051 - Can't add dynamic ports using PUT
+- #3047 - Event callbacks hold on to unresponsive hosts
 - #2892 - Version in task detail component shouldn't be localised
 - #2893 - App page component should display the right number of tasks
 - #2949 - AjaxWrapper does't handle TypeError correctly
