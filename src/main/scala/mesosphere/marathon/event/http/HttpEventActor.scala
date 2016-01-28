@@ -91,9 +91,9 @@ class HttpEventActor(conf: HttpEventConfiguration,
     log.info("Sending POST to:" + url)
 
     metrics.outstandingCallbacks.inc()
+    val start = clock.now()
     val request = Post(url, eventToJson(event))
     val response = pipeline(request)
-    val start = clock.now()
 
     response.onComplete {
       case _ =>
