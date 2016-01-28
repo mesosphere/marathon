@@ -360,6 +360,8 @@ object AppDefinition {
     def withConfigChange(newVersion: Timestamp): VersionInfo = {
       VersionInfo.forNewConfig(newVersion)
     }
+
+    def configEquals(other: VersionInfo): Boolean = lastConfigChangeVersion == other.lastConfigChangeVersion
   }
 
   object VersionInfo {

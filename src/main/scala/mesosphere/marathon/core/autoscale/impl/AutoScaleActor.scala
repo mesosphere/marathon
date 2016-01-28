@@ -4,23 +4,20 @@ import javax.inject.Provider
 
 import akka.actor._
 import mesosphere.marathon.MarathonSchedulerService
+import mesosphere.marathon.core.autoscale.AutoScaleConfig
 import mesosphere.marathon.core.autoscale.impl.AutoScaleActor._
-import mesosphere.marathon.core.autoscale.{ AutoScaleConfig, AutoScalePolicy }
-import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state._
-import mesosphere.util.ThreadPoolContext
 
 object AutoScaleActor {
 
   def props(conf: AutoScaleConfig,
-            policies: Seq[AutoScalePolicy],
-            groupManagerProvider: Provider[GroupManagement],
+            groupManagerProvider: Provider[GroupManager],
             schedulerProvider: Provider[MarathonSchedulerService],
-            taskTracker: TaskTracker): Props = {
-    Props(new AutoScaleActor(conf, policies, groupManagerProvider, schedulerProvider, taskTracker))
+            appActorFactory: (AppDefinition, Option[Timestamp], ActorRef) => Props): Props = {
+    Props(new AutoScaleActor(conf, groupManagerProvider, schedulerProvider, appActorFactory))
   }
   case object Tick
-  case class GetAutoScaleApps(apps: Seq[AppDefinition])
+  case class AutoScaleApps(apps: Seq[AppDefinition])
 
   trait AutoScaleAppResult
   case class AutoScaleSuccess(app: AppDefinition) extends AutoScaleAppResult
@@ -28,13 +25,13 @@ object AutoScaleActor {
 }
 
 class AutoScaleActor(conf: AutoScaleConfig,
-                     policies: Seq[AutoScalePolicy],
-                     groupManagerProvider: Provider[GroupManagement],
+                     groupManagerProvider: Provider[GroupManager],
                      schedulerProvider: Provider[MarathonSchedulerService],
-                     taskTracker: TaskTracker) extends Actor with ActorLogging {
+                     appActorFactory: (AppDefinition, Option[Timestamp], ActorRef) => Props)
+    extends Actor with ActorLogging {
 
-  implicit val ec = ThreadPoolContext.ioContext
-  var groupManager: GroupManagement = _
+  implicit val ec = context.dispatcher
+  var groupManager: GroupManager = _
   var scheduler: MarathonSchedulerService = _
   var tickScheduler: Option[Cancellable] = None
   var lastAppFailure: Map[PathId, Timestamp] = Map.empty
@@ -53,21 +50,19 @@ class AutoScaleActor(conf: AutoScaleConfig,
   def triggerAutoScaleApps(): Unit = {
     groupManager.rootGroup().map { root =>
       val autoScaleApps = root.transitiveApps.filter(_.autoScale.isDefined).toSeq
-      if (autoScaleApps.nonEmpty) self ! GetAutoScaleApps(autoScaleApps)
+      if (autoScaleApps.nonEmpty) self ! AutoScaleApps(autoScaleApps)
     }
   }
 
   def autoScaleAttempt(app: AppDefinition): Unit = {
-    val failureOption = lastAppFailure.get(app.id)
-    context.actorOf(
-      AutoScaleAppActor.props(app, failureOption, self, policies, groupManager, scheduler, taskTracker, conf))
+    context.actorOf(appActorFactory(app, lastAppFailure.get(app.id), self))
   }
 
   override def receive: Receive = {
-    case Tick                   => triggerAutoScaleApps()
-    case GetAutoScaleApps(apps) => apps.foreach(autoScaleAttempt)
-    case AutoScaleSuccess(app)  => lastAppFailure -= app.id
-    case AutoScaleFailure(app)  => if (!lastAppFailure.contains(app.id)) lastAppFailure += app.id -> Timestamp.now()
+    case Tick                  => triggerAutoScaleApps()
+    case AutoScaleApps(apps)   => apps.foreach(autoScaleAttempt)
+    case AutoScaleSuccess(app) => lastAppFailure -= app.id
+    case AutoScaleFailure(app) => if (!lastAppFailure.contains(app.id)) lastAppFailure += app.id -> Timestamp.now()
   }
 }
 

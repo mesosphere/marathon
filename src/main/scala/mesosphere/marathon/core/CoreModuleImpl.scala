@@ -19,7 +19,7 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppRepository, GroupManagement, TaskRepository }
+import mesosphere.marathon.state.{ AppRepository, GroupManager, TaskRepository }
 import mesosphere.marathon.tasks.TaskFactory
 import mesosphere.marathon.{
   LeadershipAbdication,
@@ -50,7 +50,7 @@ class CoreModuleImpl @Inject() (
     taskFactory: TaskFactory,
     leaderInfo: LeaderInfo,
     mesosLeaderInfo: MesosLeaderInfo,
-    groupManagerProvider: Provider[GroupManagement],
+    groupManagerProvider: Provider[GroupManager],
     schedulerProvider: Provider[MarathonSchedulerService],
     clock: Clock) extends CoreModule {
 

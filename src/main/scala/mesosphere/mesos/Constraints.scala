@@ -133,10 +133,10 @@ object Constraints {
     * @param constraints the constraints that all slaves have to meet.
     * @return the filtered list of slaves that meet all constraints.
     */
-  def selectMatchingSlaves(slaves: Iterable[MesosSlaveData],
-                           constraints: Iterable[Constraint]): Iterable[MesosSlaveData] = {
+  def selectMatchingSlaves(slaves: Iterable[MesosAgentData],
+                           constraints: Iterable[Constraint]): Iterable[MesosAgentData] = {
 
-    def matchingSlaves(slaves: Iterable[MesosSlaveData], constraint: Constraint): Iterable[MesosSlaveData] = {
+    def matchingSlaves(slaves: Iterable[MesosAgentData], constraint: Constraint): Iterable[MesosAgentData] = {
       val key = constraint.getField
       val value = constraint.getValue
 

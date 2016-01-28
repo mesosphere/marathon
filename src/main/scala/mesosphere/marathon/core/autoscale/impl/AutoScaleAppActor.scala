@@ -1,15 +1,16 @@
 package mesosphere.marathon.core.autoscale.impl
 
+import javax.inject.Provider
+
 import akka.actor._
 import akka.pattern.pipe
 import mesosphere.marathon.core.autoscale.impl.AutoScaleActor.{ AutoScaleFailure, AutoScaleSuccess }
 import mesosphere.marathon.core.autoscale.impl.AutoScaleAppActor._
 import mesosphere.marathon.core.autoscale.{ AutoScaleConfig, AutoScalePolicy, AutoScaleResult }
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.{ AppDefinition, GroupManagement, Timestamp }
+import mesosphere.marathon.state.{ GroupManager, AppDefinition, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, ScaleApplication }
 import mesosphere.marathon.{ ConflictingChangeException, MarathonSchedulerService }
-import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future
 
@@ -23,21 +24,21 @@ object AutoScaleAppActor {
   def props(app: AppDefinition,
             lastFailure: Option[Timestamp],
             handler: ActorRef,
+            groupManager: Provider[GroupManager],
+            scheduler: Provider[MarathonSchedulerService],
             policies: Seq[AutoScalePolicy],
-            groupManager: GroupManagement,
-            scheduler: MarathonSchedulerService,
             taskTracker: TaskTracker,
             conf: AutoScaleConfig): Props = {
-    Props(new AutoScaleAppActor(app, lastFailure, handler, policies, groupManager, scheduler, taskTracker, conf))
+    Props(new AutoScaleAppActor(app, lastFailure, handler, groupManager, scheduler, policies, taskTracker, conf))
   }
 }
 
 class AutoScaleAppActor(app: AppDefinition,
                         lastFailure: Option[Timestamp],
                         handler: ActorRef,
+                        groupManagerProvider: Provider[GroupManager],
+                        schedulerProvider: Provider[MarathonSchedulerService],
                         policies: Seq[AutoScalePolicy],
-                        groupManager: GroupManagement,
-                        scheduler: MarathonSchedulerService,
                         taskTracker: TaskTracker,
                         conf: AutoScaleConfig) extends Actor with ActorLogging {
 
@@ -45,9 +46,15 @@ class AutoScaleAppActor(app: AppDefinition,
   require(app.autoScale.get.policies.nonEmpty, s"AutoScaling an application without policies is not possible: $app")
 
   private[this] var policyResults = List.empty[AutoScaleResult]
-  implicit val ec = ThreadPoolContext.ioContext
+  implicit val ec = context.dispatcher
+  var groupManager: GroupManager = _
+  var scheduler: MarathonSchedulerService = _
 
-  override def preStart(): Unit = queryAppPolicies()
+  override def preStart(): Unit = {
+    groupManager = groupManagerProvider.get()
+    scheduler = schedulerProvider.get()
+    queryAppPolicies()
+  }
 
   override def receive: Receive = {
     case result: AutoScaleResult =>
@@ -76,7 +83,7 @@ class AutoScaleAppActor(app: AppDefinition,
     val scaleResult = {
       //we choose the policy with the highest impact
       def instanceDiff(result: AutoScaleResult) = math.abs(app.instances - result.target)
-      policyResults.sortBy(instanceDiff).last
+      policyResults.maxBy(instanceDiff)
     }
     val instances = scaleResult.target
     val kill = scaleResult.killTasks
@@ -94,7 +101,7 @@ class AutoScaleAppActor(app: AppDefinition,
     def update(force: Boolean): Future[AutoScaleActionResult] = {
       def updateApp(existing: Option[AppDefinition]): AppDefinition = {
         existing.foreach { existingApp =>
-          if (existingApp.version != app.version)
+          if (!existingApp.versionInfo.configEquals(app.versionInfo))
             throw new ConflictingChangeException(s"App ${app.id}: ${app.version} ${existingApp.version}")
         }
         app.copy(instances = instances)

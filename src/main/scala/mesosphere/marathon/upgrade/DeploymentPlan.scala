@@ -72,7 +72,7 @@ final case class DeploymentPlan(
   def nonEmpty: Boolean = !isEmpty
 
   /** @return all ids of apps which are referenced in any deployment actions */
-  def affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
+  lazy val affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
 
   def isAffectedBy(other: DeploymentPlan): Boolean =
     // FIXME: check for group change conflicts?
