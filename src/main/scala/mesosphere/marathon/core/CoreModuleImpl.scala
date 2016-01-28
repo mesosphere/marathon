@@ -95,7 +95,8 @@ class CoreModuleImpl @Inject() (
     groupManagerProvider,
     schedulerProvider,
     mesosLeaderInfo,
-    taskTrackerModule.taskTracker
+    taskTrackerModule.taskTracker,
+    clock
   )
 
   override lazy val appOfferMatcherModule = new LaunchQueueModule(

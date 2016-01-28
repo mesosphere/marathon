@@ -7,6 +7,7 @@ import akka.pattern.pipe
 import mesosphere.marathon.core.autoscale.impl.AutoScaleActor.{ AutoScaleFailure, AutoScaleSuccess }
 import mesosphere.marathon.core.autoscale.impl.AutoScaleAppActor._
 import mesosphere.marathon.core.autoscale.{ AutoScaleConfig, AutoScalePolicy, AutoScaleResult }
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ GroupManager, AppDefinition, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, ScaleApplication }
@@ -21,6 +22,7 @@ object AutoScaleAppActor {
   case class DeploymentTriggered(result: AutoScaleResult, deployment: DeploymentPlan) extends AutoScaleActionResult
   case class DeploymentBlocked(result: AutoScaleResult) extends AutoScaleActionResult
 
+  //scalastyle:off parameter.number
   def props(app: AppDefinition,
             lastFailure: Option[Timestamp],
             handler: ActorRef,
@@ -28,8 +30,9 @@ object AutoScaleAppActor {
             scheduler: Provider[MarathonSchedulerService],
             policies: Seq[AutoScalePolicy],
             taskTracker: TaskTracker,
+            clock: Clock,
             conf: AutoScaleConfig): Props = {
-    Props(new AutoScaleAppActor(app, lastFailure, handler, groupManager, scheduler, policies, taskTracker, conf))
+    Props(new AutoScaleAppActor(app, lastFailure, handler, groupManager, scheduler, policies, taskTracker, clock, conf))
   }
 }
 
@@ -40,6 +43,7 @@ class AutoScaleAppActor(app: AppDefinition,
                         schedulerProvider: Provider[MarathonSchedulerService],
                         policies: Seq[AutoScalePolicy],
                         taskTracker: TaskTracker,
+                        clock: Clock,
                         conf: AutoScaleConfig) extends Actor with ActorLogging {
 
   require(app.autoScale.isDefined, s"App without autoScale definition: $app")
@@ -97,7 +101,7 @@ class AutoScaleAppActor(app: AppDefinition,
         }
       }
     }
-    def forceDeployment: Boolean = lastFailure.exists(_.until(Timestamp.now()) > conf.forceDeploymentTimeout)
+    def forceDeployment: Boolean = lastFailure.exists(_.until(clock.now()) > conf.forceDeploymentTimeout)
     def update(force: Boolean): Future[AutoScaleActionResult] = {
       def updateApp(existing: Option[AppDefinition]): AppDefinition = {
         existing.foreach { existingApp =>
