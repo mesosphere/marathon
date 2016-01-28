@@ -26,3 +26,7 @@ questions.
 The
 ["**marathon**" Stack Overflow tag](https://stackoverflow.com/questions/tagged/marathon)
 is for specific questions that can be solved with a small amount of code.
+
+### Mesosphere UX Research
+
+If you'd like to take part in design research and test new features in Marathon before they're released, please add your name to our [UX Research](http://uxresearch.mesosphere.com) list.
