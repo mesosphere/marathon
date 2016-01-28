@@ -81,7 +81,9 @@ object IntegrationTestConfig {
     */
   private[this] def defaultMesosLibConfig: String = {
     val javaLibraryPath = sys.props.getOrElse("java.library.path", "/usr/local/lib:/usr/lib:/usr/lib64")
-    val dirs = javaLibraryPath.split(':').toStream #::: Stream("/usr/local/lib", "/usr/lib", "/usr/lib64")
+    val mesos_dir = sys.env.get("MESOS_DIR").map(_ + "/lib").toStream
+    val dirs =
+      javaLibraryPath.split(':').toStream #::: Stream("/usr/local/lib", "/usr/lib", "/usr/lib64") #::: mesos_dir
     val libCandidates = dirs.flatMap { (libDir: String) =>
       Stream(
         new File(libDir, "libmesos.dylib"),
