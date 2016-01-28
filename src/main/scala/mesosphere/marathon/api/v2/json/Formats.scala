@@ -570,7 +570,7 @@ trait V2Formats {
 
           app.copy(
             fetch = fetch,
-            instances = extra.autoScale.map(_ => Integer.valueOf(0)).getOrElse(app.instances),
+            instances = extra.autoScale.map(_ => 0).getOrElse(app.instances),
             dependencies = extra.dependencies,
             ports = extra.maybePorts.getOrElse(defaultPorts),
             upgradeStrategy = extra.upgradeStrategy,
