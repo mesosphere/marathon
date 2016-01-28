@@ -209,6 +209,8 @@ email list. You can find Marathon support in the `#marathon` channel, and Mesos
 support in the `#mesos` channel, on [freenode][freenode] (IRC). The team at
 [Mesosphere][Mesosphere] is also happy to answer any questions.
 
+If you'd like to take part in design research and test new features in Marathon before they're released, please add your name to our [UX Research](http://uxresearch.mesosphere.com) list.
+
 ## Authors
 
 Marathon was created by [Tobias Knaup](https://github.com/guenter) and
