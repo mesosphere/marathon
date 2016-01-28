@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ TaskOp, MatchedTaskOps, TaskOpWithSource }
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
@@ -80,29 +80,33 @@ private[launcher] class OfferProcessorImpl(
     Future.successful(())
   }
 
-  private[this] def launchTasks(offerId: OfferID, tasks: Seq[TaskOpWithSource]): Future[Unit] = {
-    if (taskLauncher.launchTasks(offerId, tasks.map(_.taskInfo))) {
+  private[this] def launchTasks(offerId: OfferID, taskOpsWithSource: Seq[TaskOpWithSource]): Future[Unit] = {
+    if (taskLauncher.acceptOffer(offerId, taskOpsWithSource.map(_.op))) {
       log.debug("Offer [{}]. Task launch successful", offerId.getValue)
-      tasks.foreach(_.accept())
+      taskOpsWithSource.foreach(_.accept())
       Future.successful(())
     }
     else {
       log.warn("Offer [{}]. Task launch rejected", offerId.getValue)
-      tasks.foreach(_.reject("driver unavailable"))
-      removeTasks(tasks)
+      taskOpsWithSource.foreach(_.reject("driver unavailable"))
+      revertTaskOps(taskOpsWithSource.view.map(_.op))
     }
   }
 
-  private[this] def removeTasks(tasks: Seq[TaskOpWithSource]): Future[Unit] = {
-    tasks.foldLeft(Future.successful(())) { (terminatedFuture, nextTask) =>
+  /** Revert the effects of the task ops on the task state. */
+  private[this] def revertTaskOps(ops: Iterable[TaskOp]): Future[Unit] = {
+    ops.foldLeft(Future.successful(())) { (terminatedFuture, nextOp) =>
       terminatedFuture.flatMap { _ =>
-        val appId = TaskIdUtil.appId(nextTask.marathonTask.getId)
-        taskCreationHandler.terminated(appId, nextTask.marathonTask.getId).map(_ => ())
+        nextOp.oldTask match {
+          case Some(existingTask) =>
+            taskCreationHandler.created(nextOp.appId, existingTask).map(_ => ())
+          case None =>
+            taskCreationHandler.terminated(nextOp.appId, nextOp.taskId).map(_ => ())
+        }
       }
     }.recover {
       case NonFatal(e) =>
-        log.error("while removing rejected tasks from taskTracker", e)
-        throw e
+        throw new RuntimeException("while reverting task ops", e)
     }
   }
 
@@ -110,33 +114,33 @@ private[launcher] class OfferProcessorImpl(
     * Saves the given tasks sequentially, evaluating before each save whether the given deadline has been reached
     * already.
     */
-  private[this] def saveTasks(tasks: Seq[TaskOpWithSource], savingDeadline: Timestamp): Future[Seq[TaskOpWithSource]] = {
-    def saveTask(task: TaskOpWithSource): Future[Option[TaskOpWithSource]] = {
-      log.info("Save task [{}]", task.marathonTask.getId)
-      val taskId = task.marathonTask.getId
+  private[this] def saveTasks(ops: Seq[TaskOpWithSource], savingDeadline: Timestamp): Future[Seq[TaskOpWithSource]] = {
+    def saveTask(taskOpWithSource: TaskOpWithSource): Future[Option[TaskOpWithSource]] = {
+      log.info("Save task [{}]", taskOpWithSource.op.taskId)
+      val taskId = taskOpWithSource.op.taskId
       val appId = TaskIdUtil.appId(taskId)
       taskCreationHandler
-        .created(appId, task.marathonTask)
-        .map(_ => Some(task))
+        .created(appId, taskOpWithSource.op.newTask)
+        .map(_ => Some(taskOpWithSource))
         .recoverWith {
           case NonFatal(e) =>
             savingTasksErrorMeter.mark()
-            task.reject(s"storage error: $e")
+            taskOpWithSource.reject(s"storage error: $e")
             log.warn(s"error while storing task $taskId for app [$appId]", e)
-            taskCreationHandler.terminated(appId, taskId).map(_ => None)
+            revertTaskOps(Some(taskOpWithSource.op))
         }.map {
-          case Some(savedTask) => Some(task)
+          case Some(savedTask) => Some(taskOpWithSource)
           case None            => None
         }
     }
 
-    tasks.foldLeft(Future.successful(Vector.empty[TaskOpWithSource])) { (savedTasksFuture, nextTask) =>
+    ops.foldLeft(Future.successful(Vector.empty[TaskOpWithSource])) { (savedTasksFuture, nextTask) =>
       savedTasksFuture.flatMap { savedTasks =>
         if (clock.now() > savingDeadline) {
           savingTasksTimeoutMeter.mark(savedTasks.size.toLong)
           nextTask.reject("saving timeout reached")
           log.info(
-            s"Timeout reached, skipping launch and save for task ${nextTask.marathonTask.getId}. " +
+            s"Timeout reached, skipping launch and save for task ${nextTask.op.newTask.getId}. " +
               s"You can reconfigure this with --${conf.saveTasksToLaunchTimeout.name}.")
           Future.successful(savedTasks)
         }

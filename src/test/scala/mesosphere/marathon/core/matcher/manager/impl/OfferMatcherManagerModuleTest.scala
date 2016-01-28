@@ -5,7 +5,7 @@ import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ TaskOp, MatchedTaskOps, TaskOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
@@ -33,7 +33,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     val matchedTasksFuture: Future[MatchedTaskOps] =
       module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
     val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-    assert(matchedTasks.tasks.isEmpty)
+    assert(matchedTasks.opsWithSource.isEmpty)
   }
 
   test("single offer is passed to matcher") {
@@ -48,7 +48,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
       module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
     val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
     assert(matchedTasks.offerId == offer.getId)
-    assert(matchedTasks.tasks.map(_.taskInfo) == Seq(makeOneCPUTask("task1_1")))
+    assert(matchedTasks.launchedTaskInfos == Seq(makeOneCPUTask("task1_1")))
   }
 
   test("deregistering only matcher works") {
@@ -63,7 +63,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     val matchedTasksFuture: Future[MatchedTaskOps] =
       module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
     val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-    assert(matchedTasks.tasks.isEmpty)
+    assert(matchedTasks.opsWithSource.isEmpty)
   }
 
   test("single offer is passed to multiple matchers") {
@@ -79,7 +79,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     val matchedTasksFuture: Future[MatchedTaskOps] =
       module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
     val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-    assert(matchedTasks.tasks.map(_.taskInfo).toSet == Set(makeOneCPUTask("task1_1"), makeOneCPUTask("task2_1")))
+    assert(matchedTasks.launchedTaskInfos.toSet == Set(makeOneCPUTask("task1_1"), makeOneCPUTask("task2_1")))
   }
 
   for (launchTokens <- Seq(0, 1, 10)) {
@@ -94,7 +94,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
       val matchedTasksFuture: Future[MatchedTaskOps] =
         module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
       val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-      assert(matchedTasks.tasks.size == launchTokens)
+      assert(matchedTasks.opsWithSource.size == launchTokens)
     }
   }
 
@@ -111,7 +111,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     val matchedTasksFuture: Future[MatchedTaskOps] =
       module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
     val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
-    assert(matchedTasks.tasks.map(_.taskInfo).toSet == Set(
+    assert(matchedTasks.launchedTaskInfos.toSet == Set(
       makeOneCPUTask("task1_1"),
       makeOneCPUTask("task1_2"),
       makeOneCPUTask("task2_1"),
@@ -163,18 +163,22 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     protected def matchTasks(deadline: Timestamp, offer: Offer): Seq[TaskInfo] = numberedTasks()
 
     override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedTaskOps] = {
-      val result = MatchedTaskOps(offer.getId, matchTasks(deadline, offer).map(task =>
-        TaskOpWithSource(source, task, MarathonTestHelper.makeTaskFromTaskInfo(task, offer))))
+      val opsWithSources = matchTasks(deadline, offer).map { task =>
+        val launch = OfferMatcher.Launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, offer))
+        TaskOpWithSource(source, launch)
+      }
+
+      val result = MatchedTaskOps(offer.getId, opsWithSources)
       results :+= result
       Future.successful(result)
     }
 
     object source extends TaskOpSource {
-      var acceptedTasks = Vector.empty[TaskInfo]
-      var rejectedTasks = Vector.empty[TaskInfo]
+      var acceptedOps = Vector.empty[TaskOp]
+      var rejectedOps = Vector.empty[TaskOp]
 
-      override def taskOpAccepted(taskInfo: TaskInfo): Unit = acceptedTasks :+= taskInfo
-      override def taskOpRejected(taskInfo: TaskInfo, reason: String): Unit = rejectedTasks :+= taskInfo
+      override def taskOpAccepted(taskOp: TaskOp): Unit = acceptedOps :+= taskOp
+      override def taskOpRejected(taskOp: TaskOp, reason: String): Unit = rejectedOps :+= taskOp
     }
   }
 

@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.launcher
 
-import org.apache.mesos.Protos.{ OfferID, TaskInfo }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.TaskOp
+import org.apache.mesos.Protos.OfferID
 
 /**
   * A TaskLauncher launches tasks on an offer or declines an offer.
@@ -12,7 +13,7 @@ trait TaskLauncher {
     *
     * @return `true` if we could communicate the task launch to Mesos and `false` otherwise
     */
-  def launchTasks(offerID: OfferID, taskInfos: Seq[TaskInfo]): Boolean
+  def acceptOffer(offerID: OfferID, taskOps: Seq[TaskOp]): Boolean
 
   /**
     * Decline the offer. We cannot use the offer afterwards anymore.

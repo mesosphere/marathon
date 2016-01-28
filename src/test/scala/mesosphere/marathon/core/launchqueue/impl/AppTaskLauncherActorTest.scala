@@ -157,7 +157,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
     launcherRef ! AppTaskLauncherActor.Stop
     Await.result(launcherRef ? "waitingForInFlight", 3.seconds)
-    matched.tasks.foreach(_.reject("stuff"))
+    matched.opsWithSource.foreach(_.reject("stuff"))
     testProbe.expectMsgClass(classOf[Terminated])
 
     Mockito.verify(taskTracker).appTasksSync(app.id)
@@ -176,7 +176,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       Await
         .result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds)
         .asInstanceOf[MatchedTaskOps]
-    matchedTasks.tasks.foreach(_.reject("stuff"))
+    matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
     val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
 
@@ -243,7 +243,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       Await
         .result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds)
         .asInstanceOf[MatchedTaskOps]
-    matchedTasks.tasks.foreach(_.accept())
+    matchedTasks.opsWithSource.foreach(_.accept())
 
     val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
 

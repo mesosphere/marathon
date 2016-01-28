@@ -2,25 +2,25 @@ package mesosphere.marathon.core.matcher.base.util
 
 import akka.actor.ActorRef
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import OfferMatcher.TaskOpSource
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ TaskOp, TaskOpSource }
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.{ TaskLaunchRejected, TaskLaunchAccepted }
 import org.apache.mesos.Protos.TaskInfo
 
 private class TaskOpSourceDelegate(actorRef: ActorRef) extends TaskOpSource {
-  override def taskOpAccepted(taskInfo: TaskInfo): Unit = actorRef ! TaskLaunchAccepted(taskInfo)
-  override def taskOpRejected(taskInfo: TaskInfo, reason: String): Unit =
-    actorRef ! TaskLaunchRejected(taskInfo, reason)
+  override def taskOpAccepted(taskOp: TaskOp): Unit = actorRef ! TaskLaunchAccepted(taskOp)
+  override def taskOpRejected(taskOp: TaskOp, reason: String): Unit =
+    actorRef ! TaskLaunchRejected(taskOp, reason)
 }
 
 object TaskOpSourceDelegate {
   def apply(actorRef: ActorRef): TaskOpSource = new TaskOpSourceDelegate(actorRef)
 
   sealed trait TaskLaunchNotification {
-    def taskInfo: TaskInfo
+    def taskOp: TaskOp
   }
   object TaskLaunchNotification {
-    def unapply(notification: TaskLaunchNotification): Option[TaskInfo] = Some(notification.taskInfo)
+    def unapply(notification: TaskLaunchNotification): Option[TaskOp] = Some(notification.taskOp)
   }
-  case class TaskLaunchAccepted(taskInfo: TaskInfo) extends TaskLaunchNotification
-  case class TaskLaunchRejected(taskInfo: TaskInfo, reason: String) extends TaskLaunchNotification
+  case class TaskLaunchAccepted(taskOp: TaskOp) extends TaskLaunchNotification
+  case class TaskLaunchRejected(taskOp: TaskOp, reason: String) extends TaskLaunchNotification
 }

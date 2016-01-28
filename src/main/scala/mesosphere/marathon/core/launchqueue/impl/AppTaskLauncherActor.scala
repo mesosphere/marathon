@@ -10,7 +10,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.AppTaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ TaskOp, MatchedTaskOps, TaskOpWithSource }
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskLaunchNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
@@ -64,7 +64,7 @@ private[launchqueue] object AppTaskLauncherActor {
     */
   private case object RecheckIfBackOffUntilReached extends Requests
 
-  private case class ScheduleTaskLaunchNotificationTimeout(task: TaskInfo)
+  private case class ScheduleTaskLaunchNotificationTimeout(launch: OfferMatcher.Launch)
 
   case object Stop extends Requests
 
@@ -90,7 +90,7 @@ private class AppTaskLauncherActor(
     private[this] var tasksToLaunch: Int) extends Actor with ActorLogging with Stash {
   // scalastyle:on parameter.number
 
-  private[this] var inFlightTaskLaunches = Map.empty[TaskID, Option[Cancellable]]
+  private[this] var inFlightTaskLaunches = Map.empty[String, Option[Cancellable]]
 
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
@@ -206,33 +206,30 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def receiveTaskLaunchNotification: Receive = {
-    case TaskOpSourceDelegate.TaskLaunchRejected(taskInfo, reason) if inFlight(taskInfo) =>
-      removeTask(taskInfo.getTaskId)
+    case TaskOpSourceDelegate.TaskLaunchRejected(op, reason) if inFlight(op) =>
+      removeTask(op.taskId)
       tasksToLaunch += 1
-      log.info(
-        "Task launch for '{}' was REJECTED, reason '{}', rescheduling. {}",
-        taskInfo.getTaskId.getValue, reason, status)
+      log.info("Task launch for '{}' was REJECTED, reason '{}', rescheduling. {}", op.taskId, reason, status)
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
     case TaskOpSourceDelegate.TaskLaunchRejected(
-      taskInfo, AppTaskLauncherActor.TASK_LAUNCH_REJECTED_TIMEOUT_REASON
+      op, AppTaskLauncherActor.TASK_LAUNCH_REJECTED_TIMEOUT_REASON
       ) =>
 
-      log.debug("Unnecessary timeout message. Ignoring task launch rejected for task id '{}'.",
-        taskInfo.getTaskId.getValue)
+      log.debug("Unnecessary timeout message. Ignoring task launch rejected for task id '{}'.", op.taskId)
 
-    case TaskOpSourceDelegate.TaskLaunchRejected(taskInfo, reason) =>
-      log.warning("Unexpected task launch rejected for taskId '{}'.", taskInfo.getTaskId.getValue)
+    case TaskOpSourceDelegate.TaskLaunchRejected(op, reason) =>
+      log.warning("Unexpected task launch rejected for taskId '{}'.", op.taskId)
 
-    case TaskOpSourceDelegate.TaskLaunchAccepted(taskInfo) =>
-      inFlightTaskLaunches -= taskInfo.getTaskId
-      log.info("Task launch for '{}' was accepted. {}", taskInfo.getTaskId.getValue, status)
+    case TaskOpSourceDelegate.TaskLaunchAccepted(op) =>
+      inFlightTaskLaunches -= op.taskId
+      log.info("Task launch for '{}' was accepted. {}", op.taskId, status)
   }
 
   private[this] def receiveTaskStatusUpdate: Receive = {
     case TaskStatusUpdate(_, taskId, MarathonTaskStatus.Terminal(_)) =>
       log.debug("task '{}' finished", taskId.getValue)
-      removeTask(taskId)
+      removeTask(taskId.getValue)
 
       // If the app has constraints, we need to reconsider offers that
       // we already rejected. E.g. when a host:unique constraint prevented
@@ -261,10 +258,10 @@ private class AppTaskLauncherActor(
       replyWithQueuedTaskCount()
   }
 
-  private[this] def removeTask(taskId: TaskID): Unit = {
+  private[this] def removeTask(taskId: String): Unit = {
     inFlightTaskLaunches.get(taskId).foreach(_.foreach(_.cancel()))
     inFlightTaskLaunches -= taskId
-    tasksMap -= taskId.getValue
+    tasksMap -= taskId
   }
 
   private[this] def receiveGetCurrentCount: Receive = {
@@ -337,7 +334,7 @@ private class AppTaskLauncherActor(
         case Some(CreatedTask(mesosTask, marathonTask)) =>
           def updateActorState(): Unit = {
             tasksMap += marathonTask.getId -> marathonTask
-            inFlightTaskLaunches += mesosTask.getTaskId -> None
+            inFlightTaskLaunches += mesosTask.getTaskId.getValue -> None
             tasksToLaunch -= 1
             OfferMatcherRegistration.manageOfferMatcherStatus()
           }
@@ -347,28 +344,28 @@ private class AppTaskLauncherActor(
           log.info("Request to launch task with id '{}', version '{}'. {}",
             mesosTask.getTaskId.getValue, app.version, status)
 
-          self ! AppTaskLauncherActor.ScheduleTaskLaunchNotificationTimeout(mesosTask)
-
-          sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, mesosTask, marathonTask)))
+          val launch = OfferMatcher.Launch(mesosTask, marathonTask)
+          self ! AppTaskLauncherActor.ScheduleTaskLaunchNotificationTimeout(launch)
+          sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, launch)))
 
         case None => sender() ! MatchedTaskOps(offer.getId, Seq.empty)
       }
   }
 
   protected val receiveScheduleTaskLaunchNotificationDelay: Receive = {
-    case AppTaskLauncherActor.ScheduleTaskLaunchNotificationTimeout(task) if inFlight(task) =>
+    case AppTaskLauncherActor.ScheduleTaskLaunchNotificationTimeout(launch) if inFlight(launch) =>
       val reject = TaskOpSourceDelegate.TaskLaunchRejected(
-        task, AppTaskLauncherActor.TASK_LAUNCH_REJECTED_TIMEOUT_REASON
+        launch, AppTaskLauncherActor.TASK_LAUNCH_REJECTED_TIMEOUT_REASON
       )
       val cancellable = scheduleTaskLaunchTimeout(context, reject)
-      inFlightTaskLaunches += task.getTaskId -> Some(cancellable)
+      inFlightTaskLaunches += launch.taskId -> Some(cancellable)
 
     case schedule: AppTaskLauncherActor.ScheduleTaskLaunchNotificationTimeout =>
       log.debug("ignoring {}", schedule)
   }
 
-  private[this] def inFlight(task: TaskInfo): Boolean = inFlight(task.getTaskId)
-  private[this] def inFlight(taskId: TaskID): Boolean = inFlightTaskLaunches.contains(taskId)
+  private[this] def inFlight(task: TaskOp): Boolean = inFlightTaskLaunches.contains(task.taskId)
+  private[this] def inFlight(taskId: String): Boolean = inFlightTaskLaunches.contains(taskId)
 
   protected def scheduleTaskLaunchTimeout(
     context: ActorContext,

@@ -1,7 +1,7 @@
 package mesosphere.marathon.tasks
 
 import com.twitter.util.NonFatal
-import org.apache.mesos.Protos.{ Value, Resource }
+import org.apache.mesos.Protos.{ Value, Resource, Offer }
 import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 
@@ -120,7 +120,7 @@ object ResourceUtil {
   }
 
   /**
-    * Deduct usedResources from resources by matching them by name.
+    * Deduct usedResources from resources by matching them by name and role.
     */
   def consumeResources(resources: Iterable[Resource], usedResources: Iterable[Resource]): Iterable[Resource] = {
     val usedResourceMap: Map[ResourceMatchKey, Seq[Resource]] =
@@ -149,6 +149,16 @@ object ResourceUtil {
           Some(resource)
       }
     }
+  }
+
+  /**
+    * Deduct usedResources from resources in the offer.
+    */
+  def consumeResourcesFromOffer(offer: Offer, usedResources: Iterable[Resource]): Offer = {
+    import scala.collection.JavaConverters._
+    val offerResources: Seq[Resource] = offer.getResourcesList.asScala
+    val leftOverResources = ResourceUtil.consumeResources(offerResources, usedResources)
+    offer.toBuilder.clearResources().addAllResources(leftOverResources.asJava).build()
   }
 
   def displayResource(resource: Resource, maxRanges: Int): String = {

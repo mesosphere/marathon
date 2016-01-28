@@ -59,10 +59,8 @@ private[manager] object OfferMatcherManagerActor {
     }
 
     def addTasks(added: Seq[TaskOpWithSource]): OfferData = {
-      val offerResources: Seq[Resource] = offer.getResourcesList.asScala
-      val taskResources: Seq[Resource] = added.map(_.taskInfo).flatMap(_.getResourcesList.asScala)
-      val leftOverResources = ResourceUtil.consumeResources(offerResources, taskResources)
-      val leftOverOffer = offer.toBuilder.clearResources().addAllResources(leftOverResources.asJava).build()
+      val leftOverOffer = added.foldLeft(offer) { (offer, nextOp) => nextOp.op.applyToOffer(offer) }
+
       copy(
         offer = leftOverOffer,
         tasks = added ++ tasks
