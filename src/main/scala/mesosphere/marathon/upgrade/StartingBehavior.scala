@@ -46,11 +46,11 @@ trait StartingBehavior { this: Actor with ActorLogging =>
     context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
-  final def receive: Receive = {
+  final override def receive: Receive = {
     val behavior =
       if (withHealthChecks) checkForHealthy
       else checkForRunning
-    behavior orElse commonBehavior
+    behavior orElse commonBehavior: PartialFunction[Any, Unit] // type annotation makes Intellij happy
   }
 
   final def checkForHealthy: Receive = {

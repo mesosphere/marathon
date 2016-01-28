@@ -75,7 +75,7 @@ class TaskReplaceActor(
       else
         taskStateBehavior
 
-    behavior orElse commonBehavior
+    behavior orElse commonBehavior: PartialFunction[Any, Unit] // type annotation makes Intellij happy
   }
 
   def taskStateBehavior: Receive = {
