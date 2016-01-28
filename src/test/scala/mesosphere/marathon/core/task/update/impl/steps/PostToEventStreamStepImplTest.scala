@@ -77,7 +77,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     Then("no event is posted to the event stream")
     events should be (empty)
     And("and nothing of importance is logged")
-    logs.filter(_.getLevel != Level.DEBUG_INT) should be (empty)
+    logs.filter(_.getLevel != Level.DEBUG) should be (empty)
   }
 
   test("terminate existing task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR) }
