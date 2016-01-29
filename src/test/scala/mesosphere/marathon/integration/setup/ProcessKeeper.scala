@@ -88,7 +88,7 @@ object ProcessKeeper {
     FileUtils.forceMkdir(mesosWorkDirFile)
 
     startJavaProcess(
-      processName, heapInMegs = 512, debugArgs ++ argsWithMain, cwd,
+      processName, heapInMegs = 512, /* debugArgs ++ */ argsWithMain, cwd,
       env + (ENV_MESOS_WORK_DIR -> mesosWorkDir),
       upWhen = _.contains(startupLine))
   }

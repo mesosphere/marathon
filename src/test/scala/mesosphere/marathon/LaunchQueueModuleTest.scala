@@ -5,6 +5,7 @@ import mesosphere.marathon.core.base.{ Clock, ShutdownHooks }
 import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueueModule }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
+import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.integration.setup.WaitTestSupport
@@ -137,7 +138,7 @@ class LaunchQueueModuleTest
     Then("the offer gets passed to the task factory and respects the answer")
     verify(taskFactory).newTask(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
     assert(matchedTasks.offerId == offer.getId)
-    assert(matchedTasks.tasks == Seq.empty)
+    assert(matchedTasks.opsWithSource == Seq.empty)
 
     verify(taskTracker).appTasksSync(app.id)
   }
@@ -164,7 +165,7 @@ class LaunchQueueModuleTest
     Then("the offer gets passed to the task factory and respects the answer")
     verify(taskFactory).newTask(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
     assert(matchedTasks.offerId == offer.getId)
-    assert(matchedTasks.tasks.map(_.taskInfo) == Seq(mesosTask))
+    assert(matchedTasks.launchedTaskInfos == Seq(mesosTask))
 
     verify(taskTracker).appTasksSync(app.id)
   }
