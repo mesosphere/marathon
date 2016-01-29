@@ -9,7 +9,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import mesosphere.marathon.{ MarathonSchedulerService, MarathonSpec }
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSchedulerService, MarathonSpec }
 import org.apache.mesos.Protos
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
@@ -63,11 +63,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting tasks retrieves tasks from taskTracker and health infos") {
     val f = new Fixture
     Given("three tasks in the task tracker")
-    val running1 = MarathonTask
-      .newBuilder()
-      .setId("task1")
-      .setStatus(Protos.TaskStatus.newBuilder().setState(Protos.TaskState.TASK_RUNNING).buildPartial())
-      .buildPartial()
+    val running1 = MarathonTestHelper.runningTaskProto("task1")
     val running2 = running1.toBuilder.setId("task2").buildPartial()
     val running3 = running1.toBuilder.setId("task3").buildPartial()
 
@@ -115,16 +111,8 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting task counts only retrieves tasks from taskTracker and health stats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val staged = MarathonTask
-      .newBuilder()
-      .setId("task1")
-      .setStatus(Protos.TaskStatus.newBuilder().setState(Protos.TaskState.TASK_STAGING).buildPartial())
-      .buildPartial()
-    val running = MarathonTask
-      .newBuilder()
-      .setId("task2")
-      .setStatus(Protos.TaskStatus.newBuilder().setState(Protos.TaskState.TASK_RUNNING).buildPartial())
-      .buildPartial()
+    val staged = MarathonTestHelper.stagedTaskProto("task1")
+    val running = MarathonTestHelper.runningTaskProto("task2")
     val running2 = running.toBuilder.setId("task3").buildPartial()
 
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -246,18 +234,8 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting taskStats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val staged = MarathonTask
-      .newBuilder()
-      .setId("task1")
-      .setStatus(Protos.TaskStatus.newBuilder().setState(Protos.TaskState.TASK_STAGING).buildPartial())
-      .setStagedAt((f.clock.now() - 10.seconds).toDateTime.getMillis)
-      .buildPartial()
-    val running = MarathonTask
-      .newBuilder()
-      .setId("task2")
-      .setStatus(Protos.TaskStatus.newBuilder().setState(Protos.TaskState.TASK_RUNNING).buildPartial())
-      .setStagedAt((f.clock.now() - 11.seconds).toDateTime.getMillis)
-      .buildPartial()
+    val staged = MarathonTestHelper.stagedTaskProto("task1", stagedAt = (f.clock.now() - 10.seconds).toDateTime.getMillis)
+    val running = MarathonTestHelper.runningTaskProto("task2", stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
     val running2 = running.toBuilder.setId("task3").buildPartial()
 
     import scala.concurrent.ExecutionContext.Implicits.global

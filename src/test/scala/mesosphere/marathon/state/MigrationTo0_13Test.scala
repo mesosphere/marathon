@@ -6,7 +6,7 @@ import java.util.UUID
 import com.codahale.metrics.MetricRegistry
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.FutureTestSupport._
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
@@ -20,8 +20,8 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     val f = new Fixture
     Given("some tasks that are stored in old path style")
     val appId = "/test/app1".toRootPath
-    val task1 = dummyTask(appId)
-    val task2 = dummyTask(appId)
+    val task1 = MarathonTestHelper.dummyTaskProto(appId)
+    val task2 = MarathonTestHelper.dummyTaskProto(appId)
     f.legacyTaskStore.store(appId, task1).futureValue
     f.legacyTaskStore.store(appId, task2).futureValue
     val names = f.entityStore.names().futureValue
@@ -46,7 +46,7 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     val f = new Fixture
     Given("some tasks that are stored in old path style")
     val appId = "/test/app1".toRootPath
-    val task1 = dummyTask(appId)
+    val task1 = MarathonTestHelper.dummyTaskProto(appId)
     f.legacyTaskStore.store(appId, task1).futureValue
 
     When("we migrate that task")
@@ -62,7 +62,7 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     val f = new Fixture
     Given("some tasks that are stored in old path style")
     val appId = "/test/app1".toRootPath
-    val task1 = dummyTask(appId)
+    val task1 = MarathonTestHelper.dummyTaskProto(appId)
     f.legacyTaskStore.store(appId, task1).futureValue
     val names = f.entityStore.names().futureValue
     names should have size 1
@@ -77,7 +77,7 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     taskKeys1 should have size 1
 
     When("we add another task in old format")
-    val task2 = dummyTask(appId)
+    val task2 = MarathonTestHelper.dummyTaskProto(appId)
     f.legacyTaskStore.store(appId, task2).futureValue
     f.entityStore.names().futureValue should contain (appId.safePath + ":" + task2.getId)
 

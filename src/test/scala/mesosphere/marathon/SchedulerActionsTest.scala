@@ -60,35 +60,11 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
 
-    val runningStatus = TaskStatus.newBuilder
-      .setTaskId(TaskID.newBuilder.setValue("task_1"))
-      .setState(TaskState.TASK_RUNNING)
-      .build()
+    val runningTask = MarathonTestHelper.runningTaskProto("task_1")
 
-    val runningTask = MarathonTask.newBuilder
-      .setId("task_1")
-      .setStatus(runningStatus)
-      .build()
+    val stagedTask = MarathonTestHelper.stagedTaskProto("task_2")
 
-    val stagedTask = MarathonTask.newBuilder
-      .setId("task_2")
-      .build()
-
-    val stagedStatus = TaskStatus.newBuilder
-      .setTaskId(TaskID.newBuilder.setValue(stagedTask.getId))
-      .setState(TaskState.TASK_STAGING)
-      .build()
-
-    val stagedTaskWithSlaveId = MarathonTask.newBuilder
-      .setId("task_3")
-      .setSlaveId(SlaveID("slave 1"))
-      .build()
-
-    val stagedWithSlaveIdStatus = TaskStatus.newBuilder
-      .setTaskId(TaskID.newBuilder.setValue(stagedTaskWithSlaveId.getId))
-      .setSlaveId(stagedTaskWithSlaveId.getSlaveId)
-      .setState(TaskState.TASK_STAGING)
-      .build()
+    val stagedTaskWithSlaveId = MarathonTestHelper.stagedTaskProto("task_3").toBuilder.setSlaveId(SlaveID("slave 1")).build()
 
     val scheduler = new SchedulerActions(
       repo,
@@ -109,7 +85,11 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
-    verify(driver).reconcileTasks(Set(runningStatus, stagedStatus, stagedWithSlaveIdStatus).asJava)
+    verify(driver).reconcileTasks(Set(
+      runningTask.getStatus,
+      stagedTask.getStatus,
+      stagedTaskWithSlaveId.getStatus
+    ).asJava)
     verify(driver).reconcileTasks(java.util.Arrays.asList())
   }
 
@@ -146,20 +126,9 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
 
-    val status = TaskStatus.newBuilder
-      .setTaskId(TaskID.newBuilder.setValue("task_1"))
-      .setState(TaskState.TASK_RUNNING)
-      .build()
+    val task = MarathonTestHelper.runningTaskProto("task_1")
 
-    val task = MarathonTask.newBuilder
-      .setId("task_1")
-      .setStatus(status)
-      .build()
-
-    val orphanedTask = MarathonTask.newBuilder
-      .setId("orphaned task")
-      .setStatus(status)
-      .build()
+    val orphanedTask = MarathonTestHelper.runningTaskProto("orphaned task")
 
     val scheduler = new SchedulerActions(
       repo,

@@ -5,10 +5,10 @@ import akka.event.EventStream
 import akka.testkit.TestProbe
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.{ TaskUpdater, TaskTracker }
 import mesosphere.marathon.core.task.update.impl.steps._
@@ -34,16 +34,45 @@ class TaskStatusUpdateProcessorImplTest
     val origUpdate = TaskStatusUpdateTestHelper.finished // everything != lost is handled in the same way
     val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
     val update = origUpdate.withTaskId(status.getTaskId)
+    val taskId = Task.Id(update.wrapped.taskId.getValue)
 
     Given("an unknown task")
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.task(appId, update.wrapped.taskId.getValue)(global) returns Future.successful(None)
+    f.taskTracker.task(appId, taskId)(global) returns Future.successful(None)
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(appId, update.wrapped.taskId.getValue)(global)
+    verify(f.taskTracker).task(appId, taskId)(global)
+
+    And("the task kill gets initiated")
+    verify(f.schedulerDriver).killTask(status.getTaskId)
+    And("the update has been acknowledged")
+    verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
+
+    And("that's it")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process update for known task without launchedTask that's not lost will result in a kill and ack") {
+    fOpt = Some(new Fixture)
+    val origUpdate = TaskStatusUpdateTestHelper.finished // everything != lost is handled in the same way
+    val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
+    val update = origUpdate.withTaskId(status.getTaskId)
+    val taskId = Task.Id(update.wrapped.taskId.getValue)
+
+    Given("an unknown task")
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.taskTracker.task(appId, taskId)(global) returns Future.successful(
+      Some(MarathonTestHelper.mininimalTask(taskId.id))
+    )
+
+    When("we process the updated")
+    f.updateProcessor.publish(status).futureValue
+
+    Then("we expect that the appropriate taskTracker methods have been called")
+    verify(f.taskTracker).task(appId, taskId)(global)
 
     And("the task kill gets initiated")
     verify(f.schedulerDriver).killTask(status.getTaskId)
@@ -60,16 +89,17 @@ class TaskStatusUpdateProcessorImplTest
     val origUpdate = TaskStatusUpdateTestHelper.lost
     val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
     val update = origUpdate.withTaskId(status.getTaskId)
+    val taskId = Task.Id(update.wrapped.taskId.getValue)
 
     Given("an unknown task")
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.task(appId, update.wrapped.taskId.getValue)(global) returns Future.successful(None)
+    f.taskTracker.task(appId, taskId)(global) returns Future.successful(None)
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(appId, update.wrapped.taskId.getValue)(global)
+    verify(f.taskTracker).task(appId, taskId)(global)
 
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
@@ -84,10 +114,11 @@ class TaskStatusUpdateProcessorImplTest
     val origUpdate = TaskStatusUpdateTestHelper.finished
     val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
     val update = origUpdate.withTaskId(status.getTaskId)
+    val taskId = Task.Id(update.wrapped.taskId.getValue)
 
     Given("a known task")
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.task(appId, update.wrapped.taskId.getValue) returns Future.successful(Some(marathonTask))
+    f.taskTracker.task(appId, taskId) returns Future.successful(Some(taskState))
     f.taskUpdater.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns Future.successful(())
     f.appRepository.app(appId, version) returns Future.successful(Some(app))
     And("and a cooperative launchQueue")
@@ -97,7 +128,7 @@ class TaskStatusUpdateProcessorImplTest
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(appId, update.wrapped.taskId.getValue)
+    verify(f.taskTracker).task(appId, taskId)
     verify(f.taskUpdater).statusUpdate(appId, status)
 
     And("the healthCheckManager got informed")
@@ -130,8 +161,8 @@ class TaskStatusUpdateProcessorImplTest
   lazy val app = AppDefinition(appId)
   lazy val version = Timestamp.now()
   lazy val task = MarathonTestHelper.makeOneCPUTask(TaskIdUtil.newTaskId(appId).getValue).build()
-  lazy val marathonTask =
-    MarathonTask.newBuilder().setId(task.getTaskId.getValue).setVersion(version.toString).build()
+  lazy val taskState = MarathonTestHelper.stagedTask(task.getTaskId.getValue, appVersion = version)
+  lazy val marathonTask = taskState.marathonTask
 
   after {
     fOpt.foreach(_.shutdown())

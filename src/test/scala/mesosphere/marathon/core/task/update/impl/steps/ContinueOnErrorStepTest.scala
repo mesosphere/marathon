@@ -24,7 +24,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
 
   private[this] val timestamp: Timestamp = Timestamp(1)
   private[this] val appId: PathId = PathId("/test")
-  private[this] val dummyTask: MarathonTask = MarathonTestHelper.dummyTask(appId)
+  private[this] val dummyTask: MarathonTask = MarathonTestHelper.dummyTaskProto(appId)
 
   test("A successful step should not produce logging output") {
     def processUpdate(step: TaskStatusUpdateStep): Future[_] = {

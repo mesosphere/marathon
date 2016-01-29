@@ -9,7 +9,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
+import mesosphere.marathon.{ MarathonTestHelper, MarathonConf, MarathonSchedulerService, MarathonSpec }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.mockito.Matchers.{ eq => equalTo }
@@ -70,14 +70,11 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val appId = PathId("/my/app")
     val slaveId = SlaveID("some slave ID")
     val now = Timestamp.now()
-    val task1 = MarathonTasks.makeTask(
-      "task-1", host, ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = slaveId
-    )
-    val task2 = MarathonTasks.makeTask(
-      "task-2", host, ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = slaveId
-    )
+
+    val taskState1 = MarathonTestHelper.mininimalTask("task1")
+    val taskState2 = MarathonTestHelper.mininimalTask("task2")
+    val task1 = taskState1.marathonTask
+    val task2 = taskState2.marathonTask
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.of(TaskTracker.AppTasks(appId, Iterable(task1, task2)))

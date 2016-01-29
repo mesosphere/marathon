@@ -3,7 +3,7 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
 import mesosphere.FutureTestSupport._
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskCreationHandler, TaskUpdater }
@@ -33,13 +33,13 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   var taskCreationHandler: TaskCreationHandler = null
   var taskUpdater: TaskUpdater = null
   var state: PersistentStore = null
-  val config = defaultConfig()
+  val config = MarathonTestHelper.defaultConfig()
   val taskIdUtil = new TaskIdUtil
   val metrics = new Metrics(new MetricRegistry)
 
   before {
     state = spy(new InMemoryStore)
-    val taskTrackerModule = createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), state, config, metrics)
+    val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule(shutdownHooks), state, config, metrics)
     taskTracker = taskTrackerModule.taskTracker
     taskCreationHandler = taskTrackerModule.taskCreationHandler
     taskUpdater = taskTrackerModule.taskUpdater
@@ -50,18 +50,18 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
     taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
 
-    val deserializedTask = taskTracker.taskSync(TEST_APP_NAME, sampleTask.getId)
+    val deserializedTask = taskTracker.marathonTaskSync(TEST_APP_NAME, sampleTask.getId)
 
-    assert(deserializedTask.nonEmpty, "fetch task returned a None")
-    assert(deserializedTask.get.equals(sampleTask), "Tasks are not properly serialized")
+    deserializedTask should not be empty
+    deserializedTask should equal(Some(sampleTask))
   }
 
   test("CreatedAndGetTask") {
-    testCreatedAndGetTask(_.taskSync(_, _))
+    testCreatedAndGetTask(_.marathonTaskSync(_, _))
   }
 
   test("CreatedAndGetTask Async") {
-    testCreatedAndGetTask(_.task(_, _).futureValue)
+    testCreatedAndGetTask(_.marathonTask(_, _).futureValue)
   }
 
   private[this] def testCreatedAndGetTask(call: (TaskTracker, PathId, String) => Option[MarathonTask]): Unit = {
@@ -163,7 +163,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   test("TaskLifecycle") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
+    val sampleTask = MarathonTestHelper.startingTaskProto(TEST_APP_NAME)
 
     // CREATE TASK
     taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
@@ -300,10 +300,8 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
   test("Should not store if state did not change (no health present)") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
-    val status = Protos.TaskStatus
-      .newBuilder
-      .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+    val status = sampleTask.getStatus.toBuilder
+      .setTimestamp(123)
       .build()
 
     taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
@@ -319,12 +317,9 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   test("Should not store if state and health did not change") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
-    val status = Protos.TaskStatus
-      .newBuilder
-      .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
-      .setHealthy(true)
+    val sampleTask = MarathonTestHelper.healthyTaskProto(TEST_APP_NAME)
+    val status = sampleTask.getStatus.toBuilder
+      .setTimestamp(123)
       .build()
 
     taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
@@ -340,11 +335,9 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   test("Should store if state changed") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
-    val status = Protos.TaskStatus
-      .newBuilder
+    val sampleTask = MarathonTestHelper.stagedTaskProto(TEST_APP_NAME)
+    val status = sampleTask.getStatus.toBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
       .build()
 
     taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
@@ -364,11 +357,8 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   test("Should store if health changed") {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
-    val status = Protos.TaskStatus
-      .newBuilder
-      .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+    val sampleTask = MarathonTestHelper.runningTaskProto(TEST_APP_NAME)
+    val status = sampleTask.getStatus.toBuilder
       .setHealthy(true)
       .build()
 
@@ -465,10 +455,9 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
   def makeSampleTask(appId: PathId) = {
     def makeTask(id: String, host: String, port: Int) = {
-      MarathonTask.newBuilder()
+      MarathonTestHelper.stagedTaskProto(id).toBuilder
         .setHost(host)
         .addAllPorts(Lists.newArrayList(port))
-        .setId(id)
         .addAttributes(TextAttribute("attr1", "bar"))
         .build()
     }
@@ -479,9 +468,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
   def makeTaskStatus(id: String, state: TaskState = TaskState.TASK_RUNNING) = {
     TaskStatus.newBuilder
-      .setTaskId(TaskID.newBuilder
-        .setValue(id)
-      )
+      .setTaskId(TaskID.newBuilder.setValue(id))
       .setState(state)
       .build
   }

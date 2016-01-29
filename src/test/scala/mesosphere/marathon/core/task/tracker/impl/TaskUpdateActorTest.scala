@@ -6,6 +6,7 @@ import akka.actor.{ Status, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -25,7 +26,7 @@ class TaskUpdateActorTest
     val appId = PathId("/app")
     val taskId = "task1"
     val op = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(taskId), TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that fails immediately")
@@ -53,7 +54,7 @@ class TaskUpdateActorTest
     val appId = PathId("/app")
     val taskId = "task1"
     val op = TaskOpProcessor.Operation(
-      f.clock.now, f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge
+      f.clock.now, f.opInitiator.ref, appId, Task.Id(taskId), TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that succeeds immediately")
@@ -90,7 +91,7 @@ class TaskUpdateActorTest
     val appId = PathId("/app")
     val taskId = "task1"
     val op = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(taskId), TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that processes it immediately")
@@ -117,7 +118,7 @@ class TaskUpdateActorTest
     val appId = PathId("/app")
     val taskId = "task1"
     val op = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, taskId, TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(taskId), TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that does not return")
@@ -144,11 +145,11 @@ class TaskUpdateActorTest
     val appId = PathId("/app")
     val task1Id = "task1"
     val op1 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, task1Id, TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(task1Id), TaskOpProcessor.Action.Expunge
     )
     val task2Id = "task2"
     val op2 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, task2Id, TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(task2Id), TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that does not return")
@@ -182,7 +183,7 @@ class TaskUpdateActorTest
     f.updateActor.underlyingActor.operationsByTaskId should have size 1
 
     And("but the first task still does have a queue")
-    f.updateActor.underlyingActor.operationsByTaskId(task1Id) should have size 1
+    f.updateActor.underlyingActor.operationsByTaskId(Task.Id(task1Id)) should have size 1
   }
 
   test("ops for the same task are processed sequentially") {
@@ -192,10 +193,10 @@ class TaskUpdateActorTest
     val appId = PathId("/app")
     val task1Id = "task1"
     val op1 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, task1Id, TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(task1Id), TaskOpProcessor.Action.Expunge
     )
     val op2 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, task1Id, TaskOpProcessor.Action.Noop
+      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(task1Id), TaskOpProcessor.Action.Noop
     )
 
     And("a processor that does not return")

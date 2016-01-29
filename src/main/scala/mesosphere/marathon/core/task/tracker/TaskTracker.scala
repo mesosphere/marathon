@@ -1,6 +1,8 @@
 package mesosphere.marathon.core.task.tracker
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.state.PathId
 import org.slf4j.LoggerFactory
 
@@ -22,8 +24,10 @@ trait TaskTracker {
   def appTasksSync(appId: PathId): Iterable[MarathonTask]
   def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]]
 
-  def taskSync(appId: PathId, taskId: String): Option[MarathonTask]
-  def task(appId: PathId, taskId: String)(implicit ec: ExecutionContext): Future[Option[MarathonTask]]
+  def marathonTaskSync(appId: PathId, taskId: String): Option[MarathonTask]
+  def marathonTask(appId: PathId, taskId: String)(implicit ec: ExecutionContext): Future[Option[MarathonTask]]
+
+  def task(appId: PathId, taskId: Task.Id)(implicit ec: ExecutionContext): Future[Option[Task]]
 
   def tasksByAppSync: TaskTracker.TasksByApp
   def tasksByApp()(implicit ec: ExecutionContext): Future[TaskTracker.TasksByApp]
@@ -50,10 +54,15 @@ object TaskTracker {
       appTasksMap.get(appId).map(_.tasks).getOrElse(Iterable.empty)
     }
 
-    def task(appId: PathId, taskId: String): Option[MarathonTask] = for {
+    def marathonTask(appId: PathId, taskId: String): Option[MarathonTask] = for {
       app <- appTasksMap.get(appId)
       task <- app.taskMap.get(taskId)
     } yield task
+
+    def taskState(appId: PathId, taskId: Task.Id): Option[Task] = for {
+      app <- appTasksMap.get(appId)
+      taskState <- app.taskStateMap.get(taskId.id)
+    } yield taskState
 
     def allTasks: Iterable[MarathonTask] = appTasksMap.values.view.flatMap(_.tasks)
 
@@ -85,22 +94,31 @@ object TaskTracker {
     * Contains only the tasks of the app with the given app ID.
     *
     * @param appId   The id of the app.
-    * @param taskMap The tasks of this app by task ID.
+    * @param taskStateMap The tasks of this app by task ID. FIXME: change keys to Task.TaskID
     */
-  case class AppTasks(appId: PathId, taskMap: Map[String, MarathonTask] = Map.empty) {
+  case class AppTasks(appId: PathId, taskStateMap: Map[String, Task] = Map.empty) {
+
     def isEmpty: Boolean = taskMap.isEmpty
     def contains(taskId: String): Boolean = taskMap.contains(taskId)
+    def taskMap: Map[String, MarathonTask] = taskStateMap.mapValues(_.marathonTask)
     def tasks: Iterable[MarathonTask] = taskMap.values
 
     private[tracker] def withTask(task: MarathonTask): AppTasks = {
-      copy(taskMap = taskMap + (task.getId -> task))
+      copy(taskStateMap = taskStateMap + (task.getId -> TaskSerializer.taskState(task)))
     }
 
-    private[tracker] def withoutTask(taskId: String): AppTasks = copy(taskMap = taskMap - taskId)
+    private[tracker] def withTaskState(taskState: Task): AppTasks = {
+      copy(taskStateMap = taskStateMap + (taskState.taskId.id -> taskState))
+    }
+
+    private[tracker] def withoutTaskState(taskId: Task.Id): AppTasks =
+      copy(taskStateMap = taskStateMap - taskId.id)
   }
 
   object AppTasks {
     def apply(appId: PathId, tasks: Iterable[MarathonTask]): AppTasks =
-      AppTasks(appId, tasks.map(task => task.getId -> task).toMap)
+      AppTasks.forStates(appId, tasks.map(TaskSerializer.taskState(_)))
+    def forStates(appId: PathId, taskStates: Iterable[Task]): AppTasks =
+      AppTasks(appId, taskStates.map(taskState => taskState.taskId.id -> taskState).toMap)
   }
 }

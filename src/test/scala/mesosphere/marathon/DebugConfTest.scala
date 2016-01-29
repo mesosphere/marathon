@@ -2,12 +2,12 @@ package mesosphere.marathon
 
 class DebugConfTest extends MarathonSpec {
   test("tracing is disabled by default") {
-    val conf = defaultConfig()
+    val conf = MarathonTestHelper.defaultConfig()
     assert(!conf.debugTracing())
   }
 
   test("tracing can be enabled") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--tracing"
     )
@@ -15,7 +15,7 @@ class DebugConfTest extends MarathonSpec {
   }
 
   test("tracing can be enabled using the deprecated ---enable_tracing") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--enable_tracing"
     )
@@ -23,7 +23,7 @@ class DebugConfTest extends MarathonSpec {
   }
 
   test("tracing can be disabled") {
-    val conf = makeConfig("" +
+    val conf = MarathonTestHelper.makeConfig("" +
       "--master", "127.0.0.1:5050",
       "--disable_tracing"
     )
@@ -31,12 +31,12 @@ class DebugConfTest extends MarathonSpec {
   }
 
   test("metrics are enabled by default") {
-    val conf = defaultConfig()
+    val conf = MarathonTestHelper.defaultConfig()
     assert(conf.metrics())
   }
 
   test("metrics can be enabled") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--metrics"
     )
@@ -44,7 +44,7 @@ class DebugConfTest extends MarathonSpec {
   }
 
   test("the deprecated --enable_metrics is accepted") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--enable_metrics"
     )
@@ -52,7 +52,7 @@ class DebugConfTest extends MarathonSpec {
   }
 
   test("metrics can be disabled") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--disable_metrics"
     )

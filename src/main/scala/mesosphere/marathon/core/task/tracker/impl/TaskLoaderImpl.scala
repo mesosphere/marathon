@@ -24,8 +24,7 @@ private[tracker] class TaskLoaderImpl(repo: TaskRepository) extends TaskLoader {
       log.info(s"Loaded ${tasks.size} tasks")
       val tasksByApp = tasks.groupBy(task => TaskIdUtil.appId(task.getId))
       val map = tasksByApp.iterator.map {
-        case (appId, appTasks) =>
-          appId -> TaskTracker.AppTasks(appId, appTasks.map(task => task.getId -> task).toMap)
+        case (appId, appTasks) => appId -> TaskTracker.AppTasks(appId, appTasks)
       }.toMap
       TaskTracker.TasksByApp.of(map)
     }

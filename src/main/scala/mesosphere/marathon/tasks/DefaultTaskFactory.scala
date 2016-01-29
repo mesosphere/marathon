@@ -25,18 +25,16 @@ class DefaultTaskFactory @Inject() (
 
     new TaskBuilder(app, taskIdUtil.newTaskId, config).buildIfMatches(offer, runningTasks).map {
       case (taskInfo, ports) =>
-        CreatedTask(
-          taskInfo,
-          MarathonTasks.makeTask(
-            id = taskInfo.getTaskId.getValue,
-            host = offer.getHostname,
-            ports = ports,
-            attributes = offer.getAttributesList.asScala,
-            version = app.version,
-            now = clock.now(),
-            slaveId = offer.getSlaveId
-          )
+        val marathonTask: MarathonTask = MarathonTasks.makeTask(
+          id = taskInfo.getTaskId.getValue,
+          host = offer.getHostname,
+          ports = ports,
+          attributes = offer.getAttributesList.asScala,
+          version = app.version,
+          now = clock.now(),
+          slaveId = offer.getSlaveId
         )
+        CreatedTask(taskInfo, marathonTask)
     }
   }
 }

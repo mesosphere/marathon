@@ -9778,6 +9778,26 @@ public final class Protos {
      */
     org.apache.mesos.Protos.NetworkInfoOrBuilder getNetworksOrBuilder(
         int index);
+
+    // optional int64 launch_counter = 12 [default = 0];
+    /**
+     * <code>optional int64 launch_counter = 12 [default = 0];</code>
+     */
+    boolean hasLaunchCounter();
+    /**
+     * <code>optional int64 launch_counter = 12 [default = 0];</code>
+     */
+    long getLaunchCounter();
+
+    // optional bool reservation_with_volume_id = 13;
+    /**
+     * <code>optional bool reservation_with_volume_id = 13;</code>
+     */
+    boolean hasReservationWithVolumeId();
+    /**
+     * <code>optional bool reservation_with_volume_id = 13;</code>
+     */
+    boolean getReservationWithVolumeId();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.MarathonTask}
@@ -9924,6 +9944,16 @@ public final class Protos {
                 mutable_bitField0_ |= 0x00000400;
               }
               networks_.add(input.readMessage(org.apache.mesos.Protos.NetworkInfo.PARSER, extensionRegistry));
+              break;
+            }
+            case 96: {
+              bitField0_ |= 0x00000080;
+              launchCounter_ = input.readInt64();
+              break;
+            }
+            case 104: {
+              bitField0_ |= 0x00000100;
+              reservationWithVolumeId_ = input.readBool();
               break;
             }
           }
@@ -10326,6 +10356,38 @@ public final class Protos {
       return networks_.get(index);
     }
 
+    // optional int64 launch_counter = 12 [default = 0];
+    public static final int LAUNCH_COUNTER_FIELD_NUMBER = 12;
+    private long launchCounter_;
+    /**
+     * <code>optional int64 launch_counter = 12 [default = 0];</code>
+     */
+    public boolean hasLaunchCounter() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional int64 launch_counter = 12 [default = 0];</code>
+     */
+    public long getLaunchCounter() {
+      return launchCounter_;
+    }
+
+    // optional bool reservation_with_volume_id = 13;
+    public static final int RESERVATION_WITH_VOLUME_ID_FIELD_NUMBER = 13;
+    private boolean reservationWithVolumeId_;
+    /**
+     * <code>optional bool reservation_with_volume_id = 13;</code>
+     */
+    public boolean hasReservationWithVolumeId() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    /**
+     * <code>optional bool reservation_with_volume_id = 13;</code>
+     */
+    public boolean getReservationWithVolumeId() {
+      return reservationWithVolumeId_;
+    }
+
     private void initFields() {
       id_ = "";
       host_ = "";
@@ -10338,6 +10400,8 @@ public final class Protos {
       status_ = org.apache.mesos.Protos.TaskStatus.getDefaultInstance();
       slaveId_ = org.apache.mesos.Protos.SlaveID.getDefaultInstance();
       networks_ = java.util.Collections.emptyList();
+      launchCounter_ = 0L;
+      reservationWithVolumeId_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -10418,6 +10482,12 @@ public final class Protos {
       for (int i = 0; i < networks_.size(); i++) {
         output.writeMessage(11, networks_.get(i));
       }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeInt64(12, launchCounter_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeBool(13, reservationWithVolumeId_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -10475,6 +10545,14 @@ public final class Protos {
       for (int i = 0; i < networks_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(11, networks_.get(i));
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(12, launchCounter_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(13, reservationWithVolumeId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -10639,6 +10717,10 @@ public final class Protos {
         } else {
           networksBuilder_.clear();
         }
+        launchCounter_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000800);
+        reservationWithVolumeId_ = false;
+        bitField0_ = (bitField0_ & ~0x00001000);
         return this;
       }
 
@@ -10735,6 +10817,14 @@ public final class Protos {
         } else {
           result.networks_ = networksBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.launchCounter_ = launchCounter_;
+        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.reservationWithVolumeId_ = reservationWithVolumeId_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -10865,6 +10955,12 @@ public final class Protos {
               networksBuilder_.addAllMessages(other.networks_);
             }
           }
+        }
+        if (other.hasLaunchCounter()) {
+          setLaunchCounter(other.getLaunchCounter());
+        }
+        if (other.hasReservationWithVolumeId()) {
+          setReservationWithVolumeId(other.getReservationWithVolumeId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -12257,6 +12353,72 @@ public final class Protos {
           networks_ = null;
         }
         return networksBuilder_;
+      }
+
+      // optional int64 launch_counter = 12 [default = 0];
+      private long launchCounter_ ;
+      /**
+       * <code>optional int64 launch_counter = 12 [default = 0];</code>
+       */
+      public boolean hasLaunchCounter() {
+        return ((bitField0_ & 0x00000800) == 0x00000800);
+      }
+      /**
+       * <code>optional int64 launch_counter = 12 [default = 0];</code>
+       */
+      public long getLaunchCounter() {
+        return launchCounter_;
+      }
+      /**
+       * <code>optional int64 launch_counter = 12 [default = 0];</code>
+       */
+      public Builder setLaunchCounter(long value) {
+        bitField0_ |= 0x00000800;
+        launchCounter_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int64 launch_counter = 12 [default = 0];</code>
+       */
+      public Builder clearLaunchCounter() {
+        bitField0_ = (bitField0_ & ~0x00000800);
+        launchCounter_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional bool reservation_with_volume_id = 13;
+      private boolean reservationWithVolumeId_ ;
+      /**
+       * <code>optional bool reservation_with_volume_id = 13;</code>
+       */
+      public boolean hasReservationWithVolumeId() {
+        return ((bitField0_ & 0x00001000) == 0x00001000);
+      }
+      /**
+       * <code>optional bool reservation_with_volume_id = 13;</code>
+       */
+      public boolean getReservationWithVolumeId() {
+        return reservationWithVolumeId_;
+      }
+      /**
+       * <code>optional bool reservation_with_volume_id = 13;</code>
+       */
+      public Builder setReservationWithVolumeId(boolean value) {
+        bitField0_ |= 0x00001000;
+        reservationWithVolumeId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool reservation_with_volume_id = 13;</code>
+       */
+      public Builder clearReservationWithVolumeId() {
+        bitField0_ = (bitField0_ & ~0x00001000);
+        reservationWithVolumeId_ = false;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.MarathonTask)
@@ -23907,7 +24069,7 @@ public final class Protos {
       "ling_at\030\027 \001(\003\022\035\n\025last_config_change_at\030\030" +
       " \001(\003\0221\n\tipAddress\030\031 \001(\0132\036.mesosphere.mar" +
       "athon.IpAddress\"\035\n\rResourceRoles\022\014\n\004role" +
-      "\030\001 \003(\t\"\307\002\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004h" +
+      "\030\001 \003(\t\"\206\003\n\014MarathonTask\022\n\n\002id\030\001 \002(\t\022\014\n\004h" +
       "ost\030\002 \001(\t\022\r\n\005ports\030\003 \003(\r\022$\n\nattributes\030\004" +
       " \003(\0132\020.mesos.Attribute\022\021\n\tstaged_at\030\005 \001(" +
       "\003\022\022\n\nstarted_at\030\006 \001(\003\022,\n\021OBSOLETE_status" +
@@ -23915,45 +24077,47 @@ public final class Protos {
       " \001(\t:\0301970-01-01T00:00:00.000Z\022!\n\006status" +
       "\030\t \001(\0132\021.mesos.TaskStatus\022\037\n\007slaveId\030\n \001",
       "(\0132\016.mesos.SlaveID\022$\n\010networks\030\013 \003(\0132\022.m" +
-      "esos.NetworkInfo\"M\n\013MarathonApp\022\014\n\004name\030" +
-      "\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.marath" +
-      "on.MarathonTask\"1\n\rContainerInfo\022\017\n\005imag" +
-      "e\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\237\004\n\025ExtendedC" +
-      "ontainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Conta" +
-      "inerInfo.Type\022\036\n\007volumes\030\002 \003(\0132\r.mesos.V" +
-      "olume\022E\n\006docker\030\003 \001(\01325.mesosphere.marat" +
-      "hon.ExtendedContainerInfo.DockerInfo\032\365\002\n" +
-      "\nDockerInfo\022\r\n\005image\030\001 \002(\t\022>\n\007network\030\002 ",
-      "\001(\0162\'.mesos.ContainerInfo.DockerInfo.Net" +
-      "work:\004HOST\022X\n\rport_mappings\030\003 \003(\0132A.meso" +
-      "sphere.marathon.ExtendedContainerInfo.Do" +
-      "ckerInfo.PortMapping\022\031\n\nprivileged\030\004 \001(\010" +
-      ":\005false\022$\n\nparameters\030\005 \003(\0132\020.mesos.Para" +
-      "meter\022\030\n\020force_pull_image\030\006 \001(\010\032c\n\013PortM" +
-      "apping\022\021\n\thost_port\030\001 \002(\r\022\026\n\016container_p" +
-      "ort\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\027\n\014service_p" +
-      "ort\030d \001(\r:\0010\")\n\020EventSubscribers\022\025\n\rcall" +
-      "back_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005maj",
-      "or\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"Z" +
-      "\n\031UpgradeStrategyDefinition\022\035\n\025minimumHe" +
-      "althCapacity\030\001 \002(\001\022\036\n\023maximumOverCapacit" +
-      "y\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002" +
-      "(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.meso" +
-      "sphere.marathon.ServiceDefinition\0224\n\006gro" +
-      "ups\030\004 \003(\0132$.mesosphere.marathon.GroupDef" +
-      "inition\022\024\n\014dependencies\030\005 \003(\t\"\245\001\n\030Deploy" +
-      "mentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versio" +
-      "n\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosphere.m",
-      "arathon.GroupDefinition\0224\n\006target\030\005 \002(\0132" +
-      "$.mesosphere.marathon.GroupDefinition\"\306\001" +
-      "\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id" +
-      "\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.m" +
-      "esos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004hos" +
-      "t\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030" +
-      "\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T" +
-      "\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002" +
-      "(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005f" +
-      "alseB\035\n\023mesosphere.marathonB\006Protos"
+      "esos.NetworkInfo\022\031\n\016launch_counter\030\014 \001(\003" +
+      ":\0010\022\"\n\032reservation_with_volume_id\030\r \001(\010\"" +
+      "M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 " +
+      "\003(\0132!.mesosphere.marathon.MarathonTask\"1" +
+      "\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opti" +
+      "ons\030\002 \003(\014\"\237\004\n\025ExtendedContainerInfo\022\'\n\004t" +
+      "ype\030\001 \002(\0162\031.mesos.ContainerInfo.Type\022\036\n\007" +
+      "volumes\030\002 \003(\0132\r.mesos.Volume\022E\n\006docker\030\003" +
+      " \001(\01325.mesosphere.marathon.ExtendedConta",
+      "inerInfo.DockerInfo\032\365\002\n\nDockerInfo\022\r\n\005im" +
+      "age\030\001 \002(\t\022>\n\007network\030\002 \001(\0162\'.mesos.Conta" +
+      "inerInfo.DockerInfo.Network:\004HOST\022X\n\rpor" +
+      "t_mappings\030\003 \003(\0132A.mesosphere.marathon.E" +
+      "xtendedContainerInfo.DockerInfo.PortMapp" +
+      "ing\022\031\n\nprivileged\030\004 \001(\010:\005false\022$\n\nparame" +
+      "ters\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020force_pu" +
+      "ll_image\030\006 \001(\010\032c\n\013PortMapping\022\021\n\thost_po" +
+      "rt\030\001 \002(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010prot" +
+      "ocol\030\003 \001(\t\022\027\n\014service_port\030d \001(\r:\0010\")\n\020E",
+      "ventSubscribers\022\025\n\rcallback_urls\030\001 \003(\t\"=" +
+      "\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor" +
+      "\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"Z\n\031UpgradeStrategy" +
+      "Definition\022\035\n\025minimumHealthCapacity\030\001 \002(" +
+      "\001\022\036\n\023maximumOverCapacity\030\002 \001(\001:\0011\"\260\001\n\017Gr" +
+      "oupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002" +
+      "(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere.marathon.S" +
+      "erviceDefinition\0224\n\006groups\030\004 \003(\0132$.mesos" +
+      "phere.marathon.GroupDefinition\022\024\n\014depend" +
+      "encies\030\005 \003(\t\"\245\001\n\030DeploymentPlanDefinitio",
+      "n\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010origin" +
+      "al\030\004 \002(\0132$.mesosphere.marathon.GroupDefi" +
+      "nition\0224\n\006target\030\005 \002(\0132$.mesosphere.mara" +
+      "thon.GroupDefinition\"\306\001\n\013TaskFailure\022\016\n\006" +
+      "app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.Ta" +
+      "skID\022\037\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n" +
+      "\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007vers" +
+      "ion\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030" +
+      "\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n" +
+      "\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014",
+      "\022\031\n\ncompressed\030\004 \001(\010:\005falseB\035\n\023mesospher" +
+      "e.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -24001,7 +24165,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
-              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "OBSOLETEStatuses", "Version", "Status", "SlaveId", "Networks", });
+              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "OBSOLETEStatuses", "Version", "Status", "SlaveId", "Networks", "LaunchCounter", "ReservationWithVolumeId", });
           internal_static_mesosphere_marathon_MarathonApp_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_mesosphere_marathon_MarathonApp_fieldAccessorTable = new
