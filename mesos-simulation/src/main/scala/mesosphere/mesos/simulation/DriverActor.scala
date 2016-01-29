@@ -27,6 +27,13 @@ object DriverActor {
   /**
     * Corresponds to the following method in [[org.apache.mesos.MesosSchedulerDriver]]:
     *
+    * `acceptOffers(o: util.Collection[OfferID], ops: util.Collection[Offer.Operation], filters: Filters): Status`
+    */
+  case class AcceptOffers(offerIds: Seq[OfferID], ops: Seq[Offer.Operation], filters: Filters)
+
+  /**
+    * Corresponds to the following method in [[org.apache.mesos.MesosSchedulerDriver]]:
+    *
     * `override def killTask(taskId: TaskID): Status`
     */
   case class KillTask(taskId: TaskID)
@@ -52,7 +59,7 @@ object DriverActor {
     */
   case object ReviveOffers
 
-  private case class ChangeTaskStatus(taskStatus: TaskStatus)
+  private case class ChangeTaskStatus(taskStatus: TaskStatus, create: Boolean)
 }
 
 class DriverActor(schedulerProps: Props) extends Actor {
@@ -136,6 +143,10 @@ class DriverActor(schedulerProps: Props) extends Actor {
     case LaunchTasks(offers, tasks) =>
       simulateTaskLaunch(offers, tasks)
 
+    case AcceptOffers(offers, ops, filters) =>
+      val taskInfos = extractTaskInfos(ops)
+      simulateTaskLaunch(offers, taskInfos)
+
     case KillTask(taskId) =>
       log.debug(s"kill task $taskId")
 
@@ -151,8 +162,8 @@ class DriverActor(schedulerProps: Props) extends Actor {
     case ReviveOffers =>
       scheduler ! offers
 
-    case ChangeTaskStatus(status) =>
-      changeTaskStatus(status)
+    case ChangeTaskStatus(status, create) =>
+      changeTaskStatus(status, create)
 
     case ReconcileTask(taskStatuses) =>
       if (taskStatuses.isEmpty) {
@@ -164,11 +175,18 @@ class DriverActor(schedulerProps: Props) extends Actor {
   }
   //scalastyle:on
 
-  def simulateTaskLaunch(offers: Seq[OfferID], tasksToLaunch: Seq[TaskInfo]): Unit = {
+  private[this] def extractTaskInfos(ops: Iterable[Offer.Operation]): Iterable[TaskInfo] = {
+    import scala.collection.JavaConverters._
+    ops.filter(_.getType == Offer.Operation.Type.LAUNCH).flatMap { op =>
+      Option(op.getLaunch).map(_.getTaskInfosList.asScala).getOrElse(Seq.empty)
+    }
+  }
+
+  private[this] def simulateTaskLaunch(offers: Seq[OfferID], tasksToLaunch: Iterable[TaskInfo]): Unit = {
     if (random.nextDouble() > 0.001) {
       log.debug(s"launch tasksToLaunch $offers, $tasksToLaunch")
       tasksToLaunch.map(_.getTaskId).foreach {
-        scheduleStatusChange(toState = TaskState.TASK_STAGING, afterDuration = 1.second)
+        scheduleStatusChange(toState = TaskState.TASK_STAGING, afterDuration = 1.second, create = true)
       }
 
       if (random.nextDouble() > 0.001) {
@@ -187,25 +205,39 @@ class DriverActor(schedulerProps: Props) extends Actor {
     }
   }
 
-  private[this] def changeTaskStatus(status: TaskStatus): Unit = {
-    status.getState match {
-      case TaskState.TASK_ERROR | TaskState.TASK_FAILED | TaskState.TASK_FINISHED | TaskState.TASK_LOST =>
-        tasks -= status.getTaskId.getValue
-      case _ =>
-        tasks += (status.getTaskId.getValue -> status)
+  private[this] def changeTaskStatus(status: TaskStatus, create: Boolean): Unit = {
+    if (create || tasks.contains(status.getTaskId.getValue)) {
+      status.getState match {
+        case TaskState.TASK_ERROR | TaskState.TASK_FAILED | TaskState.TASK_FINISHED | TaskState.TASK_LOST =>
+          tasks -= status.getTaskId.getValue
+        case _ =>
+          tasks += (status.getTaskId.getValue -> status)
+      }
+      log.debug(s"${tasks.size} tasks")
+      scheduler ! status
     }
-    log.info(s"${tasks.size} tasks")
-    scheduler ! status
+    else {
+      if (status.getState == TaskState.TASK_LOST) {
+        scheduler ! status
+      }
+      else {
+        log.debug(s"${status.getTaskId.getValue} does not exist anymore")
+      }
+    }
   }
 
-  private[this] def scheduleStatusChange(toState: TaskState, afterDuration: FiniteDuration)(taskID: TaskID): Unit = {
+  private[this] def scheduleStatusChange(
+    toState: TaskState,
+    afterDuration: FiniteDuration,
+    create: Boolean = false)(taskID: TaskID): Unit = {
+
     val newStatus = TaskStatus.newBuilder()
       .setSource(TaskStatus.Source.SOURCE_EXECUTOR)
       .setTaskId(taskID)
       .setState(toState)
       .build()
     import context.dispatcher
-    context.system.scheduler.scheduleOnce(afterDuration, self, ChangeTaskStatus(newStatus))
+    context.system.scheduler.scheduleOnce(afterDuration, self, ChangeTaskStatus(newStatus, create))
   }
 
 }

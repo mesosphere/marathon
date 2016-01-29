@@ -41,6 +41,11 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
   override def launchTasks(offerIds: util.Collection[OfferID], tasks: util.Collection[TaskInfo]): Status =
     driverCmd(DriverActor.LaunchTasks(offerIds.toSeq, tasks.toSeq))
 
+  // Mesos 0.23.x
+  override def acceptOffers(
+    offerIds: util.Collection[OfferID], ops: util.Collection[Offer.Operation], filters: Filters): Status =
+    driverCmd(DriverActor.AcceptOffers(offerIds.toSeq, ops.toSeq, filters))
+
   override def killTask(taskId: TaskID): Status = driverCmd(DriverActor.KillTask(taskId))
   override def reconcileTasks(statuses: util.Collection[TaskStatus]): Status = {
     driverCmd(DriverActor.ReconcileTask(statuses.toSeq))
@@ -59,9 +64,6 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
   override def requestResources(requests: util.Collection[Request]): Status = ???
   override def sendFrameworkMessage(executorId: ExecutorID, slaveId: SlaveID, data: Array[Byte]): Status = ???
   override def acknowledgeStatusUpdate(ackStatus: TaskStatus): Status = status
-  // Mesos 0.23.x
-  override def acceptOffers(
-    o: util.Collection[OfferID], ops: util.Collection[Offer.Operation], filters: Filters): Status = ???
 
   // life cycle
 
