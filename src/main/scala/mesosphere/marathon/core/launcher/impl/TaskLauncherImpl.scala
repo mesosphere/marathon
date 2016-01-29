@@ -35,7 +35,11 @@ private[launcher] class TaskLauncherImpl(
     }
     if (launched) {
       usedOffersMeter.mark()
-      taskOps.collect { case OfferMatcher.Launch(_, _, _) => launchedTasksMeter.mark(taskOps.size.toLong) }
+      val launchCount = taskOps.count {
+        case OfferMatcher.Launch(_, _, _) => true
+        case _                            => false
+      }
+      launchedTasksMeter.mark(launchCount)
     }
     launched
   }

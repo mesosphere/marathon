@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedTaskOps
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
-import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskLaunchRejected
+import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpRejected
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -205,7 +205,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
         app, tasksToLaunch = 1
       ) {
         override protected def scheduleTaskLaunchTimeout(
-          context: ActorContext, message: TaskLaunchRejected): Cancellable = {
+          context: ActorContext, message: TaskOpRejected): Cancellable = {
           scheduleCalled = true
           mock[Cancellable]
         }

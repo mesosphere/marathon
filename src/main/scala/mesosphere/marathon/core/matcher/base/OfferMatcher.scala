@@ -22,7 +22,7 @@ object OfferMatcher {
   }
 
   /**
-    * An operation which relates to a task is executed on an Offer.
+    * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
     */
   sealed trait TaskOp {
     /** The app ID of the affected task. */
@@ -36,7 +36,7 @@ object OfferMatcher {
     /** How would the offer change when Mesos executes this op? */
     def applyToOffer(offer: Offer): Offer
     /** To which Offer.Operations does this task op relate? */
-    def offerOperations: Seq[Offer.Operation]
+    def offerOperations: Iterable[Offer.Operation]
   }
 
   /** Launch a task on the offer. */
@@ -45,7 +45,7 @@ object OfferMatcher {
       import scala.collection.JavaConverters._
       ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.asScala)
     }
-    def offerOperations: Seq[Offer.Operation] = Seq(OfferOperation.launch(taskInfo))
+    def offerOperations: Iterable[Offer.Operation] = Seq(OfferOperation.launch(taskInfo))
   }
 
   /**
@@ -53,8 +53,8 @@ object OfferMatcher {
     * could not match the offer in any way it should simply leave the tasks
     * collection empty.
     *
-    * To increase fairness between matchers, each normal matcher should only execute as few operations
-    * as possible per offer -- one for task launches without reservations. Multiple launches could be used
+    * To increase fairness between matchers, each normal matcher should schedule as few operations
+    * as possible per offer per match, e.g. one for task launches without reservations. Multiple launches could be used
     * if the tasks need to be colocated or if the operations are intrinsically dependent on each other.
     * The OfferMultiplexer tries to summarize suitable
     * matches from multiple offer matches into one response.

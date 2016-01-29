@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launchqueue.impl.AppTaskLauncherActor.RecheckIfB
 import mesosphere.marathon.core.matcher.base
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ TaskOp, MatchedTaskOps, TaskOpWithSource }
-import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskLaunchNotification
+import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
@@ -153,7 +153,7 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def receiveWaitingForInFlight: Receive = LoggingReceive.withLabel("waitingForInFlight") {
-    case notification: TaskLaunchNotification =>
+    case notification: TaskOpNotification =>
       receiveTaskLaunchNotification(notification)
       waitingForInFlight()
 
@@ -206,22 +206,26 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def receiveTaskLaunchNotification: Receive = {
-    case TaskOpSourceDelegate.TaskLaunchRejected(op, reason) if inFlight(op) =>
+    case TaskOpSourceDelegate.TaskOpRejected(op, reason) if inFlight(op) =>
       removeTask(op.taskId)
       tasksToLaunch += 1
       log.info("Task launch for '{}' was REJECTED, reason '{}', rescheduling. {}", op.taskId, reason, status)
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
-    case TaskOpSourceDelegate.TaskLaunchRejected(
+    case TaskOpSourceDelegate.TaskOpRejected(
       op, AppTaskLauncherActor.TASK_LAUNCH_REJECTED_TIMEOUT_REASON
       ) =>
 
+      // This is a message that we scheduled in this actor.
+      // When we receive a launch confirmation or rejection, we cancel this timer but
+      // there is still a race and we might send ourselves the message nevertheless, so we just
+      // ignore it here.
       log.debug("Unnecessary timeout message. Ignoring task launch rejected for task id '{}'.", op.taskId)
 
-    case TaskOpSourceDelegate.TaskLaunchRejected(op, reason) =>
+    case TaskOpSourceDelegate.TaskOpRejected(op, reason) =>
       log.warning("Unexpected task launch rejected for taskId '{}'.", op.taskId)
 
-    case TaskOpSourceDelegate.TaskLaunchAccepted(op) =>
+    case TaskOpSourceDelegate.TaskOpAccepted(op) =>
       inFlightTaskLaunches -= op.taskId
       log.info("Task launch for '{}' was accepted. {}", op.taskId, status)
   }
@@ -333,8 +337,14 @@ private class AppTaskLauncherActor(
       newTaskOpt match {
         case Some(CreatedTask(mesosTask, marathonTask)) =>
           def updateActorState(): Unit = {
-            tasksMap += marathonTask.getId -> marathonTask
-            inFlightTaskLaunches += mesosTask.getTaskId.getValue -> None
+            val taskId = marathonTask.getId
+            assume(
+              marathonTask.getId == mesosTask.getTaskId.getValue,
+              "marathon task id and mesos task id must be equal"
+            )
+
+            tasksMap += taskId -> marathonTask
+            inFlightTaskLaunches += taskId -> None
             tasksToLaunch -= 1
             OfferMatcherRegistration.manageOfferMatcherStatus()
           }
@@ -354,7 +364,7 @@ private class AppTaskLauncherActor(
 
   protected val receiveScheduleTaskLaunchNotificationDelay: Receive = {
     case AppTaskLauncherActor.ScheduleTaskLaunchNotificationTimeout(launch) if inFlight(launch) =>
-      val reject = TaskOpSourceDelegate.TaskLaunchRejected(
+      val reject = TaskOpSourceDelegate.TaskOpRejected(
         launch, AppTaskLauncherActor.TASK_LAUNCH_REJECTED_TIMEOUT_REASON
       )
       val cancellable = scheduleTaskLaunchTimeout(context, reject)
@@ -369,7 +379,7 @@ private class AppTaskLauncherActor(
 
   protected def scheduleTaskLaunchTimeout(
     context: ActorContext,
-    message: TaskOpSourceDelegate.TaskLaunchRejected): Cancellable =
+    message: TaskOpSourceDelegate.TaskOpRejected): Cancellable =
     {
       import context.dispatcher
       context.system.scheduler.scheduleOnce(config.taskLaunchNotificationTimeout().milliseconds, self, message)

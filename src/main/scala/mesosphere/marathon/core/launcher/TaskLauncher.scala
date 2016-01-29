@@ -8,7 +8,7 @@ import org.apache.mesos.Protos.OfferID
   */
 trait TaskLauncher {
   /**
-    * Launch the given tasks on the given offer. The offer is consumed afterwards and
+    * Send operations on given offer to Mesos. The offer is consumed afterwards and
     * cannot be used anymore.
     *
     * @return `true` if we could communicate the task launch to Mesos and `false` otherwise
