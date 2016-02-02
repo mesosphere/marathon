@@ -135,7 +135,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * <span class="label label-default">v0.13.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
 * <span class="label label-default">v0.13.0</span> `--on_elected_prepare_timeout` (Optional. Default: 3 minutes):
     The timeout for preparing the Marathon instance when elected as leader.
-
+* <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
+    A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
 ## Tuning Flags for Offer Matching/Launching Tasks
 
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
@@ -280,9 +281,8 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 ### Metrics Flags
 
 * <span class="label label-default">v0.13.0</span> `--[disable_]metrics` (Optional. Default: enabled):
-    Expose the execution time per method via the metrics endpoint (/metrics) using code instrumentation.
-    Enabling this might noticeably degrade performance but it helps finding performance problems.
-    These measurements can be disabled with --disable_metrics. Other metrics are not affected.
+    Expose the execution time per method via the metrics endpoint (/metrics).
+    This metrics measurement can be disabled with --disable_metrics.
 * <span class="label label-default">v0.13.0</span> `--reporter_graphite` (Optional. Default: disabled):
     Report metrics to [Graphite](http://graphite.wikidot.com) as defined by the given URL. 
     Example: `tcp://localhost:2003?prefix=marathon-test&interval=10` 

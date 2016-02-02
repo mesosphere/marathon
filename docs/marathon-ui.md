@@ -66,56 +66,6 @@ True if the `queue` endpoint returns the
 following JSON conditions:
 `queueEntry.delay.overdue === false && queueEntry.delay.timeLeftSeconds > 0`
 
-## Application Health Reference
-It is possible to specify health checks to be run against an application's
-tasks. For instructions on how to set up and use health checks, please refer to the
-[health checks page]({{ site.baseurl }}/health-checks.html) page.
-
-<img src="{{ site.baseurl }}/img/marathon-ui-health.png" width="700" alt="Health States in Marathon UI">
-
-An application's task lifecycle always falls into one of the following
-conditions.
-
-#### Healthy
-A task is considered healthy when all of the supplied health checks are
-passing.
-
------------
-
-#### Unhealthy
-A task is considered unhealthy whenever one or more health checks are reported
-as failing.
-
------------
-
-#### Staged
-A task is staged when a launch request has been submitted to the cluster, but
-has not been reported as running yet. Fetching the specified "uris" in the app
-definition or the docker images happens before Mesos reports the task as
-running.
-
------------
-
-Additionally, the UI introduces the following concepts.
-
-#### Unknown
-The health of the task is unknown because no health checks were defined.
-
------------
-
-#### Overcapacity
-Whenever there are more running tasks than the amount of instances requested.
-This happens, for example, when a rolling restart is performed with a deployment
-policy that enforces a draining approach (i.e. new tasks are started before the
-running ones could be destroyed), or when scaling down.
-
------------
-
-#### Unscheduled
-Whenever a task never manages to reach the staged status, e.g. when no
-matching offer has been received, or Marathon throttles starting new tasks to
-prevent overwhelming Mesos.
-
 -----------
 
 
