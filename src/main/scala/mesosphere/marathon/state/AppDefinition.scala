@@ -355,6 +355,13 @@ object AppDefinition {
   }
 
   object VersionInfo {
+
+    /**
+      * This should only be used for new AppDefinitions.
+      *
+      * If you set the versionInfo of existing AppDefinitions to `NoVersion`,
+      * it will result in a restart when this AppDefinition is passed to the GroupManager update method.
+      */
     case object NoVersion extends VersionInfo {
       override def version: Timestamp = Timestamp(0)
       override def lastConfigChangeVersion: Timestamp = version
