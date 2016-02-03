@@ -73,6 +73,8 @@ case class AppDefinition(
 
   ipAddress: Option[IpAddress] = None,
 
+  autoScale: Option[AutoScaleDefinition] = None,
+
   versionInfo: VersionInfo = VersionInfo.NoVersion)
 
     extends MarathonState[Protos.ServiceDefinition, AppDefinition] {
@@ -134,6 +136,8 @@ case class AppDefinition(
       .addAllLabels(appLabels.asJava)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
+
+    autoScale.foreach { as => builder.setAutoScale(as.toProto) }
 
     container.foreach { c => builder.setContainer(c.toProto()) }
 
@@ -205,6 +209,8 @@ case class AppDefinition(
 
     val ipAddressOption = if (proto.hasIpAddress) Some(IpAddress.fromProto(proto.getIpAddress)) else None
 
+    val autoScaleOption = if (proto.hasAutoScale) Some(AutoScaleDefinition.fromProto(proto.getAutoScale)) else None
+
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -233,7 +239,8 @@ case class AppDefinition(
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
-      ipAddress = ipAddressOption
+      ipAddress = ipAddressOption,
+      autoScale = autoScaleOption
     )
   }
 
@@ -299,7 +306,8 @@ case class AppDefinition(
         upgradeStrategy != to.upgradeStrategy ||
         labels != to.labels ||
         acceptedResourceRoles != to.acceptedResourceRoles ||
-        ipAddress != to.ipAddress
+        ipAddress != to.ipAddress ||
+        autoScale != to.autoScale
     }
   }
 
@@ -352,6 +360,8 @@ object AppDefinition {
     def withConfigChange(newVersion: Timestamp): VersionInfo = {
       VersionInfo.forNewConfig(newVersion)
     }
+
+    def configEquals(other: VersionInfo): Boolean = lastConfigChangeVersion == other.lastConfigChangeVersion
   }
 
   object VersionInfo {

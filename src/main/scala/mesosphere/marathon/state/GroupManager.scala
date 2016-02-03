@@ -43,9 +43,9 @@ class GroupManager @Singleton @Inject() (
     groupRepo.group(zkName).map(_.getOrElse(Group.empty))
 
   /**
-    * Get all available versions for given group identifier.
-    * @param id the identifier of the group.
-    * @return the list of versions of this object.
+    * Get a specific app definition by its id.
+    * @param id the id of the app.
+    * @return the app uf ut is found, otherwise false
     */
   def versions(id: PathId): Future[Iterable[Timestamp]] = {
     groupRepo.listVersions(zkName).flatMap { versions =>

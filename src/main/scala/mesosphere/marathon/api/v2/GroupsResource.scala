@@ -205,7 +205,9 @@ class GroupsResource @Inject() (
         )
       }
       val scaleChange = update.scaleBy.map { scale =>
-        group.updateApps(version) { app => app.copy(instances = (app.instances * scale).ceil.toInt) }
+        group.updateApps(version) { app =>
+          if (app.autoScale.isDefined) app else app.copy(instances = (app.instances * scale).ceil.toInt)
+        }
       }
       versionChange orElse scaleChange getOrElse update.apply(group, version)
     }

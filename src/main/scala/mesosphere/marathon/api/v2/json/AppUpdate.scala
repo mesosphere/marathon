@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ NoVersion, OnlyVersion }
-import mesosphere.marathon.state.{ AppDefinition, Container, FetchUri, IpAddress, PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
@@ -60,9 +60,11 @@ case class AppUpdate(
 
     acceptedResourceRoles: Option[Set[String]] = None,
 
-    version: Option[Timestamp] = None,
+    ipAddress: Option[IpAddress] = None,
 
-    ipAddress: Option[IpAddress] = None) {
+    autoScale: Option[AutoScaleDefinition] = None,
+
+    version: Option[Timestamp] = None) {
 
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
@@ -101,6 +103,7 @@ case class AppUpdate(
     labels = labels.getOrElse(app.labels),
     acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles),
     ipAddress = ipAddress.orElse(app.ipAddress),
+    autoScale = app.autoScale,
     versionInfo = version.map(OnlyVersion).getOrElse(NoVersion)
   )
 

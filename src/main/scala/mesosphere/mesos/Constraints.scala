@@ -117,16 +117,52 @@ object Constraints {
       */
     private def matchTaskAttributes(tasks: Iterable[MarathonTask], field: String, value: String) =
       tasks.filter {
-        _.getAttributesList.asScala
-          .filter { y =>
-            y.getName == field &&
-              y.getText.getValue == value
-          }.nonEmpty
+        _.getAttributesList.asScala.exists { y =>
+          y.getName == field &&
+            y.getText.getValue == value
+        }
       }
   }
 
   def meetsConstraint(tasks: Iterable[MarathonTask], offer: Offer, constraint: Constraint): Boolean =
     new ConstraintsChecker(tasks, offer, constraint).isMatch
+
+  /**
+    * Select slaves based on given constraints.
+    * @param slaves the iterable sequence of slaves to select from.
+    * @param constraints the constraints that all slaves have to meet.
+    * @return the filtered list of slaves that meet all constraints.
+    */
+  def selectMatchingSlaves(slaves: Iterable[MesosAgentData],
+                           constraints: Iterable[Constraint]): Iterable[MesosAgentData] = {
+
+    def matchingSlaves(slaves: Iterable[MesosAgentData], constraint: Constraint): Iterable[MesosAgentData] = {
+      val key = constraint.getField
+      val value = constraint.getValue
+
+      def hostNameMatches = {
+        constraint.getOperator match {
+          case Operator.CLUSTER => slaves.filter(_.hostname == value)
+          case Operator.LIKE    => slaves.filter(_.hostname.matches(value))
+          case Operator.UNLIKE  => slaves.filter(slave => !slave.hostname.matches(value))
+          case _                => slaves
+        }
+      }
+
+      def attributeMatches = {
+        constraint.getOperator match {
+          case Operator.CLUSTER => slaves.filter(_.attributes.get(key).contains(constraint.getValue))
+          case Operator.LIKE    => slaves.filter(_.attributes.get(key).exists(value.matches))
+          case Operator.UNLIKE  => slaves.filter(_.attributes.get(key).exists(d => !value.matches(d)))
+          case _                => slaves
+        }
+      }
+
+      if (key == "hostname") hostNameMatches else attributeMatches
+    }
+
+    constraints.foldLeft(slaves) { (sla, constraint) => matchingSlaves(sla, constraint) }
+  }
 
   /**
     * Select tasks to kill while maintaining the constraints of the application definition.

@@ -56,6 +56,17 @@ message DiscoveryInfo {
   repeated mesos.Port ports = 1;
 }
 
+message AutoScaleInfo {
+
+  message ScalingPolicyInfo {
+    //The name of the policy to use
+    required string name = 1;
+    //Parameters for this policy
+    repeated mesos.Parameter parameters = 2;
+  }
+  repeated ScalingPolicyInfo policies =1;
+}
+
 message ServiceDefinition {
   required string id = 1;
   required mesos.CommandInfo cmd = 2;
@@ -82,6 +93,7 @@ message ServiceDefinition {
   optional int64 last_scaling_at = 23;
   optional int64 last_config_change_at = 24;
   optional IpAddress ipAddress = 25;
+  optional AutoScaleInfo autoScale = 26;
 }
 
 message ResourceRoles {
