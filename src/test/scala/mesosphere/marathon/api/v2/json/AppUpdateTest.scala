@@ -17,6 +17,8 @@ import scala.concurrent.duration._
 
 import mesosphere.marathon.api.v2.Validation._
 
+import scala.util.Try
+
 class AppUpdateTest extends MarathonSpec {
   import Formats._
   import mesosphere.marathon.integration.setup.V2TestFormats._
@@ -197,6 +199,22 @@ class AppUpdateTest extends MarathonSpec {
 
     val changed = AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(versionInfo = app.versionInfo)
     assert(changed == app.copy(acceptedResourceRoles = Some(Set("b"))))
+  }
+
+  test("AppUpdate does not change existing versionInfo") {
+    val app = AppDefinition(
+      id = PathId("test"),
+      cmd = Some("sleep 1"),
+      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1))
+    )
+
+    val updateCmd = AppUpdate(cmd = Some("sleep 2"))
+    assert(updateCmd(app) == app)
+  }
+
+  test("AppUpdate with a version and other changes are not allowed") {
+    val attempt = Try(AppUpdate(id = Some(PathId("/test")), cmd = Some("sleep 2"), version = Some(Timestamp(2))))
+    assert(attempt.failed.get.getMessage.contains("The 'version' field may only be combined with the 'id' field."))
   }
 
   test("update may not have both uris and fetch") {

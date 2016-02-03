@@ -44,6 +44,24 @@ class AppDeployIntegrationTest
     waitForTasks(app.id, 1) //make sure, the app has really started
   }
 
+  test("redeploying an app without changes should not cause restarts") {
+    Given("an deployed app")
+    val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val result = marathon.createAppV2(app)
+    result.code should be (201) //Created
+    extractDeploymentIds(result) should have size 1
+    waitForEvent("deployment_success")
+    val taskBeforeRedeployment = waitForTasks(app.id, 1) //make sure, the app has really started
+
+    When("redeploying the app without changes")
+    marathon.updateApp(app.id, AppUpdate(id = Some(app.id), cmd = app.cmd))
+    waitForEvent("deployment_success")
+    val tasksAfterRedeployment = waitForTasks(app.id, 1) //make sure, the app has really started
+
+    Then("no tasks should have been restarted")
+    taskBeforeRedeployment should be (tasksAfterRedeployment)
+  }
+
   test("backoff delays are reset on configuration changes") {
     val app: AppDefinition = createAFailingAppResultingInBackOff()
 

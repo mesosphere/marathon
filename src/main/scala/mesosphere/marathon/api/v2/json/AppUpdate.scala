@@ -106,7 +106,12 @@ case class AppUpdate(
     labels = labels.getOrElse(app.labels),
     acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles),
     ipAddress = ipAddress.orElse(app.ipAddress),
-    versionInfo = version.map(OnlyVersion).getOrElse(NoVersion)
+    // The versionInfo may never be overridden by an AppUpdate.
+    // Setting the version in AppUpdate means that the user wants to revert to that version. In that
+    // case, we do not update the current AppDefinition but revert completely to the specified version.
+    // For all other updates, the GroupVersioningUtil will determine a new version if the AppDefinition
+    // has really changed.
+    versionInfo = app.versionInfo
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): AppUpdate = copy(
