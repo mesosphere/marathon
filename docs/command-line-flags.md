@@ -281,8 +281,9 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 ### Metrics Flags
 
 * <span class="label label-default">v0.13.0</span> `--[disable_]metrics` (Optional. Default: enabled):
-    Expose the execution time per method via the metrics endpoint (/metrics).
-    This metrics measurement can be disabled with --disable_metrics.
+    Expose the execution time per method via the metrics endpoint (/metrics) using code instrumentation.
+    Enabling this might noticeably degrade performance but it helps finding performance problems.
+    These measurements can be disabled with --disable_metrics. Other metrics are not affected.
 * <span class="label label-default">v0.13.0</span> `--reporter_graphite` (Optional. Default: disabled):
     Report metrics to [Graphite](http://graphite.wikidot.com) as defined by the given URL. 
     Example: `tcp://localhost:2003?prefix=marathon-test&interval=10` 

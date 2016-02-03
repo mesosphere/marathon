@@ -11,8 +11,7 @@ this application. The simplest failure is that there are not sufficient resource
 framework hords all these resources. You can check the Mesos UI for available resources. Note that the required resources
 (such as CPU, Mem, Disk) have to be all available on a single host.
 
-If you do not find the solution yourself and you create a github issue, please append your Mesos `state.json` to
-the bug report so that we can inspect available cluster resources.
+If you do not find the solution yourself and you create a github issue, please append the output of Mesos `/state` endpoint to the bug report so that we can inspect available cluster resources.
 
 ### Requiring a specific host port
 
