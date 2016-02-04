@@ -36,6 +36,14 @@ class ConstraintTest extends MarathonSpec with Matchers {
 
   }
 
+  test("Read should give a nice validation error for unknown operators (regression for #3161)") {
+    import mesosphere.marathon.api.v2.json.Formats._
+    val ex = intercept[JsResultException](Json.parse("""["foo", "unique"]""").as[Constraint])
+    ex.errors should have size 1
+    ex.errors.head._2 should have size 1
+    ex.errors.head._2.head.messages.head should startWith("Constraint operator must be one of the following")
+  }
+
   test("Serialize") {
     def shouldMatch(expected: String, constraint: Constraint) {
       import mesosphere.marathon.api.v2.json.Formats._
