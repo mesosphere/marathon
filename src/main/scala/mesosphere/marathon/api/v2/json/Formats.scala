@@ -479,12 +479,21 @@ trait AppAndGroupFormats {
 
   implicit lazy val ConstraintFormat: Format[Constraint] = Format(
     new Reads[Constraint] {
-      override def reads(json: JsValue): JsResult[Constraint] = json.asOpt[Seq[String]] match {
-        case Some(seq) if seq.size >= 2 && seq.size <= 3 && Operator.values().map(_.toString).contains(seq(1)) =>
-          val builder = Constraint.newBuilder().setField(seq(0)).setOperator(Operator.valueOf(seq(1)))
-          if (seq.size == 3) builder.setValue(seq(2))
-          JsSuccess(builder.build())
-        case _ => JsError("Constraint definition must be an array of strings in format: <key>, <operator>[, value]")
+      override def reads(json: JsValue): JsResult[Constraint] = {
+        val validOperators = Operator.values().map(_.toString)
+
+        json.asOpt[Seq[String]] match {
+          case Some(seq) if seq.size >= 2 && seq.size <= 3 =>
+            if (validOperators.contains(seq(1))) {
+              val builder = Constraint.newBuilder().setField(seq(0)).setOperator(Operator.valueOf(seq(1)))
+              if (seq.size == 3) builder.setValue(seq(2))
+              JsSuccess(builder.build())
+            }
+            else {
+              JsError(s"Constraint operator must be one of the following: [${validOperators.mkString(", ")}]")
+            }
+          case _ => JsError("Constraint definition must be an array of strings in format: <key>, <operator>[, value]")
+        }
       }
     },
     Writes[Constraint] { constraint =>
