@@ -582,5 +582,61 @@ class AppDeployIntegrationTest
     marathon.app(appId).code should be (404)
   }
 
+  test("Docker info is not automagically created") {
+    import org.apache.mesos
+
+    Given("An app with MESOS container")
+    val appId = testBasePath / "app"
+    val app = AppDefinition(
+      id = appId,
+      cmd = Some("sleep 1"),
+      instances = 0,
+      container = Some(Container(
+        `type` = mesos.Protos.ContainerInfo.Type.MESOS
+      ))
+    )
+
+    app.container should not be empty
+    app.container.get.`type` should equal(mesos.Protos.ContainerInfo.Type.MESOS)
+
+    When("The request is sent")
+    val result = marathon.createAppV2(app)
+
+    Then("The app is created")
+    result.code should be (201) //Created
+
+    extractDeploymentIds(result) should have size 1
+    waitForEvent("deployment_success")
+
+    When("We fetch the app definition")
+    val getResult1 = marathon.app(appId)
+    val maybeContainer1 = getResult1.value.app.container
+
+    Then("The container should still be of type MESOS")
+    maybeContainer1 should not be empty
+    maybeContainer1.get.`type` should equal(mesos.Protos.ContainerInfo.Type.MESOS)
+
+    And("container.docker should not be set")
+    maybeContainer1.get.docker shouldBe (empty)
+
+    When("We update the app")
+    val update = marathon.updateApp(appId, AppUpdate(cmd = Some("sleep 100")))
+
+    Then("The app gets updated")
+    update.code should be (200)
+    waitForEvent("deployment_success")
+
+    When("We fetch the app definition")
+    val getResult2 = marathon.app(appId)
+    val maybeContainer2 = getResult2.value.app.container
+
+    Then("The container should still be of type MESOS")
+    maybeContainer2 should not be empty
+    maybeContainer2.get.`type` should equal(mesos.Protos.ContainerInfo.Type.MESOS)
+
+    And("container.docker should not be set")
+    maybeContainer1.get.docker shouldBe (empty)
+  }
+
   def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)
 }

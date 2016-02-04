@@ -10,9 +10,8 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -89,11 +88,94 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
-    When("The application is updates")
+    When("The application is updated")
     val response = appsResource.replace(app.id.toString, body, false, auth.request, auth.response)
 
     Then("The application is updated")
     response.getStatus should be(200)
+  }
+
+  test("Replace an existing application fails due to docker container validation") {
+    Given("An app update with an invalid container (missing docker field)")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body =
+      """{
+        |  "cmd": "sleep 1",
+        |  "container": {
+        |    "type": "DOCKER"
+        |  }
+        |}""".stripMargin.getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The application is updated")
+    val response = appsResource.replace(app.id.toString, body, force = false, auth.request, auth.response)
+
+    Then("The return code indicates a validation error for container.docker")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("container.docker")
+    response.getEntity.toString should include("must not be empty")
+  }
+
+  test("Creating an app with broken volume definition fails with readable error message") {
+    Given("An app update with an invalid volume (wrong field name)")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body =
+      """
+        |{
+        |  "id": "resident1",
+        |  "cmd": "sleep 100",
+        |  "instances": 0,
+        |  "container": {
+        |    "type": "MESOS",
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "persistent_WRONG_FIELD_NAME": {
+        |        "size": 10
+        |      },
+        |      "mode": "RW"
+        |    }]
+        |  }
+        |}
+      """.stripMargin.getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The request is processed")
+    val response = appsResource.create(body, false, auth.request, auth.response)
+
+    Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
+    response.getStatus should be(422)
+    response.getEntity.toString should include("container.volumes.[0]hostPath")
+    response.getEntity.toString should include("must not be empty")
+  }
+
+  test("Replace an existing application fails due to mesos container validation") {
+    Given("An app update with an invalid container (missing docker field)")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body =
+      """{
+        |  "cmd": "sleep 1",
+        |  "container": {
+        |    "type": "MESOS",
+        |    "docker": {
+        |      "image": "/test:latest"
+        |    }
+        |  }
+        |}""".stripMargin.getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The application is updated")
+    val response = appsResource.replace(app.id.toString, body, force = false, auth.request, auth.response)
+
+    Then("The return code indicates a validation error for container.docker")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("container.docker")
+    response.getEntity.toString should include("must be empty")
   }
 
   test("Restart an existing app") {

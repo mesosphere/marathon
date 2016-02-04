@@ -1,13 +1,15 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.{ MarathonSpec, Protos }
 import org.scalatest.Matchers
 import play.api.libs.json._
+
+import scala.collection.immutable.Seq
 
 class AppDefinitionFormatsTest
     extends MarathonSpec
@@ -67,6 +69,7 @@ class AppDefinitionFormatsTest
     (r1 \ "healthChecks").as[Set[HealthCheck]] should equal (DefaultHealthChecks)
     (r1 \ "dependencies").as[Set[PathId]] should equal (DefaultDependencies)
     (r1 \ "upgradeStrategy").as[UpgradeStrategy] should equal (DefaultUpgradeStrategy)
+    (r1 \ "residency").asOpt[String] should equal (None)
   }
 
   test("ToJson should serialize full version info") {
@@ -183,5 +186,25 @@ class AppDefinitionFormatsTest
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": [] }""")
     a[JsResultException] shouldBe thrownBy { json.as[AppDefinition] }
   }
-}
 
+  test("""FromJSON should parse "residency" """) {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "residency": {
+        |     "relaunchEscalationTimeoutSeconds": 300,
+        |     "taskLostBehavior": "RELAUNCH_AFTER_TIMEOUT"
+        |  }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.residency should equal(Some(Residency(300, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT)))
+  }
+
+  test("ToJson should serialize residency") {
+    import Fixture._
+
+    val json = Json.toJson(a1.copy(residency = Some(Residency(7200, Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER))))
+    (json \ "residency" \ "relaunchEscalationTimeoutSeconds").as[Long] should equal(7200)
+    (json \ "residency" \ "taskLostBehavior").as[String] should equal(Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER.name())
+  }
+}

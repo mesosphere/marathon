@@ -4,8 +4,16 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.AppDefinition.VersionInfo.{ NoVersion, OnlyVersion }
-import mesosphere.marathon.state.{ AppDefinition, Container, FetchUri, IpAddress, PathId, Timestamp, UpgradeStrategy }
+import mesosphere.marathon.state.{
+  AppDefinition,
+  Container,
+  FetchUri,
+  IpAddress,
+  PathId,
+  Residency,
+  Timestamp,
+  UpgradeStrategy
+}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
@@ -62,7 +70,9 @@ case class AppUpdate(
 
     version: Option[Timestamp] = None,
 
-    ipAddress: Option[IpAddress] = None) {
+    ipAddress: Option[IpAddress] = None,
+
+    residency: Option[Residency] = None) {
 
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
@@ -106,7 +116,8 @@ case class AppUpdate(
     // case, we do not update the current AppDefinition but revert completely to the specified version.
     // For all other updates, the GroupVersioningUtil will determine a new version if the AppDefinition
     // has really changed.
-    versionInfo = app.versionInfo
+    versionInfo = app.versionInfo,
+    residency = residency.orElse(app.residency)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): AppUpdate = copy(
@@ -123,5 +134,7 @@ object AppUpdate {
     appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
     appUp.ports is optional(elementsAreUnique(AppDefinition.filterOutRandomPorts))
     appUp.fetch is optional(every(fetchUriIsValid))
+    appUp.container.each is valid
+    appUp.residency is valid
   }
 }

@@ -3,7 +3,7 @@ package mesosphere.marathon.integration.setup
 import java.io.File
 
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId }
+import mesosphere.marathon.state.{ DockerVolume, AppDefinition, Container, PathId }
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
@@ -14,6 +14,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.util.Try
 
+// scalastyle:off magic.number
 object SingleMarathonIntegrationTest {
   private val log = LoggerFactory.getLogger(getClass)
 }
@@ -153,14 +154,15 @@ trait SingleMarathonIntegrationTest
 
     FileUtils.write(file,
       s"""#!/bin/sh
-         |set -x
-         |exec $appProxyMainInvocationImpl $$*""".stripMargin)
+          |set -x
+          |exec $appProxyMainInvocationImpl $$*""".stripMargin)
     file.setExecutable(true)
 
     file.getAbsolutePath
   }
 
-  private lazy val appProxyHealthChecks = Set(HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10))
+  private lazy val appProxyHealthChecks = Set(
+    HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10))
 
   def dockerAppProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
     val targetDirs = sys.env.getOrElse("TARGET_DIRS", "/marathon")
@@ -175,11 +177,11 @@ trait SingleMarathonIntegrationTest
             network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST)
           )),
           volumes = collection.immutable.Seq(
-            new Container.Volume(hostPath = env.getOrElse("IVY2_DIR", "/root/.ivy2"), containerPath = "/root/.ivy2", mode = Protos.Volume.Mode.RO),
-            new Container.Volume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-            new Container.Volume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-            new Container.Volume(hostPath = s"""$targetDirs/main""", containerPath = "/marathon/target", mode = Protos.Volume.Mode.RO),
-            new Container.Volume(hostPath = s"""$targetDirs/project""", containerPath = "/marathon/project/target", mode = Protos.Volume.Mode.RO)
+            new DockerVolume(hostPath = env.getOrElse("IVY2_DIR", "/root/.ivy2"), containerPath = "/root/.ivy2", mode = Protos.Volume.Mode.RO),
+            new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
+            new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
+            new DockerVolume(hostPath = s"""$targetDirs/main""", containerPath = "/marathon/target", mode = Protos.Volume.Mode.RO),
+            new DockerVolume(hostPath = s"""$targetDirs/project""", containerPath = "/marathon/project/target", mode = Protos.Volume.Mode.RO)
           )
         )
       ),

@@ -82,6 +82,7 @@ message ServiceDefinition {
   optional int64 last_scaling_at = 23;
   optional int64 last_config_change_at = 24;
   optional IpAddress ipAddress = 25;
+  optional ResidencyDefinition residency = 26;
 }
 
 message ResourceRoles {
@@ -114,7 +115,7 @@ message ContainerInfo {
   repeated bytes options = 2;
 }
 
-// Copied from mesos.proto
+// Copied from mesos.proto and adjusted to meet the needs for persistent volumes
 // Extends DockerInfo.PortMapping to include `service_port`.
 message ExtendedContainerInfo {
 
@@ -148,9 +149,42 @@ message ExtendedContainerInfo {
   }
 
   required mesos.ContainerInfo.Type type = 1;
-  repeated mesos.Volume volumes = 2;
+  repeated Volume volumes = 2;
 
   optional DockerInfo docker = 3;
+}
+
+// Copied from mesos.proto and adjusted to meet the needs of persistent volumes
+// Describes a volume mapping either from host to container or vice
+// versa. Both paths can either refer to a directory or a file.
+message Volume {
+
+  // Defining properties of persistent volumes
+  message PersistentVolumeInfo {
+    required uint64 size = 1;
+  }
+
+  required mesos.Volume.Mode mode = 3;
+
+  // Path pointing to a directory or file in the container. If the
+  // path is a relative path, it is relative to the container work
+  // directory. If the path is an absolute path, that path must
+  // already exist.
+  required string container_path = 1;
+
+  // The following specifies the source of this volume. At most one of
+  // the following should be set.
+
+  // Absolute path pointing to a directory or file on the host or a
+  // path relative to the container work directory.
+  optional string host_path = 2;
+
+  // The source of the volume is an Image which describes a root
+  // filesystem which will be provisioned by Mesos.
+  optional mesos.Image image = 4;
+
+  // Defines a Persistent Volume. In this case hostPath must not be set
+  optional PersistentVolumeInfo persistent = 5;
 }
 
 message EventSubscribers {
@@ -208,4 +242,14 @@ message ZKStoreEntry {
   // Introduced in Marathon 0.12
   // Optional to be backward compatible
   optional bool compressed = 4 [default = false];
+}
+
+message ResidencyDefinition {
+  enum TaskLostBehavior {
+    RELAUNCH_AFTER_TIMEOUT = 0;
+    WAIT_FOREVER = 1;
+  }
+
+  optional int64 relaunchEscalationTimeoutSeconds = 1;
+  optional TaskLostBehavior taskLostBehavior = 2;
 }

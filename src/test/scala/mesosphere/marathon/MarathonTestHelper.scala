@@ -49,7 +49,8 @@ object MarathonTestHelper {
     var args = Seq(
       "--master", "127.0.0.1:5050",
       "--max_tasks_per_offer", maxTasksPerOffer.toString,
-      "--min_revive_offers_interval", minReviveOffersInterval.toString
+      "--min_revive_offers_interval", minReviveOffersInterval.toString,
+      "--mesos_authentication_principal", "marathon"
     )
 
     mesosRole.foreach(args ++= Seq("--mesos_role", _))

@@ -5,6 +5,7 @@ import java.net._
 import com.wix.accord._
 import mesosphere.marathon.ValidationFailedException
 import mesosphere.marathon.state.FetchUri
+import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json._
 
 import scala.reflect.ClassTag
@@ -134,4 +135,13 @@ object Validation {
         }
       }
     }
+
+  def oneOf[T <: AnyRef](options: T*): Validator[T] = {
+    import ViolationBuilder._
+    new NullSafeValidator[T](
+      test = options.contains,
+      failure = _ -> s"is not one of (${options.mkString(",")})"
+    )
+  }
+
 }
