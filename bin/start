@@ -4,6 +4,7 @@ set -o errexit -o pipefail
 declare -a java_args
 declare -a app_args
 FRAMEWORK_HOME=`dirname $0`/..
+CONF_FILE=/etc/default/marathon
 
 if [ -z ${MESOS_NATIVE_JAVA_LIBRARY+x} ]
 then
@@ -14,6 +15,11 @@ then
 fi
 
 echo "MESOS_NATIVE_LIBRARY, MESOS_NATIVE_JAVA_LIBRARY set to '$MESOS_NATIVE_JAVA_LIBRARY'"
+
+# Read environment variables from config file
+set -o allexport
+[[ ! -f "$CONF_FILE" ]] || . "$CONF_FILE"
+set +o allexport
 
 addJava() { java_args=( "${java_args[@]}" "$1" ); }
 addApplication() { app_args=( "${app_args[@]}" "$1" ); }
