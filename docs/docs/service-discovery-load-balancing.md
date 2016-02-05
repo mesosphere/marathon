@@ -43,41 +43,8 @@ Port information for each running task can be queried via the
 at `<marathon host>:<port>/v2/tasks`
 
 ## Using HAProxy
-Marathon ships with a script called `marathon-lb`. Alternatively, a simpler script called [haproxy-marathon bridge](https://raw.githubusercontent.com/mesosphere/marathon/master/examples/haproxy-marathon-bridge) can be used, but it has been deprecated.
-Both can turn the Marathon's REST API's list of running tasks into a config file for HAProxy, a lightweight TCP/HTTP proxy.
-`marathon-lb` supports advanced functionality like SSL offloading, sticky connections, and VHost based load balancing.
+A script called `marathon-lb` turns Marathon's REST API's list of running tasks into a config file for HAProxy, a lightweight TCP/HTTP proxy. `marathon-lb` supports advanced functionality like SSL offloading, sticky connections, and VHost based load balancing. [More information about `marathon-lb`](https://docs.mesosphere.com/administration/service-discovery-with-marathon-lb/service-discovery-and-load-balancing-with-marathon-lb/).
 
-### marathon-lb
-To generate an HAProxy configuration from Marathon running at `localhost:8080` with the `marathon-lb` script:
+Alternatively, a simpler script called [haproxy-marathon bridge](https://raw.githubusercontent.com/mesosphere/marathon/master/examples/haproxy-marathon-bridge) can be used, but it has been deprecated.
 
-``` console
-$ ./bin/marathon-lb localhost:8080 > /etc/haproxy/haproxy.cfg
-```
-
-To reload the HAProxy configuration without interrupting existing connections:
-
-``` console
-$ haproxy -f haproxy.cfg -p haproxy.pid -sf $(cat haproxy.pid)
-```
-
-The configuration script and reload could be triggered frequently by Cron to
-keep track of topology changes. If a node goes away between reloads, HAProxy's
-health check will catch it and stop sending traffic to that node.
-
-To facilitate this setup, the `marathon-lb` script can be invoked in
-an alternate way that installs the script itself, HAProxy and a cronjob that
-once a minute pings one of the Marathon servers specified and refreshes
-HAProxy if anything has changed.
-
-``` console
-$ ./bin/marathon-lb install_haproxy_system localhost:8080
-```
-
-- The list of Marathons to ping is stored one per line in
-  `/etc/marathon-lb/marathons`
-- The script is installed as `/usr/local/bin/marathon-lb`
-- The cronjob is installed as `/etc/cron.d/marathon-lb`
-  and run as root.
-
-The provided script is just an example. For a full list of configuration options, check the
-[HAProxy configuration docs](http://cbonte.github.io/haproxy-dconv/configuration-1.5.html).
+For a full list of HAProxy configurations, consult [the HAProxy configuration docs](http://cbonte.github.io/haproxy-dconv/configuration-1.5.html).
