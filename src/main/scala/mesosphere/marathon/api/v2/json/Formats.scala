@@ -47,7 +47,7 @@ object Formats extends Formats {
 }
 
 trait Formats
-    extends V2Formats
+    extends AppAndGroupFormats
     with HealthCheckFormats
     with FetchUriFormats
     with ContainerFormats
@@ -462,7 +462,7 @@ trait FetchUriFormats {
   }
 }
 
-trait V2Formats {
+trait AppAndGroupFormats {
   import Formats._
 
   implicit lazy val IdentifiableWrites = Json.writes[Identifiable]
@@ -519,7 +519,6 @@ trait V2Formats {
       (__ \ "container").readNullable[Container] ~
       (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(AppDefinition.DefaultHealthChecks)
     )((
-
         id, cmd, args, maybeString, env, instances, cpus, mem, disk, executor, constraints, storeUrls,
         requirePorts, backoff, backoffFactor, maxLaunchDelay, container, checks
       ) => AppDefinition(
@@ -594,6 +593,17 @@ trait V2Formats {
         healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty && healthCheck.protocol != Protocol.COMMAND
       if (portIndexesMakeSense && needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
       else healthCheck
+    })
+  }
+
+  private[this] def addHealthCheckPortIndexIfNecessary(appUpdate: AppUpdate): AppUpdate = {
+    appUpdate.copy(healthChecks = appUpdate.healthChecks.map { healthChecks =>
+      healthChecks.map { healthCheck =>
+        def needsDefaultPortIndex =
+          healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty && healthCheck.protocol != Protocol.COMMAND
+        if (needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
+        else healthCheck
+      }
     })
   }
 
@@ -721,7 +731,7 @@ trait V2Formats {
       maybeJson.foldLeft(appJson)((result, obj) => result ++ obj)
     }
 
-  implicit lazy val V2AppUpdateReads: Reads[AppUpdate] = (
+  implicit lazy val AppUpdateReads: Reads[AppUpdate] = (
     (__ \ "id").readNullable[PathId].filterNot(_.exists(_.isRoot)) ~
     (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
     (__ \ "args").readNullable[Seq[String]] ~
@@ -783,7 +793,7 @@ trait V2Formats {
           fetch = extra.fetch.orElse(extra.uris.map { seq => seq.map(FetchUri.apply(_)) })
         )
       }
-    }
+    }.map(addHealthCheckPortIndexIfNecessary)
 
   implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
