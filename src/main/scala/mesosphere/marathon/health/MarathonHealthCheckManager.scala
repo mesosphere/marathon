@@ -202,7 +202,7 @@ class MarathonHealthCheckManager @Inject() (
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
-      maybeTask <- taskTracker.task(appId, taskId)
+      maybeTask <- taskTracker.marathonTask(appId, taskId)
     } yield maybeTask.map(t => Timestamp(t.getVersion))
 
     futureAppVersion.flatMap {

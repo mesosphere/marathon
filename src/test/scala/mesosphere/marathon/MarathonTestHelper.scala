@@ -1,7 +1,6 @@
 package mesosphere.marathon
 
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicInteger
 
 import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
@@ -10,22 +9,24 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.leadership.{ LeadershipModule, AlwaysElectedLeadershipModule }
+import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ PathId, TaskRepository, AppDefinition, MarathonStore, MarathonTaskState, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, MarathonStore, MarathonTaskState, PathId, TaskRepository, Timestamp }
 import mesosphere.marathon.tasks._
-import mesosphere.mesos.protos._
-import org.apache.mesos.{ Protos => MesosProtos }
-import org.apache.mesos.Protos.{ CommandInfo, TaskID, TaskInfo, Offer }
+import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
+import org.apache.mesos.Protos.{ CommandInfo, Offer, TaskID, TaskInfo }
+import org.apache.mesos.{ Protos => MesosProtos }
 import play.api.libs.json.Json
 
 import scala.util.Random
 
-trait MarathonTestHelper {
+object MarathonTestHelper {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -220,33 +221,94 @@ trait MarathonTestHelper {
     createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
   }
 
-  def dummyTask(appId: PathId) = MarathonTask.newBuilder()
+  def dummyTaskBuilder(appId: PathId) = MarathonTask.newBuilder()
     .setId(TaskIdUtil.newTaskId(appId).getValue)
+    .setHost("host.some")
+
+  def dummyTaskProto(appId: PathId) = dummyTaskBuilder(appId).build()
+  def dummyTaskProto(taskId: String) = MarathonTask.newBuilder()
+    .setId(taskId)
+    .setHost("host.some")
+    .setLaunchCounter(0)
     .build()
 
-  def stagedTask(id: String): Protos.MarathonTask = {
-    Protos.MarathonTask
-      .newBuilder()
-      .setId(id)
-      .setStatus(statusForState(MesosProtos.TaskState.TASK_STAGING))
+  def mininimalTask(appId: PathId): Task = mininimalTask(TaskIdUtil.newTaskId(appId).getValue)
+  def mininimalTask(taskId: String): Task = {
+    Task(
+      Task.Id(taskId),
+      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      reservationWithVolume = None,
+      launchCounter = 0,
+      launchedTask = None
+    )
+  }
+
+  def startingTask(appId: PathId): Task = startingTask(TaskIdUtil.newTaskId(appId).getValue)
+  def startingTask(id: String): Task = TaskSerializer.taskState(startingTaskProto(id))
+
+  def startingTaskProto(appId: PathId): Protos.MarathonTask = startingTaskProto(TaskIdUtil.newTaskId(appId).getValue)
+  def startingTaskProto(id: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
+    dummyTaskProto(id).toBuilder
+      .setVersion(appVersion.toString)
+      .setStagedAt(stagedAt)
+      .setStatus(statusForState(id, MesosProtos.TaskState.TASK_STARTING))
+      .build()
+  }
+
+  def stagedTask(appId: PathId): Task = stagedTask(TaskIdUtil.newTaskId(appId).getValue)
+  def stagedTask(id: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
+    TaskSerializer.taskState(stagedTaskProto(id, appVersion = appVersion, stagedAt = stagedAt))
+
+  def stagedTaskProto(appId: PathId): Protos.MarathonTask = stagedTaskProto(TaskIdUtil.newTaskId(appId).getValue)
+  def stagedTaskProto(id: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
+    startingTaskProto(id, appVersion = appVersion, stagedAt = stagedAt).toBuilder
+      .setStatus(statusForState(id, MesosProtos.TaskState.TASK_STAGING))
+      .build()
+  }
+
+  def runningTask(appId: PathId): Task = runningTask(TaskIdUtil.newTaskId(appId).getValue)
+  def runningTask(id: String): Task = TaskSerializer.taskState(runningTaskProto(id))
+
+  def runningTaskProto(appId: PathId): Protos.MarathonTask = runningTaskProto(TaskIdUtil.newTaskId(appId).getValue)
+  def runningTaskProto(
+    id: String,
+    appVersion: Timestamp = Timestamp(1),
+    stagedAt: Long = 2,
+    startedAt: Long = 3): Protos.MarathonTask = {
+    stagedTaskProto(id, appVersion = appVersion, stagedAt = stagedAt).toBuilder
+      .setStartedAt(startedAt)
+      .setStatus(statusForState(id, MesosProtos.TaskState.TASK_RUNNING))
+      .build()
+  }
+
+  def healthyTask(appId: PathId): Task = healthyTask(TaskIdUtil.newTaskId(appId).getValue)
+  def healthyTask(id: String): Task = TaskSerializer.taskState(healthyTaskProto(id))
+
+  def healthyTaskProto(appId: PathId): Protos.MarathonTask = healthyTaskProto(TaskIdUtil.newTaskId(appId).getValue)
+  def healthyTaskProto(id: String): Protos.MarathonTask = {
+    val task: MarathonTask = runningTaskProto(id)
+    task.toBuilder
+      .setStatus(task.getStatus.toBuilder.setHealthy(true))
       .buildPartial()
   }
 
-  def runningTask(id: String): Protos.MarathonTask = {
-    Protos.MarathonTask
-      .newBuilder()
-      .setId(id)
-      .setStatus(statusForState(MesosProtos.TaskState.TASK_RUNNING))
+  def unhealthyTask(appId: PathId): Task = unhealthyTask(TaskIdUtil.newTaskId(appId).getValue)
+  def unhealthyTask(id: String): Task = TaskSerializer.taskState(unhealthyTaskProto(id))
+
+  def unhealthyTaskProto(appId: PathId): Protos.MarathonTask = unhealthyTaskProto(TaskIdUtil.newTaskId(appId).getValue)
+  def unhealthyTaskProto(id: String): Protos.MarathonTask = {
+    val task: MarathonTask = runningTaskProto(id)
+    task.toBuilder
+      .setStatus(task.getStatus.toBuilder.setHealthy(false))
       .buildPartial()
   }
 
-  private[this] def statusForState(state: MesosProtos.TaskState): MesosProtos.TaskStatus = {
+  private[this] def statusForState(taskId: String, state: MesosProtos.TaskState): MesosProtos.TaskStatus = {
     MesosProtos.TaskStatus
       .newBuilder()
+      .setTaskId(TaskID.newBuilder().setValue(taskId))
       .setState(state)
       .buildPartial()
   }
 
 }
-
-object MarathonTestHelper extends MarathonTestHelper

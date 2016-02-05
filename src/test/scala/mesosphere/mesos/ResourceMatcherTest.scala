@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.state.AppDefinition
@@ -12,7 +12,7 @@ import scala.collection.immutable.Seq
 class ResourceMatcherTest extends MarathonSpec with Matchers {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
     import scala.collection.JavaConverters._
-    val offerBuilder = makeBasicOffer()
+    val offerBuilder = MarathonTestHelper.makeBasicOffer()
     val diskResourceIndex = offerBuilder.getResourcesList.asScala.indexWhere(_.getName == "disk")
     offerBuilder.removeResources(diskResourceIndex)
     val offer = offerBuilder.build()
@@ -42,7 +42,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("match resources success") {
-    val offer = makeBasicOffer().build()
+    val offer = MarathonTestHelper.makeBasicOffer().build()
     val app = AppDefinition(
       id = "/test".toRootPath,
       cpus = 1.0,
@@ -66,7 +66,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("match resources success with preserved roles") {
-    val offer = makeBasicOffer(role = "marathon").build()
+    val offer = MarathonTestHelper.makeBasicOffer(role = "marathon").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
       cpus = 1.0,
@@ -88,7 +88,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("match resources failure because of incorrect roles") {
-    val offer = makeBasicOffer(role = "marathon").build()
+    val offer = MarathonTestHelper.makeBasicOffer(role = "marathon").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
       cpus = 1.0,
@@ -105,7 +105,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("match resources success with constraints") {
-    val offer = makeBasicOffer(beginPort = 0, endPort = 0).setHostname("host1").build()
+    val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0).setHostname("host1").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
       cpus = 1.0,
@@ -126,7 +126,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("match resources fails on constraints") {
-    val offer = makeBasicOffer(beginPort = 0, endPort = 0).setHostname("host1").build()
+    val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0).setHostname("host1").build()
     val app = AppDefinition(
       id = "/test".toRootPath,
       cpus = 1.0,
@@ -147,7 +147,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("match resources fail on cpu") {
-    val offer = makeBasicOffer(cpus = 0.1).build()
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.1).build()
     val app = AppDefinition(
       id = "/test".toRootPath,
       cpus = 1.0,
@@ -162,7 +162,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("match resources fail on mem") {
-    val offer = makeBasicOffer(mem = 0.1).build()
+    val offer = MarathonTestHelper.makeBasicOffer(mem = 0.1).build()
     val app = AppDefinition(
       id = "/test".toRootPath,
       cpus = 1.0,
@@ -177,7 +177,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("match resources fail on disk") {
-    val offer = makeBasicOffer(disk = 0.1).build()
+    val offer = MarathonTestHelper.makeBasicOffer(disk = 0.1).build()
     val app = AppDefinition(
       id = "/test".toRootPath,
       cpus = 1.0,
@@ -192,7 +192,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("match resources fail on ports") {
-    val offer = makeBasicOffer(beginPort = 0, endPort = 0).build()
+    val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0).build()
     val app = AppDefinition(
       id = "/test".toRootPath,
       cpus = 1.0,

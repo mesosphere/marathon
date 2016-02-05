@@ -8,7 +8,7 @@ class MarathonConfTest extends MarathonSpec {
   private[this] val secretFile = "/bar/baz"
 
   test("MesosAuthenticationIsOptional") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050"
     )
     assert(conf.mesosAuthenticationPrincipal.isEmpty)
@@ -17,7 +17,7 @@ class MarathonConfTest extends MarathonSpec {
   }
 
   test("MesosAuthenticationPrincipal") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--mesos_authentication_principal", principal
     )
@@ -27,7 +27,7 @@ class MarathonConfTest extends MarathonSpec {
   }
 
   test("MesosAuthenticationSecretFile") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--mesos_authentication_principal", principal,
       "--mesos_authentication_secret_file", secretFile
@@ -39,12 +39,12 @@ class MarathonConfTest extends MarathonSpec {
   }
 
   test("HA mode is enabled by default") {
-    val conf = defaultConfig()
+    val conf = MarathonTestHelper.defaultConfig()
     assert(conf.highlyAvailable())
   }
 
   test("Disable HA mode") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--disable_ha"
     )
@@ -52,12 +52,12 @@ class MarathonConfTest extends MarathonSpec {
   }
 
   test("Checkpointing is enabled by default") {
-    val conf = defaultConfig()
+    val conf = MarathonTestHelper.defaultConfig()
     assert(conf.checkpoint())
   }
 
   test("Disable checkpointing") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--disable_checkpoint"
     )
@@ -65,7 +65,7 @@ class MarathonConfTest extends MarathonSpec {
   }
 
   test("--default_accepted_resource_roles *,marathon will fail without --mesos_role marathon") {
-    val triedConfig = Try(makeConfig(
+    val triedConfig = Try(MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--default_accepted_resource_roles", "*,marathon"
     ))
@@ -80,7 +80,7 @@ class MarathonConfTest extends MarathonSpec {
   }
 
   test("--default_accepted_resource_roles *,marathon with --mesos_role marathon") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--mesos_role", "marathon",
       "--default_accepted_resource_roles", "*,marathon"
@@ -90,7 +90,7 @@ class MarathonConfTest extends MarathonSpec {
   }
 
   test("--default_accepted_resource_roles *") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--default_accepted_resource_roles", "*"
     )
@@ -98,14 +98,14 @@ class MarathonConfTest extends MarathonSpec {
   }
 
   test("--default_accepted_resource_roles default without --mesos_role") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050"
     )
     assert(conf.defaultAcceptedResourceRolesSet == Set("*"))
   }
 
   test("--default_accepted_resource_roles default with --mesos_role") {
-    val conf = makeConfig(
+    val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--mesos_role", "marathon"
     )

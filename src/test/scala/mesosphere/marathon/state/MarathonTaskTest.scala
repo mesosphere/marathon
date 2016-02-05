@@ -7,7 +7,7 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-class MarathonTaskStateTest extends MarathonSpec with GivenWhenThen with Matchers {
+class MarathonTaskTest extends MarathonSpec with GivenWhenThen with Matchers {
 
   test("toProto returns the encapsulated MarathonTask") {
     Given("A state created from a task")

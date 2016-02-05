@@ -5,6 +5,7 @@ import java.util.concurrent.TimeoutException
 import akka.actor.{ Actor, Props, Status }
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskUpdateActor.{ ActorMetrics, FinishedTaskOp, ProcessTaskOp }
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -61,7 +62,7 @@ private[impl] class TaskUpdateActor(
 
   // this has to be a mutable field because we need to access it in postStop()
   private[impl] var operationsByTaskId =
-    Map.empty[String, Queue[TaskOpProcessor.Operation]].withDefaultValue(Queue.empty)
+    Map.empty[Task.Id, Queue[TaskOpProcessor.Operation]].withDefaultValue(Queue.empty)
 
   override def preStart(): Unit = {
     metrics.numberOfActiveOps.setValue(0)
@@ -105,7 +106,7 @@ private[impl] class TaskUpdateActor(
       val activeCount = metrics.numberOfActiveOps.decrement()
       if (log.isDebugEnabled) {
         val queuedCount = metrics.numberOfQueuedOps.getValue
-        log.debug(s"Finished processing ${op.action} for app [${op.appId}] and task [${op.taskId}] "
+        log.debug(s"Finished processing ${op.action} for app [${op.appId}] and ${op.taskId} "
           + s"$activeCount active, $queuedCount queued.");
       }
 
@@ -116,11 +117,11 @@ private[impl] class TaskUpdateActor(
       throw new IllegalStateException("received failure", cause)
   }
 
-  private[this] def processNextOpIfExists(taskId: String): Unit = {
+  private[this] def processNextOpIfExists(taskId: Task.Id): Unit = {
     operationsByTaskId(taskId).headOption foreach { op =>
       val queuedCount = metrics.numberOfQueuedOps.decrement()
       val activeCount = metrics.numberOfActiveOps.increment()
-      log.debug(s"Start processing ${op.action} for app [${op.appId}] and task [${op.taskId}]. "
+      log.debug(s"Start processing ${op.action} for app [${op.appId}] and ${op.taskId}. "
         + s"$activeCount active, $queuedCount queued.")
 
       import context.dispatcher
@@ -128,14 +129,14 @@ private[impl] class TaskUpdateActor(
         if (op.deadline <= clock.now()) {
           metrics.timedOutOpsMeter.mark()
           op.sender ! Status.Failure(
-            new TimeoutException(s"Timeout: ${op.action} for app [${op.appId}] and task [${op.taskId}].")
+            new TimeoutException(s"Timeout: ${op.action} for app [${op.appId}] and ${op.taskId}.")
           )
           Future.successful(())
         }
         else
           metrics.processOpTimer.timeFuture(processor.process(op))
       }.map { _ =>
-        log.debug(s"Finished processing ${op.action} for app [${op.appId}] and task [${op.taskId}]")
+        log.debug(s"Finished processing ${op.action} for app [${op.appId}] and ${op.taskId}")
         FinishedTaskOp(op)
       }
 

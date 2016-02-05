@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.PathId
@@ -48,15 +49,21 @@ private[tracker] class TaskTrackerDelegate(
   override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.appTasks(appId).size
   override def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
     tasksByApp().map(_.appTasks(appId).size)
-  override def taskSync(appId: PathId, taskId: String): Option[MarathonTask] = tasksByAppSync.task(appId, taskId)
-  override def task(appId: PathId, taskId: String)(implicit e: ExecutionContext): Future[Option[MarathonTask]] =
-    tasksByApp().map(_.task(appId, taskId))
+  override def marathonTaskSync(appId: PathId, taskId: String): Option[MarathonTask] =
+    tasksByAppSync.marathonTask(appId, taskId)
+  override def marathonTask(appId: PathId, taskId: String)(implicit e: ExecutionContext): Future[Option[MarathonTask]] =
+    tasksByApp().map(_.marathonTask(appId, taskId))
   override def hasAppTasksSync(appId: PathId): Boolean = tasksByAppSync.hasAppTasks(appId)
   override def hasAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     tasksByApp().map(_.hasAppTasks(appId))
   override def appTasksSync(appId: PathId): Iterable[MarathonTask] = tasksByAppSync.appTasks(appId)
   override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]] =
     tasksByApp().map(_.appTasks(appId))
+
+  override def task(
+    appId: PathId, taskId: Task.Id)(
+      implicit ec: ExecutionContext): Future[Option[Task]] =
+    tasksByApp().map(_.taskState(appId, taskId))
 
   private[this] val tasksByAppTimer =
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))

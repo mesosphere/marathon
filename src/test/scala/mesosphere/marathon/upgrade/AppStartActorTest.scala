@@ -9,7 +9,7 @@ import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ AppStartCanceledException, MarathonSpec, SchedulerActions }
+import mesosphere.marathon.{ MarathonTestHelper, AppStartCanceledException, MarathonSpec, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verify
 import org.scalatest.mock.MockitoSugar
@@ -34,7 +34,7 @@ class AppStartActorTest
     driver = mock[SchedulerDriver]
     scheduler = mock[SchedulerActions]
     taskQueue = mock[LaunchQueue]
-    taskTracker = createTaskTracker(AlwaysElectedLeadershipModule.forActorSystem(system))
+    taskTracker = MarathonTestHelper.createTaskTracker(AlwaysElectedLeadershipModule.forActorSystem(system))
   }
 
   test("Without Health Checks") {

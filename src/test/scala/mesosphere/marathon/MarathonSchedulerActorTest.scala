@@ -60,7 +60,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
+    val tasks = Set(MarathonTestHelper.runningTaskProto("task_a"))
 
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
     when(taskTracker.tasksByApp()(org.mockito.Matchers.any())).thenReturn(
@@ -85,8 +85,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   }
 
   test("ScaleApps") {
-    val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    val tasks = Set(MarathonTask.newBuilder().setId("task_a").build())
+    val app = AppDefinition(id = "/test-app".toPath, instances = 1)
+    val tasks = Set(MarathonTestHelper.runningTaskProto(app.id))
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
@@ -139,7 +139,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(taskTracker.appTasksSync(app.id)).thenReturn(Set[MarathonTask](taskA))
-    when(taskTracker.taskSync(app.id, taskA.getId))
+    when(taskTracker.marathonTaskSync(app.id, taskA.getId))
       .thenReturn(Some(taskA))
       .thenReturn(None)
 
@@ -194,7 +194,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(taskTracker.appTasksSync(app.id)).thenReturn(Set[MarathonTask](taskA))
-    when(taskTracker.taskSync(app.id, taskA.getId))
+    when(taskTracker.marathonTaskSync(app.id, taskA.getId))
       .thenReturn(Some(taskA))
       .thenReturn(None)
 

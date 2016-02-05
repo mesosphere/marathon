@@ -70,7 +70,7 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
 
   test("some overdue tasks") {
     Given("one overdue task")
-    val mockTask = MarathonTask.newBuilder().setId("someId").buildPartial()
+    val mockTask = MarathonTestHelper.stagedTaskProto("someId")
     val app = TaskTracker.AppTasks(PathId("/some"), Iterable(mockTask))
     taskTracker.tasksByAppSync returns TasksByApp.of(app)
 
@@ -95,42 +95,32 @@ class KillOverdueTasksActorTest extends MarathonSpec with GivenWhenThen with mar
     def statusBuilder(id: String, state: TaskState) =
       TaskStatus.newBuilder().setTaskId(MesosProtos.TaskID.newBuilder().setValue(id)).setState(state)
 
-    val overdueUnstagedTask = MarathonTask.newBuilder()
-      .setId("unstaged")
-      .build()
-    assert(overdueUnstagedTask.getStagedAt == 0, "The stagedAt property of an unstaged task has a value of 0")
+    val overdueUnstagedTask = MarathonTestHelper.startingTaskProto("unstaged")
     assert(overdueUnstagedTask.getStartedAt == 0, "The startedAt property of an unstaged task has a value of 0")
 
-    val unconfirmedNotOverdueTask = MarathonTask.newBuilder()
-      .setId("unconfirmed")
-      .setStagedAt(now - config.taskLaunchConfirmTimeout().millis)
-      .build()
+    val unconfirmedNotOverdueTask =
+      MarathonTestHelper.startingTaskProto("unconfirmed", stagedAt = now - config.taskLaunchConfirmTimeout().millis)
 
-    val unconfirmedOverdueTask = MarathonTask.newBuilder()
-      .setId("unconfirmedOverdue")
-      .setStagedAt(now - config.taskLaunchConfirmTimeout().millis - 1.millis)
-      .build()
+    val unconfirmedOverdueTask =
+      MarathonTestHelper.startingTaskProto(
+        "unconfirmedOverdue",
+        stagedAt = now - config.taskLaunchConfirmTimeout().millis - 1.millis
+      )
 
-    val overdueStagedTask = MarathonTask.newBuilder()
-      .setId("overdueStagedTask")
-      // When using MarathonTasks.makeTask, this would be set to a made up value
-      // This test shall explicitly make sure that the task gets selected even if it is unlikely old
-      .setStagedAt(now - 10.days)
-      .setStatus(statusBuilder("overdueStagedTask", TaskState.TASK_STAGING))
-      .buildPartial()
+    val overdueStagedTask =
+      MarathonTestHelper.stagedTaskProto(
+        "overdueStagedTask",
+        stagedAt = now - 10.days
+      )
 
-    val stagedTask = MarathonTask.newBuilder()
-      .setId("staged")
-      .setStatus(statusBuilder("staged", TaskState.TASK_STAGING))
-      .setStagedAt(now - 10.seconds)
-      .buildPartial()
+    val stagedTask =
+      MarathonTestHelper.stagedTaskProto(
+        "staged",
+        stagedAt = now - 10.seconds
+      )
 
-    val runningTask = MarathonTask.newBuilder()
-      .setId("running")
-      .setStatus(statusBuilder("running", TaskState.TASK_STAGING))
-      .setStagedAt(now - 5.seconds)
-      .setStartedAt(now - 2.seconds)
-      .buildPartial()
+    val runningTask =
+      MarathonTestHelper.runningTaskProto("running", stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
 
     Given("Several somehow overdue tasks plus some not overdue tasks")
     val appId = PathId("/ignored")

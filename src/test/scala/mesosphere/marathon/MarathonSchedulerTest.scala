@@ -36,7 +36,7 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
     frameworkIdUtil = mock[FrameworkIdUtil]
     mesosLeaderInfo = new MutableMesosLeaderInfo
     mesosLeaderInfo.onNewMasterInfo(MasterInfo.getDefaultInstance)
-    config = defaultConfig(maxTasksPerOffer = 10)
+    config = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
     taskIdUtil = TaskIdUtil
     probe = TestProbe()
     eventBus = system.eventStream

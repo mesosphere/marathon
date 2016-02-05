@@ -2,7 +2,7 @@ package mesosphere.marathon.api.validation
 
 import javax.validation.ConstraintValidatorContext
 
-import mesosphere.marathon.{ ValidationFailedException, MarathonSpec }
+import mesosphere.marathon.{ MarathonTestHelper, ValidationFailedException, MarathonSpec }
 import mesosphere.marathon.Protos.HealthCheckDefinition
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.health.HealthCheck
@@ -16,7 +16,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId("/test"),
       cmd = Some("true"))
     validate(app)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   private[this] def testValidId(id: String): Unit = {
@@ -25,7 +25,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       cmd = Some("true"))
 
     validate(app)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   test("id '/app' is valid") {
@@ -80,7 +80,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
 
     an[ValidationFailedException] should be thrownBy validateOrThrow(app)
 
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   // non-absolute paths (could be allowed in some contexts)
@@ -102,7 +102,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
     val result = validate(app)
     result.isFailure should be(true)
 
-    validateJsonSchema(app, valid = false)
+    MarathonTestHelper.validateJsonSchema(app, valid = false)
   }
 
   test("id '/.../asd' is INVALID") {
@@ -149,7 +149,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       )
     )
     assert(validate(app).isSuccess)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   test("only cmd + acceptedResourceRoles") {
@@ -158,7 +158,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       cmd = Some("true"),
       acceptedResourceRoles = Some(Set("*")))
     assert(validate(app).isSuccess)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   test("only cmd + acceptedResourceRoles 2") {
@@ -167,7 +167,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       cmd = Some("true"),
       acceptedResourceRoles = Some(Set("*", "production")))
     assert(validate(app).isSuccess)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   test("only args") {
@@ -175,7 +175,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId("/test"),
       args = Some("test" :: Nil))
     assert(validate(app).isSuccess)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   test("only container") {
@@ -185,7 +185,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
         docker = Some(Container.Docker(image = "test/image"))
       )))
     assert(validate(app).isSuccess)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   test("empty container is invalid") {
@@ -193,7 +193,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       id = PathId("/test"),
       container = Some(Container()))
     assert(validate(app).isFailure)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   test("container and cmd") {
@@ -202,7 +202,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       cmd = Some("true"),
       container = Some(Container()))
     assert(validate(app).isSuccess)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   test("container and args") {
@@ -211,7 +211,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       args = Some("test" :: Nil),
       container = Some(Container()))
     assert(validate(app).isSuccess)
-    validateJsonSchema(app)
+    MarathonTestHelper.validateJsonSchema(app)
   }
 
   test("container, cmd and args is not valid") {
@@ -221,6 +221,6 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
       args = Some("test" :: Nil),
       container = Some(Container()))
     assert(validate(app).isFailure)
-    validateJsonSchema(app, false)
+    MarathonTestHelper.validateJsonSchema(app, false)
   }
 }

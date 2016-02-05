@@ -136,10 +136,8 @@ class TaskStartActorTest
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
     when(launchQueue.get(app.id)).thenReturn(None)
-    val task = MarathonTask.newBuilder
-      .setId(TaskIdUtil.newTaskId(app.id).getValue)
-      .setVersion(Timestamp(1024).toString)
-      .build
+    val task =
+      MarathonTestHelper.startingTaskProto(app.id).toBuilder.setVersion(Timestamp(1024).toString).build()
     taskCreationHandler.created(app.id, task).futureValue
 
     val ref = TestActorRef(Props(
@@ -312,10 +310,7 @@ class TaskStartActorTest
     when(launchQueue.get(app.id)).thenReturn(None)
 
     val taskId = TaskIdUtil.newTaskId(app.id)
-    val task = MarathonTask.newBuilder
-      .setId(taskId.getValue)
-      .setVersion(Timestamp(1024).toString)
-      .build
+    val task = MarathonTestHelper.stagedTaskProto(taskId.getValue, appVersion = Timestamp(1024))
     taskCreationHandler.created(app.id, task).futureValue
 
     val ref = TestActorRef(Props(

@@ -1,5 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.StatusUpdateActionResolver
 import mesosphere.marathon.state.PathId
@@ -23,7 +25,7 @@ class StatusUpdateActionResolverTest
     val f = new Fixture
     Given("a taskID without task")
     val appId = PathId("/app")
-    val taskId = "task1"
+    val taskId = Task.Id("task1")
     f.taskTracker.task(appId, taskId) returns Future.successful(None)
     And("a status update")
     val update = TaskStatus.getDefaultInstance
@@ -37,15 +39,16 @@ class StatusUpdateActionResolverTest
     And("a fail action is returned")
     action.getClass should be(classOf[TaskOpProcessor.Action.Fail])
     action.asInstanceOf[TaskOpProcessor.Action.Fail].cause.getMessage should
-      equal(s"task [$taskId] of app [$appId] does not exist")
+      equal(s"$taskId of app [$appId] does not exist")
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
   }
 
   class Fixture {
+    val clock = ConstantClock()
     val taskTracker = mock[TaskTracker]
-    val actionResolver = new StatusUpdateActionResolver(taskTracker)
+    val actionResolver = new StatusUpdateActionResolver(clock, taskTracker)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(taskTracker)
