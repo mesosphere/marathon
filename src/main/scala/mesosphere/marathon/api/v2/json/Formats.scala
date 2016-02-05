@@ -568,6 +568,17 @@ trait V2Formats {
     })
   }
 
+  private[this] def addHealthCheckPortIndexIfNecessary(appUpdate: V2AppUpdate): V2AppUpdate = {
+    appUpdate.copy(healthChecks = appUpdate.healthChecks.map { healthChecks =>
+      healthChecks.map { healthCheck =>
+        def needsDefaultPortIndex =
+          healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty && healthCheck.protocol != Protocol.COMMAND
+        if (needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
+        else healthCheck
+      }
+    })
+  }
+
   implicit lazy val V2AppDefinitionWrites: Writes[V2AppDefinition] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
@@ -737,8 +748,7 @@ trait V2Formats {
             ipAddress = extraFields.ipAddress
           )
         }
-
-      }
+      }.map(addHealthCheckPortIndexIfNecessary)
   }
 
   implicit lazy val V2GroupFormat: Format[V2Group] = (

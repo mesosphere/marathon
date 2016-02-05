@@ -1,9 +1,8 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.AppDefinition
 import org.scalatest.Matchers
-import play.api.libs.json.{ Json, JsResultException }
+import play.api.libs.json.{ JsResultException, Json }
 
 class V2AppUpdateFormatTest extends MarathonSpec with Matchers {
   import Formats._
@@ -49,6 +48,13 @@ class V2AppUpdateFormatTest extends MarathonSpec with Matchers {
   test("FromJSON should fail when 'acceptedResourceRoles' is defined but empty") {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": [] }""")
     a[JsResultException] shouldBe thrownBy { json.as[V2AppUpdate] }
+  }
+
+  // Regression test for #3140
+  test("FromJSON should set healthCheck portIndex to 0 when neither port nor portIndex are set") {
+    val json = Json.parse(""" { "id": "test", "healthChecks": [{ "path": "/", "protocol": "HTTP" }] } """)
+    val appUpdate = json.as[V2AppUpdate]
+    appUpdate.healthChecks.get.head.portIndex should equal(Some(0))
   }
 
 }
