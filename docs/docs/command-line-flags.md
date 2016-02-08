@@ -231,8 +231,8 @@ the following startup parameters:
 **Example**
 
 Given a cluster with 200 nodes and the default settings for task launching. If we want to start 2000 tasks, it would
-take at least 10 cycles, because we are only starting 1 task per offer, leading to a total maximum of 200. If we
-change the `max_tasks_per_offer` setting to 10, we could start 1000 tasks per offer (the default setting for
+take at least 10 cycles, because we are only starting 1 task per offer (and hence 200 per cycle), leading to a total maximum of 200. If we
+change the `max_tasks_per_offer` setting to 10, we could start 1000 tasks per offer cycle (the default setting for
 `max_tasks_per_offer_cycle`), reducing the necessary cycles to 2. If we also adjust the `max_tasks_per_offer_cycle `
 to 2000, we could start all tasks in a single cycle (given we receive offers for all nodes).
 
