@@ -58,14 +58,13 @@ This will enable you to run a local version of Marathon, for development purpose
 
     ``` bash
     # setup marathon easy run
-    alias 'start-marathon'='/vagrant/bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon --assets_path src/main/resources/assets'
+    alias 'start-marathon'='/vagrant/marathon/bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon --assets_path src/main/resources/assets'
     ```
 
 9.  Refresh the terminal and run the `start-marathon` command in the marathon folder
 
     ``` console
     $ . ~/.bashrc
-    $ cd /vagrant/marathon/
     $ start-marathon
     ```
 
