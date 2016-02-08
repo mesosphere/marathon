@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v2.json
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.AppDefinition.VersionInfo.{ NoVersion, OnlyVersion, FullVersionInfo }
+import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.scalatest.Matchers
@@ -11,7 +11,7 @@ import play.api.libs.json._
 
 class AppDefinitionFormatsTest
     extends MarathonSpec
-    with V2Formats
+    with AppAndGroupFormats
     with HealthCheckFormats
     with Matchers
     with FetchUriFormats {
