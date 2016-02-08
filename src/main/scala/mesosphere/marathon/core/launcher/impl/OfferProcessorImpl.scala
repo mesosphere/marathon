@@ -99,9 +99,9 @@ private[launcher] class OfferProcessorImpl(
       terminatedFuture.flatMap { _ =>
         nextOp.oldTask match {
           case Some(existingTask) =>
-            taskCreationHandler.created(nextOp.appId, existingTask).map(_ => ())
+            taskCreationHandler.created(existingTask).map(_ => ())
           case None =>
-            taskCreationHandler.terminated(nextOp.appId, nextOp.taskId).map(_ => ())
+            taskCreationHandler.terminated(nextOp.taskId).map(_ => ())
         }
       }
     }.recover {
@@ -116,17 +116,16 @@ private[launcher] class OfferProcessorImpl(
     */
   private[this] def saveTasks(ops: Seq[TaskOpWithSource], savingDeadline: Timestamp): Future[Seq[TaskOpWithSource]] = {
     def saveTask(taskOpWithSource: TaskOpWithSource): Future[Option[TaskOpWithSource]] = {
-      log.info("Save task [{}]", taskOpWithSource.op.taskId)
-      val taskId = taskOpWithSource.op.taskId
-      val appId = TaskIdUtil.appId(taskId)
+      val taskId = taskOpWithSource.taskId
+      log.info("Save task [{}]", taskOpWithSource.taskId)
       taskCreationHandler
-        .created(appId, taskOpWithSource.op.newTask)
+        .created(taskOpWithSource.op.newTask)
         .map(_ => Some(taskOpWithSource))
         .recoverWith {
           case NonFatal(e) =>
             savingTasksErrorMeter.mark()
             taskOpWithSource.reject(s"storage error: $e")
-            log.warn(s"error while storing task $taskId for app [$appId]", e)
+            log.warn(s"error while storing task $taskId for app [${taskId.appId}]", e)
             revertTaskOps(Some(taskOpWithSource.op))
         }.map {
           case Some(savedTask) => Some(taskOpWithSource)
@@ -140,7 +139,7 @@ private[launcher] class OfferProcessorImpl(
           savingTasksTimeoutMeter.mark(savedTasks.size.toLong)
           nextTask.reject("saving timeout reached")
           log.info(
-            s"Timeout reached, skipping launch and save for task ${nextTask.op.newTask.getId}. " +
+            s"Timeout reached, skipping launch and save for ${nextTask.op.taskId}. " +
               s"You can reconfigure this with --${conf.saveTasksToLaunchTimeout.name}.")
           Future.successful(savedTasks)
         }

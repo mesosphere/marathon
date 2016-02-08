@@ -70,7 +70,7 @@ trait StartingBehavior { this: Actor with ActorLogging =>
 
   def commonBehavior: Receive = {
     case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, app.`id`, _, _, _, Version, _, _) => // scalastyle:off line.size.limit
-      log.warning(s"New task $taskId failed during app ${app.id.toString} scaling, queueing another task")
+      log.warning(s"New task [$taskId] failed during app ${app.id.toString} scaling, queueing another task")
       startedRunningTasks -= taskId
       taskQueue.add(app)
 

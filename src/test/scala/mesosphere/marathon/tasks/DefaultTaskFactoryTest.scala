@@ -2,6 +2,7 @@ package mesosphere.marathon.tasks
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
@@ -18,22 +19,33 @@ class DefaultTaskFactoryTest extends MarathonSpec {
       .setSlaveId(SlaveID("some slave ID"))
       .build()
     val appDefinition: AppDefinition = AppDefinition(ports = List())
-    val runningTasks: Set[MarathonTask] = Set(MarathonTask.newBuilder().setId("some task ID").build())
+    val runningTasks: Set[Task] = Set(
+      MarathonTestHelper.mininimalTask("some task ID")
+    )
 
     when(taskIdUtil.newTaskId(appDefinition.id)).thenReturn(TaskID("some task ID"))
 
-    val task = taskFactory.newTask(appDefinition, offer, runningTasks).get
+    val createdTask = taskFactory.newTask(appDefinition, offer, runningTasks).get
 
-    val expectedTask = MarathonTasks.makeTask(
-      id = "some task ID",
-      host = "some_host",
-      ports = List(),
-      attributes = List(),
-      version = appDefinition.version,
-      now = clock.now(),
-      slaveId = offer.getSlaveId
-    )
-    assert(task.marathonTask == expectedTask)
+    val expectedTask =
+      Task(
+        taskId = Task.Id("some task ID"),
+        agentInfo = Task.AgentInfo(
+          host = "some_host",
+          agentId = Some(offer.getSlaveId.getValue),
+          attributes = List.empty
+        ),
+        launched = Some(
+          Task.Launched(
+            appVersion = appDefinition.version,
+            status = Task.Status(
+              stagedAt = clock.now()
+            ),
+            networking = Task.HostPorts(List.empty)
+          )
+        )
+      )
+    assert(createdTask.task == expectedTask)
   }
 
   var taskIdUtil: TaskIdUtil = _

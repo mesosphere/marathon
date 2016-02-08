@@ -1,6 +1,7 @@
 package mesosphere.mesos
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.mesos.protos.{ RangesResource, Resource }
@@ -34,7 +35,7 @@ object ResourceMatcher {
   case class ResourceMatch(cpuRole: Role, memRole: Role, diskRole: Role, ports: Seq[RangesResource])
 
   //scalastyle:off method.length
-  def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Iterable[MarathonTask],
+  def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Iterable[Task],
                      acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {
 
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
@@ -79,7 +80,7 @@ object ResourceMatcher {
     def meetsAllConstraints: Boolean = {
       lazy val tasks = runningTasks
       val badConstraints = app.constraints.filterNot { constraint =>
-        Constraints.meetsConstraint(tasks, offer, constraint)
+        Constraints.meetsConstraint(tasks.view.map(_.marathonTask), offer, constraint)
       }
 
       if (badConstraints.nonEmpty && log.isInfoEnabled) {

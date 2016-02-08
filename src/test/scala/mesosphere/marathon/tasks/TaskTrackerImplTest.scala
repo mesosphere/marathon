@@ -3,6 +3,8 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.Lists
 import mesosphere.FutureTestSupport._
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -48,30 +50,30 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   test("SerializeAndDeserialize") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
 
-    val deserializedTask = taskTracker.marathonTaskSync(TEST_APP_NAME, sampleTask.getId)
+    val deserializedTask = taskTracker.marathonTaskSync(sampleTask.taskId)
 
     deserializedTask should not be empty
-    deserializedTask should equal(Some(sampleTask))
+    deserializedTask should equal(Some(sampleTask.marathonTask))
   }
 
   test("CreatedAndGetTask") {
-    testCreatedAndGetTask(_.marathonTaskSync(_, _))
+    testCreatedAndGetTask(_.marathonTaskSync(_))
   }
 
   test("CreatedAndGetTask Async") {
-    testCreatedAndGetTask(_.marathonTask(_, _).futureValue)
+    testCreatedAndGetTask(_.marathonTask(_).futureValue)
   }
 
-  private[this] def testCreatedAndGetTask(call: (TaskTracker, PathId, String) => Option[MarathonTask]): Unit = {
+  private[this] def testCreatedAndGetTask(call: (TaskTracker, Task.Id) => Option[MarathonTask]): Unit = {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
 
-    val fetchedTask = call(taskTracker, TEST_APP_NAME, sampleTask.getId)
+    val fetchedTask = call(taskTracker, sampleTask.taskId)
 
-    assert(fetchedTask.get.equals(sampleTask), "Tasks are not properly stored")
+    assert(fetchedTask.get.equals(sampleTask.marathonTask), "Tasks are not properly stored")
   }
 
   test("List") {
@@ -87,9 +89,9 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val task2 = makeSampleTask(TEST_APP_NAME / "b")
     val task3 = makeSampleTask(TEST_APP_NAME / "b")
 
-    taskCreationHandler.created(TEST_APP_NAME / "a", task1).futureValue
-    taskCreationHandler.created(TEST_APP_NAME / "b", task2).futureValue
-    taskCreationHandler.created(TEST_APP_NAME / "b", task3).futureValue
+    taskCreationHandler.created(task1).futureValue
+    taskCreationHandler.created(task2).futureValue
+    taskCreationHandler.created(task3).futureValue
 
     val testAppTasks = call(taskTracker)
 
@@ -97,18 +99,18 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
     testAppTasks.appTasksMap(TEST_APP_NAME / "a").appId should equal(TEST_APP_NAME / "a")
     testAppTasks.appTasksMap(TEST_APP_NAME / "b").appId should equal(TEST_APP_NAME / "b")
-    testAppTasks.appTasksMap(TEST_APP_NAME / "a").tasks should have size 1
-    testAppTasks.appTasksMap(TEST_APP_NAME / "b").tasks should have size 2
-    testAppTasks.appTasksMap(TEST_APP_NAME / "a").tasks.map(_.getId).toSet should equal(Set(task1.getId))
-    testAppTasks.appTasksMap(TEST_APP_NAME / "b").tasks.map(_.getId).toSet should equal(Set(task2.getId, task3.getId))
+    testAppTasks.appTasksMap(TEST_APP_NAME / "a").marathonTasks should have size 1
+    testAppTasks.appTasksMap(TEST_APP_NAME / "b").marathonTasks should have size 2
+    testAppTasks.appTasksMap(TEST_APP_NAME / "a").taskMap.keySet should equal(Set(task1.taskId))
+    testAppTasks.appTasksMap(TEST_APP_NAME / "b").taskMap.keySet should equal(Set(task2.taskId, task3.taskId))
   }
 
   test("GetTasks") {
-    testGetTasks(_.appTasksSync(TEST_APP_NAME))
+    testGetTasks(_.marathonAppTasksSync(TEST_APP_NAME))
   }
 
   test("GetTasks Async") {
-    testGetTasks(_.appTasks(TEST_APP_NAME).futureValue)
+    testGetTasks(_.marathonAppTasks(TEST_APP_NAME).futureValue)
   }
 
   private[this] def testGetTasks(call: TaskTracker => Iterable[MarathonTask]): Unit = {
@@ -116,11 +118,11 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val task2 = makeSampleTask(TEST_APP_NAME)
     val task3 = makeSampleTask(TEST_APP_NAME)
 
-    taskCreationHandler.created(TEST_APP_NAME, task1).futureValue
-    taskCreationHandler.created(TEST_APP_NAME, task2).futureValue
-    taskCreationHandler.created(TEST_APP_NAME, task3).futureValue
+    taskCreationHandler.created(task1).futureValue
+    taskCreationHandler.created(task2).futureValue
+    taskCreationHandler.created(task3).futureValue
 
-    val testAppTasks = call(taskTracker)
+    val testAppTasks = call(taskTracker).map(TaskSerializer.task(_))
 
     shouldContainTask(testAppTasks.toSet, task1)
     shouldContainTask(testAppTasks.toSet, task2)
@@ -139,7 +141,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   private[this] def testCount(count: (TaskTracker, PathId) => Int): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
 
-    taskCreationHandler.created(TEST_APP_NAME / "a", task1).futureValue
+    taskCreationHandler.created(task1).futureValue
 
     count(taskTracker, TEST_APP_NAME / "a") should be(1)
     count(taskTracker, TEST_APP_NAME / "b") should be(0)
@@ -156,55 +158,55 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   private[this] def testContains(count: (TaskTracker, PathId) => Boolean): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
 
-    taskCreationHandler.created(TEST_APP_NAME / "a", task1).futureValue
+    taskCreationHandler.created(task1).futureValue
 
     count(taskTracker, TEST_APP_NAME / "a") should be(true)
     count(taskTracker, TEST_APP_NAME / "b") should be(false)
   }
 
   test("TaskLifecycle") {
-    val sampleTask = MarathonTestHelper.startingTaskProto(TEST_APP_NAME)
+    val sampleTask = MarathonTestHelper.startingTaskForApp(TEST_APP_NAME)
 
     // CREATE TASK
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
 
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.getId)
+    stateShouldContainKey(state, sampleTask.taskId)
 
     // TASK STATUS UPDATE
-    val startingTaskStatus = makeTaskStatus(sampleTask.getId, TaskState.TASK_STARTING)
+    val startingTaskStatus = makeTaskStatus(sampleTask.taskId, TaskState.TASK_STARTING)
 
     taskUpdater.statusUpdate(TEST_APP_NAME, startingTaskStatus).futureValue
 
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.getId)
-    taskTracker.appTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
+    stateShouldContainKey(state, sampleTask.taskId)
+    taskTracker.marathonAppTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
 
     // TASK RUNNING
-    val runningTaskStatus: TaskStatus = makeTaskStatus(sampleTask.getId, TaskState.TASK_RUNNING)
+    val runningTaskStatus: TaskStatus = makeTaskStatus(sampleTask.taskId, TaskState.TASK_RUNNING)
 
     taskUpdater.statusUpdate(TEST_APP_NAME, runningTaskStatus).futureValue
 
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.getId)
-    taskTracker.appTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
+    stateShouldContainKey(state, sampleTask.taskId)
+    taskTracker.marathonAppTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK STILL RUNNING
     val updatedRunningTaskStatus = runningTaskStatus.toBuilder.setTimestamp(123).build()
     taskUpdater.statusUpdate(TEST_APP_NAME, updatedRunningTaskStatus).futureValue
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    assert(taskTracker.appTasksSync(TEST_APP_NAME).head.getStatus == runningTaskStatus)
+    assert(taskTracker.marathonAppTasksSync(TEST_APP_NAME).head.getStatus == runningTaskStatus)
 
     // TASK TERMINATED
-    taskCreationHandler.terminated(TEST_APP_NAME, sampleTask.getId).futureValue
+    taskCreationHandler.terminated(sampleTask.taskId).futureValue
 
-    stateShouldNotContainKey(state, sampleTask.getId)
+    stateShouldNotContainKey(state, sampleTask.taskId)
 
     // APP SHUTDOWN
     assert(!taskTracker.hasAppTasksSync(TEST_APP_NAME), "App was not removed")
 
     // ERRONEOUS MESSAGE, TASK DOES NOT EXIST ANYMORE
-    val erroneousStatus = makeTaskStatus(sampleTask.getId, TaskState.TASK_LOST)
+    val erroneousStatus = makeTaskStatus(sampleTask.taskId, TaskState.TASK_LOST)
 
     val failure = taskUpdater.statusUpdate(TEST_APP_NAME, erroneousStatus).failed.futureValue
     assert(failure.getCause != null)
@@ -219,32 +221,32 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
   private[this] def testStatusUpdateForTerminalState(taskState: TaskState) {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
-    val terminalStatusUpdate = makeTaskStatus(sampleTask.getId, taskState)
+    val terminalStatusUpdate = makeTaskStatus(sampleTask.taskId, taskState)
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.getId)
+    stateShouldContainKey(state, sampleTask.taskId)
 
     taskUpdater.statusUpdate(TEST_APP_NAME, terminalStatusUpdate).futureValue
 
     shouldNotContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldNotContainKey(state, sampleTask.getId)
+    stateShouldNotContainKey(state, sampleTask.taskId)
   }
 
   test("UnknownTasks") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
     // don't call taskTracker.created, but directly running
-    val runningTaskStatus: TaskStatus = makeTaskStatus(sampleTask.getId, TaskState.TASK_RUNNING)
+    val runningTaskStatus: TaskStatus = makeTaskStatus(sampleTask.taskId, TaskState.TASK_RUNNING)
     val res = taskUpdater.statusUpdate(TEST_APP_NAME, runningTaskStatus)
     ScalaFutures.whenReady(res.failed) { e =>
       assert(
-        e.getCause.getMessage == s"task [${sampleTask.getId}] of app [/foo] does not exist",
+        e.getCause.getMessage == s"${sampleTask.taskId} of app [/foo] does not exist",
         s"Got message: ${e.getCause.getMessage}"
       )
     }
     shouldNotContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldNotContainKey(state, sampleTask.getId)
+    stateShouldNotContainKey(state, sampleTask.taskId)
   }
 
   test("MultipleApps") {
@@ -259,23 +261,23 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val app3_task2 = makeSampleTask(appName3)
     val app3_task3 = makeSampleTask(appName3)
 
-    taskCreationHandler.created(appName1, app1_task1).futureValue
-    taskUpdater.statusUpdate(appName1, makeTaskStatus(app1_task1.getId)).futureValue
+    taskCreationHandler.created(app1_task1).futureValue
+    taskUpdater.statusUpdate(appName1, makeTaskStatus(app1_task1.taskId)).futureValue
 
-    taskCreationHandler.created(appName1, app1_task2).futureValue
-    taskUpdater.statusUpdate(appName1, makeTaskStatus(app1_task2.getId)).futureValue
+    taskCreationHandler.created(app1_task2).futureValue
+    taskUpdater.statusUpdate(appName1, makeTaskStatus(app1_task2.taskId)).futureValue
 
-    taskCreationHandler.created(appName2, app2_task1).futureValue
-    taskUpdater.statusUpdate(appName2, makeTaskStatus(app2_task1.getId)).futureValue
+    taskCreationHandler.created(app2_task1).futureValue
+    taskUpdater.statusUpdate(appName2, makeTaskStatus(app2_task1.taskId)).futureValue
 
-    taskCreationHandler.created(appName3, app3_task1).futureValue
-    taskUpdater.statusUpdate(appName3, makeTaskStatus(app3_task1.getId)).futureValue
+    taskCreationHandler.created(app3_task1).futureValue
+    taskUpdater.statusUpdate(appName3, makeTaskStatus(app3_task1.taskId)).futureValue
 
-    taskCreationHandler.created(appName3, app3_task2).futureValue
-    taskUpdater.statusUpdate(appName3, makeTaskStatus(app3_task2.getId)).futureValue
+    taskCreationHandler.created(app3_task2).futureValue
+    taskUpdater.statusUpdate(appName3, makeTaskStatus(app3_task2.taskId)).futureValue
 
-    taskCreationHandler.created(appName3, app3_task3).futureValue
-    taskUpdater.statusUpdate(appName3, makeTaskStatus(app3_task3.getId)).futureValue
+    taskCreationHandler.created(app3_task3).futureValue
+    taskUpdater.statusUpdate(appName3, makeTaskStatus(app3_task3.taskId)).futureValue
 
     assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
 
@@ -300,11 +302,12 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
   test("Should not store if state did not change (no health present)") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
-    val status = sampleTask.getStatus.toBuilder
+    val status = sampleTask.launched.get.status.mesosStatus.get
+      .toBuilder
       .setTimestamp(123)
       .build()
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -317,12 +320,13 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   test("Should not store if state and health did not change") {
-    val sampleTask = MarathonTestHelper.healthyTaskProto(TEST_APP_NAME)
-    val status = sampleTask.getStatus.toBuilder
+    val sampleTask = MarathonTestHelper.healthyTask(TEST_APP_NAME)
+    val status = sampleTask.launched.get.status.mesosStatus.get
+      .toBuilder
       .setTimestamp(123)
       .build()
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -335,12 +339,12 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   test("Should store if state changed") {
-    val sampleTask = MarathonTestHelper.stagedTaskProto(TEST_APP_NAME)
-    val status = sampleTask.getStatus.toBuilder
+    val sampleTask = MarathonTestHelper.stagedTaskForApp(TEST_APP_NAME)
+    val status = sampleTask.launched.get.status.mesosStatus.get.toBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
       .build()
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -357,12 +361,12 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   test("Should store if health changed") {
-    val sampleTask = MarathonTestHelper.runningTaskProto(TEST_APP_NAME)
-    val status = sampleTask.getStatus.toBuilder
+    val sampleTask = MarathonTestHelper.runningTaskForApp(TEST_APP_NAME)
+    val status = sampleTask.launched.get.status.mesosStatus.get.toBuilder
       .setHealthy(true)
       .build()
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -383,11 +387,11 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val status = Protos.TaskStatus
       .newBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .setTaskId(sampleTask.taskId.mesosTaskId)
       .setHealthy(true)
       .build()
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -409,10 +413,10 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val status = Protos.TaskStatus
       .newBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .setTaskId(sampleTask.taskId.mesosTaskId)
       .build()
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -433,10 +437,10 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val status = Protos.TaskStatus
       .newBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(Protos.TaskID.newBuilder.setValue(sampleTask.getId))
+      .setTaskId(sampleTask.taskId.mesosTaskId)
       .build()
 
-    taskCreationHandler.created(TEST_APP_NAME, sampleTask).futureValue
+    taskCreationHandler.created(sampleTask).futureValue
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
 
     taskUpdater.statusUpdate(TEST_APP_NAME, status).futureValue
@@ -454,33 +458,27 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   def makeSampleTask(appId: PathId) = {
-    def makeTask(id: String, host: String, port: Int) = {
-      MarathonTestHelper.stagedTaskProto(id).toBuilder
-        .setHost(host)
-        .addAllPorts(Lists.newArrayList(port))
-        .addAttributes(TextAttribute("attr1", "bar"))
-        .build()
-    }
-
-    val taskId = TaskIdUtil.newTaskId(appId)
-    makeTask(taskId.getValue, "host", 999)
+    MarathonTestHelper
+      .stagedTaskForApp(appId)
+      .withAgentInfo(_.copy(host = "host", attributes = Iterable(TextAttribute("attr1", "bar"))))
+      .withLaunchedTask(_.copy(networking = Task.HostPorts(Iterable(999))))
   }
 
-  def makeTaskStatus(id: String, state: TaskState = TaskState.TASK_RUNNING) = {
+  def makeTaskStatus(id: Task.Id, state: TaskState = TaskState.TASK_RUNNING) = {
     TaskStatus.newBuilder
-      .setTaskId(TaskID.newBuilder.setValue(id))
+      .setTaskId(id.mesosTaskId)
       .setState(state)
       .build
   }
 
-  def containsTask(tasks: Iterable[MarathonTask], task: MarathonTask) =
-    tasks.exists(t => t.getId == task.getId
-      && t.getHost == task.getHost
-      && t.getPortsList == task.getPortsList)
-  def shouldContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) =
-    assert(containsTask(tasks, task), s"Should contain task ${task.getId}")
-  def shouldNotContainTask(tasks: Iterable[MarathonTask], task: MarathonTask) =
-    assert(!containsTask(tasks, task), s"Should not contain task ${task.getId}")
+  def containsTask(tasks: Iterable[Task], task: Task) =
+    tasks.exists(t => t.taskId == task.taskId
+      && t.agentInfo.host == task.agentInfo.host
+      && t.launched.map(_.networking) == task.launched.map(_.networking))
+  def shouldContainTask(tasks: Iterable[Task], task: Task) =
+    assert(containsTask(tasks, task), s"Should contain ${task.taskId}")
+  def shouldNotContainTask(tasks: Iterable[Task], task: Task) =
+    assert(!containsTask(tasks, task), s"Should not contain ${task.taskId}")
 
   def shouldHaveTaskStatus(task: MarathonTask, taskStatus: TaskStatus) {
     assert(
@@ -488,13 +486,13 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     )
   }
 
-  def stateShouldNotContainKey(state: PersistentStore, key: String) {
-    val keyWithPrefix = TaskRepository.storePrefix + key
+  def stateShouldNotContainKey(state: PersistentStore, key: Task.Id) {
+    val keyWithPrefix = TaskRepository.storePrefix + key.idString
     assert(!state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was found in state")
   }
 
-  def stateShouldContainKey(state: PersistentStore, key: String) {
-    val keyWithPrefix = TaskRepository.storePrefix + key
+  def stateShouldContainKey(state: PersistentStore, key: Task.Id) {
+    val keyWithPrefix = TaskRepository.storePrefix + key.idString
     assert(state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was not found in state")
   }
 }

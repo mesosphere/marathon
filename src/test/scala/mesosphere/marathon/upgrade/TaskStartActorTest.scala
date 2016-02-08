@@ -137,8 +137,8 @@ class TaskStartActorTest
 
     when(launchQueue.get(app.id)).thenReturn(None)
     val task =
-      MarathonTestHelper.startingTaskProto(app.id).toBuilder.setVersion(Timestamp(1024).toString).build()
-    taskCreationHandler.created(app.id, task).futureValue
+      MarathonTestHelper.startingTaskForApp(app.id, appVersion = Timestamp(1024))
+    taskCreationHandler.created(task).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -310,8 +310,8 @@ class TaskStartActorTest
     when(launchQueue.get(app.id)).thenReturn(None)
 
     val taskId = TaskIdUtil.newTaskId(app.id)
-    val task = MarathonTestHelper.stagedTaskProto(taskId.getValue, appVersion = Timestamp(1024))
-    taskCreationHandler.created(app.id, task).futureValue
+    val outdatedTask = MarathonTestHelper.stagedTask(taskId.getValue, appVersion = Timestamp(1024))
+    taskCreationHandler.created(outdatedTask).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -334,11 +334,15 @@ class TaskStartActorTest
     Mockito.reset(launchQueue)
 
     // let existing task die
-    // doesn't work because it needs Zookeeper: taskTracker.terminated(app.id, taskStatus)
-    // we mock instead
     when(taskTracker.countAppTasksSync(app.id)).thenReturn(0)
     when(launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 4)))
-    system.eventStream.publish(MesosStatusUpdateEvent("", "", "TASK_ERROR", "", app.id, "", Nil, Nil, task.getVersion))
+    system.eventStream.publish(MesosStatusUpdateEvent(
+      slaveId = "", taskId = taskId.getValue, taskStatus = "TASK_ERROR", message = "", appId = app.id, host = "",
+      ipAddresses = Nil, ports = Nil,
+      // The version does not match the app.version so that it is filtered in StartingBehavior.
+      // does that make sense?
+      version = outdatedTask.launched.get.appVersion.toString
+    ))
 
     // sync will reschedule task
     ref ! StartingBehavior.Sync

@@ -147,17 +147,26 @@ object MarathonTestHelper {
 
   def makeTaskFromTaskInfo(taskInfo: TaskInfo,
                            offer: Offer = makeBasicOffer().build(),
-                           version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): MarathonTask =
+                           version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): Task =
     {
       import scala.collection.JavaConverters._
-      MarathonTasks.makeTask(
-        id = taskInfo.getTaskId.getValue,
-        host = offer.getHostname,
-        ports = Seq(1, 2, 3), // doesn't matter here
-        attributes = offer.getAttributesList.asScala,
-        version = version,
-        now = now,
-        slaveId = offer.getSlaveId
+
+      Task(
+        taskId = Task.Id(taskInfo.getTaskId),
+        agentInfo = Task.AgentInfo(
+          host = offer.getHostname,
+          agentId = Some(offer.getSlaveId.getValue),
+          attributes = offer.getAttributesList.asScala
+        ),
+        launched = Some(
+          Task.Launched(
+            appVersion = version,
+            status = Task.Status(
+              stagedAt = now
+            ),
+            networking = Task.HostPorts(Seq(1, 2, 3))
+          )
+        )
       )
     }
 
@@ -233,71 +242,102 @@ object MarathonTestHelper {
     .build()
 
   def mininimalTask(appId: PathId): Task = mininimalTask(TaskIdUtil.newTaskId(appId).getValue)
+  def mininimalTask(taskId: Task.Id): Task = mininimalTask(taskId.idString)
   def mininimalTask(taskId: String): Task = {
     Task(
       Task.Id(taskId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       reservationWithVolume = None,
       launchCounter = 0,
-      launchedTask = None
+      launched = None
     )
   }
 
-  def startingTask(appId: PathId): Task = startingTask(TaskIdUtil.newTaskId(appId).getValue)
-  def startingTask(id: String): Task = TaskSerializer.taskState(startingTaskProto(id))
+  def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
+    startingTask(
+      TaskIdUtil.newTaskId(appId).getValue,
+      appVersion = appVersion,
+      stagedAt = stagedAt
+    )
+  def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
+    TaskSerializer.task(
+      startingTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt)
+    )
 
   def startingTaskProto(appId: PathId): Protos.MarathonTask = startingTaskProto(TaskIdUtil.newTaskId(appId).getValue)
-  def startingTaskProto(id: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
-    dummyTaskProto(id).toBuilder
+  def startingTaskProto(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
+    dummyTaskProto(taskId).toBuilder
       .setVersion(appVersion.toString)
       .setStagedAt(stagedAt)
-      .setStatus(statusForState(id, MesosProtos.TaskState.TASK_STARTING))
+      .setStatus(statusForState(taskId, MesosProtos.TaskState.TASK_STARTING))
       .build()
   }
 
-  def stagedTask(appId: PathId): Task = stagedTask(TaskIdUtil.newTaskId(appId).getValue)
-  def stagedTask(id: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
-    TaskSerializer.taskState(stagedTaskProto(id, appVersion = appVersion, stagedAt = stagedAt))
+  def stagedTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
+    stagedTask(TaskIdUtil.newTaskId(appId).getValue, appVersion = appVersion, stagedAt = stagedAt)
+  def stagedTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
+    TaskSerializer.task(stagedTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt))
 
   def stagedTaskProto(appId: PathId): Protos.MarathonTask = stagedTaskProto(TaskIdUtil.newTaskId(appId).getValue)
-  def stagedTaskProto(id: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
-    startingTaskProto(id, appVersion = appVersion, stagedAt = stagedAt).toBuilder
-      .setStatus(statusForState(id, MesosProtos.TaskState.TASK_STAGING))
+  def stagedTaskProto(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
+    startingTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt).toBuilder
+      .setStatus(statusForState(taskId, MesosProtos.TaskState.TASK_STAGING))
       .build()
   }
 
-  def runningTask(appId: PathId): Task = runningTask(TaskIdUtil.newTaskId(appId).getValue)
-  def runningTask(id: String): Task = TaskSerializer.taskState(runningTaskProto(id))
+  def runningTaskForApp(appId: PathId,
+                        appVersion: Timestamp = Timestamp(1),
+                        stagedAt: Long = 2,
+                        startedAt: Long = 3): Task =
+    runningTask(
+      TaskIdUtil.newTaskId(appId).getValue,
+      appVersion = appVersion,
+      stagedAt = stagedAt,
+      startedAt = startedAt
+    )
+  def runningTask(
+    taskId: String,
+    appVersion: Timestamp = Timestamp(1),
+    stagedAt: Long = 2,
+    startedAt: Long = 3): Task =
+    TaskSerializer.task(
+      runningTaskProto(
+        taskId,
+        appVersion = appVersion,
+        stagedAt = stagedAt,
+        startedAt = startedAt
+      )
+    )
 
   def runningTaskProto(appId: PathId): Protos.MarathonTask = runningTaskProto(TaskIdUtil.newTaskId(appId).getValue)
   def runningTaskProto(
-    id: String,
+    taskId: String,
     appVersion: Timestamp = Timestamp(1),
     stagedAt: Long = 2,
     startedAt: Long = 3): Protos.MarathonTask = {
-    stagedTaskProto(id, appVersion = appVersion, stagedAt = stagedAt).toBuilder
+    stagedTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt).toBuilder
       .setStartedAt(startedAt)
-      .setStatus(statusForState(id, MesosProtos.TaskState.TASK_RUNNING))
+      .setStatus(statusForState(taskId, MesosProtos.TaskState.TASK_RUNNING))
       .build()
   }
 
   def healthyTask(appId: PathId): Task = healthyTask(TaskIdUtil.newTaskId(appId).getValue)
-  def healthyTask(id: String): Task = TaskSerializer.taskState(healthyTaskProto(id))
+  def healthyTask(taskId: String): Task = TaskSerializer.task(healthyTaskProto(taskId))
 
   def healthyTaskProto(appId: PathId): Protos.MarathonTask = healthyTaskProto(TaskIdUtil.newTaskId(appId).getValue)
-  def healthyTaskProto(id: String): Protos.MarathonTask = {
-    val task: MarathonTask = runningTaskProto(id)
+  def healthyTaskProto(taskId: String): Protos.MarathonTask = {
+    val task: MarathonTask = runningTaskProto(taskId)
     task.toBuilder
       .setStatus(task.getStatus.toBuilder.setHealthy(true))
       .buildPartial()
   }
 
   def unhealthyTask(appId: PathId): Task = unhealthyTask(TaskIdUtil.newTaskId(appId).getValue)
-  def unhealthyTask(id: String): Task = TaskSerializer.taskState(unhealthyTaskProto(id))
+  def unhealthyTask(taskId: String): Task = TaskSerializer.task(unhealthyTaskProto(taskId))
 
   def unhealthyTaskProto(appId: PathId): Protos.MarathonTask = unhealthyTaskProto(TaskIdUtil.newTaskId(appId).getValue)
-  def unhealthyTaskProto(id: String): Protos.MarathonTask = {
-    val task: MarathonTask = runningTaskProto(id)
+  def unhealthyTaskProto(taskId: String): Protos.MarathonTask = {
+    val task: MarathonTask = runningTaskProto(taskId)
     task.toBuilder
       .setStatus(task.getStatus.toBuilder.setHealthy(false))
       .buildPartial()

@@ -17,7 +17,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val marathonTask = MarathonTask.newBuilder().setId("task").setHost(sampleHost).setLaunchCounter(0).build()
 
     When("we convert it to task")
-    val taskState = TaskSerializer.taskState(marathonTask)
+    val taskState = TaskSerializer.task(marathonTask)
 
     Then("we get a minimal task State")
     val expectedState = Task(
@@ -25,7 +25,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       Task.AgentInfo(host = sampleHost, agentId = None, attributes = Iterable.empty),
       reservationWithVolume = None,
       launchCounter = 0,
-      launchedTask = None
+      launched = None
     )
 
     taskState should be(expectedState)
@@ -42,7 +42,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val marathonTask = completeTask
 
     When("we convert it to task")
-    val taskState = TaskSerializer.taskState(marathonTask)
+    val taskState = TaskSerializer.task(marathonTask)
 
     Then("we get the expected task state")
     val expectedState = fullSampleTaskStateWithoutNetworking
@@ -65,11 +65,11 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .build()
 
     When("we convert it to task")
-    val taskState = TaskSerializer.taskState(marathonTask)
+    val taskState = TaskSerializer.task(marathonTask)
 
     Then("we get the expected task state")
     val expectedState = fullSampleTaskStateWithoutNetworking.copy(
-      launchedTask = fullSampleTaskStateWithoutNetworking.launchedTask.map(
+      launched = fullSampleTaskStateWithoutNetworking.launched.map(
         _.copy(networking = Task.HostPorts(samplePorts)
         ))
     )
@@ -93,11 +93,11 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
     When("we convert it to task")
     println(marathonTask)
-    val taskState = TaskSerializer.taskState(marathonTask)
+    val taskState = TaskSerializer.task(marathonTask)
 
     Then("we get the expected task state")
     val expectedState = fullSampleTaskStateWithoutNetworking.copy(
-      launchedTask = fullSampleTaskStateWithoutNetworking.launchedTask.map(
+      launched = fullSampleTaskStateWithoutNetworking.launched.map(
         _.copy(networking = Task.NetworkInfoList(sampleNetworks)
         ))
     )
@@ -119,7 +119,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
   private[this] val appVersion: Timestamp = Timestamp(3)
   private[this] val sampleTaskStatus: TaskStatus =
     MesosProtos.TaskStatus.newBuilder()
-      .setTaskId(MesosProtos.TaskID.newBuilder().setValue(taskId.id))
+      .setTaskId(MesosProtos.TaskID.newBuilder().setValue(taskId.idString))
       .setState(MesosProtos.TaskState.TASK_RUNNING)
       .build()
   private[this] val sampleSlaveId: MesosProtos.SlaveID.Builder = MesosProtos.SlaveID.newBuilder().setValue("slaveId")
@@ -134,13 +134,13 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     Task.AgentInfo(host = sampleHost, agentId = Some(sampleSlaveId.getValue), attributes = sampleAttributes),
     reservationWithVolume = Some(Task.ReservationWithVolume),
     launchCounter = 10,
-    launchedTask = Some(
-      Task.LaunchedTask(
+    launched = Some(
+      Task.Launched(
         appVersion = appVersion,
-        status = Task.TaskStatus(
+        status = Task.Status(
           stagedAt = Timestamp(stagedAtLong),
           startedAt = Some(Timestamp(startedAtLong)),
-          status = Some(sampleTaskStatus)
+          mesosStatus = Some(sampleTaskStatus)
         ),
         networking = Task.NoNetworking
       )
@@ -149,7 +149,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
   private[this] val completeTask =
     MarathonTask
       .newBuilder()
-      .setId(taskId.id)
+      .setId(taskId.idString)
       .setHost(sampleHost)
       .addAllAttributes(sampleAttributes.asJava)
       .setStagedAt(stagedAtLong)

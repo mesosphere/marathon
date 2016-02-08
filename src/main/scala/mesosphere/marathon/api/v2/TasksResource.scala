@@ -11,6 +11,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, KillTask }
@@ -60,7 +61,7 @@ class TasksResource @Inject() (
       val taskList = taskTracker.tasksByAppSync
 
       val tasks = taskList.appTasksMap.values.view.flatMap { app =>
-        app.tasks.view.map(t => app.appId -> t)
+        app.marathonTasks.view.map(t => app.appId -> t)
       }
 
       val appIds = taskList.allAppIdsWithTasks
@@ -135,7 +136,7 @@ class TasksResource @Inject() (
       }
 
       val taskByApps = taskToAppIds
-        .flatMap { case (taskId, appId) => taskTracker.marathonTaskSync(appId, taskId) }
+        .flatMap { case (taskId, appId) => taskTracker.marathonTaskSync(Task.Id(taskId)) }
         .groupBy { x => taskIdUtil.appId(x.getId) }
         .map{ case (app, tasks) => app -> tasks.toSet }
 

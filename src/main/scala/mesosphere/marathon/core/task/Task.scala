@@ -1,8 +1,9 @@
 package mesosphere.marathon.core.task
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task.Launched
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskIdUtil
 import org.apache.mesos.{ Protos => MesosProtos }
 
@@ -12,20 +13,36 @@ import org.apache.mesos.{ Protos => MesosProtos }
 case class Task(
     taskId: Task.Id,
     agentInfo: Task.AgentInfo,
-    reservationWithVolume: Option[Task.ReservationWithVolume.type],
-    launchCounter: Long,
-    launchedTask: Option[Task.LaunchedTask]) {
+    reservationWithVolume: Option[Task.ReservationWithVolume.type] = None,
+    launchCounter: Long = 0,
+    launched: Option[Task.Launched] = None) {
+
+  def appId: PathId = taskId.appId
+
   /**
     * Legacy conversion to MarathonTask. Cache result to speed up repeated uses.
     * Should be removed before releasing 0.16.
     */
   lazy val marathonTask: MarathonTask = TaskSerializer.marathonTask(this)
+
+  def withAgentInfo(update: Task.AgentInfo => Task.AgentInfo): Task = copy(agentInfo = update(agentInfo))
+
+  def withLaunchedTask(update: Launched => Launched): Task =
+    copy(launched = launched.map(update))
+
 }
 
 object Task {
-  case class Id(id: String) {
-    lazy val appId = TaskIdUtil.appId(id)
-    override def toString: String = s"task [$id]"
+  case class Id(idString: String) {
+    lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
+    lazy val appId: PathId = TaskIdUtil.appId(idString)
+    override def toString: String = s"task [$idString]"
+  }
+
+  object Id {
+    def apply(mesosTaskId: MesosProtos.TaskID): Id = new Id(mesosTaskId.getValue)
+
+    def forApp(appId: PathId): Id = Task.Id(TaskIdUtil.newTaskId(appId))
   }
 
   /**
@@ -43,10 +60,15 @@ object Task {
   /**
     * Represents a task which has been launched (i.e. sent to Mesos for launching).
     */
-  case class LaunchedTask(
-    appVersion: Timestamp,
-    status: TaskStatus,
-    networking: Networking)
+  case class Launched(
+      appVersion: Timestamp,
+      status: Status,
+      networking: Networking) {
+
+    def withMesosStatus(mesosStatus: MesosProtos.TaskStatus): Launched = {
+      copy(status = status.copy(mesosStatus = Some(mesosStatus)))
+    }
+  }
 
   /**
     * Info relating to the host on which the task has been launched.
@@ -59,11 +81,15 @@ object Task {
   /**
     * Contains information about the status of a launched task including timestamps for important
     * state transitions.
+    *
+    * @param stagedAt Despite its name, stagedAt is set on task creation and before the TASK_STAGED notification from
+    *                 Mesos. This is important because we periodically check for any tasks with an old stagedAt
+    *                 timestamp and kill them (See KillOverdueTasksActor).
     */
-  case class TaskStatus(
+  case class Status(
     stagedAt: Timestamp,
-    startedAt: Option[Timestamp],
-    status: Option[MesosProtos.TaskStatus])
+    startedAt: Option[Timestamp] = None,
+    mesosStatus: Option[MesosProtos.TaskStatus] = None)
 
   /** Info on how to reach the task in the network. */
   sealed trait Networking

@@ -44,7 +44,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
       def tasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
         id <- appIds
         health = result(healthCheckManager.statuses(id))
-        task <- taskMap.appTasks(id)
+        task <- taskMap.marathonAppTasks(id)
       } yield EnrichedTask(id, task, health.getOrElse(task.getId, Nil))
 
       val matchingApps = appId match {

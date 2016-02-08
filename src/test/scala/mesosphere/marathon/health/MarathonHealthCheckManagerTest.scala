@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskUpdater, TaskTracker }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
@@ -79,9 +80,9 @@ class MarathonHealthCheckManagerTest
     val taskId = TaskIdUtil.newTaskId(appId)
 
     val taskStatus = MarathonTestHelper.runningTaskProto(taskId.getValue).getStatus
-    val marathonTask = MarathonTestHelper.stagedTaskProto(taskId.getValue).toBuilder.setVersion(version.toString).build()
+    val marathonTask = MarathonTestHelper.stagedTask(taskId.getValue, appVersion = version)
 
-    taskCreationHandler.created(appId, marathonTask).futureValue
+    taskCreationHandler.created(marathonTask).futureValue
     taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     taskId
@@ -116,11 +117,11 @@ class MarathonHealthCheckManagerTest
 
     val taskStatus = MarathonTestHelper.runningTaskProto(taskId.getValue).getStatus.toBuilder.setHealthy(false).build()
 
-    val marathonTask = MarathonTestHelper.stagedTaskProto(taskId.getValue).toBuilder.setVersion(app.version.toString).build()
+    val marathonTask = MarathonTestHelper.stagedTask(taskId.getValue, appVersion = app.version)
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
-    taskCreationHandler.created(appId, marathonTask).futureValue
+    taskCreationHandler.created(marathonTask).futureValue
     taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     hcManager.add(appId, app.version, healthCheck)
@@ -218,28 +219,24 @@ class MarathonHealthCheckManagerTest
     }
     val versions = List(0L, 1L, 2L).map { Timestamp(_) }.toArray
     val tasks = List(0, 1, 2).map { i =>
-      MarathonTestHelper.stagedTaskProto(appId).toBuilder
-        .setVersion(versions(i).toString)
-        .build
+      MarathonTestHelper.stagedTaskForApp(appId, appVersion = versions(i))
     }
-    def startTask(appId: PathId, task: MarathonTask, version: Timestamp, healthChecks: Set[HealthCheck]) = {
+    def startTask(appId: PathId, task: Task, version: Timestamp, healthChecks: Set[HealthCheck]) = {
       appRepository.store(AppDefinition(
         id = appId,
         versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )).futureValue
-      taskCreationHandler.created(appId, task).futureValue
-      taskUpdater.statusUpdate(appId, taskStatus(task)).futureValue
+      taskCreationHandler.created(task).futureValue
+      taskUpdater.statusUpdate(appId, taskStatus(task.marathonTask)).futureValue
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
-    def stopTask(appId: PathId, task: MarathonTask) =
-      taskCreationHandler.terminated(appId, task.getId).futureValue
+    def stopTask(appId: PathId, task: Task) =
+      taskCreationHandler.terminated(task.taskId).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath
-    val otherTask = MarathonTestHelper.stagedTaskProto(appId).toBuilder
-      .setVersion(Timestamp(0).toString)
-      .build
+    val otherTask = MarathonTestHelper.stagedTaskForApp(appId, appVersion = Timestamp(0))
     val otherHealthChecks = Set(HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds))
     startTask(otherAppId, otherTask, Timestamp(42), otherHealthChecks)
     hcManager.addAllFor(appRepository.currentVersion(otherAppId).futureValue.get)

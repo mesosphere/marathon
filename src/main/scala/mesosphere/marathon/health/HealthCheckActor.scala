@@ -4,6 +4,7 @@ import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
 import mesosphere.marathon.state.AppDefinition
@@ -63,7 +64,7 @@ class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.appTasksSync(app.id).map(_.getId).toSet
+    val activeTaskIds = taskTracker.marathonAppTasksSync(app.id).map(_.getId).toSet
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
     taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
@@ -86,7 +87,7 @@ class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.appTasksSync(app.id).foreach { task =>
+    taskTracker.marathonAppTasksSync(app.id).foreach { task =>
       if (task.getVersion == app.version.toString && task.hasStartedAt) {
         log.debug("Dispatching health check job for task [{}]", task.getId)
         val worker: ActorRef = context.actorOf(workerProps)
@@ -136,21 +137,21 @@ class HealthCheckActor(
 
     case result: HealthResult if result.version == app.version.toString =>
       log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
-      val taskId = result.taskId
-      val health = taskHealth.getOrElse(taskId, Health(taskId))
+      val taskId = Task.Id(result.taskId)
+      val health = taskHealth.getOrElse(taskId.idString, Health(taskId.idString))
 
       val newHealth = result match {
         case Healthy(_, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _) =>
-          taskTracker.marathonTaskSync(app.id, taskId) match {
+          taskTracker.marathonTaskSync(taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
                 // Don't update health
                 health
               }
               else {
-                eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
+                eventBus.publish(FailedHealthCheck(app.id, taskId.idString, healthCheck))
                 checkConsecutiveFailures(task, health)
                 health.update(result)
               }
@@ -160,13 +161,13 @@ class HealthCheckActor(
           }
       }
 
-      taskHealth += (taskId -> newHealth)
+      taskHealth += (taskId.idString -> newHealth)
 
       if (health.alive != newHealth.alive) {
         eventBus.publish(
           HealthStatusChanged(
             appId = app.id,
-            taskId = taskId,
+            taskId = taskId.idString,
             version = result.version,
             alive = newHealth.alive)
         )

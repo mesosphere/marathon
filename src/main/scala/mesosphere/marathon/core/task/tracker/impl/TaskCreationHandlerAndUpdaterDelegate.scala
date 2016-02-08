@@ -2,7 +2,6 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import akka.actor.ActorRef
 import akka.util.Timeout
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
@@ -27,24 +26,27 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
 
   private[impl] implicit val timeout: Timeout = conf.internalTaskUpdateRequestTimeout().milliseconds
 
-  override def created(appId: PathId, task: MarathonTask): Future[MarathonTask] = {
-    val taskState = TaskSerializer.taskState(task)
-    taskUpdate(appId, task.getId, TaskOpProcessor.Action.Update(taskState)).map(_ => task)
+  override def created(task: Task): Future[Task] = {
+    taskUpdate(task.taskId, TaskOpProcessor.Action.Update(task)).map(_ => task)
   }
-  override def terminated(appId: PathId, taskId: String): Future[_] = {
-    taskUpdate(appId, taskId, TaskOpProcessor.Action.Expunge)
+  override def terminated(taskId: Task.Id): Future[_] = {
+    taskUpdate(taskId, TaskOpProcessor.Action.Expunge)
   }
   override def statusUpdate(appId: PathId, status: TaskStatus): Future[_] = {
-    taskUpdate(appId, status.getTaskId.getValue, TaskOpProcessor.Action.UpdateStatus(status))
+    val taskId = Task.Id(status.getTaskId.getValue)
+    taskUpdate(taskId, TaskOpProcessor.Action.UpdateStatus(status))
   }
 
-  private[this] def taskUpdate(appId: PathId, taskId: String, action: TaskOpProcessor.Action): Future[Unit] = {
+  private[this] def taskUpdate(
+    taskId: Task.Id,
+    action: TaskOpProcessor.Action): Future[Unit] = {
+
     import akka.pattern.ask
     val deadline = clock.now + timeout.duration
-    val op: ForwardTaskOp = TaskTrackerActor.ForwardTaskOp(deadline, appId, Task.Id(taskId), action)
+    val op: ForwardTaskOp = TaskTrackerActor.ForwardTaskOp(deadline, taskId, action)
     (taskTrackerRef ? op).mapTo[Unit].recover {
       case NonFatal(e) =>
-        throw new RuntimeException(s"while asking for $action on app [$appId] and task [$taskId]", e)
+        throw new RuntimeException(s"while asking for $action on app [${taskId.appId}] and $taskId", e)
     }
   }
 }

@@ -7,10 +7,8 @@ import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
-import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonTestHelper, MarathonConf, MarathonSchedulerService, MarathonSpec }
-import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.mockito.Matchers.{ eq => equalTo }
 import org.mockito.Mockito._
@@ -42,25 +40,21 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val appId = PathId("/my/app")
     val slaveId = SlaveID("some slave ID")
     val now = Timestamp.now()
-    val task1 = MarathonTasks.makeTask(
-      "task-1", host, ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = slaveId
-    )
-    val task2 = MarathonTasks.makeTask(
-      "task-2", host, ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = slaveId
-    )
+    val task1 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
+    val task2 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.appTasksSync(appId) returns Set(task1, task2)
-    taskKiller.kill(any, any) returns Future.successful(toKill)
+    taskTracker.marathonAppTasksSync(appId) returns Set(task1, task2).map(_.marathonTask)
+    taskKiller.kill(any, any) returns Future.successful(toKill.map(_.marathonTask))
 
-    val response = appsTaskResource.deleteOne(appId.root, task1.getId, scale = false, force = false, auth.request, auth.response)
+    val response = appsTaskResource.deleteOne(
+      appId.root, task1.taskId.idString, scale = false, force = false, auth.request, auth.response
+    )
     response.getStatus shouldEqual 200
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
-      .correspondsToJsonOf(Json.obj("task" -> toKill.head))
+      .correspondsToJsonOf(Json.obj("task" -> toKill.head.marathonTask))
     verify(taskKiller).kill(equalTo(appId.rootPath), any)
     verifyNoMoreInteractions(taskKiller)
   }

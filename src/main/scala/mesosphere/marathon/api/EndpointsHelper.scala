@@ -18,7 +18,7 @@ object EndpointsHelper {
 
     val sb = new StringBuilder
     for (app <- apps if app.ipAddress.isEmpty) {
-      val tasks = tasksMap.appTasks(app.id)
+      val tasks = tasksMap.marathonAppTasks(app.id)
       val cleanId = app.id.safePath
 
       val servicePorts = app.servicePorts

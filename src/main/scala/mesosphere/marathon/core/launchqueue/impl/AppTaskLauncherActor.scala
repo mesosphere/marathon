@@ -14,6 +14,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ TaskOp, MatchedTaskO
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -90,13 +91,13 @@ private class AppTaskLauncherActor(
     private[this] var tasksToLaunch: Int) extends Actor with ActorLogging with Stash {
   // scalastyle:on parameter.number
 
-  private[this] var inFlightTaskLaunches = Map.empty[String, Option[Cancellable]]
+  private[this] var inFlightTaskLaunches = Map.empty[Task.Id, Option[Cancellable]]
 
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
 
   /** tasks that are in flight and those in the tracker */
-  private[this] var tasksMap: Map[String, MarathonTask] = _
+  private[this] var tasksMap: Map[Task.Id, Task] = _
 
   /** Decorator to use this actor as a [[base.OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = TaskOpSourceDelegate(self)
@@ -107,8 +108,7 @@ private class AppTaskLauncherActor(
     log.info("Started appTaskLaunchActor for {} version {} with initial count {}",
       app.id, app.version, tasksToLaunch)
 
-    val runningTasks = taskTracker.appTasksSync(app.id)
-    tasksMap = runningTasks.map(task => task.getId -> task).toMap
+    tasksMap = taskTracker.tasksByAppSync.appTasksMap(app.id).taskStateMap
 
     rateLimiterActor ! RateLimiterActor.GetDelay(app)
   }
@@ -232,8 +232,8 @@ private class AppTaskLauncherActor(
 
   private[this] def receiveTaskStatusUpdate: Receive = {
     case TaskStatusUpdate(_, taskId, MarathonTaskStatus.Terminal(_)) =>
-      log.debug("task '{}' finished", taskId.getValue)
-      removeTask(taskId.getValue)
+      log.debug("{} finished", taskId)
+      removeTask(taskId)
 
       // If the app has constraints, we need to reconsider offers that
       // we already rejected. E.g. when a host:unique constraint prevented
@@ -246,23 +246,25 @@ private class AppTaskLauncherActor(
       replyWithQueuedTaskCount()
 
     case TaskStatusUpdate(_, taskId, status) =>
-      tasksMap.get(taskId.getValue) match {
-        case None =>
-          log.warning("ignore update of unknown task '{}'", taskId.getValue)
+      tasksMap.get(taskId) match {
+        case Some(task) if task.launched.isEmpty =>
+          log.warning("ignore update of unlaunched {}", taskId)
+
         case Some(task) =>
-          log.debug("updating status of task '{}'", taskId.getValue)
+          status.mesosStatus.foreach { mesosStatus =>
+            log.debug("updating status of {}", taskId)
+            val updatedTask = task.withLaunchedTask(_.withMesosStatus(mesosStatus))
+            tasksMap += taskId -> updatedTask
+          }
 
-          val taskBuilder = task.toBuilder
-          status.mesosStatus.foreach(taskBuilder.setStatus)
-          val updatedTask = taskBuilder.build()
-
-          tasksMap += taskId.getValue -> updatedTask
+        case None =>
+          log.warning("ignore update of unknown {}", taskId)
       }
 
       replyWithQueuedTaskCount()
   }
 
-  private[this] def removeTask(taskId: String): Unit = {
+  private[this] def removeTask(taskId: Task.Id): Unit = {
     inFlightTaskLaunches.get(taskId).foreach(_.foreach(_.cancel()))
     inFlightTaskLaunches -= taskId
     tasksMap -= taskId
@@ -337,9 +339,9 @@ private class AppTaskLauncherActor(
       newTaskOpt match {
         case Some(CreatedTask(mesosTask, marathonTask)) =>
           def updateActorState(): Unit = {
-            val taskId = marathonTask.getId
+            val taskId = marathonTask.taskId
             assume(
-              marathonTask.getId == mesosTask.getTaskId.getValue,
+              taskId.mesosTaskId == mesosTask.getTaskId,
               "marathon task id and mesos task id must be equal"
             )
 
@@ -375,7 +377,6 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def inFlight(task: TaskOp): Boolean = inFlightTaskLaunches.contains(task.taskId)
-  private[this] def inFlight(taskId: String): Boolean = inFlightTaskLaunches.contains(taskId)
 
   protected def scheduleTaskLaunchTimeout(
     context: ActorContext,

@@ -12,11 +12,9 @@ import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
-import mesosphere.marathon.{ MarathonSpec, SchedulerActions }
-import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.{ SlaveID, TaskID }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, SchedulerActions }
+import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.{ any, same }
@@ -70,21 +68,20 @@ class DeploymentActorTest
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New, app2New, app3))
 
     // setting started at to 0 to make sure this survives
-    val slaveId = SlaveID("some slave id")
-    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(0).build()
-    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(1000).build()
-    val task2_1 = MarathonTasks.makeTask("task2_1", "", Nil, Nil, app2.version, Timestamp.now(), slaveId)
-    val task3_1 = MarathonTasks.makeTask("task3_1", "", Nil, Nil, app3.version, Timestamp.now(), slaveId)
-    val task4_1 = MarathonTasks.makeTask("task4_1", "", Nil, Nil, app4.version, Timestamp.now(), slaveId)
+    val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app1.version, startedAt = 0)
+    val task1_2 = MarathonTestHelper.runningTask("task1_2", appVersion = app1.version, startedAt = 1000)
+    val task2_1 = MarathonTestHelper.runningTask("task2_1", appVersion = app2.version)
+    val task3_1 = MarathonTestHelper.runningTask("task3_1", appVersion = app3.version)
+    val task4_1 = MarathonTestHelper.runningTask("task4_1", appVersion = app4.version)
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(tracker.appTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2))
-    when(tracker.appTasksSync(app2.id)).thenReturn(Set(task2_1))
-    when(tracker.appTasksSync(app3.id)).thenReturn(Set(task3_1))
-    when(tracker.appTasksSync(app4.id)).thenReturn(Set(task4_1))
+    when(tracker.marathonAppTasksSync(app1.id)).thenReturn(Set(task1_1.marathonTask, task1_2.marathonTask))
+    when(tracker.marathonAppTasksSync(app2.id)).thenReturn(Set(task2_1.marathonTask))
+    when(tracker.marathonAppTasksSync(app3.id)).thenReturn(Set(task3_1.marathonTask))
+    when(tracker.marathonAppTasksSync(app4.id)).thenReturn(Set(task4_1.marathonTask))
 
-    when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
+    when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent(
           slaveId = "", taskId = "task1_2", taskStatus = "TASK_KILLED", message = "", appId = app1.id, host = "",
@@ -93,7 +90,7 @@ class DeploymentActorTest
       }
     })
 
-    when(driver.killTask(TaskID(task2_1.getId))).thenAnswer(new Answer[Status] {
+    when(driver.killTask(task2_1.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent(
           slaveId = "", taskId = "task2_1", taskStatus = "TASK_KILLED", message = "", appId = app2.id, host = "",
@@ -130,7 +127,7 @@ class DeploymentActorTest
       }
     })
 
-    when(driver.killTask(TaskID(task4_1.getId))).thenAnswer(new Answer[Status] {
+    when(driver.killTask(task4_1.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent(
           slaveId = "", taskId = "task4_1", taskStatus = "TASK_FINISHED", message = "", appId = app4.id,
@@ -163,7 +160,7 @@ class DeploymentActorTest
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
       verify(scheduler).startApp(driver, app3.copy(instances = 0))
-      verify(driver, times(1)).killTask(TaskID(task1_2.getId))
+      verify(driver, times(1)).killTask(task1_2.taskId.mesosTaskId)
       verify(scheduler).stopApp(driver, app4.copy(instances = 0))
     }
     finally {
@@ -183,22 +180,21 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/foo/bar"), Set(appNew))
 
-    val slaveId = SlaveID("some slave id")
-    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(0).build()
-    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(1000).build()
+    val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app.version, startedAt = 0)
+    val task1_2 = MarathonTestHelper.runningTask("task1_2", appVersion = app.version, startedAt = 1000)
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Set(task1_1, task1_2))
+    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(task1_1.marathonTask, task1_2.marathonTask))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(driver.killTask(TaskID(task1_1.getId))).thenAnswer(new Answer[Status] {
+    when(driver.killTask(task1_1.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent("", "task1_1", "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
         Status.DRIVER_RUNNING
       }
     })
 
-    when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
+    when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent("", "task1_2", "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
         Status.DRIVER_RUNNING
@@ -237,8 +233,8 @@ class DeploymentActorTest
 
       receiverProbe.expectMsg(DeploymentFinished(plan))
 
-      verify(driver).killTask(TaskID(task1_1.getId))
-      verify(driver).killTask(TaskID(task1_2.getId))
+      verify(driver).killTask(task1_1.taskId.mesosTaskId)
+      verify(driver).killTask(task1_2.taskId.mesosTaskId)
       verify(queue).add(appNew, 2)
     }
     finally {
@@ -260,7 +256,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Set[MarathonTask]())
+    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set[MarathonTask]())
 
     try {
       TestActorRef(
@@ -298,15 +294,15 @@ class DeploymentActorTest
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New))
 
     val slaveId = SlaveID("some slave id")
-    val task1_1 = MarathonTasks.makeTask("task1_1", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(0).build()
-    val task1_2 = MarathonTasks.makeTask("task1_2", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(500).build()
-    val task1_3 = MarathonTasks.makeTask("task1_3", "", Nil, Nil, app1.version, Timestamp.now(), slaveId).toBuilder.setStartedAt(1000).build()
+    val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app1.version, startedAt = 0)
+    val task1_2 = MarathonTestHelper.runningTask("task1_2", appVersion = app1.version, startedAt = 500)
+    val task1_3 = MarathonTestHelper.runningTask("task1_3", appVersion = app1.version, startedAt = 1000)
 
-    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
+    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2.marathonTask)))
 
-    when(tracker.appTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
+    when(tracker.marathonAppTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3).map(_.marathonTask))
 
-    when(driver.killTask(TaskID(task1_2.getId))).thenAnswer(new Answer[Status] {
+    when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent("", "task1_2", "TASK_KILLED", "", app1.id, "", Nil, Nil, app1New.version.toString))
         Status.DRIVER_RUNNING
@@ -335,7 +331,7 @@ class DeploymentActorTest
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
-      verify(driver, times(1)).killTask(TaskID(task1_2.getId))
+      verify(driver, times(1)).killTask(task1_2.taskId.mesosTaskId)
       verifyNoMoreInteractions(driver)
     }
     finally {

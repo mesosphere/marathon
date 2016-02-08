@@ -1,14 +1,13 @@
 package mesosphere.marathon.core.task.bus
 
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
-import org.apache.mesos.Protos.TaskID
 import rx.lang.scala.Observable
 
 object TaskStatusObservables {
-  case class TaskStatusUpdate(timestamp: Timestamp, taskId: TaskID, status: MarathonTaskStatus) {
-    lazy val appId: PathId = TaskIdUtil.appId(taskId)
+  case class TaskStatusUpdate(timestamp: Timestamp, taskId: Task.Id, status: MarathonTaskStatus) {
+    def appId: PathId = taskId.appId
   }
 }
 

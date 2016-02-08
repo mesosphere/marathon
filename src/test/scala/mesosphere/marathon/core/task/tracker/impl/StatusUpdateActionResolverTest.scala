@@ -25,16 +25,16 @@ class StatusUpdateActionResolverTest
     val f = new Fixture
     Given("a taskID without task")
     val appId = PathId("/app")
-    val taskId = Task.Id("task1")
-    f.taskTracker.task(appId, taskId) returns Future.successful(None)
+    val taskId = Task.Id.forApp(appId)
+    f.taskTracker.task(taskId) returns Future.successful(None)
     And("a status update")
     val update = TaskStatus.getDefaultInstance
 
     When("resolve is called")
-    val action = f.actionResolver.resolve(appId, taskId, update).futureValue
+    val action = f.actionResolver.resolve(taskId, update).futureValue
 
     Then("getTAskAsync is called")
-    verify(f.taskTracker).task(appId, taskId)
+    verify(f.taskTracker).task(taskId)
 
     And("a fail action is returned")
     action.getClass should be(classOf[TaskOpProcessor.Action.Fail])

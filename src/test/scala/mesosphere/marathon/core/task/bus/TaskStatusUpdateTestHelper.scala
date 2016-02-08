@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.bus
 
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskIdUtil
@@ -12,6 +13,10 @@ class TaskStatusUpdateTestHelper(val wrapped: TaskStatusUpdate) {
   }
 
   def withTaskId(taskId: TaskID): TaskStatusUpdateTestHelper = TaskStatusUpdateTestHelper {
+    wrapped.copy(taskId = Task.Id(taskId))
+  }
+
+  def withTaskId(taskId: Task.Id): TaskStatusUpdateTestHelper = TaskStatusUpdateTestHelper {
     wrapped.copy(taskId = taskId)
   }
 
@@ -29,7 +34,7 @@ object TaskStatusUpdateTestHelper {
     new TaskStatusUpdateTestHelper(update)
 
   private def newTaskID(appId: String) = {
-    TaskIdUtil.newTaskId(PathId(appId))
+    Task.Id.forApp(PathId(appId))
   }
 
   val taskId = newTaskID("/app")
