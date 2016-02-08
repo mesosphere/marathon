@@ -23,6 +23,7 @@ import play.api.libs.json._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
+// scalastyle:off file.size.limit
 object Formats extends Formats {
 
   implicit class ReadsWithDefault[A](val reads: Reads[Option[A]]) extends AnyVal {
