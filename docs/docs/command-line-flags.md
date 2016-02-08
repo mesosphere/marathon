@@ -152,7 +152,7 @@ resource offers Marathon receives from Mesos more efficiently, we added a new of
 to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is
 configurable with the following startup parameters:
 
-* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
+* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 100): Launch at most this
     number of tasks per Mesos offer. Usually,
     there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
 
@@ -219,7 +219,7 @@ resource offers Marathon receives from Mesos more efficiently, we added a new of
 to start as many tasks as possible per task offer cycle. The maximum number of tasks to start is configurable with
 the following startup parameters:
 
-* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
+* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 100): Launch at most this
     number of tasks per Mesos offer. Usually,
     there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
 
