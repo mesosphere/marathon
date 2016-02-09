@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.update
 
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.concurrent.Future
@@ -14,6 +14,5 @@ import scala.concurrent.Future
 trait TaskStatusUpdateStep {
   def name: String
 
-  def processUpdate(
-    timestamp: Timestamp, appId: PathId, task: MarathonTask, mesosStatus: TaskStatus): Future[_]
+  def processUpdate(timestamp: Timestamp, task: Task, mesosStatus: TaskStatus): Future[_]
 }

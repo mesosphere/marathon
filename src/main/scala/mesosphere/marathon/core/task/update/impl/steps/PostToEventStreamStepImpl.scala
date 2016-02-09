@@ -4,11 +4,10 @@ import javax.inject.Named
 
 import akka.event.EventStream
 import com.google.inject.Inject
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.event.{ EventModule, MesosStatusUpdateEvent }
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.MarathonTasks
+import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskState.{
   TASK_ERROR,
   TASK_FAILED,
@@ -19,6 +18,7 @@ import org.apache.mesos.Protos.TaskState.{
 }
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.slf4j.LoggerFactory
+import scala.collection.immutable.Seq
 
 import scala.concurrent.Future
 
@@ -31,43 +31,51 @@ class PostToEventStreamStepImpl @Inject() (
 
   override def name: String = "postTaskStatusEvent"
 
-  override def processUpdate(
-    timestamp: Timestamp, appId: PathId, task: MarathonTask, status: TaskStatus): Future[_] = {
+  override def processUpdate(timestamp: Timestamp, task: Task, status: TaskStatus): Future[_] = {
 
     status.getState match {
       case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
-        postEvent(timestamp, appId, status, task)
-      case TASK_RUNNING if !task.hasStartedAt => // staged, not running
-        postEvent(timestamp, appId, status, task)
+        postEvent(timestamp, status, task)
+      case TASK_RUNNING if task.launched.exists(_.status.startedAt.isEmpty) => // staged, not running
+        postEvent(timestamp, status, task)
 
       case state: TaskState =>
-        val taskId = status.getTaskId.getValue
-        log.debug(s"Do not post event $state for [$taskId] of app [$appId].")
+        val taskId = task.taskId
+        log.debug(s"Do not post event $state for $taskId of app [${taskId.appId}].")
     }
 
     Future.successful(())
   }
 
-  private[this] def postEvent(timestamp: Timestamp, appId: PathId, status: TaskStatus, task: MarathonTask): Unit = {
-    log.info(
-      "Sending event notification for task [{}] of app [{}]: {}",
-      Array[Object](task.getId, appId, status.getState): _*
-    )
-    import scala.collection.JavaConverters._
-    eventBus.publish(
-      MesosStatusUpdateEvent(
-        status.getSlaveId.getValue,
-        status.getTaskId.getValue,
-        status.getState.name,
-        if (status.hasMessage) status.getMessage else "",
-        appId,
-        task.getHost,
-        MarathonTasks.ipAddresses(task),
-        task.getPortsList.asScala.map(_.intValue),
-        task.getVersion,
-        timestamp = timestamp.toString
+  private[this] def postEvent(timestamp: Timestamp, status: TaskStatus, task: Task): Unit = {
+    val taskId = task.taskId
+    task.launched.foreach { launched =>
+      log.info(
+        "Sending event notification for {} of app [{}]: {}",
+        Array[Object](taskId, taskId.appId, status.getState): _*
       )
-    )
+      eventBus.publish(
+        MesosStatusUpdateEvent(
+          slaveId = status.getSlaveId.getValue,
+          taskId = status.getTaskId.getValue,
+          taskStatus = status.getState.name,
+          message = if (status.hasMessage) status.getMessage else "",
+          appId = taskId.appId,
+          host = task.agentInfo.host,
+          ipAddresses = launched.networking match {
+            case networkInfoList: Task.NetworkInfoList => networkInfoList.addresses.to[Seq]
+            case _                                     => Seq.empty
+          },
+          ports = launched.networking match {
+            case Task.HostPorts(ports) => ports
+            case _                     => Iterable.empty
+          },
+          version = launched.appVersion.toString,
+          timestamp = timestamp.toString
+        )
+      )
+
+    }
   }
 
 }

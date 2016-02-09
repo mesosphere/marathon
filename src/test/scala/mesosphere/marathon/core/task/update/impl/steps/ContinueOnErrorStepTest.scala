@@ -2,6 +2,7 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ Mockito, CaptureLogEvents }
@@ -15,8 +16,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
   test("name uses nested name") {
     object nested extends TaskStatusUpdateStep {
       override def name: String = "nested"
-      override def processUpdate(
-        timestamp: Timestamp, appId: PathId, task: MarathonTask, mesosStatus: TaskStatus): Future[_] = ???
+      override def processUpdate(timestamp: Timestamp, task: Task, mesosStatus: TaskStatus): Future[_] = ???
     }
 
     ContinueOnErrorStep(nested).name should equal ("continueOnError(nested)")
@@ -24,13 +24,12 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
 
   private[this] val timestamp: Timestamp = Timestamp(1)
   private[this] val appId: PathId = PathId("/test")
-  private[this] val dummyTask: MarathonTask = MarathonTestHelper.dummyTaskProto(appId)
+  private[this] val dummyTask: Task = MarathonTestHelper.mininimalTask(appId)
 
   test("A successful step should not produce logging output") {
     def processUpdate(step: TaskStatusUpdateStep): Future[_] = {
       step.processUpdate(
         timestamp = timestamp,
-        appId = appId,
         task = dummyTask,
         mesosStatus = TaskStatus.newBuilder().buildPartial()
       )
@@ -55,7 +54,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
   test("A failing step should log the error but proceed") {
     def processUpdate(step: TaskStatusUpdateStep): Future[_] = {
       step.processUpdate(
-        timestamp, appId, task = dummyTask,
+        timestamp, task = dummyTask,
         mesosStatus = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue("task")).buildPartial())
     }
 

@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
@@ -17,11 +17,9 @@ class ContinueOnErrorStep(wrapped: TaskStatusUpdateStep) extends TaskStatusUpdat
 
   override def name: String = s"continueOnError(${wrapped.name})"
 
-  override def processUpdate(
-    timestamp: Timestamp, appId: PathId, task: MarathonTask, mesosStatus: TaskStatus): Future[_] = {
-
+  override def processUpdate(timestamp: Timestamp, task: Task, mesosStatus: TaskStatus): Future[_] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val maybeProcessed: Option[Future[_]] = Option(wrapped.processUpdate(timestamp, appId, task, mesosStatus))
+    val maybeProcessed: Option[Future[_]] = Option(wrapped.processUpdate(timestamp, task, mesosStatus))
     maybeProcessed match {
       case Some(processed) =>
         processed.recover {

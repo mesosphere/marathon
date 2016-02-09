@@ -5,9 +5,9 @@ import javax.inject.Named
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
@@ -22,17 +22,16 @@ class ScaleAppUpdateStepImpl @Inject() (
 
   override def name: String = "scaleApp"
 
-  override def processUpdate(
-    timestamp: Timestamp, appId: PathId, task: MarathonTask, status: TaskStatus): Future[_] = {
-    val taskId = status.getTaskId
+  override def processUpdate(timestamp: Timestamp, task: Task, status: TaskStatus): Future[_] = {
+    val taskId = task.taskId
 
     import org.apache.mesos.Protos.TaskState._
 
     status.getState match {
       case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
         // Remove from our internal list
-        log.info(s"initiating a scale check for app [$appId] after task [${taskId.getValue}}] terminated")
-        schedulerActor ! ScaleApp(appId)
+        log.info(s"initiating a scale check for app [${taskId.appId}] after $taskId terminated")
+        schedulerActor ! ScaleApp(taskId.appId)
 
       case _ =>
       // ignore

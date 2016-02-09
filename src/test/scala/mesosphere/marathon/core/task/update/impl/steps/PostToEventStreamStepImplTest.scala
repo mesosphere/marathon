@@ -3,16 +3,14 @@ package mesosphere.marathon.core.task.update.impl.steps
 import akka.event.EventStream
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.event.{ MarathonEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
-
-import scala.collection.JavaConverters._
 
 class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhenThen with ScalaFutures {
   test("name") {
@@ -29,7 +27,6 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     val (logs, events) = f.captureLogAndEvents {
       f.step.processUpdate(
         timestamp = updateTimestamp,
-        appId = appId,
         task = existingTask,
         status = status
       ).futureValue
@@ -40,7 +37,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     events should be (Seq(
       MesosStatusUpdateEvent(
         slaveId = slaveId.getValue,
-        taskId = taskId.getValue,
+        taskId = taskId.idString,
         taskStatus = status.getState.name,
         message = taskStatusMessage,
         appId = appId,
@@ -54,21 +51,20 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     And("only sending event info gets logged")
     logs should have size 1
     logs.map(_.toString) should be (Seq(
-      s"[INFO] Sending event notification for task [${taskId.getValue}] of app [$appId]: ${status.getState}"
+      s"[INFO] Sending event notification for $taskId of app [$appId]: ${status.getState}"
     ))
   }
 
   test("ignore running notification of already running task") {
     Given("an existing RUNNING task")
     val f = new Fixture
-    val existingTask = stagedMarathonTask.toBuilder.setStartedAt(100).build()
+    val existingTask = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
 
     When("we receive a running update")
     val status = runningTaskStatus
     val (logs, events) = f.captureLogAndEvents {
       f.step.processUpdate(
         timestamp = updateTimestamp,
-        appId = appId,
         task = existingTask,
         status = status
       ).futureValue
@@ -96,7 +92,6 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     val (logs, events) = f.captureLogAndEvents {
       f.step.processUpdate(
         timestamp = updateTimestamp,
-        appId = appId,
         task = existingTask,
         status = status
       ).futureValue
@@ -107,7 +102,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     events should be (Seq(
       MesosStatusUpdateEvent(
         slaveId = slaveId.getValue,
-        taskId = taskId.getValue,
+        taskId = taskId.idString,
         taskStatus = status.getState.name,
         message = taskStatusMessage,
         appId = appId,
@@ -121,13 +116,13 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     And("only sending event info gets logged")
     logs should have size 1
     logs.map(_.toString) should be (Seq(
-      s"[INFO] Sending event notification for task [${taskId.getValue}] of app [$appId]: ${status.getState}"
+      s"[INFO] Sending event notification for $taskId of app [$appId]: ${status.getState}"
     ))
   }
 
   private[this] val slaveId = SlaveID.newBuilder().setValue("slave1")
   private[this] val appId = PathId("/test")
-  private[this] val taskId = TaskIdUtil.newTaskId(appId)
+  private[this] val taskId = Task.Id.forApp(appId)
   private[this] val host = "some.host.local"
   private[this] val portsList = Seq(10, 11, 12)
   private[this] val version = Timestamp(1)
@@ -138,19 +133,15 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     TaskStatus
       .newBuilder()
       .setState(TaskState.TASK_RUNNING)
-      .setTaskId(taskId)
+      .setTaskId(taskId.mesosTaskId)
       .setSlaveId(slaveId)
       .setMessage(taskStatusMessage)
       .build()
 
   private[this] val stagedMarathonTask =
-    MarathonTask
-      .newBuilder()
-      .setId(taskId.getValue)
-      .setHost(host)
-      .addAllPorts(portsList.map(i => i: Integer).asJava)
-      .setVersion(version.toString)
-      .build()
+    MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
+      .withAgentInfo(_.copy(host = host))
+      .withLaunched(_.copy(networking = Task.HostPorts(portsList)))
 
   class Fixture {
     val eventStream = new EventStream()
