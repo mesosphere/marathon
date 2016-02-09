@@ -17,18 +17,17 @@ class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Match
     Given("An unauthenticated request")
     auth.authenticated = false
     val req = auth.request
-    val resp = auth.response
     val targetGroup = Group.empty.copy(apps = Set(AppDefinition(PathId("/test"))))
     val deployment = DeploymentStepInfo(DeploymentPlan(Group.empty, targetGroup), DeploymentStep(Seq.empty), 1)
     service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
     When(s"the index is fetched")
-    val running = deploymentsResource.running(req, resp)
+    val running = deploymentsResource.running(req)
     Then("we receive a NotAuthenticated response")
     running.getStatus should be(auth.NotAuthenticatedStatus)
 
     When(s"one app version is fetched")
-    val cancel = deploymentsResource.cancel(deployment.plan.id, false, req, resp)
+    val cancel = deploymentsResource.cancel(deployment.plan.id, false, req)
     Then("we receive a NotAuthenticated response")
     cancel.getStatus should be(auth.NotAuthenticatedStatus)
   }
@@ -38,13 +37,12 @@ class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Match
     auth.authenticated = true
     auth.authorized = false
     val req = auth.request
-    val resp = auth.response
     val targetGroup = Group.empty.copy(apps = Set(AppDefinition(PathId("/test"))))
     val deployment = DeploymentStepInfo(DeploymentPlan(Group.empty, targetGroup), DeploymentStep(Seq.empty), 1)
     service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
     When(s"one app version is fetched")
-    val cancel = deploymentsResource.cancel(deployment.plan.id, false, req, resp)
+    val cancel = deploymentsResource.cancel(deployment.plan.id, false, req)
     Then("we receive a not authorized response")
     cancel.getStatus should be(auth.UnauthorizedStatus)
   }

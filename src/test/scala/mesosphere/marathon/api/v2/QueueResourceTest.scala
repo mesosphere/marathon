@@ -5,7 +5,7 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ Timestamp, AppDefinition }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
@@ -27,7 +27,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     )
 
     //when
-    val response = queueResource.index(auth.request, auth.response)
+    val response = queueResource.index(auth.request)
 
     //then
     response.getStatus should be(200)
@@ -51,7 +51,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
       )
     )
     //when
-    val response = queueResource.index(auth.request, auth.response)
+    val response = queueResource.index(auth.request)
 
     //then
     response.getStatus should be(200)
@@ -70,7 +70,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     queue.list returns Seq.empty
 
     //when
-    val response = queueResource.resetDelay("unknown", auth.request, auth.response)
+    val response = queueResource.resetDelay("unknown", auth.request)
 
     //then
     response.getStatus should be(404)
@@ -87,7 +87,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     )
 
     //when
-    val response = queueResource.resetDelay("app", auth.request, auth.response)
+    val response = queueResource.resetDelay("app", auth.request)
 
     //then
     response.getStatus should be(204)
@@ -98,30 +98,46 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     Given("An unauthenticated request")
     auth.authenticated = false
     val req = auth.request
-    val resp = auth.response
 
     When(s"the index is fetched")
-    val index = queueResource.index(req, resp)
+    val index = queueResource.index(req)
     Then("we receive a NotAuthenticated response")
     index.getStatus should be(auth.NotAuthenticatedStatus)
 
     When(s"one delay is reset")
-    val resetDelay = queueResource.resetDelay("appId", req, resp)
+    val resetDelay = queueResource.resetDelay("appId", req)
     Then("we receive a NotAuthenticated response")
     resetDelay.getStatus should be(auth.NotAuthenticatedStatus)
   }
 
-  test("access without authorization is denied") {
+  test("access without authorization is denied if the app is in the queue") {
     Given("An unauthorized request")
     auth.authenticated = true
     auth.authorized = false
     val req = auth.request
-    val resp = auth.response
 
     When(s"one delay is reset")
-    val resetDelay = queueResource.resetDelay("appId", req, resp)
+    val appId = "appId".toRootPath
+    val taskCount = LaunchQueue.QueuedTaskInfo(AppDefinition(appId), 0, 0, 0, Timestamp.now())
+    queue.list returns Seq(taskCount)
+
+    val resetDelay = queueResource.resetDelay("appId", req)
     Then("we receive a not authorized response")
     resetDelay.getStatus should be(auth.UnauthorizedStatus)
+  }
+
+  test("access without authorization leads to a 404 if the app is not in the queue") {
+    Given("An unauthorized request")
+    auth.authenticated = true
+    auth.authorized = false
+    val req = auth.request
+
+    When(s"one delay is reset")
+    queue.list returns Seq.empty
+
+    val resetDelay = queueResource.resetDelay("appId", req)
+    Then("we receive a not authorized response")
+    resetDelay.getStatus should be(404)
   }
 
   var clock: Clock = _

@@ -11,7 +11,7 @@ import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSu
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, ModuleNames, PortRangeExhaustedException }
+import mesosphere.marathon._
 import mesosphere.util.CapConcurrentExecutions
 import org.slf4j.LoggerFactory
 
@@ -37,8 +37,9 @@ class GroupManager @Singleton @Inject() (
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
   private[this] val zkName = groupRepo.zkRootName
 
-  def rootGroup(): Future[Group] =
+  def rootGroup(): Future[Group] = {
     groupRepo.group(zkName).map(_.getOrElse(Group.empty))
+  }
 
   /**
     * Get all available versions for given group identifier.
@@ -167,6 +168,7 @@ class GroupManager @Singleton @Inject() (
       case Success(plan) =>
         log.info(s"Deployment acknowledged. Waiting to get processed:\n$plan")
         eventBus.publish(GroupChangeSuccess(gid, version.toString))
+      case Failure(ex: AccessDeniedException) => // If the request was not authorized, we should not publish an event
       case Failure(ex) =>
         log.warn(s"Deployment failed for change: $version", ex)
         eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))

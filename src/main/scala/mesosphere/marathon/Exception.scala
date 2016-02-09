@@ -1,13 +1,17 @@
 package mesosphere.marathon
 
 import com.wix.accord.Failure
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{ PathId, Timestamp }
 
 //scalastyle:off null
 
 class Exception(msg: String, cause: Throwable = null) extends scala.RuntimeException(msg, cause)
 
-case class UnknownAppException(id: PathId) extends Exception(s"App '$id' does not exist")
+case class UnknownAppException(id: PathId, version: Option[Timestamp] = None) extends Exception(
+  s"App '$id' does not exist" + version.fold("")(v => s" in version $v")
+)
+
+case class UnknownGroupException(id: PathId) extends Exception(s"Group '$id' does not exist")
 
 case class WrongConfigurationException(message: String) extends Exception(message)
 
@@ -29,6 +33,8 @@ case class UpgradeInProgressException(msg: String) extends Exception(msg)
 case class CanceledActionException(msg: String) extends Exception(msg)
 
 case class ConflictingChangeException(msg: String) extends Exception(msg)
+
+case class AccessDeniedException(msg: String = "Authorization Denied") extends Exception(msg)
 
 /**
   * Is thrown if an object validation is not successful.

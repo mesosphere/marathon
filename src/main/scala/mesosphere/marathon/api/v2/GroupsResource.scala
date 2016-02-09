@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import java.net.URI
 import javax.inject.Inject
-import javax.servlet.http.{ HttpServletResponse, HttpServletRequest }
+import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, Response }
 
@@ -14,11 +14,8 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ ConflictingChangeException, MarathonConf }
-import scala.concurrent.ExecutionContext.Implicits.global
+import mesosphere.marathon.{ UnknownGroupException, ConflictingChangeException, MarathonConf }
 import play.api.libs.json.{ Json, Writes }
-
-import Predef._
 
 @Path("v2/groups")
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
@@ -40,7 +37,7 @@ class GroupsResource @Inject() (
     */
   @GET
   @Timed
-  def root(@Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = group("/", req, resp)
+  def root(@Context req: HttpServletRequest): Response = group("/", req)
 
   /**
     * Get a specific group, optionally with specific version
@@ -51,26 +48,34 @@ class GroupsResource @Inject() (
   @Path("""{id:.+}""")
   @Timed
   def group(@PathParam("id") id: String,
-            @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    doIfAuthenticated(req, resp) { implicit ident =>
-      //format:off
-      def groupResponse[T](id: PathId, fn: Group => T, version: Option[Timestamp] = None)(
-        implicit writes: Writes[T]): Response = {
-        //format:on
-        result(version.map(groupManager.group(id, _)).getOrElse(groupManager.group(id))) match {
-          case Some(group) => ok(jsonString(fn(authorizedView(group))))
-          case None        => unknownGroup(id, version)
-        }
+            @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    //format:off
+    def groupResponse[T](id: PathId, fn: Group => T, version: Option[Timestamp] = None)(
+      implicit writes: Writes[T]): Response = {
+      //format:on
+      result(version.map(groupManager.group(id, _)).getOrElse(groupManager.group(id))) match {
+        case Some(group) => ok(jsonString(fn(authorizedView(group))))
+        case None        => unknownGroup(id, version)
       }
-      id match {
-        case ListApps(gid)              => groupResponse(gid.toRootPath, _.transitiveApps)
-        case ListRootApps()             => groupResponse(PathId.empty, _.transitiveApps)
-        case ListVersionsRE(gid)        => ok(jsonString(result(groupManager.versions(gid.toRootPath))))
-        case ListRootVersionRE()        => ok(jsonString(result(groupManager.versions(PathId.empty))))
-        case GetVersionRE(gid, version) => groupResponse(gid.toRootPath, identity, version = Some(Timestamp(version)))
-        case GetRootVersionRE(version)  => groupResponse(PathId.empty, identity, version = Some(Timestamp(version)))
-        case _                          => groupResponse(id.toRootPath, identity)
+    }
+
+    def versionsResponse(groupId: PathId): Response = {
+      val maybeGroup = result(groupManager.group(groupId))
+      withAuthorization(ViewGroup, maybeGroup, unknownGroup(groupId)) { _ =>
+        ok(jsonString(result(groupManager.versions(groupId))))
       }
+    }
+
+    id match {
+      case ListApps(gid)       => groupResponse(gid.toRootPath, _.transitiveApps)
+      case ListRootApps()      => groupResponse(PathId.empty, _.transitiveApps)
+      case ListVersionsRE(gid) => versionsResponse(gid.toRootPath)
+      case ListRootVersionRE() => versionsResponse(PathId.empty)
+      case GetVersionRE(gid, version) =>
+        groupResponse(gid.toRootPath, Predef.identity, version = Some(Timestamp(version)))
+      case GetRootVersionRE(version) =>
+        groupResponse(PathId.empty, Predef.identity, version = Some(Timestamp(version)))
+      case _ => groupResponse(id.toRootPath, Predef.identity)
     }
   }
 
@@ -83,9 +88,7 @@ class GroupsResource @Inject() (
   @Timed
   def create(@DefaultValue("false")@QueryParam("force") force: Boolean,
              body: Array[Byte],
-             @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    createWithPath("", force, body, req, resp)
-  }
+             @Context req: HttpServletRequest): Response = createWithPath("", force, body, req)
 
   /**
     * Create a group.
@@ -100,15 +103,16 @@ class GroupsResource @Inject() (
   def createWithPath(@PathParam("id") id: String,
                      @DefaultValue("false")@QueryParam("force") force: Boolean,
                      body: Array[Byte],
-                     @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    doIfAuthorized(req, resp, CreateAppOrGroup, id.toRootPath) { implicit identity =>
-      withValid(Json.parse(body).as[GroupUpdate]) { update =>
-        val effectivePath = update.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
-        val current = result(groupManager.rootGroup()).findGroup(_.id == effectivePath)
-        if (current.isDefined)
+                     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    withValid(Json.parse(body).as[GroupUpdate]) { groupUpdate =>
+      val effectivePath = groupUpdate.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
+
+      result(groupManager.rootGroup()).findGroup(_.id == effectivePath) match {
+        case Some(currentGroup) =>
           throw ConflictingChangeException(s"Group $effectivePath is already created. Use PUT to change this group.")
-        val (deployment, path, version) = updateOrCreate(id.toRootPath, update, force)
-        deploymentResult(deployment, Response.created(new URI(path.toString)))
+        case None =>
+          val (deployment, path) = updateOrCreate(id.toRootPath, groupUpdate, force)
+          deploymentResult(deployment, Response.created(new URI(path.toString)))
       }
     }
   }
@@ -118,8 +122,8 @@ class GroupsResource @Inject() (
   def updateRoot(@DefaultValue("false")@QueryParam("force") force: Boolean,
                  @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean,
                  body: Array[Byte],
-                 @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    update("", force, dryRun, body, req, resp)
+                 @Context req: HttpServletRequest): Response = {
+    update("", force, dryRun, body, req)
   }
 
   /**
@@ -136,23 +140,23 @@ class GroupsResource @Inject() (
              @DefaultValue("false")@QueryParam("force") force: Boolean,
              @DefaultValue("false")@QueryParam("dryRun") dryRun: Boolean,
              body: Array[Byte],
-             @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    doIfAuthorized(req, resp, UpdateAppOrGroup, id.toRootPath) { implicit identity =>
-      withValid(Json.parse(body).as[GroupUpdate]) { update =>
-        if (dryRun) {
-          val planFuture = groupManager.group(id.toRootPath).map { maybeOldGroup =>
-            val oldGroup = maybeOldGroup.getOrElse(Group.empty)
-            Json.obj(
-              "steps" -> DeploymentPlan(oldGroup, update.apply(oldGroup, Timestamp.now())).steps
-            )
-          }
+             @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    withValid(Json.parse(body).as[GroupUpdate]) { groupUpdate =>
+      val newVersion = Timestamp.now()
 
-          ok(result(planFuture).toString())
-        }
-        else {
-          val (deployment, _, _) = updateOrCreate(id.toRootPath, update, force)
-          deploymentResult(deployment)
-        }
+      if (dryRun) {
+        val originalGroup = result(groupManager.group(id.toRootPath)).getOrElse(Group.empty)
+        val updatedGroup = applyGroupUpdate(originalGroup, groupUpdate, newVersion)
+
+        ok(
+          Json.obj(
+            "steps" -> DeploymentPlan(originalGroup, updatedGroup).steps
+          ).toString()
+        )
+      }
+      else {
+        val (deployment, _) = updateOrCreate(id.toRootPath, groupUpdate, force)
+        deploymentResult(deployment)
       }
     }
   }
@@ -160,17 +164,19 @@ class GroupsResource @Inject() (
   @DELETE
   @Timed
   def delete(@DefaultValue("false")@QueryParam("force") force: Boolean,
-             @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    doIfAuthorized(req, resp, DeleteAppOrGroup, PathId.empty) { implicit identity =>
-      val version = Timestamp.now()
-      val deployment = result(groupManager.update(
-        PathId.empty,
-        root => root.copy(apps = Set.empty, groups = Set.empty),
-        version,
-        force
-      ))
-      deploymentResult(deployment)
+             @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    def clearRootGroup(rootGroup: Group): Group = {
+      checkAuthorization(DeleteGroup, rootGroup)
+      rootGroup.copy(apps = Set.empty, groups = Set.empty)
     }
+
+    val deployment = result(groupManager.update(
+      PathId.empty,
+      clearRootGroup,
+      Timestamp.now(),
+      force
+    ))
+    deploymentResult(deployment)
   }
 
   /**
@@ -184,46 +190,75 @@ class GroupsResource @Inject() (
   @Timed
   def delete(@PathParam("id") id: String,
              @DefaultValue("false")@QueryParam("force") force: Boolean,
-             @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    doIfAuthorized(req, resp, DeleteAppOrGroup, id.toRootPath) { implicit identity =>
-      val groupId = id.toRootPath
-      result(groupManager.group(groupId)).fold(unknownGroup(groupId)) { group =>
-        val version = Timestamp.now()
-        val deployment = result(groupManager.update(groupId.parent, _.remove(groupId, version), version, force))
-        deploymentResult(deployment)
+             @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val groupId = id.toRootPath
+    val version = Timestamp.now()
+
+    def deleteGroup(parentGroup: Group) = {
+      parentGroup.group(groupId) match {
+        case Some(group) => checkAuthorization(DeleteGroup, group)
+        case None        => throw UnknownGroupException(groupId)
       }
+      parentGroup.remove(groupId, version)
     }
+
+    val deployment = result(groupManager.update(groupId.parent, deleteGroup, version, force))
+    deploymentResult(deployment)
   }
 
-  private def updateOrCreate(id: PathId, update: GroupUpdate, force: Boolean): (DeploymentPlan, PathId, Timestamp) = {
-    val version = Timestamp.now()
-    def groupChange(group: Group): Group = {
-      val versionChange = update.version.map { updateVersion =>
-        val versionedGroup = result(groupManager.group(id, updateVersion)).map(_.update(id, identity, version))
-        versionedGroup.getOrElse(
-          throw new IllegalArgumentException(s"Group $id not available in version $updateVersion")
-        )
-      }
-      val scaleChange = update.scaleBy.map { scale =>
-        group.updateApps(version) { app => app.copy(instances = (app.instances * scale).ceil.toInt) }
-      }
-      versionChange orElse scaleChange getOrElse update.apply(group, version)
+  private def applyGroupUpdate(group: Group,
+                               groupUpdate: GroupUpdate,
+                               newVersion: Timestamp)(implicit identity: Identity) = {
+    def versionChange = groupUpdate.version.map { targetVersion =>
+      checkAuthorization(UpdateGroup, group)
+      val versionedGroup = result(groupManager.group(group.id, targetVersion))
+        .map(checkAuthorization(ViewGroup, _))
+        .map(_.update(group.id, Predef.identity, newVersion))
+      versionedGroup.getOrElse(
+        throw new IllegalArgumentException(s"Group $group.id not available in version $targetVersion")
+      )
     }
 
+    def scaleChange = groupUpdate.scaleBy.map { scale =>
+      checkAuthorization(UpdateGroup, group)
+      group.updateApps(newVersion) { app => app.copy(instances = (app.instances * scale).ceil.toInt) }
+    }
+
+    def createOrUpdateChange = {
+      // groupManager.update always passes a group, even if it doesn't exist
+      val maybeExistingGroup = result(groupManager.group(group.id))
+      val updatedGroup = groupUpdate.apply(group, newVersion)
+
+      maybeExistingGroup match {
+        case Some(existingGroup) => checkAuthorization(UpdateGroup, existingGroup)
+        case None                => checkAuthorization(CreateApp, updatedGroup)
+      }
+
+      updatedGroup
+    }
+
+    versionChange orElse scaleChange getOrElse createOrUpdateChange
+  }
+
+  private def updateOrCreate(id: PathId,
+                             update: GroupUpdate,
+                             force: Boolean)(implicit identity: Identity): (DeploymentPlan, PathId) = {
+    val version = Timestamp.now()
+
     val effectivePath = update.id.map(_.canonicalPath(id)).getOrElse(id)
-    val deployment = result(groupManager.update(effectivePath, groupChange, version, force))
-    (deployment, effectivePath, version)
+    val deployment = result(groupManager.update(effectivePath, applyGroupUpdate(_, update, version), version, force))
+    (deployment, effectivePath)
   }
 
   private[this] def authorizedView(root: Group)(implicit identity: Identity): Group = {
-    def appAllowed(app: AppDefinition): Boolean = isAllowedToView(app.id)
-    val allowed = root.transitiveGroups.filter(group => isAllowedToView(group.id)).map(_.id)
-    val parents = allowed.flatMap(_.allParents) -- allowed
+    def authorizedToViewApp(app: AppDefinition): Boolean = isAuthorized(ViewApp, app)
+    val visibleGroups = root.transitiveGroups.filter(group => isAuthorized(ViewGroup, group)).map(_.id)
+    val parents = visibleGroups.flatMap(_.allParents) -- visibleGroups
 
     root.updateGroup { subGroup =>
-      if (allowed.contains(subGroup.id)) Some(subGroup)
-      else if (parents.contains(subGroup.id)) Some(subGroup.copy(apps = subGroup.apps.filter(appAllowed)))
+      if (visibleGroups.contains(subGroup.id)) Some(subGroup)
+      else if (parents.contains(subGroup.id)) Some(subGroup.copy(apps = subGroup.apps.filter(authorizedToViewApp)))
       else None
-    }.getOrElse(Group.empty) //fallback, if root is not allowed
+    }.getOrElse(Group.empty) // fallback, if root is not allowed
   }
 }

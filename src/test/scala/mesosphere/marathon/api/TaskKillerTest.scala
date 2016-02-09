@@ -3,6 +3,7 @@ package mesosphere.marathon.api
 import mesosphere.marathon._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.plugin.auth.{ Identity, Authorizer, Authenticator }
 import mesosphere.marathon.state.{ AppDefinition, Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
@@ -13,6 +14,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class TaskKillerTest extends MarathonSpec
     with Matchers
@@ -24,12 +26,21 @@ class TaskKillerTest extends MarathonSpec
   var service: MarathonSchedulerService = _
   var groupManager: GroupManager = _
   var taskKiller: TaskKiller = _
+  var config: MarathonConf = _
+  var auth: TestAuthFixture = _
+  implicit var identity: Identity = _
 
   before {
     service = mock[MarathonSchedulerService]
     tracker = mock[TaskTracker]
     groupManager = mock[GroupManager]
-    taskKiller = new TaskKiller(tracker, groupManager, service)
+    config = mock[MarathonConf]
+    auth = new TestAuthFixture
+    identity = auth.identity
+
+    taskKiller = new TaskKiller(tracker, groupManager, service, config, auth.auth, auth.auth)
+
+    when(config.zkTimeoutDuration).thenReturn(1.second)
   }
 
   //regression for #3251
@@ -38,8 +49,8 @@ class TaskKillerTest extends MarathonSpec
     when(tracker.appTasksLaunchedSync(appId)).thenReturn(Iterable.empty)
     when(groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
 
-    val result = taskKiller.kill(appId, (tasks) => Set.empty[Task])
-    result.futureValue shouldEqual Iterable.empty
+    val result = taskKiller.kill(appId, (tasks) => Set.empty[Task]).futureValue
+    result.isEmpty shouldEqual true
   }
 
   test("AppNotFound") {
@@ -61,11 +72,9 @@ class TaskKillerTest extends MarathonSpec
 
   test("KillRequested with scaling") {
     val appId = PathId(List("app"))
-    val now = Timestamp.now()
     val task1 = MarathonTestHelper.runningTaskForApp(appId)
     val task2 = MarathonTestHelper.runningTaskForApp(appId)
     val tasksToKill = Set(task1, task2)
-    val originalAppDefinition = AppDefinition(appId, instances = 23)
 
     when(tracker.hasAppTasksSync(appId)).thenReturn(true)
     when(groupManager.group(appId.parent)).thenReturn(Future.successful(Some(Group.emptyWithId(appId.parent))))
@@ -91,6 +100,7 @@ class TaskKillerTest extends MarathonSpec
   test("KillRequested without scaling") {
     val appId = PathId(List("my", "app"))
     val tasksToKill = Set(MarathonTestHelper.runningTaskForApp(appId))
+    when(groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(tracker.appTasksLaunchedSync(appId)).thenReturn(tasksToKill)
 
     val result = taskKiller.kill(appId, { tasks =>
@@ -99,12 +109,10 @@ class TaskKillerTest extends MarathonSpec
     })
     result.futureValue shouldEqual tasksToKill
     verify(service, times(1)).killTasks(appId, tasksToKill)
-    verifyNoMoreInteractions(groupManager)
   }
 
   test("Kill and scale w/o force should fail if there is a deployment") {
     val appId = PathId(List("my", "app"))
-    val now = Timestamp.now()
     val task1 = MarathonTestHelper.runningTaskForApp(appId)
     val task2 = MarathonTestHelper.runningTaskForApp(appId)
     val tasksToKill = Set(task1, task2)
