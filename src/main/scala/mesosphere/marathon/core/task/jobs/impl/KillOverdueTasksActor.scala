@@ -1,12 +1,11 @@
 package mesosphere.marathon.core.task.jobs.impl
 
 import akka.actor._
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
-import mesosphere.mesos.protos.TaskID
 import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 
@@ -33,49 +32,41 @@ private[jobs] object KillOverdueTasksActor {
       log.debug("checking for overdue tasks")
       driverHolder.driver.foreach { driver =>
         determineOverdueTasks(now).foreach { overdueTask =>
-          import mesosphere.mesos.protos.Implicits._
-          log.warn("Killing overdue task '{}'", overdueTask.getId)
-          driver.killTask(TaskID(overdueTask.getId))
+          log.warn("Killing overdue {}", overdueTask.taskId)
+          driver.killTask(overdueTask.taskId.mesosTaskId)
         }
       }
     }
 
-    private[this] def determineOverdueTasks(now: Timestamp): Iterable[MarathonTask] = {
+    private[this] def determineOverdueTasks(now: Timestamp): Iterable[Task] = {
 
-      val nowMillis = now.toDateTime.getMillis
       // stagedAt is set when the task is created by the scheduler
-      val stagedExpire = nowMillis - config.taskLaunchTimeout()
-      val unconfirmedExpire = nowMillis - config.taskLaunchConfirmTimeout()
+      val stagedExpire = now - config.taskLaunchTimeout().millis
+      val unconfirmedExpire = now - config.taskLaunchConfirmTimeout().millis
 
-      val toKill = taskTracker.tasksByAppSync.allTasks.filter { task =>
-        /*
-       * One would think that !hasStagedAt would be better for querying these tasks. However, the current implementation
-       * of [[MarathonTasks.makeTask]] will set stagedAt to a non-zero value close to the current system time.
-       * Therefore, all tasks will return a non-zero value for stagedAt so that we cannot use that.
-       *
-       * If, for some reason, a task was created (sent to mesos), but we never received a [[TaskStatus]] update event,
-       * the task will also be killed after reaching the configured maximum.
-       */
-        if (task.getStartedAt != 0) {
-          false
+      def launchedAndExpired(task: Task): Boolean = {
+        task.launched.fold(false) { launched =>
+          launched.status.mesosStatus.map(_.getState) match {
+            case None | Some(TaskState.TASK_STARTING) if launched.status.stagedAt < unconfirmedExpire =>
+              log.warn(s"Should kill: ${task.taskId} was launched " +
+                s"${(launched.status.stagedAt.until(now).toSeconds)}s ago and was not confirmed yet"
+              )
+              true
+
+            case Some(TaskState.TASK_STAGING) if launched.status.stagedAt < stagedExpire =>
+              log.warn(s"Should kill: ${task.taskId} was staged ${(launched.status.stagedAt.until(now).toSeconds)}s" +
+                s" ago and has not yet started"
+              )
+              true
+
+            case _ =>
+              // running
+              false
+          }
         }
-        else if (task.hasStatus &&
-          task.getStatus.getState == TaskState.TASK_STAGING &&
-          task.getStagedAt < stagedExpire) {
-          log.warn(s"Should kill: Task '${task.getId}' was staged ${(nowMillis - task.getStagedAt) / 1000}s" +
-            s" ago and has not yet started")
-          true
-        }
-        else if (task.getStagedAt < unconfirmedExpire) {
-          log.warn(s"Should kill: Task '${task.getId}' was launched ${(nowMillis - task.getStagedAt) / 1000}s ago " +
-            s"and was not confirmed yet"
-          )
-          true
-        }
-        else false
       }
 
-      toKill.toIterable
+      taskTracker.tasksByAppSync.allTasks.filter(launchedAndExpired)
     }
   }
 

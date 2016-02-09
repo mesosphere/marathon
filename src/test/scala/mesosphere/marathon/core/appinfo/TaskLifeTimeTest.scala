@@ -1,7 +1,8 @@
 package mesosphere.marathon.core.appinfo
 
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, Protos }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.state.Timestamp
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -9,20 +10,17 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 class TaskLifeTimeTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers {
   private[this] val now: Timestamp = ConstantClock().now()
   private[this] var taskIdCounter = 0
-  private[this] def createTask(): Protos.MarathonTask.Builder = {
+  private[this] def newTaskId(): String = {
     taskIdCounter += 1
-    Protos.MarathonTask
-      .newBuilder()
-      .setId(s"task$taskIdCounter")
+    s"task$taskIdCounter"
   }
 
-  private[this] def stagedTask(): Protos.MarathonTask = {
-    createTask().setStagedAt(0).buildPartial()
+  private[this] def stagedTask(): Task = {
+    MarathonTestHelper.stagedTask(newTaskId())
   }
 
-  private[this] def runningTaskWithLifeTime(lifeTimeSeconds: Double): Protos.MarathonTask = {
-    val startedAt = (now.toDateTime.getMillis - lifeTimeSeconds * 1000.0).round
-    createTask().setStartedAt(startedAt).build()
+  private[this] def runningTaskWithLifeTime(lifeTimeSeconds: Double): Task = {
+    MarathonTestHelper.runningTask(newTaskId(), startedAt = (now.toDateTime.getMillis - lifeTimeSeconds * 1000.0).round)
   }
 
   test("life time for no tasks") {

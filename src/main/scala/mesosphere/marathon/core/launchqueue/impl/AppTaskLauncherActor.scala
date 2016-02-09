@@ -2,7 +2,6 @@ package mesosphere.marathon.core.launchqueue.impl
 
 import akka.actor.{ Actor, ActorContext, ActorLogging, ActorRef, Cancellable, Props, Stash }
 import akka.event.LoggingReceive
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
@@ -253,7 +252,7 @@ private class AppTaskLauncherActor(
         case Some(task) =>
           status.mesosStatus.foreach { mesosStatus =>
             log.debug("updating status of {}", taskId)
-            val updatedTask = task.withLaunchedTask(_.withMesosStatus(mesosStatus))
+            val updatedTask = task.withLaunched(_.withMesosStatus(mesosStatus))
             tasksMap += taskId -> updatedTask
           }
 

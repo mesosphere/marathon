@@ -68,7 +68,7 @@ private[tracker] class TaskTrackerDelegate(
 
   override def task(taskId: Task.Id)(
     implicit ec: ExecutionContext): Future[Option[Task]] =
-    tasksByApp().map(_.taskState(taskId))
+    tasksByApp().map(_.task(taskId))
 
   private[this] val tasksByAppTimer =
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))

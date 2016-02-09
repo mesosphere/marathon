@@ -3,11 +3,10 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -102,17 +101,17 @@ private class TaskTrackerActor(
 
   private[this] def withTasks(appTasks: TaskTracker.TasksByApp, counts: TaskCounts): Receive = {
 
-    def becomeWithUpdatedApp(appId: PathId)(taskId: Task.Id, newTaskState: Option[Task]): Unit = {
-      val updatedAppTasks = newTaskState match {
+    def becomeWithUpdatedApp(appId: PathId)(taskId: Task.Id, newTask: Option[Task]): Unit = {
+      val updatedAppTasks = newTask match {
         case None       => appTasks.updateApp(appId)(_.withoutTask(taskId))
         case Some(task) => appTasks.updateApp(appId)(_.withTask(task))
       }
 
       val updatedCounts = {
-        val oldTask = appTasks.marathonTask(taskId)
+        val oldTask = appTasks.task(taskId)
         // we do ignore health counts
         val oldTaskCount = TaskCounts(oldTask, healthStatuses = Map.empty)
-        val newTaskCount = TaskCounts(newTaskState.map(_.marathonTask), healthStatuses = Map.empty)
+        val newTaskCount = TaskCounts(newTask, healthStatuses = Map.empty)
         counts + newTaskCount - oldTaskCount
       }
 
@@ -132,11 +131,11 @@ private class TaskTrackerActor(
         updaterRef.forward(TaskUpdateActor.ProcessTaskOp(op))
 
       case msg @ TaskTrackerActor.TaskUpdated(task, ack) =>
-        becomeWithUpdatedApp(task.appId)(task.taskId, newTaskState = Some(task))
+        becomeWithUpdatedApp(task.appId)(task.taskId, newTask = Some(task))
         ack.sendAck()
 
       case msg @ TaskTrackerActor.TaskRemoved(taskId, ack) =>
-        becomeWithUpdatedApp(taskId.appId)(taskId, newTaskState = None)
+        becomeWithUpdatedApp(taskId.appId)(taskId, newTask = None)
         ack.sendAck()
     }
   }

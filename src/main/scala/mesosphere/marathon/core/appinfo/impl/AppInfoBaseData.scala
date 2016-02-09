@@ -87,7 +87,7 @@ class AppInfoBaseData(
   private[this] class AppData(app: AppDefinition) {
     lazy val now: Timestamp = clock.now()
 
-    lazy val tasksFuture: Future[Iterable[MarathonTask]] = tasksByAppFuture.map(_.marathonAppTasks(app.id))
+    lazy val tasksFuture: Future[Iterable[Task]] = tasksByAppFuture.map(_.appTasks(app.id))
 
     lazy val healthCountsFuture: Future[Map[String, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")

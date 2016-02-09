@@ -1,9 +1,10 @@
 package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.{ Protos, MarathonSpec }
+import mesosphere.marathon.{ MarathonTestHelper, Protos, MarathonSpec }
 import org.scalatest.{ Matchers, GivenWhenThen }
 import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.Json
@@ -59,7 +60,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
     )
     Then("we get the correct stats")
     import mesosphere.marathon.api.v2.json.Formats._
-    withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> tasks))) {
+    withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> tasks.map(_.marathonTask)))) {
       stats.maybeWithOutdatedConfig should not be empty
       stats.maybeWithLatestConfig should not be empty
       stats.maybeStartedAfterLastScaling should not be empty
@@ -93,25 +94,13 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
     lastConfigChangeAt = lastConfigChangeAt
   )
   private[this] var taskIdCounter = 0
-  private[this] def createTask(): Protos.MarathonTask.Builder = {
+  private[this] def newTaskId(): String = {
     taskIdCounter += 1
-    Protos.MarathonTask
-      .newBuilder()
-      .setId(s"task$taskIdCounter")
+    s"task$taskIdCounter"
   }
-
-  private[this] def statusForState(state: mesos.TaskState): mesos.TaskStatus = {
-    mesos.TaskStatus
-      .newBuilder()
-      .setState(state)
-      .buildPartial()
-  }
-  private[this] def runningTaskStartedAt(version: Timestamp, startingDelay: FiniteDuration): Protos.MarathonTask = {
+  private[this] def runningTaskStartedAt(version: Timestamp, startingDelay: FiniteDuration): Task = {
     val startedAt = (version + startingDelay).toDateTime.getMillis
-    createTask()
-      .setStatus(statusForState(mesos.TaskState.TASK_RUNNING))
-      .setVersion(version.toString)
-      .setStartedAt(startedAt)
-      .buildPartial()
+    MarathonTestHelper
+      .runningTask(newTaskId(), appVersion = version, startedAt = startedAt)
   }
 }

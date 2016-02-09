@@ -27,7 +27,7 @@ case class Task(
 
   def withAgentInfo(update: Task.AgentInfo => Task.AgentInfo): Task = copy(agentInfo = update(agentInfo))
 
-  def withLaunchedTask(update: Launched => Launched): Task =
+  def withLaunched(update: Launched => Launched): Task =
     copy(launched = launched.map(update))
 
 }
@@ -64,6 +64,8 @@ object Task {
       appVersion: Timestamp,
       status: Status,
       networking: Networking) {
+
+    def withStatus(update: Status => Status): Launched = copy(status = update(status))
 
     def withMesosStatus(mesosStatus: MesosProtos.TaskStatus): Launched = {
       copy(status = status.copy(mesosStatus = Some(mesosStatus)))
