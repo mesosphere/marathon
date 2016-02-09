@@ -1,14 +1,11 @@
 package mesosphere.marathon.core.appinfo
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.Protos.TaskState
-
-import scala.collection.mutable
 
 case class TaskStatsByVersion(
   maybeStartedAfterLastScaling: Option[TaskStats],
@@ -22,7 +19,7 @@ object TaskStatsByVersion {
     versionInfo: VersionInfo,
     tasks: Iterable[TaskForStatistics]): TaskStatsByVersion =
     {
-      def statsForVersion(versionTest: Long => Boolean): Option[TaskStats] = {
+      def statsForVersion(versionTest: Timestamp => Boolean): Option[TaskStats] = {
         TaskStats.forSomeTasks(tasks.filter(task => versionTest(task.version)))
       }
 
@@ -34,13 +31,13 @@ object TaskStatsByVersion {
       TaskStatsByVersion(
         maybeTotalSummary = TaskStats.forSomeTasks(tasks),
         maybeStartedAfterLastScaling = maybeFullVersionInfo.flatMap { vi =>
-          statsForVersion(_ >= vi.lastScalingAt.toDateTime.getMillis)
+          statsForVersion(_ >= vi.lastScalingAt)
         },
         maybeWithLatestConfig = maybeFullVersionInfo.flatMap { vi =>
-          statsForVersion(_ >= vi.lastConfigChangeAt.toDateTime.getMillis)
+          statsForVersion(_ >= vi.lastConfigChangeAt)
         },
         maybeWithOutdatedConfig = maybeFullVersionInfo.flatMap { vi =>
-          statsForVersion(_ < vi.lastConfigChangeAt.toDateTime.getMillis)
+          statsForVersion(_ < vi.lastConfigChangeAt)
         }
       )
 
@@ -49,7 +46,7 @@ object TaskStatsByVersion {
   def apply(
     now: Timestamp,
     versionInfo: VersionInfo,
-    tasks: Iterable[MarathonTask],
+    tasks: Iterable[Task],
     statuses: Map[String, Seq[Health]]): TaskStatsByVersion =
     {
       TaskStatsByVersion(versionInfo, TaskForStatistics.forTasks(now, tasks, statuses))
@@ -62,7 +59,7 @@ case class TaskStats(
 
 object TaskStats {
   def forSomeTasks(
-    now: Timestamp, tasks: Iterable[MarathonTask], statuses: Map[String, Seq[Health]]): Option[TaskStats] =
+    now: Timestamp, tasks: Iterable[Task], statuses: Map[String, Seq[Health]]): Option[TaskStats] =
     {
       forSomeTasks(TaskForStatistics.forTasks(now, tasks, statuses))
     }

@@ -3,6 +3,7 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
@@ -234,14 +235,14 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting taskStats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val staged = MarathonTestHelper.stagedTaskProto("task1", stagedAt = (f.clock.now() - 10.seconds).toDateTime.getMillis)
-    val running = MarathonTestHelper.runningTaskProto("task2", stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
-    val running2 = running.toBuilder.setId("task3").buildPartial()
+    val staged = MarathonTestHelper.stagedTask("task1", stagedAt = (f.clock.now() - 10.seconds).toDateTime.getMillis)
+    val running = MarathonTestHelper.runningTask("task2", stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
+    val running2 = running.copy(taskId = Task.Id("task3"))
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    val tasks: Set[MarathonTask] = Set(staged, running, running2)
+    val tasks: Set[Task] = Set(staged, running, running2)
     f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks(app.id, tasks)))
+      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, tasks)))
 
     val statuses: Map[String, Seq[Health]] = Map(
       "task1" -> Seq(),

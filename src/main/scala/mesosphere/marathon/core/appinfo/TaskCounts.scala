@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.appinfo
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.{ Protos => mesos }
@@ -39,7 +39,7 @@ case class TaskCounts(
 object TaskCounts {
   def zero: TaskCounts = TaskCounts(tasksStaged = 0, tasksRunning = 0, tasksHealthy = 0, tasksUnhealthy = 0)
 
-  def apply(appTasks: Iterable[MarathonTask], healthStatuses: Map[String, Seq[Health]]): TaskCounts = {
+  def apply(appTasks: Iterable[Task], healthStatuses: Map[String, Seq[Health]]): TaskCounts = {
     TaskCounts(TaskForStatistics.forTasks(Timestamp(0), appTasks, healthStatuses))
   }
 

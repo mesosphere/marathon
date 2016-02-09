@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.appinfo
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 
 /**
@@ -14,7 +14,7 @@ case class TaskLifeTime(
   medianSeconds: Double)
 
 object TaskLifeTime {
-  def forSomeTasks(now: Timestamp, tasks: Iterable[MarathonTask]): Option[TaskLifeTime] = {
+  def forSomeTasks(now: Timestamp, tasks: Iterable[Task]): Option[TaskLifeTime] = {
     forSomeTasks(TaskForStatistics.forTasks(now, tasks, Map.empty))
   }
 

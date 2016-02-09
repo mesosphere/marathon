@@ -1,10 +1,9 @@
 package mesosphere.marathon.core.matcher.base
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.matcher.base.util.OfferOperation
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.tasks.{ TaskIdUtil, ResourceUtil }
+import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.Protos.{ Offer, OfferID, TaskInfo }
 
 import scala.concurrent.Future

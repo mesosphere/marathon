@@ -66,12 +66,12 @@ object TaskTracker {
       task <- app.taskMap.get(taskId)
     } yield task
 
-    def taskState(taskId: Task.Id): Option[Task] = for {
+    def task(taskId: Task.Id): Option[Task] = for {
       app <- appTasksMap.get(taskId.appId)
       taskState <- app.taskStateMap.get(taskId)
     } yield taskState
 
-    def allTasks: Iterable[MarathonTask] = appTasksMap.values.view.flatMap(_.marathonTasks)
+    def allTasks: Iterable[Task] = appTasksMap.values.view.flatMap(_.tasks)
 
     private[tracker] def updateApp(appId: PathId)(update: TaskTracker.AppTasks => TaskTracker.AppTasks): TasksByApp = {
       val updated = update(appTasksMap(appId))

@@ -1077,7 +1077,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     MarathonTestHelper
       .stagedTask(taskId = id.toString)
       .withAgentInfo(_.copy(attributes = Iterable(TextAttribute(attr, attrVal))))
-      .withLaunchedTask(_.copy(networking = Task.HostPorts(List(999))))
+      .withLaunched(_.copy(networking = Task.HostPorts(List(999))))
   }
 
   private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Int], offer: Offer): Unit = {

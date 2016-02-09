@@ -461,7 +461,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     MarathonTestHelper
       .stagedTaskForApp(appId)
       .withAgentInfo(_.copy(host = "host", attributes = Iterable(TextAttribute("attr1", "bar"))))
-      .withLaunchedTask(_.copy(networking = Task.HostPorts(Iterable(999))))
+      .withLaunched(_.copy(networking = Task.HostPorts(Iterable(999))))
   }
 
   def makeTaskStatus(id: Task.Id, state: TaskState = TaskState.TASK_RUNNING) = {
