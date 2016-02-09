@@ -32,7 +32,7 @@ The plugin mechanism has the following components:
 A separate Marathon plugin interface jar is published in the following Maven repository with every Marathon release:
 
 ```
-http://downloads.mesosphere.io/maven
+http://downloads.mesosphere.com/maven
 ```
 
 with following dependency:
