@@ -326,6 +326,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       "/fetch(1)",
       "URI has invalid syntax."
     )
+
+    shouldViolate(app.copy(mem = -3.0), "/mem", "got -3.0, expected 0.0 or more")
+    shouldViolate(app.copy(cpus = -3.0), "/cpus", "got -3.0, expected 0.0 or more")
+    shouldViolate(app.copy(disk = -3.0), "/disk", "got -3.0, expected 0.0 or more")
+    shouldViolate(app.copy(instances = -3), "/instances", "got -3, expected 0 or more")
   }
 
   test("SerializationRoundtrip empty") {

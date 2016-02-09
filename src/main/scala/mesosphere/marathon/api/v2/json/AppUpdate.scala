@@ -127,5 +127,9 @@ object AppUpdate {
     appUp.fetch is optional(every(fetchUriIsValid))
     appUp.container.each is valid
     appUp.residency is valid
+    appUp.mem should optional(be >= 0.0)
+    appUp.cpus should optional(be >= 0.0)
+    appUp.instances should optional(be >= 0)
+    appUp.disk should optional(be >= 0.0)
   }
 }

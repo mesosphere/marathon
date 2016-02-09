@@ -189,12 +189,6 @@ trait Formats
   def nonEmpty[C <: Iterable[_]](implicit reads: Reads[C]): Reads[C] =
     Reads.filterNot[C](ValidationError(s"set must not be empty"))(_.isEmpty)(reads)
 
-  def minValue[A](min: A)(implicit O: Ordering[A], reads: Reads[A]): Reads[A] =
-    Reads.filterNot[A](ValidationError(s"value must not be less than $min"))(x => O.lt(x, min))(reads)
-
-  def greaterThan[A](x: A)(implicit Ord: Ordering[A], reads: Reads[A]): Reads[A] =
-    Reads.filter[A](ValidationError(s"value must be greater than $x"))(y => Ord.gt(y, x))(reads)
-
   def enumFormat[A <: java.lang.Enum[A]](read: String => A, errorMsg: String => String): Format[A] = {
     val reads = Reads[A] {
       case JsString(str) =>
@@ -536,8 +530,8 @@ trait AppAndGroupFormats {
       (__ \ "args").readNullable[Seq[String]] ~
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultEnv) ~
-      (__ \ "instances").readNullable[Int](minValue(0)).withDefault(AppDefinition.DefaultInstances) ~
-      (__ \ "cpus").readNullable[Double](greaterThan(0.0)).withDefault(AppDefinition.DefaultCpus) ~
+      (__ \ "instances").readNullable[Int].withDefault(AppDefinition.DefaultInstances) ~
+      (__ \ "cpus").readNullable[Double].withDefault(AppDefinition.DefaultCpus) ~
       (__ \ "mem").readNullable[Double].withDefault(AppDefinition.DefaultMem) ~
       (__ \ "disk").readNullable[Double].withDefault(AppDefinition.DefaultDisk) ~
       (__ \ "executor").readNullable[String](Reads.pattern(executorPattern))
@@ -838,8 +832,8 @@ trait AppAndGroupFormats {
     (__ \ "args").readNullable[Seq[String]] ~
     (__ \ "user").readNullable[String] ~
     (__ \ "env").readNullable[Map[String, String]] ~
-    (__ \ "instances").readNullable[Int](minValue(0)) ~
-    (__ \ "cpus").readNullable[Double](greaterThan(0.0)) ~
+    (__ \ "instances").readNullable[Int] ~
+    (__ \ "cpus").readNullable[Double] ~
     (__ \ "mem").readNullable[Double] ~
     (__ \ "disk").readNullable[Double] ~
     (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)) ~
