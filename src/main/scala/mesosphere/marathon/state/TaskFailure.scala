@@ -80,7 +80,7 @@ object TaskFailure {
       if (isFailureState(state))
         Some(TaskFailure(
           appId,
-          mesos.TaskID.newBuilder.setValue(taskId).build,
+          taskId.mesosTaskId,
           state,
           message,
           host,

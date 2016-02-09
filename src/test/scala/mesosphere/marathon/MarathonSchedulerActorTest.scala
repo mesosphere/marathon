@@ -151,7 +151,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val statusUpdateEvent = MesosStatusUpdateEvent(
       slaveId = "",
-      taskId = taskA.taskId.idString,
+      taskId = taskA.taskId,
       taskStatus = "TASK_FAILED",
       message = "",
       appId = app.id,
@@ -205,7 +205,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(repo.store(any())).thenReturn(Future.successful(app))
 
     val statusUpdateEvent = MesosStatusUpdateEvent(
-      slaveId = "", taskId = taskA.taskId.idString, taskStatus = "TASK_KILLED", message = "", appId = app.id,
+      slaveId = "", taskId = taskA.taskId, taskStatus = "TASK_KILLED", message = "", appId = app.id,
       host = "", ipAddresses = Nil, ports = Nil, version = "",
       timestamp = app.version.toString
     )
@@ -273,25 +273,25 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   test("Deployment resets rate limiter for affected apps") {
     val probe = TestProbe()
     val app = AppDefinition(
-      id = PathId("app1"),
+      id = PathId("/app1"),
       cmd = Some("cmd"),
       instances = 2,
       upgradeStrategy = UpgradeStrategy(0.5),
       versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
     )
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
+    val taskA = MarathonTestHelper.runningTaskForApp(app.id)
     val origGroup = Group(PathId("/foo/bar"), Set(app))
     val targetGroup = Group(PathId("/foo/bar"), Set())
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
-    when(taskTracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA))
+    when(taskTracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA.marathonTask))
 
-    when(driver.killTask(TaskID(taskA.getId))).thenAnswer(new Answer[Status] {
+    when(driver.killTask(taskA.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(
           MesosStatusUpdateEvent(
-            slaveId = "", taskId = taskA.getId, taskStatus = "TASK_KILLED", message = "", appId = app.id, host = "",
+            slaveId = "", taskId = taskA.taskId, taskStatus = "TASK_KILLED", message = "", appId = app.id, host = "",
             ipAddresses = Nil, ports = Nil, version = app.version.toString
           )
         )

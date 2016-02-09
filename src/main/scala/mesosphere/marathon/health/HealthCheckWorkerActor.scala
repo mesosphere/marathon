@@ -1,29 +1,20 @@
 package mesosphere.marathon.health
 
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{
-  COMMAND,
-  HTTP,
-  TCP,
-  HTTPS
-}
-import mesosphere.marathon.tasks.MarathonTasks
+import java.net.{ InetSocketAddress, Socket }
+import java.security.cert.X509Certificate
+import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 
 import akka.actor.{ Actor, ActorLogging, PoisonPill }
 import akka.util.Timeout
+import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{ COMMAND, HTTP, HTTPS, TCP }
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.util.ThreadPoolContext
-
-import spray.http._
 import spray.client.pipelining._
+import spray.http._
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
-import scala.util.{ Success, Failure }
-
-import java.net.{ Socket, InetSocketAddress }
-import java.security.cert.X509Certificate
-import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
+import scala.util.{ Failure, Success }
 
 class HealthCheckWorkerActor extends Actor with ActorLogging {
 
@@ -33,32 +24,34 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   import context.dispatcher // execution context for futures
 
   def receive: Receive = {
-    case HealthCheckJob(app, task, check) =>
+    case HealthCheckJob(app, task, launched, check) =>
       val replyTo = sender() // avoids closing over the volatile sender ref
 
-      doCheck(app, task, check)
+      doCheck(app, task, launched, check)
         .andThen {
           case Success(Some(result)) => replyTo ! result
           case Success(None)         => // ignore
           case Failure(t) =>
             replyTo ! Unhealthy(
-              task.getId,
-              task.getVersion,
+              task.taskId,
+              launched.appVersion,
               s"${t.getClass.getSimpleName}: ${t.getMessage}"
             )
         }
         .onComplete { case _ => self ! PoisonPill }
   }
 
-  def doCheck(app: AppDefinition, task: MarathonTask, check: HealthCheck): Future[Option[HealthResult]] =
-    getPort(task, check) match {
+  def doCheck(
+    app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck): Future[Option[HealthResult]] =
+
+    check.hostPort(launched) match {
       case None => Future.successful {
-        Some(Unhealthy(task.getId, task.getVersion, "Missing/invalid port index and no explicit port specified"))
+        Some(Unhealthy(task.taskId, launched.appVersion, "Missing/invalid port index and no explicit port specified"))
       }
       case Some(port) => check.protocol match {
-        case HTTP  => http(app, task, check, port)
-        case TCP   => tcp(app, task, check, port)
-        case HTTPS => https(app, task, check, port)
+        case HTTP  => http(app, task, launched, check, port)
+        case TCP   => tcp(app, task, launched, check, port)
+        case HTTPS => https(app, task, launched, check, port)
         case COMMAND =>
           Future.failed {
             val message = s"COMMAND health checks can only be performed " +
@@ -75,13 +68,10 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       }
     }
 
-  def getPort(task: MarathonTask, check: HealthCheck): Option[Int] = {
-    def portViaIndex: Option[Int] = check.portIndex.flatMap(task.getPortsList.asScala.lift(_).map(_.toInt))
-    check.port.orElse(portViaIndex)
-  }
-
-  def http(app: AppDefinition, task: MarathonTask, check: HealthCheck, port: Int): Future[Option[HealthResult]] = {
-    val host = MarathonTasks.effectiveIpAddress(app, task)
+  def http(
+    app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck,
+    port: Int): Future[Option[HealthResult]] = {
+    val host = task.effectiveIpAddress(app)
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"http://$host:$port$absolutePath"
@@ -95,19 +85,21 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Some(Healthy(task.getId, task.getVersion))
+        Some(Healthy(task.taskId, launched.appVersion))
       else if (check.ignoreHttp1xx && (toIgnoreResponses contains response.status.intValue)) {
-        log.debug(s"Ignoring health check HTTP response ${response.status.intValue} for task ${task.getId}")
+        log.debug(s"Ignoring health check HTTP response ${response.status.intValue} for ${task.taskId}")
         None
       }
       else {
-        Some(Unhealthy(task.getId, task.getVersion, response.status.toString()))
+        Some(Unhealthy(task.taskId, launched.appVersion, response.status.toString()))
       }
     }
   }
 
-  def tcp(app: AppDefinition, task: MarathonTask, check: HealthCheck, port: Int): Future[Option[HealthResult]] = {
-    val host = MarathonTasks.effectiveIpAddress(app, task)
+  def tcp(
+    app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck,
+    port: Int): Future[Option[HealthResult]] = {
+    val host = task.effectiveIpAddress(app)
     val address = s"$host:$port"
     val timeoutMillis = check.timeout.toMillis.toInt
     log.debug("Checking the health of [{}] via TCP", address)
@@ -119,12 +111,15 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         socket.connect(address, timeoutMillis)
         socket.close()
       }
-      Some(Healthy(task.getId, task.getVersion, Timestamp.now()))
+      Some(Healthy(task.taskId, launched.appVersion, Timestamp.now()))
     }(ThreadPoolContext.ioContext)
   }
 
-  def https(app: AppDefinition, task: MarathonTask, check: HealthCheck, port: Int): Future[Option[HealthResult]] = {
-    val host = MarathonTasks.effectiveIpAddress(app, task)
+  def https(
+    app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck,
+    port: Int): Future[Option[HealthResult]] = {
+
+    val host = task.effectiveIpAddress(app)
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"https://$host:$port$absolutePath"
@@ -151,9 +146,9 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Some(Healthy(task.getId, task.getVersion))
+        Some(Healthy(task.taskId, launched.appVersion))
       else
-        Some(Unhealthy(task.getId, task.getVersion, response.status.toString()))
+        Some(Unhealthy(task.taskId, launched.appVersion, response.status.toString()))
     }
   }
 
@@ -166,5 +161,5 @@ object HealthCheckWorker {
   protected[health] val acceptableResponses = Range(200, 400)
   protected[health] val toIgnoreResponses = Range(100, 200)
 
-  case class HealthCheckJob(app: AppDefinition, task: MarathonTask, check: HealthCheck)
+  case class HealthCheckJob(app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck)
 }

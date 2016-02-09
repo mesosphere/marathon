@@ -8,6 +8,7 @@ import org.apache.mesos.Protos.Attribute
 
 import scala.collection.JavaConverters._
 
+// FIXME(PK): Remove
 object MarathonTasks {
 
   // FIXME(PK): Move to Task

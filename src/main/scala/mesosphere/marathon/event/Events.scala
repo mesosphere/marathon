@@ -5,6 +5,7 @@ import javax.inject.Named
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.{ AbstractModule, Inject, Provides, Singleton }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
@@ -136,7 +137,7 @@ case class RemoveHealthCheck(
 
 case class FailedHealthCheck(
   appId: PathId,
-  taskId: String,
+  taskId: Task.Id,
   healthCheck: HealthCheck,
   eventType: String = "failed_health_check_event",
   timestamp: String = Timestamp.now().toString)
@@ -144,8 +145,8 @@ case class FailedHealthCheck(
 
 case class HealthStatusChanged(
   appId: PathId,
-  taskId: String,
-  version: String,
+  taskId: Task.Id,
+  version: Timestamp,
   alive: Boolean,
   eventType: String = "health_status_changed_event",
   timestamp: String = Timestamp.now().toString)
@@ -207,7 +208,7 @@ case class AppTerminatedEvent(
 
 case class MesosStatusUpdateEvent(
   slaveId: String,
-  taskId: String,
+  taskId: Task.Id,
   taskStatus: String,
   message: String,
   appId: PathId,

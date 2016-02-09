@@ -1,6 +1,7 @@
 package mesosphere.marathon.health
 
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.api.v2.json.Formats
 
@@ -10,10 +11,10 @@ import play.api.libs.json._
 class HealthTest extends MarathonSpec with Formats with Matchers {
 
   object Fixture {
-    val h1 = Health(taskId = "abcd-1234")
+    val h1 = Health(taskId = Task.Id("abcd-1234"))
 
     val h2 = Health(
-      taskId = "abcd-1234",
+      taskId = Task.Id("abcd-1234"),
       consecutiveFailures = 0,
       firstSuccess = Some(Timestamp(1)),
       lastSuccess = Some(Timestamp(3)),
@@ -21,7 +22,7 @@ class HealthTest extends MarathonSpec with Formats with Matchers {
     )
 
     val h3 = Health(
-      taskId = "abcd-1234",
+      taskId = Task.Id("abcd-1234"),
       consecutiveFailures = 1,
       firstSuccess = Some(Timestamp(1)),
       lastSuccess = Some(Timestamp(2)),

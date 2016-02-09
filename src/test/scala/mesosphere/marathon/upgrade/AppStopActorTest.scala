@@ -3,6 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ Props }
 import akka.testkit.{ TestActorRef }
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, HistoryActor, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure, TaskFailureRepository }
@@ -65,13 +66,13 @@ class AppStopActorTest
 
     val statusUpdateEventA =
       MesosStatusUpdateEvent(
-        slaveId = "", taskId = "task_a", taskStatus = "TASK_FAILED", message = "", appId = app.id, host = "",
+        slaveId = "", taskId = Task.Id("task_a"), taskStatus = "TASK_FAILED", message = "", appId = app.id, host = "",
         ipAddresses = Nil, ports = Nil, version = app.version.toString
       )
 
     val statusUpdateEventB =
       MesosStatusUpdateEvent(
-        slaveId = "", taskId = "task_b", taskStatus = "TASK_LOST", message = "", appId = app.id, host = "",
+        slaveId = "", taskId = Task.Id("task_b"), taskStatus = "TASK_LOST", message = "", appId = app.id, host = "",
         ipAddresses = Nil, ports = Nil, version = app.version.toString
       )
 

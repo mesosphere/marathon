@@ -47,7 +47,7 @@ object TaskStatsByVersion {
     now: Timestamp,
     versionInfo: VersionInfo,
     tasks: Iterable[Task],
-    statuses: Map[String, Seq[Health]]): TaskStatsByVersion =
+    statuses: Map[Task.Id, Seq[Health]]): TaskStatsByVersion =
     {
       TaskStatsByVersion(versionInfo, TaskForStatistics.forTasks(now, tasks, statuses))
     }
@@ -59,7 +59,7 @@ case class TaskStats(
 
 object TaskStats {
   def forSomeTasks(
-    now: Timestamp, tasks: Iterable[Task], statuses: Map[String, Seq[Health]]): Option[TaskStats] =
+    now: Timestamp, tasks: Iterable[Task], statuses: Map[Task.Id, Seq[Health]]): Option[TaskStats] =
     {
       forSomeTasks(TaskForStatistics.forTasks(now, tasks, statuses))
     }

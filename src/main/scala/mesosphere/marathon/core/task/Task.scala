@@ -3,7 +3,7 @@ package mesosphere.marathon.core.task
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task.Launched
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskIdUtil
 import org.apache.mesos.{ Protos => MesosProtos }
 
@@ -30,6 +30,16 @@ case class Task(
   def withLaunched(update: Launched => Launched): Task =
     copy(launched = launched.map(update))
 
+  def ipAddresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = launched.map(_.ipAddresses).getOrElse(Iterable.empty)
+
+  def effectiveIpAddress(app: AppDefinition): String = {
+    val maybeContainerIp: Option[String] = ipAddresses.map(_.getIpAddress).headOption
+
+    maybeContainerIp match {
+      case Some(ipAddress) if app.ipAddress.isDefined => ipAddress
+      case _ => agentInfo.host
+    }
+  }
 }
 
 object Task {
@@ -70,6 +80,18 @@ object Task {
     def withMesosStatus(mesosStatus: MesosProtos.TaskStatus): Launched = {
       copy(status = status.copy(mesosStatus = Some(mesosStatus)))
     }
+
+    def hasStartedRunning: Boolean = status.startedAt.isDefined
+
+    def ports: Iterable[Int] = networking match {
+      case HostPorts(ports) => ports
+      case _                => Iterable.empty
+    }
+
+    def ipAddresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = networking match {
+      case list: NetworkInfoList => list.addresses
+      case _                     => Iterable.empty
+    }
   }
 
   /**
@@ -98,6 +120,9 @@ object Task {
 
   /** The task is reachable via host ports which are bound to [[AgentInfo#host]]. */
   case class HostPorts(ports: Iterable[Int]) extends Networking
+  object HostPorts {
+    def apply(ports: Int*): HostPorts = HostPorts(ports)
+  }
 
   /**
     * The task has been launched with one-IP-per-task settings. The ports can be discovered
@@ -106,6 +131,9 @@ object Task {
   case class NetworkInfoList(networkInfoList: Iterable[MesosProtos.NetworkInfo]) extends Networking {
     import scala.collection.JavaConverters._
     def addresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = networkInfoList.flatMap(_.getIpAddressesList.asScala)
+  }
+  object NetworkInfoList {
+    def apply(networkInfoList: MesosProtos.NetworkInfo*): NetworkInfoList = NetworkInfoList(networkInfoList)
   }
 
   case object NoNetworking extends Networking

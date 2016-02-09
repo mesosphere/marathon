@@ -1,5 +1,6 @@
 package mesosphere.marathon.health
 
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 
 import org.apache.mesos.Protos.TaskStatus
@@ -56,10 +57,10 @@ trait HealthCheckManager {
   /**
     * Returns the health status of the supplied task.
     */
-  def status(appId: PathId, taskId: String): Future[Seq[Health]]
+  def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]]
 
   /**
     * Returns the health status of all tasks of the supplied app.
     */
-  def statuses(appId: PathId): Future[Map[String, Seq[Health]]]
+  def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]]
 }

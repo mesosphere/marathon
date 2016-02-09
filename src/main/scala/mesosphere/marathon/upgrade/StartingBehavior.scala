@@ -24,7 +24,9 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   def taskTracker: TaskTracker
 
   val app: AppDefinition
-  val Version = app.version.toString
+  val Version = app.version
+  // FIXME: Don't use a string here!
+  val VersionString = app.version.toString
   var atLeastOnceHealthyTasks = Set.empty[String]
   var startedRunningTasks = Set.empty[String]
   val AppId = app.id
@@ -54,24 +56,24 @@ trait StartingBehavior { this: Actor with ActorLogging =>
   }
 
   final def checkForHealthy: Receive = {
-    case HealthStatusChanged(AppId, taskId, Version, true, _, _) if !atLeastOnceHealthyTasks(taskId) =>
-      atLeastOnceHealthyTasks += taskId
+    case HealthStatusChanged(AppId, taskId, Version, true, _, _) if !atLeastOnceHealthyTasks(taskId.idString) =>
+      atLeastOnceHealthyTasks += taskId.idString
       log.info(s"$taskId is now healthy")
       checkFinished()
   }
 
   final def checkForRunning: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", _, app.`id`, _, _, _, Version, _, _) if !startedRunningTasks(taskId) => // scalastyle:off line.size.limit
-      startedRunningTasks += taskId
+    case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", _, app.`id`, _, _, _, VersionString, _, _) if !startedRunningTasks(taskId.idString) => // scalastyle:off line.size.limit
+      startedRunningTasks += taskId.idString
       log.info(s"New task $taskId now running during app ${app.id.toString} scaling, " +
         s"${nrToStart - startedRunningTasks.size} more to go")
       checkFinished()
   }
 
   def commonBehavior: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, app.`id`, _, _, _, Version, _, _) => // scalastyle:off line.size.limit
+    case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, app.`id`, _, _, _, VersionString, _, _) => // scalastyle:off line.size.limit
       log.warning(s"New task [$taskId] failed during app ${app.id.toString} scaling, queueing another task")
-      startedRunningTasks -= taskId
+      startedRunningTasks -= taskId.idString
       taskQueue.add(app)
 
     case Sync =>

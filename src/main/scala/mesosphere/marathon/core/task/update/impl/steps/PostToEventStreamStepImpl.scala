@@ -36,7 +36,7 @@ class PostToEventStreamStepImpl @Inject() (
     status.getState match {
       case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
         postEvent(timestamp, status, task)
-      case TASK_RUNNING if task.launched.exists(_.status.startedAt.isEmpty) => // staged, not running
+      case TASK_RUNNING if task.launched.exists(!_.hasStartedRunning) => // staged, not running
         postEvent(timestamp, status, task)
 
       case state: TaskState =>
@@ -57,7 +57,7 @@ class PostToEventStreamStepImpl @Inject() (
       eventBus.publish(
         MesosStatusUpdateEvent(
           slaveId = status.getSlaveId.getValue,
-          taskId = status.getTaskId.getValue,
+          taskId = Task.Id(status.getTaskId),
           taskStatus = status.getState.name,
           message = if (status.hasMessage) status.getMessage else "",
           appId = taskId.appId,

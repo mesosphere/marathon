@@ -7,15 +7,14 @@ import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon._
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskUpdater, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTracker, TaskUpdater }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks._
-import mesosphere.marathon.test.{ MarathonShutdownHookSupport, CaptureEvents }
-import mesosphere.marathon._
+import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport }
 import mesosphere.util.Logging
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.{ Protos => mesos }
@@ -77,10 +76,10 @@ class MarathonHealthCheckManagerTest
   }
 
   def makeRunningTask(appId: PathId, version: Timestamp) = {
-    val taskId = TaskIdUtil.newTaskId(appId)
+    val taskId = Task.Id.forApp(appId)
 
-    val taskStatus = MarathonTestHelper.runningTaskProto(taskId.getValue).getStatus
-    val marathonTask = MarathonTestHelper.stagedTask(taskId.getValue, appVersion = version)
+    val taskStatus = MarathonTestHelper.runningTask(taskId.idString).launched.get.status.mesosStatus.get
+    val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
 
     taskCreationHandler.created(marathonTask).futureValue
     taskUpdater.statusUpdate(appId, taskStatus).futureValue
@@ -88,9 +87,9 @@ class MarathonHealthCheckManagerTest
     taskId
   }
 
-  def updateTaskHealth(taskId: mesos.TaskID, version: Timestamp, healthy: Boolean): Unit = {
+  def updateTaskHealth(taskId: Task.Id, version: Timestamp, healthy: Boolean): Unit = {
     val taskStatus = mesos.TaskStatus.newBuilder
-      .setTaskId(taskId)
+      .setTaskId(taskId.mesosTaskId)
       .setState(mesos.TaskState.TASK_RUNNING)
       .setHealthy(healthy)
       .build
@@ -113,11 +112,11 @@ class MarathonHealthCheckManagerTest
     val app: AppDefinition = AppDefinition(id = appId)
     appRepository.store(app).futureValue
 
-    val taskId = TaskIdUtil.newTaskId(appId)
+    val taskId = Task.Id.forApp(appId)
 
-    val taskStatus = MarathonTestHelper.runningTaskProto(taskId.getValue).getStatus.toBuilder.setHealthy(false).build()
+    val taskStatus = MarathonTestHelper.unhealthyTask(taskId.idString).launched.get.status.mesosStatus.get
 
-    val marathonTask = MarathonTestHelper.stagedTask(taskId.getValue, appVersion = app.version)
+    val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = app.version)
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
@@ -126,15 +125,15 @@ class MarathonHealthCheckManagerTest
 
     hcManager.add(appId, app.version, healthCheck)
 
-    val status1 = hcManager.status(appId, taskId.getValue).futureValue
-    assert(status1 == Seq(Health(taskId.getValue)))
+    val status1 = hcManager.status(appId, taskId).futureValue
+    assert(status1 == Seq(Health(taskId)))
 
     // send unhealthy task status
     EventFilter.info(start = "Received health result for app", occurrences = 1).intercept {
       hcManager.update(taskStatus.toBuilder.setHealthy(false).build, app.version)
     }
 
-    val Seq(health2) = hcManager.status(appId, taskId.getValue).futureValue
+    val Seq(health2) = hcManager.status(appId, taskId).futureValue
     assert(health2.lastFailure.isDefined)
     assert(health2.lastSuccess.isEmpty)
 
@@ -143,7 +142,7 @@ class MarathonHealthCheckManagerTest
       hcManager.update(taskStatus.toBuilder.setHealthy(true).build, app.version)
     }
 
-    val Seq(health3) = hcManager.status(appId, taskId.getValue).futureValue
+    val Seq(health3) = hcManager.status(appId, taskId).futureValue
     assert(health3.lastFailure.isDefined)
     assert(health3.lastSuccess.isDefined)
     assert(health3.lastSuccess > health3.lastFailure)
@@ -169,7 +168,7 @@ class MarathonHealthCheckManagerTest
 
     updateTaskHealth(task1, version, healthy = true)
     statuses.foreach {
-      case (id, health) if id == task1.getValue =>
+      case (id, health) if id == task1 =>
         assert(health.size == 1)
         assert(health.head.alive)
       case (_, health) => assert(health.isEmpty)
@@ -177,7 +176,7 @@ class MarathonHealthCheckManagerTest
 
     updateTaskHealth(task2, version, healthy = true)
     statuses.foreach {
-      case (id, health) if id == task3.getValue =>
+      case (id, health) if id == task3 =>
         assert(health.isEmpty)
       case (_, health) =>
         assert(health.size == 1)
@@ -186,7 +185,7 @@ class MarathonHealthCheckManagerTest
 
     updateTaskHealth(task3, version, healthy = false)
     statuses.foreach {
-      case (id, health) if id == task3.getValue =>
+      case (id, health) if id == task3 =>
         assert(health.size == 1)
         assert(!health.head.alive)
       case (_, health) =>
@@ -196,7 +195,7 @@ class MarathonHealthCheckManagerTest
 
     updateTaskHealth(task1, version, healthy = false)
     statuses.foreach {
-      case (id, health) if id == task2.getValue =>
+      case (id, health) if id == task2 =>
         assert(health.size == 1)
         assert(health.head.alive)
       case (_, health) =>

@@ -4,6 +4,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ Command, MarathonState, Timestamp }
 import org.apache.mesos.{ Protos => MesosProtos }
 
@@ -103,6 +104,11 @@ case class HealthCheck(
       .setConsecutiveFailures(this.maxConsecutiveFailures)
       .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
       .build
+  }
+
+  def hostPort(launched: Task.Launched): Option[Int] = {
+    def portViaIndex: Option[Int] = portIndex.flatMap(launched.ports.toVector.lift(_))
+    port.orElse(portViaIndex)
   }
 
   override def version: Timestamp = Timestamp.zero

@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
@@ -136,6 +137,11 @@ trait Formats
   implicit lazy val PathIdFormat: Format[PathId] = Format(
     Reads.of[String](Reads.minLength[String](1)).map(PathId(_)),
     Writes[PathId] { id => JsString(id.toString) }
+  )
+
+  implicit lazy val TaskIdFormat: Format[Task.Id] = Format(
+    Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
+    Writes[Task.Id] { id => JsString(id.idString) }
   )
 
   implicit lazy val TimestampFormat: Format[Timestamp] = Format(

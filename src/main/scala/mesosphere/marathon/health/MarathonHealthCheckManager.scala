@@ -7,7 +7,6 @@ import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
@@ -127,26 +126,26 @@ class MarathonHealthCheckManager @Inject() (
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[MarathonTask] = taskTracker.marathonAppTasksSync(app.id)
-        val activeAppVersions: Set[String] = tasks.iterator.map(_.getVersion).toSet + app.version.toString
+        val tasks: Iterable[Task] = taskTracker.appTasksSync(app.id)
+        val activeAppVersions: Set[Timestamp] = tasks.iterator.flatMap(_.launched.map(_.appVersion)).toSet + app.version
 
-        val healthCheckAppVersions: Set[String] = appHealthChecks.writeLock { ahcs =>
+        val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
           // remove health checks for which the app version is not current and no tasks remain
           // since only current version tasks are launched.
           for {
             (version, activeHealthChecks) <- ahcs(appId)
-            if version != app.version && !activeAppVersions.contains(version.toString)
+            if version != app.version && !activeAppVersions.contains(version)
             activeHealthCheck <- activeHealthChecks
           } remove(appId, version, activeHealthCheck.healthCheck)
 
-          ahcs(appId).iterator.map(_._1.toString).toSet
+          ahcs(appId).iterator.map(_._1).toSet
         }
 
         // add missing health checks for the current
         // reconcile all running versions of the current app
-        val appVersionsWithoutHealthChecks: Set[String] = activeAppVersions -- healthCheckAppVersions
+        val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
         val res: Iterator[Future[Unit]] = appVersionsWithoutHealthChecks.iterator map { version =>
-          appRepository.app(app.id, Timestamp(version)) map {
+          appRepository.app(app.id, version) map {
             case None =>
               // FIXME: If the app version of the task is not available anymore, no health check is started.
               // We generated a new app version for every scale change. If maxVersions is configured, we
@@ -166,15 +165,15 @@ class MarathonHealthCheckManager @Inject() (
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
     appHealthChecks.readLock { ahcs =>
       // construct a health result from the incoming task status
-      val taskId = taskStatus.getTaskId.getValue
+      val taskId = Task.Id(taskStatus.getTaskId.getValue)
       val maybeResult: Option[HealthResult] =
         if (taskStatus.hasHealthy) {
           val healthy = taskStatus.getHealthy
-          log.info(s"Received status for [$taskId] with version [$version] and healthy [$healthy]")
-          Some(if (healthy) Healthy(taskId, version.toString) else Unhealthy(taskId, version.toString, ""))
+          log.info(s"Received status for $taskId with version [$version] and healthy [$healthy]")
+          Some(if (healthy) Healthy(taskId, version) else Unhealthy(taskId, version, ""))
         }
         else {
-          log.debug(s"Ignoring status for [$taskId] with no health information")
+          log.debug(s"Ignoring status for $taskId with no health information")
           None
         }
 
@@ -196,14 +195,12 @@ class MarathonHealthCheckManager @Inject() (
       }
     }
 
-  override def status(
-    appId: PathId,
-    taskId: String): Future[Seq[Health]] = {
+  override def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]] = {
     import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
-      maybeTaskState <- taskTracker.task(Task.Id(taskId))
+      maybeTaskState <- taskTracker.task(taskId)
     } yield maybeTaskState.flatMap(_.launched).map(_.appVersion)
 
     futureAppVersion.flatMap {
@@ -218,7 +215,7 @@ class MarathonHealthCheckManager @Inject() (
     }
   }
 
-  override def statuses(appId: PathId): Future[Map[String, Seq[Health]]] =
+  override def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]] =
     appHealthChecks.readLock { ahcs =>
       implicit val timeout: Timeout = Timeout(2, SECONDS)
       val futureHealths = for {
@@ -228,11 +225,11 @@ class MarathonHealthCheckManager @Inject() (
       Future.sequence(futureHealths) flatMap { healths =>
         val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
 
-        taskTracker.marathonAppTasks(appId).map { appTasks =>
+        taskTracker.appTasks(appId).map { appTasks =>
           appTasks.iterator.map { task =>
-            groupedHealth.get(task.getId) match {
-              case Some(xs) => task.getId -> xs.toSeq
-              case None     => task.getId -> Nil
+            groupedHealth.get(task.taskId) match {
+              case Some(xs) => task.taskId -> xs.toSeq
+              case None     => task.taskId -> Nil
             }
           }.toMap
         }

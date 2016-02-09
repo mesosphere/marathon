@@ -20,14 +20,14 @@ private[appinfo] object TaskForStatistics {
   def forTasks(
     now: Timestamp,
     tasks: Iterable[Task],
-    statuses: Map[String, Seq[Health]]): Iterable[TaskForStatistics] = {
+    statuses: Map[Task.Id, Seq[Health]]): Iterable[TaskForStatistics] = {
 
     val nowTs: Long = now.toDateTime.getMillis
 
     def taskForStatistics(task: Task): Option[TaskForStatistics] = {
       task.launched.map { launched =>
         val maybeTaskState = launched.status.mesosStatus.map(_.getState)
-        val healths = statuses.getOrElse(task.taskId.idString, Seq.empty)
+        val healths = statuses.getOrElse(task.taskId, Seq.empty)
         val maybeTaskLifeTime = launched.status.startedAt.map { startedAt =>
           (nowTs - startedAt.toDateTime.getMillis) / 1000.0
         }
