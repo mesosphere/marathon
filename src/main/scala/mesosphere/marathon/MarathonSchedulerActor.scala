@@ -9,6 +9,7 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
@@ -160,7 +161,7 @@ class MarathonSchedulerActor private (
       val origSender = sender()
       withLockFor(appId) {
         val promise = Promise[Unit]()
-        val tasksToKill = taskIds.flatMap(taskId => taskTracker.marathonTaskSync(appId, taskId))
+        val tasksToKill = taskIds.flatMap(taskId => taskTracker.marathonTaskSync(Task.Id(taskId)))
         context.actorOf(Props(classOf[TaskKillActor], driver, appId, taskTracker, eventBus, tasksToKill, promise))
         val res = for {
           _ <- promise.future
@@ -436,7 +437,7 @@ class SchedulerActions(
     healthCheckManager.removeAllFor(app.id)
 
     log.info(s"Stopping app ${app.id}")
-    val tasks = taskTracker.appTasksSync(app.id)
+    val tasks = taskTracker.marathonAppTasksSync(app.id)
 
     for (task <- tasks) {
       log.info(s"Killing task ${task.getId}")
@@ -462,13 +463,14 @@ class SchedulerActions(
     *
     * Should be called some time after the framework re-registers,
     * to give Mesos enough time to deliver task updates.
+    *
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
     appRepository.allPathIds().map(_.toSet).flatMap { appIds =>
       taskTracker.tasksByApp().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>
-          tasksByApp.appTasks(appId).collect {
+          tasksByApp.marathonAppTasks(appId).collect {
             case task: Protos.MarathonTask if task.hasStatus => task.getStatus
             case task: Protos.MarathonTask => // staged tasks, which have no status yet
               taskStatus(task)
@@ -480,7 +482,7 @@ class SchedulerActions(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          for (orphanTask <- tasksByApp.appTasks(unknownAppId)) {
+          for (orphanTask <- tasksByApp.marathonAppTasks(unknownAppId)) {
             log.info(s"Killing task ${orphanTask.getId}")
             driver.killTask(protos.TaskID(orphanTask.getId))
           }
@@ -551,7 +553,7 @@ class SchedulerActions(
       log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
       taskQueue.purge(app.id)
 
-      val toKill = taskTracker.appTasksSync(app.id).take(currentCount - targetCount)
+      val toKill = taskTracker.marathonAppTasksSync(app.id).take(currentCount - targetCount)
       log.info(s"Killing tasks: ${toKill.map(_.getId)}")
       for (task <- toKill) {
         driver.killTask(protos.TaskID(task.getId))

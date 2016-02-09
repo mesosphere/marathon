@@ -24,9 +24,9 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val taskId = "task1"
+    val taskId = Task.Id.forApp(appId)
     val op = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(taskId), TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that fails immediately")
@@ -52,9 +52,9 @@ class TaskUpdateActorTest
 
     Given("an op with an already reached deadline")
     val appId = PathId("/app")
-    val taskId = "task1"
+    val taskId = Task.Id.forApp(appId)
     val op = TaskOpProcessor.Operation(
-      f.clock.now, f.opInitiator.ref, appId, Task.Id(taskId), TaskOpProcessor.Action.Expunge
+      f.clock.now, f.opInitiator.ref, taskId, TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that succeeds immediately")
@@ -89,9 +89,9 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val taskId = "task1"
+    val taskId = Task.Id.forApp(appId)
     val op = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(taskId), TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that processes it immediately")
@@ -116,9 +116,9 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val taskId = "task1"
+    val taskId = Task.Id.forApp(appId)
     val op = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(taskId), TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that does not return")
@@ -143,13 +143,13 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val task1Id = "task1"
+    val task1Id = Task.Id.forApp(appId)
     val op1 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(task1Id), TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskOpProcessor.Action.Expunge
     )
-    val task2Id = "task2"
+    val task2Id = Task.Id.forApp(appId)
     val op2 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(task2Id), TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, task2Id, TaskOpProcessor.Action.Expunge
     )
 
     And("a processor that does not return")
@@ -183,7 +183,7 @@ class TaskUpdateActorTest
     f.updateActor.underlyingActor.operationsByTaskId should have size 1
 
     And("but the first task still does have a queue")
-    f.updateActor.underlyingActor.operationsByTaskId(Task.Id(task1Id)) should have size 1
+    f.updateActor.underlyingActor.operationsByTaskId(task1Id) should have size 1
   }
 
   test("ops for the same task are processed sequentially") {
@@ -191,12 +191,12 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val task1Id = "task1"
+    val task1Id = Task.Id.forApp(appId)
     val op1 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(task1Id), TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskOpProcessor.Action.Expunge
     )
     val op2 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, appId, Task.Id(task1Id), TaskOpProcessor.Action.Noop
+      f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskOpProcessor.Action.Noop
     )
 
     And("a processor that does not return")

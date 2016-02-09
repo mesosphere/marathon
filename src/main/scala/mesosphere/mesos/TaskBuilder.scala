@@ -4,6 +4,7 @@ import com.google.protobuf.{ ByteString, TextFormat }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, DiscoveryInfo, IpAddress, PathId }
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
@@ -24,7 +25,7 @@ class TaskBuilder(app: AppDefinition,
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
-  def buildIfMatches(offer: Offer, runningTasks: => Iterable[MarathonTask]): Option[(TaskInfo, Seq[Int])] = {
+  def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Int])] = {
 
     val acceptedResourceRoles: Set[String] = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
 

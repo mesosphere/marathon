@@ -3,16 +3,15 @@ package mesosphere.marathon.api.v2
 import java.util.Collections
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon._
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ Group, GroupManager, Timestamp }
-import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil }
+import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, MarathonSpec }
-import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos._
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -32,20 +31,12 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val body = s"""{"ids": ["$taskId1", "$taskId2"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
 
-    val slaveId = SlaveID("some slave ID")
-    val now = Timestamp.now()
-    val task1 = MarathonTasks.makeTask(
-      taskId1, "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = slaveId
-    )
-    val task2 = MarathonTasks.makeTask(
-      taskId2, "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = slaveId
-    )
+    val task1 = MarathonTestHelper.mininimalTask(taskId1)
+    val task2 = MarathonTestHelper.mininimalTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.marathonTaskSync(app1, taskId1) returns Some(task1)
-    taskTracker.marathonTaskSync(app2, taskId2) returns Some(task2)
+    taskTracker.marathonTaskSync(task1.taskId) returns Some(task1.marathonTask)
+    taskTracker.marathonTaskSync(task2.taskId) returns Some(task2.marathonTask)
     taskKiller.kill(any, any) returns Future.successful(Set.empty[MarathonTask])
 
     When("we ask to kill both tasks")
@@ -77,18 +68,12 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     val slaveId = SlaveID("some slave ID")
     val now = Timestamp.now()
-    val task1 = MarathonTasks.makeTask(
-      taskId1, "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = slaveId
-    )
-    val task2 = MarathonTasks.makeTask(
-      taskId2, "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = slaveId
-    )
+    val task1 = MarathonTestHelper.mininimalTask(taskId1)
+    val task2 = MarathonTestHelper.mininimalTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.marathonTaskSync(app1, taskId1) returns Some(task1)
-    taskTracker.marathonTaskSync(app2, taskId2) returns Some(task2)
+    taskTracker.marathonTaskSync(task1.taskId) returns Some(task1.marathonTask)
+    taskTracker.marathonTaskSync(task2.taskId) returns Some(task2.marathonTask)
     taskKiller.killAndScale(any, any) returns Future.successful(deploymentPlan)
 
     When("we ask to kill both tasks")
@@ -101,7 +86,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     response.getEntity shouldEqual """{"version":"1970-01-01T00:00:00.000Z","deploymentId":"plan"}"""
 
     And("app1 and app2 is killed with force")
-    verify(taskKiller).killAndScale(eq(Map(app1 -> Set(task1), app2 -> Set(task2))), eq(true))
+    verify(taskKiller).killAndScale(eq(Map(app1 -> Set(task1.marathonTask), app2 -> Set(task2.marathonTask))), eq(true))
 
     And("nothing else should be called on the TaskKiller")
     noMoreInteractions(taskKiller)

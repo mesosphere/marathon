@@ -46,24 +46,29 @@ private[tracker] class TaskTrackerDelegate(
     tasksByAppTimer.fold(futureCall())(_.timeFuture(futureCall()))
   }
 
-  override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.appTasks(appId).size
+  override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.marathonAppTasks(appId).size
   override def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
-    tasksByApp().map(_.appTasks(appId).size)
-  override def marathonTaskSync(appId: PathId, taskId: String): Option[MarathonTask] =
-    tasksByAppSync.marathonTask(appId, taskId)
-  override def marathonTask(appId: PathId, taskId: String)(implicit e: ExecutionContext): Future[Option[MarathonTask]] =
-    tasksByApp().map(_.marathonTask(appId, taskId))
+    tasksByApp().map(_.marathonAppTasks(appId).size)
+  override def marathonTaskSync(taskId: Task.Id): Option[MarathonTask] =
+    tasksByAppSync.marathonTask(taskId)
+  override def marathonTask(taskId: Task.Id)(implicit e: ExecutionContext): Future[Option[MarathonTask]] =
+    tasksByApp().map(_.marathonTask(taskId))
   override def hasAppTasksSync(appId: PathId): Boolean = tasksByAppSync.hasAppTasks(appId)
   override def hasAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     tasksByApp().map(_.hasAppTasks(appId))
-  override def appTasksSync(appId: PathId): Iterable[MarathonTask] = tasksByAppSync.appTasks(appId)
-  override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]] =
+  override def marathonAppTasksSync(appId: PathId): Iterable[MarathonTask] =
+    tasksByAppSync.marathonAppTasks(appId)
+  override def marathonAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]] =
+    tasksByApp().map(_.marathonAppTasks(appId))
+
+  override def appTasksSync(appId: PathId): Iterable[Task] =
+    tasksByAppSync.appTasks(appId)
+  override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]] =
     tasksByApp().map(_.appTasks(appId))
 
-  override def task(
-    appId: PathId, taskId: Task.Id)(
-      implicit ec: ExecutionContext): Future[Option[Task]] =
-    tasksByApp().map(_.taskState(appId, taskId))
+  override def task(taskId: Task.Id)(
+    implicit ec: ExecutionContext): Future[Option[Task]] =
+    tasksByApp().map(_.taskState(taskId))
 
   private[this] val tasksByAppTimer =
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))

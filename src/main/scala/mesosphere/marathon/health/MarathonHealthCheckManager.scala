@@ -8,20 +8,21 @@ import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
 import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil }
-import mesosphere.marathon.{ ZookeeperConf, MarathonScheduler, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.tasks.TaskIdUtil
+import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder, ZookeeperConf }
 import mesosphere.util.RWLock
-import scala.concurrent.ExecutionContext.Implicits.global
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.collection.immutable.{ Map, Seq }
 import scala.collection.mutable
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 
 class MarathonHealthCheckManager @Inject() (
     system: ActorSystem,
@@ -126,7 +127,7 @@ class MarathonHealthCheckManager @Inject() (
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[MarathonTask] = taskTracker.appTasksSync(app.id)
+        val tasks: Iterable[MarathonTask] = taskTracker.marathonAppTasksSync(app.id)
         val activeAppVersions: Set[String] = tasks.iterator.map(_.getVersion).toSet + app.version.toString
 
         val healthCheckAppVersions: Set[String] = appHealthChecks.writeLock { ahcs =>
@@ -202,8 +203,8 @@ class MarathonHealthCheckManager @Inject() (
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
-      maybeTask <- taskTracker.marathonTask(appId, taskId)
-    } yield maybeTask.map(t => Timestamp(t.getVersion))
+      maybeTaskState <- taskTracker.task(Task.Id(taskId))
+    } yield maybeTaskState.flatMap(_.launched).map(_.appVersion)
 
     futureAppVersion.flatMap {
       case None => Future.successful(Nil)
@@ -227,7 +228,7 @@ class MarathonHealthCheckManager @Inject() (
       Future.sequence(futureHealths) flatMap { healths =>
         val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
 
-        taskTracker.appTasks(appId).map { appTasks =>
+        taskTracker.marathonAppTasks(appId).map { appTasks =>
           appTasks.iterator.map { task =>
             groupedHealth.get(task.getId) match {
               case Some(xs) => task.getId -> xs.toSeq

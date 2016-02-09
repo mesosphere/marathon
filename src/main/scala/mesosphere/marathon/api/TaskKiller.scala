@@ -20,7 +20,7 @@ class TaskKiller @Inject() (
     findToKill: (Iterable[MarathonTask] => Iterable[MarathonTask])): Future[Iterable[MarathonTask]] = {
 
     if (taskTracker.hasAppTasksSync(appId)) {
-      val tasks = taskTracker.appTasksSync(appId)
+      val tasks = taskTracker.marathonAppTasksSync(appId)
       val toKill = findToKill(tasks)
       service.killTasks(appId, toKill)
       Future.successful(toKill)
@@ -33,7 +33,7 @@ class TaskKiller @Inject() (
   def killAndScale(appId: PathId,
                    findToKill: (Iterable[MarathonTask] => Iterable[MarathonTask]),
                    force: Boolean): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.appTasksSync(appId))), force)
+    killAndScale(Map(appId -> findToKill(taskTracker.marathonAppTasksSync(appId))), force)
   }
 
   def killAndScale(appTasks: Map[PathId, Iterable[MarathonTask]], force: Boolean): Future[DeploymentPlan] = {

@@ -2,6 +2,7 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.state.{ Timestamp, PathId }
@@ -21,7 +22,7 @@ class NotifyLaunchQueueStepImplTest extends FunSuite with Matchers with GivenWhe
   test("notifying launch queue") {
     val f = new Fixture
     val status = runningTaskStatus
-    val expectedUpdate = TaskStatusUpdate(updateTimestamp, taskId, MarathonTaskStatus(status))
+    val expectedUpdate = TaskStatusUpdate(updateTimestamp, Task.Id(taskId), MarathonTaskStatus(status))
 
     Given("a status update")
     f.launchQueue.notifyOfTaskUpdate(expectedUpdate) returns Future.successful(None)

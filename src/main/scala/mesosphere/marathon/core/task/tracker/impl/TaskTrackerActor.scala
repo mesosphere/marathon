@@ -27,7 +27,7 @@ object TaskTrackerActor {
     * FIXME: change taskId to [[Task.Id]]
     */
   private[impl] case class ForwardTaskOp(
-    deadline: Timestamp, appId: PathId, taskId: Task.Id, action: TaskOpProcessor.Action)
+    deadline: Timestamp, taskId: Task.Id, action: TaskOpProcessor.Action)
 
   /** Describes where and what to send after an update event has beend processed by the [[TaskTrackerActor]]. */
   private[impl] case class Ack(initiator: ActorRef, msg: Any = ()) {
@@ -35,9 +35,9 @@ object TaskTrackerActor {
   }
 
   /** Inform the [[TaskTrackerActor]] of an updated task (after persistence). */
-  private[impl] case class TaskUpdated(appId: PathId, task: Task, ack: Ack)
+  private[impl] case class TaskUpdated(task: Task, ack: Ack)
   /** Inform the [[TaskTrackerActor]] of a removed task (after persistence). */
-  private[impl] case class TaskRemoved(appId: PathId, taskId: Task.Id, ack: Ack)
+  private[impl] case class TaskRemoved(taskId: Task.Id, ack: Ack)
 
   private[tracker] class ActorMetrics(metrics: Metrics) {
     val stagedCount = metrics.gauge("service.mesosphere.marathon.task.staged.count", new AtomicIntGauge)
@@ -104,12 +104,12 @@ private class TaskTrackerActor(
 
     def becomeWithUpdatedApp(appId: PathId)(taskId: Task.Id, newTaskState: Option[Task]): Unit = {
       val updatedAppTasks = newTaskState match {
-        case None       => appTasks.updateApp(appId)(_.withoutTaskState(taskId))
-        case Some(task) => appTasks.updateApp(appId)(_.withTaskState(task))
+        case None       => appTasks.updateApp(appId)(_.withoutTask(taskId))
+        case Some(task) => appTasks.updateApp(appId)(_.withTask(task))
       }
 
       val updatedCounts = {
-        val oldTask = appTasks.marathonTask(appId, taskId.id)
+        val oldTask = appTasks.marathonTask(taskId)
         // we do ignore health counts
         val oldTaskCount = TaskCounts(oldTask, healthStatuses = Map.empty)
         val newTaskCount = TaskCounts(newTaskState.map(_.marathonTask), healthStatuses = Map.empty)
@@ -127,16 +127,16 @@ private class TaskTrackerActor(
       case TaskTrackerActor.List =>
         sender() ! appTasks
 
-      case ForwardTaskOp(deadline, appId, taskId, action) =>
-        val op = TaskOpProcessor.Operation(deadline, sender(), appId, taskId, action)
+      case ForwardTaskOp(deadline, taskId, action) =>
+        val op = TaskOpProcessor.Operation(deadline, sender(), taskId, action)
         updaterRef.forward(TaskUpdateActor.ProcessTaskOp(op))
 
-      case msg @ TaskTrackerActor.TaskUpdated(appId, task, ack) =>
-        becomeWithUpdatedApp(appId)(task.taskId, newTaskState = Some(task))
+      case msg @ TaskTrackerActor.TaskUpdated(task, ack) =>
+        becomeWithUpdatedApp(task.appId)(task.taskId, newTaskState = Some(task))
         ack.sendAck()
 
-      case msg @ TaskTrackerActor.TaskRemoved(appId, taskId, ack) =>
-        becomeWithUpdatedApp(appId)(taskId, newTaskState = None)
+      case msg @ TaskTrackerActor.TaskRemoved(taskId, ack) =>
+        becomeWithUpdatedApp(taskId.appId)(taskId, newTaskState = None)
         ack.sendAck()
     }
   }

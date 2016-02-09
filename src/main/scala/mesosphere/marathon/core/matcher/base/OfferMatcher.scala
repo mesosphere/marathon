@@ -2,6 +2,7 @@ package mesosphere.marathon.core.matcher.base
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.matcher.base.util.OfferOperation
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.{ TaskIdUtil, ResourceUtil }
 import org.apache.mesos.Protos.{ Offer, OfferID, TaskInfo }
@@ -17,6 +18,7 @@ object OfferMatcher {
     * (e.g. by throttling logic).
     */
   case class TaskOpWithSource(source: TaskOpSource, op: TaskOp) {
+    def taskId: Task.Id = op.taskId
     def accept(): Unit = source.taskOpAccepted(op)
     def reject(reason: String): Unit = source.taskOpRejected(op, reason)
   }
@@ -25,14 +27,12 @@ object OfferMatcher {
     * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
     */
   sealed trait TaskOp {
-    /** The app ID of the affected task. */
-    lazy val appId = TaskIdUtil.appId(taskId)
     /** The ID of the affected task. */
-    def taskId: String = newTask.getId
+    def taskId: Task.Id = newTask.taskId
     /** The MarathonTask state before this operation has been applied. */
-    def oldTask: Option[MarathonTask]
+    def oldTask: Option[Task]
     /** The MarathonTask state after this operation has been applied. */
-    def newTask: MarathonTask
+    def newTask: Task
     /** How would the offer change when Mesos executes this op? */
     def applyToOffer(offer: Offer): Offer
     /** To which Offer.Operations does this task op relate? */
@@ -40,7 +40,7 @@ object OfferMatcher {
   }
 
   /** Launch a task on the offer. */
-  case class Launch(taskInfo: TaskInfo, newTask: MarathonTask, oldTask: Option[MarathonTask] = None) extends TaskOp {
+  case class Launch(taskInfo: TaskInfo, newTask: Task, oldTask: Option[Task] = None) extends TaskOp {
     def applyToOffer(offer: Offer): Offer = {
       import scala.collection.JavaConverters._
       ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.asScala)
@@ -76,7 +76,7 @@ object OfferMatcher {
     def launchedTaskInfos: Iterable[TaskInfo] = ops.view.collect { case Launch(taskInfo, _, _) => taskInfo }
 
     /** The last state of the affected MarathonTasks after this operations. */
-    def marathonTasks: Map[String, MarathonTask] = ops.map(op => op.taskId -> op.newTask).toMap
+    def marathonTasks: Map[Task.Id, Task] = ops.map(op => op.taskId -> op.newTask).toMap
   }
 
   trait TaskOpSource {

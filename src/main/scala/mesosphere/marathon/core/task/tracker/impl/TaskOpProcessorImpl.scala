@@ -35,14 +35,13 @@ private[tracker] object TaskOpProcessorImpl {
       * * an Action.Expunge if the TaskStatus update indicates a terminated task OR ELSE
       * * an Action.Update if the tasks existed and the TaskStatus contains new information OR ELSE
       */
-    def resolve(
-      appId: PathId, taskId: Task.Id, status: TaskStatus)(
-        implicit ec: ExecutionContext): Future[Action] = {
-      directTaskTracker.task(appId, taskId).map {
+    def resolve(taskId: Task.Id, status: TaskStatus)(
+      implicit ec: ExecutionContext): Future[Action] = {
+      directTaskTracker.task(taskId).map {
         case Some(existingTask) =>
           resolveForExistingTask(existingTask, status)
         case None =>
-          Action.Fail(new IllegalStateException(s"$taskId of app [$appId] does not exist"))
+          Action.Fail(new IllegalStateException(s"$taskId of app [${taskId.appId}] does not exist"))
       }
     }
 
@@ -50,7 +49,7 @@ private[tracker] object TaskOpProcessorImpl {
       * Calculates the change that needs to performed on this task according to the given task status update
       */
     private[this] def resolveForExistingTask(taskState: Task, statusUpdate: TaskStatus): Action = {
-      taskState.launchedTask match {
+      taskState.launched match {
         case Some(currentLaunched) =>
           statusUpdate.getState match {
             case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
@@ -58,11 +57,11 @@ private[tracker] object TaskOpProcessorImpl {
             case TASK_RUNNING if currentLaunched.status.startedAt.isEmpty => // was staged, is now running
               val now = clock.now()
               Action.Update(
-                taskState.copy(launchedTask = Some(
+                taskState.copy(launched = Some(
                   currentLaunched.copy(
                     status = currentLaunched.status.copy(
                       startedAt = Some(now),
-                      status = Some(statusUpdate)
+                      mesosStatus = Some(statusUpdate)
                     )
                   )
                 ))
@@ -78,7 +77,7 @@ private[tracker] object TaskOpProcessorImpl {
     }
 
     private[this] def updateTaskOnStateChange(
-      taskState: Task, currentLaunch: Task.LaunchedTask, statusUpdate: TaskStatus): Action = {
+      taskState: Task, currentLaunch: Task.Launched, statusUpdate: TaskStatus): Action = {
 
       def updatedOnChange(currentStatus: TaskStatus): Option[Task] = {
         val healthy =
@@ -87,9 +86,9 @@ private[tracker] object TaskOpProcessorImpl {
         if (changed) {
           Some(
             taskState.copy(
-              launchedTask = Some(
+              launched = Some(
                 currentLaunch.copy(
-                  status = currentLaunch.status.copy(status = Some(currentStatus))
+                  status = currentLaunch.status.copy(mesosStatus = Some(currentStatus))
                 )
               )
             )
@@ -102,7 +101,7 @@ private[tracker] object TaskOpProcessorImpl {
         }
       }
 
-      val maybeUpdated = currentLaunch.status.status.flatMap(updatedOnChange(_))
+      val maybeUpdated = currentLaunch.status.mesosStatus.flatMap(updatedOnChange(_))
 
       maybeUpdated match {
         case Some(updated) => Action.Update(updated)
@@ -135,17 +134,17 @@ private[tracker] class TaskOpProcessorImpl(
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         val marathonTask = TaskSerializer.marathonTask(task)
         repo.store(marathonTask).map { _ =>
-          taskTrackerRef ! TaskTrackerActor.TaskUpdated(op.appId, task, TaskTrackerActor.Ack(op.sender))
+          taskTrackerRef ! TaskTrackerActor.TaskUpdated(task, TaskTrackerActor.Ack(op.sender))
         }.recoverWith(tryToRecover(op)(expectedTaskState = Some(task)))
       case Action.Expunge =>
         // Used for task termination or as a result from a UpdateStatus action.
         // The expunge is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        repo.expunge(op.taskId.id).map { _ =>
-          taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.appId, op.taskId, TaskTrackerActor.Ack(op.sender))
+        repo.expunge(op.taskId.idString).map { _ =>
+          taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.taskId, TaskTrackerActor.Ack(op.sender))
         }.recoverWith(tryToRecover(op)(expectedTaskState = None))
 
       case Action.UpdateStatus(status) =>
-        statusUpdateActionResolver.resolve(op.appId, op.taskId, status).flatMap { action: Action =>
+        statusUpdateActionResolver.resolve(op.taskId, status).flatMap { action: Action =>
           // Since this action is mapped to another action, we delegate the responsibility to inform
           // the sender to that other action.
           process(op.copy(action = action))
@@ -186,19 +185,19 @@ private[tracker] class TaskOpProcessorImpl(
       }
 
       log.warn(
-        s"${op.taskId} of app [${op.appId}]: try to recover from failed ${op.action.toString}", cause
+        s"${op.taskId} of app [${op.taskId.appId}]: try to recover from failed ${op.action.toString}", cause
       )
 
-      repo.task(op.taskId.id).map {
+      repo.task(op.taskId.idString).map {
         case Some(task) =>
-          val taskState = TaskSerializer.taskState(task)
-          taskTrackerRef ! TaskTrackerActor.TaskUpdated(op.appId, taskState, ack(Some(task)))
+          val taskState = TaskSerializer.task(task)
+          taskTrackerRef ! TaskTrackerActor.TaskUpdated(taskState, ack(Some(task)))
         case None =>
-          taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.appId, op.taskId, ack(None))
+          taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.taskId, ack(None))
       }.recover {
         case NonFatal(loadingFailure) =>
           log.warn(
-            s"${op.taskId} of app [${op.appId}]: task reloading failed as well", loadingFailure
+            s"${op.taskId} of app [${op.taskId.appId}]: task reloading failed as well", loadingFailure
           )
           throw cause
       }

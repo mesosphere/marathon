@@ -97,7 +97,7 @@ class TaskKillActorTest
     val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
     val tasks = mutable.Set(taskA, taskB)
 
-    when(taskTracker.appTasksSync(app.id))
+    when(taskTracker.marathonAppTasksSync(app.id))
       .thenReturn(Set.empty[MarathonTask])
 
     val ref = TestActorRef[TaskKillActor](Props(classOf[TaskKillActor], driver, app.id, taskTracker, system.eventStream, tasks.toSet, promise))
@@ -122,7 +122,7 @@ class TaskKillActorTest
 
     val ref = TestActorRef[TaskKillActor](Props(classOf[TaskKillActor], driver, appId, taskTracker, system.eventStream, tasks, promise))
 
-    when(taskTracker.appTasksSync(appId)).thenReturn(Set(taskA, taskB))
+    when(taskTracker.marathonAppTasksSync(appId)).thenReturn(Set(taskA, taskB))
 
     watch(ref)
 

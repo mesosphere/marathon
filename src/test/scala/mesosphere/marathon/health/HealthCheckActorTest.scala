@@ -45,7 +45,7 @@ class HealthCheckActorTest
       .setVersion(appVersion)
       .build()
 
-    when(tracker.appTasksSync(appId)).thenReturn(Set(task))
+    when(tracker.marathonAppTasksSync(appId)).thenReturn(Set(task))
 
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val actor = TestActorRef[HealthCheckActor](

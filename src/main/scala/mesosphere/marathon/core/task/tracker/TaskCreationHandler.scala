@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.task.tracker
 
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.core.task.Task
 
 import scala.concurrent.Future
 
@@ -15,12 +14,12 @@ trait TaskCreationHandler {
     * If the task exists already, the existing task will be overwritten so make sure
     * that you generate unique IDs.
     */
-  def created(appId: PathId, task: MarathonTask): Future[MarathonTask]
+  def created(task: Task): Future[Task]
 
   /**
     * Remove the task for the given app with the given ID completely.
     *
     * If the task does not exist, the returned Future will not fail.
     */
-  def terminated(appId: PathId, taskId: String): Future[_]
+  def terminated(taskId: Task.Id): Future[_]
 }

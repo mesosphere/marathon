@@ -84,7 +84,7 @@ private[impl] class TaskUpdateActor(
   }
 
   def receive: Receive = LoggingReceive {
-    case ProcessTaskOp(op @ TaskOpProcessor.Operation(deadline, _, _, taskId, _)) =>
+    case ProcessTaskOp(op @ TaskOpProcessor.Operation(deadline, _, taskId, _)) =>
       val oldQueue: Queue[TaskOpProcessor.Operation] = operationsByTaskId(taskId)
       val newQueue = oldQueue :+ op
       operationsByTaskId += taskId -> newQueue

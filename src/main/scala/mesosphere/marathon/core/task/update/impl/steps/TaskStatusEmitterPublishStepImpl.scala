@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.update.impl.steps
 import javax.inject.Inject
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusEmitter }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
@@ -19,7 +20,7 @@ class TaskStatusEmitterPublishStepImpl @Inject() (taskStatusEmitter: TaskStatusE
 
   override def processUpdate(
     timestamp: Timestamp, appId: PathId, task: MarathonTask, status: TaskStatus): Future[_] = {
-    val taskId = status.getTaskId
+    val taskId = Task.Id(status.getTaskId)
     taskStatusEmitter.publish(TaskStatusUpdate(timestamp, taskId, MarathonTaskStatus(status)))
     Future.successful(())
   }

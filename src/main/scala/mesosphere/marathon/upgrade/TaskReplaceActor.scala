@@ -24,7 +24,7 @@ class TaskReplaceActor(
     promise: Promise[Unit]) extends Actor with ActorLogging {
   import context.dispatcher
 
-  val tasksToKill = taskTracker.appTasksSync(app.id)
+  val tasksToKill = taskTracker.marathonAppTasksSync(app.id)
   val appId = app.id
   val version = app.version.toString
   var healthy = Set.empty[String]

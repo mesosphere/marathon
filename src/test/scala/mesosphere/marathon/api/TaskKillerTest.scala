@@ -5,7 +5,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ AppLockedException, MarathonSchedulerService, MarathonSpec, UnknownAppException }
+import mesosphere.marathon._
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.mockito.ArgumentCaptor
@@ -54,14 +54,8 @@ class TaskKillerTest extends MarathonSpec
   test("KillRequested with scaling") {
     val appId = PathId(List("app"))
     val now = Timestamp.now()
-    val task1 = MarathonTasks.makeTask(
-      "task-1", "host", ports = Nil, attributes = Nil, version = now, now = now,
-      slaveId = SlaveID("1")
-    )
-    val task2 = MarathonTasks.makeTask(
-      "task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = SlaveID("1")
-    )
+    val task1 = MarathonTestHelper.mininimalTask(appId)
+    val task2 = MarathonTestHelper.mininimalTask(appId)
     val tasksToKill = Set(task1, task2)
     val originalAppDefinition = AppDefinition(appId, instances = 23)
 
@@ -80,10 +74,10 @@ class TaskKillerTest extends MarathonSpec
       toKillCaptor.capture())
     ).thenReturn(Future.successful(expectedDeploymentPlan))
 
-    val result = taskKiller.killAndScale(appId, (tasks) => tasksToKill, force = true)
+    val result = taskKiller.killAndScale(appId, (tasks) => tasksToKill.map(_.marathonTask), force = true)
     result.futureValue shouldEqual expectedDeploymentPlan
     forceCaptor.getValue shouldEqual true
-    toKillCaptor.getValue shouldEqual Map(appId -> tasksToKill)
+    toKillCaptor.getValue shouldEqual Map(appId -> tasksToKill.map(_.marathonTask))
   }
 
   test("KillRequested without scaling") {
@@ -100,14 +94,8 @@ class TaskKillerTest extends MarathonSpec
   test("Kill and scale w/o force should fail if there is a deployment") {
     val appId = PathId(List("my", "app"))
     val now = Timestamp.now()
-    val task1 = MarathonTasks.makeTask(
-      "task-1", "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = SlaveID("1")
-    )
-    val task2 = MarathonTasks.makeTask(
-      "task-2", "host", ports = Nil, attributes = Nil, version = Timestamp.now(), now = now,
-      slaveId = SlaveID("1")
-    )
+    val task1 = MarathonTestHelper.mininimalTask(appId)
+    val task2 = MarathonTestHelper.mininimalTask(appId)
     val tasksToKill = Set(task1, task2)
 
     when(tracker.hasAppTasksSync(appId)).thenReturn(true)
@@ -122,7 +110,7 @@ class TaskKillerTest extends MarathonSpec
       any[Map[PathId, Set[MarathonTask]]]
     )).thenReturn(Future.failed(AppLockedException()))
 
-    val result = taskKiller.killAndScale(appId, (tasks) => tasksToKill, force = false)
+    val result = taskKiller.killAndScale(appId, (tasks) => tasksToKill.map(_.marathonTask), force = false)
     forceCaptor.getValue shouldEqual false
     result.failed.futureValue shouldEqual AppLockedException()
   }

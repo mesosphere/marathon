@@ -2,6 +2,7 @@ package mesosphere.mesos
 
 import com.google.common.collect.Lists
 import com.google.protobuf.TextFormat
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
@@ -609,22 +610,14 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       )
     )
 
-    var runningTasks = Set.empty[Protos.MarathonTask]
+    var runningTasks = Set.empty[Task]
 
     val builder = new TaskBuilder(app,
       s => TaskID(s.toString), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer, runningTasks)
-      assert(tupleOption.isDefined, message)
-      val marathonTask = MarathonTasks.makeTask(
-        id = tupleOption.get._1.getTaskId.getValue,
-        host = offer.getHostname,
-        ports = tupleOption.get._2,
-        attributes = offer.getAttributesList.asScala.toList,
-        version = Timestamp.now(),
-        now = Timestamp.now(),
-        slaveId = offer.slaveId)
+      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
+      val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
       runningTasks += marathonTask
     }
 
@@ -668,22 +661,14 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       )
     )
 
-    var runningTasks = Set.empty[Protos.MarathonTask]
+    var runningTasks = Set.empty[Task]
 
     val builder = new TaskBuilder(app,
       s => TaskID(s.toString), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
-      val tupleOption = builder.buildIfMatches(offer, runningTasks)
-      assert(tupleOption.isDefined, message)
-      val marathonTask = MarathonTasks.makeTask(
-        id = tupleOption.get._1.getTaskId.getValue,
-        host = offer.getHostname,
-        ports = tupleOption.get._2,
-        attributes = offer.getAttributesList.asScala.toList,
-        version = Timestamp.now(),
-        now = Timestamp.now(),
-        slaveId = offer.slaveId)
+      val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
+      val marathonTask = MarathonTestHelper.makeTaskFromTaskInfo(taskInfo, offer)
       runningTasks += marathonTask
     }
 
@@ -1089,12 +1074,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   def makeSampleTask(id: PathId, attr: String, attrVal: String) = {
-    Protos.MarathonTask.newBuilder()
-      .setHost("host")
-      .addAllPorts(Lists.newArrayList(999))
-      .setId(id.toString)
-      .addAttributes(TextAttribute(attr, attrVal))
-      .build()
+    MarathonTestHelper
+      .stagedTask(taskId = id.toString)
+      .withAgentInfo(_.copy(attributes = Iterable(TextAttribute(attr, attrVal))))
+      .withLaunchedTask(_.copy(networking = Task.HostPorts(List(999))))
   }
 
   private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Int], offer: Offer): Unit = {

@@ -43,7 +43,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val app = AppDefinition(id = PathId("/myapp"))
 
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
-    when(taskTracker.appTasksSync(app.id)).thenReturn(Set.empty[Protos.MarathonTask])
+    when(taskTracker.marathonAppTasksSync(app.id)).thenReturn(Set.empty[Protos.MarathonTask])
 
     val res = scheduler.stopApp(mock[SchedulerDriver], app)
 

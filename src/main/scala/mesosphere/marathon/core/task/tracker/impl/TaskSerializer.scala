@@ -12,7 +12,7 @@ import org.apache.mesos.{ Protos => MesosProtos }
 object TaskSerializer {
   import scala.collection.JavaConverters._
 
-  def taskState(marathonTask: MarathonTask): Task = {
+  def task(marathonTask: MarathonTask): Task = {
 
     def required[T](name: String, maybeValue: Option[T]): T = {
       maybeValue.getOrElse(throw new IllegalArgumentException(s"task[${marathonTask.getId}]: $name must be set"))
@@ -46,15 +46,15 @@ object TaskSerializer {
       }
     }
 
-    def launchedTask: Option[Task.LaunchedTask] = {
+    def launchedTask: Option[Task.Launched] = {
       if (marathonTask.hasStagedAt) {
         Some(
-          Task.LaunchedTask(
+          Task.Launched(
             appVersion = Timestamp(marathonTask.getVersion),
-            status = Task.TaskStatus(
+            status = Task.Status(
               stagedAt = Timestamp(marathonTask.getStagedAt),
               startedAt = if (marathonTask.hasStartedAt) Some(Timestamp(marathonTask.getStartedAt)) else None,
-              status = opt(_.hasStatus, _.getStatus)
+              mesosStatus = opt(_.hasStatus, _.getStatus)
             ),
             networking = if (marathonTask.getPortsCount != 0) {
               Task.HostPorts(marathonTask.getPortsList.iterator().asScala.map(_.intValue()).toVector)
@@ -78,14 +78,14 @@ object TaskSerializer {
       agentInfo = agentInfo,
       reservationWithVolume = reservationWithVolume,
       launchCounter = marathonTask.getLaunchCounter,
-      launchedTask = launchedTask
+      launched = launchedTask
     )
   }
 
   def marathonTask(taskState: Task): MarathonTask = {
     val builder = MarathonTask.newBuilder()
 
-    builder.setId(taskState.taskId.id)
+    builder.setId(taskState.taskId.idString)
 
     import taskState.agentInfo
     builder.setHost(agentInfo.host)
@@ -98,11 +98,11 @@ object TaskSerializer {
 
     builder.setLaunchCounter(taskState.launchCounter)
 
-    taskState.launchedTask.foreach { launchedTask =>
+    taskState.launched.foreach { launchedTask =>
       builder.setVersion(launchedTask.appVersion.toString)
       builder.setStagedAt(launchedTask.status.stagedAt.toDateTime.getMillis)
       launchedTask.status.startedAt.foreach(startedAt => builder.setStartedAt(startedAt.toDateTime.getMillis))
-      launchedTask.status.status.foreach(status => builder.setStatus(status))
+      launchedTask.status.mesosStatus.foreach(status => builder.setStatus(status))
       launchedTask.networking match {
         case Task.HostPorts(hostPorts) =>
           builder.addAllPorts(hostPorts.view.map(Integer.valueOf(_)).asJava)

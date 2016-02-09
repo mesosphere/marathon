@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
@@ -20,7 +21,7 @@ class NotifyLaunchQueueStepImpl @Inject() (launchQueue: LaunchQueue) extends Tas
 
   override def processUpdate(
     timestamp: Timestamp, appId: PathId, task: MarathonTask, status: TaskStatus): Future[_] = {
-    val taskId = status.getTaskId
+    val taskId = Task.Id(status.getTaskId)
     val update = TaskStatusUpdate(timestamp, taskId, MarathonTaskStatus(status))
     launchQueue.notifyOfTaskUpdate(update)
   }

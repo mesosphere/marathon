@@ -50,7 +50,7 @@ trait StoppingBehavior extends Actor with ActorLogging {
       checkFinished()
 
     case SynchronizeTasks =>
-      val trackerIds = taskTracker.appTasksSync(appId).map(_.getId).toSet
+      val trackerIds = taskTracker.marathonAppTasksSync(appId).map(_.getId).toSet
       idsToKill = idsToKill.filter(trackerIds)
 
       idsToKill.foreach { id =>

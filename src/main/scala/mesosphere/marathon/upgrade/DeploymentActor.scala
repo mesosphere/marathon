@@ -116,7 +116,7 @@ private class DeploymentActor(
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int, toKill: Option[Iterable[MarathonTask]]): Future[Unit] = {
-    val runningTasks = taskTracker.appTasksSync(app.id)
+    val runningTasks = taskTracker.marathonAppTasksSync(app.id)
     def killToMeetConstraints(notSentencedAndRunning: Iterable[MarathonTask], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 

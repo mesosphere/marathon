@@ -1,10 +1,8 @@
 package mesosphere.marathon.upgrade
 
+import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.tasks.MarathonTasks
-import mesosphere.mesos.protos.Implicits.slaveIDToProto
-import mesosphere.mesos.protos.SlaveID
 import org.scalatest.{ FunSuite, Matchers }
 
 class ScalingPropositionTest extends FunSuite with Matchers {
@@ -67,7 +65,7 @@ class ScalingPropositionTest extends FunSuite with Matchers {
 
   test("Determine tasks to kill and start when none are sentenced and need to scale") {
     val proposition = ScalingProposition.propose(
-      runningTasks = Set(createTask(1), createTask(2), createTask(3)),
+      runningTasks = Set(createTask(1), createTask(2), createTask(3)).map(_.marathonTask),
       toKill = Some(emptyTaskSet),
       meetConstraints = noConstraintsToMeet,
       scaleTo = 5
@@ -80,14 +78,14 @@ class ScalingPropositionTest extends FunSuite with Matchers {
   test("Determine tasks to kill when scaling to 0") {
     val runningTasks = Set(createTask(1), createTask(2), createTask(3))
     val proposition = ScalingProposition.propose(
-      runningTasks = runningTasks,
+      runningTasks = runningTasks.map(_.marathonTask),
       toKill = Some(emptyTaskSet),
       meetConstraints = noConstraintsToMeet,
       scaleTo = 0
     )
 
     proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get shouldEqual runningTasks.toSeq.reverse
+    proposition.tasksToKill.get shouldEqual runningTasks.toSeq.reverse.map(_.marathonTask)
     proposition.tasksToStart shouldBe empty
   }
 
@@ -98,14 +96,14 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     val alreadyKilled = createTask(42)
 
     val proposition = ScalingProposition.propose(
-      runningTasks = Set(task_1, task_2, task_3),
-      toKill = Some(Set(task_2, task_3, alreadyKilled)),
+      runningTasks = Set(task_1, task_2, task_3).map(_.marathonTask),
+      toKill = Some(Set(task_2, task_3, alreadyKilled).map(_.marathonTask)),
       meetConstraints = noConstraintsToMeet,
       scaleTo = 3
     )
 
     proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get shouldEqual Seq(task_2, task_3)
+    proposition.tasksToKill.get shouldEqual Seq(task_2, task_3).map(_.marathonTask)
     proposition.tasksToStart shouldBe Some(2)
   }
 
@@ -117,14 +115,14 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     val alreadyKilled = createTask(42)
 
     val proposition = ScalingProposition.propose(
-      runningTasks = Set(task_1, task_2, task_3, task_4),
-      toKill = Some(Set(alreadyKilled)),
+      runningTasks = Set(task_1, task_2, task_3, task_4).map(_.marathonTask),
+      toKill = Some(Set(alreadyKilled.marathonTask)),
       meetConstraints = noConstraintsToMeet,
       scaleTo = 3
     )
 
     proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get shouldEqual Seq(task_4)
+    proposition.tasksToKill.get shouldEqual Seq(task_4).map(_.marathonTask)
     proposition.tasksToStart shouldBe empty
   }
 
@@ -135,22 +133,20 @@ class ScalingPropositionTest extends FunSuite with Matchers {
     val task_4 = createTask(4)
 
     val proposition = ScalingProposition.propose(
-      runningTasks = Set(task_1, task_2, task_3, task_4),
-      toKill = Some(Set(task_2)),
-      meetConstraints = killToMeetConstraints(task_3),
+      runningTasks = Set(task_1, task_2, task_3, task_4).map(_.marathonTask),
+      toKill = Some(Set(task_2.marathonTask)),
+      meetConstraints = killToMeetConstraints(task_3.marathonTask),
       scaleTo = 1
     )
 
     proposition.tasksToKill shouldBe defined
-    proposition.tasksToKill.get shouldEqual Seq(task_2, task_3, task_4)
+    proposition.tasksToKill.get shouldEqual Seq(task_2, task_3, task_4).map(_.marathonTask)
     proposition.tasksToStart shouldBe empty
   }
 
   // Helper functions
 
-  private def createTask(index: Long) = MarathonTasks.makeTask(
-    s"task-$index", "", Nil, Nil, version = Timestamp(index), now = Timestamp.now(), slaveId = SlaveID("1")
-  )
+  private def createTask(index: Long) = MarathonTestHelper.runningTask(s"task-$index", appVersion = Timestamp(index), startedAt = Timestamp.now().toDateTime.getMillis)
 
   private def noConstraintsToMeet(running: Iterable[MarathonTask], killCount: Int) = Iterable.empty[MarathonTask]
 

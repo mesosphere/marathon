@@ -6,6 +6,7 @@ import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueueModu
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
 import mesosphere.marathon.core.matcher.base.OfferMatcher
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.integration.setup.WaitTestSupport
@@ -36,7 +37,7 @@ class LaunchQueueModuleTest
 
   test("An added queue item is returned in list") {
     Given("a task queue with one item")
-    call(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[MarathonTask])
+    call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
     taskQueue.add(app)
 
     When("querying its contents")
@@ -48,12 +49,12 @@ class LaunchQueueModuleTest
     assert(list.head.tasksLeftToLaunch == 1)
     assert(list.head.tasksLaunchedOrRunning == 0)
     assert(list.head.taskLaunchesInFlight == 0)
-    verify(taskTracker).appTasksSync(app.id)
+    verify(taskTracker).tasksByAppSync
   }
 
   test("An added queue item is reflected via count") {
     Given("a task queue with one item")
-    call(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[MarathonTask])
+    call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
     taskQueue.add(app)
 
     When("querying its count")
@@ -61,12 +62,12 @@ class LaunchQueueModuleTest
 
     Then("we get a count == 1")
     assert(count == 1)
-    verify(taskTracker).appTasksSync(app.id)
+    verify(taskTracker).tasksByAppSync
   }
 
   test("A purged queue item has a count of 0") {
     Given("a task queue with one item which is purged")
-    call(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[MarathonTask])
+    call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
     taskQueue.add(app)
     taskQueue.purge(app.id)
 
@@ -75,12 +76,12 @@ class LaunchQueueModuleTest
 
     Then("we get a count == 0")
     assert(count == 0)
-    verify(taskTracker).appTasksSync(app.id)
+    verify(taskTracker).tasksByAppSync
   }
 
   test("A re-added queue item has a count of 1") {
     Given("a task queue with one item which is purged")
-    call(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[MarathonTask])
+    call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
     taskQueue.add(app)
     taskQueue.purge(app.id)
     taskQueue.add(app)
@@ -90,12 +91,12 @@ class LaunchQueueModuleTest
 
     Then("we get a count == 1")
     assert(count == 1)
-    verify(taskTracker, times(2)).appTasksSync(app.id)
+    verify(taskTracker, times(2)).tasksByAppSync
   }
 
   test("adding a queue item registers new offer matcher") {
     Given("An empty task tracker")
-    call(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[MarathonTask])
+    call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
 
     When("Adding an app to the taskQueue")
     taskQueue.add(app)
@@ -104,12 +105,12 @@ class LaunchQueueModuleTest
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
     }
-    verify(taskTracker).appTasksSync(app.id)
+    verify(taskTracker).tasksByAppSync
   }
 
   test("purging a queue item UNregisters offer matcher") {
     Given("An app in the queue")
-    call(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[MarathonTask])
+    call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
     taskQueue.add(app)
 
     When("The app is purged")
@@ -117,14 +118,14 @@ class LaunchQueueModuleTest
 
     Then("No offer matchers remain registered")
     assert(offerMatcherManager.offerMatchers.isEmpty)
-    verify(taskTracker).appTasksSync(app.id)
+    verify(taskTracker).tasksByAppSync
   }
 
   test("an offer gets unsuccessfully matched against an item in the queue") {
     val offer = MarathonTestHelper.makeBasicOffer().build()
 
     Given("An app in the queue")
-    call(taskTracker.appTasksSync(app.id)).thenReturn(Map.empty[String, MarathonTask].values)
+    call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
     taskQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
@@ -140,18 +141,18 @@ class LaunchQueueModuleTest
     assert(matchedTasks.offerId == offer.getId)
     assert(matchedTasks.opsWithSource == Seq.empty)
 
-    verify(taskTracker).appTasksSync(app.id)
+    verify(taskTracker).tasksByAppSync
   }
 
   test("an offer gets successfully matched against an item in the queue") {
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val taskId: TaskID = TaskIdUtil.newTaskId(app.id)
     val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId).build()
-    val marathonTask = MarathonTask.newBuilder().setId(taskId.getValue).build()
+    val marathonTask = MarathonTestHelper.mininimalTask(Task.Id(taskId))
     val createdTask = CreatedTask(mesosTask, marathonTask)
 
     Given("An app in the queue")
-    call(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[MarathonTask])
+    call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
     call(taskFactory.newTask(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(Some(createdTask))
     taskQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
@@ -167,7 +168,7 @@ class LaunchQueueModuleTest
     assert(matchedTasks.offerId == offer.getId)
     assert(matchedTasks.launchedTaskInfos == Seq(mesosTask))
 
-    verify(taskTracker).appTasksSync(app.id)
+    verify(taskTracker).tasksByAppSync
   }
 
   private[this] val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))

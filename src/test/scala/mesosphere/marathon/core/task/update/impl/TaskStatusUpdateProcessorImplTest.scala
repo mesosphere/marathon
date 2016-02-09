@@ -34,17 +34,17 @@ class TaskStatusUpdateProcessorImplTest
     val origUpdate = TaskStatusUpdateTestHelper.finished // everything != lost is handled in the same way
     val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
     val update = origUpdate.withTaskId(status.getTaskId)
-    val taskId = Task.Id(update.wrapped.taskId.getValue)
+    val taskId = update.wrapped.taskId
 
     Given("an unknown task")
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.task(appId, taskId)(global) returns Future.successful(None)
+    f.taskTracker.task(taskId)(global) returns Future.successful(None)
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(appId, taskId)(global)
+    verify(f.taskTracker).task(taskId)(global)
 
     And("the task kill gets initiated")
     verify(f.schedulerDriver).killTask(status.getTaskId)
@@ -60,19 +60,19 @@ class TaskStatusUpdateProcessorImplTest
     val origUpdate = TaskStatusUpdateTestHelper.finished // everything != lost is handled in the same way
     val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
     val update = origUpdate.withTaskId(status.getTaskId)
-    val taskId = Task.Id(update.wrapped.taskId.getValue)
+    val taskId = update.wrapped.taskId
 
     Given("an unknown task")
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.task(appId, taskId)(global) returns Future.successful(
-      Some(MarathonTestHelper.mininimalTask(taskId.id))
+    f.taskTracker.task(taskId)(global) returns Future.successful(
+      Some(MarathonTestHelper.mininimalTask(taskId.idString))
     )
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(appId, taskId)(global)
+    verify(f.taskTracker).task(taskId)(global)
 
     And("the task kill gets initiated")
     verify(f.schedulerDriver).killTask(status.getTaskId)
@@ -89,17 +89,17 @@ class TaskStatusUpdateProcessorImplTest
     val origUpdate = TaskStatusUpdateTestHelper.lost
     val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
     val update = origUpdate.withTaskId(status.getTaskId)
-    val taskId = Task.Id(update.wrapped.taskId.getValue)
+    val taskId = update.wrapped.taskId
 
     Given("an unknown task")
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.task(appId, taskId)(global) returns Future.successful(None)
+    f.taskTracker.task(taskId)(global) returns Future.successful(None)
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(appId, taskId)(global)
+    verify(f.taskTracker).task(taskId)(global)
 
     And("the update has been acknowledged")
     verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
@@ -114,11 +114,11 @@ class TaskStatusUpdateProcessorImplTest
     val origUpdate = TaskStatusUpdateTestHelper.finished
     val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
     val update = origUpdate.withTaskId(status.getTaskId)
-    val taskId = Task.Id(update.wrapped.taskId.getValue)
+    val taskId = update.wrapped.taskId
 
     Given("a known task")
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.task(appId, taskId) returns Future.successful(Some(taskState))
+    f.taskTracker.task(taskId) returns Future.successful(Some(taskState))
     f.taskUpdater.statusUpdate(appId, status).asInstanceOf[Future[Unit]] returns Future.successful(())
     f.appRepository.app(appId, version) returns Future.successful(Some(app))
     And("and a cooperative launchQueue")
@@ -128,7 +128,7 @@ class TaskStatusUpdateProcessorImplTest
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(appId, taskId)
+    verify(f.taskTracker).task(taskId)
     verify(f.taskUpdater).statusUpdate(appId, status)
 
     And("the healthCheckManager got informed")
