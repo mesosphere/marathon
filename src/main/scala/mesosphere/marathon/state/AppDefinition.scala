@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.serialization.ContainerSerializer
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
@@ -73,7 +74,9 @@ case class AppDefinition(
 
   ipAddress: Option[IpAddress] = None,
 
-  versionInfo: VersionInfo = VersionInfo.NoVersion)
+  versionInfo: VersionInfo = VersionInfo.NoVersion,
+
+  residency: Option[Residency] = AppDefinition.DefaultResidency)
 
     extends MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
@@ -135,7 +138,7 @@ case class AppDefinition(
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
 
-    container.foreach { c => builder.setContainer(c.toProto()) }
+    container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
 
     acceptedResourceRoles.foreach { acceptedResourceRoles =>
       val roles = Protos.ResourceRoles.newBuilder()
@@ -180,11 +183,11 @@ case class AppDefinition(
 
     val containerOption =
       if (proto.hasContainer)
-        Some(Container(proto.getContainer))
+        Some(ContainerSerializer.fromProto(proto.getContainer))
       else if (proto.getCmd.hasContainer)
-        Some(Container(proto.getCmd.getContainer))
+        Some(ContainerSerializer.fromMesos(proto.getCmd.getContainer))
       else if (proto.hasOBSOLETEContainer)
-        Some(Container(proto.getOBSOLETEContainer))
+        Some(ContainerSerializer.fromMesos(proto.getOBSOLETEContainer))
       else None
 
     val acceptedResourceRoles: Option[Set[String]] =
@@ -455,6 +458,8 @@ object AppDefinition {
     */
   val DefaultAcceptedResourceRoles: Set[String] = Set.empty
 
+  val DefaultResidency: Option[Residency] = None
+
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
@@ -469,6 +474,7 @@ object AppDefinition {
     appDef.id is valid
     appDef.dependencies is valid
     appDef.upgradeStrategy is valid
+    appDef.container.each is valid
     appDef.storeUrls is every(urlCanBeResolvedValidator)
     appDef.ports is elementsAreUnique(filterOutRandomPorts)
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
