@@ -1,17 +1,15 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
-import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskUpdater
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonTestHelper }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
 class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFutures with Mockito with GivenWhenThen {
@@ -30,7 +28,6 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     When("processUpdate is called")
     f.step.processUpdate(
       updateTimestamp,
-      appId,
       existingTask,
       status
     ).futureValue
@@ -54,7 +51,6 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     When("processUpdate is called")
     val eventualFailure = f.step.processUpdate(
       updateTimestamp,
-      appId,
       existingTask,
       status
     ).failed.futureValue
@@ -71,7 +67,7 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
 
   private[this] val slaveId = SlaveID.newBuilder().setValue("slave1")
   private[this] val appId = PathId("/test")
-  private[this] val taskId = TaskIdUtil.newTaskId(appId)
+  private[this] val taskId = Task.Id.forApp(appId)
   private[this] val host = "some.host.local"
   private[this] val portsList = Seq(10, 11, 12)
   private[this] val version = Timestamp(1)
@@ -82,21 +78,19 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     TaskStatus
       .newBuilder()
       .setState(TaskState.TASK_RUNNING)
-      .setTaskId(taskId)
+      .setTaskId(taskId.mesosTaskId)
       .setSlaveId(slaveId)
       .setMessage(taskStatusMessage)
       .build()
 
   private[this] val stagedMarathonTask =
-    MarathonTask
-      .newBuilder()
-      .setId(taskId.getValue)
-      .setHost(host)
-      .addAllPorts(portsList.map(i => i: Integer).asJava)
-      .setVersion(version.toString)
-      .build()
+    MarathonTestHelper
+      .stagedTask(taskId.idString, appVersion = version)
+      .withAgentInfo(_.copy(host = host))
+      .withLaunched(_.copy(networking = Task.HostPorts(portsList)))
 
-  private[this] val runningMarathonTask = stagedMarathonTask.toBuilder.setStartedAt(2).build()
+  private[this] val runningMarathonTask =
+    stagedMarathonTask.withLaunched(_.withStatus(_.copy(startedAt = Some(Timestamp(2)))))
 
   class Fixture {
     lazy val taskUpdater = mock[TaskUpdater]

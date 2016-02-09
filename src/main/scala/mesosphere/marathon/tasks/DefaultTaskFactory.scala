@@ -2,7 +2,6 @@ package mesosphere.marathon.tasks
 
 import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition

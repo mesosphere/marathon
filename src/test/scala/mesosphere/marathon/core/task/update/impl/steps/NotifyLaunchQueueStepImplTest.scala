@@ -30,8 +30,7 @@ class NotifyLaunchQueueStepImplTest extends FunSuite with Matchers with GivenWhe
     When("calling processUpdate")
     f.step.processUpdate(
       updateTimestamp,
-      appId,
-      task = MarathonTestHelper.dummyTaskProto(appId),
+      task = MarathonTestHelper.mininimalTask(appId),
       status = status
     ).futureValue
 
