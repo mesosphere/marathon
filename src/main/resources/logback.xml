@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <configuration>
+    <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
     <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>[%date] %level %message \(%logger:%thread\)%n</pattern>

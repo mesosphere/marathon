@@ -56,12 +56,13 @@ private[launcher] class OfferProcessorImpl(
 
     matchFuture
       .recover {
+        case e: AskTimeoutException =>
+          matchErrorsMeter.mark()
+          log.warn(s"Could not process offer '${offer.getId.getValue}' in time. (See --max_offer_matching_timeout)")
+          MatchedTaskOps(offer.getId, Seq.empty, resendThisOffer = true)
         case NonFatal(e) =>
           matchErrorsMeter.mark()
-          val message =
-            if (e.isInstanceOf[AskTimeoutException]) "in time. Extend with --max_offer_matching_timeout."
-            else s"${e.getClass.getSimpleName}: ${e.getMessage}"
-          log.warn(s"Could not process offer '${offer.getId.getValue}' $message")
+          log.error(s"Could not process offer '${offer.getId.getValue}'", e)
           MatchedTaskOps(offer.getId, Seq.empty, resendThisOffer = true)
       }.flatMap {
         case MatchedTaskOps(offerId, tasks, resendThisOffer) =>
