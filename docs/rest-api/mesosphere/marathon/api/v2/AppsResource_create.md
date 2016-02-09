@@ -154,7 +154,7 @@ The port array currently serves multiple roles:
   See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.html)
   for details.
 
-Since this is confusing, we recommend to configure ports assignment for docker
+Since this is confusing, we recommend to configure ports assignment for Docker
 containers for `BRIDGE` networking in `container.docker.portMappings` instead, see
 [Docker Containers doc page]({{ site.baseurl }}/docs/native-docker.html#bridged-networking-mode)).
 
@@ -164,7 +164,7 @@ Each port value is exposed to the instance via environment variables
 `$PORT0`, `$PORT1`, etc. Ports assigned to running instances are also available
 via the task resource.
 
-We will probably provide an alternative way to configure this for non-docker apps in the future
+We will probably provide an alternative way to configure this for non-Docker apps in the future
 as well, see [Rethink ports API](https://github.com/mesosphere/marathon/issues/670).
 
 ##### requirePorts (Boolean)

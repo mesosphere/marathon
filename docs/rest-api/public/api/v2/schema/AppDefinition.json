@@ -156,8 +156,8 @@
         },
         "type": {
           "type": "string",
-          "description": "The only supported container type at the moment is DOCKER.",
-          "enum": ["DOCKER"]
+          "description": "Supported container types at the moment are DOCKER and MESOS.",
+          "enum": ["MESOS", "DOCKER"]
         },
         "volumes": {
           "items": {
@@ -172,6 +172,17 @@
                 "type": "string",
                 "description": "The path of the volume on the host",
                 "minLength": 1
+              },
+              "persistent": {
+                "additionalProperties": false,
+                "properties": {
+                  "size": {
+                    "type": "integer",
+                    "description": "The size of the persistent volume in MiB",
+                    "minimum": 0
+                  }
+                },
+                "type": "object"
               },
               "mode": {
                 "type": "string",
@@ -393,6 +404,25 @@
         "minimum": 0,
         "type": "integer"
       }
+    },
+    "residency": {
+      "type": "object",
+      "description": "When using local persistent volumes that pin tasks onto agents, these values define how Marathon handles terminal states of these tasks.",
+      "properties": {
+        "relaunchEscalationTimeoutSeconds": {
+          "type": "integer",
+          "description": "When a task using persistent local volumes cannot be restarted on the agent it's been pinned to, Marathon will try to launch this task on another node after this timeout. Defaults to 3600 (one hour).",
+          "minimum": 0,
+          "additionalProperties": false
+        },
+        "taskLostBehavior": {
+          "type": "string",
+          "description": "When Marathon receives a TASK_LOST status update indicating that the agent running the task is gone, this property defines whether Marathon will launch the task on another node or not. Defaults to WAIT_FOREVER",
+          "enum": ["WAIT_FOREVER", "RELAUNCH_AFTER_TIMEOUT"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     },
     "requirePorts": {
       "type": "boolean",
