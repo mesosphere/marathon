@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launcher.impl
 
+import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -55,9 +56,13 @@ private[launcher] class OfferProcessorImpl(
 
     matchFuture
       .recover {
+        case e: AskTimeoutException =>
+          matchErrorsMeter.mark()
+          log.warn(s"Could not process offer '${offer.getId.getValue}' in time. (See --max_offer_matching_timeout)")
+          MatchedTaskOps(offer.getId, Seq.empty, resendThisOffer = true)
         case NonFatal(e) =>
           matchErrorsMeter.mark()
-          log.error(s"error while matching '${offer.getId.getValue}'", e)
+          log.error(s"Could not process offer '${offer.getId.getValue}'", e)
           MatchedTaskOps(offer.getId, Seq.empty, resendThisOffer = true)
       }.flatMap {
         case MatchedTaskOps(offerId, tasks, resendThisOffer) =>
