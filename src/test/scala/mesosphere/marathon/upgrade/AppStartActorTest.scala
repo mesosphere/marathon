@@ -4,6 +4,7 @@ import akka.actor.{ Props }
 import akka.testkit.{ TestActorRef }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
@@ -57,14 +58,14 @@ class AppStartActorTest
 
     system.eventStream.publish(
       MesosStatusUpdateEvent(
-        slaveId = "", taskId = "task_a",
+        slaveId = "", taskId = Task.Id("task_a"),
         taskStatus = "TASK_RUNNING", message = "", appId = app
           .id, host = "", ipAddresses = Nil, ports = Nil, version = app.version.toString
       )
     )
     system.eventStream.publish(
       MesosStatusUpdateEvent(
-        slaveId = "", taskId = "task_b", taskStatus = "TASK_RUNNING", message = "", appId = app.id, host = "",
+        slaveId = "", taskId = Task.Id("task_b"), taskStatus = "TASK_RUNNING", message = "", appId = app.id, host = "",
         ipAddresses = Nil, ports = Nil, version = app.version.toString
       )
     )
@@ -93,8 +94,8 @@ class AppStartActorTest
     )
     watch(ref)
 
-    system.eventStream.publish(HealthStatusChanged(app.id, "task_a", app.version.toString, alive = true))
-    system.eventStream.publish(HealthStatusChanged(app.id, "task_b", app.version.toString, alive = true))
+    system.eventStream.publish(HealthStatusChanged(app.id, Task.Id("task_a"), app.version, alive = true))
+    system.eventStream.publish(HealthStatusChanged(app.id, Task.Id("task_b"), app.version, alive = true))
 
     Await.result(promise.future, 5.seconds)
 

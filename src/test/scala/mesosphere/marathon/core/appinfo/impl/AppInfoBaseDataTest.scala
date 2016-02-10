@@ -64,22 +64,22 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting tasks retrieves tasks from taskTracker and health infos") {
     val f = new Fixture
     Given("three tasks in the task tracker")
-    val running1 = MarathonTestHelper.runningTaskProto("task1")
-    val running2 = running1.toBuilder.setId("task2").buildPartial()
-    val running3 = running1.toBuilder.setId("task3").buildPartial()
+    val running1 = MarathonTestHelper.runningTask("task1")
+    val running2 = MarathonTestHelper.runningTask("task2")
+    val running3 = MarathonTestHelper.runningTask("task3")
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks(app.id, Iterable(running1, running2, running3))))
+      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Iterable(running1, running2, running3))))
 
-    val alive = Health("task2", lastSuccess = Some(Timestamp(1)))
-    val unhealthy = Health("task3", lastFailure = Some(Timestamp(1)))
+    val alive = Health(running2.taskId, lastSuccess = Some(Timestamp(1)))
+    val unhealthy = Health(running3.taskId, lastFailure = Some(Timestamp(1)))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
-        running1.getId -> Seq.empty,
-        running2.getId -> Seq(alive),
-        running3.getId -> Seq(unhealthy)
+        running1.taskId -> Seq.empty,
+        running2.taskId -> Seq(alive),
+        running3.taskId -> Seq(unhealthy)
       )
     )
 
@@ -93,9 +93,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     appInfo should be(AppInfo(app, maybeTasks = Some(
       Seq(
-        EnrichedTask(app.id, running1, Seq.empty),
-        EnrichedTask(app.id, running2, Seq(alive)),
-        EnrichedTask(app.id, running3, Seq(unhealthy))
+        EnrichedTask(app.id, running1.marathonTask, Seq.empty),
+        EnrichedTask(app.id, running2.marathonTask, Seq(alive)),
+        EnrichedTask(app.id, running3.marathonTask, Seq(unhealthy))
       )
     )))
 
@@ -122,9 +122,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
-        "task1" -> Seq(),
-        "task2" -> Seq(Health("task2", lastFailure = Some(Timestamp(1)))),
-        "task3" -> Seq(Health("task3", lastSuccess = Some(Timestamp(2))))
+        Task.Id("task1") -> Seq(),
+        Task.Id("task2") -> Seq(Health(Task.Id("task2"), lastFailure = Some(Timestamp(1)))),
+        Task.Id("task3") -> Seq(Health(Task.Id("task3"), lastSuccess = Some(Timestamp(2))))
       )
     )
 
@@ -244,10 +244,10 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     f.taskTracker.tasksByApp()(global) returns
       Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, tasks)))
 
-    val statuses: Map[String, Seq[Health]] = Map(
-      "task1" -> Seq(),
-      "task2" -> Seq(Health("task2", lastFailure = Some(Timestamp(1)))),
-      "task3" -> Seq(Health("task3", lastSuccess = Some(Timestamp(2))))
+    val statuses: Map[Task.Id, Seq[Health]] = Map(
+      staged.taskId -> Seq(),
+      running.taskId -> Seq(Health(running.taskId, lastFailure = Some(Timestamp(1)))),
+      running2.taskId -> Seq(Health(running2.taskId, lastSuccess = Some(Timestamp(2))))
     )
     f.healthCheckManager.statuses(app.id) returns Future.successful(statuses)
 

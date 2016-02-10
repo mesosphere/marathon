@@ -72,9 +72,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.of(TaskTracker.AppTasks(appId, Iterable(task1, task2)))
-    healthCheckManager.statuses(appId) returns Future.successful(
-      collection.immutable.Map("" -> collection.immutable.Seq())
-    )
+    healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
     val response = appsTaskResource.indexJson("/my/app", auth.request, auth.response)
     response.getStatus shouldEqual 200

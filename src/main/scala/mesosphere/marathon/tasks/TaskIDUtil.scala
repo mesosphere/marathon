@@ -32,9 +32,6 @@ class TaskIdUtil {
       .setValue(taskId)
       .build
   }
-
-  def taskBelongsTo(appId: PathId)(taskId: String): Boolean = taskId.startsWith(appId.safePath + appDelimiter)
-
 }
 
 object TaskIdUtil extends TaskIdUtil

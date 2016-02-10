@@ -54,7 +54,7 @@ private[tracker] object TaskOpProcessorImpl {
           statusUpdate.getState match {
             case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
               Action.Expunge
-            case TASK_RUNNING if currentLaunched.status.startedAt.isEmpty => // was staged, is now running
+            case TASK_RUNNING if !currentLaunched.hasStartedRunning => // was staged, is now running
               val now = clock.now()
               Action.Update(
                 taskState.copy(launched = Some(

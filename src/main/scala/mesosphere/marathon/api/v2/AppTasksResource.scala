@@ -10,6 +10,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth._
@@ -45,7 +46,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
         id <- appIds
         health = result(healthCheckManager.statuses(id))
         task <- taskMap.marathonAppTasks(id)
-      } yield EnrichedTask(id, task, health.getOrElse(task.getId, Nil))
+      } yield EnrichedTask(id, task, health.getOrElse(Task.Id(task.getId), Nil))
 
       val matchingApps = appId match {
         case GroupTasks(gid) =>

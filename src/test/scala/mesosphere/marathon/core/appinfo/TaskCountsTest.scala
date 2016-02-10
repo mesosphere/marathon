@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.appinfo
 
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.Mockito
@@ -53,7 +54,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
       MarathonTestHelper.runningTask("task1")
     )
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map("task1" -> aliveHealth))
+    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Task.Id("task1") -> aliveHealth))
     Then("all counts are 0 except healthy")
     counts should be(TaskCounts.zero.copy(tasksRunning = 1, tasksHealthy = 1))
   }
@@ -64,7 +65,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
       MarathonTestHelper.runningTask("task1")
     )
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map("task1" -> notAliveHealth))
+    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Task.Id("task1") -> notAliveHealth))
     Then("all counts are 0 except tasksUnhealthy")
     counts should be(TaskCounts.zero.copy(tasksRunning = 1, tasksUnhealthy = 1))
   }
@@ -75,7 +76,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
       MarathonTestHelper.runningTask("task1")
     )
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map("task1" -> mixedHealth))
+    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Task.Id("task1") -> mixedHealth))
     Then("all counts are 0 except tasksUnhealthy")
     counts should be(TaskCounts.zero.copy(tasksRunning = 1, tasksUnhealthy = 1))
   }
@@ -86,7 +87,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
       MarathonTestHelper.runningTask("task1")
     )
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map("task1" -> noHealths))
+    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Task.Id("task1") -> noHealths))
     Then("all counts are 0")
     counts should be(TaskCounts.zero.copy(tasksRunning = 1))
   }
@@ -103,8 +104,8 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
     val counts = TaskCounts(
       appTasks = oneStagedTask,
       healthStatuses = Map(
-        "task3" -> aliveHealth,
-        "task4" -> notAliveHealth
+        Task.Id("task3") -> aliveHealth,
+        Task.Id("task4") -> notAliveHealth
       )
     )
     Then("all counts are 0 except staged")
@@ -165,9 +166,9 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
   }
 
   private[this] val noHealths = Seq.empty[Health]
-  private[this] val aliveHealth = Seq(Health("task1", lastSuccess = Some(Timestamp(1))))
+  private[this] val aliveHealth = Seq(Health(Task.Id("task1"), lastSuccess = Some(Timestamp(1))))
   require(aliveHealth.forall(_.alive))
-  private[this] val notAliveHealth = Seq(Health("task1", lastFailure = Some(Timestamp(1))))
+  private[this] val notAliveHealth = Seq(Health(Task.Id("task1"), lastFailure = Some(Timestamp(1))))
   require(notAliveHealth.forall(!_.alive))
   private[this] val mixedHealth = aliveHealth ++ notAliveHealth
 }

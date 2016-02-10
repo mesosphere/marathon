@@ -26,7 +26,8 @@ class TaskReplaceActor(
 
   val tasksToKill = taskTracker.marathonAppTasksSync(app.id)
   val appId = app.id
-  val version = app.version.toString
+  val version = app.version
+  val versionString = app.version.toString
   var healthy = Set.empty[String]
   var newTasksStarted: Int = 0
   var oldTaskIds = tasksToKill.map(_.getId).toSet
@@ -79,26 +80,26 @@ class TaskReplaceActor(
   }
 
   def taskStateBehavior: Receive = {
-    case MesosStatusUpdateEvent(slaveId, taskId, "TASK_RUNNING", _, `appId`, _, _, _, `version`, _, _) =>
-      handleStartedTask(taskId)
+    case MesosStatusUpdateEvent(slaveId, taskId, "TASK_RUNNING", _, `appId`, _, _, _, `versionString`, _, _) =>
+      handleStartedTask(taskId.idString)
   }
 
   def healthCheckingBehavior: Receive = {
-    case HealthStatusChanged(`appId`, taskId, `version`, true, _, _) if !healthy(taskId) =>
-      handleStartedTask(taskId)
+    case HealthStatusChanged(`appId`, taskId, `version`, true, _, _) if !healthy(taskId.idString) =>
+      handleStartedTask(taskId.idString)
   }
 
   def commonBehavior: Receive = {
     // New task failed to start, restart it
-    case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `version`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId.idString) => // scalastyle:ignore line.size.limit
       log.error(s"New task $taskId failed on slave $slaveId during app $appId restart")
-      healthy -= taskId
+      healthy -= taskId.idString
       taskQueue.add(app)
 
     // Old task successfully killed
-    case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
-      oldTaskIds -= taskId
-      outstandingKills -= taskId
+    case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId.idString) => // scalastyle:ignore line.size.limit
+      oldTaskIds -= taskId.idString
+      outstandingKills -= taskId.idString
       reconcileNewTasks()
       checkFinished()
 

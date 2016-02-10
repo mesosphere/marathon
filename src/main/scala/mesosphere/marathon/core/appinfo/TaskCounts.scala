@@ -39,7 +39,7 @@ case class TaskCounts(
 object TaskCounts {
   def zero: TaskCounts = TaskCounts(tasksStaged = 0, tasksRunning = 0, tasksHealthy = 0, tasksUnhealthy = 0)
 
-  def apply(appTasks: Iterable[Task], healthStatuses: Map[String, Seq[Health]]): TaskCounts = {
+  def apply(appTasks: Iterable[Task], healthStatuses: Map[Task.Id, Seq[Health]]): TaskCounts = {
     TaskCounts(TaskForStatistics.forTasks(Timestamp(0), appTasks, healthStatuses))
   }
 

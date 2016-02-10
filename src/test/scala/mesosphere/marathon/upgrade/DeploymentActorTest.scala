@@ -1,12 +1,11 @@
 package mesosphere.marathon.upgrade
 
-import java.util.UUID
-
 import akka.actor.ActorSystem
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
@@ -55,10 +54,10 @@ class DeploymentActorTest
     implicit val system = ActorSystem("TestSystem")
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2)
-    val app2 = AppDefinition(id = PathId("app2"), cmd = Some("cmd"), instances = 1)
-    val app3 = AppDefinition(id = PathId("app3"), cmd = Some("cmd"), instances = 1)
-    val app4 = AppDefinition(id = PathId("app4"), cmd = Some("cmd"))
+    val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
+    val app2 = AppDefinition(id = PathId("/app2"), cmd = Some("cmd"), instances = 1)
+    val app3 = AppDefinition(id = PathId("/app3"), cmd = Some("cmd"), instances = 1)
+    val app4 = AppDefinition(id = PathId("/app4"), cmd = Some("cmd"))
     val origGroup = Group(PathId("/foo/bar"), Set(app1, app2, app4))
 
     val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
@@ -84,7 +83,7 @@ class DeploymentActorTest
     when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent(
-          slaveId = "", taskId = "task1_2", taskStatus = "TASK_KILLED", message = "", appId = app1.id, host = "",
+          slaveId = "", taskId = Task.Id("task1_2"), taskStatus = "TASK_KILLED", message = "", appId = app1.id, host = "",
           ipAddresses = Nil, ports = Nil, version = app1New.version.toString))
         Status.DRIVER_RUNNING
       }
@@ -93,7 +92,7 @@ class DeploymentActorTest
     when(driver.killTask(task2_1.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent(
-          slaveId = "", taskId = "task2_1", taskStatus = "TASK_KILLED", message = "", appId = app2.id, host = "",
+          slaveId = "", taskId = Task.Id("task2_1"), taskStatus = "TASK_KILLED", message = "", appId = app2.id, host = "",
           ipAddresses = Nil, ports = Nil, version = app2.version.toString))
         Status.DRIVER_RUNNING
       }
@@ -104,7 +103,7 @@ class DeploymentActorTest
         println(invocation.getArguments.toSeq)
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
           system.eventStream.publish(MesosStatusUpdateEvent(
-            slaveId = "", taskId = UUID.randomUUID().toString, taskStatus = "TASK_RUNNING", message = "",
+            slaveId = "", taskId = Task.Id.forApp(app2New.id), taskStatus = "TASK_RUNNING", message = "",
             appId = app2.id, host = "", ipAddresses = Nil, ports = Nil, version = app2New.version.toString)
           )
         true
@@ -121,7 +120,7 @@ class DeploymentActorTest
     when(scheduler.scale(driver, app3)).thenAnswer(new Answer[Future[Unit]] {
       def answer(invocation: InvocationOnMock): Future[Unit] = {
         system.eventStream.publish(MesosStatusUpdateEvent(
-          slaveId = "", taskId = "task3_1", taskStatus = "TASK_RUNNING", message = "", appId = app3.id, host = "",
+          slaveId = "", taskId = Task.Id("task3_1"), taskStatus = "TASK_RUNNING", message = "", appId = app3.id, host = "",
           ipAddresses = Nil, ports = Nil, version = app3.version.toString))
         Future.successful(())
       }
@@ -130,7 +129,7 @@ class DeploymentActorTest
     when(driver.killTask(task4_1.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         system.eventStream.publish(MesosStatusUpdateEvent(
-          slaveId = "", taskId = "task4_1", taskStatus = "TASK_FINISHED", message = "", appId = app4.id,
+          slaveId = "", taskId = Task.Id("task4_1"), taskStatus = "TASK_FINISHED", message = "", appId = app4.id,
           host = "", ipAddresses = Nil, ports = Nil, version = app4.version.toString
         ))
         Status.DRIVER_RUNNING
@@ -172,7 +171,7 @@ class DeploymentActorTest
     implicit val system = ActorSystem("TestSystem")
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2)
+    val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
     val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
@@ -189,14 +188,14 @@ class DeploymentActorTest
 
     when(driver.killTask(task1_1.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_1", "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
+        system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id("task1_1"), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
         Status.DRIVER_RUNNING
       }
     })
 
     when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_2", "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
+        system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id("task1_2"), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
         Status.DRIVER_RUNNING
       }
     })
@@ -210,7 +209,8 @@ class DeploymentActorTest
     when(queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
-          system.eventStream.publish(MesosStatusUpdateEvent("", s"task1_${taskIDs.next()}", "TASK_RUNNING", "", app.id, "", Nil, Nil, appNew.version.toString))
+          system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id(s"task1_${taskIDs.next()}"),
+            "TASK_RUNNING", "", app.id, "", Nil, Nil, appNew.version.toString))
         true
       }
     })
@@ -247,7 +247,7 @@ class DeploymentActorTest
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
 
-    val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 0)
+    val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 0)
     val origGroup = Group(PathId("/foo/bar"), Set(app))
 
     val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
@@ -285,7 +285,7 @@ class DeploymentActorTest
     implicit val system = ActorSystem("TestSystem")
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
-    val app1 = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 3)
+    val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 3)
     val origGroup = Group(PathId("/foo/bar"), Set(app1))
 
     val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
@@ -304,7 +304,7 @@ class DeploymentActorTest
 
     when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", "task1_2", "TASK_KILLED", "", app1.id, "", Nil, Nil, app1New.version.toString))
+        system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id("task1_2"), "TASK_KILLED", "", app1.id, "", Nil, Nil, app1New.version.toString))
         Status.DRIVER_RUNNING
       }
     })

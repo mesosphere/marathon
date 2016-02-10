@@ -37,7 +37,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     events should be (Seq(
       MesosStatusUpdateEvent(
         slaveId = slaveId.getValue,
-        taskId = taskId.idString,
+        taskId = taskId,
         taskStatus = status.getState.name,
         message = taskStatusMessage,
         appId = appId,
@@ -102,7 +102,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     events should be (Seq(
       MesosStatusUpdateEvent(
         slaveId = slaveId.getValue,
-        taskId = taskId.idString,
+        taskId = taskId,
         taskStatus = status.getState.name,
         message = taskStatusMessage,
         appId = appId,

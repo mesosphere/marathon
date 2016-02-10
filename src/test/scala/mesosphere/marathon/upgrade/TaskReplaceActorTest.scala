@@ -4,6 +4,7 @@ import akka.testkit.{ TestActorRef, TestKit }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
@@ -44,8 +45,8 @@ class TaskReplaceActorTest
     when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
-        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
+        val update = MesosStatusUpdateEvent("", Task.Id(taskId), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
         system.eventStream.publish(update)
         Status.DRIVER_RUNNING
       }
@@ -65,7 +66,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref ! MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString)
+      ref ! MesosStatusUpdateEvent("", Task.Id(s"task_$i"), "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString)
 
     Await.result(promise.future, 5.seconds)
     verify(queue).resetDelay(app)
@@ -91,8 +92,8 @@ class TaskReplaceActorTest
     when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
-        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
+        val update = MesosStatusUpdateEvent("", Task.Id(taskId), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
         system.eventStream.publish(update)
         Status.DRIVER_RUNNING
       }
@@ -112,7 +113,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref ! HealthStatusChanged(app.id, s"task_$i", app.version.toString, alive = true)
+      ref ! HealthStatusChanged(app.id, Task.Id(s"task_$i"), app.version, alive = true)
 
     Await.result(promise.future, 5.seconds)
     verify(queue).resetDelay(app)
@@ -134,8 +135,8 @@ class TaskReplaceActorTest
     when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
-        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
+        val update = MesosStatusUpdateEvent("", Task.Id(taskId), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
         system.eventStream.publish(update)
         Status.DRIVER_RUNNING
       }
@@ -157,8 +158,8 @@ class TaskReplaceActorTest
     eventually { verify(driver, times(2)).killTask(_) }
     eventually { app: AppDefinition => verify(queue, times(2)).add(app) }
 
-    ref ! MesosStatusUpdateEvent("", "task_1", "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString)
-    ref ! MesosStatusUpdateEvent("", "task_2", "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString)
+    ref ! MesosStatusUpdateEvent("", Task.Id("task_1"), "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString)
+    ref ! MesosStatusUpdateEvent("", Task.Id("task_2"), "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString)
 
     Await.result(promise.future, 5.seconds)
 
@@ -188,8 +189,8 @@ class TaskReplaceActorTest
     when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       override def answer(invocation: InvocationOnMock): Status = {
-        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
-        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
+        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
+        val update = MesosStatusUpdateEvent("", Task.Id(taskId), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
         system.eventStream.publish(update)
 
         oldTaskCount -= 1
@@ -217,15 +218,15 @@ class TaskReplaceActorTest
     assert(oldTaskCount == 2)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_0", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id(s"task_0"), app.version, alive = true)
     eventually { oldTaskCount should be(1) }
 
     // second new task becomes healthy and the last old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_1", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id(s"task_1"), app.version, alive = true)
     eventually { oldTaskCount should be(0) }
 
     // third new task becomes healthy
-    ref ! HealthStatusChanged(app.id, s"task_2", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id(s"task_2"), app.version, alive = true)
     oldTaskCount should be(0)
 
     Await.result(promise.future, 5.seconds)
@@ -258,7 +259,7 @@ class TaskReplaceActorTest
     when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
         val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
         system.eventStream.publish(update)
 
@@ -288,17 +289,17 @@ class TaskReplaceActorTest
     assert(oldTaskCount == 2)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_0", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id("task_0"), app.version, alive = true)
     eventually { oldTaskCount should be(1) }
     eventually { queueOrder.verify(queue).add(_: AppDefinition, 1) }
 
     // second new task becomes healthy and the last old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_1", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id("task_1"), app.version, alive = true)
     eventually { oldTaskCount should be(0) }
     eventually { queueOrder.verify(queue).add(_: AppDefinition, 1) }
 
     // third new task becomes healthy
-    ref ! HealthStatusChanged(app.id, s"task_2", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id("task_2"), app.version, alive = true)
     oldTaskCount should be(0)
 
     Await.result(promise.future, 5.seconds)
@@ -332,7 +333,7 @@ class TaskReplaceActorTest
     when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
         val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
         system.eventStream.publish(update)
 
@@ -360,17 +361,17 @@ class TaskReplaceActorTest
     assert(oldTaskCount == 3)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_0", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id("task_0"), app.version, alive = true)
     eventually { oldTaskCount should be(2) }
     eventually { queueOrder.verify(queue).add(_: AppDefinition, 1) }
 
     // second new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_1", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id("task_1"), app.version, alive = true)
     eventually { oldTaskCount should be(1) }
     eventually { queueOrder.verify(queue).add(_: AppDefinition, 1) }
 
     // third new task becomes healthy and last old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_2", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id("task_2"), app.version, alive = true)
     eventually { oldTaskCount should be(0) }
     queueOrder.verify(queue, never()).add(_: AppDefinition, 1)
 
@@ -404,7 +405,7 @@ class TaskReplaceActorTest
     when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
-        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
         val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
         system.eventStream.publish(update)
 
@@ -432,17 +433,17 @@ class TaskReplaceActorTest
     assert(oldTaskCount == 3)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_0", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id("task_0"), app.version, alive = true)
     eventually { oldTaskCount should be(2) }
     eventually { queueOrder.verify(queue).add(_: AppDefinition, 1) }
 
     // second new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_1", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id("task_1"), app.version, alive = true)
     eventually { oldTaskCount should be(1) }
     queueOrder.verify(queue, never()).add(_: AppDefinition, 1)
 
     // third new task becomes healthy and last old task is killed
-    ref ! HealthStatusChanged(app.id, s"task_2", app.version.toString, alive = true)
+    ref ! HealthStatusChanged(app.id, Task.Id("task_2"), app.version, alive = true)
     eventually { oldTaskCount should be(0) }
     queueOrder.verify(queue, never()).add(_: AppDefinition, 1)
 
@@ -501,9 +502,9 @@ class TaskReplaceActorTest
       var firstKillForTaskB = true
 
       def answer(invocation: InvocationOnMock): Status = {
-        val taskId = invocation.getArguments()(0).asInstanceOf[TaskID].getValue
+        val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
 
-        if (taskId == taskB.getId && firstKillForTaskB) {
+        if (taskId.idString == taskB.getId && firstKillForTaskB) {
           firstKillForTaskB = false
         }
         else {
@@ -531,7 +532,7 @@ class TaskReplaceActorTest
     ref ! RetryKills
 
     for (i <- 0 until app.instances)
-      ref ! MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString)
+      ref ! MesosStatusUpdateEvent("", Task.Id(s"task_$i"), "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString)
 
     Await.result(promise.future, 5.seconds)
     verify(queue).resetDelay(app)
@@ -565,7 +566,7 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref.receive(MesosStatusUpdateEvent("", s"task_$i", "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString))
+      ref.receive(MesosStatusUpdateEvent("", Task.Id(s"task_$i"), "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString))
 
     verify(queue, Mockito.timeout(1000)).resetDelay(app)
     verify(driver, Mockito.timeout(1000)).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
@@ -574,7 +575,7 @@ class TaskReplaceActorTest
     promise.isCompleted should be(false)
 
     for (oldTask <- Set(taskA, taskB))
-      ref.receive(MesosStatusUpdateEvent("", oldTask.getId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
+      ref.receive(MesosStatusUpdateEvent("", Task.Id(oldTask.getId), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
 
     Await.result(promise.future, 0.second)
   }

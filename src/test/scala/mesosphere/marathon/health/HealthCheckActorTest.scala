@@ -8,7 +8,7 @@ import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder, MarathonSpec, Protos }
+import mesosphere.marathon._
 import mesosphere.util.CallerThreadExecutionContext
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
@@ -33,19 +33,15 @@ class HealthCheckActorTest
     val tracker = mock[TaskTracker]
     val latch = TestLatch(1)
 
-    val appId = "test".toPath
-    val appVersion = "1"
+    val appId = "/test".toPath
+    val appVersion = Timestamp(1)
     val app = AppDefinition(id = appId)
     val appRepository: AppRepository = mock[AppRepository]
-    when(appRepository.app(appId, Timestamp(appVersion))).thenReturn(Future.successful(Some(app)))
+    when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
 
-    val task = Protos.MarathonTask
-      .newBuilder
-      .setId("test_task.9876543")
-      .setVersion(appVersion)
-      .build()
+    val task = MarathonTestHelper.stagedTask("test_task.9876543", appVersion = appVersion)
 
-    when(tracker.marathonAppTasksSync(appId)).thenReturn(Set(task))
+    when(tracker.appTasksSync(appId)).thenReturn(Set(task))
 
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val actor = TestActorRef[HealthCheckActor](
@@ -73,16 +69,12 @@ class HealthCheckActorTest
     holder.driver = Some(driver)
 
     val appId = "test".toPath
-    val appVersion = "1"
+    val appVersion = Timestamp(1)
     val app = AppDefinition(id = appId)
     val appRepository: AppRepository = mock[AppRepository]
-    when(appRepository.app(appId, Timestamp(appVersion))).thenReturn(Future.successful(Some(app)))
+    when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
 
-    val task = Protos.MarathonTask
-      .newBuilder
-      .setId("test_task.9876543")
-      .setVersion(appVersion)
-      .build()
+    val task = MarathonTestHelper.runningTask("test_task.9876543", appVersion = appVersion)
 
     val healthCheck: HealthCheck = HealthCheck(maxConsecutiveFailures = 3)
 
@@ -92,9 +84,9 @@ class HealthCheckActorTest
       )
     )
 
-    actor.underlyingActor.checkConsecutiveFailures(task, Health(task.getVersion, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(task, Health(task.taskId, consecutiveFailures = 3))
 
-    verify(driver).killTask(TaskID.newBuilder().setValue(task.getId).build())
+    verify(driver).killTask(task.taskId.mesosTaskId)
 
     verifyNoMoreInteractions(tracker, driver, scheduler)
   }

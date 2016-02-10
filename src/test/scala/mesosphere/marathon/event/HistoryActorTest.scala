@@ -3,6 +3,7 @@ package mesosphere.marathon.event
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef, TestKit }
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, Timestamp }
 import mesosphere.marathon.test.MarathonActorSupport
@@ -90,7 +91,7 @@ class HistoryActorTest
 
     MesosStatusUpdateEvent(
       slaveId = "slaveId",
-      taskId = "taskId",
+      taskId = Task.Id("taskId"),
       taskStatus = state.name(),
       message = "message",
       appId = "appId".toPath,

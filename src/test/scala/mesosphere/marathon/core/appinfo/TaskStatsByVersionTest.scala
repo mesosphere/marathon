@@ -19,7 +19,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
       now = now,
       versionInfo = versionInfo,
       tasks = Seq.empty,
-      statuses = Map.empty[String, Seq[Health]]
+      statuses = Map.empty[Task.Id, Seq[Health]]
     )
     Then("we get none")
     stats should be (
@@ -49,7 +49,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
     ) ++ afterLastScalingTasks
 
     val tasks = outdatedTasks ++ afterLastConfigChangeTasks
-    val statuses = Map.empty[String, Seq[Health]]
+    val statuses = Map.empty[Task.Id, Seq[Health]]
 
     When("calculating stats")
     val stats = TaskStatsByVersion(
