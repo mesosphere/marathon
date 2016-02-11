@@ -52,23 +52,26 @@ object Validation {
   }
 
   private def allRuleViolationsWithFullDescription(violation: Violation,
-                                                   parentDesc: Option[String] = None,
-                                                   attachDot: Boolean = true): Set[RuleViolation] = {
+                                                   parentDesc: Option[String] = None): Set[RuleViolation] = {
     def concatPath(parent: String, child: Option[String], attachDot: Boolean): String = {
-      child.map(c => parent + { if (attachDot) "." else "" } + c).getOrElse(parent)
+      child.map(c => parent + c + { if (attachDot) "." else "" }).getOrElse(parent)
     }
 
     violation match {
       case r: RuleViolation => Set(parentDesc.map(p =>
-        r.withDescription(concatPath(p, r.description, attachDot)))
+        r.withDescription(concatPath(p, r.description, attachDot = false)))
         .getOrElse(r))
       case g: GroupViolation => g.children.flatMap { c =>
-        parentDesc.map { p =>
-          val desc = concatPath(p, g.description, attachDot)
-          allRuleViolationsWithFullDescription(c, Some(desc), g.description.isDefined)
+        val desc = parentDesc.map { p =>
+          val attachDot = g.value match {
+            case _: Iterable[_] => false
+            case _              => true
+          }
+          Some(concatPath(p, g.description, attachDot))
         } getOrElse {
-          allRuleViolationsWithFullDescription(c, g.description, g.description.isDefined)
+          g.description.map(d => concatPath("", Some(d), attachDot = true))
         }
+        allRuleViolationsWithFullDescription(c, desc)
       }
     }
   }

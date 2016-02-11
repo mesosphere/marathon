@@ -148,7 +148,7 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
 
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
-    response.getEntity.toString should include("container.volumes.[0]hostPath")
+    response.getEntity.toString should include("container.volumes[0].hostPath")
     response.getEntity.toString should include("must not be empty")
   }
 
