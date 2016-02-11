@@ -6,7 +6,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.state.{ Timestamp, PathId }
-import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos.Protos.{ TaskState, TaskStatus, SlaveID }
 import org.scalatest.concurrent.ScalaFutures
@@ -40,7 +39,7 @@ class NotifyLaunchQueueStepImplTest extends FunSuite with Matchers with GivenWhe
 
   private[this] val slaveId = SlaveID.newBuilder().setValue("slave1")
   private[this] val appId = PathId("/test")
-  private[this] val taskId = TaskIdUtil.newTaskId(appId)
+  private[this] val taskId = Task.Id.forApp(appId).mesosTaskId
   private[this] val updateTimestamp = Timestamp(100)
   private[this] val taskStatusMessage = "some update"
 

@@ -7,6 +7,7 @@ import akka.event.EventStream
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.health.HealthCheckManager
@@ -115,9 +116,9 @@ private class DeploymentActor(
     promise.future
   }
 
-  def scaleApp(app: AppDefinition, scaleTo: Int, toKill: Option[Iterable[MarathonTask]]): Future[Unit] = {
-    val runningTasks = taskTracker.marathonAppTasksSync(app.id)
-    def killToMeetConstraints(notSentencedAndRunning: Iterable[MarathonTask], toKillCount: Int) =
+  def scaleApp(app: AppDefinition, scaleTo: Int, toKill: Option[Iterable[Task]]): Future[Unit] = {
+    val runningTasks = taskTracker.appTasksSync(app.id).filter(_.launched.isDefined)
+    def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
@@ -148,9 +149,9 @@ private class DeploymentActor(
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
-  def killTasks(appId: PathId, tasks: Seq[MarathonTask]): Future[Unit] = {
+  def killTasks(appId: PathId, tasks: Seq[Task]): Future[Unit] = {
     val promise = Promise[Unit]()
-    context.actorOf(Props(classOf[TaskKillActor], driver, appId, taskTracker, eventBus, tasks.toSet, promise))
+    context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, tasks.map(_.taskId), promise))
     promise.future
   }
 

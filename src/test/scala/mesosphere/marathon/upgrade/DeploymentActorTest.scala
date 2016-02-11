@@ -3,7 +3,6 @@ package mesosphere.marathon.upgrade
 import akka.actor.ActorSystem
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -13,7 +12,6 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, SchedulerActions }
-import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.{ any, same }
@@ -75,10 +73,10 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(tracker.marathonAppTasksSync(app1.id)).thenReturn(Set(task1_1.marathonTask, task1_2.marathonTask))
-    when(tracker.marathonAppTasksSync(app2.id)).thenReturn(Set(task2_1.marathonTask))
-    when(tracker.marathonAppTasksSync(app3.id)).thenReturn(Set(task3_1.marathonTask))
-    when(tracker.marathonAppTasksSync(app4.id)).thenReturn(Set(task4_1.marathonTask))
+    when(tracker.appTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2))
+    when(tracker.appTasksSync(app2.id)).thenReturn(Set(task2_1))
+    when(tracker.appTasksSync(app3.id)).thenReturn(Set(task3_1))
+    when(tracker.appTasksSync(app4.id)).thenReturn(Set(task4_1))
 
     when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -182,7 +180,7 @@ class DeploymentActorTest
     val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app.version, startedAt = 0)
     val task1_2 = MarathonTestHelper.runningTask("task1_2", appVersion = app.version, startedAt = 1000)
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(task1_1.marathonTask, task1_2.marathonTask))
+    when(tracker.appTasksSync(app.id)).thenReturn(Set(task1_1, task1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -256,7 +254,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set[MarathonTask]())
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
 
     try {
       TestActorRef(
@@ -293,14 +291,13 @@ class DeploymentActorTest
 
     val targetGroup = Group(PathId("/foo/bar"), Set(app1New))
 
-    val slaveId = SlaveID("some slave id")
     val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app1.version, startedAt = 0)
     val task1_2 = MarathonTestHelper.runningTask("task1_2", appVersion = app1.version, startedAt = 500)
     val task1_3 = MarathonTestHelper.runningTask("task1_3", appVersion = app1.version, startedAt = 1000)
 
-    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2.marathonTask)))
+    val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 
-    when(tracker.marathonAppTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3).map(_.marathonTask))
+    when(tracker.appTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
 
     when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {

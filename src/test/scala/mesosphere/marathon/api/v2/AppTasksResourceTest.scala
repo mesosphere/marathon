@@ -23,7 +23,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
   test("deleteMany") {
     val appId = "/my/app"
     val host = "host"
-    val toKill = Set(MarathonTask.getDefaultInstance)
+    val toKill = Set(MarathonTestHelper.stagedTaskForApp(PathId(appId)))
 
     config.zkTimeoutDuration returns 5.seconds
     taskKiller.kill(any, any) returns Future.successful(toKill)
@@ -32,7 +32,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     response.getStatus shouldEqual 200
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
-      .correspondsToJsonOf(Json.obj("tasks" -> toKill))
+      .correspondsToJsonOf(Json.obj("tasks" -> toKill.view.map(_.marathonTask)))
   }
 
   test("deleteOne") {
@@ -45,8 +45,8 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.marathonAppTasksSync(appId) returns Set(task1, task2).map(_.marathonTask)
-    taskKiller.kill(any, any) returns Future.successful(toKill.map(_.marathonTask))
+    taskTracker.appTasksSync(appId) returns Set(task1, task2)
+    taskKiller.kill(any, any) returns Future.successful(toKill)
 
     val response = appsTaskResource.deleteOne(
       appId.root, task1.taskId.idString, scale = false, force = false, auth.request, auth.response

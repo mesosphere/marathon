@@ -1,6 +1,5 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.PortsMatcher
@@ -80,7 +79,7 @@ object ResourceMatcher {
     def meetsAllConstraints: Boolean = {
       lazy val tasks = runningTasks
       val badConstraints = app.constraints.filterNot { constraint =>
-        Constraints.meetsConstraint(tasks.view.map(_.marathonTask), offer, constraint)
+        Constraints.meetsConstraint(tasks, offer, constraint)
       }
 
       if (badConstraints.nonEmpty && log.isInfoEnabled) {

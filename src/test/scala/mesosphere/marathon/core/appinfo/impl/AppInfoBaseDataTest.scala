@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.Task
@@ -11,7 +10,6 @@ import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSchedulerService, MarathonSpec }
-import org.apache.mesos.Protos
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 

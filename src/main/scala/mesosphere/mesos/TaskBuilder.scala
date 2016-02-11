@@ -18,7 +18,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 class TaskBuilder(app: AppDefinition,
-                  newTaskId: PathId => TaskID,
+                  newTaskId: PathId => Task.Id,
                   config: MarathonConf) {
 
   import mesosphere.mesos.protos.Implicits._
@@ -103,7 +103,7 @@ class TaskBuilder(app: AppDefinition,
     val builder = TaskInfo.newBuilder
       // Use a valid hostname to make service discovery easier
       .setName(app.id.toHostname)
-      .setTaskId(taskId)
+      .setTaskId(taskId.mesosTaskId)
       .setSlaveId(offer.getSlaveId)
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
@@ -134,7 +134,7 @@ class TaskBuilder(app: AppDefinition,
         containerProto.foreach(builder.setContainer)
 
       case PathExecutor(path) =>
-        val executorId = f"marathon-${taskId.getValue}" // Fresh executor
+        val executorId = f"marathon-${taskId.idString}" // Fresh executor
         val executorPath = s"'$path'" // TODO: Really escape this.
         val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
@@ -263,7 +263,7 @@ object TaskBuilder {
   val maxVariableLength = maxEnvironmentVarLength - labelEnvironmentKeyPrefix.length
 
   def commandInfo(app: AppDefinition,
-                  taskId: Option[TaskID],
+                  taskId: Option[Task.Id],
                   host: Option[String],
                   ports: Seq[Int],
                   envPrefix: Option[String]): CommandInfo = {
@@ -344,14 +344,14 @@ object TaskBuilder {
     }
   }
 
-  def taskContextEnv(app: AppDefinition, taskId: Option[TaskID]): Map[String, String] = {
+  def taskContextEnv(app: AppDefinition, taskId: Option[Task.Id]): Map[String, String] = {
     if (taskId.isEmpty) {
       // This branch is taken during serialization. Do not add environment variables in this case.
       Map.empty
     }
     else {
       Seq(
-        "MESOS_TASK_ID" -> taskId.map(_.getValue),
+        "MESOS_TASK_ID" -> taskId.map(_.idString),
         "MARATHON_APP_ID" -> Some(app.id.toString),
         "MARATHON_APP_VERSION" -> Some(app.version.toString),
         "MARATHON_APP_DOCKER_IMAGE" -> app.container.flatMap(_.docker.map(_.image)),

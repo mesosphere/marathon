@@ -8,7 +8,6 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.event._
-import mesosphere.marathon.tasks._
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
@@ -28,7 +27,6 @@ class MarathonScheduler @Inject() (
     taskStatusProcessor: TaskStatusUpdateProcessor,
     frameworkIdUtil: FrameworkIdUtil,
     mesosLeaderInfo: MesosLeaderInfo,
-    taskIdUtil: TaskIdUtil,
     system: ActorSystem,
     config: MarathonConf,
     schedulerCallbacks: SchedulerCallbacks) extends Scheduler {

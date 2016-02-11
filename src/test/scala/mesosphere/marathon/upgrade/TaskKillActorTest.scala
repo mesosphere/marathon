@@ -1,15 +1,14 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.{ MarathonTestHelper, TaskUpgradeCanceledException }
+import akka.actor.Props
+import akka.testkit.TestActorRef
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import akka.actor.Props
-import akka.testkit.TestActorRef
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
-import org.apache.mesos.Protos.TaskID
+import mesosphere.marathon.{ MarathonTestHelper, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
@@ -39,10 +38,10 @@ class TaskKillActorTest
     val taskA = MarathonTestHelper.runningTask("taskA_id")
     val taskB = MarathonTestHelper.runningTask("taskB_id")
 
-    val tasks = Set(taskA, taskB).map(_.marathonTask)
+    val tasks = Iterable(taskA, taskB)
     val promise = Promise[Unit]()
 
-    val ref = TestActorRef(Props(new TaskKillActor(driver, PathId("/test"), taskTracker, system.eventStream, tasks, promise)))
+    val ref = TestActorRef(Props(new TaskKillActor(driver, PathId("/test"), taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
 
     watch(ref)
 
@@ -57,10 +56,10 @@ class TaskKillActorTest
   }
 
   test("Kill tasks with empty task list") {
-    val tasks = Set[MarathonTask]()
+    val tasks = Iterable.empty[Task]
     val promise = Promise[Unit]()
 
-    val ref = TestActorRef(Props(new TaskKillActor(driver, PathId("/test"), taskTracker, system.eventStream, tasks, promise)))
+    val ref = TestActorRef(Props(new TaskKillActor(driver, PathId("/test"), taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
 
     watch(ref)
 
@@ -74,10 +73,10 @@ class TaskKillActorTest
     val taskA = MarathonTestHelper.runningTask("taskA_id")
     val taskB = MarathonTestHelper.runningTask("taskB_id")
 
-    val tasks = Set(taskA, taskB).map(_.marathonTask)
+    val tasks = Iterable(taskA, taskB)
     val promise = Promise[Unit]()
 
-    val ref = system.actorOf(Props(new TaskKillActor(driver, PathId("/test"), taskTracker, system.eventStream, tasks, promise)))
+    val ref = system.actorOf(Props(new TaskKillActor(driver, PathId("/test"), taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
 
     watch(ref)
 
@@ -95,12 +94,11 @@ class TaskKillActorTest
     val promise = Promise[Unit]()
     val taskA = MarathonTestHelper.runningTask("taskA_id")
     val taskB = MarathonTestHelper.runningTask("taskB_id")
-    val tasks = mutable.Set(taskA, taskB).map(_.marathonTask)
+    val tasks = mutable.Iterable(taskA, taskB)
 
-    when(taskTracker.marathonAppTasksSync(app.id))
-      .thenReturn(Set.empty[MarathonTask])
+    when(taskTracker.appTasksSync(app.id)).thenReturn(mutable.Iterable.empty[Task])
 
-    val ref = TestActorRef[TaskKillActor](Props(new TaskKillActor(driver, app.id, taskTracker, system.eventStream, tasks.toSet, promise)))
+    val ref = TestActorRef[TaskKillActor](Props(new TaskKillActor(driver, app.id, taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
     watch(ref)
 
     ref.underlyingActor.periodicalCheck.cancel()
@@ -117,12 +115,12 @@ class TaskKillActorTest
     val taskB = MarathonTestHelper.runningTask("taskB_id")
     val appId = PathId("/test")
 
-    val tasks = Set(taskA, taskB).map(_.marathonTask)
+    val tasks = Iterable(taskA, taskB)
     val promise = Promise[Unit]()
 
-    val ref = TestActorRef[TaskKillActor](Props(new TaskKillActor(driver, appId, taskTracker, system.eventStream, tasks, promise)))
+    val ref = TestActorRef[TaskKillActor](Props(new TaskKillActor(driver, appId, taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
 
-    when(taskTracker.marathonAppTasksSync(appId)).thenReturn(Set(taskA, taskB).map(_.marathonTask))
+    when(taskTracker.appTasksSync(appId)).thenReturn(Iterable(taskA, taskB))
 
     watch(ref)
 
@@ -134,8 +132,8 @@ class TaskKillActorTest
     system.eventStream.publish(MesosStatusUpdateEvent("", taskB.taskId, "TASK_KILLED", "", PathId.empty, "", Nil, Nil, ""))
 
     Await.result(promise.future, 5.seconds) should be(())
-    verify(driver, times(2)).killTask(taskA.taskId.mesosTaskId)
-    verify(driver, times(2)).killTask(taskB.taskId.mesosTaskId)
+    verify(driver, times(2)).killTask(taskA.launchedMesosId.get)
+    verify(driver, times(2)).killTask(taskB.launchedMesosId.get)
 
     expectTerminated(ref)
   }

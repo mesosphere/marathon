@@ -27,13 +27,13 @@ import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManag
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.{ TaskIdUtil, _ }
+import mesosphere.marathon.tasks._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
-import mesosphere.util.{ CapConcurrentExecutionsMetrics, CapConcurrentExecutions }
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore, _ }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.ZooDefs.Ids
@@ -187,7 +187,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     taskQueue: LaunchQueue,
     frameworkIdUtil: FrameworkIdUtil,
     driverHolder: MarathonSchedulerDriverHolder,
-    taskIdUtil: TaskIdUtil,
     leaderInfo: LeaderInfo,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
@@ -294,10 +293,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     metrics: Metrics): Migration = {
     new Migration(store, appRepo, groupRepo, taskRepo, conf, metrics)
   }
-
-  @Provides
-  @Singleton
-  def provideTaskIdUtil(): TaskIdUtil = new TaskIdUtil
 
   @Provides
   @Singleton

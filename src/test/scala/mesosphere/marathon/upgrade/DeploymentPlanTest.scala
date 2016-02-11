@@ -1,11 +1,10 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
@@ -373,7 +372,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
       )
     )
 
-    val taskToKill = MarathonTask.getDefaultInstance
+    val taskToKill = MarathonTestHelper.stagedTaskForApp(aId)
     val plan = DeploymentPlan(
       original = originalGroup,
       target = targetGroup,

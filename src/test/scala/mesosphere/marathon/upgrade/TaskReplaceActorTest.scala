@@ -1,8 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{ TestActorRef, TestKit }
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.TaskUpgradeCanceledException
+import akka.testkit.TestActorRef
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -12,6 +10,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.upgrade.TaskReplaceActor.RetryKills
+import mesosphere.marathon.{ MarathonTestHelper, TaskUpgradeCanceledException }
 import org.apache.mesos.Protos.{ Status, TaskID }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
@@ -37,12 +36,12 @@ class TaskReplaceActorTest
   test("Replace without health checks") {
     val app = AppDefinition(id = "myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
@@ -70,8 +69,8 @@ class TaskReplaceActorTest
 
     Await.result(promise.future, 5.seconds)
     verify(queue).resetDelay(app)
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+    verify(driver).killTask(taskA.launchedMesosId.get)
+    verify(driver).killTask(taskB.launchedMesosId.get)
 
     expectTerminated(ref)
   }
@@ -84,12 +83,12 @@ class TaskReplaceActorTest
       upgradeStrategy = UpgradeStrategy(0.0))
 
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
@@ -117,8 +116,8 @@ class TaskReplaceActorTest
 
     Await.result(promise.future, 5.seconds)
     verify(queue).resetDelay(app)
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+    verify(driver).killTask(taskA.launchedMesosId.get)
+    verify(driver).killTask(taskB.launchedMesosId.get)
 
     expectTerminated(ref)
   }
@@ -126,13 +125,13 @@ class TaskReplaceActorTest
   test("Replace and scale down from more than new minCapacity") {
     val app = AppDefinition(id = "myApp".toPath, instances = 2, upgradeStrategy = UpgradeStrategy(1.0))
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
-    val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
+    val taskC = MarathonTestHelper.runningTask("taskC_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
@@ -178,15 +177,15 @@ class TaskReplaceActorTest
     )
 
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
-    val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
+    val taskC = MarathonTestHelper.runningTask("taskC_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     var oldTaskCount = 3
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       override def answer(invocation: InvocationOnMock): Status = {
         val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
@@ -232,9 +231,9 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskC.getId).build())
+    verify(driver).killTask(taskA.launchedMesosId.get)
+    verify(driver).killTask(taskB.launchedMesosId.get)
+    verify(driver).killTask(taskC.launchedMesosId.get)
 
     expectTerminated(ref)
   }
@@ -248,15 +247,15 @@ class TaskReplaceActorTest
     )
 
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
-    val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
+    val taskC = MarathonTestHelper.runningTask("taskC_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     var oldTaskCount = 3
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
@@ -306,9 +305,9 @@ class TaskReplaceActorTest
 
     // all old tasks are killed
     verify(queue).resetDelay(app)
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskC.getId).build())
+    verify(driver).killTask(taskA.launchedMesosId.get)
+    verify(driver).killTask(taskB.launchedMesosId.get)
+    verify(driver).killTask(taskC.launchedMesosId.get)
 
     expectTerminated(ref)
   }
@@ -322,15 +321,15 @@ class TaskReplaceActorTest
     )
 
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
-    val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
+    val taskC = MarathonTestHelper.runningTask("taskC_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     var oldTaskCount = 3
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
@@ -378,9 +377,9 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskC.getId).build())
+    verify(driver).killTask(taskA.launchedMesosId.get)
+    verify(driver).killTask(taskB.launchedMesosId.get)
+    verify(driver).killTask(taskC.launchedMesosId.get)
 
     expectTerminated(ref)
   }
@@ -394,15 +393,15 @@ class TaskReplaceActorTest
     )
 
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
-    val taskC = MarathonTask.newBuilder().setId("taskC_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
+    val taskC = MarathonTestHelper.runningTask("taskC_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
     var oldTaskCount = 3
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB, taskC))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
@@ -450,9 +449,9 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskC.getId).build())
+    verify(driver).killTask(taskA.launchedMesosId.get)
+    verify(driver).killTask(taskB.launchedMesosId.get)
+    verify(driver).killTask(taskC.launchedMesosId.get)
 
     expectTerminated(ref)
   }
@@ -460,12 +459,12 @@ class TaskReplaceActorTest
   test("Cancelled") {
     val app = AppDefinition(id = "myApp".toPath, instances = 2)
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
 
@@ -492,19 +491,19 @@ class TaskReplaceActorTest
   test("Retry outstanding kills") {
     val app = AppDefinition(id = "myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       var firstKillForTaskB = true
 
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
 
-        if (taskId.idString == taskB.getId && firstKillForTaskB) {
+        if (taskId == taskB.taskId && firstKillForTaskB) {
           firstKillForTaskB = false
         }
         else {
@@ -536,8 +535,8 @@ class TaskReplaceActorTest
 
     Await.result(promise.future, 5.seconds)
     verify(queue).resetDelay(app)
-    verify(driver).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
-    verify(driver, times(2)).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+    verify(driver).killTask(taskA.launchedMesosId.get)
+    verify(driver, times(2)).killTask(taskB.launchedMesosId.get)
 
     expectTerminated(ref)
   }
@@ -545,12 +544,12 @@ class TaskReplaceActorTest
   test("Wait until the tasks are killed") {
     val app = AppDefinition(id = "myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
     val driver = mock[SchedulerDriver]
-    val taskA = MarathonTask.newBuilder().setId("taskA_id").build()
-    val taskB = MarathonTask.newBuilder().setId("taskB_id").build()
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.marathonAppTasksSync(app.id)).thenReturn(Set(taskA, taskB))
+    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
 
@@ -569,13 +568,13 @@ class TaskReplaceActorTest
       ref.receive(MesosStatusUpdateEvent("", Task.Id(s"task_$i"), "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString))
 
     verify(queue, Mockito.timeout(1000)).resetDelay(app)
-    verify(driver, Mockito.timeout(1000)).killTask(TaskID.newBuilder().setValue(taskA.getId).build())
-    verify(driver, Mockito.timeout(1000)).killTask(TaskID.newBuilder().setValue(taskB.getId).build())
+    verify(driver, Mockito.timeout(1000)).killTask(taskA.launchedMesosId.get)
+    verify(driver, Mockito.timeout(1000)).killTask(taskB.launchedMesosId.get)
 
     promise.isCompleted should be(false)
 
-    for (oldTask <- Set(taskA, taskB))
-      ref.receive(MesosStatusUpdateEvent("", Task.Id(oldTask.getId), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
+    for (oldTask <- Iterable(taskA, taskB))
+      ref.receive(MesosStatusUpdateEvent("", oldTask.taskId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
 
     Await.result(promise.future, 0.second)
   }

@@ -84,9 +84,9 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                  @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     doIfAuthorized(req, resp, KillTask, appId.toRootPath) { implicit principal =>
       val pathId = appId.toRootPath
-      def findToKill(appTasks: Iterable[MarathonTask]): Iterable[MarathonTask] = {
+      def findToKill(appTasks: Iterable[Task]): Iterable[Task] = {
         Option(host).fold(appTasks) { hostname =>
-          appTasks.filter(_.getHost == hostname || hostname == "*")
+          appTasks.filter(_.agentInfo.host == hostname || hostname == "*")
         }
       }
 
@@ -112,7 +112,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                 @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
     val pathId = appId.toRootPath
     doIfAuthorized(req, resp, KillTask, appId.toRootPath) { implicit principal =>
-      def findToKill(appTasks: Iterable[MarathonTask]): Iterable[MarathonTask] = appTasks.find(_.getId == id)
+      def findToKill(appTasks: Iterable[Task]): Iterable[Task] = appTasks.find(_.taskId == Task.Id(id))
 
       if (scale) {
         val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
@@ -127,11 +127,11 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   }
 
   private def reqToResponse(
-    future: Future[Iterable[MarathonTask]])(toResponse: Iterable[MarathonTask] => Response): Response = {
+    future: Future[Iterable[Task]])(toResponse: Iterable[MarathonTask] => Response): Response = {
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    val response = future.map {
-      toResponse
+    val response = future.map { tasks =>
+      toResponse(tasks.view.map(_.marathonTask))
     } recover {
       case UnknownAppException(unknownAppId) => unknownApp(unknownAppId)
     }

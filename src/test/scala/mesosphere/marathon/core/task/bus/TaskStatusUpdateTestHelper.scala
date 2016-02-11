@@ -3,7 +3,6 @@ package mesosphere.marathon.core.task.bus
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
 import org.apache.mesos.Protos.TaskID
 import org.joda.time.DateTime
 

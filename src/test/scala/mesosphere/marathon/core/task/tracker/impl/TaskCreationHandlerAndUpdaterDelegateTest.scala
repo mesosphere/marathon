@@ -2,7 +2,6 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import akka.actor.Status
 import akka.testkit.TestProbe
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
@@ -11,8 +10,6 @@ import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 import org.scalatest.{ Matchers, GivenWhenThen }
 import org.scalatest.concurrent.ScalaFutures
-
-import scala.concurrent.duration.Deadline
 
 class TaskCreationHandlerAndUpdaterDelegateTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
@@ -39,15 +36,14 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("Created fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val taskState = MarathonTestHelper.mininimalTask(appId)
-    val task: MarathonTask = taskState.marathonTask
+    val task = MarathonTestHelper.mininimalTask(appId)
 
     When("created is called")
-    val create = f.delegate.created(taskState)
+    val create = f.delegate.created(task)
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, taskState.taskId, TaskOpProcessor.Action.Update(taskState))
+      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.taskId, TaskOpProcessor.Action.Update(task))
     )
 
     When("the response is an error")
@@ -55,7 +51,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     f.taskTrackerProbe.reply(Status.Failure(cause))
     Then("The reply is the value of task")
     create.failed.futureValue.getMessage should include(appId.toString)
-    create.failed.futureValue.getMessage should include(task.getId)
+    create.failed.futureValue.getMessage should include(task.taskId.idString)
     create.failed.futureValue.getMessage should include("Update")
     create.failed.futureValue.getCause should be(cause)
   }
@@ -63,15 +59,14 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("Terminated succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val taskState = MarathonTestHelper.mininimalTask(appId)
-    val task: MarathonTask = taskState.marathonTask
+    val task = MarathonTestHelper.mininimalTask(appId)
 
     When("created is called")
-    val create = f.delegate.terminated(taskState.taskId)
+    val create = f.delegate.terminated(task.taskId)
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, taskState.taskId, TaskOpProcessor.Action.Expunge)
+      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.taskId, TaskOpProcessor.Action.Expunge)
     )
 
     When("the request is acknowledged")
@@ -83,15 +78,14 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("Terminated fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val taskState = MarathonTestHelper.mininimalTask(appId)
-    val task: MarathonTask = taskState.marathonTask
+    val task = MarathonTestHelper.mininimalTask(appId)
 
     When("created is called")
-    val create = f.delegate.terminated(taskState.taskId)
+    val create = f.delegate.terminated(task.taskId)
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, taskState.taskId, TaskOpProcessor.Action.Expunge)
+      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.taskId, TaskOpProcessor.Action.Expunge)
     )
 
     When("the response is an error")
@@ -99,7 +93,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     f.taskTrackerProbe.reply(Status.Failure(cause))
     Then("The reply is the value of task")
     create.failed.futureValue.getMessage should include(appId.toString)
-    create.failed.futureValue.getMessage should include(task.getId)
+    create.failed.futureValue.getMessage should include(task.taskId.idString)
     create.failed.futureValue.getMessage should include("Expunge")
     create.failed.futureValue.getCause should be(cause)
   }

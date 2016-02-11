@@ -3,13 +3,14 @@ package mesosphere.mesos
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import com.google.common.collect.Lists
 import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import org.scalatest.{ Matchers, GivenWhenThen }
 import scala.collection.JavaConverters._
 import scala.util.Random
 import mesosphere.mesos.protos.{ FrameworkID, SlaveID, OfferID, TextAttribute }
 import org.apache.mesos.Protos.{ Offer, Attribute }
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 
 class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
@@ -18,14 +19,14 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
   test("Select tasks to kill for a single group by works") {
     Given("app with hostname group_by and 20 tasks even distributed on 2 hosts")
     val app = AppDefinition(constraints = Set(makeConstraint("hostname", Operator.GROUP_BY, "")))
-    val tasks = 0.to(19).map(num => makeTaskWithHost(s"$num", s"srv${num % 2}")).toSet
+    val tasks = 0.to(19).map(num => makeTaskWithHost(s"$num", s"srv${num % 2}"))
 
     When("10 tasks should be selected to kill")
     val result = Constraints.selectTasksToKill(app, tasks, 10)
 
     Then("10 tasks got selected and evenly distributed")
     result should have size 10
-    val dist = result.groupBy(_.getId.toInt % 2 == 1)
+    val dist = result.groupBy(_.taskId.idString.toInt % 2 == 1)
     dist should have size 2
     dist.values.head should have size 5
   }
@@ -37,11 +38,11 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
       20.to(29).map(num => makeTaskWithHost(s"$num", s"srv2"))
 
     When("10 tasks should be selected to kill")
-    val result = Constraints.selectTasksToKill(app, tasks.toSet, 10)
+    val result = Constraints.selectTasksToKill(app, tasks, 10)
 
     Then("All 10 tasks are from srv1")
     result should have size 10
-    result.forall(_.getHost == "srv1") should be(true)
+    result.forall(_.agentInfo.host == "srv1") should be(true)
   }
 
   test("Select tasks to kill for multiple group by works") {
@@ -56,14 +57,14 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
         30.to(39).map(num => makeSampleTask(s"$num", Map("rack" -> "rack-2", "color" -> "green")))
 
     When("20 tasks should be selected to kill")
-    val result = Constraints.selectTasksToKill(app, tasks.toSet, 20)
+    val result = Constraints.selectTasksToKill(app, tasks, 20)
 
     Then("20 tasks got selected and evenly distributed")
     result should have size 20
-    result.count(_.getAttributesList.asScala.exists(_.getText.getValue == "rack-1")) should be(10)
-    result.count(_.getAttributesList.asScala.exists(_.getText.getValue == "rack-2")) should be(10)
-    result.count(_.getAttributesList.asScala.exists(_.getText.getValue == "blue")) should be(10)
-    result.count(_.getAttributesList.asScala.exists(_.getText.getValue == "green")) should be(10)
+    result.count(_.agentInfo.attributes.exists(_.getText.getValue == "rack-1")) should be(10)
+    result.count(_.agentInfo.attributes.exists(_.getText.getValue == "rack-2")) should be(10)
+    result.count(_.agentInfo.attributes.exists(_.getText.getValue == "blue")) should be(10)
+    result.count(_.agentInfo.attributes.exists(_.getText.getValue == "green")) should be(10)
   }
 
   test("Does not select any task without constraint") {
@@ -72,7 +73,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val tasks = 0.to(9).map(num => makeSampleTask(s"$num", Map("rack" -> "rack-1", "color" -> "blue")))
 
     When("10 tasks should be selected to kill")
-    val result = Constraints.selectTasksToKill(app, tasks.toSet, 5)
+    val result = Constraints.selectTasksToKill(app, tasks, 5)
 
     Then("0 tasks got selected")
     result should have size 0
@@ -251,7 +252,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val task4_rack1 = makeSampleTask("task4", Map("rackid" -> "rack-1"))
     val task5_rack3 = makeSampleTask("task5", Map("rackid" -> "rack-3"))
 
-    var sameRack = Set[MarathonTask]()
+    var sameRack = Iterable.empty[Task]
 
     val group2ByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "2")
 
@@ -310,7 +311,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val task4_rack1 = makeSampleTask("task4", Map("rackid" -> "rack-1"))
     val task5_rack2 = makeSampleTask("task5", Map("rackid" -> "rack-2"))
 
-    var groupRack = Set[MarathonTask]()
+    var groupRack = Iterable.empty[Task]
 
     val groupByRack = makeConstraint("rackid", Constraint.Operator.GROUP_BY, "3")
 
@@ -364,7 +365,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val task3_host2 = makeTaskWithHost("task3", "host2")
     val task4_host3 = makeTaskWithHost("task4", "host3")
 
-    var groupHost = Set[MarathonTask]()
+    var groupHost = Iterable.empty[Task]
     val attributes: Set[Attribute] = Set()
 
     val groupByHost = makeConstraint("hostname", Constraint.Operator.GROUP_BY, "2")
@@ -442,15 +443,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
   }
 
   def makeSampleTask(id: String, attrs: Map[String, String]) = {
-    val builder = MarathonTask.newBuilder()
-      .setHost("host")
-      .addAllPorts(Lists.newArrayList(999))
-      .setId(id)
-
-    for ((name, value) <- attrs) {
-      builder.addAttributes(TextAttribute(name, value))
-    }
-    builder.build()
+    val attributes = attrs.map { case (name, value) => TextAttribute(name, value): Attribute }
+    MarathonTestHelper.stagedTask(id)
+      .withAgentInfo(_.copy(attributes = attributes))
+      .withLaunched(_.copy(networking = Task.HostPorts(999)))
   }
 
   def makeOffer(hostname: String, attributes: Iterable[Attribute]) = {
@@ -464,11 +460,10 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
   }
 
   def makeTaskWithHost(id: String, host: String) = {
-    MarathonTask.newBuilder()
-      .setHost(host)
-      .addAllPorts(Lists.newArrayList(999))
-      .setId(id)
-      .build()
+    MarathonTestHelper
+      .runningTask(id)
+      .withAgentInfo(_.copy(host = host))
+      .withLaunched(_.copy(networking = Task.HostPorts(999)))
   }
 
   def makeConstraint(field: String, operator: Operator, value: String) = {

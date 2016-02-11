@@ -36,7 +36,6 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   var taskUpdater: TaskUpdater = null
   var state: PersistentStore = null
   val config = MarathonTestHelper.defaultConfig()
-  val taskIdUtil = new TaskIdUtil
   val metrics = new Metrics(new MetricRegistry)
 
   before {

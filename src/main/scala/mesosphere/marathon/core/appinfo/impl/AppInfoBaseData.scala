@@ -6,13 +6,11 @@ import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, Tas
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.TaskTracker.AppTasks
 import mesosphere.marathon.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 
-import scala.collection
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.util.control.NonFatal

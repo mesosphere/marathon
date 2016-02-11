@@ -2,17 +2,15 @@ package mesosphere.marathon.api.v2
 
 import java.util.Collections
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state.{ Group, GroupManager, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import mesosphere.mesos.protos._
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -26,18 +24,17 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     Given("two apps and 1 task each")
     val app1 = "/my/app-1".toRootPath
     val app2 = "/my/app-2".toRootPath
-    val taskId1 = taskIdUtil.newTaskId(app1).getValue
-    val taskId2 = taskIdUtil.newTaskId(app2).getValue
+    val taskId1 = Task.Id.forApp(app1).idString
+    val taskId2 = Task.Id.forApp(app2).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
 
-    val task1 = MarathonTestHelper.mininimalTask(taskId1)
-    val task2 = MarathonTestHelper.mininimalTask(taskId2)
+    val task1 = MarathonTestHelper.stagedTask(taskId1)
+    val task2 = MarathonTestHelper.runningTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.marathonTaskSync(task1.taskId) returns Some(task1.marathonTask)
-    taskTracker.marathonTaskSync(task2.taskId) returns Some(task2.marathonTask)
-    taskKiller.kill(any, any) returns Future.successful(Set.empty[MarathonTask])
+    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.forTasks(task1, task2)
+    taskKiller.kill(any, any) returns Future.successful(Iterable.empty[Task])
 
     When("we ask to kill both tasks")
     val response = taskResource.killTasks(scale = false, force = false, body = bodyBytes, auth.request, auth.response)
@@ -60,20 +57,17 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     Given("two apps and 1 task each")
     val app1 = "/my/app-1".toRootPath
     val app2 = "/my/app-2".toRootPath
-    val taskId1 = taskIdUtil.newTaskId(app1).getValue
-    val taskId2 = taskIdUtil.newTaskId(app2).getValue
+    val taskId1 = Task.Id.forApp(app1).idString
+    val taskId2 = Task.Id.forApp(app2).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
     val deploymentPlan = new DeploymentPlan("plan", Group.empty, Group.empty, Seq.empty[DeploymentStep], Timestamp.zero)
 
-    val slaveId = SlaveID("some slave ID")
-    val now = Timestamp.now()
-    val task1 = MarathonTestHelper.mininimalTask(taskId1)
-    val task2 = MarathonTestHelper.mininimalTask(taskId2)
+    val task1 = MarathonTestHelper.runningTask(taskId1)
+    val task2 = MarathonTestHelper.stagedTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.marathonTaskSync(task1.taskId) returns Some(task1.marathonTask)
-    taskTracker.marathonTaskSync(task2.taskId) returns Some(task2.marathonTask)
+    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.forTasks(task1, task2)
     taskKiller.killAndScale(any, any) returns Future.successful(deploymentPlan)
 
     When("we ask to kill both tasks")
@@ -86,7 +80,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     response.getEntity shouldEqual """{"version":"1970-01-01T00:00:00.000Z","deploymentId":"plan"}"""
 
     And("app1 and app2 is killed with force")
-    verify(taskKiller).killAndScale(eq(Map(app1 -> Set(task1.marathonTask), app2 -> Set(task2.marathonTask))), eq(true))
+    verify(taskKiller).killAndScale(eq(Map(app1 -> Iterable(task1), app2 -> Iterable(task2))), eq(true))
 
     And("nothing else should be called on the TaskKiller")
     noMoreInteractions(taskKiller)
@@ -97,9 +91,9 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     auth.authenticated = false
     val req = auth.request
     val resp = auth.response
-    val taskId1 = taskIdUtil.newTaskId("/my/app".toRootPath).getValue
-    val taskId2 = taskIdUtil.newTaskId("/my/app".toRootPath).getValue
-    val taskId3 = taskIdUtil.newTaskId("/my/app".toRootPath).getValue
+    val taskId1 = Task.Id.forApp("/my/app".toRootPath).idString
+    val taskId2 = Task.Id.forApp("/my/app".toRootPath).idString
+    val taskId3 = Task.Id.forApp("/my/app".toRootPath).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
     When(s"the index as json is fetched")
@@ -124,9 +118,9 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     auth.authorized = false
     val req = auth.request
     val resp = auth.response
-    val taskId1 = taskIdUtil.newTaskId("/my/app".toRootPath).getValue
-    val taskId2 = taskIdUtil.newTaskId("/my/app".toRootPath).getValue
-    val taskId3 = taskIdUtil.newTaskId("/my/app".toRootPath).getValue
+    val taskId1 = Task.Id.forApp("/my/app".toRootPath).idString
+    val taskId2 = Task.Id.forApp("/my/app".toRootPath).idString
+    val taskId3 = Task.Id.forApp("/my/app".toRootPath).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
     When(s"kill task is called")
@@ -138,7 +132,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
   test("killTasks fails for invalid taskId") {
     Given("a valid and an invalid taskId")
     val app1 = "/my/app-1".toRootPath
-    val taskId1 = taskIdUtil.newTaskId(app1).getValue
+    val taskId1 = Task.Id.forApp(app1).idString
     val body = s"""{"ids": ["$taskId1", "invalidTaskId"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
 
@@ -161,7 +155,6 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
   var groupManager: GroupManager = _
   var healthCheckManager: HealthCheckManager = _
   var taskResource: TasksResource = _
-  var taskIdUtil: TaskIdUtil = TaskIdUtil
   var auth: TestAuthFixture = _
 
   before {
@@ -179,7 +172,6 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
       config,
       groupManager,
       healthCheckManager,
-      taskIdUtil,
       auth.auth,
       auth.auth
     )
