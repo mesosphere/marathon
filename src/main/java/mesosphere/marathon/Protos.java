@@ -9971,41 +9971,31 @@ public final class Protos {
     org.apache.mesos.Protos.NetworkInfoOrBuilder getNetworksOrBuilder(
         int index);
 
-    // optional int64 launch_counter = 12 [default = 0];
+    // optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;
     /**
-     * <code>optional int64 launch_counter = 12 [default = 0];</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
      *
      * <pre>
-     * since 0.16
+     * since 0.16, a list of volumes can be associated with the task ID
      * </pre>
      */
-    boolean hasLaunchCounter();
+    boolean hasReservationWithVolumes();
     /**
-     * <code>optional int64 launch_counter = 12 [default = 0];</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
      *
      * <pre>
-     * since 0.16
+     * since 0.16, a list of volumes can be associated with the task ID
      * </pre>
      */
-    long getLaunchCounter();
-
-    // optional bool reservation_with_volume_id = 13 [default = false];
+    mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes getReservationWithVolumes();
     /**
-     * <code>optional bool reservation_with_volume_id = 13 [default = false];</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
      *
      * <pre>
-     * since 0.16, the volume id equals the task ID
+     * since 0.16, a list of volumes can be associated with the task ID
      * </pre>
      */
-    boolean hasReservationWithVolumeId();
-    /**
-     * <code>optional bool reservation_with_volume_id = 13 [default = false];</code>
-     *
-     * <pre>
-     * since 0.16, the volume id equals the task ID
-     * </pre>
-     */
-    boolean getReservationWithVolumeId();
+    mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumesOrBuilder getReservationWithVolumesOrBuilder();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.MarathonTask}
@@ -10154,14 +10144,17 @@ public final class Protos {
               networks_.add(input.readMessage(org.apache.mesos.Protos.NetworkInfo.PARSER, extensionRegistry));
               break;
             }
-            case 96: {
+            case 98: {
+              mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000080) == 0x00000080)) {
+                subBuilder = reservationWithVolumes_.toBuilder();
+              }
+              reservationWithVolumes_ = input.readMessage(mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(reservationWithVolumes_);
+                reservationWithVolumes_ = subBuilder.buildPartial();
+              }
               bitField0_ |= 0x00000080;
-              launchCounter_ = input.readInt64();
-              break;
-            }
-            case 104: {
-              bitField0_ |= 0x00000100;
-              reservationWithVolumeId_ = input.readBool();
               break;
             }
           }
@@ -10213,6 +10206,503 @@ public final class Protos {
     @java.lang.Override
     public com.google.protobuf.Parser<MarathonTask> getParserForType() {
       return PARSER;
+    }
+
+    public interface ReservationWithVolumesOrBuilder
+        extends com.google.protobuf.MessageOrBuilder {
+
+      // repeated string local_volume_ids = 1;
+      /**
+       * <code>repeated string local_volume_ids = 1;</code>
+       */
+      java.util.List<java.lang.String>
+      getLocalVolumeIdsList();
+      /**
+       * <code>repeated string local_volume_ids = 1;</code>
+       */
+      int getLocalVolumeIdsCount();
+      /**
+       * <code>repeated string local_volume_ids = 1;</code>
+       */
+      java.lang.String getLocalVolumeIds(int index);
+      /**
+       * <code>repeated string local_volume_ids = 1;</code>
+       */
+      com.google.protobuf.ByteString
+          getLocalVolumeIdsBytes(int index);
+    }
+    /**
+     * Protobuf type {@code mesosphere.marathon.MarathonTask.ReservationWithVolumes}
+     */
+    public static final class ReservationWithVolumes extends
+        com.google.protobuf.GeneratedMessage
+        implements ReservationWithVolumesOrBuilder {
+      // Use ReservationWithVolumes.newBuilder() to construct.
+      private ReservationWithVolumes(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+        super(builder);
+        this.unknownFields = builder.getUnknownFields();
+      }
+      private ReservationWithVolumes(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+      private static final ReservationWithVolumes defaultInstance;
+      public static ReservationWithVolumes getDefaultInstance() {
+        return defaultInstance;
+      }
+
+      public ReservationWithVolumes getDefaultInstanceForType() {
+        return defaultInstance;
+      }
+
+      private final com.google.protobuf.UnknownFieldSet unknownFields;
+      @java.lang.Override
+      public final com.google.protobuf.UnknownFieldSet
+          getUnknownFields() {
+        return this.unknownFields;
+      }
+      private ReservationWithVolumes(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        initFields();
+        int mutable_bitField0_ = 0;
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+            com.google.protobuf.UnknownFieldSet.newBuilder();
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              default: {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
+                  done = true;
+                }
+                break;
+              }
+              case 10: {
+                if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                  localVolumeIds_ = new com.google.protobuf.LazyStringArrayList();
+                  mutable_bitField0_ |= 0x00000001;
+                }
+                localVolumeIds_.add(input.readBytes());
+                break;
+              }
+            }
+          }
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(this);
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(
+              e.getMessage()).setUnfinishedMessage(this);
+        } finally {
+          if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+            localVolumeIds_ = new com.google.protobuf.UnmodifiableLazyStringList(localVolumeIds_);
+          }
+          this.unknownFields = unknownFields.build();
+          makeExtensionsImmutable();
+        }
+      }
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.class, mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.Builder.class);
+      }
+
+      public static com.google.protobuf.Parser<ReservationWithVolumes> PARSER =
+          new com.google.protobuf.AbstractParser<ReservationWithVolumes>() {
+        public ReservationWithVolumes parsePartialFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return new ReservationWithVolumes(input, extensionRegistry);
+        }
+      };
+
+      @java.lang.Override
+      public com.google.protobuf.Parser<ReservationWithVolumes> getParserForType() {
+        return PARSER;
+      }
+
+      // repeated string local_volume_ids = 1;
+      public static final int LOCAL_VOLUME_IDS_FIELD_NUMBER = 1;
+      private com.google.protobuf.LazyStringList localVolumeIds_;
+      /**
+       * <code>repeated string local_volume_ids = 1;</code>
+       */
+      public java.util.List<java.lang.String>
+          getLocalVolumeIdsList() {
+        return localVolumeIds_;
+      }
+      /**
+       * <code>repeated string local_volume_ids = 1;</code>
+       */
+      public int getLocalVolumeIdsCount() {
+        return localVolumeIds_.size();
+      }
+      /**
+       * <code>repeated string local_volume_ids = 1;</code>
+       */
+      public java.lang.String getLocalVolumeIds(int index) {
+        return localVolumeIds_.get(index);
+      }
+      /**
+       * <code>repeated string local_volume_ids = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getLocalVolumeIdsBytes(int index) {
+        return localVolumeIds_.getByteString(index);
+      }
+
+      private void initFields() {
+        localVolumeIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      }
+      private byte memoizedIsInitialized = -1;
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized != -1) return isInitialized == 1;
+
+        memoizedIsInitialized = 1;
+        return true;
+      }
+
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        getSerializedSize();
+        for (int i = 0; i < localVolumeIds_.size(); i++) {
+          output.writeBytes(1, localVolumeIds_.getByteString(i));
+        }
+        getUnknownFields().writeTo(output);
+      }
+
+      private int memoizedSerializedSize = -1;
+      public int getSerializedSize() {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+
+        size = 0;
+        {
+          int dataSize = 0;
+          for (int i = 0; i < localVolumeIds_.size(); i++) {
+            dataSize += com.google.protobuf.CodedOutputStream
+              .computeBytesSizeNoTag(localVolumeIds_.getByteString(i));
+          }
+          size += dataSize;
+          size += 1 * getLocalVolumeIdsList().size();
+        }
+        size += getUnknownFields().getSerializedSize();
+        memoizedSerializedSize = size;
+        return size;
+      }
+
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
+        return super.writeReplace();
+      }
+
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input);
+      }
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return PARSER.parseDelimitedFrom(input);
+      }
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input);
+      }
+      public static mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input, extensionRegistry);
+      }
+
+      public static Builder newBuilder() { return Builder.create(); }
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder(mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes prototype) {
+        return newBuilder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() { return newBuilder(this); }
+
+      @java.lang.Override
+      protected Builder newBuilderForType(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        Builder builder = new Builder(parent);
+        return builder;
+      }
+      /**
+       * Protobuf type {@code mesosphere.marathon.MarathonTask.ReservationWithVolumes}
+       */
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessage.Builder<Builder>
+         implements mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumesOrBuilder {
+        public static final com.google.protobuf.Descriptors.Descriptor
+            getDescriptor() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_descriptor;
+        }
+
+        protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+            internalGetFieldAccessorTable() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_fieldAccessorTable
+              .ensureFieldAccessorsInitialized(
+                  mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.class, mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.Builder.class);
+        }
+
+        // Construct using mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+
+        private Builder(
+            com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          super(parent);
+          maybeForceBuilderInitialization();
+        }
+        private void maybeForceBuilderInitialization() {
+          if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          }
+        }
+        private static Builder create() {
+          return new Builder();
+        }
+
+        public Builder clear() {
+          super.clear();
+          localVolumeIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+          bitField0_ = (bitField0_ & ~0x00000001);
+          return this;
+        }
+
+        public Builder clone() {
+          return create().mergeFrom(buildPartial());
+        }
+
+        public com.google.protobuf.Descriptors.Descriptor
+            getDescriptorForType() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_descriptor;
+        }
+
+        public mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes getDefaultInstanceForType() {
+          return mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.getDefaultInstance();
+        }
+
+        public mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes build() {
+          mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+
+        public mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes buildPartial() {
+          mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes result = new mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes(this);
+          int from_bitField0_ = bitField0_;
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            localVolumeIds_ = new com.google.protobuf.UnmodifiableLazyStringList(
+                localVolumeIds_);
+            bitField0_ = (bitField0_ & ~0x00000001);
+          }
+          result.localVolumeIds_ = localVolumeIds_;
+          onBuilt();
+          return result;
+        }
+
+        public Builder mergeFrom(com.google.protobuf.Message other) {
+          if (other instanceof mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes) {
+            return mergeFrom((mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes)other);
+          } else {
+            super.mergeFrom(other);
+            return this;
+          }
+        }
+
+        public Builder mergeFrom(mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes other) {
+          if (other == mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.getDefaultInstance()) return this;
+          if (!other.localVolumeIds_.isEmpty()) {
+            if (localVolumeIds_.isEmpty()) {
+              localVolumeIds_ = other.localVolumeIds_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+            } else {
+              ensureLocalVolumeIdsIsMutable();
+              localVolumeIds_.addAll(other.localVolumeIds_);
+            }
+            onChanged();
+          }
+          this.mergeUnknownFields(other.getUnknownFields());
+          return this;
+        }
+
+        public final boolean isInitialized() {
+          return true;
+        }
+
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes parsedMessage = null;
+          try {
+            parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            parsedMessage = (mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes) e.getUnfinishedMessage();
+            throw e;
+          } finally {
+            if (parsedMessage != null) {
+              mergeFrom(parsedMessage);
+            }
+          }
+          return this;
+        }
+        private int bitField0_;
+
+        // repeated string local_volume_ids = 1;
+        private com.google.protobuf.LazyStringList localVolumeIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        private void ensureLocalVolumeIdsIsMutable() {
+          if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+            localVolumeIds_ = new com.google.protobuf.LazyStringArrayList(localVolumeIds_);
+            bitField0_ |= 0x00000001;
+           }
+        }
+        /**
+         * <code>repeated string local_volume_ids = 1;</code>
+         */
+        public java.util.List<java.lang.String>
+            getLocalVolumeIdsList() {
+          return java.util.Collections.unmodifiableList(localVolumeIds_);
+        }
+        /**
+         * <code>repeated string local_volume_ids = 1;</code>
+         */
+        public int getLocalVolumeIdsCount() {
+          return localVolumeIds_.size();
+        }
+        /**
+         * <code>repeated string local_volume_ids = 1;</code>
+         */
+        public java.lang.String getLocalVolumeIds(int index) {
+          return localVolumeIds_.get(index);
+        }
+        /**
+         * <code>repeated string local_volume_ids = 1;</code>
+         */
+        public com.google.protobuf.ByteString
+            getLocalVolumeIdsBytes(int index) {
+          return localVolumeIds_.getByteString(index);
+        }
+        /**
+         * <code>repeated string local_volume_ids = 1;</code>
+         */
+        public Builder setLocalVolumeIds(
+            int index, java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLocalVolumeIdsIsMutable();
+          localVolumeIds_.set(index, value);
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>repeated string local_volume_ids = 1;</code>
+         */
+        public Builder addLocalVolumeIds(
+            java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLocalVolumeIdsIsMutable();
+          localVolumeIds_.add(value);
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>repeated string local_volume_ids = 1;</code>
+         */
+        public Builder addAllLocalVolumeIds(
+            java.lang.Iterable<java.lang.String> values) {
+          ensureLocalVolumeIdsIsMutable();
+          super.addAll(values, localVolumeIds_);
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>repeated string local_volume_ids = 1;</code>
+         */
+        public Builder clearLocalVolumeIds() {
+          localVolumeIds_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+          bitField0_ = (bitField0_ & ~0x00000001);
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>repeated string local_volume_ids = 1;</code>
+         */
+        public Builder addLocalVolumeIdsBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLocalVolumeIdsIsMutable();
+          localVolumeIds_.add(value);
+          onChanged();
+          return this;
+        }
+
+        // @@protoc_insertion_point(builder_scope:mesosphere.marathon.MarathonTask.ReservationWithVolumes)
+      }
+
+      static {
+        defaultInstance = new ReservationWithVolumes(true);
+        defaultInstance.initFields();
+      }
+
+      // @@protoc_insertion_point(class_scope:mesosphere.marathon.MarathonTask.ReservationWithVolumes)
     }
 
     private int bitField0_;
@@ -10564,52 +11054,38 @@ public final class Protos {
       return networks_.get(index);
     }
 
-    // optional int64 launch_counter = 12 [default = 0];
-    public static final int LAUNCH_COUNTER_FIELD_NUMBER = 12;
-    private long launchCounter_;
+    // optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;
+    public static final int RESERVATION_WITH_VOLUMES_FIELD_NUMBER = 12;
+    private mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes reservationWithVolumes_;
     /**
-     * <code>optional int64 launch_counter = 12 [default = 0];</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
      *
      * <pre>
-     * since 0.16
+     * since 0.16, a list of volumes can be associated with the task ID
      * </pre>
      */
-    public boolean hasLaunchCounter() {
+    public boolean hasReservationWithVolumes() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
     /**
-     * <code>optional int64 launch_counter = 12 [default = 0];</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
      *
      * <pre>
-     * since 0.16
+     * since 0.16, a list of volumes can be associated with the task ID
      * </pre>
      */
-    public long getLaunchCounter() {
-      return launchCounter_;
-    }
-
-    // optional bool reservation_with_volume_id = 13 [default = false];
-    public static final int RESERVATION_WITH_VOLUME_ID_FIELD_NUMBER = 13;
-    private boolean reservationWithVolumeId_;
-    /**
-     * <code>optional bool reservation_with_volume_id = 13 [default = false];</code>
-     *
-     * <pre>
-     * since 0.16, the volume id equals the task ID
-     * </pre>
-     */
-    public boolean hasReservationWithVolumeId() {
-      return ((bitField0_ & 0x00000100) == 0x00000100);
+    public mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes getReservationWithVolumes() {
+      return reservationWithVolumes_;
     }
     /**
-     * <code>optional bool reservation_with_volume_id = 13 [default = false];</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
      *
      * <pre>
-     * since 0.16, the volume id equals the task ID
+     * since 0.16, a list of volumes can be associated with the task ID
      * </pre>
      */
-    public boolean getReservationWithVolumeId() {
-      return reservationWithVolumeId_;
+    public mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumesOrBuilder getReservationWithVolumesOrBuilder() {
+      return reservationWithVolumes_;
     }
 
     private void initFields() {
@@ -10624,8 +11100,7 @@ public final class Protos {
       status_ = org.apache.mesos.Protos.TaskStatus.getDefaultInstance();
       slaveId_ = org.apache.mesos.Protos.SlaveID.getDefaultInstance();
       networks_ = java.util.Collections.emptyList();
-      launchCounter_ = 0L;
-      reservationWithVolumeId_ = false;
+      reservationWithVolumes_ = mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -10707,10 +11182,7 @@ public final class Protos {
         output.writeMessage(11, networks_.get(i));
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
-        output.writeInt64(12, launchCounter_);
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeBool(13, reservationWithVolumeId_);
+        output.writeMessage(12, reservationWithVolumes_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -10772,11 +11244,7 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(12, launchCounter_);
-      }
-      if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(13, reservationWithVolumeId_);
+          .computeMessageSize(12, reservationWithVolumes_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -10891,6 +11359,7 @@ public final class Protos {
           getStatusFieldBuilder();
           getSlaveIdFieldBuilder();
           getNetworksFieldBuilder();
+          getReservationWithVolumesFieldBuilder();
         }
       }
       private static Builder create() {
@@ -10941,10 +11410,12 @@ public final class Protos {
         } else {
           networksBuilder_.clear();
         }
-        launchCounter_ = 0L;
+        if (reservationWithVolumesBuilder_ == null) {
+          reservationWithVolumes_ = mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.getDefaultInstance();
+        } else {
+          reservationWithVolumesBuilder_.clear();
+        }
         bitField0_ = (bitField0_ & ~0x00000800);
-        reservationWithVolumeId_ = false;
-        bitField0_ = (bitField0_ & ~0x00001000);
         return this;
       }
 
@@ -11044,11 +11515,11 @@ public final class Protos {
         if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
           to_bitField0_ |= 0x00000080;
         }
-        result.launchCounter_ = launchCounter_;
-        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
-          to_bitField0_ |= 0x00000100;
+        if (reservationWithVolumesBuilder_ == null) {
+          result.reservationWithVolumes_ = reservationWithVolumes_;
+        } else {
+          result.reservationWithVolumes_ = reservationWithVolumesBuilder_.build();
         }
-        result.reservationWithVolumeId_ = reservationWithVolumeId_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -11180,11 +11651,8 @@ public final class Protos {
             }
           }
         }
-        if (other.hasLaunchCounter()) {
-          setLaunchCounter(other.getLaunchCounter());
-        }
-        if (other.hasReservationWithVolumeId()) {
-          setReservationWithVolumeId(other.getReservationWithVolumeId());
+        if (other.hasReservationWithVolumes()) {
+          mergeReservationWithVolumes(other.getReservationWithVolumes());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -12579,102 +13047,157 @@ public final class Protos {
         return networksBuilder_;
       }
 
-      // optional int64 launch_counter = 12 [default = 0];
-      private long launchCounter_ ;
+      // optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;
+      private mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes reservationWithVolumes_ = mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes, mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.Builder, mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumesOrBuilder> reservationWithVolumesBuilder_;
       /**
-       * <code>optional int64 launch_counter = 12 [default = 0];</code>
+       * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
        *
        * <pre>
-       * since 0.16
+       * since 0.16, a list of volumes can be associated with the task ID
        * </pre>
        */
-      public boolean hasLaunchCounter() {
+      public boolean hasReservationWithVolumes() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
       }
       /**
-       * <code>optional int64 launch_counter = 12 [default = 0];</code>
+       * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
        *
        * <pre>
-       * since 0.16
+       * since 0.16, a list of volumes can be associated with the task ID
        * </pre>
        */
-      public long getLaunchCounter() {
-        return launchCounter_;
+      public mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes getReservationWithVolumes() {
+        if (reservationWithVolumesBuilder_ == null) {
+          return reservationWithVolumes_;
+        } else {
+          return reservationWithVolumesBuilder_.getMessage();
+        }
       }
       /**
-       * <code>optional int64 launch_counter = 12 [default = 0];</code>
+       * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
        *
        * <pre>
-       * since 0.16
+       * since 0.16, a list of volumes can be associated with the task ID
        * </pre>
        */
-      public Builder setLaunchCounter(long value) {
+      public Builder setReservationWithVolumes(mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes value) {
+        if (reservationWithVolumesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          reservationWithVolumes_ = value;
+          onChanged();
+        } else {
+          reservationWithVolumesBuilder_.setMessage(value);
+        }
         bitField0_ |= 0x00000800;
-        launchCounter_ = value;
-        onChanged();
         return this;
       }
       /**
-       * <code>optional int64 launch_counter = 12 [default = 0];</code>
+       * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
        *
        * <pre>
-       * since 0.16
+       * since 0.16, a list of volumes can be associated with the task ID
        * </pre>
        */
-      public Builder clearLaunchCounter() {
+      public Builder setReservationWithVolumes(
+          mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.Builder builderForValue) {
+        if (reservationWithVolumesBuilder_ == null) {
+          reservationWithVolumes_ = builderForValue.build();
+          onChanged();
+        } else {
+          reservationWithVolumesBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000800;
+        return this;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
+       *
+       * <pre>
+       * since 0.16, a list of volumes can be associated with the task ID
+       * </pre>
+       */
+      public Builder mergeReservationWithVolumes(mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes value) {
+        if (reservationWithVolumesBuilder_ == null) {
+          if (((bitField0_ & 0x00000800) == 0x00000800) &&
+              reservationWithVolumes_ != mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.getDefaultInstance()) {
+            reservationWithVolumes_ =
+              mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.newBuilder(reservationWithVolumes_).mergeFrom(value).buildPartial();
+          } else {
+            reservationWithVolumes_ = value;
+          }
+          onChanged();
+        } else {
+          reservationWithVolumesBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000800;
+        return this;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
+       *
+       * <pre>
+       * since 0.16, a list of volumes can be associated with the task ID
+       * </pre>
+       */
+      public Builder clearReservationWithVolumes() {
+        if (reservationWithVolumesBuilder_ == null) {
+          reservationWithVolumes_ = mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.getDefaultInstance();
+          onChanged();
+        } else {
+          reservationWithVolumesBuilder_.clear();
+        }
         bitField0_ = (bitField0_ & ~0x00000800);
-        launchCounter_ = 0L;
-        onChanged();
-        return this;
-      }
-
-      // optional bool reservation_with_volume_id = 13 [default = false];
-      private boolean reservationWithVolumeId_ ;
-      /**
-       * <code>optional bool reservation_with_volume_id = 13 [default = false];</code>
-       *
-       * <pre>
-       * since 0.16, the volume id equals the task ID
-       * </pre>
-       */
-      public boolean hasReservationWithVolumeId() {
-        return ((bitField0_ & 0x00001000) == 0x00001000);
-      }
-      /**
-       * <code>optional bool reservation_with_volume_id = 13 [default = false];</code>
-       *
-       * <pre>
-       * since 0.16, the volume id equals the task ID
-       * </pre>
-       */
-      public boolean getReservationWithVolumeId() {
-        return reservationWithVolumeId_;
-      }
-      /**
-       * <code>optional bool reservation_with_volume_id = 13 [default = false];</code>
-       *
-       * <pre>
-       * since 0.16, the volume id equals the task ID
-       * </pre>
-       */
-      public Builder setReservationWithVolumeId(boolean value) {
-        bitField0_ |= 0x00001000;
-        reservationWithVolumeId_ = value;
-        onChanged();
         return this;
       }
       /**
-       * <code>optional bool reservation_with_volume_id = 13 [default = false];</code>
+       * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
        *
        * <pre>
-       * since 0.16, the volume id equals the task ID
+       * since 0.16, a list of volumes can be associated with the task ID
        * </pre>
        */
-      public Builder clearReservationWithVolumeId() {
-        bitField0_ = (bitField0_ & ~0x00001000);
-        reservationWithVolumeId_ = false;
+      public mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.Builder getReservationWithVolumesBuilder() {
+        bitField0_ |= 0x00000800;
         onChanged();
-        return this;
+        return getReservationWithVolumesFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
+       *
+       * <pre>
+       * since 0.16, a list of volumes can be associated with the task ID
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumesOrBuilder getReservationWithVolumesOrBuilder() {
+        if (reservationWithVolumesBuilder_ != null) {
+          return reservationWithVolumesBuilder_.getMessageOrBuilder();
+        } else {
+          return reservationWithVolumes_;
+        }
+      }
+      /**
+       * <code>optional .mesosphere.marathon.MarathonTask.ReservationWithVolumes reservation_with_volumes = 12;</code>
+       *
+       * <pre>
+       * since 0.16, a list of volumes can be associated with the task ID
+       * </pre>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes, mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.Builder, mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumesOrBuilder> 
+          getReservationWithVolumesFieldBuilder() {
+        if (reservationWithVolumesBuilder_ == null) {
+          reservationWithVolumesBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes, mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumes.Builder, mesosphere.marathon.Protos.MarathonTask.ReservationWithVolumesOrBuilder>(
+                  reservationWithVolumes_,
+                  getParentForChildren(),
+                  isClean());
+          reservationWithVolumes_ = null;
+        }
+        return reservationWithVolumesBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:mesosphere.marathon.MarathonTask)
@@ -26626,6 +27149,11 @@ public final class Protos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_MarathonApp_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -26753,7 +27281,7 @@ public final class Protos {
       " \001(\003\0221\n\tipAddress\030\031 \001(\0132\036.mesosphere.mar" +
       "athon.IpAddress\022;\n\tresidency\030\032 \001(\0132(.mes" +
       "osphere.marathon.ResidencyDefinition\"\035\n\r" +
-      "ResourceRoles\022\014\n\004role\030\001 \003(\t\"\215\003\n\014Marathon" +
+      "ResourceRoles\022\014\n\004role\030\001 \003(\t\"\327\003\n\014Marathon" +
       "Task\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030" +
       "\003 \003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos.Attrib" +
       "ute\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001" +
@@ -26761,59 +27289,61 @@ public final class Protos {
       "skStatus\022)\n\007version\030\010 \001(\t:\0301970-01-01T00",
       ":00:00.000Z\022!\n\006status\030\t \001(\0132\021.mesos.Task" +
       "Status\022\037\n\007slaveId\030\n \001(\0132\016.mesos.SlaveID\022" +
-      "$\n\010networks\030\013 \003(\0132\022.mesos.NetworkInfo\022\031\n" +
-      "\016launch_counter\030\014 \001(\003:\0010\022)\n\032reservation_" +
-      "with_volume_id\030\r \001(\010:\005false\"M\n\013MarathonA" +
-      "pp\022\014\n\004name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosp" +
-      "here.marathon.MarathonTask\"1\n\rContainerI" +
-      "nfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\255\004" +
-      "\n\025ExtendedContainerInfo\022\'\n\004type\030\001 \002(\0162\031." +
-      "mesos.ContainerInfo.Type\022,\n\007volumes\030\002 \003(",
-      "\0132\033.mesosphere.marathon.Volume\022E\n\006docker" +
-      "\030\003 \001(\01325.mesosphere.marathon.ExtendedCon" +
-      "tainerInfo.DockerInfo\032\365\002\n\nDockerInfo\022\r\n\005" +
-      "image\030\001 \002(\t\022>\n\007network\030\002 \001(\0162\'.mesos.Con" +
-      "tainerInfo.DockerInfo.Network:\004HOST\022X\n\rp" +
-      "ort_mappings\030\003 \003(\0132A.mesosphere.marathon" +
-      ".ExtendedContainerInfo.DockerInfo.PortMa" +
-      "pping\022\031\n\nprivileged\030\004 \001(\010:\005false\022$\n\npara" +
-      "meters\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020force_" +
-      "pull_image\030\006 \001(\010\032c\n\013PortMapping\022\021\n\thost_",
-      "port\030\001 \002(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010pr" +
-      "otocol\030\003 \001(\t\022\027\n\014service_port\030d \001(\r:\0010\"\336\001" +
-      "\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume.Mo" +
-      "de\022\026\n\016container_path\030\001 \002(\t\022\021\n\thost_path\030" +
-      "\002 \001(\t\022\033\n\005image\030\004 \001(\0132\014.mesos.Image\022D\n\npe" +
-      "rsistent\030\005 \001(\01320.mesosphere.marathon.Vol" +
-      "ume.PersistentVolumeInfo\032$\n\024PersistentVo" +
-      "lumeInfo\022\014\n\004size\030\001 \002(\004\")\n\020EventSubscribe" +
-      "rs\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016StorageVers" +
-      "ion\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005pat",
-      "ch\030\003 \002(\r\"Z\n\031UpgradeStrategyDefinition\022\035\n" +
-      "\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023maximumO" +
-      "verCapacity\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition" +
-      "\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 " +
-      "\003(\0132&.mesosphere.marathon.ServiceDefinit" +
-      "ion\0224\n\006groups\030\004 \003(\0132$.mesosphere.maratho" +
-      "n.GroupDefinition\022\024\n\014dependencies\030\005 \003(\t\"" +
-      "\245\001\n\030DeploymentPlanDefinition\022\n\n\002id\030\001 \002(\t" +
-      "\022\017\n\007version\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.me" +
-      "sosphere.marathon.GroupDefinition\0224\n\006tar",
-      "get\030\005 \002(\0132$.mesosphere.marathon.GroupDef" +
-      "inition\"\306\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022" +
-      "\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state" +
-      "\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007message\030\004 \001(" +
-      "\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\t" +
-      "timestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos" +
-      ".SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014" +
-      "\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompresse" +
-      "d\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefinition\022(" +
-      "\n relaunchEscalationTimeoutSeconds\030\001 \001(\003",
-      "\022S\n\020taskLostBehavior\030\002 \001(\01629.mesosphere." +
-      "marathon.ResidencyDefinition.TaskLostBeh" +
-      "avior\"@\n\020TaskLostBehavior\022\032\n\026RELAUNCH_AF" +
-      "TER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001B\035\n\023mesos" +
-      "phere.marathonB\006Protos"
+      "$\n\010networks\030\013 \003(\0132\022.mesos.NetworkInfo\022Z\n" +
+      "\030reservation_with_volumes\030\014 \001(\01328.mesosp" +
+      "here.marathon.MarathonTask.ReservationWi" +
+      "thVolumes\0322\n\026ReservationWithVolumes\022\030\n\020l" +
+      "ocal_volume_ids\030\001 \003(\t\"M\n\013MarathonApp\022\014\n\004" +
+      "name\030\001 \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.m" +
+      "arathon.MarathonTask\"1\n\rContainerInfo\022\017\n" +
+      "\005image\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\255\004\n\025Exte",
+      "ndedContainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos." +
+      "ContainerInfo.Type\022,\n\007volumes\030\002 \003(\0132\033.me" +
+      "sosphere.marathon.Volume\022E\n\006docker\030\003 \001(\013" +
+      "25.mesosphere.marathon.ExtendedContainer" +
+      "Info.DockerInfo\032\365\002\n\nDockerInfo\022\r\n\005image\030" +
+      "\001 \002(\t\022>\n\007network\030\002 \001(\0162\'.mesos.Container" +
+      "Info.DockerInfo.Network:\004HOST\022X\n\rport_ma" +
+      "ppings\030\003 \003(\0132A.mesosphere.marathon.Exten" +
+      "dedContainerInfo.DockerInfo.PortMapping\022" +
+      "\031\n\nprivileged\030\004 \001(\010:\005false\022$\n\nparameters",
+      "\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020force_pull_i" +
+      "mage\030\006 \001(\010\032c\n\013PortMapping\022\021\n\thost_port\030\001" +
+      " \002(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010protocol" +
+      "\030\003 \001(\t\022\027\n\014service_port\030d \001(\r:\0010\"\336\001\n\006Volu" +
+      "me\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016" +
+      "container_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022" +
+      "\033\n\005image\030\004 \001(\0132\014.mesos.Image\022D\n\npersiste" +
+      "nt\030\005 \001(\01320.mesosphere.marathon.Volume.Pe" +
+      "rsistentVolumeInfo\032$\n\024PersistentVolumeIn" +
+      "fo\022\014\n\004size\030\001 \002(\004\")\n\020EventSubscribers\022\025\n\r",
+      "callback_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n" +
+      "\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002" +
+      "(\r\"Z\n\031UpgradeStrategyDefinition\022\035\n\025minim" +
+      "umHealthCapacity\030\001 \002(\001\022\036\n\023maximumOverCap" +
+      "acity\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition\022\n\n\002id" +
+      "\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&." +
+      "mesosphere.marathon.ServiceDefinition\0224\n" +
+      "\006groups\030\004 \003(\0132$.mesosphere.marathon.Grou" +
+      "pDefinition\022\024\n\014dependencies\030\005 \003(\t\"\245\001\n\030De" +
+      "ploymentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007ve",
+      "rsion\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosphe" +
+      "re.marathon.GroupDefinition\0224\n\006target\030\005 " +
+      "\002(\0132$.mesosphere.marathon.GroupDefinitio" +
+      "n\"\306\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007tas" +
+      "k_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\016" +
+      "2\020.mesos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n" +
+      "\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimest" +
+      "amp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.Slave" +
+      "ID\"T\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid" +
+      "\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(",
+      "\010:\005false\"\326\001\n\023ResidencyDefinition\022(\n rela" +
+      "unchEscalationTimeoutSeconds\030\001 \001(\003\022S\n\020ta" +
+      "skLostBehavior\030\002 \001(\01629.mesosphere.marath" +
+      "on.ResidencyDefinition.TaskLostBehavior\"" +
+      "@\n\020TaskLostBehavior\022\032\n\026RELAUNCH_AFTER_TI" +
+      "MEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001B\035\n\023mesosphere." +
+      "marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -26861,7 +27391,13 @@ public final class Protos {
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
-              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "OBSOLETEStatuses", "Version", "Status", "SlaveId", "Networks", "LaunchCounter", "ReservationWithVolumeId", });
+              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "OBSOLETEStatuses", "Version", "Status", "SlaveId", "Networks", "ReservationWithVolumes", });
+          internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_descriptor =
+            internal_static_mesosphere_marathon_MarathonTask_descriptor.getNestedTypes().get(0);
+          internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_mesosphere_marathon_MarathonTask_ReservationWithVolumes_descriptor,
+              new java.lang.String[] { "LocalVolumeIds", });
           internal_static_mesosphere_marathon_MarathonApp_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_mesosphere_marathon_MarathonApp_fieldAccessorTable = new

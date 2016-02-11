@@ -13,8 +13,7 @@ import org.apache.mesos.{ Protos => MesosProtos }
 case class Task(
     taskId: Task.Id,
     agentInfo: Task.AgentInfo,
-    reservationWithVolume: Option[Task.ReservationWithVolume.type] = None,
-    launchCounter: Long = 0,
+    reservationWithVolumes: Option[Task.ReservationWithVolumes] = None,
     launched: Option[Task.Launched] = None) {
 
   def appId: PathId = taskId.appId
@@ -23,7 +22,7 @@ case class Task(
     * Legacy conversion to MarathonTask. Cache result to speed up repeated uses.
     * Should be removed before releasing 0.16.
     */
-  lazy val marathonTask: MarathonTask = TaskSerializer.marathonTask(this)
+  lazy val marathonTask: MarathonTask = TaskSerializer.toProto(this)
 
   def withAgentInfo(update: Task.AgentInfo => Task.AgentInfo): Task = copy(agentInfo = update(agentInfo))
 
@@ -57,15 +56,13 @@ object Task {
 
   /**
     * Represents a reservation for all resources that are needed for launching a task
-    * and a persistent volume.
-    *
-    * The volume ID corresponds to the task ID for two reasons:
-    *
-    * * it saves storage space
-    * * we already have the infrastructure to look for a specific task ID, we do not have
-    *   to build a second one to look things up for a volume ID.
+    * and associated persistent local volumes.
     */
-  case object ReservationWithVolume
+  case class ReservationWithVolumes(volumeIds: Iterable[LocalVolumeId])
+
+  case class LocalVolumeId(idString: String) {
+    override def toString: String = s"LocalVolume [$idString]"
+  }
 
   /**
     * Represents a task which has been launched (i.e. sent to Mesos for launching).

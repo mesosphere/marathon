@@ -152,7 +152,7 @@ class TaskTrackerActorTest
     When("staged task transitions to running")
     val probe = TestProbe()
     val stagedTaskNowRunning = MarathonTestHelper.runningTaskProto(stagedTask.getId)
-    val taskState = TaskSerializer.task(stagedTaskNowRunning)
+    val taskState = TaskSerializer.fromProto(stagedTaskNowRunning)
     probe.send(f.taskTrackerActor, TaskTrackerActor.TaskUpdated(taskState, TaskTrackerActor.Ack(probe.ref, ())))
     probe.expectMsg(())
 
@@ -176,7 +176,7 @@ class TaskTrackerActorTest
     When("a new staged task gets added")
     val probe = TestProbe()
     val newTask = MarathonTestHelper.stagedTaskProto(appId)
-    val taskState = TaskSerializer.task(newTask)
+    val taskState = TaskSerializer.fromProto(newTask)
     probe.send(f.taskTrackerActor, TaskTrackerActor.TaskUpdated(taskState, TaskTrackerActor.Ack(probe.ref, ())))
     probe.expectMsg(())
 

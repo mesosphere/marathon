@@ -1,28 +1,28 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.Protos
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.{ LocalVolumeId, ReservationWithVolumes }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
-  * Converts between [[Task]] objects
-  * and their serialized representation: MarathonTask.
+  * Converts between [[Task]] objects and their serialized representation MarathonTask.
   */
 object TaskSerializer {
   import scala.collection.JavaConverters._
 
-  def task(marathonTask: MarathonTask): Task = {
+  def fromProto(proto: Protos.MarathonTask): Task = {
 
     def required[T](name: String, maybeValue: Option[T]): T = {
-      maybeValue.getOrElse(throw new IllegalArgumentException(s"task[${marathonTask.getId}]: $name must be set"))
+      maybeValue.getOrElse(throw new IllegalArgumentException(s"task[${proto.getId}]: $name must be set"))
     }
 
     def opt[T](
-      hasAttribute: MarathonTask => Boolean, getAttribute: MarathonTask => T): Option[T] = {
+      hasAttribute: Protos.MarathonTask => Boolean, getAttribute: Protos.MarathonTask => T): Option[T] = {
 
-      if (hasAttribute(marathonTask)) {
-        Some(getAttribute(marathonTask))
+      if (hasAttribute(proto)) {
+        Some(getAttribute(proto))
       }
       else {
         None
@@ -33,13 +33,13 @@ object TaskSerializer {
       Task.AgentInfo(
         host = required("host", opt(_.hasHost, _.getHost)),
         agentId = opt(_.hasSlaveId, _.getSlaveId).map(_.getValue),
-        attributes = marathonTask.getAttributesList.iterator().asScala.toVector
+        attributes = proto.getAttributesList.iterator().asScala.toVector
       )
     }
 
-    def reservationWithVolume: Option[Task.ReservationWithVolume.type] = {
-      if (marathonTask.getReservationWithVolumeId) {
-        Some(Task.ReservationWithVolume)
+    def reservationWithVolume: Option[Task.ReservationWithVolumes] = {
+      if (proto.hasReservationWithVolumes) {
+        Some(ReservationWithVolumes(proto.getReservationWithVolumes.getLocalVolumeIdsList.asScala.map(LocalVolumeId)))
       }
       else {
         None
@@ -47,20 +47,20 @@ object TaskSerializer {
     }
 
     def launchedTask: Option[Task.Launched] = {
-      if (marathonTask.hasStagedAt) {
+      if (proto.hasStagedAt) {
         Some(
           Task.Launched(
-            appVersion = Timestamp(marathonTask.getVersion),
+            appVersion = Timestamp(proto.getVersion),
             status = Task.Status(
-              stagedAt = Timestamp(marathonTask.getStagedAt),
-              startedAt = if (marathonTask.hasStartedAt) Some(Timestamp(marathonTask.getStartedAt)) else None,
+              stagedAt = Timestamp(proto.getStagedAt),
+              startedAt = if (proto.hasStartedAt) Some(Timestamp(proto.getStartedAt)) else None,
               mesosStatus = opt(_.hasStatus, _.getStatus)
             ),
-            networking = if (marathonTask.getPortsCount != 0) {
-              Task.HostPorts(marathonTask.getPortsList.iterator().asScala.map(_.intValue()).toVector)
+            networking = if (proto.getPortsCount != 0) {
+              Task.HostPorts(proto.getPortsList.iterator().asScala.map(_.intValue()).toVector)
             }
-            else if (marathonTask.getNetworksCount != 0) {
-              Task.NetworkInfoList(marathonTask.getNetworksList.asScala)
+            else if (proto.getNetworksCount != 0) {
+              Task.NetworkInfoList(proto.getNetworksList.asScala)
             }
             else {
               Task.NoNetworking
@@ -74,16 +74,15 @@ object TaskSerializer {
     }
 
     Task(
-      taskId = Task.Id(marathonTask.getId),
+      taskId = Task.Id(proto.getId),
       agentInfo = agentInfo,
-      reservationWithVolume = reservationWithVolume,
-      launchCounter = marathonTask.getLaunchCounter,
+      reservationWithVolumes = reservationWithVolume,
       launched = launchedTask
     )
   }
 
-  def marathonTask(taskState: Task): MarathonTask = {
-    val builder = MarathonTask.newBuilder()
+  def toProto(taskState: Task): Protos.MarathonTask = {
+    val builder = Protos.MarathonTask.newBuilder()
 
     builder.setId(taskState.taskId.idString)
 
@@ -94,9 +93,13 @@ object TaskSerializer {
     }
     builder.addAllAttributes(agentInfo.attributes.asJava)
 
-    taskState.reservationWithVolume.foreach(reservation => builder.setReservationWithVolumeId(true))
-
-    builder.setLaunchCounter(taskState.launchCounter)
+    taskState.reservationWithVolumes.foreach {
+      reservation =>
+        builder.setReservationWithVolumes(
+          Protos.MarathonTask.ReservationWithVolumes.newBuilder()
+            .addAllLocalVolumeIds(reservation.volumeIds.map(_.idString).asJava)
+            .build())
+    }
 
     taskState.launched.foreach { launchedTask =>
       builder.setVersion(launchedTask.appVersion.toString)
@@ -115,4 +118,5 @@ object TaskSerializer {
 
     builder.build()
   }
+
 }
