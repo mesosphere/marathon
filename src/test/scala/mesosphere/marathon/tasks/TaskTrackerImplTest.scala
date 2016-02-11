@@ -122,7 +122,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     taskCreationHandler.created(task2).futureValue
     taskCreationHandler.created(task3).futureValue
 
-    val testAppTasks = call(taskTracker).map(TaskSerializer.task(_))
+    val testAppTasks = call(taskTracker).map(TaskSerializer.fromProto(_))
 
     shouldContainTask(testAppTasks.toSet, task1)
     shouldContainTask(testAppTasks.toSet, task2)

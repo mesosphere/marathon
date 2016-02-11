@@ -2,8 +2,8 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
-import Task.Id
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Id }
+import mesosphere.marathon.state.{ Volume, Timestamp }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos.Protos.{ Attribute, TaskStatus }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -14,24 +14,23 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
   test("minimal marathonTask => Task") {
     Given("a minimal MarathonTask")
-    val marathonTask = MarathonTask.newBuilder().setId("task").setHost(sampleHost).setLaunchCounter(0).build()
+    val marathonTask = MarathonTask.newBuilder().setId("task").setHost(sampleHost).build()
 
     When("we convert it to task")
-    val taskState = TaskSerializer.task(marathonTask)
+    val taskState = TaskSerializer.fromProto(marathonTask)
 
     Then("we get a minimal task State")
     val expectedState = Task(
       taskId,
       Task.AgentInfo(host = sampleHost, agentId = None, attributes = Iterable.empty),
-      reservationWithVolume = None,
-      launchCounter = 0,
+      reservationWithVolumes = None,
       launched = None
     )
 
     taskState should be(expectedState)
 
     When("we serialize it again")
-    val marathonTask2 = TaskSerializer.marathonTask(taskState)
+    val marathonTask2 = TaskSerializer.toProto(taskState)
 
     Then("we get the original state back")
     marathonTask2 should equal(marathonTask)
@@ -42,7 +41,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val marathonTask = completeTask
 
     When("we convert it to task")
-    val taskState = TaskSerializer.task(marathonTask)
+    val taskState = TaskSerializer.fromProto(marathonTask)
 
     Then("we get the expected task state")
     val expectedState = fullSampleTaskStateWithoutNetworking
@@ -50,7 +49,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     taskState should be(expectedState)
 
     When("we serialize it again")
-    val marathonTask2 = TaskSerializer.marathonTask(taskState)
+    val marathonTask2 = TaskSerializer.toProto(taskState)
 
     Then("we get the original state back")
     marathonTask2 should equal(marathonTask)
@@ -65,7 +64,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .build()
 
     When("we convert it to task")
-    val taskState = TaskSerializer.task(marathonTask)
+    val taskState = TaskSerializer.fromProto(marathonTask)
 
     Then("we get the expected task state")
     val expectedState = fullSampleTaskStateWithoutNetworking.copy(
@@ -77,7 +76,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     taskState should be(expectedState)
 
     When("we serialize it again")
-    val marathonTask2 = TaskSerializer.marathonTask(taskState)
+    val marathonTask2 = TaskSerializer.toProto(taskState)
 
     Then("we get the original state back")
     marathonTask2 should equal(marathonTask)
@@ -93,7 +92,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
     When("we convert it to task")
     println(marathonTask)
-    val taskState = TaskSerializer.task(marathonTask)
+    val taskState = TaskSerializer.fromProto(marathonTask)
 
     Then("we get the expected task state")
     val expectedState = fullSampleTaskStateWithoutNetworking.copy(
@@ -105,7 +104,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     taskState should be(expectedState)
 
     When("we serialize it again")
-    val marathonTask2 = TaskSerializer.marathonTask(taskState)
+    val marathonTask2 = TaskSerializer.toProto(taskState)
 
     Then("we get the original state back")
     marathonTask2 should equal(marathonTask)
@@ -132,8 +131,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
   private[this] val fullSampleTaskStateWithoutNetworking: Task = Task(
     taskId,
     Task.AgentInfo(host = sampleHost, agentId = Some(sampleSlaveId.getValue), attributes = sampleAttributes),
-    reservationWithVolume = Some(Task.ReservationWithVolume),
-    launchCounter = 10,
+    reservationWithVolumes = Some(Task.ReservationWithVolumes(Seq(LocalVolumeId("my-volume")))),
     launched = Some(
       Task.Launched(
         appVersion = appVersion,
@@ -157,8 +155,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       .setVersion(appVersion.toString)
       .setStatus(sampleTaskStatus)
       .setSlaveId(sampleSlaveId)
-      .setLaunchCounter(10)
-      .setReservationWithVolumeId(true)
+      .setReservationWithVolumes(MarathonTask.ReservationWithVolumes.newBuilder.addLocalVolumeIds("my-volume"))
       .build()
 
   private[this] def attribute(name: String, textValue: String): MesosProtos.Attribute = {

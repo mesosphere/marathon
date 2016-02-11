@@ -90,6 +90,10 @@ message ResourceRoles {
 }
 
 message MarathonTask {
+  message ReservationWithVolumes {
+    repeated string local_volume_ids = 1;
+  }
+
   required string id = 1;
   optional string host = 2;
   repeated uint32 ports = 3;
@@ -101,8 +105,7 @@ message MarathonTask {
   optional mesos.TaskStatus status = 9;
   optional mesos.SlaveID slaveId = 10;
   repeated mesos.NetworkInfo networks = 11;
-  optional int64 launch_counter = 12 [default = 0]; // since 0.16
-  optional bool reservation_with_volume_id = 13 [default = false]; // since 0.16, the volume id equals the task ID
+  optional ReservationWithVolumes reservation_with_volumes = 12; // since 0.16, a list of volumes can be associated with the task ID
 }
 
 message MarathonApp {

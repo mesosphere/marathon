@@ -125,7 +125,7 @@ object TaskTracker {
 
   object AppTasks {
     def apply(appId: PathId, tasks: Iterable[MarathonTask]): AppTasks =
-      AppTasks.forTasks(appId, tasks.map(TaskSerializer.task(_)))
+      AppTasks.forTasks(appId, tasks.map(TaskSerializer.fromProto(_)))
     def forTasks(appId: PathId, tasks: Iterable[Task]): AppTasks =
       AppTasks(appId, tasks.map(taskState => taskState.taskId -> taskState).toMap)
   }

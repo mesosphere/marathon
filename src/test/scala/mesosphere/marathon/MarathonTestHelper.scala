@@ -239,7 +239,6 @@ object MarathonTestHelper {
   def dummyTaskProto(taskId: String) = MarathonTask.newBuilder()
     .setId(taskId)
     .setHost("host.some")
-    .setLaunchCounter(0)
     .build()
 
   def mininimalTask(appId: PathId): Task = mininimalTask(TaskIdUtil.newTaskId(appId).getValue)
@@ -248,8 +247,7 @@ object MarathonTestHelper {
     Task(
       Task.Id(taskId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
-      reservationWithVolume = None,
-      launchCounter = 0,
+      reservationWithVolumes = None,
       launched = None
     )
   }
@@ -261,7 +259,7 @@ object MarathonTestHelper {
       stagedAt = stagedAt
     )
   def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
-    TaskSerializer.task(
+    TaskSerializer.fromProto(
       startingTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt)
     )
 
@@ -277,7 +275,7 @@ object MarathonTestHelper {
   def stagedTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
     stagedTask(TaskIdUtil.newTaskId(appId).getValue, appVersion = appVersion, stagedAt = stagedAt)
   def stagedTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
-    TaskSerializer.task(stagedTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt))
+    TaskSerializer.fromProto(stagedTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt))
 
   def stagedTaskProto(appId: PathId): Protos.MarathonTask = stagedTaskProto(TaskIdUtil.newTaskId(appId).getValue)
   def stagedTaskProto(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
@@ -301,7 +299,7 @@ object MarathonTestHelper {
     appVersion: Timestamp = Timestamp(1),
     stagedAt: Long = 2,
     startedAt: Long = 3): Task =
-    TaskSerializer.task(
+    TaskSerializer.fromProto(
       runningTaskProto(
         taskId,
         appVersion = appVersion,
@@ -323,7 +321,7 @@ object MarathonTestHelper {
   }
 
   def healthyTask(appId: PathId): Task = healthyTask(TaskIdUtil.newTaskId(appId).getValue)
-  def healthyTask(taskId: String): Task = TaskSerializer.task(healthyTaskProto(taskId))
+  def healthyTask(taskId: String): Task = TaskSerializer.fromProto(healthyTaskProto(taskId))
 
   def healthyTaskProto(appId: PathId): Protos.MarathonTask = healthyTaskProto(TaskIdUtil.newTaskId(appId).getValue)
   def healthyTaskProto(taskId: String): Protos.MarathonTask = {
@@ -334,7 +332,7 @@ object MarathonTestHelper {
   }
 
   def unhealthyTask(appId: PathId): Task = unhealthyTask(TaskIdUtil.newTaskId(appId).getValue)
-  def unhealthyTask(taskId: String): Task = TaskSerializer.task(unhealthyTaskProto(taskId))
+  def unhealthyTask(taskId: String): Task = TaskSerializer.fromProto(unhealthyTaskProto(taskId))
 
   def unhealthyTaskProto(appId: PathId): Protos.MarathonTask = unhealthyTaskProto(TaskIdUtil.newTaskId(appId).getValue)
   def unhealthyTaskProto(taskId: String): Protos.MarathonTask = {

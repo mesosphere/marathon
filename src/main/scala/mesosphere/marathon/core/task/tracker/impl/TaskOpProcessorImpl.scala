@@ -132,7 +132,7 @@ private[tracker] class TaskOpProcessorImpl(
       case Action.Update(task) =>
         // Used for a create or as a result from a UpdateStatus action.
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        val marathonTask = TaskSerializer.marathonTask(task)
+        val marathonTask = TaskSerializer.toProto(task)
         repo.store(marathonTask).map { _ =>
           taskTrackerRef ! TaskTrackerActor.TaskUpdated(task, TaskTrackerActor.Ack(op.sender))
         }.recoverWith(tryToRecover(op)(expectedTaskState = Some(task)))
@@ -190,7 +190,7 @@ private[tracker] class TaskOpProcessorImpl(
 
       repo.task(op.taskId.idString).map {
         case Some(task) =>
-          val taskState = TaskSerializer.task(task)
+          val taskState = TaskSerializer.fromProto(task)
           taskTrackerRef ! TaskTrackerActor.TaskUpdated(taskState, ack(Some(task)))
         case None =>
           taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.taskId, ack(None))
