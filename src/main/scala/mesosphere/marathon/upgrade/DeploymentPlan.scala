@@ -4,7 +4,7 @@ import java.net.URL
 import java.util.UUID
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory
 
@@ -22,7 +22,7 @@ final case class StartApplication(app: AppDefinition, scaleTo: Int) extends Depl
 // application is started, but the instance count should be changed
 final case class ScaleApplication(app: AppDefinition,
                                   scaleTo: Int,
-                                  sentencedToDeath: Option[Iterable[MarathonTask]] = None) extends DeploymentAction
+                                  sentencedToDeath: Option[Iterable[Task]] = None) extends DeploymentAction
 
 // application is started, but shall be completely stopped
 final case class StopApplication(app: AppDefinition) extends DeploymentAction
@@ -91,7 +91,8 @@ final case class DeploymentPlan(
       case StartApplication(app, scale) => s"Start(${appString(app)}, instances=$scale)"
       case StopApplication(app)         => s"Stop(${appString(app)})"
       case ScaleApplication(app, scale, toKill) =>
-        val killTasksString = toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.getId).mkString(",")).getOrElse("")
+        val killTasksString =
+          toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.taskId.idString).mkString(",")).getOrElse("")
         s"Scale(${appString(app)}, instances=$scale$killTasksString)"
       case RestartApplication(app)     => s"Restart(${appString(app)})"
       case ResolveArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
@@ -193,7 +194,7 @@ object DeploymentPlan {
     * from the topology of the target group's dependency graph.
     */
   def dependencyOrderedSteps(original: Group, target: Group,
-                             toKill: Map[PathId, Iterable[MarathonTask]]): Seq[DeploymentStep] = {
+                             toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
     val originalApps: Map[PathId, AppDefinition] =
       original.transitiveApps.map(app => app.id -> app).toMap
 
@@ -238,7 +239,7 @@ object DeploymentPlan {
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Iterable[MarathonTask]] = Map.empty): DeploymentPlan = {
+    toKill: Map[PathId, Iterable[Task]] = Map.empty): DeploymentPlan = {
 
     // Lookup maps for original and target apps.
     val originalApps: Map[PathId, AppDefinition] =

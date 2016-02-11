@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
@@ -373,7 +373,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
       )
     )
 
-    val taskToKill = MarathonTask.getDefaultInstance
+    val taskToKill = MarathonTestHelper.stagedTaskForApp(aId)
     val plan = DeploymentPlan(
       original = originalGroup,
       target = targetGroup,

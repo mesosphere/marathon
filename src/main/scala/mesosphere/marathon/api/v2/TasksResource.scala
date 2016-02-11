@@ -7,7 +7,6 @@ import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller, _ }
 import mesosphere.marathon.core.appinfo.EnrichedTask
@@ -16,9 +15,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, KillTask }
 import mesosphere.marathon.state.{ GroupManager, PathId }
-import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
-import mesosphere.util.ThreadPoolContext
 import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
@@ -35,7 +32,6 @@ class TasksResource @Inject() (
     val config: MarathonConf,
     groupManager: GroupManager,
     healthCheckManager: HealthCheckManager,
-    taskIdUtil: TaskIdUtil,
     val authenticator: Authenticator,
     val authorizer: Authorizer) extends AuthResource {
 
@@ -118,27 +114,27 @@ class TasksResource @Inject() (
 
     val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
     val taskToAppIds = taskIds.map { id =>
-      try { id -> taskIdUtil.appId(id) }
+      try { id -> Task.Id.appId(id) }
       catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'.") }
     }.toMap
 
     doIfAuthorized(req, resp, KillTask, taskToAppIds.values.toSeq: _*) { implicit identity =>
 
-      def scaleAppWithKill(toKill: Map[PathId, Set[MarathonTask]]): Response = {
+      def scaleAppWithKill(toKill: Map[PathId, Iterable[Task]]): Response = {
         deploymentResult(result(taskKiller.killAndScale(toKill, force)))
       }
 
-      def killTasks(toKill: Map[PathId, Set[MarathonTask]]): Response = {
+      def killTasks(toKill: Map[PathId, Iterable[Task]]): Response = {
         val killed = result(Future.sequence(toKill.map {
           case (appId, tasks) => taskKiller.kill(appId, _ => tasks)
         })).flatten
-        ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(taskIdUtil.appId(task.getId), task, Seq.empty))))
+        ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.appId, task.marathonTask, Seq.empty))))
       }
 
       val taskByApps = taskToAppIds
-        .flatMap { case (taskId, appId) => taskTracker.marathonTaskSync(Task.Id(taskId)) }
-        .groupBy { x => taskIdUtil.appId(x.getId) }
-        .map{ case (app, tasks) => app -> tasks.toSet }
+        .flatMap { case (taskId, appId) => taskTracker.tasksByAppSync.task(Task.Id(taskId)) }
+        .groupBy { task => task.taskId.appId }
+        .map{ case (app, tasks) => app -> tasks }
 
       if (scale) scaleAppWithKill(taskByApps) else killTasks(taskByApps)
     }

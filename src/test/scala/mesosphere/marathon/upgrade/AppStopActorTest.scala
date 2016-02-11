@@ -9,7 +9,7 @@ import mesosphere.marathon.event.{ AppTerminatedEvent, HistoryActor, MesosStatus
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure, TaskFailureRepository }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
-import mesosphere.marathon.{ MarathonSpec, TaskUpgradeCanceledException }
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
@@ -39,9 +39,9 @@ class AppStopActorTest
   test("Stop App") {
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()
-    val tasks = Set(marathonTask("task_a"), marathonTask("task_b"))
+    val tasks = Set(MarathonTestHelper.runningTask("task_a"), MarathonTestHelper.runningTask("task_b"))
 
-    when(taskTracker.marathonAppTasksSync(app.id)).thenReturn(tasks)
+    when(taskTracker.appTasksSync(app.id)).thenReturn(tasks)
 
     val ref = TestActorRef[AppStopActor](
       Props(
@@ -104,7 +104,7 @@ class AppStopActorTest
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()
 
-    when(taskTracker.marathonAppTasksSync(app.id)).thenReturn(Set.empty[MarathonTask])
+    when(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
 
     val ref = TestActorRef[AppStopActor](
       Props(
@@ -127,9 +127,9 @@ class AppStopActorTest
   test("Failed") {
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()
-    val tasks = Set(marathonTask("task_a"), marathonTask("task_b"))
+    val tasks = Set(MarathonTestHelper.runningTask("task_a"), MarathonTestHelper.runningTask("task_b"))
 
-    when(taskTracker.marathonAppTasksSync(app.id)).thenReturn(tasks)
+    when(taskTracker.appTasksSync(app.id)).thenReturn(tasks)
 
     val ref = TestActorRef[AppStopActor](
       Props(
@@ -156,11 +156,11 @@ class AppStopActorTest
   test("Task synchronization") {
     val app = AppDefinition(id = PathId("app"), instances = 2)
     val promise = Promise[Unit]()
-    val tasks = Set(marathonTask("task_a"), marathonTask("task_b"))
+    val tasks = Set(MarathonTestHelper.runningTask("task_a"), MarathonTestHelper.runningTask("task_b"))
 
-    when(taskTracker.marathonAppTasksSync(app.id))
+    when(taskTracker.appTasksSync(app.id))
       .thenReturn(tasks)
-      .thenReturn(Set.empty[MarathonTask])
+      .thenReturn(Iterable.empty[Task])
 
     val ref = TestActorRef[AppStopActor](
       Props(
@@ -182,12 +182,5 @@ class AppStopActorTest
 
     verify(driver, times(2)).killTask(any())
     expectTerminated(ref)
-  }
-
-  def marathonTask(name: String): MarathonTask = {
-    MarathonTask
-      .newBuilder
-      .setId(name)
-      .build()
   }
 }

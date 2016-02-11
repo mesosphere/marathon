@@ -6,10 +6,10 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOp, TaskOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.GivenWhenThen
@@ -21,8 +21,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] val offer = MarathonTestHelper.makeBasicOffer().build()
   private[this] val offerId = offer.getId
   private val appId: PathId = PathId("/testapp")
-  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(TaskIdUtil.newTaskId(appId).getValue).build()
-  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(TaskIdUtil.newTaskId(appId).getValue).build()
+  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forApp(appId).idString).build()
+  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forApp(appId).idString).build()
   private[this] val tasks = Seq(taskInfo1, taskInfo2)
 
   test("match successful, launch tasks successful") {

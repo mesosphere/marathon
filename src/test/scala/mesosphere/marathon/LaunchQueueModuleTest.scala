@@ -146,9 +146,9 @@ class LaunchQueueModuleTest
 
   test("an offer gets successfully matched against an item in the queue") {
     val offer = MarathonTestHelper.makeBasicOffer().build()
-    val taskId: TaskID = TaskIdUtil.newTaskId(app.id)
-    val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId).build()
-    val marathonTask = MarathonTestHelper.mininimalTask(Task.Id(taskId))
+    val taskId = Task.Id.forApp(PathId("/test"))
+    val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
+    val marathonTask = MarathonTestHelper.mininimalTask(taskId)
     val createdTask = CreatedTask(mesosTask, marathonTask)
 
     Given("An app in the queue")

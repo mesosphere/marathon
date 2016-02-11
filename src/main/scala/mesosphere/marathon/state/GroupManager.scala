@@ -15,6 +15,7 @@ import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, ModuleNames
 import mesosphere.util.CapConcurrentExecutions
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.slf4j.LoggerFactory
+import mesosphere.marathon.core.task.Task
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
@@ -106,7 +107,7 @@ class GroupManager @Singleton @Inject() (
     fn: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[MarathonTask]] = Map.empty): Future[DeploymentPlan] =
+    toKill: Map[PathId, Iterable[Task]] = Map.empty): Future[DeploymentPlan] =
     upgrade(gid, _.update(gid, fn, version), version, force, toKill)
 
   /**
@@ -125,7 +126,7 @@ class GroupManager @Singleton @Inject() (
     fn: Option[AppDefinition] => AppDefinition,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Iterable[MarathonTask] = Iterable.empty): Future[DeploymentPlan] =
+    toKill: Iterable[Task] = Iterable.empty): Future[DeploymentPlan] =
     upgrade(appId.parent, _.updateApp(appId, fn, version), version, force, Map(appId -> toKill))
 
   private def upgrade(
@@ -133,7 +134,7 @@ class GroupManager @Singleton @Inject() (
     change: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[MarathonTask]] = Map.empty): Future[DeploymentPlan] = serializeUpdates {
+    toKill: Map[PathId, Iterable[Task]] = Map.empty): Future[DeploymentPlan] = serializeUpdates {
 
     log.info(s"Upgrade group id:$gid version:$version with force:$force")
 

@@ -2,7 +2,7 @@ package mesosphere.marathon.api
 
 import javax.inject.Inject
 
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -17,33 +17,40 @@ class TaskKiller @Inject() (
 
   def kill(
     appId: PathId,
-    findToKill: (Iterable[MarathonTask] => Iterable[MarathonTask])): Future[Iterable[MarathonTask]] = {
+    findToKill: (Iterable[Task] => Iterable[Task])): Future[Iterable[Task]] = {
 
-    if (taskTracker.hasAppTasksSync(appId)) {
-      val tasks = taskTracker.marathonAppTasksSync(appId)
+    val tasks = taskTracker.appTasksSync(appId).filter(_.launched.isDefined)
+    if (tasks.nonEmpty) {
       val toKill = findToKill(tasks)
       service.killTasks(appId, toKill)
       Future.successful(toKill)
     }
     else {
+      // this is actually returned when the apps has no tasks
       Future.failed(UnknownAppException(appId))
     }
   }
 
   def killAndScale(appId: PathId,
-                   findToKill: (Iterable[MarathonTask] => Iterable[MarathonTask]),
+                   findToKill: (Iterable[Task] => Iterable[Task]),
                    force: Boolean): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.marathonAppTasksSync(appId))), force)
+    killAndScale(Map(appId -> findToKill(taskTracker.appTasksSync(appId))), force)
   }
 
-  def killAndScale(appTasks: Map[PathId, Iterable[MarathonTask]], force: Boolean): Future[DeploymentPlan] = {
+  def killAndScale(appTasks: Map[PathId, Iterable[Task]], force: Boolean): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
       appTasks.get(app.id).fold(app) { toKill => app.copy(instances = app.instances - toKill.size) }
     }
     def updateGroup(group: Group): Group = {
       group.copy(apps = group.apps.map(scaleApp), groups = group.groups.map(updateGroup))
     }
-    def killTasks = groupManager.update(PathId.empty, updateGroup, Timestamp.now(), force = force, toKill = appTasks)
+    def killTasks = groupManager.update(
+      PathId.empty,
+      updateGroup,
+      Timestamp.now(),
+      force = force,
+      toKill = appTasks
+    )
     appTasks.keys.find(id => !taskTracker.hasAppTasksSync(id))
       .map(id => Future.failed(UnknownAppException(id)))
       .getOrElse(killTasks)

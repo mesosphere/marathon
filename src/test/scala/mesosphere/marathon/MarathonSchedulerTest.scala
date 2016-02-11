@@ -9,7 +9,6 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.state.AppRepository
-import mesosphere.marathon.tasks._
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
@@ -24,7 +23,6 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
   var scheduler: MarathonScheduler = _
   var frameworkIdUtil: FrameworkIdUtil = _
   var mesosLeaderInfo: MesosLeaderInfo = _
-  var taskIdUtil: TaskIdUtil = _
   var config: MarathonConf = _
   var eventBus: EventStream = _
   var offerProcessor: OfferProcessor = _
@@ -37,7 +35,6 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
     mesosLeaderInfo = new MutableMesosLeaderInfo
     mesosLeaderInfo.onNewMasterInfo(MasterInfo.getDefaultInstance)
     config = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
-    taskIdUtil = TaskIdUtil
     probe = TestProbe()
     eventBus = system.eventStream
     taskStatusProcessor = mock[TaskStatusUpdateProcessor]
@@ -48,7 +45,6 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
       taskStatusProcessor = taskStatusProcessor,
       frameworkIdUtil,
       mesosLeaderInfo,
-      taskIdUtil,
       mock[ActorSystem],
       config,
       new SchedulerCallbacks {

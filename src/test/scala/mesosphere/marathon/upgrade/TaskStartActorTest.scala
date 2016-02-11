@@ -3,7 +3,6 @@ package mesosphere.marathon.upgrade
 import akka.actor.Props
 import akka.testkit.TestActorRef
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -14,7 +13,6 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.tasks.{ TaskIdUtil }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
 import mesosphere.util.state.memory.InMemoryStore
@@ -310,8 +308,8 @@ class TaskStartActorTest
     val app = AppDefinition("/myApp".toPath, instances = 5)
     when(launchQueue.get(app.id)).thenReturn(None)
 
-    val taskId = TaskIdUtil.newTaskId(app.id)
-    val outdatedTask = MarathonTestHelper.stagedTask(taskId.getValue, appVersion = Timestamp(1024))
+    val outdatedTask = MarathonTestHelper.stagedTaskForApp(app.id, appVersion = Timestamp(1024))
+    val taskId = outdatedTask.taskId
     taskCreationHandler.created(outdatedTask).futureValue
 
     val ref = TestActorRef(Props(
@@ -338,7 +336,7 @@ class TaskStartActorTest
     when(taskTracker.countAppTasksSync(app.id)).thenReturn(0)
     when(launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 4)))
     system.eventStream.publish(MesosStatusUpdateEvent(
-      slaveId = "", taskId = Task.Id(taskId), taskStatus = "TASK_ERROR", message = "", appId = app.id, host = "",
+      slaveId = "", taskId = taskId, taskStatus = "TASK_ERROR", message = "", appId = app.id, host = "",
       ipAddresses = Nil, ports = Nil,
       // The version does not match the app.version so that it is filtered in StartingBehavior.
       // does that make sense?

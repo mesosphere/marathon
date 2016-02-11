@@ -3,6 +3,7 @@ package mesosphere.marathon
 import akka.testkit.TestProbe
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
 import mesosphere.marathon.health.HealthCheckManager
@@ -43,7 +44,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val app = AppDefinition(id = PathId("/myapp"))
 
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
-    when(taskTracker.marathonAppTasksSync(app.id)).thenReturn(Set.empty[Protos.MarathonTask])
+    when(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
 
     val res = scheduler.stopApp(mock[SchedulerDriver], app)
 
@@ -60,11 +61,13 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
 
-    val runningTask = MarathonTestHelper.runningTaskProto("task_1")
+    val runningTask = MarathonTestHelper.runningTask("task_1")
 
-    val stagedTask = MarathonTestHelper.stagedTaskProto("task_2")
+    val stagedTask = MarathonTestHelper.stagedTask("task_2")
 
-    val stagedTaskWithSlaveId = MarathonTestHelper.stagedTaskProto("task_3").toBuilder.setSlaveId(SlaveID("slave 1")).build()
+    val stagedTaskWithSlaveId =
+      MarathonTestHelper.stagedTask("task_3")
+        .withAgentInfo(_.copy(agentId = Some("slave 1")))
 
     val scheduler = new SchedulerActions(
       repo,
@@ -80,16 +83,16 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val app = AppDefinition(id = PathId("/myapp"))
 
     val tasks = Set(runningTask, stagedTask, stagedTaskWithSlaveId)
-    when(taskTracker.tasksByApp()).thenReturn(Future.successful(TasksByApp.of(AppTasks(app.id, tasks))))
+    when(taskTracker.tasksByApp()).thenReturn(Future.successful(TasksByApp.of(AppTasks.forTasks(app.id, tasks))))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
     verify(driver).reconcileTasks(Set(
-      runningTask.getStatus,
-      stagedTask.getStatus,
-      stagedTaskWithSlaveId.getStatus
-    ).asJava)
+      runningTask,
+      stagedTask,
+      stagedTaskWithSlaveId
+    ).flatMap(_.launched.flatMap(_.status.mesosStatus)).asJava)
     verify(driver).reconcileTasks(java.util.Arrays.asList())
   }
 
@@ -126,9 +129,9 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
 
-    val task = MarathonTestHelper.runningTaskProto("task_1")
+    val task = MarathonTestHelper.runningTask("task_1")
 
-    val orphanedTask = MarathonTestHelper.runningTaskProto("orphaned task")
+    val orphanedTask = MarathonTestHelper.runningTask("orphaned task")
 
     val scheduler = new SchedulerActions(
       repo,
@@ -142,15 +145,15 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     )
 
     val app = AppDefinition(id = PathId("/myapp"))
-    val tasksOfApp = AppTasks(app.id, Iterable(task))
+    val tasksOfApp = AppTasks.forTasks(app.id, Iterable(task))
     val orphanedApp = AppDefinition(id = PathId("/orphan"))
-    val tasksOfOrphanedApp = AppTasks(orphanedApp.id, Iterable(orphanedTask))
+    val tasksOfOrphanedApp = AppTasks.forTasks(orphanedApp.id, Iterable(orphanedTask))
 
     when(taskTracker.tasksByApp()).thenReturn(Future.successful(TasksByApp.of(tasksOfApp, tasksOfOrphanedApp)))
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
 
     Await.result(scheduler.reconcileTasks(driver), 5.seconds)
 
-    verify(driver, times(1)).killTask(protos.TaskID(orphanedTask.getId))
+    verify(driver, times(1)).killTask(orphanedTask.launchedMesosId.get)
   }
 }

@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 
 class DefaultTaskFactory @Inject() (
-  taskIdUtil: TaskIdUtil,
   config: MarathonConf,
   clock: Clock)
     extends TaskFactory {
@@ -23,7 +22,7 @@ class DefaultTaskFactory @Inject() (
   override def newTask(app: AppDefinition, offer: Offer, runningTasks: Iterable[Task]): Option[CreatedTask] = {
     log.debug("newTask")
 
-    new TaskBuilder(app, taskIdUtil.newTaskId, config).buildIfMatches(offer, runningTasks).map {
+    new TaskBuilder(app, Task.Id.forApp, config).buildIfMatches(offer, runningTasks).map {
       case (taskInfo, ports) =>
         val task = Task(
           taskId = Task.Id(taskInfo.getTaskId),

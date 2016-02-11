@@ -4,7 +4,6 @@ import javax.inject.Inject
 
 import com.google.inject.name.Names
 import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -12,7 +11,6 @@ import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskSta
 import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 
@@ -28,7 +26,6 @@ object TaskStatusUpdateProcessorImpl {
 class TaskStatusUpdateProcessorImpl @Inject() (
     metrics: Metrics,
     clock: Clock,
-    taskIdUtil: TaskIdUtil,
     taskTracker: TaskTracker,
     driverHolder: MarathonSchedulerDriverHolder,
     steps: Seq[TaskStatusUpdateStep]) extends TaskStatusUpdateProcessor {
@@ -50,14 +47,13 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
   override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishFutureTimer.timeFuture {
     val now = clock.now()
-    val taskId = status.getTaskId
-    val appId = taskIdUtil.appId(taskId)
+    val taskId = Task.Id(status.getTaskId)
 
-    taskTracker.task(Task.Id(taskId.getValue)).flatMap {
+    taskTracker.task(taskId).flatMap {
       case Some(task) if task.launched.isDefined =>
         processUpdate(
           timestamp = now,
-          appId = appId,
+          appId = taskId.appId,
           task = task,
           mesosStatus = status
         ).map(_ => acknowledge(status))
@@ -66,7 +62,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
           if (status.getState != MesosProtos.TaskState.TASK_LOST) {
             // If we kill a unknown task, we will get another TASK_LOST notification which leads to an endless
             // stream of kills and TASK_LOST updates.
-            killTask(taskId)
+            killTask(taskId.mesosTaskId)
           }
           acknowledge(status)
           Future.successful(())

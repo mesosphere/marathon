@@ -3,6 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ Actor, ActorLogging, Cancellable }
 import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.state.PathId
@@ -21,7 +22,7 @@ trait StoppingBehavior extends Actor with ActorLogging {
   def promise: Promise[Unit]
   def taskTracker: TaskTracker
   def appId: PathId
-  var idsToKill: mutable.Set[String]
+  var idsToKill: mutable.Set[Task.Id]
   var periodicalCheck: Cancellable = _
 
   def initializeStop(): Unit
@@ -44,21 +45,17 @@ trait StoppingBehavior extends Actor with ActorLogging {
   val taskFinished = "^TASK_(ERROR|FAILED|FINISHED|LOST|KILLED)$".r
 
   def receive: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, taskFinished(_), _, _, _, _, _, _, _, _) if idsToKill(taskId.idString) =>
-      idsToKill.remove(taskId.idString)
+    case MesosStatusUpdateEvent(_, taskId, taskFinished(_), _, _, _, _, _, _, _, _) if idsToKill(taskId) =>
+      idsToKill.remove(taskId)
       log.info(s"Task $taskId has been killed. Waiting for ${idsToKill.size} more tasks to be killed.")
       checkFinished()
 
     case SynchronizeTasks =>
-      val trackerIds = taskTracker.marathonAppTasksSync(appId).map(_.getId).toSet
+      val trackerIds = taskTracker.appTasksSync(appId).map(_.taskId).toSet
       idsToKill = idsToKill.filter(trackerIds)
 
       idsToKill.foreach { id =>
-        driver.killTask(
-          Protos.TaskID
-            .newBuilder
-            .setValue(id)
-            .build())
+        driver.killTask(id.mesosTaskId)
       }
 
       scheduleSynchronization()

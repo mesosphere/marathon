@@ -591,7 +591,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val s = Set(t1, t2)
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s.toString), MarathonTestHelper.defaultConfig())
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
     val task = builder.buildIfMatches(offer, s)
 
@@ -613,7 +613,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     var runningTasks = Set.empty[Task]
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s.toString), MarathonTestHelper.defaultConfig())
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
@@ -664,7 +664,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     var runningTasks = Set.empty[Task]
 
     val builder = new TaskBuilder(app,
-      s => TaskID(s.toString), MarathonTestHelper.defaultConfig())
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
@@ -730,7 +730,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       id = PathId("/app"),
       versionInfo = version
     )
-    val env = TaskBuilder.taskContextEnv(app = app, taskId = Some(TaskID("taskId")))
+    val env = TaskBuilder.taskContextEnv(app = app, taskId = Some(Task.Id("taskId")))
 
     assert(
       env == Map(
@@ -764,7 +764,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         "LABEL2" -> "VALUE2"
       )
     )
-    val env = TaskBuilder.taskContextEnv(app = app, Some(taskId))
+    val env = TaskBuilder.taskContextEnv(app = app, Some(Task.Id(taskId)))
 
     assert(
       env == Map(
@@ -798,7 +798,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       )
     )
 
-    val env = TaskBuilder.taskContextEnv(app = app, Some(TaskID("taskId")))
+    val env = TaskBuilder.taskContextEnv(app = app, Some(Task.Id("taskId")))
       .filterKeys(_.startsWith("MARATHON_APP_LABEL"))
 
     assert(
@@ -824,7 +824,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           )
           )
         ),
-        taskId = Some(TaskID("task-123")),
+        taskId = Some(Task.Id("task-123")),
         host = Some("host.mega.corp"),
         ports = Seq(1000, 1001),
         envPrefix = None
@@ -856,7 +856,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
             "PORT_8081" -> "port8081"
           )
         ),
-        taskId = Some(TaskID("task-123")),
+        taskId = Some(Task.Id("task-123")),
         host = Some("host.mega.corp"),
         ports = Seq(1000, 1001),
         envPrefix = None
@@ -878,7 +878,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         app = AppDefinition(
           ports = Seq(8080, 8081)
         ),
-        taskId = Some(TaskID("task-123")),
+        taskId = Some(Task.Id("task-123")),
         host = Some("host.mega.corp"),
         ports = Seq(1000, 1001),
         envPrefix = None
@@ -896,7 +896,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         AppDefinition(
           ports = Seq(8080, 8081)
         ),
-        Some(TaskID("task-123")),
+        Some(Task.Id("task-123")),
         Some("host.mega.corp"),
         Seq(1000, 1001),
         Some("CUSTOM_PREFIX_")
@@ -926,7 +926,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         AppDefinition(
           ports = Seq(8080, 8081)
         ),
-        Some(TaskID("task-123")),
+        Some(Task.Id("task-123")),
         Some("host.mega.corp"),
         Seq(1000, 1001),
         Some("P_")
@@ -956,7 +956,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
             ))
           ))
         ),
-        taskId = Some(TaskID("task-123")),
+        taskId = Some(Task.Id("task-123")),
         host = Some("host.mega.corp"),
         ports = Seq(1000, 1001),
         envPrefix = None
@@ -983,7 +983,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
             ))
           ))
         ),
-        taskId = Some(TaskID("task-123")),
+        taskId = Some(Task.Id("task-123")),
         host = Some("host.mega.corp"),
         ports = Seq(1000, 1001),
         envPrefix = None
@@ -1006,7 +1006,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           FetchUri(uri = "http://www.example2.com", extract = true, cache = true, executable = true)
         )
       ),
-      taskId = Some(TaskID("task-123")),
+      taskId = Some(Task.Id("task-123")),
       host = Some("host.mega.corp"),
       ports = Seq(1000, 1001),
       envPrefix = None
@@ -1064,7 +1064,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None) = {
     val builder = new TaskBuilder(app,
-      s => TaskID(s.toString),
+      s => Task.Id(s.toString),
       MarathonTestHelper.defaultConfig(
         mesosRole = mesosRole,
         acceptedResourceRoles = acceptedResourceRoles,

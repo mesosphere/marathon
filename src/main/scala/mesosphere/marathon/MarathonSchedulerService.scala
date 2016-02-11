@@ -15,8 +15,8 @@ import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
 import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
@@ -148,8 +148,8 @@ class MarathonSchedulerService @Inject() (
 
   def killTasks(
     appId: PathId,
-    tasks: Iterable[MarathonTask]): Iterable[MarathonTask] = {
-    schedulerActor ! KillTasks(appId, tasks.map(_.getId).toSet)
+    tasks: Iterable[Task]): Iterable[Task] = {
+    schedulerActor ! KillTasks(appId, tasks.map(_.taskId))
 
     tasks
   }

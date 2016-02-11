@@ -1,9 +1,9 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.tasks.MarathonTasks
 import org.apache.mesos.Protos.Offer
 import org.slf4j.LoggerFactory
 
@@ -25,7 +25,7 @@ object Constraints {
     case _      => default
   }
 
-  private final class ConstraintsChecker(tasks: Iterable[MarathonTask], offer: Offer, constraint: Constraint) {
+  private final class ConstraintsChecker(tasks: Iterable[Task], offer: Offer, constraint: Constraint) {
     val field = constraint.getField
     val value = constraint.getValue
     lazy val attr = offer.getAttributesList.asScala.find(_.getName == field)
@@ -43,7 +43,7 @@ object Constraints {
         checkMissingAttribute
       }
 
-    private def checkGroupBy(constraintValue: String, groupFunc: (MarathonTask) => Option[String]) = {
+    private def checkGroupBy(constraintValue: String, groupFunc: (Task) => Option[String]) = {
       // Minimum group count
       val minimum = List(GroupByDefault, getIntValue(value, GroupByDefault)).max
       // Group tasks by the constraint value, and calculate the task count of each group
@@ -66,18 +66,18 @@ object Constraints {
         case Operator.LIKE     => offer.getHostname.matches(value)
         case Operator.UNLIKE   => !offer.getHostname.matches(value)
         // All running tasks must have a hostname that is different from the one in the offer
-        case Operator.UNIQUE   => tasks.forall(_.getHost != offer.getHostname)
-        case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (task: MarathonTask) => Option(task.getHost))
+        case Operator.UNIQUE   => tasks.forall(_.agentInfo.host != offer.getHostname)
+        case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (task: Task) => Some(task.agentInfo.host))
         case Operator.CLUSTER =>
           // Hostname must match or be empty
           (value.isEmpty || value == offer.getHostname) &&
             // All running tasks must have the same hostname as the one in the offer
-            tasks.forall(_.getHost == offer.getHostname)
+            tasks.forall(_.agentInfo.host == offer.getHostname)
         case _ => false
       }
 
     private def checkAttribute = {
-      def matches: Iterable[MarathonTask] = matchTaskAttributes(tasks, field, attr.get.getText.getValue)
+      def matches: Iterable[Task] = matchTaskAttributes(tasks, field, attr.get.getText.getValue)
       constraint.getOperator match {
         case Operator.UNIQUE => matches.isEmpty
         case Operator.CLUSTER =>
@@ -86,8 +86,8 @@ object Constraints {
             // All running tasks should have the matching attribute
             matches.size == tasks.size
         case Operator.GROUP_BY =>
-          val groupFunc = (task: MarathonTask) =>
-            task.getAttributesList.asScala
+          val groupFunc = (task: Task) =>
+            task.agentInfo.attributes
               .find(_.getName == field)
               .map(_.getText.getValue)
           checkGroupBy(attr.get.getText.getValue, groupFunc)
@@ -115,9 +115,9 @@ object Constraints {
     /**
       * Filters running tasks by matching their attributes to this field & value.
       */
-    private def matchTaskAttributes(tasks: Iterable[MarathonTask], field: String, value: String) =
+    private def matchTaskAttributes(tasks: Iterable[Task], field: String, value: String) =
       tasks.filter {
-        _.getAttributesList.asScala
+        _.agentInfo.attributes
           .filter { y =>
             y.getName == field &&
               y.getText.getValue == value
@@ -125,12 +125,13 @@ object Constraints {
       }
   }
 
-  def meetsConstraint(tasks: Iterable[MarathonTask], offer: Offer, constraint: Constraint): Boolean =
+  def meetsConstraint(tasks: Iterable[Task], offer: Offer, constraint: Constraint): Boolean =
     new ConstraintsChecker(tasks, offer, constraint).isMatch
 
   /**
     * Select tasks to kill while maintaining the constraints of the application definition.
     * Note: It is possible, that the result of this operation does not select as much tasks as needed.
+    *
     * @param app the application definition of the tasks.
     * @param runningTasks the list of running tasks to filter
     * @param toKillCount the expected number of tasks to select for kill
@@ -138,7 +139,7 @@ object Constraints {
     */
   //scalastyle:off return
   def selectTasksToKill(
-    app: AppDefinition, runningTasks: Iterable[MarathonTask], toKillCount: Int): Iterable[MarathonTask] = {
+    app: AppDefinition, runningTasks: Iterable[Task], toKillCount: Int): Iterable[Task] = {
 
     require(toKillCount <= runningTasks.size, "Can not kill more instances than running")
 
@@ -147,19 +148,19 @@ object Constraints {
 
     //currently, only the GROUP_BY operator is able to select tasks to kill
     val distributions = app.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
-      def groupFn(task: MarathonTask): Option[String] = constraint.getField match {
-        case "hostname"    => Some(task.getHost)
-        case field: String => task.getAttributesList.asScala.find(_.getName == field).map(_.getText.getValue)
+      def groupFn(task: Task): Option[String] = constraint.getField match {
+        case "hostname"    => Some(task.agentInfo.host)
+        case field: String => task.agentInfo.attributes.find(_.getName == field).map(_.getText.getValue)
       }
-      val taskGroups: Seq[Map[String, MarathonTask]] =
-        runningTasks.groupBy(groupFn).values.map(MarathonTasks.taskMap).toSeq
+      val taskGroups: Seq[Map[Task.Id, Task]] =
+        runningTasks.groupBy(groupFn).values.map(Task.tasksById(_)).toSeq
       GroupByDistribution(constraint, taskGroups)
     }
 
     //short circuit, if there are no constraints to align with
     if (distributions.isEmpty) return Set.empty
 
-    var toKillTasks = Map.empty[String, MarathonTask]
+    var toKillTasks = Map.empty[Task.Id, Task]
     var flag = true
     while (flag && toKillTasks.size != toKillCount) {
       val tried = distributions
@@ -168,10 +169,13 @@ object Constraints {
         //select tasks to kill (without already selected ones)
         .flatMap(_.tasksToKillIterator(toKillTasks)) ++
         //fallback: if the distributions did not select a task, choose one of the not chosen ones
-        runningTasks.iterator.filterNot(task => toKillTasks.contains(task.getId))
+        runningTasks.iterator.filterNot(task => toKillTasks.contains(task.taskId))
 
-      tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + (tryTask.getId -> tryTask)))) match {
-        case Some(task) => toKillTasks += task.getId -> task
+      val matchingTask =
+        tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + (tryTask.taskId -> tryTask))))
+
+      matchingTask match {
+        case Some(task) => toKillTasks += task.taskId -> task
         case None       => flag = false
       }
     }
@@ -179,8 +183,8 @@ object Constraints {
     //log the selected tasks and why they were selected
     if (log.isInfoEnabled) {
       val taskDesc = toKillTasks.values.map { task =>
-        val attrs = task.getAttributesList.asScala.map(a => s"${a.getName}=${a.getText.getValue}").mkString(", ")
-        s"Task:${task.getId} host:${task.getHost} attrs:$attrs"
+        val attrs = task.agentInfo.attributes.map(a => s"${a.getName}=${a.getText.getValue}").mkString(", ")
+        s"${task.taskId} host:${task.agentInfo.host} attrs:$attrs"
       }.mkString("Selected Tasks to kill:\n", "\n", "\n")
       val distDesc = distributions.map { d =>
         val (before, after) = (d.distributionDifference(), d.distributionDifference(toKillTasks))
@@ -195,21 +199,21 @@ object Constraints {
   /**
     * Helper class for easier distribution computation.
     */
-  private case class GroupByDistribution(constraint: Constraint, distribution: Seq[Map[String, MarathonTask]]) {
-    def isMoreEvenWithout(selected: Map[String, MarathonTask]): Boolean = {
+  private case class GroupByDistribution(constraint: Constraint, distribution: Seq[Map[Task.Id, Task]]) {
+    def isMoreEvenWithout(selected: Map[Task.Id, Task]): Boolean = {
       val diffAfterKill = distributionDifference(selected)
       //diff after kill is 0=perfect, 1=tolerated or minimizes the difference
       diffAfterKill <= 1 || distributionDifference() > diffAfterKill
     }
 
-    def tasksToKillIterator(without: Map[String, MarathonTask]): Iterator[MarathonTask] = {
+    def tasksToKillIterator(without: Map[Task.Id, Task]): Iterator[Task] = {
       val updated = distribution.map(_ -- without.keys).groupBy(_.size)
       if (updated.size == 1) /* even distributed */ Iterator.empty else {
         updated.maxBy(_._1)._2.iterator.flatten.map { case (taskId, task) => task }
       }
     }
 
-    def distributionDifference(without: Map[String, MarathonTask] = Map.empty): Int = {
+    def distributionDifference(without: Map[Task.Id, Task] = Map.empty): Int = {
       val updated = distribution.map(_ -- without.keys).groupBy(_.size).keySet
       updated.max - updated.min
     }

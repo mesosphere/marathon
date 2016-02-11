@@ -1,10 +1,11 @@
 package mesosphere.marathon.core.task
 
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task.Launched
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskIdUtil
+import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
@@ -24,6 +25,27 @@ case class Task(
     */
   lazy val marathonTask: MarathonTask = TaskSerializer.toProto(this)
 
+  def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
+    // it doesn't make sense for an unlaunched task
+    taskId.mesosTaskId
+  }
+
+  def mesosStatus: Option[MesosProtos.TaskStatus] = {
+    launched.flatMap(_.status.mesosStatus).orElse {
+      launchedMesosId.map { mesosId =>
+        val taskStatusBuilder = MesosProtos.TaskStatus.newBuilder
+          .setState(TaskState.TASK_STAGING)
+          .setTaskId(mesosId)
+
+        agentInfo.agentId.foreach { slaveId =>
+          taskStatusBuilder.setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(slaveId))
+        }
+
+        taskStatusBuilder.build()
+      }
+    }
+  }
+
   def withAgentInfo(update: Task.AgentInfo => Task.AgentInfo): Task = copy(agentInfo = update(agentInfo))
 
   def withLaunched(update: Launched => Launched): Task =
@@ -42,16 +64,32 @@ case class Task(
 }
 
 object Task {
+  def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
+
   case class Id(idString: String) {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
-    lazy val appId: PathId = TaskIdUtil.appId(idString)
+    lazy val appId: PathId = Id.appId(idString)
     override def toString: String = s"task [$idString]"
   }
 
   object Id {
+    private val appDelimiter = "."
+    private val TaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
+    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
+
+    def appId(taskId: String): PathId = {
+      taskId match {
+        case TaskIdRegex(appId, uuid) => PathId.fromSafePath(appId)
+        case _                        => throw new MatchError(s"taskId $taskId is no valid identifier")
+      }
+    }
+
     def apply(mesosTaskId: MesosProtos.TaskID): Id = new Id(mesosTaskId.getValue)
 
-    def forApp(appId: PathId): Id = Task.Id(TaskIdUtil.newTaskId(appId))
+    def forApp(appId: PathId): Id = {
+      val taskId = appId.safePath + appDelimiter + uuidGenerator.generate()
+      Task.Id(taskId)
+    }
   }
 
   /**
