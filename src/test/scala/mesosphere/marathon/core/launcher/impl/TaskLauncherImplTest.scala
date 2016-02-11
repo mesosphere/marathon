@@ -28,7 +28,7 @@ class TaskLauncherImplTest extends MarathonSpec {
   private[this] val launch2 = launch(MarathonTestHelper.makeOneCPUTask("task2"))
   private[this] val ops = Seq(launch1, launch2)
   private[this] val opsAsJava: util.List[Offer.Operation] = ops.flatMap(_.offerOperations).asJava
-  private[this] val filter = Protos.Filters.newBuilder().build()
+  private[this] val filter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
 
   test("launchTasks without driver") {
     driverHolder.driver = None
