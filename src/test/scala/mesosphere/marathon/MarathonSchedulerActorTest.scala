@@ -7,7 +7,6 @@ import akka.event.EventStream
 import akka.testkit._
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue

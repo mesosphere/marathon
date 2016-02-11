@@ -1,11 +1,10 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq

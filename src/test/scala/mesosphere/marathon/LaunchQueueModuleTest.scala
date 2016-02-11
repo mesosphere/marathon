@@ -1,11 +1,9 @@
 package mesosphere.marathon
 
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.base.{ Clock, ShutdownHooks }
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueueModule }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
-import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -14,11 +12,8 @@ import mesosphere.marathon.state.{ AppRepository, PathId }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.tasks._
 import mesosphere.marathon.test.MarathonShutdownHookSupport
-import org.apache.mesos.Protos.TaskID
-import org.hamcrest.{ BaseMatcher, Description }
 import org.mockito.Matchers
 import org.mockito.Mockito.{ when => call, _ }
-import org.mockito.internal.matchers.Equality
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen }
 
 import scala.concurrent.Await

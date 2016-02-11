@@ -3,7 +3,6 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.marathon
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp

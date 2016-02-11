@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.state.{ PathId, Timestamp }

@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.launcher.impl
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher

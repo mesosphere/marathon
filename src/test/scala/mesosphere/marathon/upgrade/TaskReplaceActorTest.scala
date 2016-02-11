@@ -1,8 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{ TestActorRef, TestKit }
-import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.{ MarathonTestHelper, TaskUpgradeCanceledException }
+import akka.testkit.TestActorRef
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -12,6 +10,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.upgrade.TaskReplaceActor.RetryKills
+import mesosphere.marathon.{ MarathonTestHelper, TaskUpgradeCanceledException }
 import org.apache.mesos.Protos.{ Status, TaskID }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
