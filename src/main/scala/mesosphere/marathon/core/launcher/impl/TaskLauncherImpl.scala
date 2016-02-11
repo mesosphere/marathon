@@ -27,7 +27,12 @@ private[launcher] class TaskLauncherImpl(
       if (log.isDebugEnabled) {
         log.debug(s"Launching tasks on $offerID:\n${taskInfos.mkString("\n")}")
       }
-      driver.launchTasks(Collections.singleton(offerID), taskInfos.asJava)
+
+      //We accept the offer, the rest of the offer is declined automatically with the given filter.
+      //The filter duration is set to 0, so we get the same offer in the next allocator cycle.
+      val noFilter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
+      val operations = taskOps.flatMap(_.offerOperations)
+      driver.acceptOffers(Collections.singleton(offerID), operations.asJava, noFilter)
     }
     if (launched) {
       usedOffersMeter.mark()
