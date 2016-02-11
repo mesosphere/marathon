@@ -61,8 +61,8 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
 
-    When("created is called")
-    val create = f.delegate.terminated(task.taskId)
+    When("terminated is called")
+    val terminated = f.delegate.terminated(task.taskId)
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
@@ -72,7 +72,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     When("the request is acknowledged")
     f.taskTrackerProbe.reply(())
     Then("The reply is the value of the future")
-    create.futureValue should be(())
+    terminated.futureValue should be(())
   }
 
   test("Terminated fails") {
@@ -80,8 +80,8 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
 
-    When("created is called")
-    val create = f.delegate.terminated(task.taskId)
+    When("terminated is called")
+    val terminated = f.delegate.terminated(task.taskId)
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
@@ -92,10 +92,10 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val cause: RuntimeException = new scala.RuntimeException("test failure")
     f.taskTrackerProbe.reply(Status.Failure(cause))
     Then("The reply is the value of task")
-    create.failed.futureValue.getMessage should include(appId.toString)
-    create.failed.futureValue.getMessage should include(task.taskId.idString)
-    create.failed.futureValue.getMessage should include("Expunge")
-    create.failed.futureValue.getCause should be(cause)
+    terminated.failed.futureValue.getMessage should include(appId.toString)
+    terminated.failed.futureValue.getMessage should include(task.taskId.idString)
+    terminated.failed.futureValue.getMessage should include("Expunge")
+    terminated.failed.futureValue.getCause should be(cause)
   }
 
   test("StatusUpdate succeeds") {
@@ -106,9 +106,9 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val update = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(taskId)).buildPartial()
 
     When("created is called")
-    val create = f.delegate.statusUpdate(appId, update)
+    val statusUpdate = f.delegate.statusUpdate(appId, update)
 
-    Then("an expunge operation is requested")
+    Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
       TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, Task.Id(taskId), TaskOpProcessor.Action.UpdateStatus(update))
     )
@@ -116,7 +116,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     When("the request is acknowledged")
     f.taskTrackerProbe.reply(())
     Then("The reply is the value of the future")
-    create.futureValue should be(())
+    statusUpdate.futureValue should be(())
   }
 
   test("StatusUpdate fails") {
@@ -126,10 +126,10 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     val update = TaskStatus.newBuilder().setTaskId(taskId.mesosTaskId).buildPartial()
 
-    When("created is called")
-    val create = f.delegate.statusUpdate(appId, update)
+    When("statusUpdate is called")
+    val statusUpdate = f.delegate.statusUpdate(appId, update)
 
-    Then("an expunge operation is requested")
+    Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
       TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, taskId, TaskOpProcessor.Action.UpdateStatus(update))
     )
@@ -138,10 +138,10 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val cause: RuntimeException = new scala.RuntimeException("test failure")
     f.taskTrackerProbe.reply(Status.Failure(cause))
     Then("The reply is the value of task")
-    create.failed.futureValue.getMessage should include(appId.toString)
-    create.failed.futureValue.getMessage should include(taskId.toString)
-    create.failed.futureValue.getMessage should include("UpdateStatus")
-    create.failed.futureValue.getCause should be(cause)
+    statusUpdate.failed.futureValue.getMessage should include(appId.toString)
+    statusUpdate.failed.futureValue.getMessage should include(taskId.toString)
+    statusUpdate.failed.futureValue.getMessage should include("UpdateStatus")
+    statusUpdate.failed.futureValue.getCause should be(cause)
   }
 
   class Fixture {
