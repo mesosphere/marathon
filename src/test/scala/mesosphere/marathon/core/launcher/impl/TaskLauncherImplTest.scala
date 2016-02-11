@@ -23,7 +23,7 @@ class TaskLauncherImplTest extends MarathonSpec {
   private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask("taskid2").build()
   private[this] val tasks = Seq(taskInfo1, taskInfo2)
   private[this] val tasksAsJava: util.List[TaskInfo] = Seq(taskInfo1, taskInfo2).asJava
-  private[this] val filter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
+  private[this] val noFilter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
 
   test("launchTasks without driver") {
     driverHolder.driver = None
@@ -32,19 +32,19 @@ class TaskLauncherImplTest extends MarathonSpec {
   }
 
   test("unsuccessful launchTasks") {
-    when(driverHolder.driver.get.launchTasks(offerIdAsJava, tasksAsJava)).thenReturn(Protos.Status.DRIVER_ABORTED)
+    when(driverHolder.driver.get.launchTasks(offerIdAsJava, tasksAsJava, noFilter)).thenReturn(Protos.Status.DRIVER_ABORTED)
 
     assert(!launcher.launchTasks(offerId, Seq(taskInfo1, taskInfo2)))
 
-    verify(driverHolder.driver.get).launchTasks(offerIdAsJava, tasksAsJava)
+    verify(driverHolder.driver.get).launchTasks(offerIdAsJava, tasksAsJava, noFilter)
   }
 
   test("successful launchTasks") {
-    when(driverHolder.driver.get.launchTasks(offerIdAsJava, tasksAsJava)).thenReturn(Protos.Status.DRIVER_RUNNING)
+    when(driverHolder.driver.get.launchTasks(offerIdAsJava, tasksAsJava, noFilter)).thenReturn(Protos.Status.DRIVER_RUNNING)
 
     assert(launcher.launchTasks(offerId, Seq(taskInfo1, taskInfo2)))
 
-    verify(driverHolder.driver.get).launchTasks(offerIdAsJava, tasksAsJava)
+    verify(driverHolder.driver.get).launchTasks(offerIdAsJava, tasksAsJava, noFilter)
   }
 
   test("declineOffer without driver") {
