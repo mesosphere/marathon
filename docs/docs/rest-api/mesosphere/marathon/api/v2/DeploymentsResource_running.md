@@ -36,7 +36,7 @@ Transfer-Encoding: chunked
 
 [
     {
-        "affectedApplications": [
+        "affectedApps": [
             "/test/service/srv1", 
             "/test/db/mongo1", 
             "/test/frontend/app1"
