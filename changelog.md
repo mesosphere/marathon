@@ -1,3 +1,12 @@
+## Changes from 0.15.1 to 0.15.2
+
+This release includes fixes for two bugs introduced in 0.15.0.
+
+## Fixed issues
+
+- #3172 - "Apply" button is broken (sending both uris and fetch)
+- #3242 - Treat "value" attribute in server-side validation errors as general error
+
 ## Changes from 0.15.0 to 0.15.1
 
 This release includes fixes for several bugs introduced in 0.15.0.
