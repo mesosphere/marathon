@@ -7,7 +7,7 @@ trait OfferMatcherManagerConfig extends ScallopConf {
 
   lazy val maxTasksPerOffer = opt[Int]("max_tasks_per_offer",
     descr = "Maximum tasks per offer. Do not start more than this number of tasks on a single offer.",
-    default = Some(100))
+    default = Some(5))
 
   lazy val maxTasksPerOfferCycle = opt[Int]("max_tasks_per_offer_cycle",
     descr = "DEPRECATED. NO EFFECT. Maximally launch this number of tasks per offer cycle.",

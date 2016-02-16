@@ -87,7 +87,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--reconciliation_initial_delay` (Optional. Default: 15000 (15 seconds)): The
     delay, in milliseconds, before Marathon begins to periodically perform task
     reconciliation operations.
-* `--reconciliation_interval` (Optional. Default: 300000 (5 minutes)): The
+* `--reconciliation_interval` (Optional. Default: 600000 (10 minutes)): The
     period, in milliseconds, between task reconciliation operations.
 * `--scale_apps_initial_delay` (Optional. Default: 15000 (15 seconds)): The
     delay, in milliseconds, before Marathon begins to periodically perform
@@ -162,7 +162,7 @@ more tasks when it gets feedback about running and healthy tasks from Mesos.
 
 * <span class="label label-default">v0.11.0</span> `--launch_token_refresh_interval` (Optional. Default: 30000):
     The interval (ms) in which to refresh the launch tokens to `--launch_token_count`.
-* <span class="label label-default">v0.11.0</span> `--launch_tokens` (Optional. Default: 1000):
+* <span class="label label-default">v0.11.0</span> `--launch_tokens` (Optional. Default: 100):
     Launch tokens per interval.
 
 To prevent overloading Marathon and maintain speedy offer processing, there is a timeout for matching each
@@ -219,7 +219,7 @@ resource offers Marathon receives from Mesos more efficiently, we added a new of
 to start as many tasks as possible per task offer cycle. The maximum number of tasks to start is configurable with
 the following startup parameters:
 
-* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
+* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 5): Launch at most this
     number of tasks per Mesos offer. Usually,
     there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
 

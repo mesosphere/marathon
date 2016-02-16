@@ -1,3 +1,18 @@
+## Changes from 0.15.2 to 0.16.0
+
+### Recommended Mesos version is 0.27.0
+
+### Overview
+
+#### Default settings for Task Launches have been changed
+
+Marathon has a lot of settings to adjust. Our goal is, to have sensible defaults for small and medium size clusters.
+We realized, that some default values are not sufficient in the field and changed them:
+- `--launch_tokens` has changed to 100 (was 1000)
+- `--max_tasks_per_offer` has changed to 5 (was 100) 
+- `--reconciliation_interval` has changed to 600000 (=10 minutes) (was 300000 (=5 minutes)) 
+
+
 ## Changes from 0.15.1 to 0.15.2
 
 This release includes fixes for two bugs introduced in 0.15.0.
@@ -6,6 +21,8 @@ This release includes fixes for two bugs introduced in 0.15.0.
 
 - #3172 - "Apply" button is broken (sending both uris and fetch)
 - #3242 - Treat "value" attribute in server-side validation errors as general error
+
+
 
 ## Changes from 0.15.0 to 0.15.1
 
