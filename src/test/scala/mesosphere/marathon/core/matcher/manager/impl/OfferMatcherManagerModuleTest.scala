@@ -77,7 +77,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
     val matchedTasksFuture: Future[MatchedTaskOps] =
-      module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
+      module.globalOfferMatcher.matchOffer(clock.now() + 2.seconds, offer)
     val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
     assert(matchedTasks.launchedTaskInfos.toSet == Set(makeOneCPUTask("task1_1"), makeOneCPUTask("task2_1")))
   }
@@ -92,7 +92,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
       module.subOfferMatcherManager.addSubscription(new ConstantOfferMatcher(Seq(task1)))
 
       val matchedTasksFuture: Future[MatchedTaskOps] =
-        module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
+        module.globalOfferMatcher.matchOffer(clock.now() + 10.seconds, offer)
       val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
       assert(matchedTasks.opsWithSource.size == launchTokens)
     }
@@ -109,7 +109,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     module.subOfferMatcherManager.addSubscription(new CPUOfferMatcher(Seq(task2)))
 
     val matchedTasksFuture: Future[MatchedTaskOps] =
-      module.globalOfferMatcher.matchOffer(clock.now() + 1.second, offer)
+      module.globalOfferMatcher.matchOffer(clock.now() + 5.seconds, offer)
     val matchedTasks: MatchedTaskOps = Await.result(matchedTasksFuture, 3.seconds)
     assert(matchedTasks.launchedTaskInfos.toSet == Set(
       makeOneCPUTask("task1_1"),

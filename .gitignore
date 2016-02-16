@@ -14,3 +14,4 @@ start.sh
 .DS_Store
 *.ipr
 *.iws
+.metadata/
