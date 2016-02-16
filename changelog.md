@@ -1,3 +1,25 @@
+## Changes from 0.15.1 to 0.15.2
+
+This release includes fixes for two bugs introduced in 0.15.0.
+
+## Fixed issues
+
+- #3172 - "Apply" button is broken (sending both uris and fetch)
+- #3242 - Treat "value" attribute in server-side validation errors as general error
+
+## Changes from 0.15.0 to 0.15.1
+
+This release includes fixes for several bugs introduced in 0.15.0.
+
+## Fixed issues
+
+- #3139 - Marathon 0.15.0 forces redeploy of app all the time
+- #3054 - Empty application attributes are accidentally submited by the UI
+- #3141 - Jetty throws exception during load
+- #3164 - Marathon 0.15 error on bad application id is really bad
+- #3160 - Show 400 error for Constraints field
+- #3140 - breaking API change on portIndex
+
 ## Changes from 0.14.0 to 0.15.0
 
 ### Recommended Mesos version is 0.26.0
