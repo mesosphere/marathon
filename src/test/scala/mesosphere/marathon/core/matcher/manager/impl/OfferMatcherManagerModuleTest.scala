@@ -82,7 +82,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     assert(matchedTasks.launchedTaskInfos.toSet == Set(makeOneCPUTask("task1_1"), makeOneCPUTask("task2_1")))
   }
 
-  for (launchTokens <- Seq(0, 1, 10)) {
+  for (launchTokens <- Seq(0, 1, 5)) {
     test(s"launch as many tasks as there are launch tokens: $launchTokens") {
       val offer: Offer = MarathonTestHelper.makeBasicOffer(cpus = 1.3).build()
 

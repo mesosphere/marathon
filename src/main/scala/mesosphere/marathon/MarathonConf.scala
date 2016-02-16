@@ -150,7 +150,7 @@ trait MarathonConf
   lazy val reconciliationInterval = opt[Long]("reconciliation_interval",
     descr = "This is the length of time, in milliseconds, between task " +
       "reconciliation operations.",
-    default = Some(300000L)) // 300 seconds (5 minutes)
+    default = Some(600000L)) // 600 seconds (10 minutes)
 
   lazy val scaleAppsInitialDelay = opt[Long]("scale_apps_initial_delay",
     descr = "This is the length of time, in milliseconds, before Marathon " +
