@@ -78,7 +78,7 @@ $ curl https://localhost:8443/v2/apps
                       -name marathon \
                         -in trusted.pem \
                   -password "env:MARATHON_PKCS_PASSWORD" \
-             -chain -CAFile "trustedCA.crt" \
+             -chain -CAfile "trustedCA.crt" \
                -export -out marathon.pkcs12
     ```
 
