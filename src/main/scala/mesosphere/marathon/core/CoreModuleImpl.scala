@@ -17,7 +17,7 @@ import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppRepository, TaskRepository }
-import mesosphere.marathon.tasks.TaskFactory
+import mesosphere.marathon.tasks.TaskOpLogic
 import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
 
 import scala.util.Random
@@ -38,7 +38,7 @@ class CoreModuleImpl @Inject() (
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     appRepository: AppRepository,
     taskRepository: TaskRepository,
-    taskFactory: TaskFactory,
+    taskOpLogic: TaskOpLogic,
     leaderInfo: LeaderInfo,
     clock: Clock) extends CoreModule {
 
@@ -87,7 +87,7 @@ class CoreModuleImpl @Inject() (
     // external guice dependencies
     appRepository,
     taskTrackerModule.taskTracker,
-    taskFactory
+    taskOpLogic
   )
 
   // PLUGINS

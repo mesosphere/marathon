@@ -115,6 +115,7 @@ private[impl] class OfferMatcherManagerActor private (
         updateOffersWanted()
       }
 
+      // FIXME (217): This message is not handled by anyone
       sender() ! OfferMatcherManagerDelegate.MatcherAdded(matcher)
 
     case OfferMatcherManagerDelegate.RemoveMatcher(matcher) =>
@@ -123,6 +124,7 @@ private[impl] class OfferMatcherManagerActor private (
         matchers -= matcher
         updateOffersWanted()
       }
+      // FIXME (217): This message is not handled by anyone
       sender() ! OfferMatcherManagerDelegate.MatcherRemoved(matcher)
   }
 
@@ -135,7 +137,7 @@ private[impl] class OfferMatcherManagerActor private (
     val appReservations = offer.getResourcesList.asScala
       .filter(r => r.hasDisk && r.getDisk.hasPersistence && r.getDisk.getPersistence.hasId)
       .map(_.getDisk.getPersistence.getId)
-      .collect { case LocalVolumeId((appId, _)) => appId }
+      .collect { case LocalVolumeId(volumeId) => volumeId.appId }
       .toSet
     val (reserved, normal) = matchers.toSeq.partition(_.precedenceFor.exists(appReservations))
     //1 give the offer to the matcher waiting for a reservation
@@ -223,12 +225,14 @@ private[impl] class OfferMatcherManagerActor private (
       log.warning(s"Deadline for ${data.offer.getId.getValue} overdue. Scheduled ${data.ops.size} ops so far.")
       None
     }
+    // FIXME (217): taskOps != task launches
     else if (data.ops.size >= conf.maxTasksPerOffer()) {
       log.info(
         s"Already scheduled the maximum number of ${data.ops.size} tasks on this offer. " +
           s"Increase with --${conf.maxTasksPerOffer.name}.")
       None
     }
+    // FIXME (217): taskOp != task launch
     else if (launchTokens <= 0) {
       log.info(
         s"No launch tokens left for ${data.offer.getId.getValue}. " +

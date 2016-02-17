@@ -189,7 +189,7 @@ object MarathonTestHelper {
     }
 
   def makeBasicApp() = AppDefinition(
-    id = "test-app".toPath,
+    id = "/test-app".toPath,
     cpus = 1.0,
     mem = 64.0,
     disk = 1.0,

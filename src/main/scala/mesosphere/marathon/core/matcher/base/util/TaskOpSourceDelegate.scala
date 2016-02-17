@@ -1,10 +1,9 @@
 package mesosphere.marathon.core.matcher.base.util
 
 import akka.actor.ActorRef
-import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ TaskOp, TaskOpSource }
-import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.{ TaskOpRejected, TaskOpAccepted }
-import org.apache.mesos.Protos.TaskInfo
+import mesosphere.marathon.core.matcher.base.OfferMatcher.TaskOpSource
+import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.{ TaskOpAccepted, TaskOpRejected }
+import mesosphere.marathon.tasks.TaskOp
 
 private class TaskOpSourceDelegate(actorRef: ActorRef) extends TaskOpSource {
   override def taskOpAccepted(taskOp: TaskOp): Unit = actorRef ! TaskOpAccepted(taskOp)

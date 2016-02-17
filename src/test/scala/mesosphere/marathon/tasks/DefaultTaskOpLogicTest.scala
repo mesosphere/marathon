@@ -8,7 +8,7 @@ import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 
-class DefaultTaskFactoryTest extends MarathonSpec {
+class DefaultTaskOpLogicTest extends MarathonSpec {
 
   test("Copy SlaveID from Offer to Task") {
 
@@ -21,39 +21,39 @@ class DefaultTaskFactoryTest extends MarathonSpec {
       MarathonTestHelper.mininimalTask("some task ID")
     )
 
-    val createdTask = taskFactory.newTask(appDefinition, offer, runningTasks).get
+    val inferredTaskOp = taskFactory.inferTaskOp(appDefinition, offer, runningTasks)
 
-    val expectedTask =
-      Task(
-        taskId = Task.Id("some task ID"),
-        agentInfo = Task.AgentInfo(
-          host = "some_host",
-          agentId = Some(offer.getSlaveId.getValue),
-          attributes = List.empty
-        ),
-        launched = Some(
-          Task.Launched(
-            appVersion = appDefinition.version,
-            status = Task.Status(
-              stagedAt = clock.now()
-            ),
-            networking = Task.HostPorts(List.empty)
-          )
+    val expectedTask = Task(
+      taskId = Task.Id("some task ID"),
+      agentInfo = Task.AgentInfo(
+        host = "some_host",
+        agentId = Some(offer.getSlaveId.getValue),
+        attributes = List.empty
+      ),
+      launched = Some(
+        Task.Launched(
+          appVersion = appDefinition.version,
+          status = Task.Status(
+            stagedAt = clock.now()
+          ),
+          networking = Task.HostPorts(List.empty)
         )
       )
-    assert(createdTask.task.copy(taskId = expectedTask.taskId) == expectedTask)
+    )
+    assert(inferredTaskOp.isDefined, "task op is not empty")
+    assert(inferredTaskOp.get.newTask.copy(taskId = expectedTask.taskId) == expectedTask)
   }
 
   var taskTracker: TaskTracker = _
   var config: MarathonConf = _
-  var taskFactory: DefaultTaskFactory = _
+  var taskFactory: DefaultTaskOpLogic = _
   var clock: Clock = _
 
   before {
     clock = ConstantClock()
     taskTracker = mock[TaskTracker]
     config = MarathonTestHelper.defaultConfig()
-    taskFactory = new DefaultTaskFactory(config, clock)
+    taskFactory = new DefaultTaskOpLogic(config, clock)
   }
 
 }
