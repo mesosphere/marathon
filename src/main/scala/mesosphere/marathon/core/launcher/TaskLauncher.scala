@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.launcher
 
-import mesosphere.marathon.core.matcher.base.OfferMatcher.TaskOp
+import mesosphere.marathon.tasks.TaskOp
 import org.apache.mesos.Protos.OfferID
 
 /**
@@ -11,7 +11,7 @@ trait TaskLauncher {
     * Send operations on given offer to Mesos. The offer is consumed afterwards and
     * cannot be used anymore.
     *
-    * @return `true` if we could communicate the task launch to Mesos and `false` otherwise
+    * @return `true` if we could communicate the acceptOffer call to Mesos and `false` otherwise
     */
   def acceptOffer(offerID: OfferID, taskOps: Seq[TaskOp]): Boolean
 

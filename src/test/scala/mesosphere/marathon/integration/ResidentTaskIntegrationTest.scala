@@ -21,13 +21,13 @@ class ResidentTaskIntegrationTest
   //clean up state before running the test case
   before(cleanUp())
 
-  // FIXME(ME) enable the test when the base functionality is implemented
+  // FIXME (217) enable the test when the base functionality is implemented
   ignore("persistent volume will be re-attached and keep state") {
     import StatusUpdateEvent._
 
     val f = new Fixture
     val appId = testBasePath / "app"
-    val containerPath = "/mnt/persistent-volume"
+    val containerPath = "persistent-volume"
 
     Given("A task that writes into a persistent volume")
     create(f.appWithPersistentVolume(

@@ -14,7 +14,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, AppRepository }
-import mesosphere.marathon.tasks.TaskFactory
+import mesosphere.marathon.tasks.TaskOpLogic
 
 /**
   * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given AppDefinition.
@@ -27,7 +27,7 @@ class LaunchQueueModule(
     maybeOfferReviver: Option[OfferReviver],
     appRepository: AppRepository,
     taskTracker: TaskTracker,
-    taskFactory: TaskFactory) {
+    taskOpLogic: TaskOpLogic) {
 
   private[this] val launchQueueActorRef: ActorRef = {
     val props = LaunchQueueActor.props(config, appActorProps)
@@ -48,7 +48,7 @@ class LaunchQueueModule(
       config,
       subOfferMatcherManager,
       clock,
-      taskFactory,
+      taskOpLogic,
       maybeOfferReviver,
       taskTracker,
       rateLimiterActor)(app, count)

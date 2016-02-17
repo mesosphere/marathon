@@ -77,9 +77,9 @@ class OfferMatcherManagerActorTest extends MarathonActorSupport with FunSuiteLik
       matcher
     }
 
-    def reservedOffer(appId: PathId, path: String = "/test"): Offer = {
+    def reservedOffer(appId: PathId, path: String = "test"): Offer = {
       import MarathonTestHelper._
-      makeBasicOffer().addResources(reservedDisk(LocalVolumeId(appId, path).idString, containerPath = path)).build()
+      makeBasicOffer().addResources(reservedDisk(LocalVolumeId(appId, path, "uuid").idString, containerPath = path)).build()
     }
   }
 }

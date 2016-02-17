@@ -2,8 +2,8 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Id }
-import mesosphere.marathon.state.{ Volume, Timestamp }
+import mesosphere.marathon.core.task.Task.{ ReservationWithVolumes, LocalVolumeId, Id }
+import mesosphere.marathon.state.{ PathId, Volume, Timestamp }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos.Protos.{ Attribute, TaskStatus }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -110,6 +110,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     marathonTask2 should equal(marathonTask)
   }
 
+  private[this] val appId = PathId.fromSafePath("/test")
   private[this] val taskId = Task.Id("task")
   private[this] val sampleHost: String = "somehost"
   private[this] val sampleAttributes: Iterable[Attribute] = Iterable(attribute("label1", "value1"))
@@ -131,7 +132,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
   private[this] val fullSampleTaskStateWithoutNetworking: Task = Task(
     taskId,
     Task.AgentInfo(host = sampleHost, agentId = Some(sampleSlaveId.getValue), attributes = sampleAttributes),
-    reservationWithVolumes = Some(Task.ReservationWithVolumes(Seq(LocalVolumeId("my-volume")))),
+    reservationWithVolumes = Some(Task.ReservationWithVolumes(Seq(LocalVolumeId(appId, "my-volume", "uuid-123")))),
     launched = Some(
       Task.Launched(
         appVersion = appVersion,
@@ -155,7 +156,8 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       .setVersion(appVersion.toString)
       .setStatus(sampleTaskStatus)
       .setSlaveId(sampleSlaveId)
-      .setReservationWithVolumes(MarathonTask.ReservationWithVolumes.newBuilder.addLocalVolumeIds("my-volume"))
+      .setReservationWithVolumes(MarathonTask.ReservationWithVolumes.newBuilder.addLocalVolumeIds(
+        LocalVolumeId(appId, "my-volume", "uuid-123").idString))
       .build()
 
   private[this] def attribute(name: String, textValue: String): MesosProtos.Attribute = {

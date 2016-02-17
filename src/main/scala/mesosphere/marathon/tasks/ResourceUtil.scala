@@ -154,6 +154,8 @@ object ResourceUtil {
   /**
     * Deduct usedResources from resources in the offer.
     */
+  // FIXME (217): reserved resources including disk for persistent volumes will be consumed
+  // we should also consume offered persistent volumes and (labeled) reserved resources!
   def consumeResourcesFromOffer(offer: Offer, usedResources: Iterable[Resource]): Offer = {
     import scala.collection.JavaConverters._
     val offerResources: Seq[Resource] = offer.getResourcesList.asScala
