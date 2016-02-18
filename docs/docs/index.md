@@ -83,8 +83,14 @@ library lives elsewhere in your configuration, set the environment variable
 
 For example:
 
+OS X
 ```console
 $ MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
+```
+
+Linux
+```console
+$ MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.so ./bin/start --master local --zk zk://localhost:2181/marathon
 ```
 
 ### Launch an Application
