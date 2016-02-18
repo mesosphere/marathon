@@ -6,6 +6,12 @@ package mesosphere.marathon.plugin.http
 trait HttpRequest {
 
   /**
+    * Returns the name of the HTTP method with which this request was made.
+    * For example, GET, POST, or PUT.
+    */
+  def method: String
+
+  /**
     * Get the header values for given header name
     * @param name the name of the header
     * @return the seq of values

@@ -7,7 +7,8 @@ title: Extend Marathon with Plugins
 
 <div class="alert alert-danger" role="alert">
   <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Available in Marathon Version 0.12+ <br/>
-  The Marathon plugin functionality is considered alpha, so use this feature at you own risk. We might add, change, or delete any functionality described in this document.  
+  <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 0.16 <br/>
+  The Marathon plugin functionality is considered beta, so use this feature at you own risk. We might add, change, or delete any functionality described in this document.  
 </div>
 
 ## Overview
@@ -104,17 +105,27 @@ You can also extend Marathon with a set of several plugins.
 You must provide a plugin descriptor to make sure you are using only valid combinations of plugins.
 The descriptor defines which plugin interface is extended by which service provider.
 Marathon will load this descriptor with all defined plugins during startup.
+
+- plugin (required): the name of the plugin interface 
+- implementation (required): the name of the implementing class
+- configuration (optional): configuration that is available to the plugin via the PluginConfiguration trait.
+- tags (optional): meta data attached to this plugin as simple strings
+- info (optional): meta data attached to this plugin as key/value pair
  
 Example:
 
 ```json
 {
-  "plugins": [
-    {
+  "plugins": {
+    "authorizer": {
       "plugin": "mesosphere.marathon.plugin.auth.Authorizer",
-      "implementation": "my.company.ExampleAuthorizer"
+      "implementation": "my.company.ExampleAuthorizer",
+      "tags": ["some", "tag"],
+      "info": {
+        "some": "info"
+      }
     },
-    {
+    "authenticator": {
       "plugin": "mesosphere.marathon.plugin.auth.Authenticator",
       "implementation": "my.company.ExampleAuthenticator",
       "configuration": {
@@ -129,7 +140,7 @@ Example:
         ]
       }
     }
-  ]
+  }
 }
 ```
 

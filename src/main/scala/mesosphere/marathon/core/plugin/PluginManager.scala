@@ -6,4 +6,6 @@ trait PluginManager {
 
   def plugins[T](implicit ct: ClassTag[T]): Seq[T]
 
+  def definitions: PluginDefinitions
+
 }
