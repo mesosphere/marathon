@@ -224,8 +224,10 @@ trait ContainerFormats {
     (__ \ "containerPort").formatNullable[Int].withDefault(0) ~
     (__ \ "hostPort").formatNullable[Int].withDefault(0) ~
     (__ \ "servicePort").formatNullable[Int].withDefault(0) ~
-    (__ \ "protocol").formatNullable[String].withDefault("tcp")
-  )(PortMapping(_, _, _, _), unlift(PortMapping.unapply))
+    (__ \ "protocol").formatNullable[String].withDefault("tcp") ~
+    (__ \ "name").formatNullable[String] ~
+    (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
+  )(PortMapping(_, _, _, _, _, _), unlift(PortMapping.unapply))
 
   implicit lazy val DockerFormat: Format[Docker] = (
     (__ \ "image").format[String] ~
