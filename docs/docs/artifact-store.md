@@ -37,7 +37,8 @@ The filename used in the artifact store, is the same as given by the form parame
 The response holds the URL of the artifact in the artifact store in the Location Header.
 
 **Request:**
-```http
+```
+http
 POST /v2/artifacts HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -65,7 +66,9 @@ Server: Jetty(8.1.11.v20130520)
 If you want to specify a specific path in the artifact store, specify the path in the url:
 
 **Request:**
-```http
+
+```
+http
 POST /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -83,7 +86,9 @@ Content-Disposition: form-data; name="file"; filename="test.txt"
 ```
 
 **Response:**
-```http
+
+```
+http
 HTTP/1.1 201 Created
 Content-Length: 0
 Location: hdfs://localhost:54310/artifact/special/file/name.txt
@@ -95,7 +100,9 @@ Server: Jetty(8.1.11.v20130520)
 The path is the relative path in the artifact store.
 
 **Request:**
-```http
+
+```
+http
 GET /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -104,7 +111,9 @@ User-Agent: HTTPie/0.8.0
 ```
 
 **Response:**
-```http
+
+```
+http
 HTTP/1.1 200 OK
 Content-Length: 14
 Content-Type: text/plain
@@ -119,7 +128,9 @@ Server: Jetty(8.1.11.v20130520)
 The path is the relative path in the artifact store.
 
 **Request:**
-```http
+
+```
+http
 DELETE /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -129,7 +140,9 @@ User-Agent: HTTPie/0.8.0
 ```
 
 **Response:**
-```http
+
+```
+http
 HTTP/1.1 200 OK
 Content-Length: 0
 Content-Type: application/json
