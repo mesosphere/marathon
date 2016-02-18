@@ -37,27 +37,6 @@ object ContainerSerializer {
     container.docker.foreach { d => builder.setDocker(DockerSerializer.toMesos(d)) }
     builder.build
   }
-
-  /**
-    * Lossy conversion for backwards compatibility with deprecated
-    * container representation.
-    */
-  def fromMesos(proto: mesos.Protos.CommandInfo.ContainerInfo): Container =
-    Container(
-      `type` = mesos.Protos.ContainerInfo.Type.DOCKER,
-      docker = Some(Docker(proto.getImage))
-    )
-
-  /**
-    * Lossy conversion for backwards compatibility with deprecated
-    * container representation.
-    */
-  def fromMesos(proto: Protos.ContainerInfo): Container =
-    Container(
-      `type` = mesos.Protos.ContainerInfo.Type.DOCKER,
-      docker = Some(Docker(proto.getImage.toStringUtf8))
-    )
-
 }
 
 object VolumeSerializer {

@@ -181,14 +181,7 @@ case class AppDefinition(
         Some(proto.getCmd.getValue)
       else None
 
-    val containerOption =
-      if (proto.hasContainer)
-        Some(ContainerSerializer.fromProto(proto.getContainer))
-      else if (proto.getCmd.hasContainer)
-        Some(ContainerSerializer.fromMesos(proto.getCmd.getContainer))
-      else if (proto.hasOBSOLETEContainer)
-        Some(ContainerSerializer.fromMesos(proto.getOBSOLETEContainer))
-      else None
+    val containerOption = if (proto.hasContainer) Some(ContainerSerializer.fromProto(proto.getContainer)) else None
 
     val acceptedResourceRoles: Option[Set[String]] =
       if (proto.hasAcceptedResourceRoles)
