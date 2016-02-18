@@ -105,14 +105,14 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   test("GetTasks") {
-    testGetTasks(_.marathonAppTasksSync(TEST_APP_NAME))
+    testGetTasks(_.appTasksSync(TEST_APP_NAME))
   }
 
   test("GetTasks Async") {
-    testGetTasks(_.marathonAppTasks(TEST_APP_NAME).futureValue)
+    testGetTasks(_.appTasks(TEST_APP_NAME).futureValue)
   }
 
-  private[this] def testGetTasks(call: TaskTracker => Iterable[MarathonTask]): Unit = {
+  private[this] def testGetTasks(call: TaskTracker => Iterable[Task]): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME)
     val task2 = makeSampleTask(TEST_APP_NAME)
     val task3 = makeSampleTask(TEST_APP_NAME)
@@ -121,7 +121,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     taskCreationHandler.created(task2).futureValue
     taskCreationHandler.created(task3).futureValue
 
-    val testAppTasks = call(taskTracker).map(TaskSerializer.fromProto(_))
+    val testAppTasks = call(taskTracker).map(_.marathonTask).map(TaskSerializer.fromProto(_))
 
     shouldContainTask(testAppTasks.toSet, task1)
     shouldContainTask(testAppTasks.toSet, task2)
@@ -179,7 +179,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.taskId)
-    taskTracker.marathonAppTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
+    taskTracker.appTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
 
     // TASK RUNNING
     val runningTaskStatus: TaskStatus = makeTaskStatus(sampleTask.taskId, TaskState.TASK_RUNNING)
@@ -188,13 +188,13 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.taskId)
-    taskTracker.marathonAppTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
+    taskTracker.appTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK STILL RUNNING
     val updatedRunningTaskStatus = runningTaskStatus.toBuilder.setTimestamp(123).build()
     taskUpdater.statusUpdate(TEST_APP_NAME, updatedRunningTaskStatus).futureValue
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    assert(taskTracker.marathonAppTasksSync(TEST_APP_NAME).head.getStatus == runningTaskStatus)
+    assert(taskTracker.appTasksSync(TEST_APP_NAME).head.launched.get.status.mesosStatus.get == runningTaskStatus)
 
     // TASK TERMINATED
     taskCreationHandler.terminated(sampleTask.taskId).futureValue
@@ -479,9 +479,10 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   def shouldNotContainTask(tasks: Iterable[Task], task: Task) =
     assert(!containsTask(tasks, task), s"Should not contain ${task.taskId}")
 
-  def shouldHaveTaskStatus(task: MarathonTask, taskStatus: TaskStatus) {
+  def shouldHaveTaskStatus(task: Task, taskStatus: TaskStatus) {
     assert(
-      task.getStatus == taskStatus, s"Should have task status ${taskStatus.getState.toString}"
+      task.launched.exists(_.status.mesosStatus.get == taskStatus),
+      s"Should have task status ${taskStatus.getState.toString}"
     )
   }
 

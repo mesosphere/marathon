@@ -56,10 +56,6 @@ private[tracker] class TaskTrackerDelegate(
   override def hasAppTasksSync(appId: PathId): Boolean = tasksByAppSync.hasAppTasks(appId)
   override def hasAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     tasksByApp().map(_.hasAppTasks(appId))
-  override def marathonAppTasksSync(appId: PathId): Iterable[MarathonTask] =
-    tasksByAppSync.marathonAppTasks(appId)
-  override def marathonAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]] =
-    tasksByApp().map(_.marathonAppTasks(appId))
 
   override def appTasksSync(appId: PathId): Iterable[Task] =
     tasksByAppSync.appTasks(appId)
