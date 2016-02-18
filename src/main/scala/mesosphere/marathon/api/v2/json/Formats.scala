@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginDefinition }
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
@@ -55,6 +56,7 @@ trait Formats
     with DeploymentFormats
     with EventFormats
     with EventSubscribersFormats
+    with PluginFormats
     with IpAddressFormats {
   import scala.collection.JavaConverters._
 
@@ -463,6 +465,7 @@ trait FetchUriFormats {
 }
 
 trait AppAndGroupFormats {
+
   import Formats._
 
   implicit lazy val IdentifiableWrites = Json.writes[Identifiable]
@@ -473,7 +476,7 @@ trait AppAndGroupFormats {
     (
       (__ \ "minimumHealthCapacity").readNullable[Double].withDefault(DefaultUpgradeStrategy.minimumHealthCapacity) ~
       (__ \ "maximumOverCapacity").readNullable[Double].withDefault(DefaultUpgradeStrategy.maximumOverCapacity)
-    )(UpgradeStrategy(_, _))
+    ) (UpgradeStrategy(_, _))
   }
 
   implicit lazy val ConstraintFormat: Format[Constraint] = Format(
@@ -527,7 +530,7 @@ trait AppAndGroupFormats {
       .withDefault(AppDefinition.DefaultMaxLaunchDelay.toSeconds).asSeconds ~
       (__ \ "container").readNullable[Container] ~
       (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(AppDefinition.DefaultHealthChecks)
-    )((
+    ) ((
         id, cmd, args, maybeString, env, instances, cpus, mem, disk, executor, constraints, storeUrls,
         requirePorts, backoff, backoffFactor, maxLaunchDelay, container, checks
       ) => AppDefinition(
@@ -560,7 +563,7 @@ trait AppAndGroupFormats {
             (__ \ "ipAddress").readNullable[IpAddress] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
             (__ \ "residency").readNullable[Residency]
-          )(ExtraFields)
+          ) (ExtraFields)
             .filter(ValidationError("You cannot specify both uris and fetch fields")) { extra =>
               !(extra.uris.nonEmpty && extra.fetch.nonEmpty)
             }
@@ -572,7 +575,8 @@ trait AppAndGroupFormats {
           // Normally, our default is one port. If an ipAddress is defined that would lead to an error
           // if left unchanged.
           def defaultPorts: Seq[Int] = if (extra.ipAddress.isDefined) Nil else AppDefinition.DefaultPorts
-          def fetch: Seq[FetchUri] = if (extra.fetch.nonEmpty) extra.fetch else extra.uris.map {
+          def fetch: Seq[FetchUri] = if (extra.fetch.nonEmpty) extra.fetch
+          else extra.uris.map {
             uri => FetchUri(uri = uri, extract = FetchUri.isExtract(uri))
           }
 
@@ -644,7 +648,7 @@ trait AppAndGroupFormats {
     .withDefault(Residency.defaultRelaunchEscalationTimeoutSeconds) ~
     (__ \ "taskLostBehavior").formatNullable[TaskLostBehavior]
     .withDefault(Residency.defaultTaskLostBehaviour)
-  )(Residency(_, _), unlift(Residency.unapply))
+  ) (Residency(_, _), unlift(Residency.unapply))
 
   implicit lazy val AppDefinitionWrites: Writes[AppDefinition] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
@@ -791,7 +795,7 @@ trait AppAndGroupFormats {
     (__ \ "maxLaunchDelaySeconds").readNullable[Long].map(_.map(_.seconds)) ~
     (__ \ "container").readNullable[Container] ~
     (__ \ "healthChecks").readNullable[Set[HealthCheck]]
-  )((id, cmd, args, user, env, instances, cpus, mem, disk, executor, constraints, storeUrls, ports,
+  ) ((id, cmd, args, user, env, instances, cpus, mem, disk, executor, constraints, storeUrls, ports,
       requirePorts, backoffSeconds, backoffFactor, maxLaunchDelaySeconds, container, healthChecks) => AppUpdate(
       id = id, cmd = cmd, args = args, user = user, env = env, instances = instances, cpus = cpus, mem = mem,
       disk = disk, executor = executor, constraints = constraints, storeUrls = storeUrls, ports = ports,
@@ -820,7 +824,7 @@ trait AppAndGroupFormats {
           (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
           (__ \ "ipAddress").readNullable[IpAddress] ~
           (__ \ "residency").readNullable[Residency]
-        )(ExtraFields)
+        ) (ExtraFields)
 
       extraReads.filter(ValidationError("You cannot specify both uris and fetch fields")) {
         extra => !(extra.uris.nonEmpty && extra.fetch.nonEmpty)
@@ -844,6 +848,18 @@ trait AppAndGroupFormats {
     (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
-  )(Group(_, _, _, _, _), unlift(Group.unapply))
+  ) (Group(_, _, _, _, _), unlift(Group.unapply))
+}
 
+trait PluginFormats {
+
+  implicit lazy val pluginDefinitionFormat: Writes[PluginDefinition] = (
+    (__ \ "id").write[String] ~
+    (__ \ "plugin").write[String] ~
+    (__ \ "implementation").write[String] ~
+    (__ \ "tags").writeNullable[Set[String]] ~
+    (__ \ "info").writeNullable[JsObject]
+  ) (d => (d.id, d.plugin, d.implementation, d.tags, d.info))
+
+  implicit lazy val pluginDefinitionsFormat: Writes[PluginDefinitions] = Json.writes[PluginDefinitions]
 }

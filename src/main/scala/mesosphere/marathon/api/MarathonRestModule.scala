@@ -50,6 +50,7 @@ class MarathonRestModule extends BaseRestModule {
     bind(classOf[v2.DeploymentsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.ArtifactsResource]).in(Scopes.SINGLETON)
     bind(classOf[v2.SchemaResource]).in(Scopes.SINGLETON)
+    bind(classOf[v2.PluginsResource]).in(Scopes.SINGLETON)
 
     install(new LeaderProxyFilterModule)
 

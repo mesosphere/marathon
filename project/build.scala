@@ -232,7 +232,8 @@ object Dependencies {
   import Dependency._
 
   val pluginInterface = Seq(
-    playJson % "compile"
+    playJson % "compile",
+    guava % "compile"
   )
 
   val excludeSlf4jLog4j12 = ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
@@ -282,6 +283,7 @@ object Dependency {
   object V {
     // runtime deps versions
     val Chaos = "0.8.4"
+    val Guava = "18.0"
     val JacksonCCM = "0.1.2"
     val MesosUtils = "0.26.0"
     val Akka = "2.3.9"
@@ -321,6 +323,7 @@ object Dependency {
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
+  val guava = "com.google.guava" % "guava" % V.Guava
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
