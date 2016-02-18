@@ -48,6 +48,11 @@ class Migration @Inject() (
       new MigrationTo0_13(taskRepo, store).migrate().recover {
         case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.13", e)
       }
+    },
+    StorageVersions(0, 16, 0) -> { () =>
+      new MigrationTo0_16(groupRepo, appRepo).migrate().recover {
+        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.16", e)
+      }
     }
   )
 
@@ -298,6 +303,68 @@ class MigrationTo0_13(taskRepository: TaskRepository, store: PersistentStore) {
     _ <- migrateTasks()
     _ <- renameFrameworkId()
   } yield ()
+}
+
+/**
+  * Implements the following migration logic:
+  * * Load all apps, the logic in AppDefinition.mergeFromProto will create portDefinitions from the deprecated ports
+  * * Save all apps, the logic in [[AppDefinition.toProto]] will save the new portDefinitions and skip the deprecated
+  *   ports
+  */
+class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppRepository) {
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
+  def migrate(): Future[Unit] = {
+    log.info("Start 0.16 migration")
+    val rootGroupFuture = groupRepository.rootGroup().map(_.getOrElse(Group.empty))
+
+    for {
+      rootGroup <- rootGroupFuture
+      apps = rootGroup.transitiveApps
+      _ = log.info(s"Discovered ${apps.size} apps")
+      _ <- migrateRootGroup(rootGroup)
+      _ <- migrateApps(rootGroup)
+    } yield log.info("Finished 0.16 migration")
+  }
+
+  private[this] def migrateRootGroup(rootGroup: Group): Future[Unit] = {
+    updateAllGroupVersions()
+  }
+
+  private[this] def migrateApps(rootGroup: Group): Future[Unit] = {
+    val apps = rootGroup.transitiveApps
+
+    apps.foldLeft(Future.successful(())) { (future, app) =>
+      future.flatMap { _ => updateAllAppVersions(app.id) }
+    }
+  }
+
+  private[this] def updateAllGroupVersions(): Future[Unit] = {
+    val id = groupRepository.zkRootName
+    groupRepository.listVersions(id).map(d => d.toSeq.sorted).flatMap { sortedVersions =>
+      sortedVersions.foldLeft(Future.successful(())) { (future, version) =>
+        future.flatMap { _ =>
+          groupRepository.group(id, version).flatMap {
+            case Some(group) => groupRepository.store(id, group).map(_ => ())
+            case None        => Future.failed(new MigrationFailedException(s"Group $id:$version not found"))
+          }
+        }
+      }
+    }
+  }
+
+  private[this] def updateAllAppVersions(appId: PathId): Future[Unit] = {
+    appRepository.listVersions(appId).map(d => d.toSeq.sorted).flatMap { sortedVersions =>
+      sortedVersions.foldLeft(Future.successful(())) { (future, version) =>
+        future.flatMap { _ =>
+          appRepository.app(appId, version).flatMap {
+            case Some(app) => appRepository.store(app).map(_ => ())
+            case None      => Future.failed(new MigrationFailedException(s"App $appId:$version not found"))
+          }
+        }
+      }
+    }
+  }
 }
 
 object StorageVersions {

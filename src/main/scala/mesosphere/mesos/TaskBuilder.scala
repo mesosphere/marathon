@@ -3,7 +3,7 @@ package mesosphere.mesos
 import com.google.protobuf.{ ByteString, TextFormat }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
-import mesosphere.marathon.api.serialization.ContainerSerializer
+import mesosphere.marathon.api.serialization.{ PortDefinitionSerializer, ContainerSerializer }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, DiscoveryInfo, IpAddress, PathId }
@@ -42,7 +42,7 @@ class TaskBuilder(app: AppDefinition,
 
         case _ =>
           def logInsufficientResources(): Unit = {
-            val appHostPorts = if (app.requirePorts) app.ports else app.ports.map(_ => 0)
+            val appHostPorts = if (app.requirePorts) app.portNumbers else app.portNumbers.map(_ => 0)
             val containerHostPorts: Option[Seq[Int]] = app.containerHostPorts
             val hostPorts = containerHostPorts.getOrElse(appHostPorts)
             val staticHostPorts = hostPorts.filter(_ != 0)
@@ -108,8 +108,7 @@ class TaskBuilder(app: AppDefinition,
       .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
       .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
 
-    val discoveryInfoProto = computeDiscoveryInfo(app)
-    discoveryInfoProto.map(builder.setDiscovery)
+    builder.setDiscovery(computeDiscoveryInfo(app))
 
     if (app.disk != 0) {
       // This is only supported since Mesos 0.22.0 and will result in TASK_LOST messages in combination
@@ -174,23 +173,23 @@ class TaskBuilder(app: AppDefinition,
     Some(builder.build -> ports)
   }
 
-  protected def computeDiscoveryInfo(app: AppDefinition): Option[org.apache.mesos.Protos.DiscoveryInfo] = {
-    // TODO (gkleiman@): fill in DiscoveryInfo even if an app doesn't request an IP-per-task
-    app.ipAddress match {
+  protected def computeDiscoveryInfo(app: AppDefinition): org.apache.mesos.Protos.DiscoveryInfo = {
+    val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
+    discoveryInfoBuilder.setName(app.id.toHostname)
+    discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
+
+    val portProtos = app.ipAddress match {
       case Some(IpAddress(_, _, DiscoveryInfo(ports))) if ports.nonEmpty =>
-        val builder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
-
-        builder.setName(app.id.toHostname)
-        // TODO(gkleiman@) define the default visibility
-        builder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
-
-        val portsProto = org.apache.mesos.Protos.Ports.newBuilder
-        portsProto.addAllPorts(ports.map(_.toProto).asJava)
-        builder.setPorts(portsProto)
-
-        Some(builder.build)
-      case _ => None
+        ports.map(_.toProto).asJava
+      case _ =>
+        app.portDefinitions.map(PortDefinitionSerializer.toProto).asJava
     }
+
+    val portsProto = org.apache.mesos.Protos.Ports.newBuilder
+    portsProto.addAllPorts(portProtos)
+    discoveryInfoBuilder.setPorts(portsProto)
+
+    discoveryInfoBuilder.build
   }
 
   protected def computeContainerInfo(ports: Seq[Int]): Option[ContainerInfo] = {
@@ -268,7 +267,7 @@ object TaskBuilder {
                   ports: Seq[Int],
                   envPrefix: Option[String]): CommandInfo = {
     val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
-    val declaredPorts = containerPorts.getOrElse(app.ports)
+    val declaredPorts = containerPorts.getOrElse(app.portNumbers)
     val envMap: Map[String, String] =
       taskContextEnv(app, taskId) ++
         addPrefix(envPrefix, portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _).toMap) ++

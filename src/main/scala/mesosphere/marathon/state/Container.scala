@@ -1,8 +1,9 @@
 package mesosphere.marathon.state
 
 import com.wix.accord.dsl._
-import com.wix.accord.{ RuleViolation, Failure, Result, Validator }
+import com.wix.accord._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.Validation.validate
 import org.apache.mesos.{ Protos => Mesos }
 import scala.collection.immutable.Seq
 
@@ -35,12 +36,17 @@ object Container {
       * @param hostPort      The host port to bind
       * @param servicePort   The well-known port for this service
       * @param protocol      Layer 4 protocol to expose (i.e. tcp, udp).
+      * @param name          Name of the service hosted on this port.
+      * @param labels        This can be used to decorate the message with metadata to be
+      *                      interpreted by external applications such as firewalls.
       */
     case class PortMapping(
         containerPort: Int = 0,
         hostPort: Int = 0,
         servicePort: Int = 0,
-        protocol: String = "tcp") {
+        protocol: String = "tcp",
+        name: Option[String] = None,
+        labels: Map[String, String] = Map.empty[String, String]) {
 
       require(protocol == "tcp" || protocol == "udp", "protocol can only be 'tcp' or 'udp'")
     }
@@ -49,7 +55,7 @@ object Container {
       val TCP = "tcp"
       val UDP = "udp"
 
-      val portMappingsValidator = validator[PortMapping] { portMapping =>
+      val portMappingValidator = validator[PortMapping] { portMapping =>
         portMapping.protocol is oneOf(TCP, UDP)
         portMapping.containerPort should be >= 0
         portMapping.hostPort should be >= 0
@@ -57,9 +63,17 @@ object Container {
       }
     }
 
+    val uniquePortNames: Validator[Seq[PortMapping]] = new Validator[Seq[PortMapping]] {
+      override def apply(portMappings: Seq[PortMapping]): Result = {
+        val portNames = portMappings.flatMap(_.name)
+        if (portNames.size == portNames.distinct.size) Success
+        else Failure(Set(RuleViolation("portMappings", "Port names must be unique.", None)))
+      }
+    }
+
     implicit val dockerValidator = validator[Docker] { docker =>
       docker.image is notEmpty
-      docker.portMappings is optional(every(PortMapping.portMappingsValidator))
+      docker.portMappings is optional(every(PortMapping.portMappingValidator)) and optional(uniquePortNames)
     }
   }
 

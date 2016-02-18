@@ -35,9 +35,6 @@ object V2TestFormats {
   implicit lazy val GroupChangeFailedReads: Reads[GroupChangeFailed] = Json.reads[GroupChangeFailed]
   implicit lazy val DeploymentSuccessReads: Reads[DeploymentSuccess] = Json.reads[DeploymentSuccess]
   implicit lazy val DeploymentFailedReads: Reads[DeploymentFailed] = Json.reads[DeploymentFailed]
-  //  implicit lazy val DeploymentStatusReads: Reads[DeploymentStatus] = Json.reads[DeploymentStatus]
-  //  implicit lazy val DeploymentStepSuccessReads: Reads[DeploymentStepSuccess] = Json.reads[DeploymentStepSuccess]
-  //  implicit lazy val DeploymentStepFailureReads: Reads[DeploymentStepFailure] = Json.reads[DeploymentStepFailure]
   implicit lazy val MesosStatusUpdateEventReads: Reads[MesosStatusUpdateEvent] = Json.reads[MesosStatusUpdateEvent]
   implicit lazy val MesosFrameworkMessageEventReads: Reads[MesosFrameworkMessageEvent] =
     Json.reads[MesosFrameworkMessageEvent]
@@ -67,7 +64,7 @@ object V2TestFormats {
       "constraints" -> update.constraints,
       "fetch" -> update.fetch,
       "storeUrls" -> update.storeUrls,
-      "ports" -> update.ports,
+      "portDefinitions" -> update.portDefinitions,
       "requirePorts" -> update.requirePorts,
       "backoffSeconds" -> update.backoff.map(_.toSeconds),
       "backoffFactor" -> update.backoffFactor,

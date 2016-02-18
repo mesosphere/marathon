@@ -16,7 +16,7 @@ class DefaultTaskFactoryTest extends MarathonSpec {
       .setHostname("some_host")
       .setSlaveId(SlaveID("some slave ID"))
       .build()
-    val appDefinition: AppDefinition = AppDefinition(ports = List())
+    val appDefinition: AppDefinition = AppDefinition(portDefinitions = List())
     val runningTasks: Set[Task] = Set(
       MarathonTestHelper.mininimalTask("some task ID")
     )

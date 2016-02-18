@@ -16,7 +16,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.{ GivenWhenThen, Matchers }
-import play.api.libs.json.{ JsNumber, Json }
+import play.api.libs.json.{ JsArray, JsObject, JsNumber, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -45,6 +45,42 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     response.getStatus should be(201)
 
     And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app successfully using ports instead of portDefinitions") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      portDefinitions = PortDefinitions(1000, 1001),
+      versionInfo = OnlyVersion(Timestamp.zero)
+    )
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val appJson = Json.toJson(app).as[JsObject]
+    val appJsonWithOnlyPorts = appJson - "portDefinitions" + ("ports" -> Json.parse("""[1000, 1001]"""))
+    val body = Json.stringify(appJsonWithOnlyPorts).getBytes("UTF-8")
+
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request, auth.response)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
     val expected = AppInfo(
       app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
       maybeTasks = Some(immutable.Seq.empty),
@@ -86,6 +122,26 @@ class AppsResourceTest extends MarathonSpec with Matchers with Mockito with Give
     val group = Group(PathId("/"), Set(app))
     val plan = DeploymentPlan(group, group)
     val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The application is updated")
+    val response = appsResource.replace(app.id.toString, body, false, auth.request, auth.response)
+
+    Then("The application is updated")
+    response.getStatus should be(200)
+  }
+
+  test("Replace an existing application using ports instead of portDefinitions") {
+    Given("An app and group")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+
+    val appJson = Json.toJson(app).as[JsObject]
+    val appJsonWithOnlyPorts = appJson - "uris" - "portDefinitions" - "version" +
+      ("ports" -> Json.parse("""[1000, 1001]"""))
+    val body = Json.stringify(appJsonWithOnlyPorts).getBytes("UTF-8")
+
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
     When("The application is updated")

@@ -1,13 +1,11 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.{ AppDefinition, PortDefinitions }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.Matchers
-
-import scala.collection.immutable.Seq
 
 class ResourceMatcherTest extends MarathonSpec with Matchers {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
@@ -24,7 +22,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       cpus = 1.0,
       mem = 128.0,
       disk = 0.0,
-      ports = Seq(0, 0)
+      portDefinitions = PortDefinitions(0, 0)
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())
@@ -48,7 +46,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       cpus = 1.0,
       mem = 128.0,
       disk = 0.0,
-      ports = Seq(0, 0)
+      portDefinitions = PortDefinitions(0, 0)
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())
@@ -72,7 +70,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       cpus = 1.0,
       mem = 128.0,
       disk = 0.0,
-      ports = Seq(0, 0)
+      portDefinitions = PortDefinitions(0, 0)
     )
 
     val resOpt = ResourceMatcher.matchResources(
@@ -94,7 +92,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       cpus = 1.0,
       mem = 128.0,
       disk = 0.0,
-      ports = Seq(0, 0)
+      portDefinitions = PortDefinitions(0, 0)
     )
 
     val resOpt = ResourceMatcher.matchResources(
@@ -153,7 +151,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       cpus = 1.0,
       mem = 128.0,
       disk = 0.0,
-      ports = Seq(0, 0)
+      portDefinitions = PortDefinitions(0, 0)
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())
@@ -168,7 +166,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       cpus = 1.0,
       mem = 128.0,
       disk = 0.0,
-      ports = Seq(0, 0)
+      portDefinitions = PortDefinitions(0, 0)
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())
@@ -183,7 +181,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       cpus = 1.0,
       mem = 128.0,
       disk = 1.0,
-      ports = Seq(0, 0)
+      portDefinitions = PortDefinitions(0, 0)
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())
@@ -198,7 +196,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       cpus = 1.0,
       mem = 128.0,
       disk = 0.0,
-      ports = Seq(1, 2)
+      portDefinitions = PortDefinitions(1, 2)
     )
 
     val resOpt = ResourceMatcher.matchResources(offer, app, Set())

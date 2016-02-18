@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.api.v2.json.{ GroupUpdate, GroupUpdate$ }
+import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito

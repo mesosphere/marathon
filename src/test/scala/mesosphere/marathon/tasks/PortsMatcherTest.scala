@@ -2,9 +2,9 @@ package mesosphere.marathon.tasks
 
 import java.util
 
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.{ Container, AppDefinition }
+import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.Offer
@@ -17,7 +17,7 @@ class PortsMatcherTest extends MarathonSpec {
   import mesosphere.mesos.protos.Implicits._
 
   test("get random ports from single range") {
-    val app = AppDefinition(ports = Seq(80, 81))
+    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81))
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = new PortsMatcher(app, offer)
 
@@ -27,7 +27,7 @@ class PortsMatcherTest extends MarathonSpec {
   }
 
   test("get ports from multiple ranges") {
-    val app = AppDefinition(ports = Seq(80, 81, 82, 83, 84))
+    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(protos.Range(30000, 30003), protos.Range(31000, 31000))
@@ -47,7 +47,7 @@ class PortsMatcherTest extends MarathonSpec {
   }
 
   test("get ports from multiple ranges, requirePorts") {
-    val app = AppDefinition(ports = Seq(80, 81, 82, 83, 100), requirePorts = true)
+    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 100), requirePorts = true)
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(protos.Range(80, 83), protos.Range(100, 100))
@@ -68,7 +68,7 @@ class PortsMatcherTest extends MarathonSpec {
 
   // #2865 Multiple explicit ports are mixed up in task json
   test("get ports with requirePorts preserves the ports order") {
-    val app = AppDefinition(ports = Seq(100, 80), requirePorts = true)
+    val app = AppDefinition(portDefinitions = PortDefinitions(100, 80), requirePorts = true)
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 70, endPort = 200).build
     val matcher = new PortsMatcher(app, offer, acceptedResourceRoles = Set("*"))
 
@@ -77,7 +77,7 @@ class PortsMatcherTest extends MarathonSpec {
   }
 
   test("get ports from multiple resources, preserving role") {
-    val app = AppDefinition(ports = Seq(80, 81, 82, 83, 84))
+    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(protos.Range(30000, 30003))
@@ -103,7 +103,7 @@ class PortsMatcherTest extends MarathonSpec {
   }
 
   test("get ports from multiple ranges, ignore ranges with unwanted roles") {
-    val app = AppDefinition(ports = Seq(80, 81, 82, 83, 84))
+    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(protos.Range(30000, 30003), protos.Range(31000, 31009)),
@@ -122,7 +122,7 @@ class PortsMatcherTest extends MarathonSpec {
   }
 
   test("get no ports") {
-    val app = AppDefinition(ports = Nil)
+    val app = AppDefinition(portDefinitions = Nil)
     val offer = MarathonTestHelper.makeBasicOffer().build
     val matcher = new PortsMatcher(app, offer)
 
@@ -133,7 +133,7 @@ class PortsMatcherTest extends MarathonSpec {
   }
 
   test("get too many ports") {
-    val app = AppDefinition(ports = Seq(80, 81, 82))
+    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82))
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31001).build
     val matcher = new PortsMatcher(app, offer)
 
@@ -141,7 +141,7 @@ class PortsMatcherTest extends MarathonSpec {
   }
 
   test("fail if required ports are not available") {
-    val app = AppDefinition(ports = Seq(80, 81, 82), requirePorts = true)
+    val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82), requirePorts = true)
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = new PortsMatcher(app, offer)
 

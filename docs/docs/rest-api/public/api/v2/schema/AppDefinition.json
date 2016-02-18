@@ -131,9 +131,21 @@
                     "maximum": 65535,
                     "minimum": 0
                   },
+                  "labels": {
+                    "type": "object",
+                    "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings."
+                  },
                   "protocol": {
                     "type": "string",
-                    "description": "parameter is optional and defaults to tcp."
+                    "enum": ["tcp", "udp"],
+                    "description": "Protocol of the port (one of ['tcp', 'udp']). Defaults to 'tcp'."
                   },
                   "servicePort": {
                     "type": "integer",
@@ -403,6 +415,38 @@
         "maximum": 65535,
         "minimum": 0,
         "type": "integer"
+      }
+    },
+    "portDefinitions": {
+      "type": "array",
+      "description": "An array of required port resources on the agent host. The number of items in the array determines how many dynamic ports are allocated for every task. For every port definition with port number zero, a globally unique (cluster-wide) service port is assigned and provided as part of the app definition to be used in load balancing definitions.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "port": {
+            "type": "integer",
+            "description": "if requirePorts is set to true, then this port number will be used on the agent host Otherwise if the requirePorts is set to false and this port number is not zero, then it will be used as a service port and a dynamic port will be used on the agent host. If it is set to zero, a dynamic port will be used on the host and a unique service port will be assigned by Marathon.",
+            "maximum": 65535,
+            "minimum": 0
+          },
+          "labels": {
+            "type": "object",
+            "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the service hosted on this port. If provided, it must be unique over all port definitions."
+          },
+          "protocol": {
+            "type": "string",
+            "enum": ["tcp", "udp"],
+            "description": "Protocol of the port (one of ['tcp', 'udp']). Defaults to 'tcp'."
+          }
+        }
       }
     },
     "residency": {

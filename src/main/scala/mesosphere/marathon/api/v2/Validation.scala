@@ -109,12 +109,13 @@ object Validation {
     }
   }
 
-  def elementsAreUnique[A](p: Seq[A] => Seq[A] = { seq: Seq[A] => seq }): Validator[Seq[A]] = {
+  def elementsAreUnique[A](p: Seq[A] => Seq[A] = { seq: Seq[A] => seq },
+                           errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
       def apply(seq: Seq[A]) = {
         val filteredSeq = p(seq)
         if (filteredSeq.size == filteredSeq.distinct.size) Success
-        else Failure(Set(RuleViolation(seq, "Elements must be unique.", None)))
+        else Failure(Set(RuleViolation(seq, errorMessage, None)))
       }
     }
   }
@@ -137,6 +138,14 @@ object Validation {
         }
       }
     }
+
+  def oneOf[T <: AnyRef](options: Set[T]): Validator[T] = {
+    import ViolationBuilder._
+    new NullSafeValidator[T](
+      test = options.contains,
+      failure = _ -> s"is not one of (${options.mkString(",")})"
+    )
+  }
 
   def oneOf[T <: AnyRef](options: T*): Validator[T] = {
     import ViolationBuilder._
