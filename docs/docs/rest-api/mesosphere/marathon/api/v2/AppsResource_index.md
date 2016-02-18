@@ -395,32 +395,32 @@ Example:
 ##### Existence based Selector Query
 
 Matches the existence of a label.
-  
-- {{label}}
- 
+
+- `label`
+
 Example:
 
 - environment
- 
+
 
 ##### Equality based Selector Query
-  
+
 Matches existence of labels and the (non) equality of the value.
 
-- {{label}} == {{value}}
-- {{label}} != {{value}} 
+- `label` == `value`
+- `label` != `value`
 
 Example:
- 
+
 - environment = production
 - tier != frontend
 
 ##### Set based Selector Query  
 
-Matches existence of labels and the (non) existence of the value in a given set. 
+Matches existence of labels and the (non) existence of the value in a given set.
 
-- {{label}} in ( {{value}}, {{value}}, ... , {{value}} ) 
-- {{label}} notin ( {{value}}, {{value}}, ... , {{value}} ) 
+- `label` in ( `value`, `value`, ... , `value` )
+- `label` notin ( `value`, `value`, ... , `value` )
 
 Example:
 
@@ -485,7 +485,7 @@ Transfer-Encoding: chunked
 }
 ```
 
-#### GET `/v2/apps/product/us-east/*
+#### GET `/v2/apps/product/us-east/*`
 
 List all running applications, which live in the namespace /product/us-east
 

@@ -1,4 +1,4 @@
-#### DELETE /v2/deployments/{deploymentId}
+#### DELETE `/v2/deployments/{deploymentId}`
 
 ##### Parameters
 
