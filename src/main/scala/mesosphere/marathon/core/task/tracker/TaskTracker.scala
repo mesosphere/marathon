@@ -21,9 +21,6 @@ import scala.concurrent.{ ExecutionContext, Future }
   */
 trait TaskTracker {
 
-  def marathonAppTasksSync(appId: PathId): Iterable[MarathonTask]
-  def marathonAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[MarathonTask]]
-
   def appTasksSync(appId: PathId): Iterable[Task]
   def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]]
 
@@ -96,7 +93,7 @@ object TaskTracker {
     def of(apps: TaskTracker.AppTasks*): TasksByApp = of(Map(apps.map(app => app.appId -> app): _*))
 
     def forTasks(tasks: Task*): TasksByApp = of(
-      tasks.groupBy(_.appId).map { case (appId, tasks) => appId -> AppTasks.forTasks(appId, tasks) }
+      tasks.groupBy(_.appId).map { case (appId, appTasks) => appId -> AppTasks.forTasks(appId, appTasks) }
     )
 
     def empty: TasksByApp = of(collection.immutable.Map.empty[PathId, TaskTracker.AppTasks])
