@@ -4,15 +4,16 @@ import akka.actor.{ ActorRef, Status }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.Terminated
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessor.Action
+import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessor.Action.Unlaunch
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.StatusUpdateActionResolver
-import mesosphere.marathon.state.{ PathId, TaskRepository }
+import mesosphere.marathon.state.TaskRepository
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
-import scala.annotation.tailrec
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
@@ -34,48 +35,63 @@ private[tracker] object TaskOpProcessorImpl {
       * * a Action.Noop if the task does not have to be changed OR ELSE
       * * an Action.Expunge if the TaskStatus update indicates a terminated task OR ELSE
       * * an Action.Update if the tasks existed and the TaskStatus contains new information OR ELSE
+      * * an Action.Unlaunch if a resident running task is killed
       */
     def resolve(taskId: Task.Id, status: TaskStatus)(
       implicit ec: ExecutionContext): Future[Action] = {
       directTaskTracker.task(taskId).map {
         case Some(existingTask) =>
-          resolveForExistingTask(existingTask, status)
+          actionForTaskAndStatus(existingTask, status)
         case None =>
           Action.Fail(new IllegalStateException(s"$taskId of app [${taskId.appId}] does not exist"))
       }
     }
 
+    private[this] def actionForTaskAndStatus(task: Task, statusUpdate: TaskStatus): Action = {
+      //Step 1: if a resident task is terminated, it has to be handled differently
+      resolveForResidentFailed(task, statusUpdate)
+        //Step 2: update existing running task
+        .orElse(resolveForLaunchedTask(task, statusUpdate))
+        //Step 3: nothing of the above: do nothing
+        .getOrElse {
+          log.warn("Got update for task which wasn't launched yet: {}", statusUpdate)
+          Action.Noop
+        }
+    }
+    private[this] def resolveForResidentFailed(task: Task, status: TaskStatus): Option[Action] = {
+      for {
+        _ <- task.reservationWithVolumes
+        _ <- task.launched
+        if Terminated.isTerminated(status.getState)
+      } yield Unlaunch(task)
+    }
+
     /**
       * Calculates the change that needs to performed on this task according to the given task status update
       */
-    private[this] def resolveForExistingTask(taskState: Task, statusUpdate: TaskStatus): Action = {
-      taskState.launched match {
-        case Some(currentLaunched) =>
-          statusUpdate.getState match {
-            case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
-              Action.Expunge
-            case TASK_RUNNING if !currentLaunched.hasStartedRunning => // was staged, is now running
-              val now = clock.now()
-              Action.Update(
-                taskState.copy(launched = Some(
-                  currentLaunched.copy(
-                    status = currentLaunched.status.copy(
-                      startedAt = Some(now),
-                      mesosStatus = Some(statusUpdate)
-                    )
-                  )
-                ))
-              )
-            case _ =>
-              updateTaskOnStateChange(taskState, currentLaunched, statusUpdate)
-          }
-
-        case None =>
-          log.warn("Got update for task which wasn't launched yet: {}", statusUpdate)
-          Action.Noop
+    private[this] def resolveForLaunchedTask(task: Task, statusUpdate: TaskStatus): Option[Action] = {
+      task.launched.map { launched =>
+        statusUpdate.getState match {
+          case Terminated(_) => Action.Expunge
+          case TASK_RUNNING if !launched.hasStartedRunning => stagedNowRunning(task, launched, statusUpdate)
+          case _ => updateTaskOnStateChange(task, launched, statusUpdate)
+        }
       }
     }
 
+    private[this] def stagedNowRunning(task: Task, currentLaunched: Task.Launched, statusUpdate: TaskStatus): Action = {
+      val now = clock.now()
+      Action.Update(
+        task.copy(launched = Some(
+          currentLaunched.copy(
+            status = currentLaunched.status.copy(
+              startedAt = Some(now),
+              mesosStatus = Some(statusUpdate)
+            )
+          )
+        ))
+      )
+    }
     private[this] def updateTaskOnStateChange(
       taskState: Task, currentLaunch: Task.Launched, statusUpdate: TaskStatus): Action = {
 
@@ -136,12 +152,22 @@ private[tracker] class TaskOpProcessorImpl(
         repo.store(marathonTask).map { _ =>
           taskTrackerRef ! TaskTrackerActor.TaskUpdated(task, TaskTrackerActor.Ack(op.sender))
         }.recoverWith(tryToRecover(op)(expectedTaskState = Some(task)))
+
       case Action.Expunge =>
         // Used for task termination or as a result from a UpdateStatus action.
         // The expunge is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         repo.expunge(op.taskId.idString).map { _ =>
           taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.taskId, TaskTrackerActor.Ack(op.sender))
         }.recoverWith(tryToRecover(op)(expectedTaskState = None))
+
+      case Action.Unlaunch(task) =>
+        // Used for resident tasks, that are terminated.
+        // We remove the launch information and propagate the change to the task tracker.
+        val update = task.copy(launched = None)
+        val marathonTask = TaskSerializer.toProto(update)
+        repo.store(marathonTask).map { _ =>
+          taskTrackerRef ! TaskTrackerActor.TaskUpdated(update, TaskTrackerActor.Ack(op.sender))
+        }.recoverWith(tryToRecover(op)(expectedTaskState = Some(update)))
 
       case Action.UpdateStatus(status) =>
         statusUpdateActionResolver.resolve(op.taskId, status).flatMap { action: Action =>
@@ -156,6 +182,7 @@ private[tracker] class TaskOpProcessorImpl(
         // the operation.
         op.sender ! (())
         Future.successful(())
+
       case Action.Fail(cause) =>
         // Used if a task status update for a non-existing task is processed.
         // Since we did not change the task state, we inform the sender directly of the failed operation.

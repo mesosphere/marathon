@@ -6,7 +6,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ Timestamp, PathId, TaskRepository }
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.test.{ CaptureLogEvents, MarathonActorSupport, Mockito }
-import org.apache.mesos.Protos.TaskStatus
+import org.apache.mesos.Protos.{ TaskStatus, TaskState }
 import org.scalatest.{ Matchers, GivenWhenThen }
 import org.scalatest.concurrent.ScalaFutures
 
@@ -321,6 +321,39 @@ class TaskOpProcessorImplTest
 
     And("the initiator gets its ack")
     expectMsg(())
+
+    And("no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("process terminated statusUpdate for resident tasks") {
+    import MarathonTestHelper._
+
+    Given("a statusUpdateResolver and an update")
+    val now = Timestamp.now()
+    val f = new Fixture
+    val appId = PathId("/app")
+    val unlaunched: Task = mininimalTask(appId).copy(reservationWithVolumes = Some(taskReservation))
+    val launched: Task = unlaunched.copy(launched = Some(taskLaunched))
+    val marathonTask = unlaunched.marathonTask
+    val taskId = launched.taskId.mesosTaskId.getValue
+    val killed: TaskStatus = MarathonTestHelper.statusForState(taskId, TaskState.TASK_KILLED)
+    f.taskRepository.store(marathonTask) returns Future.successful(marathonTask)
+    f.statusUpdateResolver.resolve(Task.Id(taskId), killed) returns Future.successful(TaskOpProcessor.Action.Unlaunch(launched))
+
+    When("the processor processes an update")
+    val result = f.processor.process(
+      TaskOpProcessor.Operation(deadline, testActor, Task.Id(taskId), TaskOpProcessor.Action.Unlaunch(launched))
+    )
+
+    Then("it replies with unit immediately")
+    result.futureValue should be(())
+
+    And("The task is stored")
+    verify(f.taskRepository).store(marathonTask)
+
+    And("the taskTracker gets the update")
+    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(unlaunched, TaskTrackerActor.Ack(testActor, ())))
 
     And("no more interactions")
     f.verifyNoMoreInteractions()

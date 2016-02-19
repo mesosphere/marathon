@@ -6,6 +6,7 @@ import mesosphere.marathon.core.task.Task.Launched
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import org.apache.mesos.Protos.TaskState
+import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
@@ -172,4 +173,13 @@ object Task {
   }
 
   case object NoNetworking extends Networking
+
+  object Terminated {
+    def isTerminated(state: TaskState): Boolean = state match {
+      case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST => true
+      case _ => false
+    }
+
+    def unapply(state: TaskState): Option[TaskState] = if (isTerminated(state)) Some(state) else None
+  }
 }
