@@ -4,9 +4,8 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.{ MarathonTestHelper, Protos, MarathonSpec }
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import org.scalatest.{ Matchers, GivenWhenThen }
-import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.Json
 import scala.concurrent.duration._
 
@@ -60,7 +59,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
     )
     Then("we get the correct stats")
     import mesosphere.marathon.api.v2.json.Formats._
-    withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> tasks.map(_.marathonTask)))) {
+    withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> tasks))) {
       stats.maybeWithOutdatedConfig should not be empty
       stats.maybeWithLatestConfig should not be empty
       stats.maybeStartedAfterLastScaling should not be empty

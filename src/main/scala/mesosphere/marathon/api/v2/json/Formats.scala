@@ -1,19 +1,18 @@
 package mesosphere.marathon.api.v2.json
 
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
-import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginDefinition }
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
-import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
-import mesosphere.marathon.tasks.MarathonTasks
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => mesos }
@@ -58,7 +57,6 @@ trait Formats
     with EventSubscribersFormats
     with PluginFormats
     with IpAddressFormats {
-  import scala.collection.JavaConverters._
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
     Json.obj(
@@ -105,21 +103,42 @@ trait Formats
     )(toIpAddress, toTuple)
   }
 
-  implicit lazy val MarathonTaskWrites: Writes[MarathonTask] = Writes { task =>
+  implicit lazy val TaskIdWrite: Writes[Task.Id] = Writes { id => JsString(id.idString) }
+  implicit lazy val LocalVolumeIdWrite: Writes[Task.LocalVolumeId] = Writes { id =>
     Json.obj(
-      "id" -> task.getId,
-      "host" -> (if (task.hasHost) task.getHost else JsNull),
-      "ipAddresses" -> MarathonTasks.ipAddresses(task),
-      "ports" -> task.getPortsList.asScala.map(_.intValue),
-      "startedAt" -> (if (task.getStartedAt != 0) Timestamp(task.getStartedAt) else JsNull),
-      "stagedAt" -> (if (task.getStagedAt != 0) Timestamp(task.getStagedAt) else JsNull),
-      "version" -> task.getVersion,
-      "slaveId" -> (if (task.hasSlaveId) task.getSlaveId.getValue else JsNull)
+      "containerPath" -> id.containerPath,
+      "persistenceId" -> id.idString
     )
   }
 
+  implicit lazy val TaskWrites: Writes[Task] = Writes { task =>
+    val base = Json.obj(
+      "id" -> task.taskId,
+      "slaveId" -> task.agentInfo.agentId,
+      "host" -> task.agentInfo.host
+    )
+
+    val launched = task.launched.map { launched =>
+      base ++ Json.obj (
+        "startedAt" -> launched.status.startedAt,
+        "stagedAt" -> launched.status.stagedAt,
+        "ports" -> launched.ports,
+        "ipAddresses" -> launched.ipAddresses,
+        "version" -> launched.appVersion
+      )
+    }.getOrElse(base)
+
+    val reservation = task.reservationWithVolumes.map { reservation =>
+      launched ++ Json.obj(
+        "localVolumes" -> reservation.volumeIds
+      )
+    }.getOrElse(launched)
+
+    reservation
+  }
+
   implicit lazy val EnrichedTaskWrites: Writes[EnrichedTask] = Writes { task =>
-    val taskJson = MarathonTaskWrites.writes(task.task).as[JsObject]
+    val taskJson = TaskWrites.writes(task.task).as[JsObject]
 
     val enrichedJson = taskJson ++ Json.obj(
       "appId" -> task.appId

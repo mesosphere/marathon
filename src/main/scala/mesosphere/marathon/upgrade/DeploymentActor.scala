@@ -4,7 +4,6 @@ import java.net.URL
 
 import akka.actor._
 import akka.event.EventStream
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task

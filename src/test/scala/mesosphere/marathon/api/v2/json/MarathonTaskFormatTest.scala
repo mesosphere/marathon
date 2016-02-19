@@ -1,42 +1,42 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.{ ReservationWithVolumes, NetworkInfoList, NoNetworking }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.{ Protos => MesosProtos }
-
-import scala.collection.JavaConverters._
 
 class MarathonTaskFormatTest extends MarathonSpec {
   import Formats._
 
   class Fixture {
-    val taskWithoutIp = MarathonTask.newBuilder
-      .setId("/foo/bar")
-      .setHost("agent1.mesos")
-      .setVersion(Timestamp(1024).toString)
-      .setStagedAt(1024L)
-      .setSlaveId(MesosProtos.SlaveID.newBuilder.setValue("abcd-1234"))
-      .build
+    val time = Timestamp(1024)
+    val network = MesosProtos.NetworkInfo.newBuilder()
+      .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.newBuilder().setIpAddress("123.123.123.123"))
+      .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.newBuilder().setIpAddress("123.123.123.124"))
+      .build()
 
-    val ip1 = MesosProtos.NetworkInfo.IPAddress.newBuilder().setIpAddress("123.123.123.123").build
-    val ip2 = MesosProtos.NetworkInfo.IPAddress.newBuilder().setIpAddress("123.123.123.124").build
-    val taskWithMultipleIPs = MarathonTask.newBuilder
-      .setId("/foo/bar")
-      .setHost("agent1.mesos")
-      .setVersion(Timestamp(1024).toString)
-      .setStagedAt(1024L)
-      .setSlaveId(MesosProtos.SlaveID.newBuilder.setValue("abcd-1234"))
-      .addAllNetworks(
-        Seq(
-          MesosProtos.NetworkInfo.newBuilder.addIpAddresses(ip1).build,
-          MesosProtos.NetworkInfo.newBuilder.addIpAddresses(ip2).build
-        ).asJava
-      ).build
+    val taskWithoutIp = new Task(
+      taskId = Task.Id("/foo/bar"),
+      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      reservationWithVolumes = None,
+      launched = Some(Task.Launched(time, Task.Status(time, None), NoNetworking)))
+
+    val taskWithMultipleIPs = new Task(
+      taskId = Task.Id("/foo/bar"),
+      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      reservationWithVolumes = None,
+      launched = Some(Task.Launched(time, Task.Status(time, None), NetworkInfoList(network))))
+
+    val taskWithLocalVolumes = new Task(
+      taskId = Task.Id("/foo/bar"),
+      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      reservationWithVolumes = Some(ReservationWithVolumes(Seq(Task.LocalVolumeId("appid.container.random")))),
+      launched = Some(Task.Launched(time, Task.Status(time, Some(time)), NoNetworking)))
   }
 
-  test("JSON serialization of MarathonTask without IPs") {
+  test("JSON serialization of a Task without IPs") {
     val f = new Fixture()
     val json =
       """
@@ -54,7 +54,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
     JsonTestHelper.assertThatJsonOf(f.taskWithoutIp).correspondsToJsonString(json)
   }
 
-  test("JSON serialization of MarathonTask with multiple IPs") {
+  test("JSON serialization of a Task with multiple IPs") {
     val f = new Fixture()
     val json =
       """
@@ -79,5 +79,29 @@ class MarathonTaskFormatTest extends MarathonSpec {
         |}
       """.stripMargin
     JsonTestHelper.assertThatJsonOf(f.taskWithMultipleIPs).correspondsToJsonString(json)
+  }
+
+  test("JSON serialization of a Task with reserved local volumes") {
+    val f = new Fixture()
+    val json =
+      """
+        |{
+        |  "id": "/foo/bar",
+        |  "host": "agent1.mesos",
+        |  "ipAddresses": [],
+        |  "ports": [],
+        |  "startedAt": "1970-01-01T00:00:01.024Z",
+        |  "stagedAt": "1970-01-01T00:00:01.024Z",
+        |  "version": "1970-01-01T00:00:01.024Z",
+        |  "slaveId": "abcd-1234",
+        |  "localVolumes": [
+        |    {
+        |      "containerPath": "container",
+        |      "persistenceId": "appid.container.random"
+        |    }
+        |  ]
+        |}
+      """.stripMargin
+    JsonTestHelper.assertThatJsonOf(f.taskWithLocalVolumes).correspondsToJsonString(json)
   }
 }

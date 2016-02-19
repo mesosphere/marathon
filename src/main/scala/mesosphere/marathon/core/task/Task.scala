@@ -101,6 +101,11 @@ object Task {
 
   case class LocalVolumeId(idString: String) {
     override def toString: String = s"LocalVolume [$idString]"
+
+    def containerPath: String = {
+      //TODO: make the case class hold all different parts and assemble an id string on demand?
+      idString.split("""\.""")(1)
+    }
   }
 
   object LocalVolumeId {
@@ -132,10 +137,7 @@ object Task {
 
     def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-    def ports: Iterable[Int] = networking match {
-      case HostPorts(ports) => ports
-      case _                => Iterable.empty
-    }
+    def ports: Iterable[Int] = networking.ports
 
     def ipAddresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = networking match {
       case list: NetworkInfoList => list.addresses
@@ -165,7 +167,9 @@ object Task {
     mesosStatus: Option[MesosProtos.TaskStatus] = None)
 
   /** Info on how to reach the task in the network. */
-  sealed trait Networking
+  sealed trait Networking {
+    def ports: Iterable[Int]
+  }
 
   /** The task is reachable via host ports which are bound to [[AgentInfo#host]]. */
   case class HostPorts(ports: Iterable[Int]) extends Networking
@@ -180,12 +184,15 @@ object Task {
   case class NetworkInfoList(networkInfoList: Iterable[MesosProtos.NetworkInfo]) extends Networking {
     import scala.collection.JavaConverters._
     def addresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = networkInfoList.flatMap(_.getIpAddressesList.asScala)
+    override def ports: Iterable[Int] = Iterable.empty
   }
   object NetworkInfoList {
     def apply(networkInfoList: MesosProtos.NetworkInfo*): NetworkInfoList = NetworkInfoList(networkInfoList)
   }
 
-  case object NoNetworking extends Networking
+  case object NoNetworking extends Networking {
+    override def ports: Iterable[Int] = Iterable.empty
+  }
 
   object Terminated {
     def isTerminated(state: TaskState): Boolean = state match {

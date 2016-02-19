@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.appinfo.impl
 
 import mesosphere.marathon.MarathonSchedulerService
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.Task
@@ -121,7 +120,7 @@ class AppInfoBaseData(
 
     lazy val enrichedTasksFuture: Future[Seq[EnrichedTask]] = {
       def statusesToEnrichedTasks(
-        tasksById: Map[Task.Id, MarathonTask],
+        tasksById: Map[Task.Id, Task],
         statuses: Map[Task.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         for {
           (taskId, healthResults) <- statuses.to[Seq]
@@ -131,7 +130,7 @@ class AppInfoBaseData(
 
       log.debug(s"assembling rich tasks for app [${app.id}]")
 
-      val tasksByIdFuture = tasksByAppFuture.map(_.appTasksMap.get(app.id).map(_.taskMap).getOrElse(Map.empty))
+      val tasksByIdFuture = tasksByAppFuture.map(_.appTasksMap.get(app.id).map(_.taskStateMap).getOrElse(Map.empty))
       val healthStatusesFutures = healthCheckManager.statuses(app.id)
       for {
         tasksById <- tasksByIdFuture
