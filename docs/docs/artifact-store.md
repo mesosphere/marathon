@@ -4,39 +4,38 @@ title: Artifact Store
 
 # Artifact Store
 
-Deployments inside a distributed system need a location, where application specific resources can be found.
-In Marathon we call this place the artifact store.
+Deployments inside a distributed system need a location where application-specific resources can be found. In Marathon, we call this place the artifact store.
 
 
 ## Usage
 
-The use of the Marathon Artifact Store functionality is completely optional.
-All functionality and goals can be accomplished manually as well.
-Marathon tries to simplify several use cases.
+Use of the Marathon artifact store is completely optional: you can create all of the artifact atore functionality manually as well. The Marathon artifact store simplifies several use cases.
 
 
 ## Artifact Store Backend
 
-Marathon supports different storage system, that can be used as artifact store.
-The type of the artifact store is configured via the command line.
-Example: start with --artifact_store hdfs://localhost:54310/path/to/store to use Hadoop DFS 
-as artifact storage backend.
+Marathon supports several different storage system backends for the artifact store.
+
+You can specify the storage system backend on the command line. To use Hadoop DFS, for example, use the following command line flag:
+
+ --artifact_store hdfs://localhost:54310/path/to/store 
 
 
-## Artifact REST endpoint
+## Artifact REST Endpoint
 
-There is a special endpoint to access and manipulate the artifacts in the artifact store.
-The URL's of the created artifacts can be used as URI's of an application definition.
+A special endpoint enables you to access and manipulate the artifacts in the artifact store. The URLs of the created artifacts can be used as URIs of an application definition.
 
-### Upload an artifact to the artifact store
+See the [REST API documentation](http://mesosphere.github.io/marathon/docs/generated/api.html#v2_artifacts) for more information.
 
-Upload an artifact to the artifact store.
-A multipart form upload request has to be performed.
-The form parameter name has to be ```file```.
-The filename used in the artifact store, is the same as given by the form parameter.
-The response holds the URL of the artifact in the artifact store in the Location Header.
+### Upload an Artifact to the Artifact Store
+
+To upload an artifact to the artifact stopre, you must perform a multipart form upload request.
+The form parameter name has to be ```file```. The filename in the artifact store will be the same one you provide in the form parameter.
+
+The location header of the response will contain the URL of the artifact in the artifact store.
 
 **Request:**
+
 ```
 http
 POST /v2/artifacts HTTP/1.1
@@ -56,7 +55,9 @@ Content-Disposition: form-data; name="file"; filename="test.txt"
 ```
 
 **Response:**
-```http
+
+```
+http
 HTTP/1.1 201 Created
 Content-Length: 0
 Location: hdfs://hd.cluster.bare.org:54310/artifact/test.txt
@@ -97,12 +98,10 @@ Server: Jetty(8.1.11.v20130520)
 
 ### Get an artifact from the artifact store
 
-The path is the relative path in the artifact store.
+Use the relative path in the artifact store:
 
 **Request:**
-
-```
-http
+```http
 GET /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -111,9 +110,7 @@ User-Agent: HTTPie/0.8.0
 ```
 
 **Response:**
-
-```
-http
+```http
 HTTP/1.1 200 OK
 Content-Length: 14
 Content-Type: text/plain
@@ -125,12 +122,10 @@ Server: Jetty(8.1.11.v20130520)
 
 ### Delete an artifact from the artifact store
 
-The path is the relative path in the artifact store.
+Use the relative path in the artifact store:
 
 **Request:**
-
-```
-http
+```http
 DELETE /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -140,9 +135,7 @@ User-Agent: HTTPie/0.8.0
 ```
 
 **Response:**
-
-```
-http
+```http
 HTTP/1.1 200 OK
 Content-Length: 0
 Content-Type: application/json
@@ -150,25 +143,29 @@ Server: Jetty(8.1.11.v20130520)
 ```
 
 
-## Automatic Artifact Storing
+## Automatic Artifact Storage
 
-An AppDefinition holds a sequence of URIs, that get fetched on each instance, that gets started.
+An AppDefinition holds a sequence of URIs that Marathon fetches when it starts each app instance.
+
 The artifact could be fetched directly from the source, or put into the artifact store.
 One simple way to do this is automatic artifact storing.
 
-The AppDefinition has a field storeUrls, which holds an array of URL strings.
+You can automatically store artifacts in the artifact store with the ```storeURLs``` field of the AppDefinition. The ```storeURLs``` field holds an array of URL strings.
 Every URL here is processed in this way:
 
-* The URL gets downloaded
-* The byte stream is stored in the asset store
-* The asset store url is added to the AppDefinition uris list
-* The url is removed from the storeUrls array
+* The URL is downloaded. 
+* The byte stream is stored in the asset store.
+* Marathon adds the asset store URL to the AppDefinition URIs list.
+* Marathon removes the URL from the storeUrls array.
 
-As a result, all storeUrls are accessible from the artifact store.
-All instances that will run the application, will load the needed assets from the artifact store.
+As a result, all storeUrls are accessible from the artifact store. All instances that run the application are able to load the necessary assets from the artifact store.
 
+### Prerequisites
 
-### Create an application definition with automatic artifact resolution
+To use this feature, all assets need to be resolvable by marathon itself.
+The HTTP server should support HTTP ETag Header in order to circumvent manual content hash creation.
+
+### Create an Application Definition with Automatic Artifact Resolution
 
 **Request:**
 ```http
@@ -209,8 +206,8 @@ Transfer-Encoding: chunked
 }
 ```
 
-When the app gets deployed, all storeUrls will be stored in the artifact store and
-the definition will be adapted and will look like this:
+When the app is deployed, all ```storeUrls``` will be stored in the artifact store and
+the definition will modified to look like this:
 
 **Request:**
 ```http
@@ -250,22 +247,17 @@ Transfer-Encoding: chunked
 
 ### Automatic Path creation
  
-The path in the asset store is computed that way:
+The path in the asset store is computed in the following way:
 
-* HEAD Request to the asset
-* if ETag is available, take ETag HTTP Header
-* if ETag is not available (dumb HTTP server), download the resource and compute the Sha-1 hash manually
-* filename of the url remains the same
+1. HEAD Request to the asset.
+2. If ETag is available, take ETag HTTP header.
+3. If ETag is not available, download the resource and compute the Sha-1 hash manually.
+4. The filename of the url remains the same.
 
-The complete path is {artifact store base}/{ETag or ContentHash}/{filename of asset}
-This effectively will create a path, that is unique to the content of the resource.
+The complete path to the artifact is ```{artifact store base}/{ETag or ContentHash}/{filename of asset}```.
+
+Marathon creates a path that is unique to the content of the resource.
+
 If the same URL holds a different entity, a new path is created.
-The same path is downloaded only once. 
-In other words if the path is available in the artifact store, it is not downloaded again.
 
-
-### Prerequisites
-
-To use this feature, all assets need to be resolvable by marathon itself.
-To circumvent manual content hash creation, the http server should support HTTP ETag Header. 
-
+The same path is downloaded only once: if the path is available in the artifact store, it is not downloaded again.
