@@ -126,7 +126,7 @@ object PathId {
           val p = pathId.canonicalPath(pathId.parent)
           if (pathId.parent != PathId.empty && p.parent != pathId.parent) Failure(Set(
             RuleViolation(pathId,
-              s"""identifier $pathId is not child of ${pathId.parent}.
+              s"""Identifier $pathId is not child of ${pathId.parent}.
                     |Actual parent: ${p.parent}.
                     |Hint: use relative paths.""".
                 stripMargin, None)
@@ -134,7 +134,7 @@ object PathId {
           )
           else Success
         }
-        else Failure(Set(RuleViolation(pathId.parent, "path of parent should be absolute", None)))
+        else Failure(Set(RuleViolation(pathId.parent, "Path of parent should be absolute.", None)))
       }
     }
   }

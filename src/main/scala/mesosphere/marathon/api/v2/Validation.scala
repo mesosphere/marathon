@@ -34,7 +34,7 @@ object Validation {
         }
 
         if (violations.isEmpty) Success
-        else Failure(Set(GroupViolation(seq, "seq contains elements, which are not valid", None, violations.toSet)))
+        else Failure(Set(GroupViolation(seq, "Seq contains elements, which are not valid.", None, violations.toSet)))
       }
     }
   }
@@ -84,13 +84,13 @@ object Validation {
             case http: HttpURLConnection =>
               http.setRequestMethod("HEAD")
               if (http.getResponseCode == HttpURLConnection.HTTP_OK) Success
-              else Failure(Set(RuleViolation(url, "url could not be resolved", None)))
+              else Failure(Set(RuleViolation(url, "URL could not be resolved.", None)))
             case other: URLConnection =>
               other.getInputStream
               Success //if we come here, we could read the stream
           }
         }.getOrElse(
-          Failure(Set(RuleViolation(url, "url could not be resolved", None)))
+          Failure(Set(RuleViolation(url, "URL could not be resolved.", None)))
         )
       }
     }
@@ -115,7 +115,7 @@ object Validation {
       def apply(seq: Seq[A]) = {
         val filteredSeq = p(seq)
         if (filteredSeq.size == filteredSeq.distinct.size) Success
-        else Failure(Set(RuleViolation(seq, "Elements must be unique", None)))
+        else Failure(Set(RuleViolation(seq, "Elements must be unique.", None)))
       }
     }
   }

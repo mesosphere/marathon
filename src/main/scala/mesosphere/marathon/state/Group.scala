@@ -239,7 +239,7 @@ object Group {
 
         if (clashingIds.isEmpty) Success
         else Failure(Set(RuleViolation(group,
-          s"Groups and Applications may not have the same identifier: ${clashingIds.mkString(", ")}", None)))
+          s"Groups and Applications may not have the same identifier: ${clashingIds.mkString(", ")}.", None)))
       }
     }
 
@@ -247,7 +247,7 @@ object Group {
     new Validator[Set[PathId]] {
       def apply(dependencies: Set[PathId]) = {
         if (group.hasNonCyclicDependencies) Success
-        else Failure(Set(RuleViolation(group, "Dependency graph has cyclic dependencies", None)))
+        else Failure(Set(RuleViolation(group, "Dependency graph has cyclic dependencies.", None)))
       }
     }
 
