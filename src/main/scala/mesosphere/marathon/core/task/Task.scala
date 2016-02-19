@@ -103,6 +103,19 @@ object Task {
     override def toString: String = s"LocalVolume [$idString]"
   }
 
+  object LocalVolumeId {
+    def apply(appId: PathId, path: String): LocalVolumeId = {
+      //FIXME: mock implementation from ME
+      LocalVolumeId(s"${appId.safePath}.$path.random")
+    }
+
+    private val LocalVolumeEncoderRE = "^([^.]+).([^.]+).([^.]+)$".r
+    def unapply(id: String): Option[(PathId, String)] = id match {
+      case LocalVolumeEncoderRE(app, path, _) => Some(PathId.fromSafePath(app) -> path)
+      case _                                  => None
+    }
+  }
+
   /**
     * Represents a task which has been launched (i.e. sent to Mesos for launching).
     */

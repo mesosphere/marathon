@@ -2,7 +2,7 @@ package mesosphere.marathon.core.matcher.base
 
 import mesosphere.marathon.core.matcher.base.util.OfferOperation
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.Protos.{ Offer, OfferID, TaskInfo }
 
@@ -95,4 +95,11 @@ trait OfferMatcher {
     * for every returned `org.apache.mesos.Protos.TaskInfo`.
     */
   def matchOffer(deadline: Timestamp, offer: Offer): Future[OfferMatcher.MatchedTaskOps]
+
+  /**
+    * We can optimize the offer routing for different offer matcher in case there are reserved resources.
+    * A defined precedence is used to filter incoming offers with reservations that apply to this filter.
+    * If the filter matches, the offer matcher manager has higher priority than other matchers.
+    */
+  def precedenceFor: Option[PathId] = None
 }
