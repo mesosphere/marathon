@@ -251,6 +251,15 @@ object MarathonTestHelper {
     )
   }
 
+  def taskReservation: Task.ReservationWithVolumes = {
+    Task.ReservationWithVolumes(Seq.empty)
+  }
+
+  def taskLaunched: Task.Launched = {
+    val now = Timestamp.now()
+    Task.Launched(now, status = Task.Status(now), networking = Task.NoNetworking)
+  }
+
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
     startingTask(
       Task.Id.forApp(appId).idString,
@@ -342,7 +351,7 @@ object MarathonTestHelper {
       .buildPartial()
   }
 
-  private[this] def statusForState(taskId: String, state: MesosProtos.TaskState): MesosProtos.TaskStatus = {
+  def statusForState(taskId: String, state: MesosProtos.TaskState): MesosProtos.TaskStatus = {
     MesosProtos.TaskStatus
       .newBuilder()
       .setTaskId(TaskID.newBuilder().setValue(taskId))

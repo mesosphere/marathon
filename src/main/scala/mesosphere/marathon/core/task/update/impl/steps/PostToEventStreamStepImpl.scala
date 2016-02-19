@@ -5,6 +5,7 @@ import javax.inject.Named
 import akka.event.EventStream
 import com.google.inject.Inject
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.Terminated
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.event.{ EventModule, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.Timestamp
@@ -34,7 +35,7 @@ class PostToEventStreamStepImpl @Inject() (
   override def processUpdate(timestamp: Timestamp, task: Task, status: TaskStatus): Future[_] = {
 
     status.getState match {
-      case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
+      case Terminated(_) =>
         postEvent(timestamp, status, task)
       case TASK_RUNNING if task.launched.exists(!_.hasStartedRunning) => // staged, not running
         postEvent(timestamp, status, task)
