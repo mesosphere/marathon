@@ -9,11 +9,12 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, Task
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ MatchTimeout, OfferData }
+import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.ResourceUtil
-import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
+import org.apache.mesos.Protos.{ Offer, OfferID }
 import org.slf4j.LoggerFactory
 import rx.lang.scala.Observer
 
@@ -71,7 +72,7 @@ private[manager] object OfferMatcherManagerActor {
   private case class MatchTimeout(offerId: OfferID)
 }
 
-private class OfferMatcherManagerActor private (
+private[impl] class OfferMatcherManagerActor private (
   metrics: OfferMatcherManagerActorMetrics,
   random: Random, clock: Clock, conf: OfferMatcherManagerConfig, offersWantedObserver: Observer[Boolean])
     extends Actor with ActorLogging {
@@ -128,6 +129,21 @@ private class OfferMatcherManagerActor private (
   private[this] def offersWanted: Boolean = matchers.nonEmpty && launchTokens > 0
   private[this] def updateOffersWanted(): Unit = offersWantedObserver.onNext(offersWanted)
 
+  private[impl] def offerMatchers(offer: Offer): Queue[OfferMatcher] = {
+    //the persistence id of a volume encodes the app id
+    //we use this information as filter criteria
+    val appReservations = offer.getResourcesList.asScala
+      .filter(r => r.hasDisk && r.getDisk.hasPersistence && r.getDisk.getPersistence.hasId)
+      .map(_.getDisk.getPersistence.getId)
+      .collect { case LocalVolumeId((appId, _)) => appId }
+      .toSet
+    val (reserved, normal) = matchers.toSeq.partition(_.precedenceFor.exists(appReservations))
+    //1 give the offer to the matcher waiting for a reservation
+    //2 give the offer to anybody else
+    //3 randomize both lists to be fair
+    (random.shuffle(reserved) ++ random.shuffle(normal)).to[Queue]
+  }
+
   private[this] def receiveProcessOffer: Receive = {
     case ActorOfferMatcher.MatchOffer(deadline, offer: Offer) if !offersWanted =>
       log.debug(s"Ignoring offer ${offer.getId.getValue}: No one interested.")
@@ -137,7 +153,7 @@ private class OfferMatcherManagerActor private (
       log.debug(s"Start processing offer ${offer.getId.getValue}")
 
       // setup initial offer data
-      val randomizedMatchers = random.shuffle(matchers).to[Queue]
+      val randomizedMatchers = offerMatchers(offer)
       val data = OfferMatcherManagerActor.OfferData(offer, deadline, sender(), randomizedMatchers, Seq.empty)
       offerQueues += offer.getId -> data
       metrics.currentOffersGauge.setValue(offerQueues.size)

@@ -87,6 +87,24 @@ object MarathonTestHelper {
     offerBuilder
   }
 
+  def reservedDisk(id: String, size: Double = 4096, role: String = "*",
+                   principal: String = "test", containerPath: String = "/container"): MesosProtos.Resource.Builder = {
+    import MesosProtos.Resource.{ ReservationInfo, DiskInfo }
+    MesosProtos.Resource.newBuilder()
+      .setType(MesosProtos.Value.Type.SCALAR)
+      .setName(Resource.DISK)
+      .setScalar(MesosProtos.Value.Scalar.newBuilder.setValue(size))
+      .setRole(role)
+      .setReservation(ReservationInfo.newBuilder().setPrincipal(principal))
+      .setDisk(DiskInfo.newBuilder()
+        .setPersistence(DiskInfo.Persistence.newBuilder().setId(id))
+        .setVolume(MesosProtos.Volume.newBuilder()
+          .setMode(MesosProtos.Volume.Mode.RW)
+          .setContainerPath(containerPath)
+        )
+      )
+  }
+
   /**
     * @param ranges how many port ranges should be included in this offer
     * @return

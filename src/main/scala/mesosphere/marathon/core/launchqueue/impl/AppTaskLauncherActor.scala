@@ -404,7 +404,10 @@ private class AppTaskLauncherActor(
 
   /** Manage registering this actor as offer matcher. Only register it if tasksToLaunch > 0. */
   private[this] object OfferMatcherRegistration {
-    private[this] val myselfAsOfferMatcher: OfferMatcher = new ActorOfferMatcher(clock, self)
+    private[this] val myselfAsOfferMatcher: OfferMatcher = {
+      //set the precedence only, if this app is resident
+      new ActorOfferMatcher(clock, self, app.residency.map(_ => app.id))
+    }
     private[this] var registeredAsMatcher = false
 
     /** Register/unregister as necessary */

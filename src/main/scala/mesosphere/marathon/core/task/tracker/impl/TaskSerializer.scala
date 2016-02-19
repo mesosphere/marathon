@@ -39,7 +39,8 @@ object TaskSerializer {
 
     def reservationWithVolume: Option[Task.ReservationWithVolumes] = {
       if (proto.hasReservationWithVolumes) {
-        Some(ReservationWithVolumes(proto.getReservationWithVolumes.getLocalVolumeIdsList.asScala.map(LocalVolumeId)))
+        Some(ReservationWithVolumes(
+          proto.getReservationWithVolumes.getLocalVolumeIdsList.asScala.map(LocalVolumeId(_))))
       }
       else {
         None
