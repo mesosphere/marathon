@@ -74,7 +74,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(
       app,
       "ports",
-      "Elements must be unique"
+      "Elements must be unique."
     )
     MarathonTestHelper.validateJsonSchema(app, false)
 
