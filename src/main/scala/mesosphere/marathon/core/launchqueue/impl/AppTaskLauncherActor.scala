@@ -232,7 +232,14 @@ private class AppTaskLauncherActor(
   private[this] def receiveTaskStatusUpdate: Receive = {
     case TaskStatusUpdate(_, taskId, MarathonTaskStatus.Terminal(_)) =>
       log.debug("{} finished", taskId)
-      removeTask(taskId)
+      // FIXME (217): Another place where we have to handle resident tasks differently – would make sense
+      // to put all this into strategy functions or a dedicated implementation
+      if (app.residency.isDefined) {
+        unlaunchTask(taskId)
+      }
+      else {
+        removeTask(taskId)
+      }
 
       // If the app has constraints, we need to reconsider offers that
       // we already rejected. E.g. when a host:unique constraint prevented
@@ -269,6 +276,18 @@ private class AppTaskLauncherActor(
     tasksMap -= taskId
   }
 
+  private[this] def unlaunchTask(taskId: Task.Id): Unit = {
+    tasksMap.get(taskId) match {
+      case Some(task) =>
+        log.info(">>> resident task unlaunched")
+        tasksMap += taskId -> task.copy(launched = None)
+
+      case None =>
+        log.warning("ignore unlaunch of unknown {}", taskId)
+    }
+
+  }
+
   private[this] def receiveGetCurrentCount: Receive = {
     case AppTaskLauncherActor.GetCount =>
       replyWithQueuedTaskCount()
@@ -276,6 +295,7 @@ private class AppTaskLauncherActor(
 
   private[this] def receiveAddCount: Receive = {
     case AppTaskLauncherActor.AddTasks(newApp, addCount) =>
+      log.info(s">>> Got AddTasks($newApp, $addCount)")
       val configChange = app.isUpgrade(newApp)
       if (configChange || app.needsRestart(newApp) || app.isOnlyScaleChange(newApp)) {
         app = newApp
