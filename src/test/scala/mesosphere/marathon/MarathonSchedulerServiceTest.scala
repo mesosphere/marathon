@@ -186,7 +186,8 @@ class MarathonSchedulerServiceTest
       system,
       migration,
       schedulerActor,
-      events
+      events,
+      metrics = new Metrics(new MetricRegistry)
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
       override def newTimer() = mockTimer
