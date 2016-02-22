@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.serialization.ContainerSerializer
+import mesosphere.marathon.api.serialization.{ ResidencySerializer, ContainerSerializer }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
@@ -154,6 +154,8 @@ case class AppDefinition(
       case _ => // ignore
     }
 
+    residency.foreach { r => builder.setResidency(ResidencySerializer.toProto(r)) }
+
     builder.build
   }
 
@@ -201,6 +203,8 @@ case class AppDefinition(
 
     val ipAddressOption = if (proto.hasIpAddress) Some(IpAddress.fromProto(proto.getIpAddress)) else None
 
+    val residencyOption = if (proto.hasResidency) Some(ResidencySerializer.fromProto(proto.getResidency)) else None
+
     AppDefinition(
       id = proto.getId.toPath,
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -229,7 +233,8 @@ case class AppDefinition(
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
-      ipAddress = ipAddressOption
+      ipAddress = ipAddressOption,
+      residency = residencyOption
     )
   }
 
