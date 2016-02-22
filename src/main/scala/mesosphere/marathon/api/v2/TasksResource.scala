@@ -57,7 +57,7 @@ class TasksResource @Inject() (
       val taskList = taskTracker.tasksByAppSync
 
       val tasks = taskList.appTasksMap.values.view.flatMap { app =>
-        app.marathonTasks.view.map(t => app.appId -> t)
+        app.tasks.view.map(t => app.appId -> t)
       }
 
       val appIds = taskList.allAppIdsWithTasks
@@ -72,12 +72,12 @@ class TasksResource @Inject() (
 
       val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
         (appId, task) <- tasks if isAllowedToView(appId)
-        if statusSet.isEmpty || statusSet(task.getStatus.getState)
+        if statusSet.isEmpty || task.mesosStatus.exists(s => statusSet(s.getState))
       } yield {
         EnrichedTask(
           appId,
           task,
-          health.getOrElse(Task.Id(task.getId), Nil),
+          health.getOrElse(task.taskId, Nil),
           appToPorts.getOrElse(appId, Nil)
         )
       }
@@ -128,7 +128,7 @@ class TasksResource @Inject() (
         val killed = result(Future.sequence(toKill.map {
           case (appId, tasks) => taskKiller.kill(appId, _ => tasks)
         })).flatten
-        ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.appId, task.marathonTask, Seq.empty))))
+        ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.appId, task, Seq.empty))))
       }
 
       val taskByApps = taskToAppIds

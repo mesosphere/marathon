@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.appinfo
 
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.PathId
 
 case class EnrichedTask(
   appId: PathId,
-  task: MarathonTask,
+  task: Task,
   healthCheckResults: Seq[Health],
   servicePorts: Seq[Int] = Nil)

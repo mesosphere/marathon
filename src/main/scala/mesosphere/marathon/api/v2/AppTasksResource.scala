@@ -6,7 +6,6 @@ import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
@@ -45,8 +44,8 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
       def tasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
         id <- appIds
         health = result(healthCheckManager.statuses(id))
-        task <- taskMap.marathonAppTasks(id)
-      } yield EnrichedTask(id, task, health.getOrElse(Task.Id(task.getId), Nil))
+        task <- taskMap.appTasks(id)
+      } yield EnrichedTask(id, task, health.getOrElse(task.taskId, Nil))
 
       val matchingApps = appId match {
         case GroupTasks(gid) =>
@@ -127,11 +126,11 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   }
 
   private def reqToResponse(
-    future: Future[Iterable[Task]])(toResponse: Iterable[MarathonTask] => Response): Response = {
+    future: Future[Iterable[Task]])(toResponse: Iterable[Task] => Response): Response = {
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val response = future.map { tasks =>
-      toResponse(tasks.view.map(_.marathonTask))
+      toResponse(tasks)
     } recover {
       case UnknownAppException(unknownAppId) => unknownApp(unknownAppId)
     }

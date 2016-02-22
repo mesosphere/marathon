@@ -87,13 +87,13 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     Then("we get a tasks object in the appInfo")
     appInfo.maybeTasks should not be empty
     appInfo.maybeTasks.get.map(_.appId.toString) should have size (3)
-    appInfo.maybeTasks.get.map(_.task.getId).toSet should be (Set("task1", "task2", "task3"))
+    appInfo.maybeTasks.get.map(_.task.taskId.idString).toSet should be (Set("task1", "task2", "task3"))
 
     appInfo should be(AppInfo(app, maybeTasks = Some(
       Seq(
-        EnrichedTask(app.id, running1.marathonTask, Seq.empty),
-        EnrichedTask(app.id, running2.marathonTask, Seq(alive)),
-        EnrichedTask(app.id, running3.marathonTask, Seq(unhealthy))
+        EnrichedTask(app.id, running1, Seq.empty),
+        EnrichedTask(app.id, running2, Seq(alive)),
+        EnrichedTask(app.id, running3, Seq(unhealthy))
       )
     )))
 

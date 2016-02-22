@@ -1,9 +1,9 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ Group, GroupManager, PathId, Timestamp }
@@ -32,7 +32,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     response.getStatus shouldEqual 200
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
-      .correspondsToJsonOf(Json.obj("tasks" -> toKill.view.map(_.marathonTask)))
+      .correspondsToJsonOf(Json.obj("tasks" -> toKill))
   }
 
   test("deleteOne") {
@@ -54,7 +54,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     response.getStatus shouldEqual 200
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
-      .correspondsToJsonOf(Json.obj("task" -> toKill.head.marathonTask))
+      .correspondsToJsonOf(Json.obj("task" -> toKill.head))
     verify(taskKiller).kill(equalTo(appId.rootPath), any)
     verifyNoMoreInteractions(taskKiller)
   }
@@ -65,21 +65,19 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val slaveId = SlaveID("some slave ID")
     val now = Timestamp.now()
 
-    val taskState1 = MarathonTestHelper.mininimalTask("task1")
-    val taskState2 = MarathonTestHelper.mininimalTask("task2")
-    val task1 = taskState1.marathonTask
-    val task2 = taskState2.marathonTask
+    val task1 = MarathonTestHelper.mininimalTask("task1")
+    val task2 = MarathonTestHelper.mininimalTask("task2")
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.of(TaskTracker.AppTasks(appId, Iterable(task1, task2)))
+    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(appId, Iterable(task1, task2)))
     healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
     val response = appsTaskResource.indexJson("/my/app", auth.request, auth.response)
     response.getStatus shouldEqual 200
-    def toEnrichedTask(marathonTask: MarathonTask): EnrichedTask = {
+    def toEnrichedTask(task: Task): EnrichedTask = {
       EnrichedTask(
         appId = PathId("/my/app"),
-        task = marathonTask,
+        task = task,
         healthCheckResults = Seq(),
         servicePorts = Seq()
       )
