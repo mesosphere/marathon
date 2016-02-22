@@ -26,8 +26,13 @@ class TaskKiller @Inject() (
       Future.successful(toKill)
     }
     else {
-      // this is actually returned when the apps has no tasks
-      Future.failed(UnknownAppException(appId))
+      //The task manager does not know about apps with 0 tasks
+      //prior versions of Marathon accepted this call with an empty iterable
+      import scala.concurrent.ExecutionContext.Implicits.global
+      groupManager.app(appId).map {
+        case Some(app) => Iterable.empty[Task]
+        case None      => throw new UnknownAppException(appId)
+      }
     }
   }
 
