@@ -43,13 +43,13 @@ class AppUpdateTest extends MarathonSpec {
     shouldViolate(
       update.copy(ports = Some(Seq(9000, 8080, 9000))),
       "ports",
-      "Elements must be unique"
+      "Elements must be unique."
     )
 
     shouldNotViolate(
       update.copy(ports = Some(Seq(AppDefinition.RandomPortValue, 8080, AppDefinition.RandomPortValue))),
       "ports",
-      "Elements must be unique"
+      "Elements must be unique."
     )
   }
 
