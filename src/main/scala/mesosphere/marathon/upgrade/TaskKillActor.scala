@@ -19,13 +19,6 @@ class TaskKillActor(
     val promise: Promise[Unit]) extends StoppingBehavior {
 
   override var idsToKill = tasksToKill.to[mutable.Set]
-
-  def initializeStop(): Unit = {
-    log.info(s"Killing ${tasksToKill.size} instances")
-    for (taskId <- tasksToKill) {
-      driver.killTask(taskId.mesosTaskId)
-    }
-  }
 }
 
 object TaskKillActor {

@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, HistoryActor, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure, TaskFailureRepository }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
+import mesosphere.marathon.upgrade.StoppingBehavior.KillAllTasks
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers.any
@@ -148,7 +148,6 @@ class AppStopActorTest
       Await.result(promise.future, 5.seconds)
     }
 
-    verify(driver, times(2)).killTask(any())
     expectTerminated(ref)
   }
 
@@ -158,6 +157,7 @@ class AppStopActorTest
     val tasks = Set(MarathonTestHelper.runningTask("task_a"), MarathonTestHelper.runningTask("task_b"))
 
     when(taskTracker.appTasksSync(app.id))
+      .thenReturn(tasks)
       .thenReturn(tasks)
       .thenReturn(Iterable.empty[Task])
 
@@ -173,9 +173,7 @@ class AppStopActorTest
     )
     watch(ref)
 
-    ref.underlyingActor.periodicalCheck.cancel()
-
-    ref ! SynchronizeTasks
+    ref ! KillAllTasks
 
     Await.result(promise.future, 10.seconds) should be(())
 
