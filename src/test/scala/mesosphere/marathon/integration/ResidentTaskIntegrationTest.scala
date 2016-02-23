@@ -6,7 +6,6 @@ import mesosphere.marathon.integration.setup.{ SingleMarathonIntegrationTest, In
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, BeforeAndAfter, Matchers }
-import org.slf4j.LoggerFactory
 import scala.collection.immutable.Seq
 
 class ResidentTaskIntegrationTest
@@ -16,13 +15,27 @@ class ResidentTaskIntegrationTest
     with BeforeAndAfter
     with GivenWhenThen {
 
-  private[this] val log = LoggerFactory.getLogger(getClass)
-
   //clean up state before running the test case
   before(cleanUp())
 
-  // FIXME (217) enable the test when the base functionality is implemented
-  ignore("persistent volume will be re-attached and keep state") {
+  test("resident task can be deployed and write to persistent volume") {
+    import StatusUpdateEvent._
+
+    val f = new Fixture
+    val appId = testBasePath / "app"
+    val containerPath = "persistent-volume"
+
+    Given("A task that writes into a persistent volume")
+    create(f.appWithPersistentVolume(
+      appId,
+      containerPath,
+      cmd = s"""echo "data" > $containerPath/data ; exit 0 ;"""))
+
+    // wait until the task exited
+    waitForStatusUpdates(TASK_RUNNING, TASK_FINISHED)
+  }
+
+  test("persistent volume will be re-attached and keep state") {
     import StatusUpdateEvent._
 
     val f = new Fixture
@@ -63,11 +76,8 @@ class ResidentTaskIntegrationTest
     val TASK_FAILED = "TASK_FAILED"
   }
 
-  def waitForStatusUpdates(kinds: String*) = {
-    val updateEvents = kinds.map(_ => Event.STATUS_UPDATE_EVENT)
-    val events = waitForEvents(updateEvents: _*)()
-    val statuses = events.values.flatMap(_.map(_.info("taskStatus")))
-    statuses should equal(kinds.toSeq)
+  def waitForStatusUpdates(kinds: String*) = kinds.foreach { kind =>
+    waitForEventWith(Event.STATUS_UPDATE_EVENT, _.info("taskStatus") == kind)
   }
 
   private[this] def create(app: AppDefinition) = {
@@ -91,6 +101,10 @@ class ResidentTaskIntegrationTest
       )
 
       appProxy(appId, "v1", instances = 1, withHealth = false).copy(
+        residency = Some(Residency(
+          Residency.defaultRelaunchEscalationTimeoutSeconds,
+          Residency.defaultTaskLostBehaviour
+        )),
         container = Some(Container(
           `type` = Mesos.ContainerInfo.Type.MESOS,
           volumes = Seq(persistentVolume)
