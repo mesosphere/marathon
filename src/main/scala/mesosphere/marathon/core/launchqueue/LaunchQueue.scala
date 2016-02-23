@@ -20,7 +20,7 @@ object LaunchQueue {
   protected[marathon] case class QueuedTaskCount(
       app: AppDefinition,
       tasksLeftToLaunch: Int,
-      taskLaunchesInFlight: Int, // FIXME (217): rename to taskOpsInFlight
+      taskLaunchesInFlight: Int,
       tasksLaunchedOrRunning: Int,
       backOffUntil: Timestamp) {
     def waiting: Boolean = tasksLeftToLaunch != 0 || taskLaunchesInFlight != 0

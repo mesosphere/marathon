@@ -10,8 +10,8 @@ trait LaunchQueueConfig extends ScallopConf {
     hidden = true,
     default = Some(1000))
 
-  lazy val taskLaunchNotificationTimeout = opt[Int]("task_launch_notification_timeout",
-    descr = "INTERNAL TUNING PARAMETER: Timeout (in ms) for matched tasks to be launched or rejected.",
+  lazy val taskOpNotificationTimeout = opt[Int]("task_operation_notification_timeout",
+    descr = "INTERNAL TUNING PARAMETER: Timeout (in ms) for matched task opereations to be accepted or rejected.",
     hidden = true,
     default = Some(3000))
 }

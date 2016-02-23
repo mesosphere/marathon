@@ -33,11 +33,6 @@ object ResourceMatcher {
 
   case class ResourceMatch(cpuRole: Role, memRole: Role, diskRole: Role, ports: Seq[RangesResource])
 
-  // FIXME (217): for resident tasks, we actually need to match against reserved/labeled resources
-  // in that case, we make sure that we
-  // * match against available resources (when reserving)
-  // * match against reserved resources (when launching)
-  // * use/consume reserved resources (when launching)
   //scalastyle:off method.length
   def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Iterable[Task],
                      acceptedResourceRoles: Set[String] = Set("*")): Option[ResourceMatch] = {

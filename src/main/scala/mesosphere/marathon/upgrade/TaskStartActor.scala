@@ -21,7 +21,6 @@ class TaskStartActor(
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
   val nrToStart: Int =
-    // FIXME (217): use taskTracker.countRunning
     scaleTo - taskQueue.get(app.id).map(_.totalTaskCount).getOrElse(
       taskTracker.appTasksSync(app.id).count(_.launched.isDefined))
 
