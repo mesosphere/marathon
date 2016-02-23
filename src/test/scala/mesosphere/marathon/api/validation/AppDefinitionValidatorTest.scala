@@ -5,7 +5,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, ValidationFailedException }
+import mesosphere.marathon._
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
 
@@ -297,11 +297,21 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
   }
 
   test("valid docker volume") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     val f = new Fixture
     val container = f.validDockerContainer.copy(
       volumes = Seq(f.validPersistentVolume)
     )
     assert(validate(container).isSuccess)
+  }
+
+  test("valid docker volume, but cli parameter are not provided") {
+    AllConf.SuppliedOptionNames = Set.empty
+    val f = new Fixture
+    val container = f.validDockerContainer.copy(
+      volumes = Seq(f.validPersistentVolume)
+    )
+    assert(validate(container).isFailure)
   }
 
   test("docker volume with missing containerPath is invalid") {

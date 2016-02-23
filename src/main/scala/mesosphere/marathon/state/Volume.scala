@@ -108,5 +108,7 @@ object PersistentVolume {
     vol.containerPath is notEmpty
     vol.persistent is valid
     vol.mode is equalTo(Mode.RW)
+    //persistent volumes require those CLI parameters provided
+    vol is valid(configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file"))
   }
 }

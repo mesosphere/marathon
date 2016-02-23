@@ -75,6 +75,11 @@ class MarathonApp extends App {
 
   override lazy val conf = new AllConf(args)
 
+  override def initConf(): Unit = {
+    super.initConf()
+    AllConf.SuppliedOptionNames = conf.builder.getAllSuppliedOptionNames.toSet
+  }
+
   def runDefault(): Unit = {
     setConcurrentContextDefaults()
 

@@ -3,9 +3,8 @@ package mesosphere.marathon.api.v2
 import java.net._
 
 import com.wix.accord._
-import mesosphere.marathon.ValidationFailedException
+import mesosphere.marathon.{ AllConf, ValidationFailedException }
 import mesosphere.marathon.state.FetchUri
-import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json._
 
 import scala.reflect.ClassTag
@@ -147,4 +146,12 @@ object Validation {
     )
   }
 
+  def configValueSet[T <: AnyRef](config: String*): Validator[T] = {
+    new Validator[T] {
+      override def apply(t: T): Result = {
+        if (config.forall(AllConf.suppliedOptionNames)) Success else Failure(Set(RuleViolation(t,
+          s"""You have to supply ${config.mkString(", ")} on the command line.""", None)))
+      }
+    }
+  }
 }

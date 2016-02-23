@@ -17,3 +17,9 @@ class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
   with HttpEventConfiguration
   with DebugConf
   with PluginManagerConfiguration
+
+object AllConf {
+  //Set if main is initialized. Allow test to override this value.
+  @volatile private[marathon] var SuppliedOptionNames: Set[String] = Set.empty
+  def suppliedOptionNames: Set[String] = SuppliedOptionNames
+}
