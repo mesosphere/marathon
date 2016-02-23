@@ -25,7 +25,8 @@ class TaskReplaceActor(
     promise: Promise[Unit]) extends Actor with ActorLogging {
   import context.dispatcher
 
-  val tasksToKill = taskTracker.appTasksSync(app.id)
+  // FIXME (217): use taskTracker.running...
+  val tasksToKill = taskTracker.appTasksSync(app.id).filter(_.launched.isDefined)
   val appId = app.id
   val version = app.version
   val versionString = app.version.toString
