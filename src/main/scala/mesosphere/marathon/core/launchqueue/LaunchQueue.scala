@@ -13,14 +13,14 @@ object LaunchQueue {
     * @param app the currently used app definition
     * @param tasksLeftToLaunch the tasks that still have to be launched
     * @param taskLaunchesInFlight the number of tasks which have been requested to be launched
-    *                             but are unconfirmed yet
+    *                        but are unconfirmed yet
     * @param tasksLaunchedOrRunning the number of tasks which are running or at least have been confirmed to be
     *                               launched
     */
   protected[marathon] case class QueuedTaskCount(
       app: AppDefinition,
       tasksLeftToLaunch: Int,
-      taskLaunchesInFlight: Int,
+      taskLaunchesInFlight: Int, // FIXME (217): rename to taskOpsInFlight
       tasksLaunchedOrRunning: Int,
       backOffUntil: Timestamp) {
     def waiting: Boolean = tasksLeftToLaunch != 0 || taskLaunchesInFlight != 0

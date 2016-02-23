@@ -514,7 +514,8 @@ class SchedulerActions(
     * Make sure the app is running the correct number of instances
     */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    val currentCount = taskTracker.countAppTasksSync(app.id)
+    // FIXME (217): use taskTracker.countRunning
+    val currentCount = taskTracker.appTasksSync(app.id).count(_.launched.isDefined)
     val targetCount = app.instances
 
     if (targetCount > currentCount) {
