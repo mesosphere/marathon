@@ -343,7 +343,8 @@ private class AppTaskLauncherActor(
       app,
       tasksLeftToLaunch = tasksToLaunch,
       taskLaunchesInFlight = inFlightTaskOperations.size,
-      tasksLaunchedOrRunning = tasksMap.size - inFlightTaskOperations.size,
+      // don't count tasks that are not launched in the tasksMap
+      tasksLaunchedOrRunning = tasksMap.values.count(_.launched.isDefined) - inFlightTaskOperations.size,
       backOffUntil.getOrElse(clock.now())
     )
   }
@@ -428,7 +429,7 @@ private class AppTaskLauncherActor(
     }
 
     val inFlight = inFlightTaskOperations.size
-    val tasksLaunchedOrRunning = tasksMap.size - inFlight
+    val tasksLaunchedOrRunning = tasksMap.values.count(_.launched.isDefined) - inFlight
     val instanceCountDelta = tasksMap.size + tasksToLaunch - app.instances
     val matchInstanceStr = if (instanceCountDelta == 0) "" else s"instance count delta $instanceCountDelta."
     s"$tasksToLaunch tasksToLaunch, $inFlight in flight, " +

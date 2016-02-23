@@ -42,7 +42,7 @@ object TaskSerializer {
         Some(ReservationWithVolumes(
           proto.getReservationWithVolumes.getLocalVolumeIdsList.asScala.map {
             case LocalVolumeId(volumeId) => volumeId
-            case invalid                 => throw new SerializationFailedException(s"$invalid is no valid volumeId")
+            case invalid: String         => throw new SerializationFailedException(s"$invalid is no valid volumeId")
           }))
       }
       else {
