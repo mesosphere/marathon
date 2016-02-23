@@ -59,10 +59,29 @@ object ProcessKeeper {
     FileUtils.deleteDirectory(mesosWorkDirFile)
     FileUtils.forceMkdir(mesosWorkDirFile)
 
+    val credentialsPath = write(mesosWorkDirFile, fileName = "credentials", content = "principal1 secret1")
+    val aclsPath = write(mesosWorkDirFile, fileName = "acls.json", content =
+      """
+        |{
+        |  "run_tasks": [{
+        |      "principals": { "type": "ANY" },
+        |      "users": { "type": "ANY" }
+        |    }],
+        |  "register_frameworks": [{
+        |      "principals": { "type": "ANY" },
+        |      "roles": { "type": "ANY" }
+        |    }]
+        |}
+      """.stripMargin)
+
+    log.info(s">>> credentialsPath = $credentialsPath")
     val mesosEnv = Seq(
       ENV_MESOS_WORK_DIR -> mesosWorkDirForMesos,
       "MESOS_LAUNCHER" -> "posix",
-      "MESOS_CONTAINERIZERS" -> "docker,mesos")
+      "MESOS_CONTAINERIZERS" -> "docker,mesos",
+      "MESOS_ROLES" -> "public,foo",
+      "MESOS_ACLS" -> s"file://$aclsPath",
+      "MESOS_CREDENTIALS" -> s"file://$credentialsPath")
     startProcess(
       "mesos",
       Process(Seq("mesos-local", "--ip=127.0.0.1"), cwd = None, mesosEnv: _*),
@@ -80,17 +99,33 @@ object ProcessKeeper {
       "-Dakka.actor.debug.autoreceive=true",
       "-Dakka.actor.debug.lifecycle=true"
     )
-    val argsWithMain = mainClass :: arguments
 
-    val mesosWorkDir: String = "/tmp/marathon-itest-marathon"
-    val mesosWorkDirFile: File = new File(mesosWorkDir)
-    FileUtils.deleteDirectory(mesosWorkDirFile)
-    FileUtils.forceMkdir(mesosWorkDirFile)
+    val marathonWorkDir: String = "/tmp/marathon-itest-marathon"
+    val marathonWorkDirFile: File = new File(marathonWorkDir)
+    FileUtils.deleteDirectory(marathonWorkDirFile)
+    FileUtils.forceMkdir(marathonWorkDirFile)
+
+    val secretPath = write(marathonWorkDirFile, fileName = "marathon-secret", content = "secret1")
+    val authSettings = List(
+      "--mesos_authentication_principal", "principal1",
+      "--mesos_role", "foo",
+      "--mesos_authentication_secret_file", s"$secretPath"
+    )
+
+    val argsWithMain = mainClass :: arguments ++ authSettings
 
     startJavaProcess(
       processName, heapInMegs = 512, /* debugArgs ++ */ argsWithMain, cwd,
-      env + (ENV_MESOS_WORK_DIR -> mesosWorkDir),
+      env + (ENV_MESOS_WORK_DIR -> marathonWorkDir),
       upWhen = _.contains(startupLine))
+  }
+
+  private[this] def write(dir: File, fileName: String, content: String): String = {
+    val file = File.createTempFile(fileName, "", dir)
+    file.deleteOnExit()
+    FileUtils.write(file, content)
+    file.setReadable(true)
+    file.getAbsolutePath
   }
 
   def startJavaProcess(name: String, heapInMegs: Int, arguments: List[String],
