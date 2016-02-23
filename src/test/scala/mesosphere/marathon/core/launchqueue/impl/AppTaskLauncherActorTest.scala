@@ -203,7 +203,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
         taskTracker, rateLimiterActor.ref,
         app, tasksToLaunch = 1
       ) {
-        override protected def scheduleTaskLaunchTimeout(
+        override protected def scheduleTaskOperationTimeout(
           context: ActorContext, message: TaskOpRejected): Cancellable = {
           scheduleCalled = true
           mock[Cancellable]

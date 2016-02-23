@@ -34,7 +34,6 @@ object TaskOp {
     }
   }
 
-  // FIXME (217): implement reservation labels
   case class ReserveAndCreateVolumes(
       newTask: Task,
       resources: Iterable[Mesos.Resource],

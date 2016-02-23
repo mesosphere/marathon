@@ -689,7 +689,6 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     assert(result == JsError(ValidationError("You cannot specify both uris and fetch fields")))
   }
 
-  // FIXME (217): Extract an AppDefinitionSerializer and make this part of its test:
   test("Residency serialization (toProto) and deserialization (fromProto)") {
     val app = AppDefinition(id = "/test".toRootPath,
       residency = Some(Residency(

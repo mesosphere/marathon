@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.matcher.base.util
 
+import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.Resource.ReservationInfo
@@ -12,20 +13,16 @@ class OfferOperationFactory(
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  // FIXME (217): log.warn in these cases? or only if we really need and access them?
-
   private[this] lazy val principal: String = principalOpt match {
     case Some(value) => value
-    case _ =>
-      log.error("No principal set. See --mesos_authentication_principal")
-      "n/a"
+    case _ => throw new WrongConfigurationException(
+      "No principal set. Set --mesos_authentication_principal to enable using local volumes in Marathon.")
   }
 
-  private[this] val role: String = roleOpt match {
+  private[this] lazy val role: String = roleOpt match {
     case Some(value) => value
-    case _ =>
-      log.error("No role set. See --mesos_role")
-      "n/a"
+    case _ => throw new WrongConfigurationException(
+      "No principal set. Set --mesos_role to enable using local volumes in Marathon.")
   }
 
   /** Create a launch operation for the given taskInfo. */

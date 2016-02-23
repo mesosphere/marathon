@@ -96,6 +96,8 @@ case class AppDefinition(
     }
   }
 
+  def isResident: Boolean = residency.isDefined
+
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(

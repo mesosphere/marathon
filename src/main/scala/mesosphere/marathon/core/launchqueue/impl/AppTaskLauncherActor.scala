@@ -19,7 +19,7 @@ import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.{ TaskOp, TaskOpLogic }
-import org.apache.mesos.Protos.TaskInfo
+import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.duration._
 
@@ -63,14 +63,13 @@ private[launchqueue] object AppTaskLauncherActor {
     */
   private case object RecheckIfBackOffUntilReached extends Requests
 
-  // FIXME (217): we need a different timeout!
   private case class ScheduleTaskOpNotificationTimeout(launch: TaskOp)
 
   case object Stop extends Requests
 
-  private val TASK_LAUNCH_REJECTED_TIMEOUT_REASON: String =
+  private val TASK_OP_REJECTED_TIMEOUT_REASON: String =
     "AppTaskLauncherActor: no accept received within timeout. " +
-      "You can reconfigure the timeout with --task_launch_notification_timeout."
+      "You can reconfigure the timeout with --task_operation_notification_timeout."
 }
 
 /**
@@ -147,7 +146,7 @@ private class AppTaskLauncherActor(
       receiveGetCurrentCount,
       receiveAddCount,
       receiveProcessOffers,
-      receiveScheduleTaskLaunchNotificationDelay
+      receiveScheduleTaskOpNotificationDelay
     ).reduce(_.orElse[Any, Unit](_))
   }
 
@@ -211,10 +210,7 @@ private class AppTaskLauncherActor(
       log.info("Task launch for '{}' was REJECTED, reason '{}', rescheduling. {}", op.taskId, reason, status)
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
-    case TaskOpSourceDelegate.TaskOpRejected(
-      op, AppTaskLauncherActor.TASK_LAUNCH_REJECTED_TIMEOUT_REASON
-      ) =>
-
+    case TaskOpSourceDelegate.TaskOpRejected(op, AppTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON) =>
       // This is a message that we scheduled in this actor.
       // When we receive a launch confirmation or rejection, we cancel this timer but
       // there is still a race and we might send ourselves the message nevertheless, so we just
@@ -232,9 +228,7 @@ private class AppTaskLauncherActor(
   private[this] def receiveTaskStatusUpdate: Receive = {
     case TaskStatusUpdate(_, taskId, MarathonTaskStatus.Terminal(_)) =>
       log.debug("{} finished", taskId)
-      // FIXME (217): Another place where we have to handle resident tasks differently – would make sense
-      // to put all this into strategy functions or a dedicated implementation
-      if (app.residency.isDefined) {
+      if (app.isResident) {
         unlaunchTask(taskId)
       }
       else {
@@ -337,7 +331,6 @@ private class AppTaskLauncherActor(
     context.become(waitForInitialDelay)
   }
 
-  // FIXME (217): adjust this to return taskOperationsInFlight - however, this breaks the api
   private[this] def replyWithQueuedTaskCount(): Unit = {
     sender() ! QueuedTaskCount(
       app,
@@ -356,54 +349,52 @@ private class AppTaskLauncherActor(
       sender ! MatchedTaskOps(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      def updateActorState(task: Task, mesosTask: Option[TaskInfo]): Unit = {
-        val taskId = task.taskId
-
-        mesosTask.foreach { taskInfo =>
-          assume(
-            taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
-
-          // only decrement for launched tasks, not for reservations:
-          // FIXME (217): make sure this doesn't break the counting logic
-          tasksToLaunch -= 1
-        }
-
-        tasksMap += taskId -> task
-        inFlightTaskOperations += taskId -> None
-        OfferMatcherRegistration.manageOfferMatcherStatus()
-      }
-
       val taskOp: Option[TaskOp] = taskOpLogic.inferTaskOp(app, offer, tasksMap.values)
       taskOp match {
-        case Some(launch @ TaskOp.Launch(mesosTask, newTask, _, _)) =>
-          updateActorState(newTask, Some(mesosTask))
-
-          log.info("Request to launch task with id '{}', version '{}'. {}",
-            mesosTask.getTaskId.getValue, app.version, status)
-
-          self ! AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(launch)
-          sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, launch)))
-
-        case Some(reserveAndCreate @ TaskOp.ReserveAndCreateVolumes(newTask, _, _, _, _)) =>
-          updateActorState(newTask, None)
-
-          log.info("Request to reserve resources and create volumes for task with id '{}', version '{}'. {}",
-            newTask.taskId.idString, app.version, status)
-
-          self ! AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(reserveAndCreate)
-          sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, reserveAndCreate)))
-
+        case Some(launch: TaskOp.Launch) => handleLaunchOp(launch, offer)
+        case Some(reserve: TaskOp.ReserveAndCreateVolumes) => handleReserveOp(reserve, offer)
         case None => sender() ! MatchedTaskOps(offer.getId, Seq.empty)
       }
   }
 
-  protected val receiveScheduleTaskLaunchNotificationDelay: Receive = {
-    case AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(launch) if inFlight(launch) =>
+  private[this] def handleLaunchOp(launch: TaskOp.Launch, offer: Mesos.Offer): Unit = {
+    log.info("Request: Launch task '{}', version '{}'. {}", launch.taskId.idString, app.version, status)
+
+    updateActorState(launch.newTask, Some(launch.taskInfo))
+    self ! AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(launch)
+    sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, launch)))
+  }
+
+  private[this] def handleReserveOp(reserve: TaskOp.ReserveAndCreateVolumes, offer: Mesos.Offer): Unit = {
+    log.info("Request: Reserve/Create for task '{}', version '{}'. {}", reserve.taskId.idString, app.version, status)
+
+    updateActorState(reserve.newTask, None)
+    self ! AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(reserve)
+    sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, reserve)))
+  }
+
+  private[this] def updateActorState(task: Task, mesosTask: Option[Mesos.TaskInfo]): Unit = {
+    val taskId = task.taskId
+
+    mesosTask.foreach { taskInfo =>
+      assume(taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
+
+      // only decrement for launched tasks, not for reservations:
+      tasksToLaunch -= 1
+    }
+
+    tasksMap += taskId -> task
+    inFlightTaskOperations += taskId -> None
+    OfferMatcherRegistration.manageOfferMatcherStatus()
+  }
+
+  protected val receiveScheduleTaskOpNotificationDelay: Receive = {
+    case AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(taskOp) if inFlight(taskOp) =>
       val reject = TaskOpSourceDelegate.TaskOpRejected(
-        launch, AppTaskLauncherActor.TASK_LAUNCH_REJECTED_TIMEOUT_REASON
+        taskOp, AppTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON
       )
-      val cancellable = scheduleTaskLaunchTimeout(context, reject)
-      inFlightTaskOperations += launch.taskId -> Some(cancellable)
+      val cancellable = scheduleTaskOperationTimeout(context, reject)
+      inFlightTaskOperations += taskOp.taskId -> Some(cancellable)
 
     case schedule: AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout =>
       log.debug("ignoring {}", schedule)
@@ -411,12 +402,12 @@ private class AppTaskLauncherActor(
 
   private[this] def inFlight(task: TaskOp): Boolean = inFlightTaskOperations.contains(task.taskId)
 
-  protected def scheduleTaskLaunchTimeout(
+  protected def scheduleTaskOperationTimeout(
     context: ActorContext,
     message: TaskOpSourceDelegate.TaskOpRejected): Cancellable =
     {
       import context.dispatcher
-      context.system.scheduler.scheduleOnce(config.taskLaunchNotificationTimeout().milliseconds, self, message)
+      context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, message)
     }
 
   private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())

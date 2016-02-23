@@ -71,7 +71,6 @@ class TaskBuilder(app: AppDefinition,
     }
   }
 
-  // FIXME (217): remove this function
   def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Int])] = {
 
     val acceptedResourceRoles: Set[String] = {

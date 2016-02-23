@@ -28,7 +28,7 @@ class DefaultTaskOpLogic @Inject() (
   override def inferTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp] = {
     log.debug(s"inferTaskOp")
 
-    if (app.residency.isDefined) {
+    if (app.isResident) {
       inferForResidents(app, offer, tasks)
     }
     else {
@@ -89,7 +89,6 @@ class DefaultTaskOpLogic @Inject() (
     lazy val matchingVolumes = PersistentVolumeMatcher.matchVolumes(offer, app, waitingTasks)
     lazy val matchingResources = ResourceMatcher.matchResources(offer, app, tasks, acceptedResourceRoles)
 
-    // FIXME (217): these interfaces are still not nice ...
     val taskOp: Option[TaskOp] = if (needToLaunch && matchingVolumes.isDefined && matchingResources.isDefined) {
       launch(app, offer, matchingVolumes.get.task, matchingResources, matchingVolumes)
     }
