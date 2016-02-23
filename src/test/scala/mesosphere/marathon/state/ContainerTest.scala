@@ -39,8 +39,18 @@ class ContainerTest extends MarathonSpec with Matchers {
           image = "group/image",
           network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
           portMappings = Some(Seq(
-            Container.Docker.PortMapping(8080, 32001, 9000, Container.Docker.PortMapping.TCP),
-            Container.Docker.PortMapping(8081, 32002, 9001, Container.Docker.PortMapping.UDP)
+            Container.Docker.PortMapping(
+              containerPort = 8080,
+              hostPort = 32001,
+              servicePort = 9000,
+              protocol = Container.Docker.PortMapping.TCP,
+              name = Some("http"),
+              labels = Map("foo" -> "bar")),
+            Container.Docker.PortMapping(
+              containerPort = 8081,
+              hostPort = 32002,
+              servicePort = 9001,
+              protocol = Container.Docker.PortMapping.UDP)
           )
           )
         )
@@ -268,8 +278,9 @@ class ContainerTest extends MarathonSpec with Matchers {
           "image": "group/image",
           "network": "BRIDGE",
           "portMappings": [
-            { "containerPort": 8080, "hostPort": 32001, "servicePort": 9000, "protocol": "tcp"},
-            { "containerPort": 8081, "hostPort": 32002, "servicePort": 9001, "protocol": "udp"}
+            { "containerPort": 8080, "hostPort": 32001, "servicePort": 9000, "protocol": "tcp", "name": "http",
+              "labels": { "foo": "bar" } },
+            { "containerPort": 8081, "hostPort": 32002, "servicePort": 9001, "protocol": "udp" }
           ]
         }
       }
@@ -280,7 +291,7 @@ class ContainerTest extends MarathonSpec with Matchers {
     assert(readResult4 == f.container2)
   }
 
-  test("SerializationRoundTrip  with privileged, networking and parameters") {
+  test("SerializationRoundTrip with privileged, networking and parameters") {
     JsonTestHelper.assertSerializationRoundtripWorks(fixture().container3)
   }
 

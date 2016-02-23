@@ -86,7 +86,46 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     MarathonTestHelper.validateJsonSchema(app, true)
 
+    app = AppDefinition(
+      id = "test".toPath,
+      cmd = Some("true"),
+      container = Some(Container(
+        docker = Some(Docker(
+          image = "mesosphere/marathon",
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+          portMappings = Some(Seq(
+            Docker.PortMapping(8080, 0, 0, "tcp", Some("foo")),
+            Docker.PortMapping(8081, 0, 0, "tcp", Some("foo"))
+          ))
+        ))
+      )),
+      ports = Nil
+    )
+    shouldViolate(
+      app,
+      "container.docker.portMappings",
+      "Port names must be unique."
+    )
+
     val correct = AppDefinition(id = "test".toPath)
+
+    app = correct.copy(
+      container = Some(Container(
+        docker = Some(Docker(
+          image = "mesosphere/marathon",
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+          portMappings = Some(Seq(
+            Docker.PortMapping(8080, 0, 0, "tcp", Some("foo")),
+            Docker.PortMapping(8081, 0, 0, "tcp", Some("bar"))
+          ))
+        ))
+      )),
+      ports = Nil)
+    shouldNotViolate(
+      app,
+      "container.docker.portMappings",
+      "Port names must be unique."
+    )
 
     app = correct.copy(executor = "//cmd")
     shouldNotViolate(

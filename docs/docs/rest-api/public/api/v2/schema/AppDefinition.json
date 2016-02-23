@@ -131,6 +131,17 @@
                     "maximum": 65535,
                     "minimum": 0
                   },
+                  "labels": {
+                    "type": "object",
+                    "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the service hosted on this port."
+                  },
                   "protocol": {
                     "type": "string",
                     "description": "parameter is optional and defaults to tcp."

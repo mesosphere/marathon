@@ -114,7 +114,7 @@ class PortsMatcher(
         shuffledAvailablePorts.filter(portWithRole => !hostPortsFromMappings(portWithRole.port))
 
       mappings.iterator.map {
-        case PortMapping(containerPort, hostPort, servicePort, protocol) if hostPort == 0 =>
+        case PortMapping(containerPort, hostPort, servicePort, protocol, name, labels) if hostPort == 0 =>
           if (!availablePortsWithoutStaticHostPorts.hasNext) {
             log.info(s"Offer [${offer.getId.getValue}]. Insufficient ports in offer for app [${app.id}]")
             None
