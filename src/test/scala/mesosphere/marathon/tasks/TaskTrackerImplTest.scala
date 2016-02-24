@@ -130,7 +130,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   test("Count") {
-    testCount(_.countAppTasksSync(_))
+    testCount(_.countLaunchedAppTasksSync(_))
   }
 
   test("Count Async") {

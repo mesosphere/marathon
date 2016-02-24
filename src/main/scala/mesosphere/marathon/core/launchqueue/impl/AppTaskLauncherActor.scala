@@ -4,7 +4,7 @@ import akka.actor.{ Actor, ActorContext, ActorLogging, ActorRef, Cancellable, Pr
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.AppTaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base
@@ -49,12 +49,12 @@ private[launchqueue] object AppTaskLauncherActor {
 
   /**
     * Increase the task count of the receiver.
-    * The actor responds with a [[QueuedTaskCount]] message.
+    * The actor responds with a [[QueuedTaskInfo]] message.
     */
   case class AddTasks(app: AppDefinition, count: Int) extends Requests
   /**
     * Get the current count.
-    * The actor responds with a [[QueuedTaskCount]] message.
+    * The actor responds with a [[QueuedTaskInfo]] message.
     */
   case object GetCount extends Requests
 
@@ -330,12 +330,12 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def replyWithQueuedTaskCount(): Unit = {
-    sender() ! QueuedTaskCount(
+    sender() ! QueuedTaskInfo(
       app,
       tasksLeftToLaunch = tasksToLaunch,
       taskLaunchesInFlight = inFlightTaskOperations.size,
       // don't count tasks that are not launched in the tasksMap
-      tasksLaunchedOrRunning = tasksMap.values.count(_.launched.isDefined) - inFlightTaskOperations.size,
+      tasksLaunched = tasksMap.values.count(_.launched.isDefined) - inFlightTaskOperations.size,
       backOffUntil.getOrElse(clock.now())
     )
   }

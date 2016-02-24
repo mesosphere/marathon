@@ -46,6 +46,8 @@ private[tracker] class TaskTrackerDelegate(
     tasksByAppTimer.fold(futureCall())(_.timeFuture(futureCall()))
   }
 
+  override def countLaunchedAppTasksSync(appId: PathId): Int =
+    tasksByAppSync.appTasks(appId).count(_.launched.isDefined)
   override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.marathonAppTasks(appId).size
   override def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
     tasksByApp().map(_.marathonAppTasks(appId).size)
@@ -61,6 +63,7 @@ private[tracker] class TaskTrackerDelegate(
     tasksByAppSync.appTasks(appId)
   override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]] =
     tasksByApp().map(_.appTasks(appId))
+  override def appTasksLaunchedSync(appId: PathId): Iterable[Task] = appTasksSync(appId).filter(_.launched.isDefined)
 
   override def task(taskId: Task.Id)(
     implicit ec: ExecutionContext): Future[Option[Task]] =

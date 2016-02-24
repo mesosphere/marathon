@@ -44,7 +44,7 @@ class TaskKillerTest extends MarathonSpec
 
   test("AppNotFound") {
     val appId = PathId("invalid")
-    when(tracker.appTasksSync(appId)).thenReturn(Iterable.empty)
+    when(tracker.appTasksLaunchedSync(appId)).thenReturn(Iterable.empty)
     when(groupManager.app(appId)).thenReturn(Future.successful(None))
 
     val result = taskKiller.kill(appId, (tasks) => Set.empty[Task])
@@ -91,7 +91,7 @@ class TaskKillerTest extends MarathonSpec
   test("KillRequested without scaling") {
     val appId = PathId(List("my", "app"))
     val tasksToKill = Set(MarathonTestHelper.runningTaskForApp(appId))
-    when(tracker.appTasksSync(appId)).thenReturn(tasksToKill)
+    when(tracker.appTasksLaunchedSync(appId)).thenReturn(tasksToKill)
 
     val result = taskKiller.kill(appId, { tasks =>
       tasks should equal(tasksToKill)

@@ -73,10 +73,10 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(tracker.appTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2))
-    when(tracker.appTasksSync(app2.id)).thenReturn(Set(task2_1))
-    when(tracker.appTasksSync(app3.id)).thenReturn(Set(task3_1))
-    when(tracker.appTasksSync(app4.id)).thenReturn(Set(task4_1))
+    when(tracker.appTasksLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2))
+    when(tracker.appTasksLaunchedSync(app2.id)).thenReturn(Set(task2_1))
+    when(tracker.appTasksLaunchedSync(app3.id)).thenReturn(Set(task3_1))
+    when(tracker.appTasksLaunchedSync(app4.id)).thenReturn(Set(task4_1))
 
     when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
@@ -180,7 +180,7 @@ class DeploymentActorTest
     val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app.version, startedAt = 0)
     val task1_2 = MarathonTestHelper.runningTask("task1_2", appVersion = app.version, startedAt = 1000)
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Set(task1_1, task1_2))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Set(task1_1, task1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -254,7 +254,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
 
     try {
       TestActorRef(
@@ -297,7 +297,7 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 
-    when(tracker.appTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
+    when(tracker.appTasksLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
 
     when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {

@@ -6,7 +6,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.OfferReviver
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedTaskOps
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
@@ -43,11 +43,11 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val launcherRef = createLauncherRef(instances = 0)
     launcherRef ! RateLimiterActor.DelayUpdate(app, clock.now())
 
-    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
-    assert(counts.tasksLaunchedOrRunning == 1)
+    assert(counts.tasksLaunched == 1)
 
-    assert(!counts.waiting)
+    assert(!counts.inProgress)
     assert(counts.taskLaunchesInFlight == 0)
     assert(counts.tasksLeftToLaunch == 0)
 
@@ -60,8 +60,8 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val launcherRef = createLauncherRef(instances = 3)
     rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(app))
     rateLimiterActor.reply(RateLimiterActor.DelayUpdate(app, clock.now()))
-    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
-    assert(counts.tasksLaunchedOrRunning == 1)
+    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
+    assert(counts.tasksLaunched == 1)
     Mockito.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
     Mockito.reset(offerMatcherManager)
 
@@ -73,7 +73,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp))
     val newDelay: Timestamp = clock.now() + 5.seconds
     rateLimiterActor.reply(RateLimiterActor.DelayUpdate(upgradedApp, newDelay))
-    val counts2 = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+    val counts2 = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
     assert(counts2.backOffUntil == newDelay)
 
     And("the actor knows the new app definition")
@@ -94,8 +94,8 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val launcherRef = createLauncherRef(instances = 1)
     rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(app))
     rateLimiterActor.reply(RateLimiterActor.DelayUpdate(app, clock.now()))
-    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
-    assert(counts.tasksLaunchedOrRunning == 1)
+    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
+    assert(counts.tasksLaunched == 1)
 
     // We don't care about interactions until this point
     Mockito.reset(offerMatcherManager)
@@ -107,7 +107,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     rateLimiterActor.reply(RateLimiterActor.DelayUpdate(upgradedApp, clock.now()))
 
     // wait for message being processed
-    Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+    Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
     Then("the actor reregisters itself for at the offerMatcher")
     val inOrder = Mockito.inOrder(offerMatcherManager)
@@ -128,11 +128,11 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
     Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedTaskOps]
 
-    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
-    assert(counts.tasksLaunchedOrRunning == 0)
+    assert(counts.tasksLaunched == 0)
 
-    assert(counts.waiting)
+    assert(counts.inProgress)
     assert(counts.taskLaunchesInFlight == 1)
     assert(counts.tasksLeftToLaunch == 0)
 
@@ -177,11 +177,11 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
         .asInstanceOf[MatchedTaskOps]
     matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
-    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
-    assert(counts.tasksLaunchedOrRunning == 0)
+    assert(counts.tasksLaunched == 0)
 
-    assert(counts.waiting)
+    assert(counts.inProgress)
     assert(counts.taskLaunchesInFlight == 0)
     assert(counts.tasksLeftToLaunch == 1)
 
@@ -244,10 +244,10 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
         .asInstanceOf[MatchedTaskOps]
     matchedTasks.opsWithSource.foreach(_.accept())
 
-    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
-    assert(counts.tasksLaunchedOrRunning == 1)
-    assert(!counts.waiting)
+    assert(counts.tasksLaunched == 1)
+    assert(!counts.inProgress)
     assert(counts.taskLaunchesInFlight == 0)
     assert(counts.tasksLeftToLaunch == 0)
 
@@ -270,17 +270,17 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       launcherRef ! RateLimiterActor.DelayUpdate(app, clock.now())
 
       // wait for startup
-      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
       // task status update
       val counts = Await.result(
         launcherRef ? update.withTaskId(marathonTask.taskId).wrapped,
         3.seconds
-      ).asInstanceOf[QueuedTaskCount]
+      ).asInstanceOf[QueuedTaskInfo]
 
-      assert(counts.tasksLaunchedOrRunning == 0)
+      assert(counts.tasksLaunched == 0)
 
-      assert(!counts.waiting)
+      assert(!counts.inProgress)
       assert(counts.taskLaunchesInFlight == 0)
       assert(counts.tasksLeftToLaunch == 0)
 
@@ -310,10 +310,10 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       launcherRef ! RateLimiterActor.DelayUpdate(appWithConstraints, clock.now())
 
       And("that has succesfully started up")
-      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
       When("we get a status update about a terminated task")
-      Await.result(launcherRef ? update.withTaskId(marathonTask.taskId).wrapped, 3.seconds).asInstanceOf[QueuedTaskCount]
+      Await.result(launcherRef ? update.withTaskId(marathonTask.taskId).wrapped, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
       Then("reviveOffers has been called")
       Mockito.verify(offerReviver).reviveOffers()
@@ -336,17 +336,17 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
       launcherRef ! RateLimiterActor.DelayUpdate(app, clock.now())
 
       // wait for startup
-      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
       // task status update
       val counts = Await.result(
         launcherRef ? update.withTaskId(marathonTask.taskId).wrapped,
         3.seconds
-      ).asInstanceOf[QueuedTaskCount]
+      ).asInstanceOf[QueuedTaskInfo]
 
-      assert(counts.tasksLaunchedOrRunning == 1)
+      assert(counts.tasksLaunched == 1)
 
-      assert(!counts.waiting)
+      assert(!counts.inProgress)
       assert(counts.taskLaunchesInFlight == 0)
       assert(counts.tasksLeftToLaunch == 0)
 
