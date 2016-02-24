@@ -41,7 +41,7 @@ class LaunchQueueModuleTest
     assert(list.size == 1)
     assert(list.head.app == app)
     assert(list.head.tasksLeftToLaunch == 1)
-    assert(list.head.tasksLaunchedOrRunning == 0)
+    assert(list.head.tasksLaunched == 0)
     assert(list.head.taskLaunchesInFlight == 0)
     verify(taskTracker).tasksByAppSync
   }

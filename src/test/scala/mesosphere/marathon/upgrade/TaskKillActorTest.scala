@@ -96,7 +96,7 @@ class TaskKillActorTest
     val taskB = MarathonTestHelper.runningTask("taskB_id")
     val tasks = mutable.Iterable(taskA, taskB)
 
-    when(taskTracker.appTasksSync(app.id)).thenReturn(mutable.Iterable.empty[Task])
+    when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(mutable.Iterable.empty[Task])
 
     val ref = TestActorRef[TaskKillActor](Props(new TaskKillActor(driver, app.id, taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
     watch(ref)
@@ -120,7 +120,7 @@ class TaskKillActorTest
 
     val ref = TestActorRef[TaskKillActor](Props(new TaskKillActor(driver, appId, taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
 
-    when(taskTracker.appTasksSync(appId)).thenReturn(Iterable(taskA, taskB))
+    when(taskTracker.appTasksLaunchedSync(appId)).thenReturn(Iterable(taskA, taskB))
 
     watch(ref)
 

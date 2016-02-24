@@ -4,7 +4,7 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskCount
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.Mockito
@@ -21,8 +21,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     //given
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
-      QueuedTaskCount(
-        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunchedOrRunning = 0, clock.now() + 100.seconds
+      QueuedTaskInfo(
+        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunched = 0, clock.now() + 100.seconds
       )
     )
 
@@ -45,8 +45,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     //given
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
-      QueuedTaskCount(
-        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunchedOrRunning = 0,
+      QueuedTaskInfo(
+        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunched = 0,
         backOffUntil = clock.now() - 100.seconds
       )
     )
@@ -80,8 +80,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     //given
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
-      QueuedTaskCount(
-        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunchedOrRunning = 0,
+      QueuedTaskInfo(
+        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunched = 0,
         backOffUntil = clock.now() + 100.seconds
       )
     )

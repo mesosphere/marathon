@@ -33,8 +33,8 @@ class QueueResource @Inject() (
     import Formats._
 
     doIfAuthenticated(req, resp) { implicit identity =>
-      val queuedWithDelay = launchQueue.list.filter(t => t.waiting && isAllowedToView(t.app.id)).map {
-        case taskCount: LaunchQueue.QueuedTaskCount =>
+      val queuedWithDelay = launchQueue.list.filter(t => t.inProgress && isAllowedToView(t.app.id)).map {
+        case taskCount: LaunchQueue.QueuedTaskInfo =>
           val timeLeft = clock.now() until taskCount.backOffUntil
           Json.obj(
             "app" -> taskCount.app,
@@ -56,7 +56,7 @@ class QueueResource @Inject() (
     val id = appId.toRootPath
     doIfAuthorized(req, resp, UpdateAppOrGroup, id) { implicit identity =>
       launchQueue.list.find(_.app.id == id).map {
-        case taskCount: LaunchQueue.QueuedTaskCount =>
+        case taskCount: LaunchQueue.QueuedTaskInfo =>
           launchQueue.resetDelay(taskCount.app)
           noContent
       }.getOrElse(notFound(s"application $appId not found in task queue"))

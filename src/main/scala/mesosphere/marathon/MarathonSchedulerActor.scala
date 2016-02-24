@@ -514,13 +514,13 @@ class SchedulerActions(
     * Make sure the app is running the correct number of instances
     */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    val currentCount = taskTracker.appTasksSync(app.id).count(_.launched.isDefined)
+    val launchedCount = taskTracker.countLaunchedAppTasksSync(app.id)
     val targetCount = app.instances
 
-    if (targetCount > currentCount) {
-      log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
+    if (targetCount > launchedCount) {
+      log.info(s"Need to scale ${app.id} from $launchedCount up to $targetCount instances")
 
-      val queuedOrRunning = taskQueue.get(app.id).map(_.totalTaskCount).getOrElse(currentCount)
+      val queuedOrRunning = taskQueue.get(app.id).map(_.finalTaskCount).getOrElse(launchedCount)
       val toQueue = targetCount - queuedOrRunning
 
       if (toQueue > 0) {
@@ -531,11 +531,11 @@ class SchedulerActions(
         log.info(s"Already queued or started $queuedOrRunning tasks for ${app.id}. Not scaling.")
       }
     }
-    else if (targetCount < currentCount) {
-      log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
+    else if (targetCount < launchedCount) {
+      log.info(s"Scaling ${app.id} from $launchedCount down to $targetCount instances")
       taskQueue.purge(app.id)
 
-      val toKill = taskTracker.appTasksSync(app.id).take(currentCount - targetCount)
+      val toKill = taskTracker.appTasksLaunchedSync(app.id).take(launchedCount - targetCount)
       val taskIds: Iterable[TaskID] = toKill.flatMap(_.launchedMesosId)
       log.info(s"Killing tasks: ${taskIds.map(_.getValue)}")
       for (taskId <- taskIds) {
