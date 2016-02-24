@@ -14,7 +14,7 @@ class MarathonTasksTest extends MarathonSpec with Matchers {
 
   class Fixture {
     val appWithoutIpAddress = AppDefinition(id = "/foo/bar".toPath, ipAddress = None)
-    val appWithIpAddress = AppDefinition(id = "/foo/bar".toPath, ports = Seq.empty[Int], ipAddress = Some(IpAddress()))
+    val appWithIpAddress = AppDefinition(id = "/foo/bar".toPath, portDefinitions = Seq.empty, ipAddress = Some(IpAddress()))
 
     val networkWithoutIp = mesos.NetworkInfo.newBuilder.build()
 

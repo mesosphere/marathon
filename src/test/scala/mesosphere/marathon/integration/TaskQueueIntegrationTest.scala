@@ -24,7 +24,7 @@ class TaskQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIn
     Given("a new app with constraints that cannot be fulfilled")
     val c = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Operator.CLUSTER).setValue("na").build()
     val appId = testBasePath / "app"
-    val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, ports = List.empty)
+    val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, portDefinitions = List.empty)
     val create = marathon.createAppV2(app)
     create.code should be (201) // Created
 

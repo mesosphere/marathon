@@ -13,7 +13,10 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
 
   class Fixture {
     val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), ipAddress = None)
-    val appWithIpAddress = AppDefinition(id = PathId("/foo/bar"), ports = Seq.empty[Int], ipAddress = Some(IpAddress()))
+    val appWithIpAddress = AppDefinition(
+      id = PathId("/foo/bar"),
+      portDefinitions = Seq.empty,
+      ipAddress = Some(IpAddress()))
 
     val networkWithoutIp = MesosProtos.NetworkInfo.newBuilder.build()
 

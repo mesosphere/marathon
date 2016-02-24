@@ -4,16 +4,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{
-  AppDefinition,
-  Container,
-  FetchUri,
-  IpAddress,
-  PathId,
-  Residency,
-  Timestamp,
-  UpgradeStrategy
-}
+import mesosphere.marathon.state._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
@@ -46,7 +37,7 @@ case class AppUpdate(
 
     storeUrls: Option[Seq[String]] = None,
 
-    ports: Option[Seq[Int]] = None,
+    portDefinitions: Option[Seq[PortDefinition]] = None,
 
     requirePorts: Option[Boolean] = None,
 
@@ -99,7 +90,7 @@ case class AppUpdate(
     constraints = constraints.getOrElse(app.constraints),
     fetch = fetch.getOrElse(app.fetch),
     storeUrls = storeUrls.getOrElse(app.storeUrls),
-    ports = ports.getOrElse(app.ports),
+    portDefinitions = portDefinitions.getOrElse(app.portDefinitions),
     requirePorts = requirePorts.getOrElse(app.requirePorts),
     backoff = backoff.getOrElse(app.backoff),
     backoffFactor = backoffFactor.getOrElse(app.backoffFactor),
@@ -132,7 +123,7 @@ object AppUpdate {
     appUp.dependencies is valid
     appUp.upgradeStrategy is valid
     appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
-    appUp.ports is optional(elementsAreUnique(AppDefinition.filterOutRandomPorts))
+    appUp.portDefinitions is optional(PortDefinitions.portDefinitionsValidator)
     appUp.fetch is optional(every(fetchUriIsValid))
     appUp.container.each is valid
     appUp.residency is valid

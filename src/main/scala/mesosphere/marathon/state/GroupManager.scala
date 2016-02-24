@@ -5,23 +5,21 @@ import javax.inject.{ Inject, Named }
 
 import akka.event.EventStream
 import com.google.inject.Singleton
-
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, ModuleNames, PortRangeExhaustedException }
 import mesosphere.util.CapConcurrentExecutions
-import scala.concurrent.ExecutionContext.Implicits.global
 import org.slf4j.LoggerFactory
-import mesosphere.marathon.core.task.Task
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
-
-import mesosphere.marathon.api.v2.Validation._
 
 /**
   * The group manager is the facade for all group related actions.
@@ -203,7 +201,7 @@ class GroupManager @Singleton @Inject() (
   //scalastyle:off method.length
   private[state] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = from.transitiveApps.flatMap(_.ports) ++ to.transitiveApps.flatMap(_.ports)
+    var taken = from.transitiveApps.flatMap(_.portNumbers) ++ to.transitiveApps.flatMap(_.portNumbers)
 
     def nextGlobalFreePort: Int = synchronized {
       val port = portRange.find(!taken.contains(_))
@@ -216,12 +214,19 @@ class GroupManager @Singleton @Inject() (
       port
     }
 
+    def mergeServicePortsAndPortDefinitions(portDefinitions: Seq[PortDefinition], servicePorts: Seq[Int]) = {
+      portDefinitions.zipAll(servicePorts, AppDefinition.RandomPortDefinition, AppDefinition.RandomPortValue).map {
+        case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
+      }
+    }
+
     def assignPorts(app: AppDefinition): AppDefinition = {
+
       //all ports that are already assigned in old app definition, but not used in the new definition
       //if the app uses dynamic ports (0), it will get always the same ports assigned
       val assignedAndAvailable = mutable.Queue(
         from.app(app.id)
-          .map(_.ports.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
+          .map(_.portNumbers.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
           .getOrElse(Nil): _*
       )
 
@@ -249,7 +254,7 @@ class GroupManager @Singleton @Inject() (
       }
 
       app.copy(
-        ports = servicePorts,
+        portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, servicePorts),
         container = newContainer.orElse(app.container)
       )
     }
@@ -259,7 +264,9 @@ class GroupManager @Singleton @Inject() (
         case app: AppDefinition if app.hasDynamicPort => assignPorts(app)
         case app: AppDefinition =>
           // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-          app.copy(ports = app.servicePorts)
+          app.copy(
+            portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
+          )
       }
 
     dynamicApps.foldLeft(to) { (group, app) =>

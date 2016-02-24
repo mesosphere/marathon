@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import com.wix.accord.Success
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.state.AppDefinition.VersionInfo
@@ -8,8 +9,6 @@ import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-
-// import com.wix.accord.scalatest.ResultMatchers
 
 class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
@@ -185,7 +184,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
-      validate(changed).isSuccess should be (true)
+      validate(changed) should be (Success)
     }
 
     it("cannot replace a group with apps by an app definition") {
