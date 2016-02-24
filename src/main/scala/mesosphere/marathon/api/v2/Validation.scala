@@ -109,13 +109,21 @@ object Validation {
     }
   }
 
-  def elementsAreUnique[A](p: Seq[A] => Seq[A] = { seq: Seq[A] => seq },
-                           errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
+  def elementsAreUnique[A](errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
+    new Validator[Seq[A]] {
+      def apply(seq: Seq[A]) = {
+        if (seq.size == seq.distinct.size) Success
+        else Failure(Set(RuleViolation(seq, errorMessage, None)))
+      }
+    }
+  }
+
+  def elementsAreUniqueWithFilter[A](p: Seq[A] => Seq[A] = { seq: Seq[A] => seq },
+                                     errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
       def apply(seq: Seq[A]) = {
         val filteredSeq = p(seq)
-        if (filteredSeq.size == filteredSeq.distinct.size) Success
-        else Failure(Set(RuleViolation(seq, errorMessage, None)))
+        elementsAreUnique(errorMessage)(filteredSeq)
       }
     }
   }
