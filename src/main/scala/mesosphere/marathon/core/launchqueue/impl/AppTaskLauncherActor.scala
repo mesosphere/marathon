@@ -273,7 +273,6 @@ private class AppTaskLauncherActor(
   private[this] def unlaunchTask(taskId: Task.Id): Unit = {
     tasksMap.get(taskId) match {
       case Some(task) =>
-        log.info(">>> resident task unlaunched")
         tasksMap += taskId -> task.copy(launched = None)
 
       case None =>
@@ -289,7 +288,6 @@ private class AppTaskLauncherActor(
 
   private[this] def receiveAddCount: Receive = {
     case AppTaskLauncherActor.AddTasks(newApp, addCount) =>
-      log.info(s">>> Got AddTasks($newApp, $addCount)")
       val configChange = app.isUpgrade(newApp)
       if (configChange || app.needsRestart(newApp) || app.isOnlyScaleChange(newApp)) {
         app = newApp
