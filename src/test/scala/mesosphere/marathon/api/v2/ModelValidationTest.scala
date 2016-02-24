@@ -1,7 +1,11 @@
 package mesosphere.marathon.api.v2
 
+import java.util.regex.Pattern
+
+import com.wix.accord.{ Success, Failure }
+import com.wix.accord.dsl._
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.api.v2.json.{ GroupUpdate, GroupUpdate$ }
+import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
@@ -10,8 +14,10 @@ import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.scalatest.{ BeforeAndAfterAll, Matchers, OptionValues }
 
 import mesosphere.marathon.api.v2.Validation._
+import play.api.libs.json.{ JsObject, Json }
 
 import scala.collection.immutable.Seq
+import scala.util.matching.Regex
 
 class ModelValidationTest
     extends MarathonSpec
@@ -74,6 +80,36 @@ class ModelValidationTest
       v.message == "Requested service port 3200 conflicts with a service port in app /app2") should be(true)
   }
 
+  test("Multiple errors within one field of a validator should be grouped into one array") {
+    val empty = ImportantTitle("")
+
+    validate(empty) match {
+      case Success => fail()
+      case f: Failure =>
+        val errors = (Json.toJson(f) \ "details").as[Seq[JsObject]]
+        errors should have size 1
+        (errors.head \ "path").as[String] should be("name")
+        (errors.head \ "errors").as[Seq[String]] should have size 2
+    }
+  }
+
+  test("Validators should not produce 'value' string at the end of description.") {
+    val group = Group("/test".toPath, groups = Set(
+      Group("/test/group1".toPath, Set(
+        AppDefinition("/test/group1/valid".toPath, cmd = Some("foo")),
+        AppDefinition("/test/group1/invalid".toPath))
+      ),
+      Group("/test/group2".toPath)))
+
+    validate(group) match {
+      case Success => fail()
+      case f: Failure =>
+        val errors = (Json.toJson(f) \ "details").as[Seq[JsObject]]
+        errors should have size 1
+        (errors.head \ "path").as[String] should be("groups[0].apps[1]")
+    }
+  }
+
   private def createServicePortApp(id: PathId, servicePort: Int) =
     AppDefinition(
       id,
@@ -86,4 +122,10 @@ class ModelValidationTest
       ))
     )
 
+  case class ImportantTitle(name: String)
+
+  implicit val mrImportantValidator = validator[ImportantTitle] { m =>
+    m.name is equalTo("Dr.")
+    m.name is notEmpty
+  }
 }
