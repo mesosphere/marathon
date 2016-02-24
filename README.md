@@ -158,6 +158,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Corvisa](https://www.corvisa.com/)
 * [Criteo] (http://www.criteo.com/)
 * [Daemon](http://www.daemon.com.au/)
+* [DataMan](http://www.shurenyun.com/)
 * [DHL Parcel](https://www.dhlparcel.nl/)
 * [Disqus](https://disqus.com/)
 * [eBay](http://www.ebay.com/)
