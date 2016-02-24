@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.launcher
 
-import mesosphere.marathon.tasks.TaskOp
 import org.apache.mesos.Protos.OfferID
 
 /**

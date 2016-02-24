@@ -5,6 +5,7 @@ import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
+import mesosphere.marathon.core.launcher.{ TaskOpFactory, TaskOp }
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.AppTaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base
@@ -18,7 +19,6 @@ import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.tasks.{ TaskOp, TaskOpLogic }
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.duration._
@@ -29,7 +29,7 @@ private[launchqueue] object AppTaskLauncherActor {
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
     clock: Clock,
-    taskOpLogic: TaskOpLogic,
+    taskOpFactory: TaskOpFactory,
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef)(
@@ -38,7 +38,7 @@ private[launchqueue] object AppTaskLauncherActor {
     Props(new AppTaskLauncherActor(
       config,
       offerMatcherManager,
-      clock, taskOpLogic,
+      clock, taskOpFactory,
       maybeOfferReviver,
       taskTracker, rateLimiterActor,
       app, initialCount))
@@ -80,7 +80,7 @@ private class AppTaskLauncherActor(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
     clock: Clock,
-    taskOpLogic: TaskOpLogic,
+    taskOpFactory: TaskOpFactory,
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef,
@@ -347,43 +347,33 @@ private class AppTaskLauncherActor(
       sender ! MatchedTaskOps(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val taskOp: Option[TaskOp] = taskOpLogic.inferTaskOp(app, offer, tasksMap.values)
+      val taskOp: Option[TaskOp] = taskOpFactory.inferTaskOp(app, offer, tasksMap.values)
       taskOp match {
-        case Some(launch: TaskOp.Launch) => handleLaunchOp(launch, offer)
-        case Some(reserve: TaskOp.ReserveAndCreateVolumes) => handleReserveOp(reserve, offer)
-        case None => sender() ! MatchedTaskOps(offer.getId, Seq.empty)
+        case Some(op) => handleTaskOp(op, offer)
+        case None     => sender() ! MatchedTaskOps(offer.getId, Seq.empty)
       }
   }
 
-  private[this] def handleLaunchOp(launch: TaskOp.Launch, offer: Mesos.Offer): Unit = {
-    log.info("Request: Launch task '{}', version '{}'. {}", launch.taskId.idString, app.version, status)
+  private[this] def handleTaskOp(taskOp: TaskOp, offer: Mesos.Offer): Unit = {
+    def updateActorState(): Unit = {
+      taskOp match {
+        // only decrement for launched tasks, not for reservations:
+        case _: TaskOp.Launch => tasksToLaunch -= 1
+        case _                => ()
+      }
 
-    updateActorState(launch.newTask, Some(launch.taskInfo))
-    self ! AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(launch)
-    sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, launch)))
-  }
-
-  private[this] def handleReserveOp(reserve: TaskOp.ReserveAndCreateVolumes, offer: Mesos.Offer): Unit = {
-    log.info("Request: Reserve/Create for task '{}', version '{}'. {}", reserve.taskId.idString, app.version, status)
-
-    updateActorState(reserve.newTask, None)
-    self ! AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(reserve)
-    sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, reserve)))
-  }
-
-  private[this] def updateActorState(task: Task, mesosTask: Option[Mesos.TaskInfo]): Unit = {
-    val taskId = task.taskId
-
-    mesosTask.foreach { taskInfo =>
-      assume(taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
-
-      // only decrement for launched tasks, not for reservations:
-      tasksToLaunch -= 1
+      val taskId = taskOp.taskId
+      tasksMap += taskId -> taskOp.newTask
+      inFlightTaskOperations += taskId -> None
+      OfferMatcherRegistration.manageOfferMatcherStatus()
     }
 
-    tasksMap += taskId -> task
-    inFlightTaskOperations += taskId -> None
-    OfferMatcherRegistration.manageOfferMatcherStatus()
+    log.info("Request {} for task '{}', version '{}'. {}",
+      taskOp.getClass.getSimpleName, taskOp.taskId.idString, app.version, status)
+
+    updateActorState()
+    self ! AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(taskOp)
+    sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, taskOp)))
   }
 
   protected val receiveScheduleTaskOpNotificationDelay: Receive = {

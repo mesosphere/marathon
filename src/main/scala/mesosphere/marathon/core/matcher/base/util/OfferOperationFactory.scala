@@ -22,7 +22,7 @@ class OfferOperationFactory(
   private[this] lazy val role: String = roleOpt match {
     case Some(value) => value
     case _ => throw new WrongConfigurationException(
-      "No principal set. Set --mesos_role to enable using local volumes in Marathon.")
+      "No role set. Set --mesos_role to enable using local volumes in Marathon.")
   }
 
   /** Create a launch operation for the given taskInfo. */
@@ -41,7 +41,7 @@ class OfferOperationFactory(
     import scala.collection.JavaConverters._
     val reservedResources = resources.map { resource =>
       Mesos.Resource.newBuilder(resource)
-        .setRole(role) // actually needed or already in the resource?
+        .setRole(role)
         .setReservation(ReservationInfo.newBuilder()
           .setPrincipal(principal)).build();
     }
@@ -55,7 +55,7 @@ class OfferOperationFactory(
       .build()
   }
 
-  def createVolumes(appId: PathId, localVolumes: Iterable[LocalVolume]): Mesos.Offer.Operation = {
+  def createVolumes(localVolumes: Iterable[LocalVolume]): Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
 
     val volumes: Iterable[Mesos.Resource] = localVolumes.map { vol =>

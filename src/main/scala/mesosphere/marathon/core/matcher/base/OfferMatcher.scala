@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.matcher.base
 
+import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskOp
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Future

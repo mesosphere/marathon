@@ -1,8 +1,9 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon.core.launcher.impl
 
 import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ LocalVolume, LocalVolumeId, ReservationWithVolumes }
 import mesosphere.marathon.state.{ AppDefinition, PersistentVolume }
@@ -12,17 +13,17 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-class DefaultTaskOpLogic @Inject() (
+class DefaultTaskOpFactory @Inject() (
   config: MarathonConf,
   clock: Clock)
-    extends TaskOpLogic {
+    extends TaskOpFactory {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val taskOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.get
     val roleOpt = config.mesosRole.get
 
-    new TaskOpFactory(principalOpt, roleOpt)
+    new TaskOpFactoryHelper(principalOpt, roleOpt)
   }
 
   override def inferTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp] = {

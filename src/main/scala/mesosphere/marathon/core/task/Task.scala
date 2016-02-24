@@ -105,16 +105,15 @@ object Task {
 
   case class LocalVolumeId(appId: PathId, containerPath: String, uuid: String) {
     import LocalVolumeId._
-    lazy val idString = appId.safePath + appDelimiter + containerPath + volumeDelimiter + uuid
+    lazy val idString = appId.safePath + delimiter + containerPath + delimiter + uuid
 
     override def toString: String = s"LocalVolume [$idString]"
   }
 
   object LocalVolumeId {
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
-    private val appDelimiter = "."
-    private val volumeDelimiter = "."
-    private val LocalVolumeEncoderRE = "^([^.]+).([^.]+).([^.]+)$".r
+    private val delimiter = "#"
+    private val LocalVolumeEncoderRE = s"^([^.]+)[$delimiter]([^.]+)[$delimiter]([^.]+)$$".r
 
     def apply(appId: PathId, volume: PersistentVolume): LocalVolumeId =
       LocalVolumeId(appId, volume.containerPath, uuidGenerator.generate().toString)

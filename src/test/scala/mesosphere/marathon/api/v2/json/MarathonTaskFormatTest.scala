@@ -32,7 +32,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
     val taskWithLocalVolumes = new Task(
       taskId = Task.Id("/foo/bar"),
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
-      reservationWithVolumes = Some(ReservationWithVolumes(Seq(Task.LocalVolumeId.unapply("appid.container.random")).flatten)),
+      reservationWithVolumes = Some(ReservationWithVolumes(Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten)),
       launched = Some(Task.Launched(time, Task.Status(time, Some(time)), NoNetworking)))
   }
 
@@ -97,7 +97,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
         |  "localVolumes": [
         |    {
         |      "containerPath": "container",
-        |      "persistenceId": "appid.container.random"
+        |      "persistenceId": "appid#container#random"
         |    }
         |  ]
         |}

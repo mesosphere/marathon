@@ -1,7 +1,8 @@
-package mesosphere.marathon.tasks
+package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
+import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.{ Protos => Mesos }
 
 /**

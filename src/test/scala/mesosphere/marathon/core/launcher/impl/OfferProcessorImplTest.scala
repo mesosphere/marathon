@@ -2,14 +2,13 @@ package mesosphere.marathon.core.launcher.impl
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.launcher.{ TaskOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.tasks.{ TaskOpFactory, TaskOp }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.GivenWhenThen
@@ -285,8 +284,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
   object f {
     import org.apache.mesos.{ Protos => Mesos }
-    val launch = new TaskOpFactory(Some("principal"), Some("role")).launch(_: Mesos.TaskInfo, _: Task, None)
-    val launchWithOldTask = new TaskOpFactory(Some("principal"), Some("role")).launch _
+    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launch(_: Mesos.TaskInfo, _: Task, None)
+    val launchWithOldTask = new TaskOpFactoryHelper(Some("principal"), Some("role")).launch _
   }
 
   class DummySource extends TaskOpSource {

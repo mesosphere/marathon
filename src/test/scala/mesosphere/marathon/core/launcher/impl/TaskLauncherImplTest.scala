@@ -5,9 +5,8 @@ import java.util.Collections
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.launcher.TaskLauncher
+import mesosphere.marathon.core.launcher.{ TaskOp, TaskLauncher }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.tasks.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
@@ -23,7 +22,7 @@ class TaskLauncherImplTest extends MarathonSpec {
   private[this] val offerIdAsJava: util.Set[Protos.OfferID] = Collections.singleton[Protos.OfferID](offerId)
   private[this] def launch(taskInfoBuilder: TaskInfo.Builder): TaskOp.Launch = {
     val taskInfo = taskInfoBuilder.build()
-    new TaskOpFactory(Some("principal"), Some("role")).launch(taskInfo, MarathonTestHelper.makeTaskFromTaskInfo(taskInfo))
+    new TaskOpFactoryHelper(Some("principal"), Some("role")).launch(taskInfo, MarathonTestHelper.makeTaskFromTaskInfo(taskInfo))
   }
   private[this] val launch1 = launch(MarathonTestHelper.makeOneCPUTask("task1"))
   private[this] val launch2 = launch(MarathonTestHelper.makeOneCPUTask("task2"))

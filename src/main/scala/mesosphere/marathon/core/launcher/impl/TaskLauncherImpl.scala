@@ -4,9 +4,8 @@ import java.util.Collections
 
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.TaskLauncher
+import mesosphere.marathon.core.launcher.{ TaskOp, TaskLauncher }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
-import mesosphere.marathon.tasks.TaskOp
 import org.apache.mesos.Protos.{ OfferID, Status }
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.slf4j.LoggerFactory
