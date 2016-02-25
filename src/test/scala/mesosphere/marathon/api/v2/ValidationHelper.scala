@@ -2,12 +2,10 @@ package mesosphere.marathon.api.v2
 
 import com.wix.accord._
 
-/**
-  * Created by alex on 07/01/16.
-  */
 object ValidationHelper {
   case class ViolationMessageAndProperty(message: String, property: Option[String]) {
-    override def toString: String = s"Property: $property Message: $message"
+    override def toString: String = property.map(p => s"Property: $p. Message: $message")
+      .getOrElse(s"Message: $message")
   }
 
   def getAllRuleConstrains(r: Result): Seq[ViolationMessageAndProperty] = {

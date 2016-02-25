@@ -7,6 +7,7 @@ import mesosphere.marathon.{ AllConf, ValidationFailedException }
 import mesosphere.marathon.state.FetchUri
 import play.api.libs.json._
 
+import scala.collection.GenTraversableOnce
 import scala.reflect.ClassTag
 import scala.util.Try
 
@@ -111,21 +112,36 @@ object Validation {
 
   def elementsAreUnique[A](errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
-      def apply(seq: Seq[A]) = {
-        if (seq.size == seq.distinct.size) Success
-        else Failure(Set(RuleViolation(seq, errorMessage, None)))
-      }
+      def apply(seq: Seq[A]) = areUnique(seq, errorMessage)
     }
   }
 
-  def elementsAreUniqueWithFilter[A](p: Seq[A] => Seq[A] = { seq: Seq[A] => seq },
+  def elementsAreUniqueBy[A, B](fn: A => B,
+                                errorMessage: String = "Elements must be unique.",
+                                filter: B => Boolean = { _: B => true }): Validator[Seq[A]] = {
+    new Validator[Seq[A]] {
+      def apply(seq: Seq[A]) = areUnique(seq.map(fn).filter(filter), errorMessage)
+    }
+  }
+
+  def elementsAreUniqueByOptional[A, B](fn: A => GenTraversableOnce[B],
+                                        errorMessage: String = "Elements must be unique.",
+                                        filter: B => Boolean = { _: B => true }): Validator[Seq[A]] = {
+    new Validator[Seq[A]] {
+      def apply(seq: Seq[A]) = areUnique(seq.flatMap(fn).filter(filter), errorMessage)
+    }
+  }
+
+  def elementsAreUniqueWithFilter[A](fn: A => Boolean,
                                      errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
-      def apply(seq: Seq[A]) = {
-        val filteredSeq = p(seq)
-        elementsAreUnique(errorMessage)(filteredSeq)
-      }
+      def apply(seq: Seq[A]) = areUnique(seq.filter(fn), errorMessage)
     }
+  }
+
+  private[this] def areUnique[A](seq: Seq[A], errorMessage: String): Result = {
+    if (seq.size == seq.distinct.size) Success
+    else Failure(Set(RuleViolation(seq, errorMessage, None)))
   }
 
   def theOnlyDefinedOptionIn[A <: Product: ClassTag, B](product: A): Validator[Option[B]] =
