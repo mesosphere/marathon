@@ -5,7 +5,8 @@ title: Event Bus
 # Event Bus
 
 Marathon has an internal event bus that captures all API requests and scaling events. This is useful for integrating with load balancers, keeping stats, etc.
-Events can be subscribed to by pluggable subscribers. Currently an HTTP callback subscriber is implemented that POSTs events in JSON format to one or more endpoints. Other subscribers are easy to add. See the code in
+
+Pluggable subscribers can subscribe to events. Currently, an HTTP callback subscriber is implemented that POSTs events in JSON format to one or more endpoints. Other subscribers are easy to add. See the code in
 [marathon/event/http](https://github.com/mesosphere/marathon/tree/master/src/main/scala/mesosphere/marathon/event/http)
 for guidance.
 
@@ -25,7 +26,7 @@ Below are example JSON bodies that are posted by Marathon.
 
 ### API Request
 
-Fired every time Marathon receives an API request that modifies an app (create, update, delete):
+The API request JSON body is posted every time Marathon receives an API request that modifies an app (create, update, delete):
 
 ``` json
 {
@@ -64,7 +65,7 @@ Fired every time Marathon receives an API request that modifies an app (create, 
 
 ### Status Update
 
-Fired every time the status of a task changes:
+The status update JSON body is posted every time the status of a task changes:
 
 ``` json
 {
@@ -90,7 +91,7 @@ The possible values for `taskStatus` are:
 - `TASK_KILLED`
 - `TASK_LOST`
 
-where the last four states are terminal.
+The last four states are terminal.
 
 ### Framework Message
 
@@ -106,7 +107,7 @@ where the last four states are terminal.
 
 ### Event Subscription
 
-Fired when a new http callback subscriber is added or removed:
+The event subscription JSON body is posted when a new HTTP callback subscriber is added or removed:
 
 ``` json
 {
