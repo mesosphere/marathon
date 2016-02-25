@@ -1,7 +1,7 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.launcher.impl.DefaultTaskOpFactory
+import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
@@ -13,7 +13,7 @@ import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-class DefaultTaskOpFactoryTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
+class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
 
   test("Copy SlaveID from Offer to Task") {
     val f = new Fixture
@@ -27,7 +27,7 @@ class DefaultTaskOpFactoryTest extends MarathonSpec with GivenWhenThen with Mock
       MarathonTestHelper.mininimalTask("some task ID")
     )
 
-    val inferredTaskOp = f.taskOpFactory.inferTaskOp(appDefinition, offer, runningTasks)
+    val inferredTaskOp = f.taskOpFactory.buildTaskOp(appDefinition, offer, runningTasks)
 
     val expectedTask = Task(
       taskId = Task.Id("some task ID"),
@@ -58,7 +58,7 @@ class DefaultTaskOpFactoryTest extends MarathonSpec with GivenWhenThen with Mock
     val tasks = Nil
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.inferTaskOp(app, offer, tasks)
+    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
 
     Then("None is returned because there are already 2 launched tasks")
     taskOp shouldBe empty
@@ -72,7 +72,7 @@ class DefaultTaskOpFactoryTest extends MarathonSpec with GivenWhenThen with Mock
     val tasks = Nil
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.inferTaskOp(app, offer, tasks)
+    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
 
     Then("A Launch is inferred")
     taskOp shouldBe a[Some[TaskOp.Launch]]
@@ -86,7 +86,7 @@ class DefaultTaskOpFactoryTest extends MarathonSpec with GivenWhenThen with Mock
     val tasks = Nil
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.inferTaskOp(app, offer, tasks)
+    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
 
     Then("None is returned")
     taskOp shouldBe empty
@@ -100,7 +100,7 @@ class DefaultTaskOpFactoryTest extends MarathonSpec with GivenWhenThen with Mock
     val tasks = Nil
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.inferTaskOp(app, offer, tasks)
+    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
 
     Then("A ReserveAndCreateVolumes is returned")
     taskOp shouldBe a[Some[TaskOp.ReserveAndCreateVolumes]]
@@ -119,7 +119,7 @@ class DefaultTaskOpFactoryTest extends MarathonSpec with GivenWhenThen with Mock
       f.residentReservedTask(app.id, localVolumeIdMatch))
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.inferTaskOp(app, offer, tasks)
+    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
 
     Then("A Launch is returned")
     taskOp shouldBe a[Some[TaskOp.Launch]]
@@ -144,7 +144,7 @@ class DefaultTaskOpFactoryTest extends MarathonSpec with GivenWhenThen with Mock
     val tasks = Seq(f.residentLaunchedTask(app.id, usedVolumeId))
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.inferTaskOp(app, offer, tasks)
+    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
 
     Then("A None is returned because there is already a launched Task")
     taskOp shouldBe empty
@@ -155,7 +155,7 @@ class DefaultTaskOpFactoryTest extends MarathonSpec with GivenWhenThen with Mock
     val taskTracker = mock[TaskTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("role"), principal = Some("principal"))
     val clock = ConstantClock()
-    val taskOpFactory: TaskOpFactory = new DefaultTaskOpFactory(config, clock)
+    val taskOpFactory: TaskOpFactory = new TaskOpFactoryImpl(config, clock)
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()

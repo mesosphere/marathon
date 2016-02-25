@@ -347,7 +347,7 @@ private class AppTaskLauncherActor(
       sender ! MatchedTaskOps(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val taskOp: Option[TaskOp] = taskOpFactory.inferTaskOp(app, offer, tasksMap.values)
+      val taskOp: Option[TaskOp] = taskOpFactory.buildTaskOp(app, offer, tasksMap.values)
       taskOp match {
         case Some(op) => handleTaskOp(op, offer)
         case None     => sender() ! MatchedTaskOps(offer.getId, Seq.empty)

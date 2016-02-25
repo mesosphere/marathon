@@ -8,12 +8,9 @@ import org.apache.mesos.{ Protos => Mesos }
 trait TaskOpFactory {
 
   /**
-    * Return a TaskOp if and only if the offer matches the app.
-    * @param app
-    * @param offer
     * @param tasks a list of tasks for the given app, needed to check constraints handle resident tasks
-    * @return
+    * @return a TaskOp if and only if the offer matches the app.
     */
-  def inferTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp]
+  def buildTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp]
 
 }

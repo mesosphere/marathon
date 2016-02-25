@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-class DefaultTaskOpFactory @Inject() (
+class TaskOpFactoryImpl @Inject() (
   config: MarathonConf,
   clock: Clock)
     extends TaskOpFactory {
@@ -26,7 +26,7 @@ class DefaultTaskOpFactory @Inject() (
     new TaskOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  override def inferTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp] = {
+  override def buildTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp] = {
     log.debug(s"inferTaskOp")
 
     if (app.isResident) {

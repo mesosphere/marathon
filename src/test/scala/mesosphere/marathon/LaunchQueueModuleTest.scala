@@ -127,12 +127,12 @@ class LaunchQueueModuleTest
     }
 
     When("we ask for matching an offer")
-    call(taskOpFactory.inferTaskOp(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(None)
+    call(taskOpFactory.buildTaskOp(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(None)
     val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
     val matchedTasks = Await.result(matchFuture, 3.seconds)
 
     Then("the offer gets passed to the task factory and respects the answer")
-    verify(taskOpFactory).inferTaskOp(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
+    verify(taskOpFactory).buildTaskOp(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
     assert(matchedTasks.offerId == offer.getId)
     assert(matchedTasks.opsWithSource == Seq.empty)
 
@@ -148,7 +148,7 @@ class LaunchQueueModuleTest
 
     Given("An app in the queue")
     call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
-    call(taskOpFactory.inferTaskOp(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(Some(launch))
+    call(taskOpFactory.buildTaskOp(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(Some(launch))
     taskQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
@@ -159,7 +159,7 @@ class LaunchQueueModuleTest
     val matchedTasks = Await.result(matchFuture, 3.seconds)
 
     Then("the offer gets passed to the task factory and respects the answer")
-    verify(taskOpFactory).inferTaskOp(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
+    verify(taskOpFactory).buildTaskOp(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
     assert(matchedTasks.offerId == offer.getId)
     assert(matchedTasks.launchedTaskInfos == Seq(mesosTask))
 

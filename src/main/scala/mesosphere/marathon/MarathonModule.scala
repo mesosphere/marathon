@@ -20,7 +20,7 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launcher.TaskOpFactory
-import mesosphere.marathon.core.launcher.impl.DefaultTaskOpFactory
+import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
@@ -89,7 +89,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[LeadershipAbdication]).to(classOf[MarathonSchedulerService])
     bind(classOf[LeaderInfo]).to(classOf[MarathonLeaderInfo]).in(Scopes.SINGLETON)
-    bind(classOf[TaskOpFactory]).to(classOf[DefaultTaskOpFactory]).in(Scopes.SINGLETON)
+    bind(classOf[TaskOpFactory]).to(classOf[TaskOpFactoryImpl]).in(Scopes.SINGLETON)
 
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
 
