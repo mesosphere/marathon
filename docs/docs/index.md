@@ -41,30 +41,13 @@ $ tar xzf marathon-0.15.1.tgz
 
 SHA-256 checksums are available by appending `.sha256` to the URLs.
 
-### Running in Production Mode
-
-To launch Marathon in *production mode*, you need to have both
-ZooKeeper and Mesos running. The following command launches
-Marathon in *production mode*. Point your web browser to
-`localhost:8080` and you should see the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html).
-
-``` console
-$ ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
-```
-
-Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeepers
-for storing state. They are separate options because Mesos masters can be
-discovered in other ways as well.
-
-For all configuration options, see the [command line flags](command-line-flags.html) doc. For more information on the high-availability feature of Marathon, see the [high availability](high-availability.html) doc.
-
 ### Versioning
 
 As of version 0.9.0, Marathon adheres to [semantic versioning](http://semver.org).
 That means our documented REST API remains compatible across releases unless we change the MAJOR version
 (the first number in the version tuple). If you depend on undocumented features, please tell us about them by [raising a GitHub issue](https://github.com/mesosphere/marathon/issues/new). Portions of the API marked as EXPERIMENTAL are exempt from this rule. We do not introduce new features in PATCH version increments (the last number in the version tuple).
 
-In rare cases, we may change the command line interfaces of the Marathon server process in a MINOR version upgrade. The release notes document these instances.
+In rare cases, we may change the Marathon command line flags in a MINOR version upgrade. The release notes document these instances.
 
 We provide release candidates for all new MAJOR/MINOR versions and invite our users to test them and
 give us feedback, particularly on violations of the versioning policy.
@@ -73,9 +56,9 @@ give us feedback, particularly on violations of the versioning policy.
 
 See [the Marathon upgrade guide](https://mesosphere.github.io/marathon/docs/upgrade/index.html) to learn how to upgrade to a new version.
 
-### Running in Production Mode
+### Running in High Availability Mode
 
-Both ZooKeeper and Mesos need to be running in order to launch Marathon in *production mode*.
+Both ZooKeeper and Mesos need to be running in order to launch Marathon in *high availability mode*.
 
 Point your web browser to
 `localhost:8080` and you should see the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html).
