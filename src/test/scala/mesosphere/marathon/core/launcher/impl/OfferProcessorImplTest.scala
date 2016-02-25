@@ -2,9 +2,9 @@ package mesosphere.marathon.core.launcher.impl
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.launcher.{ TaskOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOp, TaskOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.Metrics
@@ -28,7 +28,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, OfferMatcher.Launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
     val offerProcessor = createProcessor()
 
     val deadline: Timestamp = clock.now() + 1.second
@@ -66,7 +66,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, OfferMatcher.Launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
 
     val offerProcessor = createProcessor()
 
@@ -108,10 +108,10 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     val dummySource = new DummySource
     val tasksWithSource = tasks.map { task =>
       val dummyTask = MarathonTestHelper.mininimalTask(task.getTaskId.getValue)
-      val launch = OfferMatcher.Launch(
+      val launch = f.launchWithOldTask(
         task,
-        newTask = MarathonTestHelper.makeTaskFromTaskInfo(task),
-        oldTask = Some(dummyTask)
+        MarathonTestHelper.makeTaskFromTaskInfo(task),
+        Some(dummyTask)
       )
       TaskOpWithSource(dummySource, launch)
     }
@@ -154,7 +154,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, OfferMatcher.Launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
 
     val offerProcessor = createProcessor()
 
@@ -191,7 +191,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, OfferMatcher.Launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
 
     val offerProcessor = createProcessor()
 
@@ -280,6 +280,12 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     new OfferProcessorImpl(
       conf, clock, new Metrics(new MetricRegistry), offerMatcher, taskLauncher, taskCreationHandler
     )
+  }
+
+  object f {
+    import org.apache.mesos.{ Protos => Mesos }
+    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launch(_: Mesos.TaskInfo, _: Task, None)
+    val launchWithOldTask = new TaskOpFactoryHelper(Some("principal"), Some("role")).launch _
   }
 
   class DummySource extends TaskOpSource {

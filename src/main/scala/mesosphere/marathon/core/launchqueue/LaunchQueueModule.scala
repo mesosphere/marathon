@@ -3,6 +3,7 @@ package mesosphere.marathon.core.launchqueue
 import akka.actor.{ ActorRef, Props }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
+import mesosphere.marathon.core.launcher.TaskOpFactory
 import mesosphere.marathon.core.launchqueue.impl.{
   AppTaskLauncherActor,
   LaunchQueueActor,
@@ -14,7 +15,6 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, AppRepository }
-import mesosphere.marathon.tasks.TaskFactory
 
 /**
   * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given AppDefinition.
@@ -27,7 +27,7 @@ class LaunchQueueModule(
     maybeOfferReviver: Option[OfferReviver],
     appRepository: AppRepository,
     taskTracker: TaskTracker,
-    taskFactory: TaskFactory) {
+    taskOpFactory: TaskOpFactory) {
 
   private[this] val launchQueueActorRef: ActorRef = {
     val props = LaunchQueueActor.props(config, appActorProps)
@@ -48,7 +48,7 @@ class LaunchQueueModule(
       config,
       subOfferMatcherManager,
       clock,
-      taskFactory,
+      taskOpFactory,
       maybeOfferReviver,
       taskTracker,
       rateLimiterActor)(app, count)

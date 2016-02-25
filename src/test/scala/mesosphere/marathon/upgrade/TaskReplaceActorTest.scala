@@ -41,7 +41,7 @@ class TaskReplaceActorTest
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
@@ -88,7 +88,7 @@ class TaskReplaceActorTest
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
@@ -131,7 +131,7 @@ class TaskReplaceActorTest
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
@@ -185,7 +185,7 @@ class TaskReplaceActorTest
 
     var oldTaskCount = 3
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       override def answer(invocation: InvocationOnMock): Status = {
         val taskId = invocation.getArguments()(0).asInstanceOf[TaskID]
@@ -255,7 +255,7 @@ class TaskReplaceActorTest
 
     var oldTaskCount = 3
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
@@ -329,7 +329,7 @@ class TaskReplaceActorTest
 
     var oldTaskCount = 3
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
@@ -401,7 +401,7 @@ class TaskReplaceActorTest
 
     var oldTaskCount = 3
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       def answer(invocation: InvocationOnMock): Status = {
         val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
@@ -464,7 +464,7 @@ class TaskReplaceActorTest
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
 
@@ -496,7 +496,7 @@ class TaskReplaceActorTest
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
     when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
       var firstKillForTaskB = true
 
@@ -549,7 +549,7 @@ class TaskReplaceActorTest
     val queue = mock[LaunchQueue]
     val tracker = mock[TaskTracker]
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
 

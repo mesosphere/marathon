@@ -5,24 +5,24 @@ import java.util.Collections
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.matcher.base.OfferMatcher
+import mesosphere.marathon.core.launcher.{ TaskOp, TaskLauncher }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSchedulerDriverHolder, MarathonSpec }
-import mesosphere.marathon.core.launcher.TaskLauncher
+import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
+import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.OfferID
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.mockito.Mockito
-import org.mockito.Mockito.{ when, verify }
-import mesosphere.mesos.protos.Implicits._
+import org.mockito.Mockito.{ verify, when }
+
 import scala.collection.JavaConverters._
 
 class TaskLauncherImplTest extends MarathonSpec {
   private[this] val offerId = OfferID("offerId")
   private[this] val offerIdAsJava: util.Set[Protos.OfferID] = Collections.singleton[Protos.OfferID](offerId)
-  private[this] def launch(taskInfoBuilder: TaskInfo.Builder): OfferMatcher.Launch = {
+  private[this] def launch(taskInfoBuilder: TaskInfo.Builder): TaskOp.Launch = {
     val taskInfo = taskInfoBuilder.build()
-    OfferMatcher.Launch(taskInfo, MarathonTestHelper.makeTaskFromTaskInfo(taskInfo))
+    new TaskOpFactoryHelper(Some("principal"), Some("role")).launch(taskInfo, MarathonTestHelper.makeTaskFromTaskInfo(taskInfo))
   }
   private[this] val launch1 = launch(MarathonTestHelper.makeOneCPUTask("task1"))
   private[this] val launch2 = launch(MarathonTestHelper.makeOneCPUTask("task2"))

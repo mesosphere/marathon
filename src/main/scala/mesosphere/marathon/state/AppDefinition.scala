@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.serialization.{ PortDefinitionSerializer, ContainerSerializer }
+import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
@@ -98,6 +98,8 @@ case class AppDefinition(
     }
   }
 
+  def isResident: Boolean = residency.isDefined
+
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(
@@ -156,6 +158,8 @@ case class AppDefinition(
       case _ => // ignore
     }
 
+    residency.foreach { r => builder.setResidency(ResidencySerializer.toProto(r)) }
+
     builder.build
   }
 
@@ -203,6 +207,8 @@ case class AppDefinition(
 
     val ipAddressOption = if (proto.hasIpAddress) Some(IpAddress.fromProto(proto.getIpAddress)) else None
 
+    val residencyOption = if (proto.hasResidency) Some(ResidencySerializer.fromProto(proto.getResidency)) else None
+
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
     val portDefinitions =
@@ -237,7 +243,8 @@ case class AppDefinition(
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
-      ipAddress = ipAddressOption
+      ipAddress = ipAddressOption,
+      residency = residencyOption
     )
   }
 

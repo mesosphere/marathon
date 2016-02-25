@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.Protos
+import mesosphere.marathon.{ SerializationFailedException, Protos }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, ReservationWithVolumes }
 import mesosphere.marathon.state.Timestamp
@@ -40,7 +40,10 @@ object TaskSerializer {
     def reservationWithVolume: Option[Task.ReservationWithVolumes] = {
       if (proto.hasReservationWithVolumes) {
         Some(ReservationWithVolumes(
-          proto.getReservationWithVolumes.getLocalVolumeIdsList.asScala.map(LocalVolumeId(_))))
+          proto.getReservationWithVolumes.getLocalVolumeIdsList.asScala.map {
+            case LocalVolumeId(volumeId) => volumeId
+            case invalid: String         => throw new SerializationFailedException(s"$invalid is no valid volumeId")
+          }))
       }
       else {
         None

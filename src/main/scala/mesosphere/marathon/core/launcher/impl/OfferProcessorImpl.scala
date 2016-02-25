@@ -2,9 +2,9 @@ package mesosphere.marathon.core.launcher.impl
 
 import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.launcher.{ TaskOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOp, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
@@ -73,7 +73,7 @@ private[launcher] class OfferProcessorImpl(
           }
       }.flatMap {
         case MatchedTaskOps(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
-        case MatchedTaskOps(offerId, tasks, _)             => launchTasks(offerId, tasks)
+        case MatchedTaskOps(offerId, tasks, _)             => acceptOffer(offerId, tasks)
       }
   }
 
@@ -84,7 +84,7 @@ private[launcher] class OfferProcessorImpl(
     Future.successful(())
   }
 
-  private[this] def launchTasks(offerId: OfferID, taskOpsWithSource: Seq[TaskOpWithSource]): Future[Unit] = {
+  private[this] def acceptOffer(offerId: OfferID, taskOpsWithSource: Seq[TaskOpWithSource]): Future[Unit] = {
     if (taskLauncher.acceptOffer(offerId, taskOpsWithSource.map(_.op))) {
       log.debug("Offer [{}]. Task launch successful", offerId.getValue)
       taskOpsWithSource.foreach(_.accept())

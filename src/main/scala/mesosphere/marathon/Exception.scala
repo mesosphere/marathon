@@ -37,6 +37,8 @@ case class ConflictingChangeException(msg: String) extends Exception(msg)
   */
 case class ValidationFailedException(obj: Any, failure: Failure) extends Exception("Validation failed")
 
+case class SerializationFailedException(message: String) extends Exception(message)
+
 /*
  * Task upgrade specific exceptions
  */

@@ -3,10 +3,13 @@ package mesosphere.marathon.core.matcher.manager.impl
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.launcher.TaskOp
+import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ TaskOp, MatchedTaskOps, TaskOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.ResourceUtil
@@ -131,6 +134,11 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     MarathonTestHelper.makeOneCPUTask(idBase).build()
   }
 
+  object f {
+    import org.apache.mesos.{ Protos => Mesos }
+    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launch(_: Mesos.TaskInfo, _: Task, None)
+  }
+
   private[this] var module: OfferMatcherManagerModule = _
   private[this] var clock: Clock = _
 
@@ -164,7 +172,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
 
     override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedTaskOps] = {
       val opsWithSources = matchTasks(deadline, offer).map { task =>
-        val launch = OfferMatcher.Launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, offer))
+        val launch = f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, offer))
         TaskOpWithSource(source, launch)
       }
 
