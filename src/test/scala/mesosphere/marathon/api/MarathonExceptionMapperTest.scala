@@ -1,7 +1,5 @@
 package mesosphere.marathon.api
 
-import javax.validation.ConstraintViolationException
-
 import mesosphere.marathon.{ ValidationFailedException, MarathonSpec }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.Validation._
@@ -84,7 +82,8 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
     val errors = (entity \ "details").as[Seq[JsObject]]
     errors should have size 1
     val firstError = errors.head
-    (firstError \ "attribute").as[String] should be("value")
-    (firstError \ "error").as[String] should be("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
+    (firstError \ "path").as[String] should be("self")
+    val errorMsgs = (firstError \ "errors").as[Seq[String]]
+    errorMsgs.head should be("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
   }
 }

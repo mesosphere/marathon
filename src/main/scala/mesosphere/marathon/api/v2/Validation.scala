@@ -40,38 +40,55 @@ object Validation {
   }
 
   implicit lazy val failureWrites: Writes[Failure] = Writes { f =>
-    Json.obj("message" -> "Object is not valid",
-      "details" -> f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
-  }
-
-  implicit lazy val ruleViolationWrites: Writes[RuleViolation] = Writes { v =>
     Json.obj(
-      "attribute" -> v.description,
-      "error" -> v.constraint
-    )
+      "message" -> "Object is not valid",
+      "details" -> {
+        f.violations
+          .flatMap(allRuleViolationsWithFullDescription(_))
+          .groupBy(_.description)
+          .map {
+            case (description, ruleViolation) =>
+              Json.obj(
+                "path" -> description,
+                "errors" -> ruleViolation.map(r => JsString(r.constraint))
+              )
+          }
+      })
   }
 
   private def allRuleViolationsWithFullDescription(violation: Violation,
-                                                   parentDesc: Option[String] = None): Set[RuleViolation] = {
-    def concatPath(parent: String, child: Option[String], attachDot: Boolean): String = {
-      child.map(c => parent + c + { if (attachDot) "." else "" }).getOrElse(parent)
+                                                   parentDesc: Option[String] = None,
+                                                   prependDot: Boolean = false): Set[RuleViolation] = {
+    def concatPath(parent: String, child: Option[String], dot: Boolean): String = {
+      child.map(c => parent + { if (dot) "." else "" } + c).getOrElse(parent)
     }
 
     violation match {
-      case r: RuleViolation => Set(parentDesc.map(p =>
-        r.withDescription(concatPath(p, r.description, attachDot = false)))
-        .getOrElse(r))
-      case g: GroupViolation => g.children.flatMap { c =>
-        val desc = parentDesc.map { p =>
-          val attachDot = g.value match {
-            case _: Iterable[_] => false
-            case _              => true
-          }
-          Some(concatPath(p, g.description, attachDot))
+      case r: RuleViolation => Set(
+        parentDesc.map {
+          p =>
+            r.description.map {
+              case "value"   => r.withDescription(p)
+              case s: String => r.withDescription(concatPath(p, r.description, prependDot))
+            } getOrElse r.withDescription(p)
         } getOrElse {
-          g.description.map(d => concatPath("", Some(d), attachDot = true))
+          r.withDescription(r.description.map {
+            case "value"   => "self"
+            case s: String => s
+          } getOrElse "self")
+        })
+      case g: GroupViolation => g.children.flatMap { c =>
+        val dot = g.value match {
+          case _: Iterable[_] => false
+          case _              => true
         }
-        allRuleViolationsWithFullDescription(c, desc)
+
+        val desc = parentDesc.map {
+          p => Some(concatPath(p, g.description, prependDot))
+        } getOrElse {
+          g.description.map(d => concatPath("", Some(d), prependDot))
+        }
+        allRuleViolationsWithFullDescription(c, desc, dot)
       }
     }
   }
