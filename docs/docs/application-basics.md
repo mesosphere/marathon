@@ -4,12 +4,13 @@ title: Application Basics
 
 # Application Basics
 
-Applications are an integral concept in Marathon. Each application typically represents a long running service, of which there would be many instances running on multiple hosts.
+Applications are an integral concept in Marathon. <!-- are they a concept? if so, what more can we say about this concept? --> Each application typically represents a long-running service, of which there would be many instances running on multiple hosts.
 
 ## Hello Marathon: An Inline Shell Script
 
-Let us start with a simple example: an app that prints `Hello Marathon` to stdout and then sleeps for 5 sec, in an endless loop.
-You would use the following application definition (in JSON format) to describe the application: 
+Let's start with a simple example: an app that prints `Hello Marathon` to stdout and then sleeps for 5 sec, in an endless loop.
+
+Use the following JSON application definition to describe the application <!-- how to do launch this? try to find the dcos command -->: 
 
 ```json
 {
@@ -21,19 +22,19 @@ You would use the following application definition (in JSON format) to describe 
 }
 ```
 
-Note that `cmd` in the above example is the command that gets executed. Its value is wrapped by the underlying Mesos executor via `/bin/sh -c ${cmd}`.
+Note that `cmd` in the above example is the command that is executed. Its value is wrapped by the underlying Mesos executor via `/bin/sh -c ${cmd}`. <!-- this last sentence: why is it relevant to the user at this point? -->
 
 <p class="text-center">
   <img src="{{ site.baseurl }}/img/marathon-basic-0.png" width="800" height="612" alt="Marathon deployment example: simple bash command">
 </p>
 
-What happens here is that Marathon hands over execution to Mesos. Mesos executes each task in its own sandbox environment.
-The sandbox is a special directory on each slave that acts as the execution environment (from a storage perspective) and also contains relevant log files as well as `stderr` and `stdout` for the command being executed. See also the role of the sandbox in [debugging distributed apps](https://docs.mesosphere.com/tutorials/debugging-a-mesosphere-cluster/).
+What happens here <!-- where is here? I want to rephrase this to "When you launch an app, Marathon... --> is that Marathon hands over execution to Mesos. Mesos executes each task in its own sandbox environment.
+The sandbox is a special directory on each slave that acts as the execution environment (from a storage perspective <!-- what does this mean? -->) and contains relevant log files as well as `stderr` and `stdout` for the command being executed. See also the role of the sandbox in [debugging distributed apps](https://docs.mesosphere.com/tutorials/debugging-a-mesosphere-cluster/).
 
 
 ## Using Resources in Applications
 
-To run any non-trivial application you typically depend on a collection of resources, i.e., files and/or archives of files. To deal with this, Marathon has the concept of `uris`. It leverages the Mesos fetcher to do the legwork in terms of downloading (and potentially) extracting resources.
+To run any non-trivial application, you typically depend on a collection of resources: files and/or archives of files. To deal with this <!-- I'd like to be more precise here: what is there to "deal with"? how can we describe the challenge here? -->, Marathon has the concept of `uris`. <!-- what is the connection between these two sentencences? --> Marathon leverages the Mesos fetcher to do the legwork in terms of downloading (and potentially) extracting resources.
 
 But before we dive into this topic, let's have a look at an example:
 
@@ -50,11 +51,11 @@ But before we dive into this topic, let's have a look at an example:
 }
 ```
 
-What the example above does: before executing the `cmd`, download the resource `https://example.com/app/cool-script.sh` (via Mesos) and make it available in the application task's sandbox. You can check that these have been downloaded by visiting the Mesos UI and clicking into a Mesos worker node's sandbox where you should now find `cool-script.sh`.
+The example above downloads the resource `https://example.com/app/cool-script.sh` (via Mesos) and makes it available in the application task's sandbox before executing the `cmd`. You can check that these have been downloaded by selecting the sandbox of a Mesos worker node in the Mesos UI. You should find `cool-script.sh`.
 
-Note that as of Mesos v0.22 and above the fetcher code now does not make downloaded files executable by default, so `cmd` should be: `chmod u+x cool-script.sh && ./cool-script.sh`.
+Note that as of Mesos v0.22 and above the fetcher code does not make downloaded files executable by default, so `cmd` should be: `chmod u+x cool-script.sh && ./cool-script.sh`. <!-- should we just have this be cmd, then comment on it? wouldn't most people be using the latest Mesos? -->
 
-As already mentioned above, Marathon also [knows how to handle](https://github.com/mesosphere/marathon/blob/master/src/main/scala/mesosphere/mesos/TaskBuilder.scala) application resources that reside in archives. Currently, Marathon will (via Mesos and before executing the `cmd`) first attempt to unpack/extract resources with the following file extensions:
+Marathon [handles application resources in archives](https://github.com/mesosphere/marathon/blob/master/src/main/scala/mesosphere/mesos/TaskBuilder.scala). Before executing the `cmd`, Marathon will attempt (via Mesos) to unpack/extract resources with the following file extensions:
 
 * `.tgz`
 * `.tar.gz`
@@ -64,7 +65,7 @@ As already mentioned above, Marathon also [knows how to handle](https://github.c
 * `.tar.xz`
 * `.zip`
 
-And how this looks in practice shows you the following example: let's assume you have an application executable in a zip file at `https://example.com/app.zip`. This zip file contains the script `cool-script.sh` and that's what you want to execute. Here's how:
+Let's assume you have an application executable in a zip file at `https://example.com/app.zip`. This zip file contains the script `cool-script.sh`, which you want to execute. The following code snippet will extract and execute `cool-script.sh`:
 
 ```json
 {
@@ -79,9 +80,9 @@ And how this looks in practice shows you the following example: let's assume you
 }
 ```
 
-Note that in contrast to the example `basic-1` we now have a `cmd` that looks as follows: `app/cool-script.sh`. This stems from the fact that when the zip file gets downloaded and extracted, a directory `app` according to the file name `app.zip` is created where the content of the zip file is extracted into.
+In contrast to the example `basic-1`, `cmd` now specifies the `app` directory: `app/cool-script.sh`. After the zip file is downloaded, it is extracted into a directory with the same filename. <!-- <-- need to clarify this --> So `app.zip` is extracted into a directory called `app`.
 
-Note also that you can specify many resources, not only one. So, for example, you could provide a git repository and some resources from a CDN as follows:
+You can specify more than one resource. For example, you can provide a git repository and resources from a CDN:
 
 ```json
 {
@@ -93,7 +94,7 @@ Note also that you can specify many resources, not only one. So, for example, yo
 }
 ```
 
-A typical pattern in the development and deployment cycle is to have your automated build system place the app binary in a location that's downloadable via an URI. Marathon can download resources from a number of sources, supporting the following [URI schemes](http://tools.ietf.org/html/rfc3986#section-3.1):
+A typical pattern in the development and deployment cycle is to have your automated build system place the app binary in a location is accessible via URI. Marathon supports the following [URI schemes](http://tools.ietf.org/html/rfc3986#section-3.1):
 
 * `file:`
 * `http:`
@@ -107,9 +108,9 @@ A typical pattern in the development and deployment cycle is to have your automa
 
 ## A Simple Docker-based Application
 
-With Marathon it is straightforward to run applications that use Docker images. See also [Running Docker Containers on Marathon]({{ site.baseurl }}/docs/native-docker.html) for further details and advanced options.
+It is straightforward to run applications that use Docker images in Marathon. See [Running Docker Containers on Marathon]({{ site.baseurl }}/docs/native-docker.html) for further details and advanced options.
 
-In the following example application definition, we will focus on a simple Docker app: a Python-based web server using the image [python:3](https://registry.hub.docker.com/_/python/). Inside the container, the web server runs on port `8080` (the value of `containerPort`). Outside of the container, Marathon assigns a random port (`hostPort` is set to `0`):
+In the following example application definition, we will focus on a simple Docker app: a Python-based web server using the image [python:3](https://registry.hub.docker.com/_/python/). Inside the container, the web server runs on port `8080` (the value of `containerPort`). Outside of the container, Marathon assigns a random port (`hostPort` is set to `0`): <!-- does this mean that if you set hostPort to 0 you'll get assigned a random port? -->
 
 ```json
 {
@@ -130,13 +131,13 @@ In the following example application definition, we will focus on a simple Docke
 }
 ```
 
-In this example, we are going to use the [HTTP API]({{ site.baseurl }}/docs/rest-api.html) to deploy the app `basic-3`:
+In this example, we use the [HTTP API]({{ site.baseurl }}/docs/rest-api.html) to deploy the app `basic-3`:
 
 ```sh
 curl -X POST http://10.141.141.10:8080/v2/apps -d @basic-3.json -H "Content-type: application/json"
 ```
 
-This assumes that you've pasted the example JSON into a file called `basic-3.json` and you're using [playa-mesos](https://github.com/mesosphere/playa-mesos), a Mesos sandbox environment based on Vagrant, for testing out the deployment. When you submit the above application definition to Marathon you should see something like the following in the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html) (for the tasks and configuration tabs, respectively):
+This assumes that you've pasted the example JSON into a file called `basic-3.json` and you're using [playa-mesos](https://github.com/mesosphere/playa-mesos), a Mesos sandbox environment based on Vagrant, to test the deployment. When you submit the above application definition to Marathon you should see your application in the tasks and configuration tabs of the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html):
 
 <p class="text-center">
   <img src="{{ site.baseurl }}/img/marathon-basic-3-tasks.png" width="800" height="612" alt="Marathon deployment example: Docker image, tasks">
@@ -146,4 +147,4 @@ This assumes that you've pasted the example JSON into a file called `basic-3.jso
   <img src="{{ site.baseurl }}/img/marathon-basic-3-config.png" width="800" height="612" alt="Marathon deployment example: Docker image, configuration">
 </p>
 
-The result of this exercise is that Marathon has launched a Python-based web server in a Docker container, which is now serving the contents of the container's root directory at `http://10.141.141.10:31000`.
+Marathon has launched a Python-based web server in a Docker container, which is now serving the contents of the container's root directory at `http://10.141.141.10:31000`.
