@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.upgrade.StoppingBehavior.SynchronizeTasks
+import mesosphere.marathon.upgrade.StoppingBehavior.KillAllTasks
 import mesosphere.marathon.{ MarathonTestHelper, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito._
@@ -58,6 +58,9 @@ class TaskKillActorTest
   test("Kill tasks with empty task list") {
     val tasks = Iterable.empty[Task]
     val promise = Promise[Unit]()
+    val appId = PathId("/test")
+
+    when(taskTracker.appTasksSync(appId)).thenReturn(mutable.Iterable.empty[Task])
 
     val ref = TestActorRef(Props(new TaskKillActor(driver, PathId("/test"), taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
 
@@ -101,9 +104,9 @@ class TaskKillActorTest
     val ref = TestActorRef[TaskKillActor](Props(new TaskKillActor(driver, app.id, taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
     watch(ref)
 
-    ref.underlyingActor.periodicalCheck.cancel()
+    //    ref.underlyingActor.periodicalCheck.cancel()
 
-    ref ! SynchronizeTasks
+    ref ! KillAllTasks
 
     Await.result(promise.future, 5.seconds) should be(())
 
@@ -120,20 +123,20 @@ class TaskKillActorTest
 
     val ref = TestActorRef[TaskKillActor](Props(new TaskKillActor(driver, appId, taskTracker, system.eventStream, tasks.map(_.taskId), promise)))
 
-    when(taskTracker.appTasksSync(appId)).thenReturn(Iterable(taskA, taskB))
+    when(taskTracker.appTasksSync(appId)).thenReturn(Iterable(taskA, taskB), Iterable(taskA, taskB))
 
     watch(ref)
 
-    ref.underlyingActor.periodicalCheck.cancel()
+    ref ! KillAllTasks
 
-    ref ! SynchronizeTasks
+    intercept[java.util.concurrent.TimeoutException] {
+      Await.result(promise.future, 12.seconds)
+    }
+    verify(driver, times(2)).killTask(taskA.launchedMesosId.get)
+    verify(driver, times(2)).killTask(taskB.launchedMesosId.get)
 
     system.eventStream.publish(MesosStatusUpdateEvent("", taskA.taskId, "TASK_KILLED", "", PathId.empty, "", Nil, Nil, ""))
     system.eventStream.publish(MesosStatusUpdateEvent("", taskB.taskId, "TASK_KILLED", "", PathId.empty, "", Nil, Nil, ""))
-
-    Await.result(promise.future, 5.seconds) should be(())
-    verify(driver, times(2)).killTask(taskA.launchedMesosId.get)
-    verify(driver, times(2)).killTask(taskB.launchedMesosId.get)
 
     expectTerminated(ref)
   }
