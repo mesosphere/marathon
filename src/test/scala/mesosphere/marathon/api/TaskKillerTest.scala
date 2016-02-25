@@ -35,7 +35,7 @@ class TaskKillerTest extends MarathonSpec
   //regression for #3251
   test("No tasks to kill should return with an empty array") {
     val appId = PathId("invalid")
-    when(tracker.appTasksSync(appId)).thenReturn(Iterable.empty)
+    when(tracker.appTasksLaunchedSync(appId)).thenReturn(Iterable.empty)
     when(groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
 
     val result = taskKiller.kill(appId, (tasks) => Set.empty[Task])
