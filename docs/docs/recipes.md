@@ -207,9 +207,11 @@ You can configure some of your Mesos agents to only offer their resources to a s
 
 ### Preventing Accidental Use of Special Roles inside Marathon
 
-With the base setup, all Marathon applications will by default use all resources either assigned to the unspecific "*" role or the role you specified with `--mesos_role`. 
+With the base setup, that is, with no command-line parameters specified, all Marathon applications will by default use all resources either assigned to the unspecific "*" role or the role you specified with `--mesos_role`. 
 
-One way to ensure that only special tasks are run on these nodes is to use a separate Marathon instance for these. Another way is to configure Marathon such that it will ignore your special roles for apps by default and then explicitly configure the exceptions as shown below.
+To ensure that only special tasks are run on nodes you specify, you can use a separate Marathon instance for those tasks.
+
+You can also configure Marathon to ignore your special roles for apps by default, then explicitly configure the exceptions:
 
 1. Configure Marathon to ignore the special resources by default: `--default_accepted_resource_roles '*'` (make sure
 that you quote the "*" correctly)
