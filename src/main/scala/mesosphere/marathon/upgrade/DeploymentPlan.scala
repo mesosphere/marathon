@@ -71,6 +71,8 @@ final case class DeploymentPlan(
 
   def nonEmpty: Boolean = !isEmpty
 
+  def affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app)).toSet
+
   /** @return all ids of apps which are referenced in any deployment actions */
   def affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
 

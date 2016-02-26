@@ -3,6 +3,7 @@ package mesosphere.marathon.state
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
@@ -17,7 +18,7 @@ case class Group(
     apps: Set[AppDefinition] = defaultApps,
     groups: Set[Group] = defaultGroups,
     dependencies: Set[PathId] = defaultDependencies,
-    version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] {
+    version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] with IGroup {
 
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
@@ -84,7 +85,7 @@ case class Group(
   }
 
   /**
-    * Add the given app definition to this group replacing any priorly existing app definition with the same ID.
+    * Add the given app definition to this group replacing any previously existing app definition with the same ID.
     *
     * If a group exists with a conflicting ID which does not contain any app definition, replace that as well.
     */

@@ -153,7 +153,6 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     val result = manager(10, 20).assignDynamicServicePorts(originalGroup, updatedGroup)
 
     val assignedPorts: Set[Int] = result.transitiveApps.flatMap(_.portNumbers)
-    println(assignedPorts.mkString(","))
     assignedPorts should have size 3
   }
 

@@ -1,6 +1,6 @@
 package mesosphere.marathon.plugin.auth
 
-import mesosphere.marathon.plugin.PathId
+import mesosphere.marathon.plugin.{ Group, AppDefinition }
 
 /**
   * Base trait for all actions in the system.
@@ -8,30 +8,22 @@ import mesosphere.marathon.plugin.PathId
   *
   * @tparam Resource the type of the Resource.
   */
-sealed trait AuthorizedAction[Resource]
+sealed trait AuthorizedAction[+Resource]
 
 /**
-  * If an Application or Group is created with a given PathId.
+  * The following objects will be passed to the Authorizer when an action affects an application, in order to identify
+  * which CRUD action needs to be authorized.
   */
-case object CreateAppOrGroup extends AuthorizedAction[PathId]
+case object CreateApp extends AuthorizedAction[AppDefinition]
+case object UpdateApp extends AuthorizedAction[AppDefinition]
+case object DeleteApp extends AuthorizedAction[AppDefinition]
+case object ViewApp extends AuthorizedAction[AppDefinition]
 
 /**
-  * If an Application or Group is updated with a given PathId.
+  * The following objects will be passed to the Authorizer when an action affects group, in order to identify which CRUD
+  * action needs to be authorized.
   */
-case object UpdateAppOrGroup extends AuthorizedAction[PathId]
-
-/**
-  * If an Application or Group is deleted with a given PathId.
-  */
-case object DeleteAppOrGroup extends AuthorizedAction[PathId]
-
-/**
-  * If an Application or Group is viewed with a given PathId.
-  */
-case object ViewAppOrGroup extends AuthorizedAction[PathId]
-
-/**
-  * If a Task is killed from an Application with a given PathId.
-  */
-case object KillTask extends AuthorizedAction[PathId]
-
+case object CreateGroup extends AuthorizedAction[Group]
+case object UpdateGroup extends AuthorizedAction[Group]
+case object DeleteGroup extends AuthorizedAction[Group]
+case object ViewGroup extends AuthorizedAction[Group]

@@ -138,10 +138,6 @@ class MarathonSchedulerService @Inject() (
       .mapTo[RunningDeployments]
       .map(_.plans)
 
-  def getApp(appId: PathId): Option[AppDefinition] = {
-    Await.result(appRepository.currentVersion(appId), config.zkTimeoutDuration)
-  }
-
   def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
     Await.result(appRepository.app(appId, version), config.zkTimeoutDuration)
   }

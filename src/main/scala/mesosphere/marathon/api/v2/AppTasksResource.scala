@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import javax.inject.Inject
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
@@ -15,7 +15,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ GroupManager, PathId }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
+import mesosphere.marathon.{ UnknownGroupException, MarathonConf, MarathonSchedulerService, UnknownAppException }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -36,28 +36,30 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
 
   @GET
   @Timed
-  def indexJson(@PathParam("appId") appId: String,
-                @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    doIfAuthorized(req, resp, ViewAppOrGroup, appId.toRootPath) { implicit principal =>
-      val taskMap = taskTracker.tasksByAppSync
+  def indexJson(@PathParam("appId") id: String,
+                @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val taskMap = taskTracker.tasksByAppSync
 
-      def tasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
-        id <- appIds
-        health = result(healthCheckManager.statuses(id))
-        task <- taskMap.appTasks(id)
-      } yield EnrichedTask(id, task, health.getOrElse(task.taskId, Nil))
+    def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
+      runningApps <- appIds.filter(taskMap.hasAppTasks)
+      id <- appIds
+      health = result(healthCheckManager.statuses(id))
+      task <- taskMap.appTasks(id)
+    } yield EnrichedTask(id, task, health.getOrElse(task.taskId, Nil))
 
-      val matchingApps = appId match {
-        case GroupTasks(gid) =>
-          result(groupManager.group(gid.toRootPath))
-            .map(_.transitiveApps.map(_.id))
-            .getOrElse(Set.empty)
-        case _ => Set(appId.toRootPath)
-      }
-
-      val running = matchingApps.filter(taskMap.hasAppTasks)
-
-      if (running.isEmpty) unknownApp(appId.toRootPath) else ok(jsonObjString("tasks" -> tasks(running)))
+    id match {
+      case GroupTasks(gid) =>
+        val groupPath = gid.toRootPath
+        val maybeGroup = result(groupManager.group(groupPath))
+        withAuthorization(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
+          ok(jsonObjString("tasks" -> runningTasks(group.transitiveApps.map(_.id))))
+        }
+      case _ =>
+        val appId = id.toRootPath
+        val maybeApp = result(groupManager.app(appId))
+        withAuthorization(ViewApp, maybeApp, unknownApp(appId)) { _ =>
+          ok(jsonObjString("tasks" -> runningTasks(Set(appId))))
+        }
     }
   }
 
@@ -65,12 +67,10 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
   def indexTxt(@PathParam("appId") appId: String,
-               @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    doIfAuthorized(req, resp, ViewAppOrGroup, appId.toRootPath) { implicit principal =>
-      val id = appId.toRootPath
-      service.getApp(id).fold(unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(taskTracker, Seq(app), "\t"))
-      }
+               @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val id = appId.toRootPath
+    withAuthorization(ViewApp, result(groupManager.app(id)), unknownApp(id)) { app =>
+      ok(EndpointsHelper.appsToEndpointString(taskTracker, Seq(app), "\t"))
     }
   }
 
@@ -80,23 +80,22 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                  @QueryParam("host") host: String,
                  @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
                  @QueryParam("force")@DefaultValue("false") force: Boolean = false,
-                 @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    doIfAuthorized(req, resp, KillTask, appId.toRootPath) { implicit principal =>
-      val pathId = appId.toRootPath
-      def findToKill(appTasks: Iterable[Task]): Iterable[Task] = {
-        Option(host).fold(appTasks) { hostname =>
-          appTasks.filter(_.agentInfo.host == hostname || hostname == "*")
-        }
-      }
+                 @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val pathId = appId.toRootPath
 
-      if (scale) {
-        val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
-        deploymentResult(result(deploymentF))
+    def findToKill(appTasks: Iterable[Task]): Iterable[Task] = {
+      Option(host).fold(appTasks) { hostname =>
+        appTasks.filter(_.agentInfo.host == hostname || hostname == "*")
       }
-      else {
-        reqToResponse(taskKiller.kill(pathId, findToKill)) {
-          tasks => ok(jsonObjString("tasks" -> tasks))
-        }
+    }
+
+    if (scale) {
+      val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
+      deploymentResult(result(deploymentF))
+    }
+    else {
+      reqToResponse(taskKiller.kill(pathId, findToKill)) {
+        tasks => ok(jsonObjString("tasks" -> tasks))
       }
     }
   }
@@ -108,19 +107,17 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                 @PathParam("taskId") id: String,
                 @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
                 @QueryParam("force")@DefaultValue("false") force: Boolean = false,
-                @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
+                @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
-    doIfAuthorized(req, resp, KillTask, appId.toRootPath) { implicit principal =>
-      def findToKill(appTasks: Iterable[Task]): Iterable[Task] = appTasks.find(_.taskId == Task.Id(id))
+    def findToKill(appTasks: Iterable[Task]): Iterable[Task] = appTasks.find(_.taskId == Task.Id(id))
 
-      if (scale) {
-        val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
-        deploymentResult(result(deploymentF))
-      }
-      else {
-        reqToResponse(taskKiller.kill(pathId, findToKill)) {
-          tasks => tasks.headOption.fold(unknownTask(id))(task => ok(jsonObjString("task" -> task)))
-        }
+    if (scale) {
+      val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
+      deploymentResult(result(deploymentF))
+    }
+    else {
+      reqToResponse(taskKiller.kill(pathId, findToKill)) {
+        tasks => tasks.headOption.fold(unknownTask(id))(task => ok(jsonObjString("task" -> task)))
       }
     }
   }
@@ -132,7 +129,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
     val response = future.map { tasks =>
       toResponse(tasks)
     } recover {
-      case UnknownAppException(unknownAppId) => unknownApp(unknownAppId)
+      case UnknownAppException(appId, version) => unknownApp(appId, version)
     }
     result(response)
   }
