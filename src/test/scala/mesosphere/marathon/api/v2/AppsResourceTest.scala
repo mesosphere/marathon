@@ -426,6 +426,21 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     filtered(1) should be (AppDefinition("/visible/other/foo/app".toPath))
   }
 
+  test("delete with authorization gives a 404 if the app doesn't exist") {
+    Given("An authenticated identity with full access")
+    auth.authenticated = true
+    auth.authorized = false
+    val req = auth.request
+
+    When("We try to remove a non-existing application")
+    useRealGroupManager()
+    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(Group.empty))
+    groupRepository.rootGroup returns Future.successful(Some(Group.empty))
+
+    Then("A 404 is returned")
+    intercept[UnknownAppException] { appsResource.delete(false, "/foo", req) }
+  }
+
   var clock: ConstantClock = _
   var eventBus: EventStream = _
   var service: MarathonSchedulerService = _
