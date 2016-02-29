@@ -3,9 +3,12 @@ package mesosphere.marathon.upgrade
 import java.net.URL
 import java.util.UUID
 
-import mesosphere.marathon.Protos
+import com.wix.accord.dsl._
+import com.wix.accord._
+import mesosphere.marathon.{ MarathonConf, Protos }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
+import mesosphere.marathon.api.v2.Validation._
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -74,11 +77,15 @@ final case class DeploymentPlan(
   def affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app)).toSet
 
   /** @return all ids of apps which are referenced in any deployment actions */
-  def affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
+  lazy val affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
 
   def isAffectedBy(other: DeploymentPlan): Boolean =
     // FIXME: check for group change conflicts?
     affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
+
+  def createdOrUpdatedApps: Seq[AppDefinition] = {
+    target.transitiveApps.toIndexedSeq.filter(app => affectedApplicationIds(app.id))
+  }
 
   override def toString: String = {
     def appString(app: AppDefinition): String = {
@@ -298,4 +305,8 @@ object DeploymentPlan {
     result
   }
 
+  def changeIsValid(config: MarathonConf): Validator[DeploymentPlan] = validator[DeploymentPlan] { plan =>
+    plan.target is valid(Group.groupWithConfigValidator(config.maxApps.get))
+    plan.createdOrUpdatedApps as "app" is every(valid(AppDefinition.updateIsValid(plan.original)))
+  }
 }
