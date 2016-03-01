@@ -173,7 +173,7 @@ class AppsResource @Inject() (
     val appId = id.toRootPath
 
     def deleteAppFromGroup(group: Group) = {
-      checkAuthorization(DeleteApp, group.app(appId), unknownApp(appId))
+      checkAuthorization(DeleteApp, group.app(appId), UnknownAppException(appId))
       group.removeApplication(appId)
     }
 
