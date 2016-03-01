@@ -339,11 +339,11 @@ class TaskOpProcessorImplTest
     val taskId = launched.taskId.mesosTaskId.getValue
     val killed: TaskStatus = MarathonTestHelper.statusForState(taskId, TaskState.TASK_KILLED)
     f.taskRepository.store(marathonTask) returns Future.successful(marathonTask)
-    f.statusUpdateResolver.resolve(Task.Id(taskId), killed) returns Future.successful(TaskOpProcessor.Action.Unlaunch(launched))
+    f.statusUpdateResolver.resolve(Task.Id(taskId), killed) returns Future.successful(TaskOpProcessor.Action.Update(unlaunched))
 
     When("the processor processes an update")
     val result = f.processor.process(
-      TaskOpProcessor.Operation(deadline, testActor, Task.Id(taskId), TaskOpProcessor.Action.Unlaunch(launched))
+      TaskOpProcessor.Operation(deadline, testActor, Task.Id(taskId), TaskOpProcessor.Action.Update(unlaunched))
     )
 
     Then("it replies with unit immediately")

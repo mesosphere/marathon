@@ -7,7 +7,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Terminated
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessor.Action
-import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessor.Action.Unlaunch
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.StatusUpdateActionResolver
 import mesosphere.marathon.state.TaskRepository
 import org.apache.mesos.Protos.TaskState._
@@ -63,7 +62,7 @@ private[tracker] object TaskOpProcessorImpl {
         _ <- task.reservationWithVolumes
         _ <- task.launched
         if Terminated.isTerminated(status.getState)
-      } yield Unlaunch(task)
+      } yield Action.Update(task.copy(launched = None))
     }
 
     /**
@@ -159,15 +158,6 @@ private[tracker] class TaskOpProcessorImpl(
         repo.expunge(op.taskId.idString).map { _ =>
           taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.taskId, TaskTrackerActor.Ack(op.sender))
         }.recoverWith(tryToRecover(op)(expectedTaskState = None))
-
-      case Action.Unlaunch(task) =>
-        // Used for resident tasks, that are terminated.
-        // We remove the launch information and propagate the change to the task tracker.
-        val update = task.copy(launched = None)
-        val marathonTask = TaskSerializer.toProto(update)
-        repo.store(marathonTask).map { _ =>
-          taskTrackerRef ! TaskTrackerActor.TaskUpdated(update, TaskTrackerActor.Ack(op.sender))
-        }.recoverWith(tryToRecover(op)(expectedTaskState = Some(update)))
 
       case Action.UpdateStatus(status) =>
         statusUpdateActionResolver.resolve(op.taskId, status).flatMap { action: Action =>

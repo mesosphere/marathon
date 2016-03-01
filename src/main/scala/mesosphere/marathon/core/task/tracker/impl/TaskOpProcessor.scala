@@ -23,9 +23,6 @@ private[tracker] object TaskOpProcessor {
     /** Remove a task. */
     case object Expunge extends Action
 
-    /** Remove the launch information from a task */
-    case class Unlaunch(task: Task) extends Action
-
     /**
       * Update a task according to a status update.
       *
