@@ -27,7 +27,7 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   override def buildTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp] = {
-    log.debug(s"inferTaskOp")
+    log.debug("buildTaskOp")
 
     if (app.isResident) {
       inferForResidents(app, offer, tasks)
@@ -68,7 +68,7 @@ class TaskOpFactoryImpl @Inject() (
 
     val acceptedResourceRoles: Set[String] = {
       val roles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
-      if (log.isDebugEnabled) log.debug(s"acceptedResourceRoles $roles")
+      if (log.isDebugEnabled) log.debug(s"inferForResidents, acceptedResourceRoles $roles")
       roles
     }
 
