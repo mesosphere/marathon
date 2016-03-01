@@ -83,7 +83,7 @@ class HttpEventActor(conf: HttpEventConfiguration,
       //remove all unsubscribed callback listener
       limiter = limiter.filterKeys(subscribers.urls).iterator.toMap.withDefaultValue(NoLimit)
       metrics.skippedCallbacks.mark(limited.size)
-      active.foreach(post(_, event, me))
+      active.par.foreach(post(_, event, me))
     }
   }
 
@@ -115,4 +115,3 @@ class HttpEventActor(conf: HttpEventConfiguration,
     }
   }
 }
-
