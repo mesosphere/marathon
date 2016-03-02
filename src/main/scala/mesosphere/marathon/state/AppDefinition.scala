@@ -11,7 +11,6 @@ import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
@@ -221,7 +220,7 @@ case class AppDefinition(
       else proto.getPortDefinitionsList.asScala.map(PortDefinitionSerializer.fromProto).to[Seq]
 
     AppDefinition(
-      id = proto.getId.toPath,
+      id = PathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = commandOption,
       args = argsOption,
@@ -494,6 +493,7 @@ object AppDefinition {
     appDef is portIndicesAreValid
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
+    (appDef.persistentVolumes is empty) or (appDef.residency is notEmpty)
   }
 
   def filterOutRandomPorts(ports: scala.Seq[Int]): scala.Seq[Int] = {

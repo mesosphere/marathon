@@ -5,7 +5,7 @@ import java.util.UUID
 
 import com.wix.accord.dsl._
 import com.wix.accord._
-import mesosphere.marathon.{ MarathonConf, Protos }
+import mesosphere.marathon.Protos
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v2.Validation._
@@ -271,7 +271,7 @@ object DeploymentPlan {
     )
 
     // 2. Start apps that do not exist in the original, requiring only 0
-    //    instances.  These are scaled as needed in the depency-ordered
+    //    instances.  These are scaled as needed in the dependency-ordered
     //    steps that follow.
     steps += DeploymentStep(
       (targetApps -- originalApps.keys).valuesIterator.map { newApp =>
@@ -305,8 +305,7 @@ object DeploymentPlan {
     result
   }
 
-  def changeIsValid(config: MarathonConf): Validator[DeploymentPlan] = validator[DeploymentPlan] { plan =>
-    plan.target is valid(Group.groupWithConfigValidator(config.maxApps.get))
+  implicit lazy val deploymentPlanIsValid: Validator[DeploymentPlan] = validator[DeploymentPlan] { plan =>
     plan.createdOrUpdatedApps as "app" is every(valid(AppDefinition.updateIsValid(plan.original)))
   }
 }

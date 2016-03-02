@@ -27,6 +27,6 @@ object UpgradeStrategy {
 
   lazy val validForResidentTasks: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
     strategy.minimumHealthCapacity should be <= 0.5
-    strategy.maximumOverCapacity should be <= 0.00001
+    strategy.maximumOverCapacity should be == 0.0
   }
 }

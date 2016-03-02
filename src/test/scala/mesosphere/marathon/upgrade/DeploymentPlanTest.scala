@@ -7,8 +7,8 @@ import mesosphere.marathon.state._
 import mesosphere.marathon._
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos.{ Protos => mesos }
-import org.rogach.scallop.ScallopOption
 import org.scalatest.{ GivenWhenThen, Matchers }
+import com.wix.accord._
 
 import scala.collection.immutable.Seq
 
@@ -392,7 +392,6 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     Given("All options are supplied and we have a valid group change")
     AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     val f = new Fixture()
-    val validator = DeploymentPlan.changeIsValid(f.config)
 
     When("We create a scale deployment")
     val app = f.validResident.copy(instances = 123)
@@ -400,36 +399,27 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val plan = DeploymentPlan(f.group, group)
 
     Then("The deployment is valid")
-    validator(plan).isSuccess should be(true)
+    validate(plan).isSuccess should be(true)
   }
 
   test("Deployment plan validation fails for invalid changes in resident tasks") {
     Given("All options are supplied and we have a valid group change")
     AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     val f = new Fixture()
-    val validator = DeploymentPlan.changeIsValid(f.config)
 
     When("We update the upgrade strategy to the default strategy")
-    val app2 = f.validResident.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy, instances = 2)
+    val app2 = f.validResident.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
     val group2 = f.group.copy(apps = Set(app2))
     val plan2 = DeploymentPlan(f.group, group2)
 
     Then("The deployment is not valid")
-    validator(plan2).isSuccess should be(false)
+    validate(plan2).isSuccess should be(false)
   }
 
   class Fixture {
     def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
     val zero = UpgradeStrategy(0, 0)
-    val config = mock[MarathonConf]
-    config.maxApps returns scallopOption(Some(500))
 
-    def scallopOption[A](a: Option[A]): ScallopOption[A] = {
-      new ScallopOption[A]("") {
-        override def get = a
-        override def apply() = a.get
-      }
-    }
     def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
       AppDefinition(
         id = PathId(id),
