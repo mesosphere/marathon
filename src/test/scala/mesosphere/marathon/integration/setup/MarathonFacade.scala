@@ -9,6 +9,7 @@ import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
 import mesosphere.marathon.state.{ Group, AppDefinition, PathId, Timestamp }
 import org.slf4j.LoggerFactory
+import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
 import spray.client.pipelining._
 import spray.http._
@@ -30,7 +31,18 @@ case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITDeploymentPlan(version: String, deploymentId: String)
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
-case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Int], startedAt: Date, stagedAt: Date, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
+case class ITEnrichedTask(
+    appId: String,
+    id: String,
+    host: String,
+    ports: Option[Seq[Int]],
+    startedAt: Option[Date],
+    stagedAt: Option[Date],
+    version: Option[String]) {
+
+  def launched: Boolean = startedAt.nonEmpty
+  def suspended: Boolean = startedAt.isEmpty
+}
 case class ITLeaderResult(leader: String)
 
 case class ITListDeployments(deployments: Seq[ITDeployment])
@@ -60,7 +72,6 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   implicit lazy val appUpdateMarshaller = playJsonMarshaller[AppUpdate]
   implicit lazy val itListAppsResultFormat = Json.format[ITListAppsResult]
   implicit lazy val itAppVersionsFormat = Json.format[ITAppVersions]
-  implicit lazy val itEnrichedTaskFormat = Json.format[ITEnrichedTask]
   implicit lazy val itListTasksFormat = Json.format[ITListTasks]
   implicit lazy val itDeploymentPlanFormat = Json.format[ITDeploymentPlan]
   implicit lazy val itHealthCheckResultFormat = Json.format[ITHealthCheckResult]
@@ -71,6 +82,16 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   implicit lazy val itQueueDelayFormat = Json.format[ITQueueDelay]
   implicit lazy val itQueueItemFormat = Json.format[ITQueueItem]
   implicit lazy val itTaskQueueFormat = Json.format[ITTaskQueue]
+
+  implicit lazy val itEnrichedTaskFormat: Format[ITEnrichedTask] = (
+    (__ \ "appId").format[String] ~
+    (__ \ "id").format[String] ~
+    (__ \ "host").format[String] ~
+    (__ \ "ports").formatNullable[Seq[Int]] ~
+    (__ \ "startedAt").formatNullable[Date] ~
+    (__ \ "stagedAt").formatNullable[Date] ~
+    (__ \ "version").formatNullable[String]
+  )(ITEnrichedTask(_, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)

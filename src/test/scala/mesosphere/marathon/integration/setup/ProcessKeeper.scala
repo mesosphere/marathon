@@ -64,13 +64,21 @@ object ProcessKeeper {
       """
         |{
         |  "run_tasks": [{
-        |      "principals": { "type": "ANY" },
-        |      "users": { "type": "ANY" }
-        |    }],
+        |    "principals": { "type": "ANY" },
+        |    "users": { "type": "ANY" }
+        |  }],
         |  "register_frameworks": [{
-        |      "principals": { "type": "ANY" },
-        |      "roles": { "type": "ANY" }
-        |    }]
+        |    "principals": { "type": "ANY" },
+        |    "roles": { "type": "ANY" }
+        |  }],
+        |  "reserve_resources": [{
+        |    "principals": { "type": "ANY" },
+        |    "resources": { "type": "ANY" }
+        |  }],
+        |  "create_volumes": [{
+        |    "principals": { "type": "ANY" },
+        |    "volume_types": { "type": "ANY" }
+        |  }]
         |}
       """.stripMargin)
 

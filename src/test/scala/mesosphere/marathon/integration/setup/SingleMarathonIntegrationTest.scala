@@ -127,7 +127,7 @@ trait SingleMarathonIntegrationTest
 
   def waitForTasks(appId: PathId, num: Int, maxWait: FiniteDuration = 30.seconds): List[ITEnrichedTask] = {
     def checkTasks: Option[List[ITEnrichedTask]] = {
-      val tasks = Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil)
+      val tasks = Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil).filter(_.launched)
       if (tasks.size == num) Some(tasks) else None
     }
     WaitTestSupport.waitFor(s"$num tasks to launch", maxWait)(checkTasks)
@@ -219,14 +219,14 @@ trait SingleMarathonIntegrationTest
   }
 
   def taskProxyChecks(appId: PathId, versionId: String, state: Boolean): Seq[IntegrationHealthCheck] = {
-    marathon.tasks(appId).value.flatMap(_.ports).map { port =>
+    marathon.tasks(appId).value.flatMap(_.ports).flatMap(_.map { port =>
       val check = new IntegrationHealthCheck(appId, versionId, port, state)
       ExternalMarathonIntegrationTest.healthChecks
         .filter(c => c.appId == appId && c.versionId == versionId)
         .foreach(ExternalMarathonIntegrationTest.healthChecks -= _)
       ExternalMarathonIntegrationTest.healthChecks += check
       check
-    }
+    })
   }
 
   def cleanUp(withSubscribers: Boolean = false, maxWait: FiniteDuration = 30.seconds) {
