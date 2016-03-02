@@ -11,7 +11,6 @@ import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
@@ -100,6 +99,10 @@ case class AppDefinition(
   }
 
   def isResident: Boolean = residency.isDefined
+
+  def persistentVolumes: Iterable[PersistentVolume] = {
+    container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
+  }
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
@@ -217,7 +220,7 @@ case class AppDefinition(
       else proto.getPortDefinitionsList.asScala.map(PortDefinitionSerializer.fromProto).to[Seq]
 
     AppDefinition(
-      id = proto.getId.toPath,
+      id = PathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = commandOption,
       args = argsOption,
@@ -488,8 +491,9 @@ object AppDefinition {
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsContainerValidator
     appDef is portIndicesAreValid
-    appDef.instances.intValue should be >= 0
+    appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
+    (appDef.persistentVolumes is empty) or (appDef.residency is notEmpty)
   }
 
   def filterOutRandomPorts(ports: scala.Seq[Int]): scala.Seq[Int] = {
@@ -523,6 +527,48 @@ object AppDefinition {
         }) Success
         else Failure(Set(RuleViolation(app,
           "Health check port indices must address an element of the ports array or container port mappings.", None)))
+      }
+    }
+  }
+
+  def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
+    def changeNoVolumes: Validator[AppDefinition] = new Validator[AppDefinition] {
+      override def apply(to: AppDefinition): Result = {
+        val fromVolumes = from.persistentVolumes
+        val toVolumes = to.persistentVolumes
+        def sameSize = fromVolumes.size == toVolumes.size
+        def noChange = from.persistentVolumes.forall { fromVolume =>
+          toVolumes.find(_.containerPath == fromVolume.containerPath).contains(fromVolume)
+        }
+        if (sameSize && noChange) Success
+        else Failure(Set(RuleViolation(to, "Persistent volumes can not be changed!", None)))
+      }
+    }
+    def changeNoResources: Validator[AppDefinition] = new Validator[AppDefinition] {
+      override def apply(to: AppDefinition): Result = {
+        if (from.cpus != to.cpus ||
+          from.mem != to.mem ||
+          from.disk != to.disk ||
+          from.portDefinitions != to.portDefinitions)
+          Failure(Set(RuleViolation(to, "Resident Tasks may not change resource requirements!", None)))
+        else
+          Success
+      }
+    }
+    validator[AppDefinition] { app =>
+      app should changeNoVolumes
+      app should changeNoResources
+      app.upgradeStrategy is UpgradeStrategy.validForResidentTasks
+    }
+  }
+
+  def updateIsValid(from: Group): Validator[AppDefinition] = {
+    new Validator[AppDefinition] {
+      override def apply(app: AppDefinition): Result = {
+        from.transitiveApps.find(_.id == app.id) match {
+          case (Some(last)) if last.isResident || app.isResident => residentUpdateIsValid(last)(app)
+          case _ => Success
+        }
       }
     }
   }

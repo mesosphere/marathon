@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import com.wix.accord.Validator
 import mesosphere.marathon.Protos._
 
 import com.wix.accord.dsl._
@@ -22,5 +23,10 @@ object UpgradeStrategy {
   implicit val updateStrategyValidator = validator[UpgradeStrategy] { strategy =>
     strategy.minimumHealthCapacity is between(0.0, 1.0)
     strategy.maximumOverCapacity is between(0.0, 1.0)
+  }
+
+  lazy val validForResidentTasks: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
+    strategy.minimumHealthCapacity should be <= 0.5
+    strategy.maximumOverCapacity should be == 0.0
   }
 }

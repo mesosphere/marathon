@@ -4,12 +4,15 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon._
+import mesosphere.marathon.test.Mockito
+import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
+import com.wix.accord._
 
 import scala.collection.immutable.Seq
 
-class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
+class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito {
 
   protected def actionsOf(plan: DeploymentPlan): Seq[DeploymentAction] =
     plan.steps.flatMap(_.actions)
@@ -385,4 +388,49 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen {
     plan.steps.head.actions.head shouldEqual ScaleApplication(newApp, 5, Some(Set(taskToKill)))
   }
 
+  test("Deployment plan allows valid updates for resident tasks") {
+    Given("All options are supplied and we have a valid group change")
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+    val f = new Fixture()
+
+    When("We create a scale deployment")
+    val app = f.validResident.copy(instances = 123)
+    val group = f.group.copy(apps = Set(app))
+    val plan = DeploymentPlan(f.group, group)
+
+    Then("The deployment is valid")
+    validate(plan).isSuccess should be(true)
+  }
+
+  test("Deployment plan validation fails for invalid changes in resident tasks") {
+    Given("All options are supplied and we have a valid group change")
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+    val f = new Fixture()
+
+    When("We update the upgrade strategy to the default strategy")
+    val app2 = f.validResident.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
+    val group2 = f.group.copy(apps = Set(app2))
+    val plan2 = DeploymentPlan(f.group, group2)
+
+    Then("The deployment is not valid")
+    validate(plan2).isSuccess should be(false)
+  }
+
+  class Fixture {
+    def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
+    val zero = UpgradeStrategy(0, 0)
+
+    def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
+      AppDefinition(
+        id = PathId(id),
+        container = Some(Container(mesos.ContainerInfo.Type.MESOS, volumes)),
+        residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT))
+      )
+    }
+    val vol1 = persistentVolume("foo")
+    val vol2 = persistentVolume("bla")
+    val vol3 = persistentVolume("test")
+    val validResident = residentApp("/app1", Seq(vol1, vol2)).copy(upgradeStrategy = zero)
+    val group = Group(PathId("/test"), apps = Set(validResident))
+  }
 }

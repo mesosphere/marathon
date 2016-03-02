@@ -38,12 +38,12 @@ class ModelValidationTest
       createServicePortApp("/c".toPath, 0)
     ))
 
-    val failedResult = Group.groupWithConfigValidator(Some(2)).apply(group)
+    val failedResult = Group.validWithConfig(Some(2)).apply(group)
     failedResult.isFailure should be(true)
     ValidationHelper.getAllRuleConstrains(failedResult)
       .find(v => v.message.contains("This Marathon instance may only handle up to 2 Apps!")) should be ('defined)
 
-    val successfulResult = Group.groupWithConfigValidator(Some(10)).apply(group)
+    val successfulResult = Group.validWithConfig(Some(10)).apply(group)
     successfulResult.isSuccess should be(true)
   }
 

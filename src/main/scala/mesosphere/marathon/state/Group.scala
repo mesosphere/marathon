@@ -220,7 +220,7 @@ object Group {
     group is validPorts
   }
 
-  def groupWithConfigValidator(maxApps: Option[Int])(implicit validator: Validator[Group]): Validator[Group] = {
+  def validWithConfig(maxApps: Option[Int])(implicit validator: Validator[Group]): Validator[Group] = {
     new Validator[Group] {
       override def apply(group: Group): Result = {
         maxApps.filter(group.transitiveApps.size > _).map { num =>
