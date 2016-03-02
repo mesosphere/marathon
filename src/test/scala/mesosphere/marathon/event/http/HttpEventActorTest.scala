@@ -1,11 +1,13 @@
 package mesosphere.marathon.event.http
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import akka.actor.{ Actor, ActorSystem, Props }
 import akka.testkit.{ EventFilter, TestActorRef }
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.base.{ ConstantClock, Clock }
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.event.EventStreamAttached
 import mesosphere.marathon.event.http.HttpEventActor.EventNotificationLimit
 import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
@@ -29,7 +31,7 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
 
     Then("The message is broadcast to both subscribers")
     waitUntil("Wait for 2 subscribers to get notified", 1.second) {
-      aut.underlyingActor.requests.size == 2
+      aut.underlyingActor.requests.get() == 2
     }
   }
 
@@ -74,7 +76,7 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
 
     And("The message is send to the other subscriber")
     waitUntil("Wait for 1 subscribers to get notified", 1.second) {
-      aut.underlyingActor.requests.size == 1
+      aut.underlyingActor.requests.get() == 1
     }
   }
 
@@ -116,9 +118,9 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
 
   class NoHttpEventActor(subscribers: Set[String])
       extends HttpEventActor(conf, TestActorRef(Props(new ReturnSubscribersTestActor(subscribers))), metrics, clock) {
-    var requests = List.empty[HttpRequest]
+    var requests = new AtomicInteger()
     override val pipeline: (HttpRequest) => Future[HttpResponse] = { request =>
-      requests ::= request
+      requests.incrementAndGet()
       Future(responseAction())
     }
   }
