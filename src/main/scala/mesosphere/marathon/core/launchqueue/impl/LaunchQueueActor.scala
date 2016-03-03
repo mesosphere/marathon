@@ -89,7 +89,7 @@ private[impl] class LaunchQueueActor(
             suspendedLaunchersMessages(actorRef) :+ DeferredMessage(sender(), ConfirmPurge)
           suspendedLaunchersMessages += actorRef -> deferredMessages
           suspendedLauncherPathIds += appId
-          actorRef ! PoisonPill
+          actorRef ! AppTaskLauncherActor.Stop
         case None => sender() ! (())
       }
 
