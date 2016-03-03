@@ -573,7 +573,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
       ),
-      mesosRole = Some("marathon")
+      mesosRole = Some("marathon"),
+      acceptedResourceRoles = Some(Set("marathon"))
     )
 
     assert(task.isDefined)

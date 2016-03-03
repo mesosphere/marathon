@@ -1,7 +1,8 @@
 package mesosphere.marathon.tasks
 
 import com.twitter.util.NonFatal
-import org.apache.mesos.Protos.{ Value, Resource, Offer }
+import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 
@@ -13,9 +14,15 @@ object ResourceUtil {
     * The resources in launched tasks, should
     * be consumed from resources in the offer with the same [[ResourceMatchKey]].
     */
-  private[this] case class ResourceMatchKey(role: String, name: String)
+  private[this] case class ResourceMatchKey(
+    role: String, name: String,
+    reservation: Option[ReservationInfo], disk: Option[DiskInfo])
   private[this] object ResourceMatchKey {
-    def apply(resource: Resource): ResourceMatchKey = ResourceMatchKey(resource.getRole, resource.getName)
+    def apply(resource: MesosProtos.Resource): ResourceMatchKey = {
+      val reservation = if (resource.hasReservation) Some(resource.getReservation) else None
+      val disk = if (resource.hasDisk) Some(resource.getDisk) else None
+      ResourceMatchKey(resource.getRole, resource.getName, reservation, disk)
+    }
   }
 
   /**
@@ -23,10 +30,12 @@ object ResourceUtil {
     */
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
-  def consumeResource(resource: Resource, usedResource: Resource): Option[Resource] = {
+  def consumeResource(
+    resource: MesosProtos.Resource,
+    usedResource: MesosProtos.Resource): Option[MesosProtos.Resource] = {
     require(resource.getType == usedResource.getType)
 
-    def consumeScalarResource: Option[Resource] = {
+    def consumeScalarResource: Option[MesosProtos.Resource] = {
       val leftOver: Double = resource.getScalar.getValue - usedResource.getScalar.getValue
       if (leftOver <= 0) {
         None
@@ -35,13 +44,15 @@ object ResourceUtil {
         Some(resource
           .toBuilder
           .setScalar(
-            Value.Scalar
+            MesosProtos.Value.Scalar
               .newBuilder().setValue(leftOver))
           .build())
       }
     }
 
-    def deductRange(baseRange: Value.Range, usedRange: Value.Range): Seq[Value.Range] = {
+    def deductRange(
+      baseRange: MesosProtos.Value.Range,
+      usedRange: MesosProtos.Value.Range): Seq[MesosProtos.Value.Range] = {
       if (baseRange.getEnd < usedRange.getBegin) { // baseRange completely before usedRange
         Seq(baseRange)
       }
@@ -49,12 +60,12 @@ object ResourceUtil {
         Seq(baseRange)
       }
       else {
-        val rangeBefore: Option[Value.Range] = if (baseRange.getBegin < usedRange.getBegin)
+        val rangeBefore: Option[MesosProtos.Value.Range] = if (baseRange.getBegin < usedRange.getBegin)
           Some(baseRange.toBuilder.setEnd(usedRange.getBegin - 1).build())
         else
           None
 
-        val rangeAfter: Option[Value.Range] = if (baseRange.getEnd > usedRange.getEnd)
+        val rangeAfter: Option[MesosProtos.Value.Range] = if (baseRange.getEnd > usedRange.getEnd)
           Some(baseRange.toBuilder.setBegin(usedRange.getEnd + 1).build())
         else
           None
@@ -63,7 +74,7 @@ object ResourceUtil {
       }
     }
 
-    def consumeRangeResource: Option[Resource] = {
+    def consumeRangeResource: Option[MesosProtos.Resource] = {
       val usedRanges = usedResource.getRanges.getRangeList.asScala
       val baseRanges = resource.getRanges.getRangeList.asScala
 
@@ -75,7 +86,7 @@ object ResourceUtil {
         }
       }
 
-      val rangesBuilder = Value.Ranges.newBuilder()
+      val rangesBuilder = MesosProtos.Value.Ranges.newBuilder()
       diminished.foreach(rangesBuilder.addRange)
 
       val result = resource
@@ -89,7 +100,7 @@ object ResourceUtil {
         None
     }
 
-    def consumeSetResource: Option[Resource] = {
+    def consumeSetResource: Option[MesosProtos.Resource] = {
       val baseSet: Set[String] = resource.getSet.getItemList.asScala.toSet
       val consumedSet: Set[String] = usedResource.getSet.getItemList.asScala.toSet
       require(consumedSet subsetOf baseSet, s"$consumedSet must be subset of $baseSet")
@@ -100,7 +111,7 @@ object ResourceUtil {
         Some(
           resource
             .toBuilder
-            .setSet(Value.Set.newBuilder().addAllItem(resultSet.asJava))
+            .setSet(MesosProtos.Value.Set.newBuilder().addAllItem(resultSet.asJava))
             .build()
         )
       else
@@ -108,11 +119,11 @@ object ResourceUtil {
     }
 
     resource.getType match {
-      case Value.Type.SCALAR => consumeScalarResource
-      case Value.Type.RANGES => consumeRangeResource
-      case Value.Type.SET    => consumeSetResource
+      case MesosProtos.Value.Type.SCALAR => consumeScalarResource
+      case MesosProtos.Value.Type.RANGES => consumeRangeResource
+      case MesosProtos.Value.Type.SET    => consumeSetResource
 
-      case unexpectedResourceType: Value.Type =>
+      case unexpectedResourceType: MesosProtos.Value.Type =>
         log.warn("unexpected resourceType {} for resource {}", Seq(unexpectedResourceType, resource.getName): _*)
         // we don't know the resource, thus we consume it completely
         None
@@ -122,14 +133,16 @@ object ResourceUtil {
   /**
     * Deduct usedResources from resources by matching them by name and role.
     */
-  def consumeResources(resources: Iterable[Resource], usedResources: Iterable[Resource]): Iterable[Resource] = {
-    val usedResourceMap: Map[ResourceMatchKey, Seq[Resource]] =
+  def consumeResources(
+    resources: Iterable[MesosProtos.Resource],
+    usedResources: Iterable[MesosProtos.Resource]): Iterable[MesosProtos.Resource] = {
+    val usedResourceMap: Map[ResourceMatchKey, Seq[MesosProtos.Resource]] =
       usedResources.groupBy(ResourceMatchKey(_)).mapValues(_.to[Seq])
 
-    resources.flatMap { resource: Resource =>
+    resources.flatMap { resource: MesosProtos.Resource =>
       usedResourceMap.get(ResourceMatchKey(resource)) match {
-        case Some(usedResources: Seq[Resource]) =>
-          usedResources.foldLeft(Some(resource): Option[Resource]) {
+        case Some(usedResources: Seq[MesosProtos.Resource]) =>
+          usedResources.foldLeft(Some(resource): Option[MesosProtos.Resource]) {
             case (Some(resource), usedResource) =>
               if (resource.getType != usedResource.getType) {
                 log.warn("Different resource types for resource {}: {} and {}",
@@ -154,33 +167,48 @@ object ResourceUtil {
   /**
     * Deduct usedResources from resources in the offer.
     */
-  def consumeResourcesFromOffer(offer: Offer, usedResources: Iterable[Resource]): Offer = {
+  def consumeResourcesFromOffer(
+    offer: MesosProtos.Offer,
+    usedResources: Iterable[MesosProtos.Resource]): MesosProtos.Offer = {
     import scala.collection.JavaConverters._
-    val offerResources: Seq[Resource] = offer.getResourcesList.asScala
+    val offerResources: Seq[MesosProtos.Resource] = offer.getResourcesList.asScala
     val leftOverResources = ResourceUtil.consumeResources(offerResources, usedResources)
     offer.toBuilder.clearResources().addAllResources(leftOverResources.asJava).build()
   }
 
-  def displayResource(resource: Resource, maxRanges: Int): String = {
-    def rangesToString(ranges: Seq[Value.Range]): String = {
+  def displayResource(resource: MesosProtos.Resource, maxRanges: Int): String = {
+    def rangesToString(ranges: Seq[MesosProtos.Value.Range]): String = {
       ranges.map { range => s"${range.getBegin}->${range.getEnd}" }.mkString(",")
     }
 
+    lazy val resourceName = {
+      val principalString = if (resource.hasReservation && resource.getReservation.hasPrincipal)
+        s", RESERVED for ${resource.getReservation.getPrincipal}"
+      else
+        ""
+      val diskString = if (resource.hasDisk && resource.getDisk.hasPersistence)
+        s", diskId ${resource.getDisk.getPersistence.getId}"
+      else
+        ""
+
+      s"${resource.getName}(${resource.getRole}$principalString$diskString)"
+    }
+
     resource.getType match {
-      case Value.Type.SCALAR => s"${resource.getName} ${resource.getScalar.getValue}"
-      case Value.Type.RANGES =>
-        s"${resource.getName} ${
+      case MesosProtos.Value.Type.SCALAR => s"$resourceName ${resource.getScalar.getValue}"
+      case MesosProtos.Value.Type.RANGES =>
+        s"$resourceName ${
           val ranges = resource.getRanges.getRangeList.asScala
           if (ranges.size > maxRanges)
             s"${rangesToString(ranges.take(maxRanges))} ... (${ranges.size - maxRanges} more)"
           else
             rangesToString(ranges)
         }"
-      case other: Value.Type => resource.toString
+      case other: MesosProtos.Value.Type => resource.toString
     }
   }
 
-  def displayResources(resources: Iterable[Resource], maxRanges: Int): String = {
+  def displayResources(resources: Iterable[MesosProtos.Resource], maxRanges: Int): String = {
     resources.map(displayResource(_, maxRanges)).mkString("; ")
   }
 }

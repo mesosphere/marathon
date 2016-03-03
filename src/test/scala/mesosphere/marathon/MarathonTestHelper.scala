@@ -20,7 +20,8 @@ import mesosphere.marathon.state.{ PersistentVolumeInfo, PersistentVolume, Volum
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
-import org.apache.mesos.Protos.{ CommandInfo, Offer, TaskID, TaskInfo }
+import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
+import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
@@ -62,16 +63,30 @@ object MarathonTestHelper {
   }
 
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
-                     beginPort: Int = 31000, endPort: Int = 32000, role: String = "*"): Offer.Builder = {
-    val cpusResource = ScalarResource(Resource.CPUS, cpus, role = role)
-    val memResource = ScalarResource(Resource.MEM, mem, role = role)
-    val diskResource = ScalarResource(Resource.DISK, disk, role = role)
+                     beginPort: Int = 31000, endPort: Int = 32000, role: String = "*",
+                     reserved: Boolean = false): Offer.Builder = {
+
+    require(role != "*" || !reserved, "reserved resources cannot have role *")
+
+    def heedReserved(resource: Mesos.Resource): Mesos.Resource = {
+      if (reserved) {
+        val reservation = Mesos.Resource.ReservationInfo.newBuilder().setPrincipal("marathon")
+        resource.toBuilder.setReservation(reservation).build()
+      }
+      else {
+        resource
+      }
+    }
+
+    val cpusResource = heedReserved(ScalarResource(Resource.CPUS, cpus, role = role))
+    val memResource = heedReserved(ScalarResource(Resource.MEM, mem, role = role))
+    val diskResource = heedReserved(ScalarResource(Resource.DISK, disk, role = role))
     val portsResource = if (beginPort <= endPort) {
-      Some(RangesResource(
+      Some(heedReserved(RangesResource(
         Resource.PORTS,
         Seq(Range(beginPort.toLong, endPort.toLong)),
         role
-      ))
+      )))
     }
     else {
       None
@@ -88,6 +103,55 @@ object MarathonTestHelper {
     portsResource.foreach(offerBuilder.addResources(_))
 
     offerBuilder
+  }
+
+  def scalarResource(
+    name: String, d: Double, role: String = "*",
+    reservation: Option[ReservationInfo] = None, disk: Option[DiskInfo] = None): Mesos.Resource = {
+
+    val builder = Mesos.Resource
+      .newBuilder()
+      .setName(name)
+      .setType(Value.Type.SCALAR)
+      .setScalar(Value.Scalar.newBuilder().setValue(d))
+      .setRole(role)
+
+    reservation.foreach(builder.setReservation)
+    disk.foreach(builder.setDisk)
+
+    builder.build()
+  }
+
+  def portsResource(
+    begin: Long, end: Long, role: String = "*",
+    reservation: Option[ReservationInfo] = None): Mesos.Resource = {
+
+    val ranges = Mesos.Value.Ranges.newBuilder()
+      .addRange(Mesos.Value.Range.newBuilder().setBegin(begin).setEnd(end))
+
+    val builder = Mesos.Resource
+      .newBuilder()
+      .setName(Resource.PORTS)
+      .setType(Value.Type.RANGES)
+      .setRanges(ranges)
+      .setRole(role)
+
+    reservation.foreach(builder.setReservation)
+
+    builder.build()
+  }
+
+  def reservation(principal: String, labels: Map[String, String] = Map.empty): Mesos.Resource.ReservationInfo = {
+    val labelsBuilder = Mesos.Labels.newBuilder()
+    labels.foreach {
+      case (k, v) =>
+        labelsBuilder.addLabels(Mesos.Label.newBuilder().setKey(k).setValue(v))
+    }
+
+    Mesos.Resource.ReservationInfo.newBuilder()
+      .setPrincipal(principal)
+      .setLabels(labelsBuilder)
+      .build()
   }
 
   def reservedDisk(id: String, size: Double = 4096, role: String = "*",
@@ -397,7 +461,7 @@ object MarathonTestHelper {
 
   def offerWithVolumes(localVolumeIds: LocalVolumeId*) = {
     import scala.collection.JavaConverters._
-    MarathonTestHelper.makeBasicOffer()
+    MarathonTestHelper.makeBasicOffer(reserved = true, role = "test")
       .addAllResources(persistentVolumeResources(localVolumeIds: _*).asJava)
       .build()
   }
@@ -427,7 +491,7 @@ object MarathonTestHelper {
     volumes = Seq[Volume](
       PersistentVolume(
         containerPath = "persistent-volume",
-        persistent = PersistentVolumeInfo(1024),
+        persistent = PersistentVolumeInfo(10), // must match persistentVolumeResources
         mode = Mesos.Volume.Mode.RW
       )
     ),

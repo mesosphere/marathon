@@ -92,11 +92,25 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     taskOp shouldBe empty
   }
 
-  test("Resident app -> ReserveAndCreateVolumes") {
-    Given("A resident app, a normal offer and no tasks")
+  test("Resident app -> ReserveAndCreateVolumes fails because of insufficient disk resources") {
+    Given("A resident app, an insufficient offer and no tasks")
     val f = new Fixture
     val app = f.residentApp
     val offer = f.offer
+    val tasks = Nil
+
+    When("We infer the taskOp")
+    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
+
+    Then("A no is returned because there is not enough disk space")
+    taskOp shouldBe None
+  }
+
+  test("Resident app -> ReserveAndCreateVolumes succeeds") {
+    Given("A resident app, a normal offer and no tasks")
+    val f = new Fixture
+    val app = f.residentApp
+    val offer = f.offerWithSpaceForLocalVolume
     val tasks = Nil
 
     When("We infer the taskOp")
@@ -106,7 +120,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     taskOp shouldBe a[Some[TaskOp.ReserveAndCreateVolumes]]
   }
 
-  test("Resident app -> Launch") {
+  test("Resident app -> Launch succeeds") {
     Given("A resident app, an offer with persistent volumes and a matching task")
     val f = new Fixture
     val app = f.residentApp.copy(instances = 2)
@@ -153,7 +167,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
   class Fixture {
     import mesosphere.marathon.{ MarathonTestHelper => MTH }
     val taskTracker = mock[TaskTracker]
-    val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("role"), principal = Some("principal"))
+    val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"), principal = Some("principal"))
     val clock = ConstantClock()
     val taskOpFactory: TaskOpFactory = new TaskOpFactoryImpl(config, clock)
 
@@ -165,6 +179,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) =
       MTH.residentReservedTask(appId, volumeIds: _*).copy(launched = Some(MTH.taskLaunched))
     def offer = MTH.makeBasicOffer().build()
+    def offerWithSpaceForLocalVolume = MTH.makeBasicOffer(disk = 1025).build()
     def insufficientOffer = MTH.makeBasicOffer(cpus = 0.01, mem = 1, disk = 0.01, beginPort = 31000, endPort = 31001).build()
     def offerWithVolumes(localVolumeIds: LocalVolumeId*) = MTH.offerWithVolumes(localVolumeIds: _*)
   }

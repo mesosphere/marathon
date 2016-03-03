@@ -7,7 +7,7 @@ import mesosphere.marathon.api.serialization.{ PortDefinitionSerializer, Contain
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ PersistentVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
-import mesosphere.mesos.ResourceMatcher.ResourceMatch
+import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
@@ -21,9 +21,7 @@ class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => Task.Id,
                   config: MarathonConf) {
 
-  import mesosphere.mesos.protos.Implicits._
-
-  val log = LoggerFactory.getLogger(getClass.getName)
+  val log = LoggerFactory.getLogger(getClass)
 
   def build(
     offer: Offer,
@@ -63,8 +61,8 @@ class TaskBuilder(app: AppDefinition,
     }
 
     resourceMatchOpt match {
-      case Some(ResourceMatch(cpuRole, memRole, diskRole, ports)) =>
-        build(offer, cpuRole, memRole, diskRole, ports, volumeMatchOpt)
+      case Some(resourceMatch) =>
+        build(offer, resourceMatch, volumeMatchOpt)
       case _ =>
         if (log.isInfoEnabled) logInsufficientResources()
         None
@@ -79,33 +77,18 @@ class TaskBuilder(app: AppDefinition,
       roles
     }
 
-    val resourceMatch = ResourceMatcher.matchResources(offer, app, runningTasks, acceptedResourceRoles)
+    val resourceMatch =
+      ResourceMatcher.matchResources(
+        offer, app, runningTasks, ResourceSelector(acceptedResourceRoles, reserved = false))
 
     build(offer, resourceMatch)
-  }
-
-  def getResources(
-    resourceMatch: ResourceMatch,
-    persistentVolumes: Iterable[PersistentVolume]): Iterable[org.apache.mesos.Protos.Resource] = {
-
-    val neededDisk = app.disk + persistentVolumes.map(_.persistent.size).sum
-    val buffer = scala.collection.mutable.Buffer[org.apache.mesos.Protos.Resource](
-      ScalarResource(Resource.CPUS, app.cpus, resourceMatch.cpuRole),
-      ScalarResource(Resource.MEM, app.mem, resourceMatch.memRole),
-      ScalarResource(Resource.DISK, neededDisk, resourceMatch.diskRole)
-    )
-    resourceMatch.ports.foreach(port => buffer += port)
-    buffer
   }
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   private[this] def build(
     offer: Offer,
-    cpuRole: String,
-    memRole: String,
-    diskRole: String,
-    portsResources: Seq[RangesResource],
+    resourceMatch: ResourceMatch,
     volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): Some[(TaskInfo, Seq[Int])] = {
 
     val executor: Executor = if (app.executor == "") {
@@ -116,8 +99,6 @@ class TaskBuilder(app: AppDefinition,
     }
 
     val host: Option[String] = Some(offer.getHostname)
-
-    val ports = portsResources.flatMap(_.ranges.flatMap(_.asScala()).to[Seq].map(_.toInt))
 
     val labels = app.labels.map {
       case (key, value) =>
@@ -130,33 +111,20 @@ class TaskBuilder(app: AppDefinition,
       .setName(app.id.toHostname)
       .setTaskId(taskId.mesosTaskId)
       .setSlaveId(offer.getSlaveId)
-      .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
-      .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
+      .addAllResources(resourceMatch.resources.asJava)
 
     builder.setDiscovery(computeDiscoveryInfo(app))
-
-    if (app.disk != 0) {
-      // This is only supported since Mesos 0.22.0 and will result in TASK_LOST messages in combination
-      // with older mesos versions. So if the user leaves this untouched, we will NOT pass it to
-      // Mesos. If the user chooses a value != 0, we assume that they rely on this value and we DO pass it to Mesos
-      // irrespective of the version.
-      //
-      // This is not enforced in Mesos without specifically configuring the appropriate enforcer.
-      builder.addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
-    }
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
 
-    portsResources.foreach(builder.addResources(_))
-
     volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources(_)))
 
-    val containerProto = computeContainerInfo(ports)
+    val containerProto = computeContainerInfo(resourceMatch.hostPorts)
     val envPrefix: Option[String] = config.envVarsPrefix.get
     executor match {
       case CommandExecutor() =>
-        builder.setCommand(TaskBuilder.commandInfo(app, Some(taskId), host, ports, envPrefix))
+        builder.setCommand(TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix))
         containerProto.foreach(builder.setContainer)
 
       case PathExecutor(path) =>
@@ -164,7 +132,8 @@ class TaskBuilder(app: AppDefinition,
         val executorPath = s"'$path'" // TODO: Really escape this.
         val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
-        val command = TaskBuilder.commandInfo(app, Some(taskId), host, ports, envPrefix).toBuilder.setValue(shell)
+        val command =
+          TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix).toBuilder.setValue(shell)
 
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
@@ -197,7 +166,7 @@ class TaskBuilder(app: AppDefinition,
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
 
-    Some(builder.build -> ports)
+    Some(builder.build -> resourceMatch.hostPorts)
   }
 
   protected def computeDiscoveryInfo(app: AppDefinition): org.apache.mesos.Protos.DiscoveryInfo = {
