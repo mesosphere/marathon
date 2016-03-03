@@ -29,7 +29,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
           val violations = ValidationHelper.getAllRuleConstrains(f)
 
           assert(violations.exists { v =>
-            v.property.contains(path) && v.message == template
+            v.path.contains(path) && v.message == template
           },
             s"Violations:\n${violations.mkString}"
           )
@@ -42,7 +42,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         case f: Failure =>
           val violations = ValidationHelper.getAllRuleConstrains(f)
           assert(!violations.exists { v =>
-            v.property.contains(path) && v.message == template
+            v.path.contains(path) && v.message == template
           },
             s"Violations:\n${violations.mkString}"
           )
@@ -52,23 +52,23 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     var app = AppDefinition(id = "a b".toRootPath)
     val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
     MarathonTestHelper.validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "/id", idError)
 
     app = app.copy(id = "a#$%^&*b".toRootPath)
     MarathonTestHelper.validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "/id", idError)
 
     app = app.copy(id = "-dash-disallowed-at-start".toRootPath)
     MarathonTestHelper.validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "/id", idError)
 
     app = app.copy(id = "dash-disallowed-at-end-".toRootPath)
     MarathonTestHelper.validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "/id", idError)
 
     app = app.copy(id = "uppercaseLettersNoGood".toRootPath)
     MarathonTestHelper.validateJsonSchema(app, false)
-    shouldViolate(app, "id", idError)
+    shouldViolate(app, "/id", idError)
 
     app = AppDefinition(
       id = "test".toPath,
@@ -77,7 +77,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldViolate(
       app,
-      "portDefinitions",
+      "/portDefinitions",
       "Ports must be unique."
     )
     MarathonTestHelper.validateJsonSchema(app, false)
@@ -89,7 +89,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldNotViolate(
       app,
-      "portDefinitions",
+      "/portDefinitions",
       "Ports must be unique."
     )
     MarathonTestHelper.validateJsonSchema(app, true)
@@ -111,7 +111,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldViolate(
       app,
-      "container.docker.portMappings",
+      "/container/docker/portMappings",
       "Port names must be unique."
     )
 
@@ -125,7 +125,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldViolate(
       app,
-      "portDefinitions",
+      "/portDefinitions",
       "Port names must be unique."
     )
 
@@ -145,7 +145,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       portDefinitions = Nil)
     shouldNotViolate(
       app,
-      "container.docker.portMappings",
+      "/container/docker/portMappings",
       "Port names must be unique."
     )
 
@@ -157,14 +157,14 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldNotViolate(
       app,
-      "portDefinitions",
+      "/portDefinitions",
       "Port names must be unique."
     )
 
     app = correct.copy(executor = "//cmd")
     shouldNotViolate(
       app,
-      "executor",
+      "/executor",
       "{javax.validation.constraints.Pattern.message}"
     )
     MarathonTestHelper.validateJsonSchema(app)
@@ -172,7 +172,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(executor = "some/relative/path.mte")
     shouldNotViolate(
       app,
-      "executor",
+      "/executor",
       "{javax.validation.constraints.Pattern.message}"
     )
     MarathonTestHelper.validateJsonSchema(app)
@@ -180,7 +180,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(executor = "/some/absolute/path")
     shouldNotViolate(
       app,
-      "executor",
+      "/executor",
       "{javax.validation.constraints.Pattern.message}"
     )
     MarathonTestHelper.validateJsonSchema(app)
@@ -188,7 +188,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(executor = "")
     shouldNotViolate(
       app,
-      "executor",
+      "/executor",
       "{javax.validation.constraints.Pattern.message}"
     )
     MarathonTestHelper.validateJsonSchema(app)
@@ -196,7 +196,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(executor = "/test/")
     shouldViolate(
       app,
-      "executor",
+      "/executor",
       "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'"
     )
     MarathonTestHelper.validateJsonSchema(app, false)
@@ -204,7 +204,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(executor = "/test//path")
     shouldViolate(
       app,
-      "executor",
+      "/executor",
       "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'"
     )
     MarathonTestHelper.validateJsonSchema(app, false)
@@ -212,7 +212,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(cmd = Some("command"), args = Some(Seq("a", "b", "c")))
     shouldViolate(
       app,
-      "value",
+      "/",
       "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
     MarathonTestHelper.validateJsonSchema(app, false)
@@ -220,7 +220,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(cmd = None, args = Some(Seq("a", "b", "c")))
     shouldNotViolate(
       app,
-      "value",
+      "/",
       "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
     MarathonTestHelper.validateJsonSchema(app)
@@ -228,7 +228,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(upgradeStrategy = UpgradeStrategy(1.2))
     shouldViolate(
       app,
-      "upgradeStrategy.minimumHealthCapacity",
+      "/upgradeStrategy/minimumHealthCapacity",
       "got 1.2, expected between 0.0 and 1.0"
     )
     MarathonTestHelper.validateJsonSchema(app, false)
@@ -236,7 +236,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, 1.2))
     shouldViolate(
       app,
-      "upgradeStrategy.maximumOverCapacity",
+      "/upgradeStrategy/maximumOverCapacity",
       "got 1.2, expected between 0.0 and 1.0"
     )
     MarathonTestHelper.validateJsonSchema(app, false)
@@ -244,7 +244,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(upgradeStrategy = UpgradeStrategy(-1.2))
     shouldViolate(
       app,
-      "upgradeStrategy.minimumHealthCapacity",
+      "/upgradeStrategy/minimumHealthCapacity",
       "got -1.2, expected between 0.0 and 1.0"
     )
     MarathonTestHelper.validateJsonSchema(app, false)
@@ -252,7 +252,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, -1.2))
     shouldViolate(
       app,
-      "upgradeStrategy.maximumOverCapacity",
+      "/upgradeStrategy/maximumOverCapacity",
       "got -1.2, expected between 0.0 and 1.0"
     )
     MarathonTestHelper.validateJsonSchema(app, false)
@@ -272,7 +272,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldNotViolate(
       app,
-      "",
+      "/",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
     MarathonTestHelper.validateJsonSchema(app, false) // missing image
@@ -289,7 +289,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldNotViolate(
       app,
-      "",
+      "/",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
     MarathonTestHelper.validateJsonSchema(app, false) // missing image
@@ -300,7 +300,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     shouldViolate(
       app,
-      "value",
+      "/",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
 
@@ -312,7 +312,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     shouldViolate(
       app,
-      "fetch.[1]",
+      "/fetch(1)",
       "URI has invalid syntax."
     )
 
@@ -323,7 +323,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     shouldNotViolate(app,
-      "fetch.[1]",
+      "/fetch(1)",
       "URI has invalid syntax."
     )
   }
