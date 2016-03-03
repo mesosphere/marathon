@@ -117,8 +117,11 @@ class MarathonScheduler @Inject() (
 
     // Currently, it's pretty hard to disambiguate this error from other causes of framework errors.
     // Watch MESOS-2522 which will add a reason field for framework errors to help with this.
-    // For now the frameworkId is never removed!
-    val removeFrameworkId = false
+    // For now the frameworkId is removed based on the error message.
+    val removeFrameworkId = message match {
+      case "Framework has been removed" => true
+      case unknown: String => false
+    }
     suicide(removeFrameworkId)
   }
 
