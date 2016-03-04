@@ -106,14 +106,19 @@ class GroupsResource @Inject() (
                      @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withValid(Json.parse(body).as[GroupUpdate]) { groupUpdate =>
       val effectivePath = groupUpdate.id.map(_.canonicalPath(id.toRootPath)).getOrElse(id.toRootPath)
+      val rootGroup = result(groupManager.rootGroup())
 
-      result(groupManager.rootGroup()).findGroup(_.id == effectivePath) match {
-        case Some(currentGroup) =>
-          throw ConflictingChangeException(s"Group $effectivePath is already created. Use PUT to change this group.")
-        case None =>
-          val (deployment, path) = updateOrCreate(id.toRootPath, groupUpdate, force)
-          deploymentResult(deployment, Response.created(new URI(path.toString)))
+      def throwIfConflicting[A](conflict: Option[Any], msg: String) = {
+        conflict.map(_ => throw ConflictingChangeException(msg))
       }
+
+      throwIfConflicting(rootGroup.findGroup(_.id == effectivePath),
+        s"Group $effectivePath is already created. Use PUT to change this group.")
+      throwIfConflicting(rootGroup.transitiveApps.find(_.id == effectivePath),
+        s"An app with the path $effectivePath already exists.")
+
+      val (deployment, path) = updateOrCreate(id.toRootPath, groupUpdate, force)
+      deploymentResult(deployment, Response.created(new URI(path.toString)))
     }
   }
 
