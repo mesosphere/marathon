@@ -12,7 +12,7 @@ class HttpCallbackSubscriptionService @Inject() (
     @Named(HttpEventModule.SubscribersKeeperActor) val subscribersKeeper: ActorRef,
     @Named(EventModule.busName) eventBus: EventStream) {
 
-  implicit val ec = HttpEventModule.executionContext
+  import scala.concurrent.ExecutionContext.Implicits.global
   implicit val timeout = HttpEventModule.timeout
 
   def handleSubscriptionEvent(event: MarathonSubscriptionEvent): Future[MarathonEvent] =

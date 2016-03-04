@@ -14,8 +14,9 @@ import spray.client.pipelining.{ sendReceive, _ }
 import spray.http.{ HttpRequest, HttpResponse }
 import spray.httpx.PlayJsonSupport
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
 /**
@@ -36,6 +37,8 @@ object HttpEventActor {
     def limited: Boolean = !notLimited
   }
   val NoLimit = EventNotificationLimit(0, None)
+
+  private case class Broadcast(event: MarathonEvent, subscribers: EventSubscribers)
 
   class HttpEventActorMetrics @Inject() (metrics: Metrics) {
     private val pre = MetricPrefixes.SERVICE
@@ -59,32 +62,41 @@ class HttpEventActor(conf: HttpEventConfiguration,
                      clock: Clock)
     extends Actor with ActorLogging with PlayJsonSupport {
 
-  implicit val ec = HttpEventModule.executionContext
   implicit val timeout = HttpEventModule.timeout
-  val pipeline: HttpRequest => Future[HttpResponse] = addHeader("Accept", "application/json") ~> sendReceive
+  def pipeline(implicit ec: ExecutionContext): HttpRequest => Future[HttpResponse] = {
+    addHeader("Accept", "application/json") ~> sendReceive
+  }
   var limiter = Map.empty[String, EventNotificationLimit].withDefaultValue(NoLimit)
 
   def receive: Receive = {
-    case event: MarathonEvent     => broadcast(event)
-    case NotificationSuccess(url) => limiter += url -> NoLimit
-    case NotificationFailed(url)  => limiter += url -> limiter(url).nextFailed
-    case _                        => log.warning("Message not understood!")
+    case event: MarathonEvent          => resolveSubscribersForEventAndBroadcast(event)
+    case Broadcast(event, subscribers) => broadcast(event, subscribers)
+    case NotificationSuccess(url)      => limiter += url -> NoLimit
+    case NotificationFailed(url)       => limiter += url -> limiter(url).nextFailed
+    case _                             => log.warning("Message not understood!")
   }
 
-  def broadcast(event: MarathonEvent): Unit = {
+  def resolveSubscribersForEventAndBroadcast(event: MarathonEvent): Unit = {
     metrics.eventMeter.mark()
     log.info("POSTing to all endpoints.")
     val me = self
-    (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].foreach { subscribers =>
-      val (active, limited) = subscribers.urls.partition(limiter(_).notLimited)
-      if (limited.nonEmpty) {
-        log.info(s"""Will not send event ${event.eventType} to unresponsive hosts: ${limited.mkString(" ")}""")
-      }
-      //remove all unsubscribed callback listener
-      limiter = limiter.filterKeys(subscribers.urls).iterator.toMap.withDefaultValue(NoLimit)
-      metrics.skippedCallbacks.mark(limited.size)
-      active.foreach(post(_, event, me))
+    import context.dispatcher
+    (subscribersKeeper ? GetSubscribers).mapTo[EventSubscribers].map { subscribers =>
+      me ! Broadcast(event, subscribers)
+    }.onFailure {
+      case NonFatal(e) => log.error("While trying to resolve subscribers for event {}", event)
     }
+  }
+
+  def broadcast(event: MarathonEvent, subscribers: EventSubscribers): Unit = {
+    val (active, limited) = subscribers.urls.partition(limiter(_).notLimited)
+    if (limited.nonEmpty) {
+      log.info(s"""Will not send event ${event.eventType} to unresponsive hosts: ${limited.mkString(" ")}""")
+    }
+    //remove all unsubscribed callback listener
+    limiter = limiter.filterKeys(subscribers.urls).iterator.toMap.withDefaultValue(NoLimit)
+    metrics.skippedCallbacks.mark(limited.size)
+    active.foreach(post(_, event, self))
   }
 
   def post(url: String, event: MarathonEvent, eventActor: ActorRef): Unit = {
@@ -93,8 +105,10 @@ class HttpEventActor(conf: HttpEventConfiguration,
     metrics.outstandingCallbacks.inc()
     val start = clock.now()
     val request = Post(url, eventToJson(event))
-    val response = pipeline(request)
 
+    val response = pipeline(context.dispatcher)(request)
+
+    import context.dispatcher
     response.onComplete {
       case _ =>
         metrics.outstandingCallbacks.dec()
