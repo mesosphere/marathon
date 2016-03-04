@@ -272,7 +272,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldNotViolate(
       app,
-      "/",
+      "/healthCecks(0)",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
     MarathonTestHelper.validateJsonSchema(app, false) // missing image
@@ -289,7 +289,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldNotViolate(
       app,
-      "/",
+      "/healthChecks(0)",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
     MarathonTestHelper.validateJsonSchema(app, false) // missing image
@@ -300,7 +300,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     shouldViolate(
       app,
-      "/",
+      "/healthChecks(0)",
       "Health check port indices must address an element of the ports array or container port mappings."
     )
 

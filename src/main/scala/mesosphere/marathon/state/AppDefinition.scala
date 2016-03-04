@@ -490,7 +490,7 @@ object AppDefinition {
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsContainerValidator
-    appDef is portIndicesAreValid
+    appDef.healthChecks is every(portIndixIsValid(appDef.hostPorts.indices))
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     (appDef.persistentVolumes is empty) or (appDef.residency is notEmpty)
@@ -513,21 +513,14 @@ object AppDefinition {
     }
   }
 
-  private def portIndicesAreValid: Validator[AppDefinition] = {
-    new Validator[AppDefinition] {
-      override def apply(app: AppDefinition): Result = {
-        val appDef = app
-        val validPortIndices = appDef.hostPorts.indices
-
-        if (appDef.healthChecks.forall { hc =>
-          hc.protocol == Protocol.COMMAND || (hc.portIndex match {
-            case Some(idx) => validPortIndices contains idx
-            case None      => validPortIndices.length == 1 && validPortIndices.head == 0
-          })
-        }) Success
-        else Failure(Set(RuleViolation(app,
-          "Health check port indices must address an element of the ports array or container port mappings.", None)))
-      }
+  private def portIndixIsValid(hostPortsIndices: Range) = new Validator[HealthCheck] {
+    override def apply(healthCheck: HealthCheck): Result = {
+      if (healthCheck.protocol == Protocol.COMMAND || (healthCheck.portIndex match {
+        case Some(idx) => hostPortsIndices contains idx
+        case None      => hostPortsIndices.length == 1 && hostPortsIndices.head == 0
+      })) Success
+      else Failure(Set(RuleViolation(healthCheck,
+        "Health check port indices must address an element of the ports array or container port mappings.", None)))
     }
   }
 
