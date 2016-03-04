@@ -815,6 +815,23 @@ trait AppAndGroupFormats {
       maybeJson.foldLeft(appJson)((result, obj) => result ++ obj)
     }
 
+  implicit lazy val GroupInfoWrites: Writes[GroupInfo] =
+    Writes { info =>
+
+      val maybeJson = Seq[Option[JsObject]](
+        info.maybeApps.map(apps => Json.obj("apps" -> apps)),
+        info.maybeGroups.map(groups => Json.obj("groups" -> groups))
+      ).flatten
+
+      val groupJson = Json.obj (
+        "id" -> info.group.id,
+        "dependencies" -> info.group.dependencies,
+        "version" -> info.group.version
+      )
+
+      maybeJson.foldLeft(groupJson)((result, obj) => result ++ obj)
+    }
+
   implicit lazy val AppUpdateReads: Reads[AppUpdate] = (
     (__ \ "id").readNullable[PathId].filterNot(_.exists(_.isRoot)) ~
     (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~

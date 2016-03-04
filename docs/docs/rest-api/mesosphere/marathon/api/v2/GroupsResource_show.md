@@ -1,6 +1,25 @@
-## GET `/v2/groups/{groupId}`
+## GET `/v2/groups/{groupId}?embed=...`
 
 List the application groups with id `groupId`.
+
+Embeds nested resources that match the supplied path.
+You can specify this parameter multiple times with different values.
+Unknown embed parameters are ignored.
+If you omit this parameter, it defaults to `group.groups`, `group.apps`
+
+- `group.groups` embed all child groups of each group
+
+- `group.apps` embed all apps of each group
+
+- `group.apps.tasks` embed all tasks of each application
+
+- `group.apps.counts` embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy) 
+
+- `group.apps.deployments` embed all deployment identifier, if the related app currently is in deployment.
+
+- `group.apps.lastTaskFailure` embeds the lastTaskFailure for the application if there is one.
+
+- `group.apps.taskStats` exposes task statistics in the JSON.
 
 ### Example
 

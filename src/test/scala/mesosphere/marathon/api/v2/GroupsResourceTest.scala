@@ -1,8 +1,11 @@
 package mesosphere.marathon.api.v2
 
+import java.util.Collections
+
 import mesosphere.marathon.api.{ TestGroupManagerFixture, TestAuthFixture }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
+import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
@@ -49,12 +52,12 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     groupManager.rootGroup() returns Future.successful(Group(PathId.empty))
 
     When(s"the root is fetched from index")
-    val root = groupsResource.root(req)
+    val root = groupsResource.root(req, embed)
     Then("we receive a NotAuthenticated response")
     root.getStatus should be(auth.NotAuthenticatedStatus)
 
     When(s"the group by id is fetched from create")
-    val group = groupsResource.group("/foo/bla", req)
+    val group = groupsResource.group("/foo/bla", embed, req)
     Then("we receive a NotAuthenticated response")
     group.getStatus should be(auth.NotAuthenticatedStatus)
 
@@ -151,45 +154,6 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     intercept[UnknownGroupException] { groupsResource.delete("/foo", false, req) }
   }
 
-  test("access with limited authorization gives a filtered apps listing") {
-    Given("An authorized identity with limited ACL's")
-    auth.authenticated = true
-    auth.authorized = true
-    auth.authFn = (resource: Any) => {
-      val id = resource match {
-        case app: AppDefinition => app.id.toString
-        case _                  => resource.asInstanceOf[Group].id.toString
-      }
-      id.startsWith("/visible")
-    }
-
-    val group = Group(PathId.empty, Set(AppDefinition("/app1".toPath)), Set(
-      Group("/visible".toPath, Set(AppDefinition("/visible/app1".toPath)), Set(
-        Group("/visible/group".toPath, Set(AppDefinition("/visible/group/app1".toPath)))
-      )),
-      Group("/secure".toPath, Set(AppDefinition("/secure/app1".toPath)), Set(
-        Group("/secure/group".toPath, Set(AppDefinition("/secure/group/app1".toPath)))
-      )),
-      Group("/other".toPath, Set(AppDefinition("/other/app1".toPath)), Set(
-        Group("/other/group".toPath, Set(AppDefinition("/other/group/app1".toPath)))
-      ))
-    ))
-    groupManager.group(PathId.empty) returns Future.successful(Some(group))
-
-    When("The root group is fetched")
-    val root = groupsResource.root(auth.request)
-
-    Then("The root group contains only entities according to ACL's")
-    root.getStatus should be (200)
-    val result = Json.parse(root.getEntity.asInstanceOf[String])
-      .as[GroupUpdate]
-      .copy(version = None)
-      .apply(Group.empty, Timestamp.now())
-    result.transitiveApps should have size 2
-    result.transitiveApps.map(_.id.toString) should be(Set("/visible/app1", "/visible/group/app1"))
-    result.transitiveGroups should have size 3
-  }
-
   test("Group Versions for root are transferred as simple json string array (Fix #2329)") {
     Given("Specific Group versions")
     val groupVersions = Seq(Timestamp.now(), Timestamp.now())
@@ -197,7 +161,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     groupManager.group(PathId.empty) returns Future.successful(Some(Group(PathId.empty)))
 
     When("The versions are queried")
-    val rootVersionsResponse = groupsResource.group("versions", auth.request)
+    val rootVersionsResponse = groupsResource.group("versions", embed, auth.request)
 
     Then("The versions are send as simple json array")
     rootVersionsResponse.getStatus should be (200)
@@ -212,7 +176,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     groupManager.group("/foo/bla/blub".toRootPath) returns Future.successful(Some(Group("/foo/bla/blub".toRootPath)))
 
     When("The versions are queried")
-    val rootVersionsResponse = groupsResource.group("/foo/bla/blub/versions", auth.request)
+    val rootVersionsResponse = groupsResource.group("/foo/bla/blub/versions", embed, auth.request)
 
     Then("The versions are send as simple json array")
     rootVersionsResponse.getStatus should be (200)
@@ -252,12 +216,14 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   var groupRepository: GroupRepository = _
   var groupsResource: GroupsResource = _
   var auth: TestAuthFixture = _
+  var groupInfo: GroupInfoService = _
+  val embed: java.util.Set[String] = Collections.emptySet()
 
   before {
     auth = new TestAuthFixture
     config = mock[MarathonConf]
     groupManager = mock[GroupManager]
-    groupsResource = new GroupsResource(groupManager, auth.auth, auth.auth, config)
+    groupsResource = new GroupsResource(groupManager, groupInfo, auth.auth, auth.auth, config)
 
     config.zkTimeoutDuration returns 1.second
   }
@@ -270,6 +236,6 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
 
     config.zkTimeoutDuration returns 1.second
 
-    groupsResource = new GroupsResource(groupManager, auth.auth, auth.auth, config)
+    groupsResource = new GroupsResource(groupManager, groupInfo, auth.auth, auth.auth, config)
   }
 }

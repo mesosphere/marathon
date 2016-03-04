@@ -266,7 +266,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
     val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
     val appInfo = AppInfo(app, maybeDeployments = Some(Seq(Identifiable("deployment-123"))), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
-    appInfoService.queryAll(any, eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
+    appInfoService.selectAppsBy(any, eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
     When("The the index is fetched without any filters")
     val response = appsResource.index(null, null, null, new java.util.HashSet(), auth.request)
