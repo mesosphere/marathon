@@ -6,7 +6,7 @@ import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ UnknownGroupException, MarathonConf, MarathonSpec }
+import mesosphere.marathon.{ConflictingChangeException, UnknownGroupException, MarathonConf, MarathonSpec}
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, Json }
 
@@ -217,6 +217,34 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     Then("The versions are send as simple json array")
     rootVersionsResponse.getStatus should be (200)
     rootVersionsResponse.getEntity should be(Json.toJson(groupVersions).toString())
+  }
+
+  test("Creation of a group with same path as an existing app should be prohibited (fixes #3385)") {
+    Given("A real group manager with one app")
+    useRealGroupManager()
+    val group = Group("/group".toRootPath, apps = Set(AppDefinition("/group/app".toRootPath)))
+    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
+    groupRepository.rootGroup returns Future.successful(Some(group))
+
+    When("creating a group with the same path existing app")
+    val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group/app".toRootPath))))
+
+    Then("we get a 409")
+    intercept[ConflictingChangeException] { groupsResource.create(false, body.getBytes, auth.request) }
+  }
+
+  test("Creation of a group with same path as an existing group should be prohibited") {
+    Given("A real group manager with one app")
+    useRealGroupManager()
+    val group = Group("/group".toRootPath)
+    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
+    groupRepository.rootGroup returns Future.successful(Some(group))
+
+    When("creating a group with the same path existing app")
+    val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group".toRootPath))))
+
+    Then("we get a 409")
+    intercept[ConflictingChangeException] { groupsResource.create(false, body.getBytes, auth.request) }
   }
 
   var config: MarathonConf = _
