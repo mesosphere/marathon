@@ -120,7 +120,7 @@ class MarathonScheduler @Inject() (
     // For now the frameworkId is removed based on the error message.
     val removeFrameworkId = message match {
       case "Framework has been removed" => true
-      case unknown: String => false
+      case _: String                    => false
     }
     suicide(removeFrameworkId)
   }
@@ -136,7 +136,7 @@ class MarathonScheduler @Inject() (
     * the scheduler may never re-register with the saved FrameworkID until
     * the leading Mesos master process is killed.
     */
-  private def suicide(removeFrameworkId: Boolean): Unit = {
+  protected def suicide(removeFrameworkId: Boolean): Unit = {
     log.error(s"Committing suicide!")
 
     if (removeFrameworkId) Await.ready(frameworkIdUtil.expunge(), config.zkTimeoutDuration)
