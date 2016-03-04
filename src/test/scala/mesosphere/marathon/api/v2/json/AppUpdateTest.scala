@@ -28,21 +28,21 @@ class AppUpdateTest extends MarathonSpec {
       val violations = validate(update)
       assert(violations.isFailure)
       assert(ValidationHelper.getAllRuleConstrains(violations).exists(v =>
-        v.property.getOrElse(false) == path && v.message == template
+        v.path.getOrElse(false) == path && v.message == template
       ))
     }
 
     def shouldNotViolate(update: AppUpdate, path: String, template: String): Unit = {
       val violations = validate(update)
       assert(!ValidationHelper.getAllRuleConstrains(violations).exists(v =>
-        v.property.getOrElse(false) == path && v.message == template))
+        v.path.getOrElse(false) == path && v.message == template))
     }
 
     val update = AppUpdate()
 
     shouldViolate(
       update.copy(portDefinitions = Some(PortDefinitions(9000, 8080, 9000))),
-      "portDefinitions",
+      "/portDefinitions",
       "Ports must be unique."
     )
 
@@ -51,7 +51,7 @@ class AppUpdateTest extends MarathonSpec {
         PortDefinition(port = 9000, name = Some("foo")),
         PortDefinition(port = 9001, name = Some("foo"))))
       ),
-      "portDefinitions",
+      "/portDefinitions",
       "Port names must be unique."
     )
 
@@ -60,7 +60,7 @@ class AppUpdateTest extends MarathonSpec {
         PortDefinition(port = 9000, name = Some("foo")),
         PortDefinition(port = 9001, name = Some("bar"))))
       ),
-      "portDefinitions",
+      "/portDefinitions",
       "Port names must be unique."
     )
   }

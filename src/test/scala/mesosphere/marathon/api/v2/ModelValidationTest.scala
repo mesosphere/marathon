@@ -88,7 +88,7 @@ class ModelValidationTest
       case f: Failure =>
         val errors = (Json.toJson(f) \ "details").as[Seq[JsObject]]
         errors should have size 1
-        (errors.head \ "path").as[String] should be("name")
+        (errors.head \ "path").as[String] should be("/name")
         (errors.head \ "errors").as[Seq[String]] should have size 2
     }
   }
@@ -106,7 +106,7 @@ class ModelValidationTest
       case f: Failure =>
         val errors = (Json.toJson(f) \ "details").as[Seq[JsObject]]
         errors should have size 1
-        (errors.head \ "path").as[String] should be("groups[0].apps[1]")
+        (errors.head \ "path").as[String] should be("/groups(0)/apps(1)")
     }
   }
 

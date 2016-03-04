@@ -30,7 +30,7 @@ object Validation {
       override def apply(seq: Iterable[T]): Result = {
 
         val violations = seq.map(item => (item, validator(item))).zipWithIndex.collect {
-          case ((item, f: Failure), pos: Int) => GroupViolation(item, "not valid", Some(s"[$pos]"), f.violations)
+          case ((item, f: Failure), pos: Int) => GroupViolation(item, "not valid", Some(s"($pos)"), f.violations)
         }
 
         if (violations.isEmpty) Success
@@ -56,11 +56,11 @@ object Validation {
       })
   }
 
-  private def allRuleViolationsWithFullDescription(violation: Violation,
-                                                   parentDesc: Option[String] = None,
-                                                   prependDot: Boolean = false): Set[RuleViolation] = {
-    def concatPath(parent: String, child: Option[String], dot: Boolean): String = {
-      child.map(c => parent + { if (dot) "." else "" } + c).getOrElse(parent)
+  def allRuleViolationsWithFullDescription(violation: Violation,
+                                           parentDesc: Option[String] = None,
+                                           prependSlash: Boolean = false): Set[RuleViolation] = {
+    def concatPath(parent: String, child: Option[String], slash: Boolean): String = {
+      child.map(c => parent + { if (slash) "/" else "" } + c).getOrElse(parent)
     }
 
     violation match {
@@ -68,14 +68,19 @@ object Validation {
         parentDesc.map {
           p =>
             r.description.map {
-              case "value"   => r.withDescription(p)
-              case s: String => r.withDescription(concatPath(p, r.description, prependDot))
-            } getOrElse r.withDescription(p)
+              // Error is on object level, having a parent description. Omit 'value', prepend '/' as root.
+              case "value"   => r.withDescription("/" + p)
+              // Error is on property level, having a parent description. Prepend '/' as root.
+              case s: String => r.withDescription(concatPath("/" + p, r.description, prependSlash))
+              // Error is on unknown level, having a parent description. Prepend '/' as root.
+            } getOrElse r.withDescription("/" + p)
         } getOrElse {
           r.withDescription(r.description.map {
-            case "value"   => "self"
-            case s: String => s
-          } getOrElse "self")
+            // Error is on object level, having no parent description, being a root error.
+            case "value"   => "/"
+            // Error is on property level, having no parent description, being a property of root error.
+            case s: String => "/" + s
+          } getOrElse "/")
         })
       case g: GroupViolation => g.children.flatMap { c =>
         val dot = g.value match {
@@ -84,9 +89,9 @@ object Validation {
         }
 
         val desc = parentDesc.map {
-          p => Some(concatPath(p, g.description, prependDot))
+          p => Some(concatPath(p, g.description, prependSlash))
         } getOrElse {
-          g.description.map(d => concatPath("", Some(d), prependDot))
+          g.description.map(d => concatPath("", Some(d), prependSlash))
         }
         allRuleViolationsWithFullDescription(c, desc, dot)
       }

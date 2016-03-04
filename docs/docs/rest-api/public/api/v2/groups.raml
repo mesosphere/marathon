@@ -76,8 +76,10 @@ put:
               "message":"Object is not valid",
               "details": [
                 {
-                  "attribute":"apps[0].id",
-                  "error":"identifier /app is not child of /group. Hint: use relative paths."
+                  "path":"/apps(0)/id",
+                  "errors": [
+                    "identifier /app is not child of /group. Hint: use relative paths."
+                  ]
                 }
               ]
             }
@@ -117,8 +119,10 @@ post:
               "message":"Object is not valid",
               "details": [
                 {
-                  "attribute":"apps[0].id",
-                  "error":"identifier /app is not child of /group. Hint: use relative paths."
+                  "path":"/apps(0)/id",
+                  "errors": [
+                    "identifier /app is not child of /group. Hint: use relative paths."
+                  ]
                 }
               ]
             }
