@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.core.task.Task.{ LocalVolume, LocalVolumeId, ReservationWithVolumes }
 import mesosphere.marathon.state.{ AppDefinition, PersistentVolume }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -41,22 +41,18 @@ class TaskOpFactoryImpl @Inject() (
   private[this] def inferNormalTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp] = {
     new TaskBuilder(app, Task.Id.forApp, config).buildIfMatches(offer, tasks).map {
       case (taskInfo, ports) =>
-        val task = Task(
+        val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
           agentInfo = Task.AgentInfo(
             host = offer.getHostname,
             agentId = Some(offer.getSlaveId.getValue),
             attributes = offer.getAttributesList.asScala
           ),
-          launched = Some(
-            Task.Launched(
-              appVersion = app.version,
-              status = Task.Status(
-                stagedAt = clock.now()
-              ),
-              networking = Task.HostPorts(ports)
-            )
-          )
+          appVersion = app.version,
+          status = Task.Status(
+            stagedAt = clock.now()
+          ),
+          networking = Task.HostPorts(ports)
         )
         taskOperationFactory.launch(taskInfo, task)
     }
@@ -128,23 +124,21 @@ class TaskOpFactoryImpl @Inject() (
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(app, (_) => task.taskId, config).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
-        val newTask = task.copy(
-          agentInfo = Task.AgentInfo(
-            host = offer.getHostname,
-            agentId = Some(offer.getSlaveId.getValue),
-            attributes = offer.getAttributesList.asScala
+        val launch = TaskStateOp.Launch(
+          appVersion = app.version,
+          status = Task.Status(
+            stagedAt = clock.now()
           ),
-          launched = Some(
-            Task.Launched(
-              appVersion = app.version,
-              status = Task.Status(
-                stagedAt = clock.now()
-              ),
-              networking = Task.HostPorts(ports)
-            )
-          )
-        )
-        taskOperationFactory.launch(taskInfo, newTask)
+          networking = Task.HostPorts(ports))
+
+        // FIXME (3221): something like reserved.launch(...): LaunchedOnReservation so we don't need to match?
+        task.update(launch) match {
+          case TaskStateChange.Update(updatedTask) =>
+            taskOperationFactory.launch(taskInfo, updatedTask)
+
+          case unexpected: TaskStateChange =>
+            throw new scala.RuntimeException(s"Expected TaskStateChange.Update but got $unexpected")
+        }
     }
   }
 
@@ -157,15 +151,15 @@ class TaskOpFactoryImpl @Inject() (
       LocalVolume(LocalVolumeId(app.id, volume), volume)
     }
     val persistentVolumeIds = localVolumes.map(_.id)
-    val task = Task(
+    val task = Task.Reserved(
       taskId = Task.Id.forApp(app.id),
       agentInfo = Task.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),
         attributes = offer.getAttributesList.asScala
       ),
-      launched = None,
-      reservationWithVolumes = Some(ReservationWithVolumes(persistentVolumeIds))
+      state = Task.Reserved.State.New(timeout = None),
+      reservation = ReservationWithVolumes(persistentVolumeIds)
     )
     taskOperationFactory.reserveAndCreateVolumes(task, resourceMatch.resources, localVolumes)
   }

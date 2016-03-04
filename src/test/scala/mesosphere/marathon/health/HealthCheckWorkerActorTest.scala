@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, Protos }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.Matchers
 
 import scala.concurrent.duration._
@@ -22,6 +22,8 @@ class HealthCheckWorkerActorTest
     with Matchers {
 
   import HealthCheckWorker._
+  import MarathonTestHelper.Implicits._
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   test("A TCP health check should correctly resolve the hostname") {
@@ -35,7 +37,7 @@ class HealthCheckWorkerActorTest
     val task =
       MarathonTestHelper.runningTask("test_id")
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withLaunched(_.copy(networking = Task.HostPorts(socketPort)))
+        .withNetworking(Task.HostPorts(socketPort))
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = "test_id".toPath)
@@ -60,7 +62,7 @@ class HealthCheckWorkerActorTest
     val task =
       MarathonTestHelper.runningTask("test_id")
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withLaunched(_.copy(networking = Task.HostPorts(socketPort)))
+        .withNetworking(Task.HostPorts(socketPort))
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = "test_id".toPath)

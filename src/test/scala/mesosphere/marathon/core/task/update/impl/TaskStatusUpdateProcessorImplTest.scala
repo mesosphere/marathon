@@ -64,7 +64,7 @@ class TaskStatusUpdateProcessorImplTest
     Given("an unknown task")
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.task(taskId)(global) returns Future.successful(
-      Some(MarathonTestHelper.mininimalTask(taskId.idString))
+      Some(MarathonTestHelper.minimalReservedTask(taskId.appId, Task.ReservationWithVolumes(Iterable.empty)))
     )
 
     When("we process the updated")

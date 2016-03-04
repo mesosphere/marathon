@@ -60,6 +60,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
 
     val stagedTask = MarathonTestHelper.stagedTask("task_2")
 
+    import MarathonTestHelper.Implicits._
     val stagedTaskWithSlaveId =
       MarathonTestHelper.stagedTask("task_3")
         .withAgentInfo(_.copy(agentId = Some("slave 1")))

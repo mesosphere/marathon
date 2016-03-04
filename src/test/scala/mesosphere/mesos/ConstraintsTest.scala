@@ -1,16 +1,17 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
-import com.google.common.collect.Lists
+import mesosphere.marathon.MarathonTestHelper.Implicits._
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
+import org.apache.mesos.Protos.{ Attribute, Offer }
+import org.scalatest.{ GivenWhenThen, Matchers }
+
 import scala.collection.JavaConverters._
 import scala.util.Random
-import mesosphere.mesos.protos.{ FrameworkID, SlaveID, OfferID, TextAttribute }
-import org.apache.mesos.Protos.{ Offer, Attribute }
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 
 class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
@@ -446,7 +447,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val attributes = attrs.map { case (name, value) => TextAttribute(name, value): Attribute }
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
-      .withLaunched(_.copy(networking = Task.HostPorts(999)))
+      .withNetworking(Task.HostPorts(999))
   }
 
   def makeOffer(hostname: String, attributes: Iterable[Attribute]) = {
@@ -463,7 +464,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     MarathonTestHelper
       .runningTask(id)
       .withAgentInfo(_.copy(host = host))
-      .withLaunched(_.copy(networking = Task.HostPorts(999)))
+      .withNetworking(Task.HostPorts(999))
   }
 
   def makeConstraint(field: String, operator: Operator, value: String) = {

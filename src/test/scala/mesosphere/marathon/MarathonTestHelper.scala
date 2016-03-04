@@ -11,13 +11,13 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ TaskLabels, TaskOpFactoryImpl }
 import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{ ReservationWithVolumes, LocalVolumeId }
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.Task.{ LocalVolumeId, ReservationWithVolumes }
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ PersistentVolumeInfo, PersistentVolume, Volume, Container, Residency, AppDefinition, MarathonStore, MarathonTaskState, PathId, TaskRepository, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Container, MarathonStore, MarathonTaskState, PathId, PersistentVolume, PersistentVolumeInfo, Residency, TaskRepository, Timestamp, Volume }
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
@@ -26,12 +26,14 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
-import scala.util.Random
 import scala.collection.immutable.Seq
+import scala.util.Random
 
 object MarathonTestHelper {
 
   import mesosphere.mesos.protos.Implicits._
+
+  lazy val clock = Clock()
 
   def makeConfig(args: String*): AllConf = {
     val opts = new AllConf(args) {
@@ -165,7 +167,7 @@ object MarathonTestHelper {
 
   def reservedDisk(id: String, size: Double = 4096, role: String = "*",
                    principal: String = "test", containerPath: String = "/container"): Mesos.Resource.Builder = {
-    import Mesos.Resource.{ ReservationInfo, DiskInfo }
+    import Mesos.Resource.{ DiskInfo, ReservationInfo }
     Mesos.Resource.newBuilder()
       .setType(Mesos.Value.Type.SCALAR)
       .setName(Resource.DISK)
@@ -245,22 +247,18 @@ object MarathonTestHelper {
     {
       import scala.collection.JavaConverters._
 
-      Task(
+      Task.LaunchedEphemeral(
         taskId = Task.Id(taskInfo.getTaskId),
         agentInfo = Task.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
           attributes = offer.getAttributesList.asScala
         ),
-        launched = Some(
-          Task.Launched(
-            appVersion = version,
-            status = Task.Status(
-              stagedAt = now
-            ),
-            networking = Task.HostPorts(Seq(1, 2, 3))
-          )
-        )
+        appVersion = version,
+        status = Task.Status(
+          stagedAt = now
+        ),
+        networking = Task.HostPorts(Seq(1, 2, 3))
       )
     }
 
@@ -310,7 +308,7 @@ object MarathonTestHelper {
       metrics
     )
 
-    new TaskTrackerModule(Clock(), metrics, defaultConfig(), leadershipModule, taskRepo) {
+    new TaskTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val taskTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
@@ -326,6 +324,7 @@ object MarathonTestHelper {
 
   def dummyTaskBuilder(appId: PathId) = MarathonTask.newBuilder()
     .setId(Task.Id.forApp(appId).idString)
+    .setStagedAt(0)
     .setHost("host.some")
 
   def dummyTaskProto(appId: PathId) = dummyTaskBuilder(appId).build()
@@ -336,12 +335,39 @@ object MarathonTestHelper {
 
   def mininimalTask(appId: PathId): Task = mininimalTask(Task.Id.forApp(appId).idString)
   def mininimalTask(taskId: Task.Id): Task = mininimalTask(taskId.idString)
-  def mininimalTask(taskId: String): Task = {
-    Task(
+  def mininimalTask(taskId: String, now: Timestamp = clock.now()): Task = {
+    Task.LaunchedEphemeral(
       Task.Id(taskId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
-      reservationWithVolumes = None,
-      launched = None
+      appVersion = now,
+      status = Task.Status(
+        stagedAt = now,
+        startedAt = None,
+        mesosStatus = None
+      ),
+      networking = Task.NoNetworking
+    )
+  }
+
+  def minimalReservedTask(appId: PathId, reservation: ReservationWithVolumes): Task =
+    Task.Reserved(
+      taskId = Task.Id.forApp(appId),
+      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      state = Task.Reserved.State.New(timeout = None),
+      reservation = reservation)
+
+  def mininimalLaunchedTask(taskId: String): Task.LaunchedEphemeral = {
+    val now = Timestamp.now()
+    Task.LaunchedEphemeral(
+      Task.Id(taskId),
+      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      appVersion = now,
+      status = Task.Status(
+        stagedAt = now,
+        startedAt = None,
+        mesosStatus = None
+      ),
+      networking = Task.NoNetworking
     )
   }
 
@@ -352,6 +378,11 @@ object MarathonTestHelper {
   def taskLaunched: Task.Launched = {
     val now = Timestamp.now()
     Task.Launched(now, status = Task.Status(now), networking = Task.NoNetworking)
+  }
+
+  def taskLaunchedOp: TaskStateOp.Launch = {
+    val now = Timestamp.now()
+    TaskStateOp.Launch(now, Task.Status(now), Task.NoNetworking)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
@@ -377,8 +408,22 @@ object MarathonTestHelper {
   def stagedTaskForApp(
     appId: PathId = PathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
     stagedTask(Task.Id.forApp(appId).idString, appVersion = appVersion, stagedAt = stagedAt)
-  def stagedTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
-    TaskSerializer.fromProto(stagedTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt))
+  def stagedTask(
+    taskId: String,
+    appVersion: Timestamp = Timestamp(1),
+    stagedAt: Long = 2,
+    mesosStatus: Option[Mesos.TaskStatus] = None): Task.LaunchedEphemeral =
+    Task.LaunchedEphemeral(
+      Task.Id(taskId),
+      Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      appVersion,
+      Task.Status(
+        stagedAt = Timestamp(stagedAt),
+        startedAt = None,
+        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STAGING))
+      ),
+      Task.NoNetworking
+    )
 
   def stagedTaskProto(appId: PathId): Protos.MarathonTask = stagedTaskProto(Task.Id.forApp(appId).idString)
   def stagedTaskProto(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
@@ -493,8 +538,23 @@ object MarathonTestHelper {
     )
   }
 
-  def residentReservedTask(appId: PathId, localVolumeIds: LocalVolumeId*) = mininimalTask(appId)
-    .copy(reservationWithVolumes = Some(ReservationWithVolumes(localVolumeIds)))
+  def residentReservedTask(appId: PathId, localVolumeIds: LocalVolumeId*) =
+    minimalReservedTask(appId, ReservationWithVolumes(localVolumeIds))
+
+  def residentLaunchedTask(appId: PathId, localVolumeIds: LocalVolumeId*) = {
+    val now = Timestamp.now()
+    Task.LaunchedOnReservation(
+      taskId = Task.Id.forApp(appId),
+      agentInfo = Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      appVersion = now,
+      status = Task.Status(
+        stagedAt = now,
+        startedAt = None,
+        mesosStatus = None
+      ),
+      networking = Task.NoNetworking,
+      reservation = ReservationWithVolumes(localVolumeIds))
+  }
 
   def mesosContainerWithPersistentVolume = Container(
     `type` = Mesos.ContainerInfo.Type.MESOS,
@@ -507,5 +567,44 @@ object MarathonTestHelper {
     ),
     docker = None
   )
+
+  def addNetworking(task: Task, networking: Task.Networking): Task = task match {
+    case launchedEphemeral: Task.LaunchedEphemeral         => launchedEphemeral.copy(networking = networking)
+    case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(networking = networking)
+    case reserved: Task.Reserved                           => throw new scala.RuntimeException("Reserved task cannot have networking")
+  }
+
+  object Implicits {
+    implicit class TaskImprovements(task: Task) {
+      def withAgentInfo(update: Task.AgentInfo => Task.AgentInfo): Task = task match {
+        case launchedEphemeral: Task.LaunchedEphemeral =>
+          launchedEphemeral.copy(agentInfo = update(launchedEphemeral.agentInfo))
+
+        case reserved: Task.Reserved =>
+          reserved.copy(agentInfo = update(reserved.agentInfo))
+
+        case launchedOnReservation: Task.LaunchedOnReservation =>
+          launchedOnReservation.copy(agentInfo = update(launchedOnReservation.agentInfo))
+      }
+
+      def withNetworking(update: Task.Networking): Task = task match {
+        case launchedEphemeral: Task.LaunchedEphemeral         => launchedEphemeral.copy(networking = update)
+        case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(networking = update)
+        case reserved: Task.Reserved                           => throw new scala.RuntimeException("Reserved task cannot have networking")
+      }
+
+      def withStatus(update: Task.Status => Task.Status): Task = task match {
+        case launchedEphemeral: Task.LaunchedEphemeral =>
+          launchedEphemeral.copy(status = update(launchedEphemeral.status))
+
+        case launchedOnReservation: Task.LaunchedOnReservation =>
+          launchedOnReservation.copy(status = update(launchedOnReservation.status))
+
+        case reserved: Task.Reserved =>
+          throw new scala.RuntimeException("Reserved task cannot have a status")
+      }
+
+    }
+  }
 
 }

@@ -1,7 +1,6 @@
 package mesosphere.marathon.tasks
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.collect.Lists
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
@@ -18,7 +17,7 @@ import mesosphere.mesos.protos.TextAttribute
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.scalatest.concurrent.ScalaFutures
@@ -457,10 +456,11 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   }
 
   def makeSampleTask(appId: PathId) = {
+    import MarathonTestHelper.Implicits._
     MarathonTestHelper
       .stagedTaskForApp(appId)
       .withAgentInfo(_.copy(host = "host", attributes = Iterable(TextAttribute("attr1", "bar"))))
-      .withLaunched(_.copy(networking = Task.HostPorts(Iterable(999))))
+      .withNetworking(Task.HostPorts(Iterable(999)))
   }
 
   def makeTaskStatus(id: Task.Id, state: TaskState = TaskState.TASK_RUNNING) = {

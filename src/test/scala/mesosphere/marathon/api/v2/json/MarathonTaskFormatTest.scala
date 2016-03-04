@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v2.json
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{ ReservationWithVolumes, NetworkInfoList, NoNetworking }
+import mesosphere.marathon.core.task.Task.{ LaunchedOnReservation, NetworkInfoList, NoNetworking, ReservationWithVolumes }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.{ Protos => MesosProtos }
 
@@ -17,23 +17,27 @@ class MarathonTaskFormatTest extends MarathonSpec {
       .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.newBuilder().setIpAddress("123.123.123.124"))
       .build()
 
-    val taskWithoutIp = new Task(
+    val taskWithoutIp = new Task.LaunchedEphemeral(
       taskId = Task.Id("/foo/bar"),
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
-      reservationWithVolumes = None,
-      launched = Some(Task.Launched(time, Task.Status(time, None), NoNetworking)))
+      appVersion = time,
+      status = Task.Status(time, None),
+      networking = NoNetworking)
 
-    val taskWithMultipleIPs = new Task(
+    val taskWithMultipleIPs = new Task.LaunchedEphemeral(
       taskId = Task.Id("/foo/bar"),
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
-      reservationWithVolumes = None,
-      launched = Some(Task.Launched(time, Task.Status(time, None), NetworkInfoList(network))))
+      appVersion = time,
+      status = Task.Status(time, None),
+      networking = NetworkInfoList(network))
 
-    val taskWithLocalVolumes = new Task(
+    val taskWithLocalVolumes = new LaunchedOnReservation(
       taskId = Task.Id("/foo/bar"),
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
-      reservationWithVolumes = Some(ReservationWithVolumes(Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten)),
-      launched = Some(Task.Launched(time, Task.Status(time, Some(time)), NoNetworking)))
+      appVersion = time,
+      status = Task.Status(time, Some(time)),
+      networking = NoNetworking,
+      reservation = ReservationWithVolumes(Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten))
   }
 
   test("JSON serialization of a Task without IPs") {

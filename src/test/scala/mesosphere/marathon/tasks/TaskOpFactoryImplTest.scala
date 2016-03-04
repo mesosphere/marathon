@@ -29,25 +29,21 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
 
     val inferredTaskOp = f.taskOpFactory.buildTaskOp(appDefinition, offer, runningTasks)
 
-    val expectedTask = Task(
-      taskId = Task.Id("some task ID"),
+    val expectedTask = Task.LaunchedEphemeral(
+      taskId = inferredTaskOp.fold(Task.Id("failure"))(_.newTask.taskId),
       agentInfo = Task.AgentInfo(
         host = "some_host",
         agentId = Some(offer.getSlaveId.getValue),
         attributes = List.empty
       ),
-      launched = Some(
-        Task.Launched(
-          appVersion = appDefinition.version,
-          status = Task.Status(
-            stagedAt = f.clock.now()
-          ),
-          networking = Task.HostPorts(List.empty)
-        )
-      )
+      appVersion = appDefinition.version,
+      status = Task.Status(
+        stagedAt = f.clock.now()
+      ),
+      networking = Task.HostPorts(List.empty)
     )
     assert(inferredTaskOp.isDefined, "task op is not empty")
-    assert(inferredTaskOp.get.newTask.copy(taskId = expectedTask.taskId) == expectedTask)
+    assert(inferredTaskOp.get.newTask == expectedTask)
   }
 
   test("Normal app -> None (insufficient offer)") {
@@ -176,11 +172,9 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
-    def normalLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.mininimalTask(appId).copy(launched = Some(MTH.taskLaunched))
-    def residentReservedTask(appId: PathId, volumeIds: LocalVolumeId*) =
-      MTH.residentReservedTask(appId, volumeIds: _*)
-    def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) =
-      MTH.residentReservedTask(appId, volumeIds: _*).copy(launched = Some(MTH.taskLaunched))
+    def normalLaunchedTask(appId: PathId) = MTH.mininimalLaunchedTask(appId.toString)
+    def residentReservedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentReservedTask(appId, volumeIds: _*)
+    def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentLaunchedTask(appId, volumeIds: _*)
     def offer = MTH.makeBasicOffer().build()
     def offerWithSpaceForLocalVolume = MTH.makeBasicOffer(disk = 1025).build()
     def insufficientOffer = MTH.makeBasicOffer(cpus = 0.01, mem = 1, disk = 0.01, beginPort = 31000, endPort = 31001).build()

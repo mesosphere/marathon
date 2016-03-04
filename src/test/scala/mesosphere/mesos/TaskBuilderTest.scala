@@ -1167,10 +1167,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   def makeSampleTask(id: PathId, attr: String, attrVal: String) = {
+    import MarathonTestHelper.Implicits._
     MarathonTestHelper
       .stagedTask(taskId = id.toString)
       .withAgentInfo(_.copy(attributes = Iterable(TextAttribute(attr, attrVal))))
-      .withLaunched(_.copy(networking = Task.HostPorts(List(999))))
+      .withNetworking(Task.HostPorts(List(999)))
   }
 
   private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, taskPorts: Seq[Int], offer: Offer): Unit = {

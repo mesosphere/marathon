@@ -86,7 +86,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     Then("we get a tasks object in the appInfo")
     appInfo.maybeTasks should not be empty
-    appInfo.maybeTasks.get.map(_.appId.toString) should have size (3)
+    appInfo.maybeTasks.get.map(_.appId.toString) should have size 3
     appInfo.maybeTasks.get.map(_.task.taskId.idString).toSet should be (Set("task1", "task2", "task3"))
 
     appInfo should be(AppInfo(app, maybeTasks = Some(
@@ -235,7 +235,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     Given("one staged and two running tasks in the taskTracker")
     val staged = MarathonTestHelper.stagedTask("task1", stagedAt = (f.clock.now() - 10.seconds).toDateTime.getMillis)
     val running = MarathonTestHelper.runningTask("task2", stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
-    val running2 = running.copy(taskId = Task.Id("task3"))
+    val running2 = MarathonTestHelper.runningTask("task3", stagedAt = (f.clock.now() - 11.seconds).toDateTime.getMillis)
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val tasks: Set[Task] = Set(staged, running, running2)

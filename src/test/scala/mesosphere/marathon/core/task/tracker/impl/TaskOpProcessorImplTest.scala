@@ -2,17 +2,17 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import akka.actor.Status
 import akka.testkit.TestProbe
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ Timestamp, PathId, TaskRepository }
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.state.{ PathId, TaskRepository, Timestamp }
 import mesosphere.marathon.test.{ CaptureLogEvents, MarathonActorSupport, Mockito }
-import org.apache.mesos.Protos.{ TaskStatus, TaskState }
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
-import scala.util.{ Success, Try, Failure }
 import scala.concurrent.duration._
+import scala.util.{ Failure, Success, Try }
 
 class TaskOpProcessorImplTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
@@ -333,8 +333,8 @@ class TaskOpProcessorImplTest
     val now = Timestamp.now()
     val f = new Fixture
     val appId = PathId("/app")
-    val unlaunched: Task = mininimalTask(appId).copy(reservationWithVolumes = Some(taskReservation))
-    val launched: Task = unlaunched.copy(launched = Some(taskLaunched))
+    val unlaunched: Task = minimalReservedTask(appId, taskReservation)
+    val launched: Task = f.toLaunched(unlaunched, taskLaunchedOp)
     val marathonTask = unlaunched.marathonTask
     val taskId = launched.taskId.mesosTaskId.getValue
     val killed: TaskStatus = MarathonTestHelper.statusForState(taskId, TaskState.TASK_KILLED)
@@ -371,5 +371,11 @@ class TaskOpProcessorImplTest
       noMoreInteractions(taskRepository)
       noMoreInteractions(statusUpdateResolver)
     }
+
+    def toLaunched(task: Task, taskStateOp: TaskStateOp.Launch): Task =
+      task.update(taskStateOp) match {
+        case TaskStateChange.Update(launchedTask) => launchedTask
+        case _                                    => throw new scala.RuntimeException("taskStateOp did not result in a launched task")
+      }
   }
 }

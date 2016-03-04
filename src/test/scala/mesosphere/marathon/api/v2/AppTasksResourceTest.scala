@@ -39,6 +39,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
   }
 
   test("deleteOne") {
+    import MarathonTestHelper.Implicits._
     val appId = PathId("/my/app")
     val slaveId = SlaveID("some slave ID")
     val task1 = MarathonTestHelper.mininimalTask(appId).withAgentInfo(_.copy(agentId = Some(slaveId.value)))
