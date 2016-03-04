@@ -50,13 +50,18 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val taskId = Task.Id(status.getTaskId)
 
     taskTracker.task(taskId).flatMap {
+      case _ if status.getState == MesosProtos.TaskState.TASK_KILLING =>
+        // introduced in Mesos 0.28.0, not yet processed
+        log.info("Ignoring TASK_KILLING update for {}", taskId)
+        acknowledge(status)
+
       case Some(task) if task.launched.isDefined =>
         processUpdate(
           timestamp = now,
           appId = taskId.appId,
           task = task,
           mesosStatus = status
-        ).map(_ => acknowledge(status))
+        ).flatMap(_ => acknowledge(status))
       case _ =>
         killUnknownTaskTimer {
           if (status.getState != MesosProtos.TaskState.TASK_LOST) {
@@ -65,13 +70,13 @@ class TaskStatusUpdateProcessorImpl @Inject() (
             killTask(taskId.mesosTaskId)
           }
           acknowledge(status)
-          Future.successful(())
         }
     }
   }
 
-  private[this] def acknowledge(taskStatus: MesosProtos.TaskStatus): Unit = {
+  private[this] def acknowledge(taskStatus: MesosProtos.TaskStatus): Future[Unit] = {
     driverHolder.driver.foreach(_.acknowledgeStatusUpdate(taskStatus))
+    Future.successful(())
   }
 
   private[this] def killTask(taskId: MesosProtos.TaskID): Unit = {
