@@ -72,10 +72,12 @@ object ProcessKeeper {
         |    "roles": { "type": "ANY" }
         |  }],
         |  "reserve_resources": [{
+        |    "roles": { "type": "ANY" },
         |    "principals": { "type": "ANY" },
         |    "resources": { "type": "ANY" }
         |  }],
         |  "create_volumes": [{
+        |    "roles": { "type": "ANY" },
         |    "principals": { "type": "ANY" },
         |    "volume_types": { "type": "ANY" }
         |  }]
