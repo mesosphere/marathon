@@ -15,7 +15,7 @@ import mesosphere.marathon.test.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
 import spray.http.{ HttpRequest, HttpResponse, StatusCode }
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 
 class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers {
@@ -36,7 +36,7 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
   test("If a message is send to non existing subscribers") {
     Given("A HttpEventActor with 2 subscribers")
     val aut = TestActorRef(new NoHttpEventActor(Set("host1", "host2")))
-    responseAction = () => throw new RuntimeException("Can not connect")
+    responseAction = () => throw new RuntimeException("Cannot connect")
 
     When("An event is send to the actor")
     aut ! EventStreamAttached("remote")
@@ -99,11 +99,13 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
   var statusCode: StatusCode = _
   var responseAction = () => response
   val metrics = new HttpEventActor.HttpEventActorMetrics(new Metrics(new MetricRegistry))
-  implicit val system = ActorSystem("test-system",
-    ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")
-  )
+
+  implicit var system: ActorSystem = _
 
   before {
+    system = ActorSystem("test-system",
+      ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")
+    )
     clock = ConstantClock()
     conf = mock[HttpEventConfiguration]
     conf.slowConsumerTimeout returns 10.seconds
@@ -114,11 +116,17 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
     responseAction = () => response
   }
 
+  after {
+    system.shutdown()
+    system.awaitTermination()
+  }
+
   class NoHttpEventActor(subscribers: Set[String])
       extends HttpEventActor(conf, TestActorRef(Props(new ReturnSubscribersTestActor(subscribers))), metrics, clock) {
-    var requests = List.empty[HttpRequest]
-    override val pipeline: (HttpRequest) => Future[HttpResponse] = { request =>
-      requests ::= request
+    var _requests = List.empty[HttpRequest]
+    def requests = synchronized(_requests)
+    override def pipeline(implicit ec: ExecutionContext): (HttpRequest) => Future[HttpResponse] = synchronized { request =>
+      _requests ::= request
       Future(responseAction())
     }
   }
