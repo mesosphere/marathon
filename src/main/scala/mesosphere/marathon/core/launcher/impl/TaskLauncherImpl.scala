@@ -24,14 +24,14 @@ private[launcher] class TaskLauncherImpl(
   override def acceptOffer(offerID: OfferID, taskOps: Seq[TaskOp]): Boolean = {
     val accepted = withDriver(s"launchTasks($offerID)") { driver =>
       import scala.collection.JavaConverters._
-      if (log.isDebugEnabled) {
-        log.debug(s"Operations on $offerID:\n${taskOps.mkString("\n")}")
-      }
 
       //We accept the offer, the rest of the offer is declined automatically with the given filter.
       //The filter duration is set to 0, so we get the same offer in the next allocator cycle.
       val noFilter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
       val operations = taskOps.flatMap(_.offerOperations)
+      if (log.isDebugEnabled()) {
+        log.debug(s"Operations on $offerID:\n${operations.mkString("\n")}")
+      }
       driver.acceptOffers(Collections.singleton(offerID), operations.asJava, noFilter)
     }
     if (accepted) {

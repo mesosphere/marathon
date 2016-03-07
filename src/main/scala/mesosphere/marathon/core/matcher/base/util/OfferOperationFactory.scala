@@ -1,8 +1,11 @@
 package mesosphere.marathon.core.matcher.base.util
 
 import mesosphere.marathon.WrongConfigurationException
+import mesosphere.marathon.core.launcher.impl.TaskLabels
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.marathon.state.PathId
+import org.apache.mesos.Protos.Resource
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
@@ -37,14 +40,18 @@ class OfferOperationFactory(
       .build()
   }
 
-  def reserve(resources: Iterable[Mesos.Resource]): Mesos.Offer.Operation = {
+  def reserve(taskId: Task.Id, resources: Iterable[Mesos.Resource]): Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
     val reservedResources = resources.map { resource =>
       Mesos.Resource.newBuilder(resource)
         .setRole(role)
-        .setReservation(ReservationInfo.newBuilder()
-          .setPrincipal(principal)).build();
+        .setReservation(
+          ReservationInfo.newBuilder()
+            .setPrincipal(principal)
+            .setLabels(TaskLabels.mesosLabelsForTask(taskId))
+        ).build()
     }
+
     val reserve = Mesos.Offer.Operation.Reserve.newBuilder()
       .addAllResources(reservedResources.asJava)
       .build()
@@ -55,7 +62,7 @@ class OfferOperationFactory(
       .build()
   }
 
-  def createVolumes(localVolumes: Iterable[LocalVolume]): Mesos.Offer.Operation = {
+  def createVolumes(taskId: Task.Id, localVolumes: Iterable[LocalVolume]): Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
 
     val volumes: Iterable[Mesos.Resource] = localVolumes.map { vol =>
@@ -72,12 +79,18 @@ class OfferOperationFactory(
           .setVolume(volume)
       }
 
+      val reservation =
+        Mesos.Resource.ReservationInfo.newBuilder()
+          .setPrincipal(principal)
+          .setLabels(TaskLabels.mesosLabelsForTask(taskId))
+          .build()
+
       Mesos.Resource.newBuilder()
         .setName("disk")
         .setType(Mesos.Value.Type.SCALAR)
         .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
         .setRole(role)
-        .setReservation(Mesos.Resource.ReservationInfo.newBuilder().setPrincipal(principal).build())
+        .setReservation(reservation)
         .setDisk(disk)
         .build()
     }
