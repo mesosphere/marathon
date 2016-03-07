@@ -11,9 +11,11 @@ object AppSelector {
     override def matches(app: AppDefinition): Boolean = matchesFunc(app)
   }
 
-  def forall(selectors: Iterable[AppSelector]): AppSelector = AllMustMatch(selectors)
+  def all: AppSelector = AppSelector(_ => true)
 
-  private[this] case class AllMustMatch(selectors: Iterable[AppSelector]) extends AppSelector {
+  def forall(selectors: Iterable[AppSelector]): AppSelector = new AllAppSelectorsMustMatch(selectors)
+
+  private[appinfo] class AllAppSelectorsMustMatch(selectors: Iterable[AppSelector]) extends AppSelector {
     override def matches(app: AppDefinition): Boolean = selectors.forall(_.matches(app))
   }
 }

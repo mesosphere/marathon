@@ -6,7 +6,7 @@ import akka.actor.ActorRefFactory
 import com.google.inject.name.Names
 import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService }
+import mesosphere.marathon.core.appinfo.{ GroupInfoService, AppInfoModule, AppInfoService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -76,6 +76,9 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   final def appInfoService(appInfoModule: AppInfoModule): AppInfoService = appInfoModule.appInfoService
+
+  @Provides @Singleton
+  final def groupInfoService(appInfoModule: AppInfoModule): GroupInfoService = appInfoModule.groupInfoService
 
   @Provides @Singleton
   def pluginManager(coreModule: CoreModule): PluginManager = coreModule.pluginModule.pluginManager
