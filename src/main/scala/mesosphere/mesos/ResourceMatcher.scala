@@ -40,19 +40,35 @@ object ResourceMatcher {
     * @param reserved if reserved is true, only resources with a ReservationInfo
     *                 are considered. If reserved is false, only resources without
     *                 a ReservationInfo are considered.
+    * @param requiredLabels only resources with the given keys/values are matched.
     */
-  case class ResourceSelector(acceptedRoles: Set[String], reserved: Boolean) {
+  case class ResourceSelector(
+      acceptedRoles: Set[String], reserved: Boolean, requiredLabels: Map[String, String] = Map.empty) {
     def apply(resource: Protos.Resource): Boolean = {
       // resources with disks are matched by the VolumeMatcher or not at all
       val noAssociatedDisk = !resource.hasDisk
+      def hasRequiredLabels: Boolean = {
+        val labelMap: Map[String, String] =
+          if (!resource.hasReservation || !resource.getReservation.hasLabels)
+            Map.empty
+          else {
+            import scala.collection.JavaConverters._
+            resource.getReservation.getLabels.getLabelsList.asScala.iterator.map { label =>
+              label.getKey -> label.getValue
+            }.toMap
+          }
+        requiredLabels.forall { case (k, v) => labelMap.get(k).contains(v) }
+      }
 
-      noAssociatedDisk && acceptedRoles(resource.getRole) && resource.hasReservation == reserved
+      noAssociatedDisk && acceptedRoles(resource.getRole) && resource.hasReservation == reserved && hasRequiredLabels
     }
 
     override def toString: String = {
       val reservedString = if (reserved) "RESERVED" else "unreserved"
       val rolesString = acceptedRoles.mkString(", ")
-      s"Considering $reservedString resources with roles {$rolesString}"
+      def labelKeyValues = requiredLabels.map { case (k, v) => s"$k: $v" }.mkString(", ")
+      val labelStrings = if (requiredLabels.nonEmpty) s" and labels $labelKeyValues" else ""
+      s"Considering $reservedString resources with roles {$rolesString}$labelStrings"
     }
   }
 

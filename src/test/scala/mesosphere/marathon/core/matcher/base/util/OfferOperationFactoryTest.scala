@@ -28,7 +28,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
 
     When("We create a reserve operation")
     val error = intercept[WrongConfigurationException] {
-      factory.reserve(Seq(Mesos.Resource.getDefaultInstance))
+      factory.reserve(Task.Id.forApp(PathId("/test")), Seq(Mesos.Resource.getDefaultInstance))
     }
 
     Then("A meaningful exception is thrown")
@@ -41,7 +41,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
 
     When("We create a reserve operation")
     val error = intercept[WrongConfigurationException] {
-      factory.reserve(Seq(Mesos.Resource.getDefaultInstance))
+      factory.reserve(Task.Id.forApp(PathId("/test")), Seq(Mesos.Resource.getDefaultInstance))
     }
 
     Then("A meaningful exception is thrown")
@@ -56,7 +56,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
     val task = MarathonTestHelper.makeOneCPUTask("123")
 
     When("We create a reserve operation")
-    val operation = factory.reserve(task.getResourcesList.asScala)
+    val operation = factory.reserve(Task.Id(task.getTaskId), task.getResourcesList.asScala)
 
     Then("The operation is as expected")
     operation.getType shouldEqual Mesos.Offer.Operation.Type.RESERVE
@@ -82,7 +82,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
     val volumes = Seq(f.localVolume("mount"))
 
     When("We create a reserve operation")
-    val operation = factory.createVolumes(volumes)
+    val operation = factory.createVolumes(Task.Id(task.getTaskId), volumes)
 
     Then("The operation is as expected")
     operation.getType shouldEqual Mesos.Offer.Operation.Type.CREATE

@@ -127,10 +127,13 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val localVolumeIdLaunched = LocalVolumeId(app.id, "persistent-volume-launched", "uuidLaunched")
     val localVolumeIdUnwanted = LocalVolumeId(app.id, "persistent-volume-unwanted", "uuidUnwanted")
     val localVolumeIdMatch = LocalVolumeId(app.id, "persistent-volume", "uuidMatch")
-    val offer = f.offerWithVolumes(localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch)
+    val reservedTask = f.residentReservedTask(app.id, localVolumeIdMatch)
+    val offer = f.offerWithVolumes(
+      reservedTask.taskId.idString, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
+    )
     val tasks = Seq(
       f.residentLaunchedTask(app.id, localVolumeIdLaunched),
-      f.residentReservedTask(app.id, localVolumeIdMatch))
+      reservedTask)
 
     When("We infer the taskOp")
     val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
@@ -154,8 +157,8 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val app = f.residentApp
     val usedVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid1")
     val offeredVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid2")
-    val offer = f.offerWithVolumes(offeredVolumeId)
     val tasks = Seq(f.residentLaunchedTask(app.id, usedVolumeId))
+    val offer = f.offerWithVolumes(tasks.head.taskId.idString, offeredVolumeId)
 
     When("We infer the taskOp")
     val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
@@ -181,7 +184,9 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     def offer = MTH.makeBasicOffer().build()
     def offerWithSpaceForLocalVolume = MTH.makeBasicOffer(disk = 1025).build()
     def insufficientOffer = MTH.makeBasicOffer(cpus = 0.01, mem = 1, disk = 0.01, beginPort = 31000, endPort = 31001).build()
-    def offerWithVolumes(localVolumeIds: LocalVolumeId*) = MTH.offerWithVolumes(localVolumeIds: _*)
+
+    def offerWithVolumes(taskId: String, localVolumeIds: LocalVolumeId*) =
+      MTH.offerWithVolumes(taskId, localVolumeIds: _*)
   }
 
 }

@@ -9,6 +9,7 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.launcher.impl.{ TaskLabels, TaskOpFactoryImpl }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ ReservationWithVolumes, LocalVolumeId }
@@ -64,17 +65,25 @@ object MarathonTestHelper {
 
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
                      beginPort: Int = 31000, endPort: Int = 32000, role: String = "*",
-                     reserved: Boolean = false): Offer.Builder = {
+                     reservation: Option[Map[String, String]] = None): Offer.Builder = {
 
-    require(role != "*" || !reserved, "reserved resources cannot have role *")
+    require(role != "*" || reservation.isEmpty, "reserved resources cannot have role *")
 
     def heedReserved(resource: Mesos.Resource): Mesos.Resource = {
-      if (reserved) {
-        val reservation = Mesos.Resource.ReservationInfo.newBuilder().setPrincipal("marathon")
-        resource.toBuilder.setReservation(reservation).build()
-      }
-      else {
-        resource
+      reservation match {
+        case Some(reservationLabels) =>
+          val labels = Mesos.Labels.newBuilder()
+          reservationLabels.foreach {
+            case (k, v) =>
+              labels.addLabels(Mesos.Label.newBuilder().setKey(k).setValue(v))
+          }
+          val reservation =
+            Mesos.Resource.ReservationInfo.newBuilder()
+              .setPrincipal("marathon")
+              .setLabels(labels)
+          resource.toBuilder.setReservation(reservation).build()
+        case None =>
+          resource
       }
     }
 
@@ -459,11 +468,12 @@ object MarathonTestHelper {
       .build()
   }
 
-  def offerWithVolumes(localVolumeIds: LocalVolumeId*) = {
+  def offerWithVolumes(taskId: String, localVolumeIds: LocalVolumeId*) = {
     import scala.collection.JavaConverters._
-    MarathonTestHelper.makeBasicOffer(reserved = true, role = "test")
-      .addAllResources(persistentVolumeResources(localVolumeIds: _*).asJava)
-      .build()
+    MarathonTestHelper.makeBasicOffer(
+      reservation = Some(TaskLabels.labelsForTask(Task.Id(taskId))),
+      role = "test"
+    ).addAllResources(persistentVolumeResources(localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumesOnly(localVolumeIds: LocalVolumeId*) = {

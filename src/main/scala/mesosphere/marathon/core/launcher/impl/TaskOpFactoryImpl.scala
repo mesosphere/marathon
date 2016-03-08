@@ -95,7 +95,10 @@ class TaskOpFactoryImpl @Inject() (
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
             offer, app, tasks,
-            ResourceSelector(config.mesosRole.get.toSet, reserved = true)
+            ResourceSelector(
+              config.mesosRole.get.toSet, reserved = true,
+              requiredLabels = TaskLabels.labelsForTask(volumeMatch.task)
+            )
           )
 
         matchingReservedResourcesWithoutVolumes.flatMap { otherResourcesMatch =>
