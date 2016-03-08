@@ -107,7 +107,7 @@ case class AppDefinition(
   /**
     * @return the disk resources required for volumes
     */
-  def volumeDiskResources: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
+  def diskForVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {

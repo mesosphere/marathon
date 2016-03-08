@@ -17,7 +17,7 @@ class ResourceMatchTest
         ScalarMatch(
           "mem", 128.0,
           consumed = Iterable(ScalarMatch.Consumption(128.0, "role1", reservation = Some(memReservation))),
-          note = None
+          scope = ScalarMatchResult.Scope.NoneDisk
         )
       ),
       portsMatch = PortsMatch(Seq(PortsMatcher.PortWithRole("role2", 80, reservation = Some(portReservation))))

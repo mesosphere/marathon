@@ -8,7 +8,6 @@ import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Resource
-import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.Matchers
 
 class ResourceMatcherTest extends MarathonSpec with Matchers {
@@ -29,14 +28,14 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, Set())
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, ResourceSelector.wildcard)
 
     resOpt should not be empty
     val res = resOpt.get
 
     res.scalarMatch(Resource.CPUS).get.roles should be(Seq("*"))
     res.scalarMatch(Resource.MEM).get.roles should be(Seq("*"))
-    res.scalarMatch(Resource.DISK).get.roles should be(Seq.empty)
+    res.scalarMatch(Resource.DISK) should be(empty)
 
     res.hostPorts should have size 2
   }
@@ -51,14 +50,14 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, Set())
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, ResourceSelector.wildcard)
 
     resOpt should not be empty
     val res = resOpt.get
 
     res.scalarMatch(Resource.CPUS).get.roles should be(Seq("*"))
     res.scalarMatch(Resource.MEM).get.roles should be(Seq("*"))
-    res.scalarMatch(Resource.DISK).get.roles should be(Seq.empty)
+    res.scalarMatch(Resource.DISK) should be(empty)
 
     res.hostPorts should have size 2
   }
@@ -172,7 +171,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
 
     res.scalarMatch(Resource.CPUS).get.roles should be(Seq("marathon"))
     res.scalarMatch(Resource.MEM).get.roles should be(Seq("marathon"))
-    res.scalarMatch(Resource.DISK).get.roles should be(Seq.empty)
+    res.scalarMatch(Resource.DISK) should be(empty)
   }
 
   test("match resources failure because of incorrect roles") {
@@ -208,7 +207,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       )
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, Set())
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, ResourceSelector.wildcard)
 
     resOpt should not be empty
   }
@@ -229,7 +228,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       )
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, Set())
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, ResourceSelector.wildcard)
 
     resOpt should be (empty)
   }
@@ -244,7 +243,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, Set())
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, ResourceSelector.wildcard)
 
     resOpt should be (empty)
   }
@@ -259,7 +258,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, Set())
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, ResourceSelector.wildcard)
 
     resOpt should be (empty)
   }
@@ -274,7 +273,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(0, 0)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, Set())
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, ResourceSelector.wildcard)
 
     resOpt should be (empty)
   }
@@ -289,7 +288,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       portDefinitions = PortDefinitions(1, 2)
     )
 
-    val resOpt = ResourceMatcher.matchResources(offer, app, Set())
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, ResourceSelector.wildcard)
 
     resOpt should be (empty)
   }

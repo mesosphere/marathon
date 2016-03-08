@@ -69,12 +69,12 @@ object ResourceMatcher {
     * for the reservation on UNRESERVED resources and once for every (re-)launch on RESERVED resources.
     *
     * If matching on RESERVED resources as specified by the ResourceSelector, resources for volumes
-    * have to matched separately (e.g. by the [[PersistentVolumeMatcher]]). If matching on UNRESERVED
-    * resources, the disk resources for the local volumes are included since they must be part of
+    * have to be matched separately (e.g. by the [[PersistentVolumeMatcher]]). If matching on UNRESERVED
+    * resources, the disk resources for the local volumes are included since they must become part of
     * the reservation.
     */
   def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Iterable[Task],
-                     selector: ResourceSelector = ResourceSelector.wildcard): Option[ResourceMatch] = {
+                     selector: ResourceSelector): Option[ResourceMatch] = {
 
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
 
@@ -82,18 +82,18 @@ object ResourceMatcher {
 
     // Local volumes only need to be matched if we are making a reservation for resident tasks --
     // that means if the resources that are matched are still unreserved.
-    val diskMatch = if (!selector.reserved && app.volumeDiskResources > 0) {
-      scalarResourceMatch(Resource.DISK, app.disk + app.volumeDiskResources, Some("including volumes"))
+    val diskMatch = if (!selector.reserved && app.diskForVolumes > 0) {
+      scalarResourceMatch(Resource.DISK, app.disk + app.diskForVolumes, ScalarMatchResult.Scope.IncludingLocalVolumes)
     }
     else {
-      scalarResourceMatch(Resource.DISK, app.disk, if (app.volumeDiskResources > 0) Some("excluding volumes") else None)
+      scalarResourceMatch(Resource.DISK, app.disk, ScalarMatchResult.Scope.ExcludingLocalVolumes)
     }
 
     val scalarMatchResults = Iterable(
-      scalarResourceMatch(Resource.CPUS, app.cpus, None),
-      scalarResourceMatch(Resource.MEM, app.mem, None),
+      scalarResourceMatch(Resource.CPUS, app.cpus, ScalarMatchResult.Scope.NoneDisk),
+      scalarResourceMatch(Resource.MEM, app.mem, ScalarMatchResult.Scope.NoneDisk),
       diskMatch
-    )
+    ).filter(_.requiredValue != 0)
 
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
 
@@ -128,7 +128,10 @@ object ResourceMatcher {
 
   private[this] def matchScalarResource(
     groupedResources: Map[Role, mutable.Buffer[Protos.Resource]], selector: ResourceSelector)(
-      name: String, requiredValue: Double, note: Option[String] = None): ScalarMatchResult = {
+      name: String, requiredValue: Double,
+      scope: ScalarMatchResult.Scope = ScalarMatchResult.Scope.NoneDisk): ScalarMatchResult = {
+
+    require(scope == ScalarMatchResult.Scope.NoneDisk || name == Resource.DISK)
 
     @tailrec
     def findMatches(
@@ -136,11 +139,11 @@ object ResourceMatcher {
       resourcesLeft: Iterable[Protos.Resource],
       resourcesConsumed: List[ScalarMatch.Consumption] = List.empty): ScalarMatchResult = {
       if (valueLeft <= 0) {
-        ScalarMatch(name, requiredValue, resourcesConsumed, note = note)
+        ScalarMatch(name, requiredValue, resourcesConsumed, scope = scope)
       }
       else {
         resourcesLeft.headOption match {
-          case None => NoMatch(name, requiredValue, requiredValue - valueLeft, note = note)
+          case None => NoMatch(name, requiredValue, requiredValue - valueLeft, scope = scope)
           case Some(nextResource) =>
             val consume = Math.min(valueLeft, nextResource.getScalar.getValue)
             val newValueLeft = valueLeft - consume

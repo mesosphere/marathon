@@ -1,5 +1,6 @@
 package mesosphere.marathon.tasks
 
+import org.apache.mesos.Protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Persistence
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
@@ -40,11 +41,113 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with 
     assert(leftOvers == Seq(MTH.scalarResource("cpus", 1.5), MTH.scalarResource("cpus", 0.5, role = "marathon")))
   }
 
-  test("resource consumption considers reservation") {
+  test("resource consumption considers reservation state") {
+    val reservationInfo = ReservationInfo.newBuilder().setPrincipal("principal").build()
+
     val disk = DiskInfo.newBuilder().setPersistence(Persistence.newBuilder().setId("persistenceId")).build()
-    val resource = MTH.scalarResource("disk", 1024, "role", None, Some(disk))
-    val resourceString = ResourceUtil.displayResources(Seq(resource), maxRanges = 10)
-    resourceString should equal("disk(role, diskId persistenceId) 1024.0")
+    val resourceWithReservation = MTH.scalarResource("disk", 1024, "role", Some(reservationInfo), Some(disk))
+    val resourceWithoutReservation = MTH.scalarResource("disk", 1024, "role", None, None)
+
+    // simple case: Only exact match contained
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation),
+      usedResources = Iterable(resourceWithReservation)
+    ) should be(empty)
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithoutReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(empty)
+
+    // ensure that the correct choice is made
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithoutReservation, resourceWithReservation),
+      usedResources = Iterable(resourceWithReservation)
+    ) should be(Seq(resourceWithoutReservation))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation, resourceWithoutReservation),
+      usedResources = Iterable(resourceWithReservation)
+    ) should be(Seq(resourceWithoutReservation))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation, resourceWithoutReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(Seq(resourceWithReservation))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithoutReservation, resourceWithReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(Seq(resourceWithReservation))
+
+    // if there is no match, leave resources unchanged
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(Seq(resourceWithReservation))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(Seq(resourceWithReservation))
+  }
+
+  test("resource consumption considers reservation labels") {
+    val reservationInfo1 = ReservationInfo.newBuilder().setPrincipal("principal").build()
+    val labels = Protos.Labels.newBuilder().addLabels(Protos.Label.newBuilder().setKey("key").setValue("value"))
+    val reservationInfo2 = ReservationInfo.newBuilder().setPrincipal("principal").setLabels(labels).build()
+
+    val resourceWithReservation1 = MTH.scalarResource("disk", 1024, "role", Some(reservationInfo1), None)
+    val resourceWithReservation2 = MTH.scalarResource("disk", 1024, "role", Some(reservationInfo2), None)
+
+    // simple case: Only exact match contained
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation1)
+    ) should be(empty)
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation2),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(empty)
+
+    // ensure that the correct choice is made
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation2, resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation1)
+    ) should be(Seq(resourceWithReservation2))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1, resourceWithReservation2),
+      usedResources = Iterable(resourceWithReservation1)
+    ) should be(Seq(resourceWithReservation2))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1, resourceWithReservation2),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(Seq(resourceWithReservation1))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation2, resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(Seq(resourceWithReservation1))
+
+    // if there is no match, leave resources unchanged
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(Seq(resourceWithReservation1))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(Seq(resourceWithReservation1))
   }
 
   test("display resources indicates reservation") {
