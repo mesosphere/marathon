@@ -9,7 +9,7 @@ import akka.testkit.{ TestKit, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Group.JoinException
-import com.twitter.common.zookeeper.{ Candidate, Group }
+import com.twitter.common.zookeeper.{ ZooKeeperClient, Candidate, Group }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.health.HealthCheckManager
@@ -78,6 +78,7 @@ class MarathonSchedulerServiceTest
   var migration: Migration = _
   var schedulerActor: ActorRef = _
   var events: EventStream = _
+  var zk: ZooKeeperClient = _
 
   before {
     probe = TestProbe()
@@ -93,6 +94,7 @@ class MarathonSchedulerServiceTest
     migration = mock[Migration]
     schedulerActor = probe.ref
     events = new EventStream()
+    zk = mock[ZooKeeperClient]
   }
 
   def driverFactory[T](provide: => SchedulerDriver): SchedulerDriverFactory = {
@@ -118,7 +120,8 @@ class MarathonSchedulerServiceTest
       system,
       migration,
       schedulerActor,
-      events
+      events,
+      zk
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
@@ -148,7 +151,8 @@ class MarathonSchedulerServiceTest
       system,
       migration,
       schedulerActor,
-      events
+      events,
+      zk
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
@@ -178,7 +182,8 @@ class MarathonSchedulerServiceTest
       system,
       migration,
       schedulerActor,
-      events
+      events,
+      zk
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
       override def newTimer() = mockTimer
@@ -216,7 +221,8 @@ class MarathonSchedulerServiceTest
       system,
       migration,
       schedulerActor,
-      events
+      events,
+      zk
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
       override def newTimer() = mockTimer
@@ -246,7 +252,8 @@ class MarathonSchedulerServiceTest
       system,
       migration,
       schedulerActor,
-      events
+      events,
+      zk
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
@@ -283,7 +290,8 @@ class MarathonSchedulerServiceTest
       system,
       migration,
       schedulerActor,
-      events
+      events,
+      zk
     ) {
       override def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = ()
     }
