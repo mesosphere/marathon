@@ -161,6 +161,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [DataMan](http://www.shurenyun.com/)
 * [DHL Parcel](https://www.dhlparcel.nl/)
 * [Disqus](https://disqus.com/)
+* [DueDil](https://www.duedil.com/)
 * [eBay](http://www.ebay.com/)
 * [The Factory](https://github.com/thefactory/)
 * [Football Radar](http://www.footballradar.com)
