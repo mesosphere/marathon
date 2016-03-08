@@ -30,7 +30,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val inferredTaskOp = f.taskOpFactory.buildTaskOp(appDefinition, offer, runningTasks)
 
     val expectedTask = Task.LaunchedEphemeral(
-      taskId = inferredTaskOp.fold(Task.Id("failure"))(_.newTask.taskId),
+      taskId = inferredTaskOp.fold(Task.Id("failure"))(_.taskId),
       agentInfo = Task.AgentInfo(
         host = "some_host",
         agentId = Some(offer.getSlaveId.getValue),
@@ -43,7 +43,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       networking = Task.HostPorts(List.empty)
     )
     assert(inferredTaskOp.isDefined, "task op is not empty")
-    assert(inferredTaskOp.get.newTask == expectedTask)
+    assert(inferredTaskOp.get.maybeNewTask.get == expectedTask)
   }
 
   test("Normal app -> None (insufficient offer)") {

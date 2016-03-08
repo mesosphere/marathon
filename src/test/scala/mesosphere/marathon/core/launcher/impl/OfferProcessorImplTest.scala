@@ -58,7 +58,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     And("the tasks have been stored")
     for (task <- tasksWithSource) {
       val ordered = inOrder(taskCreationHandler)
-      ordered.verify(taskCreationHandler).created(task.op.newTask)
+      ordered.verify(taskCreationHandler).created(task.op.maybeNewTask.get)
     }
   }
 
@@ -75,8 +75,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTaskOps(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
       val op = task.op
-      taskCreationHandler.created(op.newTask) returns Future.successful(op.newTask)
-      taskCreationHandler.terminated(op.newTask.taskId).asInstanceOf[Future[Unit]] returns
+      taskCreationHandler.created(op.maybeNewTask.get) returns Future.successful(op.maybeNewTask.get)
+      taskCreationHandler.terminated(op.taskId).asInstanceOf[Future[Unit]] returns
         Future.successful(())
     }
 
@@ -98,8 +98,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     for (task <- tasksWithSource) {
       val ordered = inOrder(taskCreationHandler)
       val op = task.op
-      ordered.verify(taskCreationHandler).created(op.newTask)
-      ordered.verify(taskCreationHandler).terminated(op.newTask.taskId)
+      ordered.verify(taskCreationHandler).created(op.maybeNewTask.get)
+      ordered.verify(taskCreationHandler).terminated(op.taskId)
     }
   }
 
@@ -123,7 +123,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTaskOps(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
       val op = task.op
-      taskCreationHandler.created(op.newTask) returns Future.successful(op.newTask)
+      taskCreationHandler.created(op.maybeNewTask.get) returns Future.successful(op.maybeNewTask.get)
       taskCreationHandler.created(op.oldTask.get) returns Future.successful(op.oldTask.get)
     }
 
@@ -145,7 +145,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     for (task <- tasksWithSource) {
       val op = task.op
       val ordered = inOrder(taskCreationHandler)
-      ordered.verify(taskCreationHandler).created(op.newTask)
+      ordered.verify(taskCreationHandler).created(op.maybeNewTask.get)
       ordered.verify(taskCreationHandler).created(op.oldTask.get)
     }
   }
@@ -203,10 +203,10 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedTaskOps(offerId, tasksWithSource))
 
     for (task <- tasksWithSource) {
-      taskCreationHandler.created(task.op.newTask) answers { args =>
+      taskCreationHandler.created(task.op.maybeNewTask.get) answers { args =>
         // simulate that stores are really slow
         clock += 1.hour
-        Future.successful(task.op.newTask)
+        Future.successful(task.op.maybeNewTask.get)
       }
       taskCreationHandler.terminated(task.op.taskId).asInstanceOf[Future[Unit]] returns
         Future.successful(Some(task.op.taskId))
@@ -231,7 +231,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     for (task <- tasksWithSource.take(1)) {
       val ordered = inOrder(taskCreationHandler)
       val op = task.op
-      ordered.verify(taskCreationHandler).created(op.newTask)
+      ordered.verify(taskCreationHandler).created(op.maybeNewTask.get)
     }
 
     And("and the second task was not stored")

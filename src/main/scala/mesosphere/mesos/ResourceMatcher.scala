@@ -1,5 +1,6 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.core.launcher.impl.ResourceLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
@@ -43,7 +44,7 @@ object ResourceMatcher {
     * @param requiredLabels only resources with the given keys/values are matched.
     */
   case class ResourceSelector(
-      acceptedRoles: Set[String], reserved: Boolean, requiredLabels: Map[String, String] = Map.empty) {
+      acceptedRoles: Set[String], reserved: Boolean, requiredLabels: ResourceLabels = ResourceLabels.empty) {
     def apply(resource: Protos.Resource): Boolean = {
       // resources with disks are matched by the VolumeMatcher or not at all
       val noAssociatedDisk = !resource.hasDisk
@@ -57,7 +58,7 @@ object ResourceMatcher {
               label.getKey -> label.getValue
             }.toMap
           }
-        requiredLabels.forall { case (k, v) => labelMap.get(k).contains(v) }
+        requiredLabels.labels.forall { case (k, v) => labelMap.get(k).contains(v) }
       }
 
       noAssociatedDisk && acceptedRoles(resource.getRole) && resource.hasReservation == reserved && hasRequiredLabels
@@ -66,8 +67,7 @@ object ResourceMatcher {
     override def toString: String = {
       val reservedString = if (reserved) "RESERVED" else "unreserved"
       val rolesString = acceptedRoles.mkString(", ")
-      def labelKeyValues = requiredLabels.map { case (k, v) => s"$k: $v" }.mkString(", ")
-      val labelStrings = if (requiredLabels.nonEmpty) s" and labels $labelKeyValues" else ""
+      val labelStrings = if (requiredLabels.labels.nonEmpty) s" and labels $requiredLabels" else ""
       s"Considering $reservedString resources with roles {$rolesString}$labelStrings"
     }
   }

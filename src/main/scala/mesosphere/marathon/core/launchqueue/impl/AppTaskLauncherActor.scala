@@ -350,8 +350,15 @@ private class AppTaskLauncherActor(
       }
 
       val taskId = taskOp.taskId
-      tasksMap += taskId -> taskOp.newTask
-      inFlightTaskOperations += taskId -> None
+      taskOp.maybeNewTask match {
+        case Some(newTask) =>
+          tasksMap += taskId -> newTask
+          // Why?
+          inFlightTaskOperations += taskId -> None
+        case None =>
+          removeTask(taskId)
+      }
+
       OfferMatcherRegistration.manageOfferMatcherStatus()
     }
 

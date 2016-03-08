@@ -48,7 +48,7 @@ class OfferOperationFactory(
         .setReservation(
           ReservationInfo.newBuilder()
             .setPrincipal(principal)
-            .setLabels(TaskLabels.mesosLabelsForTask(taskId))
+            .setLabels(TaskLabels.labelsForTask(taskId).mesosLabels)
         ).build()
     }
 
@@ -82,7 +82,7 @@ class OfferOperationFactory(
       val reservation =
         Mesos.Resource.ReservationInfo.newBuilder()
           .setPrincipal(principal)
-          .setLabels(TaskLabels.mesosLabelsForTask(taskId))
+          .setLabels(TaskLabels.labelsForTask(taskId).mesosLabels)
           .build()
 
       Mesos.Resource.newBuilder()
