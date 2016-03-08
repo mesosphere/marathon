@@ -9,10 +9,9 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.impl.{ TaskLabels, TaskOpFactoryImpl }
+import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.Task.{ LocalVolumeId, ReservationWithVolumes }
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
@@ -335,7 +334,7 @@ object MarathonTestHelper {
 
   def mininimalTask(appId: PathId): Task = mininimalTask(Task.Id.forApp(appId).idString)
   def mininimalTask(taskId: Task.Id): Task = mininimalTask(taskId.idString)
-  def mininimalTask(taskId: String, now: Timestamp = clock.now()): Task = {
+  def mininimalTask(taskId: String, now: Timestamp = clock.now()): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
@@ -349,31 +348,15 @@ object MarathonTestHelper {
     )
   }
 
-  def minimalReservedTask(appId: PathId, reservation: ReservationWithVolumes): Task =
+  def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task =
     Task.Reserved(
       taskId = Task.Id.forApp(appId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
-      state = Task.Reserved.State.New(timeout = None),
       reservation = reservation)
 
-  def mininimalLaunchedTask(taskId: String): Task.LaunchedEphemeral = {
-    val now = Timestamp.now()
-    Task.LaunchedEphemeral(
-      Task.Id(taskId),
-      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
-      appVersion = now,
-      status = Task.Status(
-        stagedAt = now,
-        startedAt = None,
-        mesosStatus = None
-      ),
-      networking = Task.NoNetworking
-    )
-  }
+  def newReservation: Task.Reservation = Task.Reservation(Seq.empty, taskReservationStateNew)
 
-  def taskReservation: Task.ReservationWithVolumes = {
-    Task.ReservationWithVolumes(Seq.empty)
-  }
+  def taskReservationStateNew = Task.Reservation.State.New(timeout = None)
 
   def taskLaunched: Task.Launched = {
     val now = Timestamp.now()
@@ -498,7 +481,7 @@ object MarathonTestHelper {
       .buildPartial()
   }
 
-  def persistentVolumeResources(localVolumeIds: LocalVolumeId*) = localVolumeIds.map { id =>
+  def persistentVolumeResources(localVolumeIds: Task.LocalVolumeId*) = localVolumeIds.map { id =>
     Mesos.Resource.newBuilder()
       .setName("disk")
       .setType(Mesos.Value.Type.SCALAR)
@@ -513,7 +496,7 @@ object MarathonTestHelper {
       .build()
   }
 
-  def offerWithVolumes(taskId: String, localVolumeIds: LocalVolumeId*) = {
+  def offerWithVolumes(taskId: String, localVolumeIds: Task.LocalVolumeId*) = {
     import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer(
       reservation = Some(TaskLabels.labelsForTask(Task.Id(taskId))),
@@ -521,7 +504,7 @@ object MarathonTestHelper {
     ).addAllResources(persistentVolumeResources(localVolumeIds: _*).asJava).build()
   }
 
-  def offerWithVolumesOnly(localVolumeIds: LocalVolumeId*) = {
+  def offerWithVolumesOnly(localVolumeIds: Task.LocalVolumeId*) = {
     import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
@@ -538,10 +521,10 @@ object MarathonTestHelper {
     )
   }
 
-  def residentReservedTask(appId: PathId, localVolumeIds: LocalVolumeId*) =
-    minimalReservedTask(appId, ReservationWithVolumes(localVolumeIds))
+  def residentReservedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) =
+    minimalReservedTask(appId, Task.Reservation(localVolumeIds, taskReservationStateNew))
 
-  def residentLaunchedTask(appId: PathId, localVolumeIds: LocalVolumeId*) = {
+  def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
       taskId = Task.Id.forApp(appId),
@@ -553,7 +536,7 @@ object MarathonTestHelper {
         mesosStatus = None
       ),
       networking = Task.NoNetworking,
-      reservation = ReservationWithVolumes(localVolumeIds))
+      reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
   }
 
   def mesosContainerWithPersistentVolume = Container(

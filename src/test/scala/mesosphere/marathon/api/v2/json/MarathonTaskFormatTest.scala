@@ -1,9 +1,8 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{ LaunchedOnReservation, NetworkInfoList, NoNetworking, ReservationWithVolumes }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.{ Protos => MesosProtos }
 
@@ -22,22 +21,24 @@ class MarathonTaskFormatTest extends MarathonSpec {
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       appVersion = time,
       status = Task.Status(time, None),
-      networking = NoNetworking)
+      networking = Task.NoNetworking)
 
     val taskWithMultipleIPs = new Task.LaunchedEphemeral(
       taskId = Task.Id("/foo/bar"),
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       appVersion = time,
       status = Task.Status(time, None),
-      networking = NetworkInfoList(network))
+      networking = Task.NetworkInfoList(network))
 
-    val taskWithLocalVolumes = new LaunchedOnReservation(
+    val taskWithLocalVolumes = new Task.LaunchedOnReservation(
       taskId = Task.Id("/foo/bar"),
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       appVersion = time,
       status = Task.Status(time, Some(time)),
-      networking = NoNetworking,
-      reservation = ReservationWithVolumes(Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten))
+      networking = Task.NoNetworking,
+      reservation = Task.Reservation(
+        Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten,
+        MarathonTestHelper.taskReservationStateNew))
   }
 
   test("JSON serialization of a Task without IPs") {

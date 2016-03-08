@@ -5,8 +5,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
-import mesosphere.marathon.core.task.Task.{ LocalVolume, LocalVolumeId, ReservationWithVolumes }
-import mesosphere.marathon.state.{ AppDefinition, PersistentVolume }
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import org.apache.mesos.{ Protos => Mesos }
@@ -147,8 +146,8 @@ class TaskOpFactoryImpl @Inject() (
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val localVolumes: Iterable[LocalVolume] = app.persistentVolumes.map { volume =>
-      LocalVolume(LocalVolumeId(app.id, volume), volume)
+    val localVolumes: Iterable[Task.LocalVolume] = app.persistentVolumes.map { volume =>
+      Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume)
     }
     val persistentVolumeIds = localVolumes.map(_.id)
     val task = Task.Reserved(
@@ -158,8 +157,7 @@ class TaskOpFactoryImpl @Inject() (
         agentId = Some(offer.getSlaveId.getValue),
         attributes = offer.getAttributesList.asScala
       ),
-      state = Task.Reserved.State.New(timeout = None),
-      reservation = ReservationWithVolumes(persistentVolumeIds)
+      reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = None))
     )
     taskOperationFactory.reserveAndCreateVolumes(task, resourceMatch.resources, localVolumes)
   }

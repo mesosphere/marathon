@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.{ SerializationFailedException, MarathonTestHelper }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.{ MarathonTestHelper, SerializationFailedException }
 import org.apache.mesos.Protos.{ Attribute, TaskStatus }
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
@@ -149,56 +149,11 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     serialized should equal(proto)
   }
 
-  test("Failure case: LaunchedOnReservation has ReservedState") {
-    val f = new Fixture
-
-    Given("a LaunchedOnReservation proto with a reservedState")
-    val proto = f.Resident.launchedOnReservationProtoWithReservedState
-
-    When("We convert it to a task")
-    val error = intercept[SerializationFailedException] {
-      TaskSerializer.fromProto(proto)
-    }
-
-    Then("We get a SerializationFailedException")
-    error.message should startWith("Unable to deserialize")
-  }
-
-  test("Failure case: LaunchedEphemeral has ReservedState") {
-    val f = new Fixture
-
-    Given("a LaunchedEphemeral proto with a reservedState")
-    val proto = f.Resident.launchedEphemeralWithReservedState
-
-    When("We convert it to a task")
-    val error = intercept[SerializationFailedException] {
-      TaskSerializer.fromProto(proto)
-    }
-
-    Then("We get a SerializationFailedException")
-    error.message should startWith("Unable to deserialize")
-  }
-
   test("Failure case: Reserved has no Reservation") {
     val f = new Fixture
 
     Given("a Reserved proto missing reservation")
     val proto = f.Resident.reservedProtoWithoutReservation
-
-    When("We convert it to a task")
-    val error = intercept[SerializationFailedException] {
-      TaskSerializer.fromProto(proto)
-    }
-
-    Then("We get a SerializationFailedException")
-    error.message should startWith("Unable to deserialize")
-  }
-
-  test("Failure case: Reserved has no ReservedState") {
-    val f = new Fixture
-
-    Given("a Reserved proto missing reserved state")
-    val proto = f.Resident.reservedProtoWithoutReservedState
 
     When("We convert it to a task")
     val error = intercept[SerializationFailedException] {
@@ -240,7 +195,9 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
           mesosStatus = Some(sampleTaskStatus)
         ),
         networking = Task.NoNetworking,
-        reservation = Task.ReservationWithVolumes(Seq(LocalVolumeId(appId, "my-volume", "uuid-123")))
+        reservation = Task.Reservation(
+          Seq(LocalVolumeId(appId, "my-volume", "uuid-123")),
+          Task.Reservation.State.Launched)
       )
 
     val completeTask =
@@ -254,8 +211,10 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setVersion(appVersion.toString)
         .setStatus(sampleTaskStatus)
         .setSlaveId(sampleSlaveId)
-        .setReservation(MarathonTask.Reservation.newBuilder.addLocalVolumeIds(
-          LocalVolumeId(appId, "my-volume", "uuid-123").idString))
+        .setReservation(MarathonTask.Reservation.newBuilder
+          .addLocalVolumeIds(LocalVolumeId(appId, "my-volume", "uuid-123").idString)
+          .setState(MarathonTask.Reservation.State.newBuilder()
+            .setType(MarathonTask.Reservation.State.Type.Launched)))
         .build()
 
     private[this] def attribute(name: String, textValue: String): MesosProtos.Attribute = {
@@ -287,22 +246,21 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setHost(host)
         .setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))
         .addAllAttributes(attributes.asJava)
-        .setReservedState(MarathonTask.ReservedState.newBuilder()
-          .setType(MarathonTask.ReservedState.Type.New)
-          .setTimeout(MarathonTask.ReservedState.Timeout.newBuilder()
-            .setInitiated(now.toDateTime.getMillis)
-            .setDeadline((now + 1.minute).toDateTime.getMillis)
-            .setReason(MarathonTask.ReservedState.Timeout.Reason.ReservationTimeout)))
         .setReservation(MarathonTask.Reservation.newBuilder()
-          .addAllLocalVolumeIds(localVolumeIds.map(_.idString).asJava))
+          .addAllLocalVolumeIds(localVolumeIds.map(_.idString).asJava)
+          .setState(MarathonTask.Reservation.State.newBuilder()
+            .setType(MarathonTask.Reservation.State.Type.New)
+            .setTimeout(MarathonTask.Reservation.State.Timeout.newBuilder()
+              .setInitiated(now.toDateTime.getMillis)
+              .setDeadline((now + 1.minute).toDateTime.getMillis)
+              .setReason(MarathonTask.Reservation.State.Timeout.Reason.ReservationTimeout))))
         .build()
 
       def reservedState = Task.Reserved(
         Task.Id(taskId.idString),
         Task.AgentInfo(host = host, agentId = Some(agentId), attributes),
-        state = Task.Reserved.State.New(Some(Task.Reserved.Timeout(
-          initiated = now, deadline = now + 1.minute, reason = Task.Reserved.Timeout.Reason.ReservationTimeout))),
-        reservation = Task.ReservationWithVolumes(localVolumeIds)
+        reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.New(Some(Task.Reservation.Timeout(
+          initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout))))
       )
 
       def launchedEphemeralProto = MarathonTask.newBuilder()
@@ -319,7 +277,9 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
       def launchedOnReservationProto = launchedEphemeralProto.toBuilder
         .setReservation(MarathonTask.Reservation.newBuilder()
-          .addAllLocalVolumeIds(localVolumeIds.map(_.idString).asJava))
+          .addAllLocalVolumeIds(localVolumeIds.map(_.idString).asJava)
+          .setState(MarathonTask.Reservation.State.newBuilder()
+            .setType(MarathonTask.Reservation.State.Type.Launched)))
         .build()
 
       def launchedOnReservationState = Task.LaunchedOnReservation(
@@ -328,30 +288,10 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         appVersion,
         status,
         hostPorts,
-        Task.ReservationWithVolumes(localVolumeIds)
+        Task.Reservation(localVolumeIds, Task.Reservation.State.Launched)
       )
 
-      def launchedOnReservationProtoWithReservedState = launchedOnReservationProto.toBuilder
-        .setReservedState(MarathonTask.ReservedState.newBuilder()
-          .setType(MarathonTask.ReservedState.Type.New)
-          .setTimeout(MarathonTask.ReservedState.Timeout.newBuilder()
-            .setInitiated(now.toDateTime.getMillis)
-            .setDeadline((now + 1.minute).toDateTime.getMillis)
-            .setReason(MarathonTask.ReservedState.Timeout.Reason.ReservationTimeout)))
-        .build()
-
-      def launchedEphemeralWithReservedState = launchedEphemeralProto.toBuilder
-        .setReservedState(MarathonTask.ReservedState.newBuilder()
-          .setType(MarathonTask.ReservedState.Type.New)
-          .setTimeout(MarathonTask.ReservedState.Timeout.newBuilder()
-            .setInitiated(now.toDateTime.getMillis)
-            .setDeadline((now + 1.minute).toDateTime.getMillis)
-            .setReason(MarathonTask.ReservedState.Timeout.Reason.ReservationTimeout)))
-        .build()
-
       def reservedProtoWithoutReservation = reservedProto.toBuilder.clearReservation().build()
-
-      def reservedProtoWithoutReservedState = reservedProto.toBuilder.clearReservedState().build()
     }
   }
 }

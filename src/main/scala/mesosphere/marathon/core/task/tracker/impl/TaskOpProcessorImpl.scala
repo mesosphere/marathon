@@ -50,7 +50,9 @@ private[tracker] object TaskOpProcessorImpl {
         case TaskStateChange.Update(updatedTask) => Action.Update(updatedTask)
         case TaskStateChange.Expunge             => Action.Expunge
         case TaskStateChange.NoChange            => Action.Noop
-        case TaskStateChange.Failure(_)          => Action.Noop
+        case TaskStateChange.Failure(cause) =>
+          log.warn(s"Task state update failed for ${task.taskId}. Reason: $cause")
+          Action.Noop
       }
     }
   }

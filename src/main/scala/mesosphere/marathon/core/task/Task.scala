@@ -17,9 +17,10 @@ import org.slf4j.LoggerFactory
 sealed trait Task {
   def taskId: Task.Id
   def agentInfo: Task.AgentInfo
-  def reservationWithVolumes: Option[Task.ReservationWithVolumes]
+  def reservationWithVolumes: Option[Task.Reservation]
   def launched: Option[Task.Launched]
 
+  /** update the task based on the given trigger - depending on its state the task will decide what should happen */
   def update(update: TaskStateOp): TaskStateChange
 
   def appId: PathId = taskId.appId
@@ -64,20 +65,6 @@ sealed trait Task {
 }
 
 object Task {
-  private[this] def newHealthStatus(
-    current: MesosProtos.TaskStatus,
-    update: MesosProtos.TaskStatus): Option[MesosProtos.TaskStatus] = {
-
-    val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
-    val changed = healthy || current.getState != update.getState
-    if (changed) {
-      Some(update)
-    }
-    else {
-      None
-    }
-  }
-
   /**
     * A LaunchedEphemeral task is a stateless task that does not consume reserved resources or persistent volumes.
     */
@@ -88,11 +75,11 @@ object Task {
       status: Status,
       networking: Networking) extends Task {
 
-    private[this] val log = LoggerFactory.getLogger(getClass)
+    import LaunchedEphemeral.log
 
-    override val reservationWithVolumes: Option[ReservationWithVolumes] = None
+    override def reservationWithVolumes: Option[Reservation] = None
 
-    override val launched: Option[Launched] = Some(Task.Launched(appVersion, status, networking))
+    override def launched: Option[Launched] = Some(Task.Launched(appVersion, status, networking))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -109,31 +96,31 @@ object Task {
       case TaskStateOp.MesosUpdate(MarathonTaskStatus.Terminal(_), now) =>
         TaskStateChange.Expunge
 
-      // case 3: health updated
+      // case 3: health or state updated
       case TaskStateOp.MesosUpdate(taskStatus, now) =>
-        val healthChange = for {
+        val healthOrStateChange = for {
           current <- status.mesosStatus
           update <- taskStatus.mesosStatus
-          newStatus <- newHealthStatus(current, update)
+          newStatus <- updatedHealthOrState(current, update)
         } yield TaskStateChange.Update(copy(status = status.copy(mesosStatus = Some(newStatus))))
 
-        healthChange.getOrElse{
+        healthOrStateChange.getOrElse{
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
           TaskStateChange.NoChange
         }
 
       // failure case: Launch
       case _: TaskStateOp.Launch =>
-        val msg = s"Unable to handle Launch op on LaunchedEphemeral $taskId"
-        log.error(msg, taskId)
-        TaskStateChange.Failure(msg)
+        TaskStateChange.Failure("Unable to handle Launch op on LaunchedEphemeral")
 
       // failure case: Timeout
-      case TaskStateOp.Timeout =>
-        val msg = s"Unable to handle Timeout op on LaunchedEphemeral $taskId"
-        log.error(msg)
-        TaskStateChange.Failure(msg)
+      case TaskStateOp.ReservationTimeout =>
+        TaskStateChange.Failure("Unable to handle Timeout op on LaunchedEphemeral")
     }
+  }
+
+  object LaunchedEphemeral {
+    private val log = LoggerFactory.getLogger(getClass)
   }
 
   /**
@@ -146,64 +133,23 @@ object Task {
   case class Reserved(
       taskId: Task.Id,
       agentInfo: AgentInfo,
-      state: Reserved.State,
-      reservation: ReservationWithVolumes) extends Task {
+      reservation: Reservation) extends Task {
 
-    private[this] val log = LoggerFactory.getLogger(getClass)
+    override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override val reservationWithVolumes: Option[ReservationWithVolumes] = Some(reservation)
-
-    override val launched: Option[Launched] = None
+    override def launched: Option[Launched] = None
 
     override def update(update: TaskStateOp): TaskStateChange = update match {
       case TaskStateOp.Launch(appVersion, status, networking) =>
         TaskStateChange.Update(LaunchedOnReservation(
           taskId, agentInfo, appVersion, status, networking, reservation))
 
-      case TaskStateOp.Timeout =>
+      case TaskStateOp.ReservationTimeout =>
         TaskStateChange.Expunge
 
       // failure case: MesosUpdate
       case _: TaskStateOp.MesosUpdate =>
-        val msg = s"Unable to handle MesosUpdate op on Reserved task $taskId"
-        log.error(msg)
-        TaskStateChange.Failure(msg)
-    }
-  }
-
-  object Reserved {
-
-    sealed trait State {
-      /** Defines when this state should time out and for which reason */
-      def timeout: Option[Timeout]
-    }
-    object State {
-      /** A newly reserved Task */
-      case class New(timeout: Option[Timeout]) extends State
-      /** A ResidentTask that has been running before but terminated and can be relaunched */
-      case class Suspended(timeout: Option[Timeout]) extends State
-      /** A ResidentTask whose reservation and persistent volumes are being destroyed */
-      case class Garbage(timeout: Option[Timeout]) extends State
-      /** An unknown task created because of unknown reservations/persistent volumes */
-      case class Unknown(timeout: Option[Timeout]) extends State
-    }
-
-    /**
-      * A timeout that eventually leads to a state transition
-      * @param initiated When this timeout was setup
-      * @param deadline When this timeout should become effective
-      * @param reason The reason why this timeout was set up
-      */
-    case class Timeout(initiated: Timestamp, deadline: Timestamp, reason: Timeout.Reason)
-
-    object Timeout {
-      sealed trait Reason
-      object Reason {
-        /** A timeout because the task could not be relaunched */
-        case object RelaunchEscalationTimeout extends Reason
-        /** A timeout because we got no ack for reserved resources or persistent volumes */
-        case object ReservationTimeout extends Reason
-      }
+        TaskStateChange.Failure("Unable to handle MesosUpdate op on Reserved task")
     }
   }
 
@@ -213,13 +159,13 @@ object Task {
       appVersion: Timestamp,
       status: Status,
       networking: Networking,
-      reservation: ReservationWithVolumes) extends Task {
+      reservation: Reservation) extends Task {
 
-    private[this] val log = LoggerFactory.getLogger(getClass)
+    import LaunchedOnReservation.log
 
-    override lazy val reservationWithVolumes: Option[ReservationWithVolumes] = Some(reservation)
+    override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override lazy val launched: Option[Launched] = Some(Task.Launched(appVersion, status, networking))
+    override def launched: Option[Launched] = Some(Task.Launched(appVersion, status, networking))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -238,34 +184,48 @@ object Task {
         TaskStateChange.Update(Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
-          state = Task.Reserved.State.Suspended(timeout = None),
-          reservation = reservation
+          reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None))
         ))
 
-      // case 3: health updated
+      // case 3: health or state updated
       case TaskStateOp.MesosUpdate(taskStatus, now) =>
-        val healthChange = for {
+        val healthOrStateChange = for {
           current <- status.mesosStatus
           update <- taskStatus.mesosStatus
-          newStatus <- newHealthStatus(current, update)
+          newStatus <- updatedHealthOrState(current, update)
         } yield TaskStateChange.Update(copy(status = status.copy(mesosStatus = Some(newStatus))))
 
-        healthChange.getOrElse{
+        healthOrStateChange.getOrElse{
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
           TaskStateChange.NoChange
         }
 
       // failure case: Launch
       case _: TaskStateOp.Launch =>
-        val msg = s"Unable to handle Launch op on LaunchedOnReservation $taskId}"
-        log.error(msg)
-        TaskStateChange.Failure(msg)
+        TaskStateChange.Failure("Unable to handle Launch op on LaunchedOnReservation}")
 
       // failure case: Timeout
-      case TaskStateOp.Timeout =>
-        val msg = s"Unable to handle Timeout op on LaunchedOnReservation $taskId"
-        log.error(msg)
-        TaskStateChange.Failure(msg)
+      case TaskStateOp.ReservationTimeout =>
+        TaskStateChange.Failure("Unable to handle Timeout op on LaunchedOnReservation")
+    }
+  }
+
+  object LaunchedOnReservation {
+    private val log = LoggerFactory.getLogger(getClass)
+  }
+
+  /** returns the new status if the health status has been added or changed, or if the state changed */
+  private[this] def updatedHealthOrState(
+    current: MesosProtos.TaskStatus,
+    update: MesosProtos.TaskStatus): Option[MesosProtos.TaskStatus] = {
+
+    val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
+    val changed = healthy || current.getState != update.getState
+    if (changed) {
+      Some(update)
+    }
+    else {
+      None
     }
   }
 
@@ -301,7 +261,47 @@ object Task {
     * Represents a reservation for all resources that are needed for launching a task
     * and associated persistent local volumes.
     */
-  case class ReservationWithVolumes(volumeIds: Iterable[LocalVolumeId])
+  case class Reservation(volumeIds: Iterable[LocalVolumeId], state: Reservation.State)
+
+  object Reservation {
+    sealed trait State {
+      /** Defines when this state should time out and for which reason */
+      def timeout: Option[Timeout]
+    }
+    object State {
+      /** A newly reserved resident task */
+      case class New(timeout: Option[Timeout]) extends State
+      /** A launched resident task, never has a timeout */
+      case object Launched extends State {
+        override def timeout: Option[Timeout] = None
+      }
+      /** A resident task that has been running before but terminated and can be relaunched */
+      case class Suspended(timeout: Option[Timeout]) extends State
+      /** A resident task whose reservation and persistent volumes are being destroyed */
+      case class Garbage(timeout: Option[Timeout]) extends State
+      /** An unknown resident task created because of unknown reservations/persistent volumes */
+      case class Unknown(timeout: Option[Timeout]) extends State
+    }
+
+    /**
+      * A timeout that eventually leads to a state transition
+      * @param initiated When this timeout was setup
+      * @param deadline When this timeout should become effective
+      * @param reason The reason why this timeout was set up
+      */
+    case class Timeout(initiated: Timestamp, deadline: Timestamp, reason: Timeout.Reason)
+
+    object Timeout {
+      sealed trait Reason
+      object Reason {
+        /** A timeout because the task could not be relaunched */
+        case object RelaunchEscalationTimeout extends Reason
+        /** A timeout because we got no ack for reserved resources or persistent volumes */
+        case object ReservationTimeout extends Reason
+      }
+    }
+
+  }
 
   case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)
 

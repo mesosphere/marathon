@@ -172,7 +172,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
-    def normalLaunchedTask(appId: PathId) = MTH.mininimalLaunchedTask(appId.toString)
+    def normalLaunchedTask(appId: PathId) = MTH.mininimalTask(appId.toString)
     def residentReservedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentReservedTask(appId, volumeIds: _*)
     def residentLaunchedTask(appId: PathId, volumeIds: LocalVolumeId*) = MTH.residentLaunchedTask(appId, volumeIds: _*)
     def offer = MTH.makeBasicOffer().build()

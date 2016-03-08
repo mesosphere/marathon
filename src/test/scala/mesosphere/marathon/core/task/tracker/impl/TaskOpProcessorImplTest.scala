@@ -333,7 +333,7 @@ class TaskOpProcessorImplTest
     val now = Timestamp.now()
     val f = new Fixture
     val appId = PathId("/app")
-    val unlaunched: Task = minimalReservedTask(appId, taskReservation)
+    val unlaunched: Task = minimalReservedTask(appId, newReservation)
     val launched: Task = f.toLaunched(unlaunched, taskLaunchedOp)
     val marathonTask = unlaunched.marathonTask
     val taskId = launched.taskId.mesosTaskId.getValue

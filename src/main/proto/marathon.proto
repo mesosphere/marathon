@@ -92,27 +92,30 @@ message ResourceRoles {
 
 message MarathonTask {
   message Reservation {
-    repeated string local_volume_ids = 1;
-  }
-  message ReservedState {
-    enum Type {
-      New = 1;
-      Suspended = 2;
-      Garbage = 3;
-      Unknown = 4;
-    }
-    message Timeout {
-      enum Reason {
-        RelaunchEscalationTimeout = 1;
-        ReservationTimeout = 2;
+    message State {
+      enum Type {
+        New = 1;
+        Launched = 2;
+        Suspended = 3;
+        Garbage = 4;
+        Unknown = 5;
       }
+      message Timeout {
+        enum Reason {
+          RelaunchEscalationTimeout = 1;
+          ReservationTimeout = 2;
+        }
 
-      required int64 initiated = 1;
-      required int64 deadline = 2;
-      required Reason reason = 3;
+        required int64 initiated = 1;
+        required int64 deadline = 2;
+        required Reason reason = 3;
+      }
+      required Type type = 1;
+      optional Timeout timeout = 2;
     }
-    required Type type = 1;
-    optional Timeout timeout = 2;
+
+    repeated string local_volume_ids = 1;
+    required State state = 2;
   }
 
   required string id = 1;
@@ -127,7 +130,6 @@ message MarathonTask {
   optional mesos.SlaveID slaveId = 10;
   repeated mesos.NetworkInfo networks = 11;
   optional Reservation reservation = 12; // since 0.16, a list of volumes can be associated with the task ID
-  optional ReservedState reserved_state = 13;
 }
 
 message MarathonApp {
