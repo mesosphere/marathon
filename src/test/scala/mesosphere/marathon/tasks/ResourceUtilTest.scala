@@ -1,10 +1,14 @@
 package mesosphere.marathon.tasks
 
+import org.apache.mesos.Protos
+import org.apache.mesos.Protos.Resource.DiskInfo.Persistence
+import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
-import org.scalatest.{ Assertions, GivenWhenThen, FunSuite }
+import org.scalatest.{ Matchers, Assertions, GivenWhenThen, FunSuite }
 import scala.collection.JavaConverters._
+import mesosphere.marathon.{ MarathonTestHelper => MTH }
 
-class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions {
+class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions with Matchers {
   test("no base resources") {
     val leftOvers = ResourceUtil.consumeResources(
       Seq(),
@@ -15,26 +19,150 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions {
 
   test("resource mix") {
     val leftOvers = ResourceUtil.consumeResources(
-      Seq(scalar("cpus", 3), ports("ports", 2 to 20), set("labels", Set("a", "b"))),
-      Seq(scalar("cpus", 2), ports("ports", 2 to 12), set("labels", Set("a")))
+      Seq(MTH.scalarResource("cpus", 3), ports("ports", 2 to 20), set("labels", Set("a", "b"))),
+      Seq(MTH.scalarResource("cpus", 2), ports("ports", 2 to 12), set("labels", Set("a")))
     )
-    assert(leftOvers == Seq(scalar("cpus", 1), ports("ports", 13 to 20), set("labels", Set("b"))))
+    assert(leftOvers == Seq(MTH.scalarResource("cpus", 1), ports("ports", 13 to 20), set("labels", Set("b"))))
   }
 
   test("resource repeated consumed resources with the same name/role") {
     val leftOvers = ResourceUtil.consumeResources(
-      Seq(scalar("cpus", 3)),
-      Seq(scalar("cpus", 2), scalar("cpus", 1))
+      Seq(MTH.scalarResource("cpus", 3)),
+      Seq(MTH.scalarResource("cpus", 2), MTH.scalarResource("cpus", 1))
     )
     assert(leftOvers == Seq())
   }
 
   test("resource consumption considers roles") {
     val leftOvers = ResourceUtil.consumeResources(
-      Seq(scalar("cpus", 2), scalar("cpus", 2, role = "marathon")),
-      Seq(scalar("cpus", 0.5), scalar("cpus", 1, role = "marathon"), scalar("cpus", 0.5, role = "marathon"))
+      Seq(MTH.scalarResource("cpus", 2), MTH.scalarResource("cpus", 2, role = "marathon")),
+      Seq(MTH.scalarResource("cpus", 0.5), MTH.scalarResource("cpus", 1, role = "marathon"), MTH.scalarResource("cpus", 0.5, role = "marathon"))
     )
-    assert(leftOvers == Seq(scalar("cpus", 1.5), scalar("cpus", 0.5, role = "marathon")))
+    assert(leftOvers == Seq(MTH.scalarResource("cpus", 1.5), MTH.scalarResource("cpus", 0.5, role = "marathon")))
+  }
+
+  test("resource consumption considers reservation state") {
+    val reservationInfo = ReservationInfo.newBuilder().setPrincipal("principal").build()
+
+    val disk = DiskInfo.newBuilder().setPersistence(Persistence.newBuilder().setId("persistenceId")).build()
+    val resourceWithReservation = MTH.scalarResource("disk", 1024, "role", Some(reservationInfo), Some(disk))
+    val resourceWithoutReservation = MTH.scalarResource("disk", 1024, "role", None, None)
+
+    // simple case: Only exact match contained
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation),
+      usedResources = Iterable(resourceWithReservation)
+    ) should be(empty)
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithoutReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(empty)
+
+    // ensure that the correct choice is made
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithoutReservation, resourceWithReservation),
+      usedResources = Iterable(resourceWithReservation)
+    ) should be(Seq(resourceWithoutReservation))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation, resourceWithoutReservation),
+      usedResources = Iterable(resourceWithReservation)
+    ) should be(Seq(resourceWithoutReservation))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation, resourceWithoutReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(Seq(resourceWithReservation))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithoutReservation, resourceWithReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(Seq(resourceWithReservation))
+
+    // if there is no match, leave resources unchanged
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(Seq(resourceWithReservation))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation),
+      usedResources = Iterable(resourceWithoutReservation)
+    ) should be(Seq(resourceWithReservation))
+  }
+
+  test("resource consumption considers reservation labels") {
+    val reservationInfo1 = ReservationInfo.newBuilder().setPrincipal("principal").build()
+    val labels = Protos.Labels.newBuilder().addLabels(Protos.Label.newBuilder().setKey("key").setValue("value"))
+    val reservationInfo2 = ReservationInfo.newBuilder().setPrincipal("principal").setLabels(labels).build()
+
+    val resourceWithReservation1 = MTH.scalarResource("disk", 1024, "role", Some(reservationInfo1), None)
+    val resourceWithReservation2 = MTH.scalarResource("disk", 1024, "role", Some(reservationInfo2), None)
+
+    // simple case: Only exact match contained
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation1)
+    ) should be(empty)
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation2),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(empty)
+
+    // ensure that the correct choice is made
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation2, resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation1)
+    ) should be(Seq(resourceWithReservation2))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1, resourceWithReservation2),
+      usedResources = Iterable(resourceWithReservation1)
+    ) should be(Seq(resourceWithReservation2))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1, resourceWithReservation2),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(Seq(resourceWithReservation1))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation2, resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(Seq(resourceWithReservation1))
+
+    // if there is no match, leave resources unchanged
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(Seq(resourceWithReservation1))
+
+    ResourceUtil.consumeResources(
+      resources = Iterable(resourceWithReservation1),
+      usedResources = Iterable(resourceWithReservation2)
+    ) should be(Seq(resourceWithReservation1))
+  }
+
+  test("display resources indicates reservation") {
+    val reservationInfo = ReservationInfo.newBuilder().setPrincipal("principal").build()
+    val resource = MTH.scalarResource("disk", 1024, "role", Some(reservationInfo), None)
+    val resourceString = ResourceUtil.displayResources(Seq(resource), maxRanges = 10)
+    resourceString should equal("disk(role, RESERVED for principal) 1024.0")
+  }
+
+  test("display resources displays disk and reservation info") {
+    val reservationInfo = ReservationInfo.newBuilder().setPrincipal("principal").build()
+    val disk = DiskInfo.newBuilder().setPersistence(Persistence.newBuilder().setId("persistenceId")).build()
+    val resource = MTH.scalarResource("disk", 1024, "role", Some(reservationInfo), Some(disk))
+    val resourceString = ResourceUtil.displayResources(Seq(resource), maxRanges = 10)
+    resourceString should equal("disk(role, RESERVED for principal, diskId persistenceId) 1024.0")
   }
 
   // in the middle
@@ -121,21 +249,11 @@ class ResourceUtilTest extends FunSuite with GivenWhenThen with Assertions {
 
   private[this] def scalarTest(consumedResource: Double, baseResource: Double, expectedResult: Option[Double]): Unit = {
     test(s"consuming scalar resource $consumedResource from $baseResource results in $expectedResult") {
-      val r1 = scalar("cpus", consumedResource)
-      val r2 = scalar("cpus", baseResource)
-      val r3 = expectedResult.map(scalar("cpus", _))
+      val r1 = MTH.scalarResource("cpus", consumedResource)
+      val r2 = MTH.scalarResource("cpus", baseResource)
+      val r3 = expectedResult.map(MTH.scalarResource("cpus", _))
       val result = ResourceUtil.consumeResource(r2, r1)
       assert(result == r3)
     }
-  }
-
-  private[this] def scalar(name: String, d: Double, role: String = "*"): Resource = {
-    Resource
-      .newBuilder()
-      .setName(name)
-      .setType(Value.Type.SCALAR)
-      .setScalar(Value.Scalar.newBuilder().setValue(d))
-      .setRole(role)
-      .build()
   }
 }

@@ -7,6 +7,7 @@ import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ LocalVolume, LocalVolumeId, ReservationWithVolumes }
 import mesosphere.marathon.state.{ AppDefinition, PersistentVolume }
+import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
@@ -87,23 +88,34 @@ class TaskOpFactoryImpl @Inject() (
      *  - schedule a ReserveAndCreate TaskOp
      */
 
-    lazy val matchingVolumes = PersistentVolumeMatcher.matchVolumes(offer, app, waitingTasks)
-    lazy val matchingResources = ResourceMatcher.matchResources(offer, app, tasks, acceptedResourceRoles)
+    def maybeLaunchOnReservation = if (needToLaunch) {
+      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, app, waitingTasks)
 
-    val taskOp: Option[TaskOp] = if (needToLaunch && matchingVolumes.isDefined && matchingResources.isDefined) {
-      launch(app, offer, matchingVolumes.get.task, matchingResources, matchingVolumes)
-    }
-    else if (needToReserve && matchingResources.isDefined) {
-      matchingResources.map(resourceMatch => reserveAndCreateVolumes(app, offer, resourceMatch))
-    }
-    else {
-      None
-    }
+      maybeVolumeMatch.flatMap { volumeMatch =>
+        val matchingReservedResourcesWithoutVolumes =
+          ResourceMatcher.matchResources(
+            offer, app, tasks,
+            ResourceSelector(config.mesosRole.get.toSet, reserved = true)
+          )
 
-    taskOp
+        matchingReservedResourcesWithoutVolumes.flatMap { otherResourcesMatch =>
+          launchOnReservation(app, offer, volumeMatch.task, matchingReservedResourcesWithoutVolumes, maybeVolumeMatch)
+        }
+      }
+    }
+    else None
+
+    def maybeReserveAndCreateVolumes = if (needToReserve) {
+      val matchingResourcesForReservation =
+        ResourceMatcher.matchResources(offer, app, tasks, ResourceSelector(acceptedResourceRoles, reserved = false))
+      matchingResourcesForReservation.map(resourceMatch => reserveAndCreateVolumes(app, offer, resourceMatch))
+    }
+    else None
+
+    maybeLaunchOnReservation orElse maybeReserveAndCreateVolumes
   }
 
-  private[this] def launch(
+  private[this] def launchOnReservation(
     app: AppDefinition,
     offer: Mesos.Offer,
     task: Task,
@@ -138,11 +150,7 @@ class TaskOpFactoryImpl @Inject() (
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val persistentVolumes = app.container.fold(Seq.empty[PersistentVolume])(_.volumes.collect{
-      case volume @ PersistentVolume(_, _, _) => volume
-    })
-    val resources = new TaskBuilder(app, Task.Id.forApp, config).getResources(resourceMatch, persistentVolumes)
-    val localVolumes: Iterable[LocalVolume] = persistentVolumes.map { volume =>
+    val localVolumes: Iterable[LocalVolume] = app.persistentVolumes.map { volume =>
       LocalVolume(LocalVolumeId(app.id, volume), volume)
     }
     val persistentVolumeIds = localVolumes.map(_.id)
@@ -156,7 +164,7 @@ class TaskOpFactoryImpl @Inject() (
       launched = None,
       reservationWithVolumes = Some(ReservationWithVolumes(persistentVolumeIds))
     )
-    taskOperationFactory.reserveAndCreateVolumes(task, resources, localVolumes)
+    taskOperationFactory.reserveAndCreateVolumes(task, resourceMatch.resources, localVolumes)
   }
 
 }

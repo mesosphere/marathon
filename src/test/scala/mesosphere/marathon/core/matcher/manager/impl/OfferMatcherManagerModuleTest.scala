@@ -15,7 +15,7 @@ import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.test.MarathonShutdownHookSupport
 import org.apache.mesos.Protos.{ Offer, TaskInfo }
-import org.scalatest.{ BeforeAndAfter, FunSuite }
+import org.scalatest.{ Matchers, BeforeAndAfter, FunSuite }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -23,7 +23,7 @@ import scala.concurrent.{ Await, Future }
 import scala.util.Random
 import scala.collection.JavaConverters._
 
-class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with MarathonShutdownHookSupport {
+class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with MarathonShutdownHookSupport with Matchers {
 
   // FIXME: Missing Tests
   // Adding matcher while matching offers
@@ -127,7 +127,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     val offer: Offer = MarathonTestHelper.makeBasicOfferWithManyPortRanges(100).build()
     //scalastyle:on magic.number
     val resources = ResourceUtil.displayResources(offer.getResourcesList.asScala, 10)
-    assert(resources.contains("ports 1->2,3->4,5->6,7->8,9->10,11->12,13->14,15->16,17->18,19->20 ... (90 more)"))
+    resources should include("ports(*) 1->2,3->4,5->6,7->8,9->10,11->12,13->14,15->16,17->18,19->20 ... (90 more)")
   }
 
   def makeOneCPUTask(idBase: String) = {

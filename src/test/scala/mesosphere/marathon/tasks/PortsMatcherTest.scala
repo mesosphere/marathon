@@ -4,15 +4,18 @@ import java.util
 
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions }
+import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos._
 import org.apache.mesos.Protos.Offer
+import org.scalatest.Matchers
 
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-class PortsMatcherTest extends MarathonSpec {
+class PortsMatcherTest extends MarathonSpec with Matchers {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -21,9 +24,9 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(matcher.matches)
-    assert(2 == matcher.ports.size)
-    assert(matcher.portRanges.get.map(_.role) == Seq("*"))
+    assert(matcher.portsMatch.isDefined)
+    assert(2 == matcher.portsMatch.get.hostPorts.size)
+    assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq("*"))
   }
 
   test("get ports from multiple ranges") {
@@ -41,9 +44,9 @@ class PortsMatcherTest extends MarathonSpec {
       .build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(matcher.matches)
-    assert(5 == matcher.ports.size)
-    assert(matcher.portRanges.get.map(_.role) == Seq("*"))
+    assert(matcher.portsMatch.isDefined)
+    assert(5 == matcher.portsMatch.get.hostPorts.size)
+    assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq("*"))
   }
 
   test("get ports from multiple ranges, requirePorts") {
@@ -59,21 +62,21 @@ class PortsMatcherTest extends MarathonSpec {
       .setHostname("localhost")
       .addResources(portsResource)
       .build
-    val matcher = new PortsMatcher(app, offer, acceptedResourceRoles = Set("*"))
+    val matcher = new PortsMatcher(app, offer, ResourceSelector.wildcard)
 
-    assert(matcher.matches)
-    assert(matcher.ports == Seq(80, 81, 82, 83, 100))
-    assert(matcher.portRanges.get.map(_.role) == Seq("*"))
+    assert(matcher.portsMatch.isDefined)
+    assert(matcher.portsMatch.get.hostPorts == Seq(80, 81, 82, 83, 100))
+    assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq("*"))
   }
 
   // #2865 Multiple explicit ports are mixed up in task json
   test("get ports with requirePorts preserves the ports order") {
     val app = AppDefinition(portDefinitions = PortDefinitions(100, 80), requirePorts = true)
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 70, endPort = 200).build
-    val matcher = new PortsMatcher(app, offer, acceptedResourceRoles = Set("*"))
+    val matcher = new PortsMatcher(app, offer, ResourceSelector.wildcard)
 
-    assert(matcher.matches)
-    assert(matcher.ports == Seq(100, 80))
+    assert(matcher.portsMatch.isDefined)
+    assert(matcher.portsMatch.get.hostPorts == Seq(100, 80))
   }
 
   test("get ports from multiple resources, preserving role") {
@@ -95,11 +98,11 @@ class PortsMatcherTest extends MarathonSpec {
       .addResources(portsResource)
       .addResources(portsResource2)
       .build
-    val matcher = new PortsMatcher(app, offer, acceptedResourceRoles = Set("*", "marathon"))
+    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set("*", "marathon"), reserved = false))
 
-    assert(matcher.matches)
-    assert(5 == matcher.ports.size)
-    assert(matcher.portRanges.get.map(_.role).to[Set] == Set("*", "marathon"))
+    assert(matcher.portsMatch.isDefined)
+    assert(5 == matcher.portsMatch.get.hostPorts.size)
+    assert(matcher.portsMatch.get.resources.map(_.getRole).to[Set] == Set("*", "marathon"))
   }
 
   test("get ports from multiple ranges, ignore ranges with unwanted roles") {
@@ -116,9 +119,9 @@ class PortsMatcherTest extends MarathonSpec {
       .setHostname("localhost")
       .addResources(portsResource)
       .build
-    val matcher = new PortsMatcher(app, offer, acceptedResourceRoles = Set("*"))
+    val matcher = new PortsMatcher(app, offer, ResourceSelector.wildcard)
 
-    assert(!matcher.matches)
+    assert(matcher.portsMatch.isEmpty)
   }
 
   test("get no ports") {
@@ -126,10 +129,8 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer().build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(matcher.matches)
-    assert(
-      Some(Nil) == matcher.portRanges
-    )
+    assert(matcher.portsMatch.isDefined)
+    assert(Nil == matcher.portsMatch.get.hostPorts)
   }
 
   test("get too many ports") {
@@ -137,7 +138,7 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31001).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(!matcher.matches)
+    assert(matcher.portsMatch.isEmpty)
   }
 
   test("fail if required ports are not available") {
@@ -145,8 +146,7 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(!matcher.matches)
-    assert(None == matcher.portRanges)
+    assert(matcher.portsMatch.isEmpty)
   }
 
   test("fail if dynamic mapped port from container cannot be satisfied") {
@@ -163,8 +163,7 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = -1).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(!matcher.matches)
-    assert(None == matcher.portRanges)
+    assert(matcher.portsMatch.isEmpty)
   }
 
   test("satisfy dynamic mapped port from container") {
@@ -181,8 +180,8 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31000).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(matcher.matches)
-    assert(Some(Seq(RangesResource("ports", Seq(protos.Range(31000, 31000)), "*"))) == matcher.portRanges)
+    assert(matcher.portsMatch.isDefined)
+    assert(matcher.portsMatch.get.hostPorts == Seq(31000))
   }
 
   test("randomly satisfy dynamic mapped port from container") {
@@ -200,24 +199,24 @@ class PortsMatcherTest extends MarathonSpec {
     val rand = new Random(new util.Random(0))
     val matcher = new PortsMatcher(app, offer, random = rand)
 
-    assert(matcher.matches)
-    val firstPort = matcher.ports.head
+    assert(matcher.portsMatch.isDefined)
+    val firstPort = matcher.portsMatch.get.hostPorts.head
 
-    val differentMatchWithSameSeed = (1 to 10).find { _ =>
+    val differentMatchWithSameSeed: Option[Int] = (1 to 10).find { _ =>
       val rand = new Random(new util.Random(0))
-      val matcher = new PortsMatcher(app, offer, random = rand)
-      matcher.ports.head != firstPort
+      val portsMatch = new PortsMatcher(app, offer, random = rand).portsMatch
+      portsMatch.get.hostPorts.head != firstPort
     }
 
-    assert(differentMatchWithSameSeed.isEmpty)
+    differentMatchWithSameSeed should be(empty)
 
     val differentMatchWithDifferentSeed = (1 to 1000).find { seed =>
       val rand = new Random(new util.Random(seed.toLong))
       val matcher = new PortsMatcher(app, offer, random = rand)
-      matcher.ports.head != firstPort
+      matcher.portsMatch.get.hostPorts.head != firstPort
     }
 
-    assert(differentMatchWithDifferentSeed.isDefined)
+    differentMatchWithDifferentSeed should be(defined)
   }
 
   test("fail if fixed mapped port from container cannot be satisfied") {
@@ -234,7 +233,7 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(!matcher.matches)
+    assert(matcher.portsMatch.isEmpty)
   }
 
   test("satisfy fixed mapped port from container") {
@@ -251,8 +250,8 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(matcher.matches)
-    assert(Some(Seq(RangesResource("ports", Seq(protos.Range(31200, 31200)), "*"))) == matcher.portRanges)
+    assert(matcher.portsMatch.isDefined)
+    assert(matcher.portsMatch.get.hostPorts == Seq(31200))
   }
 
   test("do not satisfy fixed mapped port from container with resource offer of incorrect role") {
@@ -275,7 +274,7 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer(endPort = -1).addResources(portsResource).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(!matcher.matches)
+    assert(matcher.portsMatch.isEmpty)
   }
 
   test("satisfy fixed and dynamic mapped port from container from one offered range") {
@@ -293,10 +292,8 @@ class PortsMatcherTest extends MarathonSpec {
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31001).build
     val matcher = new PortsMatcher(app, offer)
 
-    assert(matcher.matches)
-    assert(Some(Seq(
-      RangesResource("ports", Seq(protos.Range(31001, 31001), protos.Range(31000, 31000)), "*")
-    )) == matcher.portRanges)
+    assert(matcher.portsMatch.isDefined)
+    assert(matcher.portsMatch.get.hostPorts == Seq(31001, 31000))
   }
 
   test("satisfy fixed and dynamic mapped port from container from ranges with different roles") {
@@ -318,12 +315,12 @@ class PortsMatcherTest extends MarathonSpec {
     )
 
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31000).addResources(portsResource).build
-    val matcher = new PortsMatcher(app, offer, acceptedResourceRoles = Set("*", "marathon"))
+    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set("*", "marathon"), reserved = false))
 
-    assert(matcher.matches)
-    assert(Some(Set(
-      RangesResource("ports", Seq(protos.Range(31000, 31000)), "*"),
-      RangesResource("ports", Seq(protos.Range(31001, 31001)), "marathon")
-    )) == matcher.portRanges.map(_.toSet))
+    assert(matcher.portsMatch.isDefined)
+    assert(matcher.portsMatch.get.hostPorts.toSet == Set(31000, 31001))
+    assert(matcher.portsMatch.get.hostPortsWithRole.toSet == Set(
+      PortWithRole("*", 31000), PortWithRole("marathon", 31001)
+    ))
   }
 }
