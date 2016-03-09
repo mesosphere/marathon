@@ -180,6 +180,18 @@ class AppDefinitionFormatsTest
     a[JsResultException] shouldBe thrownBy { json.as[AppDefinition] }
   }
 
+  test("FromJSON should read the default upgrade strategy") {
+    val json = Json.parse(""" { "id": "test" }""")
+    val appDef = json.as[AppDefinition]
+    appDef.upgradeStrategy should be(UpgradeStrategy.empty)
+  }
+
+  test("FromJSON should read the residency upgrade strategy") {
+    val json = Json.parse(""" { "id": "test", "residency": {}}""")
+    val appDef = json.as[AppDefinition]
+    appDef.upgradeStrategy should be(UpgradeStrategy.forResidentTasks)
+  }
+
   test("""FromJSON should parse "residency" """) {
     val appDef = Json.parse(
       """{

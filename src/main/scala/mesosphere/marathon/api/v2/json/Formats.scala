@@ -556,17 +556,22 @@ trait AppAndGroupFormats {
         healthChecks = checks)).flatMap { app =>
         // necessary because of case class limitations (good for another 21 fields)
         case class ExtraFields(
-          uris: Seq[String],
-          fetch: Seq[FetchUri],
-          dependencies: Set[PathId],
-          maybePorts: Option[Seq[Int]],
-          upgradeStrategy: UpgradeStrategy,
-          labels: Map[String, String],
-          acceptedResourceRoles: Option[Set[String]],
-          ipAddress: Option[IpAddress],
-          version: Timestamp,
-          residency: Option[Residency],
-          maybePortDefinitions: Option[Seq[PortDefinition]])
+            uris: Seq[String],
+            fetch: Seq[FetchUri],
+            dependencies: Set[PathId],
+            maybePorts: Option[Seq[Int]],
+            upgradeStrategy: Option[UpgradeStrategy],
+            labels: Map[String, String],
+            acceptedResourceRoles: Option[Set[String]],
+            ipAddress: Option[IpAddress],
+            version: Timestamp,
+            residency: Option[Residency],
+            maybePortDefinitions: Option[Seq[PortDefinition]]) {
+          def upgradeStrategyOrDefault: UpgradeStrategy = {
+            import UpgradeStrategy.{ forResidentTasks, empty }
+            upgradeStrategy.getOrElse(if (residency.isDefined) forResidentTasks else empty)
+          }
+        }
 
         val extraReads: Reads[ExtraFields] =
           (
@@ -574,7 +579,7 @@ trait AppAndGroupFormats {
             (__ \ "fetch").readNullable[Seq[FetchUri]].withDefault(AppDefinition.DefaultFetch) ~
             (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies) ~
             (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
-            (__ \ "upgradeStrategy").readNullable[UpgradeStrategy].withDefault(AppDefinition.DefaultUpgradeStrategy) ~
+            (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
             (__ \ "ipAddress").readNullable[IpAddress] ~
@@ -615,7 +620,7 @@ trait AppAndGroupFormats {
             fetch = fetch,
             dependencies = extra.dependencies,
             portDefinitions = portDefinitions,
-            upgradeStrategy = extra.upgradeStrategy,
+            upgradeStrategy = extra.upgradeStrategyOrDefault,
             labels = extra.labels,
             acceptedResourceRoles = extra.acceptedResourceRoles,
             ipAddress = extra.ipAddress,

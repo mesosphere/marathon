@@ -506,12 +506,12 @@ object AppDefinition {
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
   }
 
-  private def defineCorrectResidencyCombination: Validator[AppDefinition] =
+  private val defineCorrectResidencyCombination: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
       !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
     }
 
-  private def containsCmdArgsContainerValidator: Validator[AppDefinition] =
+  private val containsCmdArgsContainerValidator: Validator[AppDefinition] =
     isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.") { app =>
       val cmd = app.cmd.nonEmpty
       val args = app.args.nonEmpty
