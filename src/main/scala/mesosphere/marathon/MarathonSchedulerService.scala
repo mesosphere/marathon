@@ -11,7 +11,7 @@ import akka.pattern.{ after, ask }
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.twitter.common.base.ExceptionalCommand
-import com.twitter.common.zookeeper.Candidate
+import com.twitter.common.zookeeper.{ ZooKeeperClient, Candidate }
 import com.twitter.common.zookeeper.Candidate.Leader
 import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.MarathonSchedulerActor._
@@ -27,6 +27,7 @@ import mesosphere.util.state.FrameworkIdUtil
 import org.apache.log4j.Logger
 import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
+import org.apache.zookeeper.{ WatchedEvent, Watcher }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.{ MILLISECONDS, _ }
@@ -49,7 +50,8 @@ class MarathonSchedulerService @Inject() (
     system: ActorSystem,
     migration: Migration,
     @Named("schedulerActor") schedulerActor: ActorRef,
-    @Named(EventModule.busName) eventStream: EventStream) extends AbstractExecutionThreadService with Leader {
+    @Named(EventModule.busName) eventStream: EventStream,
+    zk: ZooKeeperClient) extends AbstractExecutionThreadService with Leader {
 
   import mesosphere.util.ThreadPoolContext.context
 
@@ -76,6 +78,15 @@ class MarathonSchedulerService @Inject() (
   private[mesosphere] var timer = newTimer()
 
   val log = Logger.getLogger(getClass.getName)
+
+  val abdicateOnConnectionLossWatcher = new Watcher {
+    import Watcher.Event.KeeperState.{ Disconnected, Expired }
+    override def process(event: WatchedEvent): Unit = event.getState match {
+      case Disconnected | Expired => abdicateLeadership()
+      case _                      => //ignore
+    }
+  }
+  zk.register(abdicateOnConnectionLossWatcher)
 
   // FIXME: Remove from this class
   def frameworkId: Option[FrameworkID] = {
@@ -163,7 +174,7 @@ class MarathonSchedulerService @Inject() (
     log.info("Completed run")
   }
 
-  override def triggerShutdown(): Unit = {
+  override def triggerShutdown(): Unit = synchronized {
     log.info("Shutdown triggered")
 
     leader.set(false)
@@ -181,7 +192,7 @@ class MarathonSchedulerService @Inject() (
     super.triggerShutdown()
   }
 
-  def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = {
+  def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = synchronized {
     log.info("Running driver")
 
     // The following block asynchronously runs the driver. Note that driver.run()
@@ -218,7 +229,7 @@ class MarathonSchedulerService @Inject() (
     }
   }
 
-  def stopDriver(): Unit = {
+  def stopDriver(): Unit = synchronized {
     log.info("Stopping driver")
 
     // Stopping the driver will cause the driver run() method to return.
@@ -229,14 +240,14 @@ class MarathonSchedulerService @Inject() (
   //End Service interface
 
   //Begin Leader interface, which is required for CandidateImpl.
-  override def onDefeated(): Unit = {
+  override def onDefeated(): Unit = synchronized {
     log.info("Defeated (Leader Interface)")
 
     // Our leadership has been defeated and thus we call the defeatLeadership() method.
     defeatLeadership()
   }
 
-  override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = {
+  override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = synchronized {
     var migrationComplete = false
     try {
       log.info("Elected (Leader Interface)")
@@ -272,7 +283,7 @@ class MarathonSchedulerService @Inject() (
   }
   //End Leader interface
 
-  private def defeatLeadership(): Unit = {
+  private def defeatLeadership(): Unit = synchronized {
     log.info("Defeat leadership")
 
     eventStream.publish(LocalLeadershipEvent.Standby)
@@ -286,7 +297,7 @@ class MarathonSchedulerService @Inject() (
     stopDriver()
   }
 
-  private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = {
+  private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = synchronized {
     log.info("Elect leadership")
 
     // We have been elected as leader. Thus, update leadership and run the driver.
@@ -299,29 +310,31 @@ class MarathonSchedulerService @Inject() (
     schedulePeriodicOperations()
   }
 
-  def abdicateLeadership(): Unit = {
-    log.info("Abdicating")
+  def abdicateLeadership(): Unit = synchronized {
+    if (leader.get()) {
+      log.info("Abdicating")
 
-    // To abdicate we defeat our leadership
-    defeatLeadership()
+      // To abdicate we defeat our leadership
+      defeatLeadership()
+    }
   }
 
   var offerLeadershipBackOff = 0.5.seconds
   val maximumOfferLeadershipBackOff = 16.seconds
 
-  private def increaseOfferLeadershipBackOff() {
+  private def increaseOfferLeadershipBackOff(): Unit = synchronized {
     if (offerLeadershipBackOff <= maximumOfferLeadershipBackOff) {
       offerLeadershipBackOff *= 2
       log.info(s"Increasing offerLeadership backoff to $offerLeadershipBackOff")
     }
   }
 
-  private def resetOfferLeadershipBackOff() {
+  private def resetOfferLeadershipBackOff(): Unit = synchronized {
     log.info("Reset offerLeadership backoff")
     offerLeadershipBackOff = 0.5.seconds
   }
 
-  private def offerLeadership(): Unit = {
+  private def offerLeadership(): Unit = synchronized {
     log.info(s"Will offer leadership after $offerLeadershipBackOff backoff")
     after(offerLeadershipBackOff, system.scheduler)(Future {
       candidate.synchronized {
@@ -341,7 +354,7 @@ class MarathonSchedulerService @Inject() (
     })
   }
 
-  private def schedulePeriodicOperations(): Unit = {
+  private def schedulePeriodicOperations(): Unit = synchronized {
 
     timer.schedule(
       new TimerTask {
