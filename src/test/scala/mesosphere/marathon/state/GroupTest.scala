@@ -217,7 +217,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       val result = validate(changed)
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
-        .message should be ("Groups and Applications may not have the same identifier: /some/nested.")
+        .message should be ("Groups and Applications may not have the same identifier.")
     }
 
     it("can marshal and unmarshal from to protos") {
