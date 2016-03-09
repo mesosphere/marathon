@@ -2,7 +2,7 @@
 
 Create and start a new application.
 
-Here is an example of an application JSON which includes all fields. 
+Here is an example of an application JSON which includes all fields.
 
 ```javascript
 {
@@ -115,14 +115,14 @@ Here is an example of an application JSON which includes all fields.
 }
 ```
 
-##### id (String) 
+##### id (String)
 
 Unique identifier for the app consisting of a series of names separated by slashes.
 Each name must be at least 1 character and may
 only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters
 (`a-z`). The name may not begin or end with a dash.
 
-The allowable format is represented by the following regular expression 
+The allowable format is represented by the following regular expression
 `^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$`
 
 ##### cmd (String)
@@ -139,7 +139,7 @@ The number of CPU`s this application needs per instance. This number does not ha
 
 ##### mem (Float)
 
-The amount of memory in MB that is needed for the application per instance. 
+The amount of memory in MB that is needed for the application per instance.
 
 ##### ports (Array of Integers)
 
@@ -194,7 +194,7 @@ the Mesos slave.  For a discussion of docker-specific options, see the
 [native docker document]({{site.baseurl}}/docs/native-docker.html).
 
 ##### env (Object with String values)
- 
+
 Key value pairs that get added to the environment variables of the process to start.
 
 ##### constraints
@@ -270,7 +270,7 @@ at most one defined health check.
 
 An HTTP health check is considered passing if (1) its HTTP response code is between
 200 and 399, inclusive, and (2) its response is received within the
-`timeoutSeconds` period. 
+`timeoutSeconds` period.
 
 If a task fails more than `maxConsecutiveFailures`
 health checks consecutively, that task is killed causing Marathon to start
@@ -298,7 +298,7 @@ by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
   variables like `$PORT1`.
 * `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
   health check is considered a failure regardless of the response.
-  
+
 ##### backoffSeconds, backoffFactor and maxLaunchDelaySeconds
 
 Configures exponential backoff behavior when launching potentially sick apps.
@@ -475,7 +475,7 @@ Transfer-Encoding: chunked
 ```
 
 ##### Example (create an app with an already existing ID)
-If the ID you are trying to create already exists, then the create operation fails. 
+If the ID you are trying to create already exists, then the create operation fails.
 
 **Request:**
 

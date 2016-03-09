@@ -15,7 +15,7 @@ See the detailed docs on
 
 ```json
 {
-    "id": "simple-docker", 
+    "id": "simple-docker",
     "container": {
       "docker": {
         "image": "busybox"
@@ -32,7 +32,7 @@ See the detailed docs on
 
 ```json
 {
-    "id": "simple-docker", 
+    "id": "simple-docker",
     "container": {
       "docker": {
         "image": "mesosphere/inky"
@@ -94,7 +94,7 @@ The following JSON file will make a private Docker registry available in your cl
     "SETTINGS_FLAVOR": "local",
     "STORAGE_PATH": "/storage"
   },
-  "ports": [ 0 ]
+  "ports": [0]
 }
 ```
 
@@ -158,8 +158,8 @@ See the detailed docs on
 ### Command (executor) health checks
 
 Command health checks are executed on the slave where the task is running.
-To enable this feature for marathon versions prior to `0.7.4`, start 
-Marathon with the `--executor_health_checks` flag (not required/allowed 
+To enable this feature for marathon versions prior to `0.7.4`, start
+Marathon with the `--executor_health_checks` flag (not required/allowed
 since `0.7.4`). Requires Mesos version `0.20.0` or later.
 
 ```json
@@ -194,7 +194,7 @@ However, there are times when you want to separate some machines from the common
 * Some nodes in your cluster have publicly reachable network addresses and you only want to start tasks there that make use of public addresses.
 
 * Some nodes in your cluster have special hardware, such as very fast SSDs or GPUs, that you want to reserve for tasks that need this hardware.
-  
+
 ### Using roles
 
 You can configure some of your Mesos agents to only offer their resources to a specific Mesos role. Only Mesos frameworks (such as Marathon) that are configured for this specific Mesos role will get offers for these resources. In this way, you can prevent accidental usage of these resources by other Mesos frameworks.
@@ -207,7 +207,7 @@ You can configure some of your Mesos agents to only offer their resources to a s
 
 ### Preventing Accidental Use of Special Roles inside Marathon
 
-With the base setup, that is, with no command-line parameters specified, all Marathon applications will by default use all resources either assigned to the unspecific "*" role or the role you specified with `--mesos_role`. 
+With the base setup, that is, with no command-line parameters specified, all Marathon applications will by default use all resources either assigned to the unspecific "*" role or the role you specified with `--mesos_role`.
 
 To ensure that only special tasks are run on nodes you specify, you can use a separate Marathon instance for those tasks.
 
@@ -234,7 +234,7 @@ that you quote the "*" correctly)
 
 ### Using constraints
 
-You can use constraints to restrict where to run the tasks for your apps. See 
+You can use constraints to restrict where to run the tasks for your apps. See
 [constraints]({ site.baseurl }}/docs/constraints.html) for details.
 
 The advantage of using constraints to restrict where tasks run is that you only have to provide appropriate attributes on the Mesos agents.
