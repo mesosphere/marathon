@@ -14,6 +14,7 @@ import scala.util.Try
 object Validation {
 
   def validate[T](t: T)(implicit validator: Validator[T]): Result = validator.apply(t)
+
   def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
     case Success    => t
     case f: Failure => throw new ValidationFailedException(t, f)
@@ -201,12 +202,15 @@ object Validation {
     )
   }
 
-  def configValueSet[T <: AnyRef](config: String*): Validator[T] = {
-    new Validator[T] {
-      override def apply(t: T): Result = {
-        if (config.forall(AllConf.suppliedOptionNames)) Success else Failure(Set(RuleViolation(t,
-          s"""You have to supply ${config.mkString(", ")} on the command line.""", None)))
-      }
+  def configValueSet[T <: AnyRef](config: String*): Validator[T] =
+    isTrue(s"""You have to supply ${config.mkString(", ")} on the command line.""") { _ =>
+      config.forall(AllConf.suppliedOptionNames)
+    }
+
+  def isTrue[T](constraint: String)(test: T => Boolean): Validator[T] = new Validator[T] {
+    import ViolationBuilder._
+    override def apply(value: T): Result = {
+      if (test(value)) Success else RuleViolation(value, constraint, None)
     }
   }
 }

@@ -63,13 +63,11 @@ object Container {
       }
     }
 
-    val uniquePortNames: Validator[Seq[PortMapping]] = new Validator[Seq[PortMapping]] {
-      override def apply(portMappings: Seq[PortMapping]): Result = {
+    val uniquePortNames: Validator[Seq[PortMapping]] =
+      isTrue[Seq[PortMapping]]("Port names must be unique.") { portMappings =>
         val portNames = portMappings.flatMap(_.name)
-        if (portNames.size == portNames.distinct.size) Success
-        else Failure(Set(RuleViolation("portMappings", "Port names must be unique.", None)))
+        portNames.size == portNames.distinct.size
       }
-    }
 
     implicit val dockerValidator = validator[Docker] { docker =>
       docker.image is notEmpty
@@ -106,5 +104,4 @@ object Container {
       }
     }
   }
-
 }
