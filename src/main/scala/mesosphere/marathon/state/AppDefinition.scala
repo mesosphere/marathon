@@ -498,12 +498,18 @@ object AppDefinition {
     appDef.healthChecks is every(portIndexIsValid(appDef.hostPorts.indices))
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
-    (appDef.persistentVolumes is empty) or (appDef.residency is notEmpty)
     appDef.mem should be >= 0.0
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
     appDef.disk should be >= 0.0
+    appDef must defineCorrectResidencyCombination
+    (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
   }
+
+  private def defineCorrectResidencyCombination: Validator[AppDefinition] =
+    isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
+      !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
+    }
 
   private def containsCmdArgsContainerValidator: Validator[AppDefinition] =
     isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.") { app =>
