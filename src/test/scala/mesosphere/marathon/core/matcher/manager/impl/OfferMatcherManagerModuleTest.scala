@@ -136,7 +136,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
 
   object f {
     import org.apache.mesos.{ Protos => Mesos }
-    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launch(_: Mesos.TaskInfo, _: Task, None)
+    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
   }
 
   private[this] var module: OfferMatcherManagerModule = _

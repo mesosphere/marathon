@@ -3,7 +3,8 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTrackerConfig, TaskUpdater }
 import mesosphere.marathon.state.PathId
@@ -26,27 +27,30 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
 
   private[impl] implicit val timeout: Timeout = conf.internalTaskUpdateRequestTimeout().milliseconds
 
-  override def created(task: Task): Future[Task] = {
-    taskUpdate(task.taskId, TaskOpProcessor.Action.Update(task)).map(_ => task)
+  // FIXME (3221): pass task in and create TaskStateOp on the fly?
+  override def created(taskStateOp: TaskStateOp): Future[Unit] = {
+    taskUpdate(taskStateOp.taskId, taskStateOp)
   }
-  override def terminated(taskId: Task.Id): Future[_] = {
-    taskUpdate(taskId, TaskOpProcessor.Action.Expunge)
+  // FIXME (3221): pass task in and create TaskStateOp on the fly?
+  override def terminated(stateOp: TaskStateOp.ForceExpunge): Future[_] = {
+    taskUpdate(stateOp.taskId, stateOp)
   }
   override def statusUpdate(appId: PathId, status: TaskStatus): Future[_] = {
     val taskId = Task.Id(status.getTaskId.getValue)
-    taskUpdate(taskId, TaskOpProcessor.Action.UpdateStatus(status))
+    val stateOp = TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus(status), clock.now())
+    taskUpdate(taskId, stateOp)
   }
 
   private[this] def taskUpdate(
     taskId: Task.Id,
-    action: TaskOpProcessor.Action): Future[Unit] = {
+    taskStateOp: TaskStateOp): Future[Unit] = {
 
     import akka.pattern.ask
     val deadline = clock.now + timeout.duration
-    val op: ForwardTaskOp = TaskTrackerActor.ForwardTaskOp(deadline, taskId, action)
+    val op: ForwardTaskOp = TaskTrackerActor.ForwardTaskOp(deadline, taskId, taskStateOp)
     (taskTrackerRef ? op).mapTo[Unit].recover {
       case NonFatal(e) =>
-        throw new RuntimeException(s"while asking for $action on app [${taskId.appId}] and $taskId", e)
+        throw new RuntimeException(s"while asking for $taskStateOp on app [${taskId.appId}] and $taskId", e)
     }
   }
 }

@@ -238,7 +238,7 @@ object MarathonTestHelper {
 
   def makeTaskFromTaskInfo(taskInfo: TaskInfo,
                            offer: Offer = makeBasicOffer().build(),
-                           version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): Task =
+                           version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): Task.LaunchedEphemeral =
     {
       import scala.collection.JavaConverters._
 
@@ -328,8 +328,8 @@ object MarathonTestHelper {
     .setHost("host.some")
     .build()
 
-  def mininimalTask(appId: PathId): Task = mininimalTask(Task.Id.forApp(appId).idString)
-  def mininimalTask(taskId: Task.Id): Task = mininimalTask(taskId.idString)
+  def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forApp(appId).idString)
+  def mininimalTask(taskId: Task.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
   def mininimalTask(taskId: String, now: Timestamp = clock.now()): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
@@ -359,9 +359,9 @@ object MarathonTestHelper {
     Task.Launched(now, status = Task.Status(now), networking = Task.NoNetworking)
   }
 
-  def taskLaunchedOp: TaskStateOp.Launch = {
+  def taskLaunchedOp(taskId: Task.Id): TaskStateOp.LaunchOnReservation = {
     val now = Timestamp.now()
-    TaskStateOp.Launch(now, Task.Status(now), Task.NoNetworking)
+    TaskStateOp.LaunchOnReservation(taskId, now, Task.Status(now), Task.NoNetworking)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =

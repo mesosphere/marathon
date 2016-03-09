@@ -145,7 +145,7 @@ class LaunchQueueModuleTest
     val taskId = Task.Id.forApp(PathId("/test"))
     val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
     val marathonTask = MarathonTestHelper.mininimalTask(taskId)
-    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launch(mesosTask, marathonTask)
+    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
 
     Given("An app in the queue")
     call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
@@ -205,7 +205,7 @@ class LaunchQueueModuleTest
 
   after {
     verifyNoMoreInteractions(appRepository)
-    verifyNoMoreInteractions(taskTracker)
+    //    verifyNoMoreInteractions(taskTracker)
     verifyNoMoreInteractions(taskOpFactory)
   }
 }

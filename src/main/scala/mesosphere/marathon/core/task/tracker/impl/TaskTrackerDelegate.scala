@@ -3,11 +3,12 @@ package mesosphere.marathon.core.task.tracker.impl
 import java.util.concurrent.TimeoutException
 
 import akka.actor.ActorRef
+import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
+import mesosphere.marathon.core.task.tracker.{ TaskTrackerUpdateSubscriber, TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.PathId
 
@@ -34,7 +35,6 @@ private[tracker] class TaskTrackerDelegate(
   }
 
   override def tasksByApp()(implicit ec: ExecutionContext): Future[TaskTracker.TasksByApp] = {
-    import akka.pattern.ask
     def futureCall(): Future[TaskTracker.TasksByApp] =
       (taskTrackerRef ? TaskTrackerActor.List).mapTo[TaskTracker.TasksByApp].recover {
         case e: AskTimeoutException =>
@@ -74,4 +74,13 @@ private[tracker] class TaskTrackerDelegate(
 
   private[this] implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
+  override def subscribeForUpdates(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)(
+    implicit ec: ExecutionContext): Future[Unit] = {
+    (taskTrackerRef ? TaskTrackerActor.Subscribe(appId, subscriber)).mapTo[Unit]
+  }
+
+  override def unsubscribeFromUpdates(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)(
+    implicit ec: ExecutionContext): Future[Unit] = {
+    (taskTrackerRef ? TaskTrackerActor.Unsubscribe(appId, subscriber)).mapTo[Unit]
+  }
 }
