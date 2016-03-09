@@ -7,12 +7,11 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.MarathonSchedulerDriverHolder
 
-class HealthCheckActor(
+private[health] class HealthCheckActor(
     app: AppDefinition,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    marathonScheduler: MarathonScheduler,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
@@ -182,6 +181,21 @@ class HealthCheckActor(
 }
 
 object HealthCheckActor {
+  def props(
+    app: AppDefinition,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+    healthCheck: HealthCheck,
+    taskTracker: TaskTracker,
+    eventBus: EventStream): Props = {
+
+    Props(new HealthCheckActor(
+      app,
+      marathonSchedulerDriverHolder,
+      healthCheck,
+      taskTracker,
+      eventBus))
+  }
+
   // self-sent every healthCheck.intervalSeconds
   case object Tick
   case class GetTaskHealth(taskId: Task.Id)

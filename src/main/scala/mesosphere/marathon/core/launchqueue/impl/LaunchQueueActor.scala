@@ -2,7 +2,6 @@ package mesosphere.marathon.core.launchqueue.impl
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{
-  PoisonPill,
   Terminated,
   Actor,
   ActorLogging,
@@ -15,7 +14,7 @@ import akka.event.LoggingReceive
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueue }
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import LaunchQueue.QueuedTaskInfo
 
@@ -116,7 +115,7 @@ private[impl] class LaunchQueueActor(
   }
 
   private[this] def receiveTaskUpdateToSuspendedActor: Receive = {
-    case update: TaskStatusUpdate if suspendedLauncherPathIds(update.appId) =>
+    case update: TaskUpdate if suspendedLauncherPathIds(update.appId) =>
       deferMessageToSuspendedActor(update, update.appId)
   }
 
@@ -139,7 +138,7 @@ private[impl] class LaunchQueueActor(
   }
 
   private[this] def receiveTaskUpdate: Receive = {
-    case update: TaskStatusUpdate =>
+    case update: TaskUpdate =>
       import context.dispatcher
       launchers.get(update.appId) match {
         case Some(actorRef) =>

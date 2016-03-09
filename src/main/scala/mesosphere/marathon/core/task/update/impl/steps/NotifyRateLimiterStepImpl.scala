@@ -1,29 +1,43 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
-import mesosphere.marathon.state.{ AppRepository, Timestamp }
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.update.TaskUpdateStep
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.state.AppRepository
+import org.apache.mesos.Protos
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.concurrent.Future
 
 class NotifyRateLimiterStepImpl @Inject() (
-    launchQueue: LaunchQueue,
-    appRepository: AppRepository) extends TaskStatusUpdateStep {
+    launchQueueProvider: Provider[LaunchQueue],
+    appRepositoryProvider: Provider[AppRepository]) extends TaskUpdateStep {
+
+  private[this] lazy val launchQueue = launchQueueProvider.get()
+  private[this] lazy val appRepository = appRepositoryProvider.get()
 
   override def name: String = "notifyRateLimiter"
 
-  override def processUpdate(timestamp: Timestamp, task: Task, status: TaskStatus): Future[_] = {
-    import org.apache.mesos.Protos.TaskState._
-
-    status.getState match {
-      case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_LOST =>
+  override def processUpdate(update: TaskUpdate): Future[_] = {
+    // if MesosUpdate and status terminal != killed
+    update.stateOp match {
+      case TaskStateOp.MesosUpdate(task, TerminalNotKilled(status), _) =>
         notifyRateLimiter(status, task)
+      case _ => Future.successful(())
+    }
+  }
 
-      case _ =>
-        Future.successful(())
+  // it's only relevant for the rate limiter if we received a terminal Mesos Update that's not TASK_KILLED
+  private[this] object TerminalNotKilled {
+    def unapply(status: MarathonTaskStatus): Option[Protos.TaskStatus] = {
+      status match {
+        case terminal: MarathonTaskStatus.Terminal if !terminal.killed =>
+          status.mesosStatus
+        case _ => None
+      }
     }
   }
 

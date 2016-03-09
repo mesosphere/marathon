@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.tracker.impl
 import java.util.concurrent.TimeoutException
 
 import akka.actor.ActorRef
+import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
@@ -34,7 +35,6 @@ private[tracker] class TaskTrackerDelegate(
   }
 
   override def tasksByApp()(implicit ec: ExecutionContext): Future[TaskTracker.TasksByApp] = {
-    import akka.pattern.ask
     def futureCall(): Future[TaskTracker.TasksByApp] =
       (taskTrackerRef ? TaskTrackerActor.List).mapTo[TaskTracker.TasksByApp].recover {
         case e: AskTimeoutException =>
@@ -73,5 +73,4 @@ private[tracker] class TaskTrackerDelegate(
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))
 
   private[this] implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
-
 }

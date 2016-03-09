@@ -14,9 +14,9 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, Task
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange }
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -139,7 +139,7 @@ private class AppTaskLauncherActor(
       receiveStop,
       receiveDelayUpdate,
       receiveTaskLaunchNotification,
-      receiveTaskStatusUpdate,
+      receiveTaskUpdate,
       receiveGetCurrentCount,
       receiveAddCount,
       receiveProcessOffers
@@ -221,41 +221,29 @@ private class AppTaskLauncherActor(
       log.info("Task launch for '{}' was accepted. {}", op.taskId, status)
   }
 
-  private[this] def receiveTaskStatusUpdate: Receive = {
-    case TaskStatusUpdate(_, taskId, status) =>
-      def handleTask(oldTask: Task) = {
-        oldTask.update(TaskStateOp.MesosUpdate(status, clock.now())) match {
-          case TaskStateChange.Update(updatedTask) =>
-            log.debug("updating status of {}", taskId)
-            tasksMap += taskId -> updatedTask
+  private[this] def receiveTaskUpdate: Receive = {
+    case TaskUpdate(stateOp, stateChange) =>
+      log.info("received TaskUpdate")
 
-          case TaskStateChange.Expunge =>
-            log.debug("{} finished", taskId)
-            removeTask(taskId)
+      stateChange match {
+        case TaskStateChange.Update(task, _) =>
+          log.debug("updating status of {}", task.taskId)
+          tasksMap += task.taskId -> task
 
-          case TaskStateChange.NoChange =>
-            log.debug("no change for {}", taskId)
+        case TaskStateChange.Expunge(task) =>
+          log.debug("{} finished", task.taskId)
+          removeTask(task.taskId)
+          // If the app has constraints, we need to reconsider offers that
+          // we already rejected. E.g. when a host:unique constraint prevented
+          // us to launch tasks on a particular node before, we need to reconsider offers
+          // of that node after a task on that node has died.
+          if (app.constraints.nonEmpty) {
+            maybeOfferReviver.foreach(_.reviveOffers())
+          }
 
-          case TaskStateChange.Failure(cause) =>
-            log.warning("Task state update failed for {}. Reason: {}", taskId, cause.getMessage)
-        }
+        case _ =>
+          log.debug("receiveTaskUpdate: ignoring stateChange {}", stateChange)
       }
-
-      tasksMap.get(taskId) match {
-        case Some(oldTask) => handleTask(oldTask)
-        case _             => log.warning("ignore update of unknown {}", taskId)
-      }
-
-      if (status.terminal) {
-        // If the app has constraints, we need to reconsider offers that
-        // we already rejected. E.g. when a host:unique constraint prevented
-        // us to launch tasks on a particular node before, we need to reconsider offers
-        // of that node after a task on that node has died.
-        if (app.constraints.nonEmpty) {
-          maybeOfferReviver.foreach(_.reviveOffers())
-        }
-      }
-
       replyWithQueuedTaskCount()
   }
 
@@ -341,19 +329,23 @@ private class AppTaskLauncherActor(
 
   private[this] def handleTaskOp(taskOp: TaskOp, offer: Mesos.Offer): Unit = {
     def updateActorState(): Unit = {
+      val taskId = taskOp.taskId
       taskOp match {
         // only decrement for launched tasks, not for reservations:
         case _: TaskOp.Launch => tasksToLaunch -= 1
         case _                => ()
       }
 
-      val taskId = taskOp.taskId
-      taskOp.maybeNewTask match {
-        case Some(newTask) =>
-          tasksMap += taskId -> newTask
+      // We will receive the updated task once it's been persisted. Before that,
+      // we can only store the possible state, as we don't have the updated task
+      // yet.
+      taskOp.newTask.possibleNewState match {
+        case Some(newState) =>
+          tasksMap += taskId -> newState
           scheduleTaskOpTimeout(taskOp)
+
         case None =>
-          removeTask(taskId)
+          tasksMap -= taskId
       }
 
       OfferMatcherRegistration.manageOfferMatcherStatus()

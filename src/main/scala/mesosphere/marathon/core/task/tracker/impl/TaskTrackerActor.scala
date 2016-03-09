@@ -4,7 +4,7 @@ import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.appinfo.TaskCounts
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.metrics.Metrics
@@ -20,13 +20,8 @@ object TaskTrackerActor {
   /** Query the current [[TaskTracker.AppTasks]] from the [[TaskTrackerActor]]. */
   private[impl] case object List
 
-  /**
-    * Forward an update operation to the child [[TaskUpdateActor]].
-    *
-    * FIXME: change taskId to [[Task.Id]]
-    */
-  private[impl] case class ForwardTaskOp(
-    deadline: Timestamp, taskId: Task.Id, action: TaskOpProcessor.Action)
+  /** Forward an update operation to the child [[TaskUpdateActor]]. */
+  private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Task.Id, taskStateOp: TaskStateOp)
 
   /** Describes where and what to send after an update event has beend processed by the [[TaskTrackerActor]]. */
   private[impl] case class Ack(initiator: ActorRef, msg: Any = ()) {
@@ -126,8 +121,8 @@ private class TaskTrackerActor(
       case TaskTrackerActor.List =>
         sender() ! appTasks
 
-      case ForwardTaskOp(deadline, taskId, action) =>
-        val op = TaskOpProcessor.Operation(deadline, sender(), taskId, action)
+      case ForwardTaskOp(deadline, taskId, taskStateOp) =>
+        val op = TaskOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
         updaterRef.forward(TaskUpdateActor.ProcessTaskOp(op))
 
       case msg @ TaskTrackerActor.TaskUpdated(task, ack) =>

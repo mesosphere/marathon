@@ -4,10 +4,9 @@ import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }
 
@@ -32,25 +31,6 @@ class TaskTrackerActorTest
     verify(f.taskLoader).loadTasks()
 
     And("it will eventuall die")
-    watch(f.taskTrackerActor)
-    expectMsgClass(classOf[Terminated]).getActor should be(f.taskTrackerActor)
-  }
-
-  test("failures of the taskUpdateActor are escalated") {
-    Given("an always failing updater")
-    val f = new Fixture {
-      override def updaterProps(trackerRef: ActorRef): Props = failProps
-    }
-    And("an empty task loader result")
-    f.taskLoader.loadTasks() returns Future.successful(TaskTracker.TasksByApp.empty)
-
-    When("the task tracker actor gets a ForwardTaskOp")
-    val deadline = Timestamp.zero // ignored
-    f.taskTrackerActor ! TaskTrackerActor.ForwardTaskOp(
-      deadline, Task.Id("task1"), TaskOpProcessor.Action.Noop
-    )
-
-    Then("it will eventuall die")
     watch(f.taskTrackerActor)
     expectMsgClass(classOf[Terminated]).getActor should be(f.taskTrackerActor)
   }
@@ -112,7 +92,9 @@ class TaskTrackerActorTest
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
     val stagedTask = MarathonTestHelper.stagedTaskProto(appId)
+    val stagedTaskState = TaskSerializer.fromProto(stagedTask)
     val runningTask1 = MarathonTestHelper.runningTaskProto(appId)
+    val runningTask1State = TaskSerializer.fromProto(runningTask1)
     val runningTask2 = MarathonTestHelper.runningTaskProto(appId)
     val appDataMap = TaskTracker.TasksByApp.of(
       TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
@@ -121,7 +103,7 @@ class TaskTrackerActorTest
 
     When("staged task gets deleted")
     val probe = TestProbe()
-    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskRemoved(Task.Id(stagedTask.getId), TaskTrackerActor.Ack(probe.ref, ())))
+    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskRemoved(stagedTaskState.taskId, TaskTrackerActor.Ack(probe.ref, ())))
     probe.expectMsg(())
 
     Then("it will have set the correct metric counts")
@@ -129,7 +111,7 @@ class TaskTrackerActorTest
     f.actorMetrics.stagedCount.getValue should be(0)
 
     When("running task gets deleted")
-    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskRemoved(Task.Id(runningTask1.getId), TaskTrackerActor.Ack(probe.ref, ())))
+    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskRemoved(runningTask1State.taskId, TaskTrackerActor.Ack(probe.ref, ())))
     probe.expectMsg(())
 
     Then("it will have set the correct metric counts")
@@ -142,6 +124,7 @@ class TaskTrackerActorTest
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
     val stagedTask = MarathonTestHelper.stagedTaskProto(appId)
+    val stagedTaskState = TaskSerializer.fromProto(stagedTask)
     val runningTask1 = MarathonTestHelper.runningTaskProto(appId)
     val runningTask2 = MarathonTestHelper.runningTaskProto(appId)
     val appDataMap = TaskTracker.TasksByApp.of(

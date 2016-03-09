@@ -5,6 +5,7 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.event.{ MarathonEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
@@ -24,12 +25,9 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
     When("we receive a running status update")
     val status = runningTaskStatus
+    val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(
-        timestamp = updateTimestamp,
-        task = existingTask,
-        status = status
-      ).futureValue
+      f.step.processUpdate(taskUpdate).futureValue
     }
 
     Then("the appropriate event is posted")
@@ -62,12 +60,9 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
     When("we receive a running update")
     val status = runningTaskStatus
+    val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(
-        timestamp = updateTimestamp,
-        task = existingTask,
-        status = status
-      ).futureValue
+      f.step.processUpdate(taskUpdate).futureValue
     }
 
     Then("no event is posted to the event stream")
@@ -89,12 +84,9 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
     When("we receive a terminal status update")
     val status = runningTaskStatus.toBuilder.setState(terminalTaskState).build()
+    val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
-      f.step.processUpdate(
-        timestamp = updateTimestamp,
-        task = existingTask,
-        status = status
-      ).futureValue
+      f.step.processUpdate(taskUpdate).futureValue
     }
 
     Then("the appropriate event is posted")

@@ -6,7 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTracker }
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
@@ -137,7 +137,7 @@ class TaskStartActorTest
     when(launchQueue.get(app.id)).thenReturn(None)
     val task =
       MarathonTestHelper.startingTaskForApp(app.id, appVersion = Timestamp(1024))
-    taskCreationHandler.created(task).futureValue
+    taskCreationHandler.created(TaskStateOp.Create(task)).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -310,7 +310,7 @@ class TaskStartActorTest
 
     val outdatedTask = MarathonTestHelper.stagedTaskForApp(app.id, appVersion = Timestamp(1024))
     val taskId = outdatedTask.taskId
-    taskCreationHandler.created(outdatedTask).futureValue
+    taskCreationHandler.created(TaskStateOp.Create(outdatedTask)).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
