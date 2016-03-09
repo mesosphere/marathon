@@ -375,6 +375,32 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     AppDefinition.residentUpdateIsValid(from)(to9).isSuccess should be(false)
   }
 
+  test("Validation for defining a resident app") {
+    Given("A resident app definition")
+    val f = new Fixture
+    val from = f.validResident
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+
+    When("Check if only defining residency without persistent volumes is valid")
+    val to1 = from.copy(container = None)
+    Then("Should be invalid")
+    AppDefinition.appDefinitionValidator(to1).isSuccess should be(false)
+
+    When("Check if only defining local volumes without residency is valid")
+    val to2 = from.copy(residency = None)
+    Then("Should be invalid")
+    AppDefinition.appDefinitionValidator(to2).isSuccess should be(false)
+
+    When("Check if defining local volumes and residency is valid")
+    Then("Should be valid")
+    AppDefinition.appDefinitionValidator(from).isSuccess should be(true)
+
+    When("Check if defining no local volumes and no residency is valid")
+    val to3 = from.copy(residency = None, container = None)
+    Then("Should be valid")
+    AppDefinition.appDefinitionValidator(to3).isSuccess should be(true)
+  }
+
   class Fixture {
     def validDockerContainer: Container = Container(
       `type` = mesos.ContainerInfo.Type.DOCKER,
@@ -417,6 +443,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
       AppDefinition(
         id = PathId(id),
+        cmd = Some("test"),
         container = Some(Container(mesos.ContainerInfo.Type.MESOS, volumes)),
         residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT))
       )
