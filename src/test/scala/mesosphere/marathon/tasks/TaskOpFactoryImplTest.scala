@@ -3,7 +3,7 @@ package mesosphere.marathon.tasks
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
@@ -44,7 +44,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       networking = Task.HostPorts(List.empty)
     )
     assert(inferredTaskOp.isDefined, "task op is not empty")
-    assert(inferredTaskOp.get.maybeNewTask.get == expectedTask)
+    assert(inferredTaskOp.get.newTask == TaskStateOp.Create(expectedTask))
   }
 
   test("Normal app -> None (insufficient offer)") {

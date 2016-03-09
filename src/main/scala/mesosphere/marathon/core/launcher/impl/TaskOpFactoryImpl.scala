@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.{ TaskOpFactory, TaskOp }
+import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -56,7 +56,8 @@ class TaskOpFactoryImpl @Inject() (
           ),
           networking = Task.HostPorts(ports)
         )
-        taskOperationFactory.launch(taskInfo, task)
+
+        taskOperationFactory.launchEphemeral(taskInfo, task)
     }
   }
 
@@ -132,21 +133,15 @@ class TaskOpFactoryImpl @Inject() (
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(app, (_) => task.taskId, config).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
-        val launch = TaskStateOp.Launch(
+        val taskStateOp = TaskStateOp.LaunchOnReservation(
+          task.taskId,
           appVersion = app.version,
           status = Task.Status(
             stagedAt = clock.now()
           ),
           networking = Task.HostPorts(ports))
 
-        // FIXME (3221): something like reserved.launch(...): LaunchedOnReservation so we don't need to match?
-        task.update(launch) match {
-          case TaskStateChange.Update(updatedTask) =>
-            taskOperationFactory.launch(taskInfo, updatedTask)
-
-          case unexpected: TaskStateChange =>
-            throw new scala.RuntimeException(s"Expected TaskStateChange.Update but got $unexpected")
-        }
+        taskOperationFactory.launchOnReservation(taskInfo, taskStateOp, task)
     }
   }
 
@@ -169,7 +164,8 @@ class TaskOpFactoryImpl @Inject() (
       ),
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = None))
     )
-    taskOperationFactory.reserveAndCreateVolumes(frameworkId, task, resourceMatch.resources, localVolumes)
+    val taskStateOp = TaskStateOp.Reserve(task)
+    taskOperationFactory.reserveAndCreateVolumes(frameworkId, taskStateOp, resourceMatch.resources, localVolumes)
   }
 
 }

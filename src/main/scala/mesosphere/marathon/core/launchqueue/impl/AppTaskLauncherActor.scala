@@ -15,7 +15,7 @@ import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNot
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.{ TaskTrackerUpdateSubscriber, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
@@ -106,10 +106,13 @@ private class AppTaskLauncherActor(
     tasksMap = taskTracker.tasksByAppSync.appTasksMap(app.id).taskStateMap
 
     rateLimiterActor ! RateLimiterActor.GetDelay(app)
+
+    TaskTrackerUpdatesSubscription.register()
   }
 
   override def postStop(): Unit = {
     OfferMatcherRegistration.unregister()
+    TaskTrackerUpdatesSubscription.unregister()
     recheckBackOff.foreach(_.cancel())
 
     if (inFlightTaskOperations.nonEmpty) {
@@ -140,6 +143,7 @@ private class AppTaskLauncherActor(
       receiveDelayUpdate,
       receiveTaskLaunchNotification,
       receiveTaskStatusUpdate,
+      receiveTaskTrackerUpdate,
       receiveGetCurrentCount,
       receiveAddCount,
       receiveProcessOffers
@@ -221,41 +225,39 @@ private class AppTaskLauncherActor(
       log.info("Task launch for '{}' was accepted. {}", op.taskId, status)
   }
 
+  private[this] def receiveTaskTrackerUpdate: Receive = {
+    case ActorTaskTrackerUpdateSubscriber.HandleTaskStateChange(stateChange) =>
+      stateChange match {
+        case TaskStateChange.Update(updatedTask) =>
+          log.debug("updating status of {}", updatedTask.taskId)
+          tasksMap += updatedTask.taskId -> updatedTask
+
+        case TaskStateChange.Expunge(taskId) =>
+          log.debug("{} finished", taskId)
+          removeTask(taskId)
+          // If the app has constraints, we need to reconsider offers that
+          // we already rejected. E.g. when a host:unique constraint prevented
+          // us to launch tasks on a particular node before, we need to reconsider offers
+          // of that node after a task on that node has died.
+          if (app.constraints.nonEmpty) {
+            maybeOfferReviver.foreach(_.reviveOffers())
+          }
+
+        case _ =>
+          // FIXME (3221): Only TaskUpdated and TaskRemoved are propagated to the taskTracker
+          // right now, so we'll only receive Update/Expunge here. It would be good to receive
+          // Failures as well along with an actualState: Option[Task] so we can update/remove
+          // the internal tasksMap. besides, it's ugly to only partly receive stateChanges
+          // (although Failure and NoChange are no changes in that sense)
+          log.debug("receiveTaskTrackerUpdate: ignoring unexpected stateChange {}", stateChange)
+      }
+      replyWithQueuedTaskCount()
+  }
+
+  // FIXME (3221): remove! Does any LaunchQueue logic depend on receiving the counts?
   private[this] def receiveTaskStatusUpdate: Receive = {
     case TaskStatusUpdate(_, taskId, status) =>
-      def handleTask(oldTask: Task) = {
-        oldTask.update(TaskStateOp.MesosUpdate(status, clock.now())) match {
-          case TaskStateChange.Update(updatedTask) =>
-            log.debug("updating status of {}", taskId)
-            tasksMap += taskId -> updatedTask
-
-          case TaskStateChange.Expunge =>
-            log.debug("{} finished", taskId)
-            removeTask(taskId)
-
-          case TaskStateChange.NoChange =>
-            log.debug("no change for {}", taskId)
-
-          case TaskStateChange.Failure(cause) =>
-            log.warning("Task state update failed for {}. Reason: {}", taskId, cause.getMessage)
-        }
-      }
-
-      tasksMap.get(taskId) match {
-        case Some(oldTask) => handleTask(oldTask)
-        case _             => log.warning("ignore update of unknown {}", taskId)
-      }
-
-      if (status.terminal) {
-        // If the app has constraints, we need to reconsider offers that
-        // we already rejected. E.g. when a host:unique constraint prevented
-        // us to launch tasks on a particular node before, we need to reconsider offers
-        // of that node after a task on that node has died.
-        if (app.constraints.nonEmpty) {
-          maybeOfferReviver.foreach(_.reviveOffers())
-        }
-      }
-
+      log.debug("ignoring TaskStatusUpdate")
       replyWithQueuedTaskCount()
   }
 
@@ -341,20 +343,21 @@ private class AppTaskLauncherActor(
 
   private[this] def handleTaskOp(taskOp: TaskOp, offer: Mesos.Offer): Unit = {
     def updateActorState(): Unit = {
+      val taskId = taskOp.taskId
       taskOp match {
         // only decrement for launched tasks, not for reservations:
         case _: TaskOp.Launch => tasksToLaunch -= 1
         case _                => ()
       }
 
-      val taskId = taskOp.taskId
-      taskOp.maybeNewTask match {
-        case Some(newTask) =>
-          tasksMap += taskId -> newTask
-          scheduleTaskOpTimeout(taskOp)
-        case None =>
-          removeTask(taskId)
+      // We will receive the updated task once it's been persisted. Before that,
+      // we can only store the possible state, as we don't have the updated task
+      // yet.
+      taskOp.newTask.possibleNewState.foreach { newState =>
+        tasksMap += taskId -> newState
+        scheduleTaskOpTimeout(taskOp)
       }
+      // FIXME (3221): remove from taskMap if none?
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
     }
@@ -436,6 +439,21 @@ private class AppTaskLauncherActor(
         offerMatcherManager.removeSubscription(myselfAsOfferMatcher)(context.dispatcher)
         registeredAsMatcher = false
       }
+    }
+  }
+
+  private[this] object TaskTrackerUpdatesSubscription {
+    private[this] val myselfAsTaskUpdateSubscriber: TaskTrackerUpdateSubscriber =
+      new ActorTaskTrackerUpdateSubscriber(self)
+
+    def register(): Unit = {
+      log.info("Subscribe as listener for {} status updates.", app.id)
+      taskTracker.subscribeForUpdates(app.id, myselfAsTaskUpdateSubscriber)(context.dispatcher)
+    }
+
+    def unregister(): Unit = {
+      log.info("Unsubscribe as listener for {} status updates.", app.id)
+      taskTracker.unsubscribeFromUpdates(app.id, myselfAsTaskUpdateSubscriber)(context.dispatcher)
     }
   }
 }

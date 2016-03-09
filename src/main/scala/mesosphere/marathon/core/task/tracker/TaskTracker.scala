@@ -39,6 +39,13 @@ trait TaskTracker {
 
   def hasAppTasksSync(appId: PathId): Boolean
   def hasAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean]
+
+  /** subscribe as listener for task write operations (create, update, delete) */
+  def subscribeForUpdates(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)(
+    implicit ec: ExecutionContext): Future[Unit]
+  /** unsubscribe as listener for task write operations (create, update, delete) */
+  def unsubscribeFromUpdates(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)(
+    implicit ec: ExecutionContext): Future[Unit]
 }
 
 object TaskTracker {

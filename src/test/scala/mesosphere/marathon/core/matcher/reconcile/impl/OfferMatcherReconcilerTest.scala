@@ -2,7 +2,7 @@ package mesosphere.marathon.core.matcher.reconcile.impl
 
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.launcher.TaskOp
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
@@ -47,8 +47,8 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val expectedOps =
       Iterable(
         TaskOp.UnreserveAndDestroyVolumes(
-          taskId,
-          oldTask = None, maybeNewTask = None,
+          TaskStateOp.ForceExpunge(taskId),
+          oldTask = None,
           resources = offer.getResourcesList.asScala.to[Seq]
         )
       )
@@ -78,8 +78,8 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     Then("all resources are destroyed and unreserved")
     val expectedOps = Iterable(
       TaskOp.UnreserveAndDestroyVolumes(
-        taskId,
-        oldTask = None, maybeNewTask = None,
+        TaskStateOp.ForceExpunge(taskId),
+        oldTask = None,
         resources = offer.getResourcesList.asScala.to[Seq]
       )
     )
@@ -109,8 +109,8 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     Then("all resources are destroyed and unreserved")
     val expectedOps = Iterable(
       TaskOp.UnreserveAndDestroyVolumes(
-        taskId,
-        oldTask = Some(bogusTask), maybeNewTask = None,
+        TaskStateOp.ForceExpunge(taskId),
+        oldTask = Some(bogusTask),
         resources = offer.getResourcesList.asScala.to[Seq]
       )
     )

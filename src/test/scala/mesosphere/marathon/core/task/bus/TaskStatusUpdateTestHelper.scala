@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task.bus
 
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateChange, Task }
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskID
