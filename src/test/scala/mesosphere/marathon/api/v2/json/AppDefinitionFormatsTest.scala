@@ -151,14 +151,6 @@ class AppDefinitionFormatsTest
     }
   }
 
-  test("FromJSON should fail when 'cpus' is less than or equal to 0") {
-    var json1 = Json.parse(""" { "id": "test", "cpus": 0.0 }""")
-    a[JsResultException] shouldBe thrownBy { json1.as[AppDefinition] }
-
-    val json2 = Json.parse(""" { "id": "test", "cpus": -1.0 }""")
-    a[JsResultException] shouldBe thrownBy { json2.as[AppDefinition] }
-  }
-
   test("""ToJSON should correctly handle missing acceptedResourceRoles""") {
     val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = None)
     val json = Json.toJson(appDefinition)

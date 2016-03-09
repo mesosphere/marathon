@@ -63,6 +63,11 @@ class AppUpdateTest extends MarathonSpec {
       "/portDefinitions",
       "Port names must be unique."
     )
+
+    shouldViolate(update.copy(mem = Some(-3.0)), "/mem", "got -3.0, expected 0.0 or more")
+    shouldViolate(update.copy(cpus = Some(-3.0)), "/cpus", "got -3.0, expected 0.0 or more")
+    shouldViolate(update.copy(disk = Some(-3.0)), "/disk", "got -3.0, expected 0.0 or more")
+    shouldViolate(update.copy(instances = Some(-3)), "/instances", "got -3, expected 0 or more")
   }
 
   private[this] def fromJsonString(json: String): AppUpdate = {

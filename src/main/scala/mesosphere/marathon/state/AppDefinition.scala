@@ -499,6 +499,10 @@ object AppDefinition {
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     (appDef.persistentVolumes is empty) or (appDef.residency is notEmpty)
+    appDef.mem should be >= 0.0
+    appDef.cpus should be >= 0.0
+    appDef.instances should be >= 0
+    appDef.disk should be >= 0.0
   }
 
   private def containsCmdArgsContainerValidator: Validator[AppDefinition] =
