@@ -17,5 +17,10 @@ object TaskStateChange {
   case class Update(updatedTask: Task) extends TaskStateChange
   case object Expunge extends TaskStateChange
   case object NoChange extends TaskStateChange
-  case class Failure(cause: String) extends TaskStateChange
+  case class Failure(cause: Throwable) extends TaskStateChange
+  object Failure {
+    def apply(message: String): Failure = Failure(TaskStateChangeException(message))
+  }
 }
+
+case class TaskStateChangeException(message: String) extends Exception(message)

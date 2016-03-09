@@ -240,7 +240,7 @@ private class AppTaskLauncherActor(
             log.debug("no change for {}", taskId)
 
           case TaskStateChange.Failure(cause) =>
-            log.warning("Task state update failed for {}. Reason: {}", taskId, cause)
+            log.warning("Task state update failed for {}. Reason: {}", taskId, cause.getMessage)
         }
       }
 
