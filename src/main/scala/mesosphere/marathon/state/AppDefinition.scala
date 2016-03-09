@@ -501,10 +501,6 @@ object AppDefinition {
     (appDef.persistentVolumes is empty) or (appDef.residency is notEmpty)
   }
 
-  def filterOutRandomPorts(ports: scala.Seq[Int]): scala.Seq[Int] = {
-    ports.filterNot(_ == AppDefinition.RandomPortValue)
-  }
-
   private def containsCmdArgsContainerValidator: Validator[AppDefinition] = {
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
