@@ -495,7 +495,7 @@ object AppDefinition {
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsContainerValidator
-    appDef.healthChecks is every(portIndixIsValid(appDef.hostPorts.indices))
+    appDef.healthChecks is every(portIndexIsValid(appDef.hostPorts.indices))
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     (appDef.persistentVolumes is empty) or (appDef.residency is notEmpty)
@@ -514,7 +514,7 @@ object AppDefinition {
     }
   }
 
-  private def portIndixIsValid(hostPortsIndices: Range) = new Validator[HealthCheck] {
+  private def portIndexIsValid(hostPortsIndices: Range) = new Validator[HealthCheck] {
     override def apply(healthCheck: HealthCheck): Result = {
       if (healthCheck.protocol == Protocol.COMMAND || (healthCheck.portIndex match {
         case Some(idx) => hostPortsIndices contains idx
