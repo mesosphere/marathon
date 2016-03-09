@@ -15,7 +15,9 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
   test("name uses nested name") {
     object nested extends TaskStatusUpdateStep {
       override def name: String = "nested"
-      override def processUpdate(timestamp: Timestamp, task: Task, mesosStatus: TaskStatus): Future[_] = ???
+      override def processUpdate(timestamp: Timestamp, task: Task, mesosStatus: TaskStatus): Future[_] = {
+        throw new scala.RuntimeException("not implemted")
+      }
     }
 
     ContinueOnErrorStep(nested).name should equal ("continueOnError(nested)")

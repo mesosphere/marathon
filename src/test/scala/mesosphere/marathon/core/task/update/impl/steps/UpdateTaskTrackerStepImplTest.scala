@@ -11,6 +11,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
+import MarathonTestHelper.Implicits._
 
 class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFutures with Mockito with GivenWhenThen {
   test("name") {
@@ -87,10 +88,10 @@ class UpdateTaskTrackerStepImplTest extends FunSuite with Matchers with ScalaFut
     MarathonTestHelper
       .stagedTask(taskId.idString, appVersion = version)
       .withAgentInfo(_.copy(host = host))
-      .withLaunched(_.copy(networking = Task.HostPorts(portsList)))
+      .withNetworking(Task.HostPorts(portsList))
 
   private[this] val runningMarathonTask =
-    stagedMarathonTask.withLaunched(_.withStatus(_.copy(startedAt = Some(Timestamp(2)))))
+    stagedMarathonTask.withStatus(_.copy(startedAt = Some(Timestamp(2))))
 
   class Fixture {
     lazy val taskUpdater = mock[TaskUpdater]

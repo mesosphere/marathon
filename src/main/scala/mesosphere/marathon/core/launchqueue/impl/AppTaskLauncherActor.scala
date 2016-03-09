@@ -4,8 +4,8 @@ import akka.actor.{ Actor, ActorContext, ActorLogging, ActorRef, Cancellable, Pr
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
+import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
-import mesosphere.marathon.core.launcher.{ TaskOpFactory, TaskOp }
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.AppTaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base
@@ -14,10 +14,9 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, Task
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -226,39 +225,38 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def receiveTaskStatusUpdate: Receive = {
-    case TaskStatusUpdate(_, taskId, MarathonTaskStatus.Terminal(_)) =>
-      log.debug("{} finished", taskId)
-      if (app.isResident) {
-        unlaunchTask(taskId)
-      }
-      else {
-        removeTask(taskId)
-      }
-
-      // If the app has constraints, we need to reconsider offers that
-      // we already rejected. E.g. when a host:unique constraint prevented
-      // us to launch tasks on a particular node before, we need to reconsider offers
-      // of that node after a task on that node has died.
-      if (app.constraints.nonEmpty) {
-        maybeOfferReviver.foreach(_.reviveOffers())
-      }
-
-      replyWithQueuedTaskCount()
-
     case TaskStatusUpdate(_, taskId, status) =>
-      tasksMap.get(taskId) match {
-        case Some(task) if task.launched.isEmpty =>
-          log.warning("ignore update of unlaunched {}", taskId)
-
-        case Some(task) =>
-          status.mesosStatus.foreach { mesosStatus =>
+      def handleTask(oldTask: Task) = {
+        oldTask.update(TaskStateOp.MesosUpdate(status, clock.now())) match {
+          case TaskStateChange.Update(updatedTask) =>
             log.debug("updating status of {}", taskId)
-            val updatedTask = task.withLaunched(_.withMesosStatus(mesosStatus))
             tasksMap += taskId -> updatedTask
-          }
 
-        case None =>
-          log.warning("ignore update of unknown {}", taskId)
+          case TaskStateChange.Expunge =>
+            log.debug("{} finished", taskId)
+            removeTask(taskId)
+
+          case TaskStateChange.NoChange =>
+            log.debug("no change for {}", taskId)
+
+          case TaskStateChange.Failure(cause) =>
+            log.warning("Task state update failed for {}. Reason: {}", taskId, cause)
+        }
+      }
+
+      tasksMap.get(taskId) match {
+        case Some(oldTask) => handleTask(oldTask)
+        case _             => log.warning("ignore update of unknown {}", taskId)
+      }
+
+      if (status.terminal) {
+        // If the app has constraints, we need to reconsider offers that
+        // we already rejected. E.g. when a host:unique constraint prevented
+        // us to launch tasks on a particular node before, we need to reconsider offers
+        // of that node after a task on that node has died.
+        if (app.constraints.nonEmpty) {
+          maybeOfferReviver.foreach(_.reviveOffers())
+        }
       }
 
       replyWithQueuedTaskCount()
@@ -268,17 +266,6 @@ private class AppTaskLauncherActor(
     inFlightTaskOperations.get(taskId).foreach(_.foreach(_.cancel()))
     inFlightTaskOperations -= taskId
     tasksMap -= taskId
-  }
-
-  private[this] def unlaunchTask(taskId: Task.Id): Unit = {
-    tasksMap.get(taskId) match {
-      case Some(task) =>
-        tasksMap += taskId -> task.copy(launched = None)
-
-      case None =>
-        log.warning("ignore unlaunch of unknown {}", taskId)
-    }
-
   }
 
   private[this] def receiveGetCurrentCount: Receive = {

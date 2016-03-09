@@ -138,10 +138,11 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       .setMessage(taskStatusMessage)
       .build()
 
+  import MarathonTestHelper.Implicits._
   private[this] val stagedMarathonTask =
     MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
       .withAgentInfo(_.copy(host = host))
-      .withLaunched(_.copy(networking = Task.HostPorts(portsList)))
+      .withNetworking(Task.HostPorts(portsList))
 
   class Fixture {
     val eventStream = new EventStream()

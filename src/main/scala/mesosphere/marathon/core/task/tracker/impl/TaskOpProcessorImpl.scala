@@ -3,13 +3,12 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ ActorRef, Status }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.Terminated
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessor.Action
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.StatusUpdateActionResolver
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.TaskRepository
-import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
@@ -34,7 +33,6 @@ private[tracker] object TaskOpProcessorImpl {
       * * a Action.Noop if the task does not have to be changed OR ELSE
       * * an Action.Expunge if the TaskStatus update indicates a terminated task OR ELSE
       * * an Action.Update if the tasks existed and the TaskStatus contains new information OR ELSE
-      * * an Action.Unlaunch if a resident running task is killed
       */
     def resolve(taskId: Task.Id, status: TaskStatus)(
       implicit ec: ExecutionContext): Future[Action] = {
@@ -47,81 +45,13 @@ private[tracker] object TaskOpProcessorImpl {
     }
 
     private[this] def actionForTaskAndStatus(task: Task, statusUpdate: TaskStatus): Action = {
-      //Step 1: if a resident task is terminated, it has to be handled differently
-      resolveForResidentFailed(task, statusUpdate)
-        //Step 2: update existing running task
-        .orElse(resolveForLaunchedTask(task, statusUpdate))
-        //Step 3: nothing of the above: do nothing
-        .getOrElse {
-          log.warn("Got update for task which wasn't launched yet: {}", statusUpdate)
-          Action.Noop
-        }
-    }
-    private[this] def resolveForResidentFailed(task: Task, status: TaskStatus): Option[Action] = {
-      for {
-        _ <- task.reservationWithVolumes
-        _ <- task.launched
-        if Terminated.isTerminated(status.getState)
-      } yield Action.Update(task.copy(launched = None))
-    }
-
-    /**
-      * Calculates the change that needs to performed on this task according to the given task status update
-      */
-    private[this] def resolveForLaunchedTask(task: Task, statusUpdate: TaskStatus): Option[Action] = {
-      task.launched.map { launched =>
-        statusUpdate.getState match {
-          case Terminated(_) => Action.Expunge
-          case TASK_RUNNING if !launched.hasStartedRunning => stagedNowRunning(task, launched, statusUpdate)
-          case _ => updateTaskOnStateChange(task, launched, statusUpdate)
-        }
-      }
-    }
-
-    private[this] def stagedNowRunning(task: Task, currentLaunched: Task.Launched, statusUpdate: TaskStatus): Action = {
-      val now = clock.now()
-      Action.Update(
-        task.copy(launched = Some(
-          currentLaunched.copy(
-            status = currentLaunched.status.copy(
-              startedAt = Some(now),
-              mesosStatus = Some(statusUpdate)
-            )
-          )
-        ))
-      )
-    }
-    private[this] def updateTaskOnStateChange(
-      taskState: Task, currentLaunch: Task.Launched, statusUpdate: TaskStatus): Action = {
-
-      def updatedOnChange(currentStatus: TaskStatus): Option[Task] = {
-        val healthy =
-          statusUpdate.hasHealthy && (!currentStatus.hasHealthy || currentStatus.getHealthy != statusUpdate.getHealthy)
-        val changed = healthy || currentStatus.getState != statusUpdate.getState
-        if (changed) {
-          Some(
-            taskState.copy(
-              launched = Some(
-                currentLaunch.copy(
-                  status = currentLaunch.status.copy(mesosStatus = Some(currentStatus))
-                )
-              )
-            )
-          )
-        }
-        else {
-          log.info("currentStatus {}", currentStatus)
-          log.info("update {}", statusUpdate)
-          None
-        }
-      }
-
-      val maybeUpdated = currentLaunch.status.mesosStatus.flatMap(updatedOnChange(_))
-
-      maybeUpdated match {
-        case Some(updated) => Action.Update(updated)
-        case None =>
-          log.debug(s"Ignoring status update for ${taskState.taskId}. Status did not change.")
+      val change = task.update(TaskStateOp.MesosUpdate(MarathonTaskStatus(statusUpdate), clock.now()))
+      change match {
+        case TaskStateChange.Update(updatedTask) => Action.Update(updatedTask)
+        case TaskStateChange.Expunge             => Action.Expunge
+        case TaskStateChange.NoChange            => Action.Noop
+        case TaskStateChange.Failure(cause) =>
+          log.warn(s"Task state update failed for ${task.taskId}. Reason: $cause")
           Action.Noop
       }
     }
