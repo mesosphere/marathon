@@ -11,9 +11,9 @@ Here is an example of an application JSON which includes all fields.
     "args": ["/bin/sh", "-c", "env && sleep 300"]
     "cpus": 1.5,
     "mem": 256.0,
-    "ports": [
-        8080,
-        9000
+    "portDefinitions": [
+        { "port": 8080, "protocol": "tcp", "name": "http", labels: { "VIP_0": "10.0.0.1:80" } },
+        { "port": 9000, "protocol": "tcp", "name": "admin" }
     ],
     "requirePorts": false,
     "instances": 3,
@@ -142,6 +142,7 @@ The number of CPU`s this application needs per instance. This number does not ha
 The amount of memory in MB that is needed for the application per instance.
 
 ##### ports (Array of Integers)
+Since <span class="label label-default">v0.16.0</span>: __Deprecated__ . Use portDefinitions instead.
 
 An array of required port resources on the host.
 
@@ -167,14 +168,42 @@ via the task resource.
 We will probably provide an alternative way to configure this for non-Docker apps in the future
 as well, see [Rethink ports API](https://github.com/mesosphere/marathon/issues/670).
 
+##### portsDefinitions (Array of Objects)
+
+Since <span class="label label-default">v0.16.0</span>:
+
+An array of required port resources on the host.
+
+The portDefinitions array currently serves multiple roles:
+
+* The number of items in the array determines how many dynamic ports are allocated
+  for every task.
+* For every port that is zero, a globally unique (cluster-wide) port is assigned and
+  provided as part of the app definition to be used in load balancing definitions.
+  See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.html)
+  for details.
+
+Since this is confusing, we recommend to configure ports assignment for Docker containers for `BRIDGE` networking in
+`container.docker.portMappings` instead, see [Docker Containers doc page]({{ site.baseurl
+}}/docs/native-docker.html#bridged-networking-mode)).
+
+Alternatively or if you use the Mesos Containerizer, pass zeros as port values to generate one or more arbitrary
+free ports for each application instance.
+
+Each port value is exposed to the instance via environment variables `$PORT0`, `$PORT1`, etc. Ports assigned to running
+instances are also available via the task resource.
+
+We will probably provide an alternative way to configure this for non-Docker apps in the future
+as well, see [Rethink ports API](https://github.com/mesosphere/marathon/issues/670).
+
 ##### requirePorts (Boolean)
 
 Normally, the host ports of your tasks are automatically assigned. This corresponds to the
 `requirePorts` value `false` which is the default.
 
-If you need more control and want to specify your host ports in advance, you can
- set `requirePorts` to `true`. This way the ports you have specified are used as host ports. That also
- means that Marathon can schedule the associated tasks only on hosts that have the specified ports available.
+If you need more control and want to specify your host ports in advance, you can set `requirePorts` to `true`. This way
+the ports you have specified are used as host ports. That also means that Marathon can schedule the associated tasks
+only on hosts that have the specified ports available.
 
 ##### instances (Integer)
 
@@ -459,8 +488,8 @@ Transfer-Encoding: chunked
     "id": "/my-app",
     "instances": 2,
     "mem": 50.0,
-    "ports": [
-        0
+    "portDefinitions": [
+        {"port": 0}
     ],
     "requirePorts": false,
     "storeUrls": [],

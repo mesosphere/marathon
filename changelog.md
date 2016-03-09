@@ -12,6 +12,14 @@ We realized, that some default values are not sufficient in the field and change
 - `--max_tasks_per_offer` has changed to 5 (was 100)
 - `--reconciliation_interval` has changed to 600000 (=10 minutes) (was 300000 (=5 minutes))
 
+#### Support for ports metadata
+
+The v2 REST API was extended to support additional ports metadata (protocol, name, and labels) through the
+`portDefinition` application field.  Marathon will pass this new information to Mesos, who will in turn make it
+available for service discovery purposes.
+
+Note: the `portDefinitions` array deprecates the `ports` array.
+
 ## Changes from 0.15.1 to 0.15.2
 
 This release includes fixes for two bugs introduced in 0.15.0.
