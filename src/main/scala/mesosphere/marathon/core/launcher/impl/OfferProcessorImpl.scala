@@ -126,7 +126,7 @@ private[launcher] class OfferProcessorImpl(
         case Some(newTask) =>
           log.info(
             s"Save ${taskOpWithSource.taskId} " +
-              s"after applying the effects of {taskOpWithSource.op.getClass.getSimpleName}"
+              s"after applying the effects of ${taskOpWithSource.op.getClass.getSimpleName}"
           )
           taskCreationHandler.created(newTask)
         case None =>

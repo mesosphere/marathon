@@ -2,9 +2,10 @@ package mesosphere.mesos.scale
 
 import java.io.File
 
-import mesosphere.marathon.api.v2.json.{ AppUpdate, AppUpdate$ }
+import mesosphere.marathon.api.v2.json.{ AppUpdate }
+import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.integration.setup.MarathonFacade._
+import MarathonFacade._
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
@@ -122,7 +123,7 @@ class SingleAppScalingTest
       val tasksRunning = (currentApp.entityJson \ "app" \ "tasksRunning").as[Int]
       val tasksStaged = (currentApp.entityJson \ "app" \ "tasksStaged").as[Int]
 
-      log.info(s"XXX (suspend) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
+      log.info(s"XXX (suspendSuccessfully) Current instance count: staged $tasksStaged, running $tasksRunning / $instances")
 
       if (instances == 0) {
         Some(())
