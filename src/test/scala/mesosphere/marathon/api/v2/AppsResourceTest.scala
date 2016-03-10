@@ -60,6 +60,44 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
   }
 
+  test("Create a new app fails with Validation errors for negative resources") {
+    Given("An app with negative resources")
+    var app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
+      versionInfo = OnlyVersion(Timestamp.zero), mem = -128)
+    var group = Group(PathId("/"), Set(app))
+    var plan = DeploymentPlan(group, group)
+    var body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+
+    Then("A constraint violation exception is thrown")
+    var response = appsResource.create(body, false, auth.request)
+    response.getStatus should be(422)
+
+    app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
+      versionInfo = OnlyVersion(Timestamp.zero), cpus = -1)
+    group = Group(PathId("/"), Set(app))
+    plan = DeploymentPlan(group, group)
+    body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+
+    response = appsResource.create(body, false, auth.request)
+    response.getStatus should be(422)
+
+    app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
+      versionInfo = OnlyVersion(Timestamp.zero), instances = -1)
+    group = Group(PathId("/"), Set(app))
+    plan = DeploymentPlan(group, group)
+    body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+
+    response = appsResource.create(body, false, auth.request)
+    response.getStatus should be(422)
+
+  }
+
   test("Create a new app successfully using ports instead of portDefinitions") {
     Given("An app and group")
     val app = AppDefinition(
