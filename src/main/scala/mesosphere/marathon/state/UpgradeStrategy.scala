@@ -14,6 +14,7 @@ case class UpgradeStrategy(minimumHealthCapacity: Double, maximumOverCapacity: D
 
 object UpgradeStrategy {
   def empty: UpgradeStrategy = UpgradeStrategy(1)
+  def forResidentTasks: UpgradeStrategy = UpgradeStrategy(0.5, 0)
   def fromProto(upgradeStrategy: UpgradeStrategyDefinition): UpgradeStrategy =
     UpgradeStrategy(
       upgradeStrategy.getMinimumHealthCapacity,
