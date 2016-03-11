@@ -89,10 +89,10 @@ Options applicable to every protocol:
 
 For TCP/HTTP health checks, either `port` or `portIndex` may be used. If none is provided, `portIndex` is assumed. If `port` is provided, it takes precedence overriding any `portIndex` option.
 
-* `portIndex` (Optional. Default: 0): Index in this app's `ports` array to be
-  used for health requests. An index is used so the app can use random ports,
-  like "[0, 0, 0]" for example, and tasks could be started with port environment
-  variables like `$PORT1`.
+* `portIndex` (Optional. Default: 0): Index in this app's `ports` or
+  `portDefinitions` array to be used for health requests. An index is used
+  so the app can use random ports, like `[0, 0, 0]` for example, and tasks
+  could be started with port environment variables like `$PORT1`.
 * `port` (Optional. Default: None): Port number to be used for health requests.
 
 The following options only apply to HTTP health checks:

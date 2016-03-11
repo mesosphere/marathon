@@ -277,7 +277,7 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of
     concurrent HTTP requests, that is allowed concurrently before requests get answered directly with a
     HTTP 503 Service Temporarily Unavailable.
-    
+
 ### Metrics Flags
 
 * <span class="label label-default">v0.13.0</span> `--[disable_]metrics` (Optional. Default: enabled):
@@ -285,22 +285,22 @@ The Web Site flags control the behavior of Marathon's web site, including the us
     Enabling this might noticeably degrade performance but it helps finding performance problems.
     These measurements can be disabled with --disable_metrics. Other metrics are not affected.
 * <span class="label label-default">v0.13.0</span> `--reporter_graphite` (Optional. Default: disabled):
-    Report metrics to [Graphite](http://graphite.wikidot.com) as defined by the given URL. 
-    Example: `tcp://localhost:2003?prefix=marathon-test&interval=10` 
+    Report metrics to [Graphite](http://graphite.wikidot.com) as defined by the given URL.
+    Example: `tcp://localhost:2003?prefix=marathon-test&interval=10`
     The URL can have several parameters to refine the functionality.
     * prefix: (Default: None) the prefix for all metrics
     * interval: (Default: 10) the interval to report to graphite in seconds
 * <span class="label label-default">v0.13.0</span> `--reporter_datadog` (Optional. Default: disabled):
-    Report metrics to [Datadog](https://www.datadoghq.com) as defined by the given URL. 
+    Report metrics to [Datadog](https://www.datadoghq.com) as defined by the given URL.
     Either use UDP to talk to a datadog agent or HTTP to talk directly to DatadogHQ.
     Example (UDP to agent): `udp://localhost:8125?prefix=marathon-test&tags=marathon&interval=10`
     Example (HTTP to DataDogHQ): `http://datadog?apiKey=abc&prefix=marathon-test&tags=marathon&interval=10`
     The URL can have several parameters to refine the functionality.
-    * expansions: (Default: all) which metric data should be expanded. can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999 
+    * expansions: (Default: all) which metric data should be expanded. can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999
     * interval: (Default: 10) the interval in seconds to report to Datadog
     * prefix: (Default: marathon_test) the prefix is prepended to all metric names
     * tags: (Default: empty) the tags to send with each metric. Can be either simple value like `foo` or key value like `foo:bla`
-    * apiKey: (Default: empty) the api key to use, when directly connecting to Datadog (HTTP) 
+    * apiKey: (Default: empty) the api key to use, when directly connecting to Datadog (HTTP)
 
 ### Debug Flags
 
