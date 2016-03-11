@@ -8,9 +8,28 @@ import org.apache.mesos.{ Protos => Mesos }
 trait TaskOpFactory {
 
   /**
-    * @param tasks a list of tasks for the given app, needed to check constraints and handle resident tasks
     * @return a TaskOp if and only if the offer matches the app.
     */
-  def buildTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp]
+  def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp]
 
+}
+
+object TaskOpFactory {
+
+  /**
+    * @param app the related app definition
+    * @param offer the offer to match against
+    * @param taskMap a map of running tasks or reservations for the given app,
+    *              needed to check constraints and handle resident tasks
+    */
+  case class Request(app: AppDefinition, offer: Mesos.Offer, taskMap: Map[Task.Id, Task]) {
+    def tasks: Iterable[Task] = taskMap.values
+    def isForResidentApp: Boolean = app.isResident
+  }
+
+  object Request {
+    def apply(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Request = {
+      new Request(app, offer, Task.tasksById(tasks))
+    }
+  }
 }
