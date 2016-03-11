@@ -53,9 +53,11 @@ object OfferMatcher {
     def launchedTaskInfos: Iterable[Mesos.TaskInfo] = ops.view.collect {
       case TaskOp.Launch(taskInfo, _, _, _) => taskInfo
     }
+  }
 
-    /** The last state of the affected MarathonTasks after this operations. */
-    def marathonTasks: Map[Task.Id, Task] = ops.map(op => op.taskId -> op.newTask).toMap
+  object MatchedTaskOps {
+    def noMatch(offerId: Mesos.OfferID, resendThisOffer: Boolean = false): MatchedTaskOps =
+      new MatchedTaskOps(offerId, Seq.empty, resendThisOffer = resendThisOffer)
   }
 
   trait TaskOpSource {

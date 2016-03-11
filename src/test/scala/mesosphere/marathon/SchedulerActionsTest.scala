@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupRepository, PathId }
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ times, verify, verifyNoMoreInteractions, when }
 import org.scalatest.Matchers
@@ -17,7 +17,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with Matchers with MockitoSugar {
+class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with Matchers with Mockito {
   import system.dispatcher
 
   test("Reset rate limiter if application is stopped") {
@@ -39,7 +39,7 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
     val app = AppDefinition(id = PathId("/myapp"))
 
     when(repo.expunge(app.id)).thenReturn(Future.successful(Seq(true)))
-    when(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
+    when(taskTracker.appTasks(eq(app.id))(any)).thenReturn(Future.successful(Iterable.empty[Task]))
 
     val res = scheduler.stopApp(mock[SchedulerDriver], app)
 

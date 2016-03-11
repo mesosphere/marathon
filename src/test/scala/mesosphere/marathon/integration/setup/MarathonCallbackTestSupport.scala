@@ -2,6 +2,8 @@ package mesosphere.marathon.integration.setup
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
+
 import scala.annotation.tailrec
 import scala.concurrent.duration.{ FiniteDuration, _ }
 

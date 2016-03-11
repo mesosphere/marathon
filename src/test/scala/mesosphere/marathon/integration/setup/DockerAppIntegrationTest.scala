@@ -1,6 +1,7 @@
 package mesosphere.marathon.integration.setup
 
-import mesosphere.marathon.integration.setup.MarathonFacade._
+import mesosphere.marathon.integration.facades.MarathonFacade
+import MarathonFacade._
 import mesosphere.marathon.state.{ Container, AppDefinition }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 

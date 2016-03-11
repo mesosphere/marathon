@@ -433,18 +433,17 @@ class SchedulerActions(
     healthCheckManager.removeAllFor(app.id)
 
     log.info(s"Stopping app ${app.id}")
-    val tasks = taskTracker.appTasksSync(app.id)
+    taskTracker.appTasks(app.id).map { tasks =>
+      for (taskId <- tasks.iterator.flatMap(_.launchedMesosId)) {
+        log.info(s"Killing task [${taskId.getValue}]")
+        driver.killTask(taskId)
+      }
+      taskQueue.purge(app.id)
+      taskQueue.resetDelay(app)
+      // TODO after all tasks have been killed we should remove the app from taskTracker
 
-    for (taskId <- tasks.iterator.flatMap(_.launchedMesosId)) {
-      log.info(s"Killing task [${taskId.getValue}]")
-      driver.killTask(taskId)
+      eventBus.publish(AppTerminatedEvent(app.id))
     }
-    taskQueue.purge(app.id)
-    taskQueue.resetDelay(app)
-    // TODO after all tasks have been killed we should remove the app from taskTracker
-
-    eventBus.publish(AppTerminatedEvent(app.id))
-    Future.successful(())
   }
 
   def scaleApps(): Future[Unit] = {

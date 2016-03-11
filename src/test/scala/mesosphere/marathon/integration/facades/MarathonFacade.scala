@@ -1,13 +1,14 @@
-package mesosphere.marathon.integration.setup
+package mesosphere.marathon.integration.facades
 
 import java.io.File
 import java.util.Date
 
 import akka.actor.ActorSystem
-import mesosphere.marathon.api.v2.json.{ GroupUpdate, AppUpdate }
+import mesosphere.marathon.api.v2.json.{ AppUpdate, GroupUpdate }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
-import mesosphere.marathon.state.{ Group, AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.integration.setup.{ RestResult, SprayHttpResponse }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import org.slf4j.LoggerFactory
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
@@ -56,10 +57,12 @@ case class ITDeployment(id: String, affectedApps: Seq[String])
 /**
   * The MarathonFacade offers the REST API of a remote marathon instance
   * with all local domain objects.
+  *
   * @param url the url of the remote marathon instance
   */
 class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends PlayJsonSupport {
   import SprayHttpResponse._
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   require(baseGroup.absolute)

@@ -62,8 +62,6 @@ private[launchqueue] object AppTaskLauncherActor {
     */
   private case object RecheckIfBackOffUntilReached extends Requests
 
-  private case class ScheduleTaskOpNotificationTimeout(launch: TaskOp)
-
   case object Stop extends Requests
 
   private val TASK_OP_REJECTED_TIMEOUT_REASON: String =
@@ -88,7 +86,7 @@ private class AppTaskLauncherActor(
     private[this] var tasksToLaunch: Int) extends Actor with ActorLogging with Stash {
   // scalastyle:on parameter.number
 
-  private[this] var inFlightTaskOperations = Map.empty[Task.Id, Option[Cancellable]]
+  private[this] var inFlightTaskOperations = Map.empty[Task.Id, Cancellable]
 
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
@@ -116,7 +114,7 @@ private class AppTaskLauncherActor(
 
     if (inFlightTaskOperations.nonEmpty) {
       log.warning("Actor shutdown but still some tasks in flight: {}", inFlightTaskOperations.keys.mkString(", "))
-      inFlightTaskOperations.values.foreach(_.foreach(_.cancel()))
+      inFlightTaskOperations.values.foreach(_.cancel())
     }
 
     super.postStop()
@@ -144,8 +142,7 @@ private class AppTaskLauncherActor(
       receiveTaskStatusUpdate,
       receiveGetCurrentCount,
       receiveAddCount,
-      receiveProcessOffers,
-      receiveScheduleTaskOpNotificationDelay
+      receiveProcessOffers
     ).reduce(_.orElse[Any, Unit](_))
   }
 
@@ -263,7 +260,7 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def removeTask(taskId: Task.Id): Unit = {
-    inFlightTaskOperations.get(taskId).foreach(_.foreach(_.cancel()))
+    inFlightTaskOperations.get(taskId).foreach(_.cancel())
     inFlightTaskOperations -= taskId
     tasksMap -= taskId
   }
@@ -350,8 +347,14 @@ private class AppTaskLauncherActor(
       }
 
       val taskId = taskOp.taskId
-      tasksMap += taskId -> taskOp.newTask
-      inFlightTaskOperations += taskId -> None
+      taskOp.maybeNewTask match {
+        case Some(newTask) =>
+          tasksMap += taskId -> newTask
+          scheduleTaskOpTimeout(taskOp)
+        case None =>
+          removeTask(taskId)
+      }
+
       OfferMatcherRegistration.manageOfferMatcherStatus()
     }
 
@@ -359,20 +362,15 @@ private class AppTaskLauncherActor(
       taskOp.getClass.getSimpleName, taskOp.taskId.idString, app.version, status)
 
     updateActorState()
-    self ! AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(taskOp)
     sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, taskOp)))
   }
 
-  protected val receiveScheduleTaskOpNotificationDelay: Receive = {
-    case AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout(taskOp) if inFlight(taskOp) =>
-      val reject = TaskOpSourceDelegate.TaskOpRejected(
-        taskOp, AppTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON
-      )
-      val cancellable = scheduleTaskOperationTimeout(context, reject)
-      inFlightTaskOperations += taskOp.taskId -> Some(cancellable)
-
-    case schedule: AppTaskLauncherActor.ScheduleTaskOpNotificationTimeout =>
-      log.debug("ignoring {}", schedule)
+  private[this] def scheduleTaskOpTimeout(taskOp: TaskOp): Unit = {
+    val reject = TaskOpSourceDelegate.TaskOpRejected(
+      taskOp, AppTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON
+    )
+    val cancellable = scheduleTaskOperationTimeout(context, reject)
+    inFlightTaskOperations += taskOp.taskId -> cancellable
   }
 
   private[this] def inFlight(task: TaskOp): Boolean = inFlightTaskOperations.contains(task.taskId)

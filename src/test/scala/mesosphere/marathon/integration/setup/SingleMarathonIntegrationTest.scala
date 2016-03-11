@@ -3,12 +3,14 @@ package mesosphere.marathon.integration.setup
 import java.io.File
 
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.integration.facades.{ MesosFacade, ITEnrichedTask, ITDeploymentResult, MarathonFacade }
 import mesosphere.marathon.state.{ DockerVolume, AppDefinition, Container, PathId }
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
 import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
 import org.slf4j.LoggerFactory
+import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{ FiniteDuration, _ }
@@ -47,6 +49,7 @@ trait SingleMarathonIntegrationTest
 
   val testBasePath: PathId = PathId("/marathonintegrationtest")
   override lazy val marathon: MarathonFacade = new MarathonFacade(config.marathonUrl, testBasePath)
+  lazy val mesos: MesosFacade = new MesosFacade(s"http://${config.master}")
 
   def extraMarathonParameters: List[String] = List.empty[String]
 
@@ -89,6 +92,7 @@ trait SingleMarathonIntegrationTest
       ) ++ extraMarathonParameters
       startMarathon(config.marathonBasePort, parameters: _*)
 
+      waitForCleanSlateInMesos()
       log.info("Setting up local mesos/marathon infrastructure: done.")
     }
     else {
@@ -239,6 +243,8 @@ trait SingleMarathonIntegrationTest
       waitForChange(deleteResult)
     }
 
+    waitForCleanSlateInMesos()
+
     val apps = marathon.listAppsInBaseGroup
     require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
     val groups = marathon.listGroupsInBaseGroup
@@ -249,5 +255,22 @@ trait SingleMarathonIntegrationTest
     events.clear()
     ExternalMarathonIntegrationTest.healthChecks.clear()
     log.info("CLEAN UP finished !!!!!!!!!")
+  }
+
+  def waitForCleanSlateInMesos(): Boolean = {
+    require(mesos.state.value.agents.size == 1, "one agent expected")
+    WaitTestSupport.waitUntil("clean slate in Mesos", 30.seconds) {
+      val agent = mesos.state.value.agents.head
+      val empty = agent.usedResources.isEmpty && agent.reservedResourcesByRole.isEmpty
+      if (!empty) {
+        import mesosphere.marathon.integration.facades.MesosFormats._
+        log.info(
+          "Waiting for blank slate Mesos...\n \"used_resources\": "
+            + Json.prettyPrint(Json.toJson(agent.usedResources)) + "\n \"reserved_resources\": "
+            + Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
+        )
+      }
+      empty
+    }
   }
 }
