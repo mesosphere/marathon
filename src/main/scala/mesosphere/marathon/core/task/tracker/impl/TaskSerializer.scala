@@ -102,9 +102,8 @@ object TaskSerializer {
         Task.LaunchedEphemeral(
           taskId, agentInfo, launched.appVersion, launched.status, launched.networking)
 
-      case (_, _) =>
-        val msg = s"Unable to deserialize task $taskId, agentInfo=$agentInfo, reservation=$reservationOpt," +
-          s"launched=$launchedOpt"
+      case (None, None) =>
+        val msg = s"Unable to deserialize task $taskId, agentInfo=$agentInfo. It is neither reserved nor launched"
         throw new SerializationFailedException(msg)
     }
   }
