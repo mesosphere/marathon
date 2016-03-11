@@ -184,10 +184,10 @@ class ResidentTaskIntegrationTest
     all.map(_.version).forall(_.contains(newVersion)) shouldBe true
 
     And("exactly 5 instances are running")
-    all.count(_.launched) shouldBe 5
+    all.filter(_.launched) should have size(5)
 
     And("no extra task was created")
-    all.size shouldBe 5
+    all should have size(5)
   }
 
   /**
