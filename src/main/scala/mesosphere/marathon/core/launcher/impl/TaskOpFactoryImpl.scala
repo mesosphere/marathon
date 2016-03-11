@@ -38,7 +38,7 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
-    val TaskOpFactory.Request(app, offer, tasks) = request
+    val TaskOpFactory.Request(app, offer, tasks, _) = request
 
     new TaskBuilder(app, Task.Id.forApp, config).buildIfMatches(offer, tasks.values).map {
       case (taskInfo, ports) =>
@@ -60,11 +60,10 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   private[this] def inferForResidents(request: TaskOpFactory.Request): Option[TaskOp] = {
-    val TaskOpFactory.Request(app, offer, tasks) = request
+    val TaskOpFactory.Request(app, offer, tasks, additionalLaunches) = request
 
-    val (launchedTasks, waitingTasks) = tasks.values.partition(_.launched.isDefined)
-    val needToLaunch = launchedTasks.size < app.instances && waitingTasks.nonEmpty
-    val needToReserve = tasks.size < app.instances
+    val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
+    val needToReserve = request.numberOfWaitingReservations < additionalLaunches
 
     val acceptedResourceRoles: Set[String] = {
       val roles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
@@ -88,7 +87,7 @@ class TaskOpFactoryImpl @Inject() (
      */
 
     def maybeLaunchOnReservation = if (needToLaunch) {
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, app, waitingTasks)
+      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, app, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
         val matchingReservedResourcesWithoutVolumes =

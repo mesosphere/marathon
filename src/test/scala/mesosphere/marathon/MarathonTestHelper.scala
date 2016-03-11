@@ -344,7 +344,7 @@ object MarathonTestHelper {
     )
   }
 
-  def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task =
+  def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
       taskId = Task.Id.forApp(appId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),

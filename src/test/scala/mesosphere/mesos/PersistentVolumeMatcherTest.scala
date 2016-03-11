@@ -11,22 +11,6 @@ import scala.collection.immutable.Seq
 class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
   import scala.collection.JavaConverters._
 
-  test("Non-Resident app results in Match") {
-    val f = new Fixture
-
-    Given("a normal app without residency and an offer without persistent volumes")
-    val app = MarathonTestHelper.makeBasicApp()
-    val offer = MarathonTestHelper.makeBasicOffer().build()
-    val tasks = Seq(f.makeTask(app.id))
-
-    When("We ask for a volume match")
-    val matchOpt = PersistentVolumeMatcher.matchVolumes(offer, app, tasks)
-
-    Then("We receive a VolumeMatch with an empty list")
-    matchOpt should not be empty
-    matchOpt.get.persistentVolumeResources shouldBe empty
-  }
-
   test("Missing volumes result in NO match") {
     val f = new Fixture
 
