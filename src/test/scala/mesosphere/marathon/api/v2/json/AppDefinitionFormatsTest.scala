@@ -192,6 +192,25 @@ class AppDefinitionFormatsTest
     appDef.upgradeStrategy should be(UpgradeStrategy.forResidentTasks)
   }
 
+  test("FromJSON should read the default residency automatically residency ") {
+    val json = Json.parse(
+      """
+        |{
+        |  "id": "resident",
+        |  "container": {
+        |    "type": "MESOS",
+        |    "volumes": [{
+        |      "containerPath": "var",
+        |      "persistent": { "size": 10 },
+        |      "mode": "RW"
+        |    }]
+        |  }
+        |}
+      """.stripMargin)
+    val appDef = json.as[AppDefinition]
+    appDef.residency should be(Some(Residency.defaultResidency))
+  }
+
   test("""FromJSON should parse "residency" """) {
     val appDef = Json.parse(
       """{

@@ -571,6 +571,9 @@ trait AppAndGroupFormats {
             import UpgradeStrategy.{ forResidentTasks, empty }
             upgradeStrategy.getOrElse(if (residency.isDefined) forResidentTasks else empty)
           }
+          def residencyOrDefault: Option[Residency] = {
+            residency.orElse(if (app.persistentVolumes.nonEmpty) Some(Residency.defaultResidency) else None)
+          }
         }
 
         val extraReads: Reads[ExtraFields] =
@@ -625,7 +628,7 @@ trait AppAndGroupFormats {
             acceptedResourceRoles = extra.acceptedResourceRoles,
             ipAddress = extra.ipAddress,
             versionInfo = AppDefinition.VersionInfo.OnlyVersion(extra.version),
-            residency = extra.residency
+            residency = extra.residencyOrDefault
           )
         }
       }
