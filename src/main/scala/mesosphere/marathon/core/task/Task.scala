@@ -267,6 +267,8 @@ object Task {
     }
   }
 
+  def reservedTasks(tasks: Iterable[Task]): Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+
   def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
 
   case class Id(idString: String) {

@@ -3,9 +3,11 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.task.TaskStateOp.ReservationTimeout
 import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.core.task.tracker.{
+  TaskReservationTimeoutHandler,
   TaskStateOpProcessor,
   TaskCreationHandler,
   TaskTrackerConfig
@@ -22,7 +24,7 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
   clock: Clock,
   conf: TaskTrackerConfig,
   taskTrackerRef: ActorRef)
-    extends TaskCreationHandler with TaskStateOpProcessor {
+    extends TaskCreationHandler with TaskStateOpProcessor with TaskReservationTimeoutHandler {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -36,6 +38,9 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
     process(taskStateOp).map(_ => ())
   }
   override def terminated(stateOp: TaskStateOp.ForceExpunge): Future[_] = {
+    process(stateOp)
+  }
+  override def timeout(stateOp: ReservationTimeout): Future[_] = {
     process(stateOp)
   }
 

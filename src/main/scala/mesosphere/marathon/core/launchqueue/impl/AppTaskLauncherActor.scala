@@ -233,11 +233,13 @@ private class AppTaskLauncherActor(
         case TaskStateChange.Expunge(task) =>
           log.debug("{} finished", task.taskId)
           removeTask(task.taskId)
-          // If the app has constraints, we need to reconsider offers that
+          // A) If the app has constraints, we need to reconsider offers that
           // we already rejected. E.g. when a host:unique constraint prevented
           // us to launch tasks on a particular node before, we need to reconsider offers
           // of that node after a task on that node has died.
-          if (app.constraints.nonEmpty) {
+          //
+          // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
+          if (app.constraints.nonEmpty || (app.isResident && shouldLaunchTasks)) {
             maybeOfferReviver.foreach(_.reviveOffers())
           }
 

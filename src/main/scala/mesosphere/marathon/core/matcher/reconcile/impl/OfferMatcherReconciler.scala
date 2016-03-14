@@ -67,6 +67,9 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
                   resources = spuriousResources.to[Seq]
                 )
               TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
+            //          case (taskId, spuriousResources) if shouldRefreshLastSeen(taskId) =>
+            //            // this is slightly silly but we need to refresh
+
           }.to[Seq]
 
           MatchedTaskOps(offer.getId, taskOps, resendThisOffer = true)
