@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
+import mesosphere.marathon.core.launcher.{ TaskOpFactory, TaskOp }
 import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -26,19 +26,21 @@ class TaskOpFactoryImpl @Inject() (
     new TaskOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  override def buildTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp] = {
+  override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     log.debug("buildTaskOp")
 
-    if (app.isResident) {
-      inferForResidents(app, offer, tasks)
+    if (request.isForResidentApp) {
+      inferForResidents(request)
     }
     else {
-      inferNormalTaskOp(app, offer, tasks)
+      inferNormalTaskOp(request)
     }
   }
 
-  private[this] def inferNormalTaskOp(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp] = {
-    new TaskBuilder(app, Task.Id.forApp, config).buildIfMatches(offer, tasks).map {
+  private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
+    val TaskOpFactory.Request(app, offer, tasks, _) = request
+
+    new TaskBuilder(app, Task.Id.forApp, config).buildIfMatches(offer, tasks.values).map {
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
@@ -57,10 +59,11 @@ class TaskOpFactoryImpl @Inject() (
     }
   }
 
-  private[this] def inferForResidents(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task]): Option[TaskOp] = {
-    val (launchedTasks, waitingTasks) = tasks.partition(_.launched.isDefined)
-    val needToLaunch = launchedTasks.size < app.instances && waitingTasks.nonEmpty
-    val needToReserve = tasks.size < app.instances
+  private[this] def inferForResidents(request: TaskOpFactory.Request): Option[TaskOp] = {
+    val TaskOpFactory.Request(app, offer, tasks, additionalLaunches) = request
+
+    val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
+    val needToReserve = request.numberOfWaitingReservations < additionalLaunches
 
     val acceptedResourceRoles: Set[String] = {
       val roles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
@@ -84,12 +87,12 @@ class TaskOpFactoryImpl @Inject() (
      */
 
     def maybeLaunchOnReservation = if (needToLaunch) {
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, app, waitingTasks)
+      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, app, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
-            offer, app, tasks,
+            offer, app, tasks.values,
             ResourceSelector(
               config.mesosRole.get.toSet, reserved = true,
               requiredLabels = TaskLabels.labelsForTask(volumeMatch.task)
@@ -105,7 +108,10 @@ class TaskOpFactoryImpl @Inject() (
 
     def maybeReserveAndCreateVolumes = if (needToReserve) {
       val matchingResourcesForReservation =
-        ResourceMatcher.matchResources(offer, app, tasks, ResourceSelector(acceptedResourceRoles, reserved = false))
+        ResourceMatcher.matchResources(
+          offer, app, tasks.values,
+          ResourceSelector(acceptedResourceRoles, reserved = false)
+        )
       matchingResourcesForReservation.map(resourceMatch => reserveAndCreateVolumes(app, offer, resourceMatch))
     }
     else None

@@ -22,12 +22,13 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       .setHostname("some_host")
       .setSlaveId(SlaveID("some slave ID"))
       .build()
-    val appDefinition: AppDefinition = AppDefinition(portDefinitions = List())
+    val app: AppDefinition = AppDefinition(portDefinitions = List())
     val runningTasks: Set[Task] = Set(
       MarathonTestHelper.mininimalTask("some task ID")
     )
 
-    val inferredTaskOp = f.taskOpFactory.buildTaskOp(appDefinition, offer, runningTasks)
+    val request = TaskOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val inferredTaskOp = f.taskOpFactory.buildTaskOp(request)
 
     val expectedTask = Task.LaunchedEphemeral(
       taskId = inferredTaskOp.fold(Task.Id("failure"))(_.taskId),
@@ -36,7 +37,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
         agentId = Some(offer.getSlaveId.getValue),
         attributes = List.empty
       ),
-      appVersion = appDefinition.version,
+      appVersion = app.version,
       status = Task.Status(
         stagedAt = f.clock.now()
       ),
@@ -51,10 +52,11 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val f = new Fixture
     val app = f.normalApp
     val offer = f.insufficientOffer
-    val tasks = Nil
+    val runningTasks = Nil
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
+    val request = TaskOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("None is returned because there are already 2 launched tasks")
     taskOp shouldBe empty
@@ -65,10 +67,11 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val f = new Fixture
     val app = f.normalApp
     val offer = f.offer
-    val tasks = Nil
+    val runningTasks = Nil
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
+    val request = TaskOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A Launch is inferred")
     taskOp shouldBe a[Some[TaskOp.Launch]]
@@ -79,10 +82,11 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val f = new Fixture
     val app = f.residentApp
     val offer = f.insufficientOffer
-    val tasks = Nil
+    val runningTasks = Nil
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
+    val request = TaskOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("None is returned")
     taskOp shouldBe empty
@@ -93,10 +97,11 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val f = new Fixture
     val app = f.residentApp
     val offer = f.offer
-    val tasks = Nil
+    val runningTasks = Nil
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
+    val request = TaskOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A no is returned because there is not enough disk space")
     taskOp shouldBe None
@@ -107,10 +112,11 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val f = new Fixture
     val app = f.residentApp
     val offer = f.offerWithSpaceForLocalVolume
-    val tasks = Nil
+    val runningTasks = Nil
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
+    val request = TaskOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A ReserveAndCreateVolumes is returned")
     taskOp shouldBe a[Some[TaskOp.ReserveAndCreateVolumes]]
@@ -127,12 +133,13 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val offer = f.offerWithVolumes(
       reservedTask.taskId.idString, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
     )
-    val tasks = Seq(
+    val runningTasks = Seq(
       f.residentLaunchedTask(app.id, localVolumeIdLaunched),
       reservedTask)
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
+    val request = TaskOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A Launch is returned")
     taskOp shouldBe a[Some[TaskOp.Launch]]
@@ -153,11 +160,12 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val app = f.residentApp
     val usedVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid1")
     val offeredVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid2")
-    val tasks = Seq(f.residentLaunchedTask(app.id, usedVolumeId))
-    val offer = f.offerWithVolumes(tasks.head.taskId.idString, offeredVolumeId)
+    val runningTasks = Seq(f.residentLaunchedTask(app.id, usedVolumeId))
+    val offer = f.offerWithVolumes(runningTasks.head.taskId.idString, offeredVolumeId)
 
     When("We infer the taskOp")
-    val taskOp = f.taskOpFactory.buildTaskOp(app, offer, tasks)
+    val request = TaskOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)
+    val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A None is returned because there is already a launched Task")
     taskOp shouldBe empty
