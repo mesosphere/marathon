@@ -1,7 +1,6 @@
 package mesosphere.marathon.state
 
-import com.wix.accord.Success
-import mesosphere.marathon.api.v2.Validation._
+import com.wix.accord._
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
@@ -395,6 +394,24 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("All non existing subgroups should be created")
       ids should equal(reference.transitiveGroups.map(_.id))
+    }
+
+    it("relative dependencies should be resolvable") {
+      Given("a group with an app having relative dependency")
+      val group: Group = Group("/".toPath, groups = Set(
+        Group("group".toPath, apps = Set(AppDefinition("app1".toPath, cmd = Some("foo"))),
+          groups = Set(
+            Group("subgroup".toPath, Set(
+              AppDefinition("app2".toPath, cmd = Some("bar"),
+                dependencies = Set("../app1".toPath))))
+          ))
+      ))
+
+      When("group is validated")
+      val result = validate(group)
+
+      Then("result should be a success")
+      result.isSuccess should be(true)
     }
   }
 }

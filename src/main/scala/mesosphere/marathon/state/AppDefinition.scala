@@ -479,22 +479,13 @@ object AppDefinition {
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
-  /**
-    * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.
-    * If users had already one invalid app definition, each deployment would cause a complete revalidation of
-    * the root group including the invalid one.
-    * Until the user changed all invalid apps, the user would get weird validation
-    * errors for every deployment potentially unrelated to the deployed apps.
-    */
-  implicit val appDefinitionValidator = validator[AppDefinition] { appDef =>
-    appDef.id is valid
-    appDef.dependencies is valid
+  private val validBasicAppDefinition = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
     appDef.container.each is valid
     appDef.storeUrls is every(urlCanBeResolvedValidator)
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
-    appDef is containsCmdArgsContainerValidator
+    appDef is containsCmdArgsOrContainer
     appDef.healthChecks is every(portIndexIsValid(appDef.hostPorts.indices))
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
@@ -502,16 +493,39 @@ object AppDefinition {
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
     appDef.disk should be >= 0.0
-    appDef must defineCorrectResidencyCombination
+    appDef must definesCorrectResidencyCombination
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
   }
 
-  private val defineCorrectResidencyCombination: Validator[AppDefinition] =
+  /**
+    * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.
+    * If users had already one invalid app definition, each deployment would cause a complete revalidation of
+    * the root group including the invalid one.
+    * Until the user changed all invalid apps, the user would get weird validation
+    * errors for every deployment potentially unrelated to the deployed apps.
+    */
+  implicit val validAppDefinition: Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app.id is valid
+    app.id is PathId.absolutePathValidator
+    app.dependencies is every(PathId.validPathWithBase(app.id.parent))
+  } and validBasicAppDefinition
+
+  /**
+    * Validator for apps, which are being part of a group.
+    * @param base Path of the parent group.
+    * @return
+    */
+  def validNestedAppDefinition(base: PathId): Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app.id is PathId.validPathWithBase(base)
+    app.dependencies is every(PathId.validPathWithBase(base))
+  } and validBasicAppDefinition
+
+  private val definesCorrectResidencyCombination: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
       !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
     }
 
-  private val containsCmdArgsContainerValidator: Validator[AppDefinition] =
+  private val containsCmdArgsOrContainer: Validator[AppDefinition] =
     isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.") { app =>
       val cmd = app.cmd.nonEmpty
       val args = app.args.nonEmpty

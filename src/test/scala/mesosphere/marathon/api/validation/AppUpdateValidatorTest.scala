@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.validation
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.api.v2.Validation._
+import com.wix.accord.validate
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.state.{ Container, PathId }
 import org.apache.mesos.{ Protos => mesos }

@@ -2,6 +2,7 @@ package mesosphere.marathon.api.validation
 
 import mesosphere.marathon.Protos.HealthCheckDefinition
 import mesosphere.marathon.api.v2.Validation._
+import com.wix.accord.validate
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
@@ -384,21 +385,21 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     When("Check if only defining residency without persistent volumes is valid")
     val to1 = from.copy(container = None)
     Then("Should be invalid")
-    AppDefinition.appDefinitionValidator(to1).isSuccess should be(false)
+    AppDefinition.validAppDefinition(to1).isSuccess should be(false)
 
     When("Check if only defining local volumes without residency is valid")
     val to2 = from.copy(residency = None)
     Then("Should be invalid")
-    AppDefinition.appDefinitionValidator(to2).isSuccess should be(false)
+    AppDefinition.validAppDefinition(to2).isSuccess should be(false)
 
     When("Check if defining local volumes and residency is valid")
     Then("Should be valid")
-    AppDefinition.appDefinitionValidator(from).isSuccess should be(true)
+    AppDefinition.validAppDefinition(from).isSuccess should be(true)
 
     When("Check if defining no local volumes and no residency is valid")
     val to3 = from.copy(residency = None, container = None)
     Then("Should be valid")
-    AppDefinition.appDefinitionValidator(to3).isSuccess should be(true)
+    AppDefinition.validAppDefinition(to3).isSuccess should be(true)
   }
 
   class Fixture {

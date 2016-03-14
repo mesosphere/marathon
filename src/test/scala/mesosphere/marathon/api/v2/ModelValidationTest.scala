@@ -1,8 +1,6 @@
 package mesosphere.marathon.api.v2
 
-import java.util.regex.Pattern
-
-import com.wix.accord.{ Success, Failure }
+import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.v2.json.GroupUpdate
@@ -17,7 +15,6 @@ import mesosphere.marathon.api.v2.Validation._
 import play.api.libs.json.{ JsObject, Json }
 
 import scala.collection.immutable.Seq
-import scala.util.matching.Regex
 
 class ModelValidationTest
     extends MarathonSpec
@@ -38,12 +35,12 @@ class ModelValidationTest
       createServicePortApp("/c".toPath, 0)
     ))
 
-    val failedResult = Group.validWithConfig(Some(2)).apply(group)
+    val failedResult = Group.validGroupWithConfig(Some(2)).apply(group)
     failedResult.isFailure should be(true)
     ValidationHelper.getAllRuleConstrains(failedResult)
       .find(v => v.message.contains("This Marathon instance may only handle up to 2 Apps!")) should be ('defined)
 
-    val successfulResult = Group.validWithConfig(Some(10)).apply(group)
+    val successfulResult = Group.validGroupWithConfig(Some(10)).apply(group)
     successfulResult.isSuccess should be(true)
   }
 

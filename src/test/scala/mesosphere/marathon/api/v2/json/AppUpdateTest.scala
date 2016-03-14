@@ -15,7 +15,7 @@ import play.api.libs.json.{ JsPath, JsError, Json }
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-import mesosphere.marathon.api.v2.Validation._
+import com.wix.accord._
 
 import scala.util.Try
 
