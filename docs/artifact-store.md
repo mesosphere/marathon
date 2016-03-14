@@ -19,7 +19,7 @@ Marathon tries to simplify several use cases.
 
 Marathon supports different storage system, that can be used as artifact store.
 The type of the artifact store is configured via the command line.
-Example: start with --artifact_store hdfs://localhost:54310/path/to/store to use Hadoop DFS 
+Example: start with --artifact_store hdfs://localhost:54310/path/to/store to use Hadoop DFS
 as artifact storage backend.
 
 
@@ -37,7 +37,8 @@ The filename used in the artifact store, is the same as given by the form parame
 The response holds the URL of the artifact in the artifact store in the Location Header.
 
 **Request:**
-```http
+```
+http
 POST /v2/artifacts HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -65,7 +66,9 @@ Server: Jetty(8.1.11.v20130520)
 If you want to specify a specific path in the artifact store, specify the path in the url:
 
 **Request:**
-```http
+
+```
+http
 POST /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -83,7 +86,9 @@ Content-Disposition: form-data; name="file"; filename="test.txt"
 ```
 
 **Response:**
-```http
+
+```
+http
 HTTP/1.1 201 Created
 Content-Length: 0
 Location: hdfs://localhost:54310/artifact/special/file/name.txt
@@ -95,7 +100,9 @@ Server: Jetty(8.1.11.v20130520)
 The path is the relative path in the artifact store.
 
 **Request:**
-```http
+
+```
+http
 GET /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -104,7 +111,9 @@ User-Agent: HTTPie/0.8.0
 ```
 
 **Response:**
-```http
+
+```
+http
 HTTP/1.1 200 OK
 Content-Length: 14
 Content-Type: text/plain
@@ -119,7 +128,9 @@ Server: Jetty(8.1.11.v20130520)
 The path is the relative path in the artifact store.
 
 **Request:**
-```http
+
+```
+http
 DELETE /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -129,7 +140,9 @@ User-Agent: HTTPie/0.8.0
 ```
 
 **Response:**
-```http
+
+```
+http
 HTTP/1.1 200 OK
 Content-Length: 0
 Content-Type: application/json
@@ -168,14 +181,14 @@ Host: localhost:8080
 User-Agent: HTTPie/0.8.0
 
 {
-    "cmd": "python toggle.py $PORT0", 
-    "cpus": 0.2, 
-    "id": "app", 
-    "instances": 2, 
-    "mem": 32, 
+    "cmd": "python toggle.py $PORT0",
+    "cpus": 0.2,
+    "id": "app",
+    "instances": 2,
+    "mem": 32,
     "ports": [
         0
-    ], 
+    ],
     "storeUrls": [
         "http://downloads.mesosphere.com/misc/toggle.tgz"
     ]
@@ -191,7 +204,7 @@ Server: Jetty(8.1.11.v20130520)
 Transfer-Encoding: chunked
 
 {
-    "deploymentId": "910ae97f-3f3d-4fdb-a9a1-9d72f0ae8e49", 
+    "deploymentId": "910ae97f-3f3d-4fdb-a9a1-9d72f0ae8e49",
     "version": "2014-07-22T13:25:52.319Z"
 }
 ```
@@ -217,18 +230,18 @@ Transfer-Encoding: chunked
 
 {
     "app": {
-        "cmd": "python toggle.py $PORT0 mongo2 v1", 
-        "cpus": 0.2, 
-        "id": "/app", 
-        "instances": 2, 
-        "mem": 32.0, 
+        "cmd": "python toggle.py $PORT0 mongo2 v1",
+        "cpus": 0.2,
+        "id": "/app",
+        "instances": 2,
+        "mem": 32.0,
         "ports": [
             10001
-        ], 
-        "storeUrls": [], 
+        ],
+        "storeUrls": [],
         "uris": [
             "hdfs://localhost:54310/artifact/f1cc046e4b603a94d0932eb818854fcc52e1b563/toggle.tgz"
-        ] 
+        ]
     }
 }
 ```
@@ -236,7 +249,7 @@ Transfer-Encoding: chunked
 
 
 ### Automatic Path creation
- 
+
 The path in the asset store is computed that way:
 
 * HEAD Request to the asset
@@ -247,12 +260,12 @@ The path in the asset store is computed that way:
 The complete path is {artifact store base}/{ETag or ContentHash}/{filename of asset}
 This effectively will create a path, that is unique to the content of the resource.
 If the same URL holds a different entity, a new path is created.
-The same path is downloaded only once. 
+The same path is downloaded only once.
 In other words if the path is available in the artifact store, it is not downloaded again.
 
 
 ### Prerequisites
 
 To use this feature, all assets need to be resolvable by marathon itself.
-To circumvent manual content hash creation, the http server should support HTTP ETag Header. 
+To circumvent manual content hash creation, the http server should support HTTP ETag Header.
 

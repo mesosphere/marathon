@@ -12,7 +12,7 @@ addition to those set by Mesos.
 Each element of the `env` field of each task's app definition describes
 an environment variable.
 
-_Note: No custom prefix will be added to these variable names, even if one is
+**Note:** No custom prefix will be added to these variable names, even if one is
 specified via the `--env_vars_prefix` command line flag.
 
 ## Host Ports
@@ -33,7 +33,7 @@ port, then `PORT` has the same value as `PORT0`.
 The `PORTS` variable contains a comma-separated list of all assigned
 host ports.
 
-_Note: It is possible to specify a custom prefix for these variable
+**Note:** It is possible to specify a custom prefix for these variable
 names through the `--env_vars_prefix` command line flag.
 
 ## App Metadata
@@ -50,10 +50,10 @@ names through the `--env_vars_prefix` command line flag.
 - `MARATHON_APP_LABELS` contains list of labels of the corresponding app definition. For example: `label1 label2 label3`
 - `MARATHON_APP_LABEL_NAME` contains value of label "NAME" of the corresponding app definition. 
 
-_Note: No custom prefix will be added to these variable names, even if one is
+**Note:** No custom prefix will be added to these variable names, even if one is
 specified via the `--env_vars_prefix` command line flag.
 
-_Note: Label name will be sanitized: all characters except a-z A-Z 0-9 _ will be replaced with _. 
+**Note:** Label name will be sanitized: all characters except `a-z A-Z 0-9 _` will be replaced with `_`. 
 All keys and values longer than 512 chars will be omitted.
 
 ## Task Metadata

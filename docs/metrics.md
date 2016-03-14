@@ -32,6 +32,10 @@ be available under "stats.gauges.marathon_test.service.mesosphere.marathon.uptim
 in milliseconds. This is helpful to diagnose stability problems which cause
 Marathon to restart.
 
+`service.mesosphere.marathon.leaderDuration` (gauge) - The duration since the last leader election happened
+in milliseconds. This is helpful to diagnose stability problems and how often leader election happens.
+
+
 ### App/group/task counts
 
 `service.mesosphere.marathon.app.count` (gauge) - The number of defined apps. In general,

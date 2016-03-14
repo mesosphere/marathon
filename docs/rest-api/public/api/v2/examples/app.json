@@ -37,7 +37,9 @@
           "containerPort": 80,
           "hostPort": 0,
           "protocol": "tcp",
-          "servicePort": 10019
+          "servicePort": 10019,
+          "name": "http",
+          "labels": { "vip": "192.168.0.1:80" }
         }
       ],
       "privileged": false
@@ -95,6 +97,14 @@
   },
   "ports": [
     0
+  ],
+  "portDefinitions": [
+    {
+      "port": 0
+      "protocol": "tcp",
+      "name": "http",
+      "labels": { "vip": "192.168.0.1:80" }
+    }
   ],
   "requirePorts": false,
   "upgradeStrategy": {

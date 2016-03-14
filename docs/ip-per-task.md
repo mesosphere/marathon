@@ -86,6 +86,3 @@ however still possible to describe the ports that the Application's tasks expose
 
 Marathon will pass down this information to Mesos (inside the DiscoveryInfo message) when starting new tasks,
 [mesos-dns](https://github.com/mesosphere/mesos-dns) will then expose this information through IN SRV records.
-
-In the future Marathon will also fill in the DiscoveryInfo message for applications that don't require
-IP-per-task.
