@@ -144,7 +144,11 @@ class CoreModuleImpl @Inject() (
   // is created. Changing the wiring order for this feels wrong since it is nicer if it
   // follows architectural logic. Therefore we instantiate them here explicitly.
 
-  taskJobsModule.killOverdueTasks(taskTrackerModule.taskTracker, marathonSchedulerDriverHolder)
+  taskJobsModule.handleOverdueTasks(
+    taskTrackerModule.taskTracker,
+    taskTrackerModule.taskReservationTimeoutHandler,
+    marathonSchedulerDriverHolder
+  )
   maybeOfferReviver
   offerMatcherManagerModule
   launcherModule
