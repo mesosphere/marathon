@@ -4,7 +4,7 @@ import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
@@ -45,16 +45,22 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
     if (resourcesByTaskId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
     else {
       def createTaskOps(tasksByApp: TasksByApp, rootGroup: Group): MatchedTaskOps = {
-        def spurious(taskId: Id): Boolean =
+        def spurious(taskId: Task.Id): Boolean =
           tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.appId).isEmpty
 
         val taskOps = resourcesByTaskId.iterator.collect {
           case (taskId, spuriousResources) if spurious(taskId) =>
             val unreserveAndDestroy =
               TaskOp.UnreserveAndDestroyVolumes(
-                taskId = taskId, oldTask = tasksByApp.task(taskId), resources = spuriousResources.to[Seq]
+                // FIXME (3221): is ForceExpunge correct here?
+                newTask = TaskStateOp.ForceExpunge(taskId),
+                oldTask = tasksByApp.task(taskId),
+                resources = spuriousResources.to[Seq]
               )
             TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
+          //          case (taskId, spuriousResources) if shouldRefreshLastSeen(taskId) =>
+          //            // this is slightly silly but we need to refresh
+
         }.to[Seq]
 
         MatchedTaskOps(offer.getId, taskOps, resendThisOffer = true)

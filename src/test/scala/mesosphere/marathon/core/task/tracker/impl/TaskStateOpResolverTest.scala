@@ -1,14 +1,12 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.StatusUpdateActionResolver
+import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.Mockito
-import org.apache.mesos.Protos.TaskStatus
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 
@@ -17,7 +15,8 @@ import scala.concurrent.Future
   *
   * More tests are in [[mesosphere.marathon.tasks.TaskTrackerImplTest]]
   */
-class StatusUpdateActionResolverTest
+// FIXME (3221): add missing tests
+class TaskStateOpResolverTest
     extends FunSuite with Mockito with GivenWhenThen with ScalaFutures with Matchers {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -27,28 +26,23 @@ class StatusUpdateActionResolverTest
     val appId = PathId("/app")
     val taskId = Task.Id.forApp(appId)
     f.taskTracker.task(taskId) returns Future.successful(None)
-    And("a status update")
-    val update = TaskStatus.getDefaultInstance
 
     When("resolve is called")
-    val action = f.actionResolver.resolve(taskId, update).futureValue
+    val stateChange = f.stateOpResolver.resolve(TaskStateOp.ForceExpunge(taskId)).futureValue
 
-    Then("getTAskAsync is called")
+    Then("getTaskAsync is called")
     verify(f.taskTracker).task(taskId)
 
-    And("a fail action is returned")
-    action.getClass should be(classOf[TaskOpProcessor.Action.Fail])
-    action.asInstanceOf[TaskOpProcessor.Action.Fail].cause.getMessage should
-      equal(s"$taskId of app [$appId] does not exist")
+    And("the future fails")
+    stateChange shouldBe a[TaskStateChange.Failure]
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
   }
 
   class Fixture {
-    val clock = ConstantClock()
     val taskTracker = mock[TaskTracker]
-    val actionResolver = new StatusUpdateActionResolver(clock, taskTracker)
+    val stateOpResolver = new TaskStateOpResolver(taskTracker)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(taskTracker)

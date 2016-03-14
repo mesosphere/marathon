@@ -9,7 +9,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTracker, TaskUpdater }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
@@ -81,7 +81,7 @@ class MarathonHealthCheckManagerTest
     val taskStatus = MarathonTestHelper.runningTask(taskId.idString).launched.get.status.mesosStatus.get
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
 
-    taskCreationHandler.created(marathonTask).futureValue
+    taskCreationHandler.created(TaskStateOp.Create(marathonTask)).futureValue
     taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     taskId
@@ -120,7 +120,7 @@ class MarathonHealthCheckManagerTest
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
-    taskCreationHandler.created(marathonTask).futureValue
+    taskCreationHandler.created(TaskStateOp.Create(marathonTask)).futureValue
     taskUpdater.statusUpdate(appId, taskStatus).futureValue
 
     hcManager.add(appId, app.version, healthCheck)
@@ -226,12 +226,12 @@ class MarathonHealthCheckManagerTest
         versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )).futureValue
-      taskCreationHandler.created(task).futureValue
+      taskCreationHandler.created(TaskStateOp.Create(task)).futureValue
       taskUpdater.statusUpdate(appId, taskStatus(task.marathonTask)).futureValue
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: Task) =
-      taskCreationHandler.terminated(task.taskId).futureValue
+      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.taskId)).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath

@@ -4,8 +4,8 @@ import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.appinfo.TaskCounts
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
+import mesosphere.marathon.core.task.tracker.{ TaskTrackerUpdateSubscriber, TaskTracker }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
@@ -20,13 +20,8 @@ object TaskTrackerActor {
   /** Query the current [[TaskTracker.AppTasks]] from the [[TaskTrackerActor]]. */
   private[impl] case object List
 
-  /**
-    * Forward an update operation to the child [[TaskUpdateActor]].
-    *
-    * FIXME: change taskId to [[Task.Id]]
-    */
-  private[impl] case class ForwardTaskOp(
-    deadline: Timestamp, taskId: Task.Id, action: TaskOpProcessor.Action)
+  /** Forward an update operation to the child [[TaskUpdateActor]]. */
+  private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Task.Id, taskStateOp: TaskStateOp)
 
   /** Describes where and what to send after an update event has beend processed by the [[TaskTrackerActor]]. */
   private[impl] case class Ack(initiator: ActorRef, msg: Any = ()) {
@@ -34,9 +29,9 @@ object TaskTrackerActor {
   }
 
   /** Inform the [[TaskTrackerActor]] of an updated task (after persistence). */
-  private[impl] case class TaskUpdated(task: Task, ack: Ack)
+  private[impl] case class TaskUpdated(stateChange: TaskStateChange.Update, ack: Ack)
   /** Inform the [[TaskTrackerActor]] of a removed task (after persistence). */
-  private[impl] case class TaskRemoved(taskId: Task.Id, ack: Ack)
+  private[impl] case class TaskRemoved(stateChange: TaskStateChange.Expunge, ack: Ack)
 
   private[tracker] class ActorMetrics(metrics: Metrics) {
     val stagedCount = metrics.gauge("service.mesosphere.marathon.task.staged.count", new AtomicIntGauge)
@@ -47,6 +42,10 @@ object TaskTrackerActor {
       runningCount.setValue(0)
     }
   }
+
+  private[impl] case class Subscribe(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)
+
+  private[impl] case class Unsubscribe(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)
 }
 
 /**
@@ -62,6 +61,7 @@ private class TaskTrackerActor(
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val updaterRef = context.actorOf(taskUpdaterProps(self), "updater")
+  private[this] var subscribersByApp: Map[PathId, Set[TaskTrackerUpdateSubscriber]] = Map.empty
 
   override val supervisorStrategy = OneForOneStrategy() { case _: Exception => Escalate }
 
@@ -126,17 +126,40 @@ private class TaskTrackerActor(
       case TaskTrackerActor.List =>
         sender() ! appTasks
 
-      case ForwardTaskOp(deadline, taskId, action) =>
-        val op = TaskOpProcessor.Operation(deadline, sender(), taskId, action)
+      case ForwardTaskOp(deadline, taskId, taskStateOp) =>
+        val op = TaskOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
         updaterRef.forward(TaskUpdateActor.ProcessTaskOp(op))
 
-      case msg @ TaskTrackerActor.TaskUpdated(task, ack) =>
+      case msg @ TaskTrackerActor.TaskUpdated(stateChange, ack) =>
+        val task = stateChange.updatedTask
         becomeWithUpdatedApp(task.appId)(task.taskId, newTask = Some(task))
+        notifySubscribers(task.appId, stateChange)
         ack.sendAck()
 
-      case msg @ TaskTrackerActor.TaskRemoved(taskId, ack) =>
+      case msg @ TaskTrackerActor.TaskRemoved(stateChange, ack) =>
+        val taskId = stateChange.taskId
         becomeWithUpdatedApp(taskId.appId)(taskId, newTask = None)
+        notifySubscribers(taskId.appId, stateChange)
         ack.sendAck()
+
+      case TaskTrackerActor.Subscribe(appId, subscriber) =>
+        val subscribers = subscribersByApp.get(appId).map(_ + subscriber).getOrElse(Set(subscriber))
+        subscribersByApp += appId -> subscribers
+
+      case TaskTrackerActor.Unsubscribe(appId, subscriber) =>
+        val subscribers = subscribersByApp.get(appId).map(_ - subscriber).getOrElse(Set.empty)
+        if (subscribers.nonEmpty) {
+          subscribersByApp += appId -> subscribers
+        }
+        else {
+          subscribersByApp - appId
+        }
     }
+  }
+
+  private[this] def notifySubscribers(appId: PathId, stateChange: TaskStateChange): Unit = {
+    subscribersByApp.get(appId).foreach(_.foreach { subscriber =>
+      subscriber.handleTaskStateChange(stateChange)
+    })
   }
 }
