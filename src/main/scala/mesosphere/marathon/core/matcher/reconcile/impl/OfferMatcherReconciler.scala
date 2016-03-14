@@ -4,7 +4,7 @@ import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
@@ -52,7 +52,10 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
           case (taskId, spuriousResources) if spurious(taskId) =>
             val unreserveAndDestroy =
               TaskOp.UnreserveAndDestroyVolumes(
-                taskId = taskId, oldTask = tasksByApp.task(taskId), resources = spuriousResources.to[Seq]
+                // FIXME (3221): is ForceExpunge correct here?
+                newTask = TaskStateOp.ForceExpunge(taskId),
+                oldTask = tasksByApp.task(taskId),
+                resources = spuriousResources.to[Seq]
               )
             TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
         }.to[Seq]

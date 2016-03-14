@@ -83,9 +83,10 @@ object Task {
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
+    //scalastyle:off cyclomatic.complexity method.length
     override def update(update: TaskStateOp): TaskStateChange = update match {
       // case 1: now running
-      case TaskStateOp.MesosUpdate(MarathonTaskStatus.Running(mesosStatus), now) if !hasStartedRunning =>
+      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running(mesosStatus), now) if !hasStartedRunning =>
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
@@ -93,29 +94,34 @@ object Task {
         TaskStateChange.Update(updated)
 
       // case 2: terminal
-      case TaskStateOp.MesosUpdate(MarathonTaskStatus.Terminal(_), now) =>
-        TaskStateChange.Expunge
+      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(_), now) =>
+        TaskStateChange.Expunge(taskId)
 
       // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(taskStatus, now) =>
-        val healthOrStateChange = for {
-          current <- status.mesosStatus
-          update <- taskStatus.mesosStatus
-          newStatus <- updatedHealthOrState(current, update)
-        } yield TaskStateChange.Update(copy(status = status.copy(mesosStatus = Some(newStatus))))
-
-        healthOrStateChange.getOrElse{
+      case TaskStateOp.MesosUpdate(_, taskStatus, now) =>
+        updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus).map { newStatus =>
+          TaskStateChange.Update(copy(status = status.copy(mesosStatus = Some(newStatus))))
+        } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
-          TaskStateChange.NoChange
+          TaskStateChange.NoChange(taskId)
         }
 
-      // failure case: Launch
-      case _: TaskStateOp.Launch =>
-        TaskStateChange.Failure("Unable to handle Launch op on LaunchedEphemeral")
+      case TaskStateOp.ForceExpunge(_) =>
+        TaskStateChange.Expunge(taskId)
 
-      // failure case: Timeout
-      case TaskStateOp.ReservationTimeout =>
-        TaskStateChange.Failure("Unable to handle Timeout op on LaunchedEphemeral")
+      // FIXME (3221): If the task needs to recreated after a not-accepted taskOp, Create is used.
+      // that's neither nice nor obvious, so this should be improved
+      case TaskStateOp.Create(task) =>
+        TaskStateChange.Update(task)
+
+      case _: TaskStateOp.LaunchOnReservation =>
+        TaskStateChange.Failure("LaunchOnReservation on LaunchedEphemeral is not allowed")
+
+      case _: TaskStateOp.ReservationTimeout =>
+        TaskStateChange.Failure("ReservationTimeout on LaunchedEphemeral is not allowed")
+
+      case _: TaskStateOp.Reserve =>
+        TaskStateChange.Failure("Reserve on LaunchedEphemeral is not allowed")
     }
   }
 
@@ -140,16 +146,28 @@ object Task {
     override def launched: Option[Launched] = None
 
     override def update(update: TaskStateOp): TaskStateChange = update match {
-      case TaskStateOp.Launch(appVersion, status, networking) =>
+      case TaskStateOp.LaunchOnReservation(_, appVersion, status, networking) =>
         TaskStateChange.Update(LaunchedOnReservation(
           taskId, agentInfo, appVersion, status, networking, reservation))
 
-      case TaskStateOp.ReservationTimeout =>
-        TaskStateChange.Expunge
+      case _: TaskStateOp.ReservationTimeout =>
+        TaskStateChange.Expunge(taskId)
 
-      // failure case: MesosUpdate
+      // if a LaunchOnReservation failed while persisting the task, we want to recreate the reserved task
+      case TaskStateOp.Create(task) =>
+        TaskStateChange.Update(task)
+
+      // failure case
+      case _: TaskStateOp.ForceExpunge =>
+        TaskStateChange.Failure("Expunge on Reserved is not allowed")
+
+      // failure case
+      case _: TaskStateOp.Reserve =>
+        TaskStateChange.NoChange(taskId)
+
+      // failure case
       case _: TaskStateOp.MesosUpdate =>
-        TaskStateChange.Failure("Unable to handle MesosUpdate op on Reserved task")
+        TaskStateChange.Failure("MesosUpdate on Reserved is not allowed")
     }
   }
 
@@ -169,9 +187,10 @@ object Task {
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
+    //scalastyle:off cyclomatic.complexity method.length
     override def update(update: TaskStateOp): TaskStateChange = update match {
       // case 1: now running
-      case TaskStateOp.MesosUpdate(MarathonTaskStatus.Running(mesosStatus), now) if !hasStartedRunning =>
+      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running(mesosStatus), now) if !hasStartedRunning =>
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
@@ -180,7 +199,7 @@ object Task {
 
       // case 2: terminal
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
-      case TaskStateOp.MesosUpdate(MarathonTaskStatus.Terminal(_), now) =>
+      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(_), now) =>
         TaskStateChange.Update(Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
@@ -188,25 +207,33 @@ object Task {
         ))
 
       // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(taskStatus, now) =>
-        val healthOrStateChange = for {
-          current <- status.mesosStatus
-          update <- taskStatus.mesosStatus
-          newStatus <- updatedHealthOrState(current, update)
-        } yield TaskStateChange.Update(copy(status = status.copy(mesosStatus = Some(newStatus))))
-
-        healthOrStateChange.getOrElse{
+      case TaskStateOp.MesosUpdate(_, taskStatus, _) =>
+        updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus).map { newStatus =>
+          TaskStateChange.Update(copy(status = status.copy(mesosStatus = Some(newStatus))))
+        } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
-          TaskStateChange.NoChange
+          TaskStateChange.NoChange(taskId)
         }
 
-      // failure case: Launch
-      case _: TaskStateOp.Launch =>
+      // failure case: LaunchOnReservation
+      case _: TaskStateOp.LaunchOnReservation =>
         TaskStateChange.Failure("Unable to handle Launch op on LaunchedOnReservation}")
 
       // failure case: Timeout
-      case TaskStateOp.ReservationTimeout =>
-        TaskStateChange.Failure("Unable to handle Timeout op on LaunchedOnReservation")
+      case _: TaskStateOp.ReservationTimeout =>
+        TaskStateChange.Failure("ReservationTimeout on LaunchedOnReservation is not allowed")
+
+      // failure case
+      case TaskStateOp.Create(task) =>
+        TaskStateChange.Failure("Create on LaunchedOnReservation is not allowed")
+
+      // failure case
+      case _: TaskStateOp.ForceExpunge =>
+        TaskStateChange.Failure("Expunge on LaunchedOnReservation is not allowed")
+
+      // failure case
+      case _: TaskStateOp.Reserve =>
+        TaskStateChange.Failure("Reserve on LaunchedOnReservation is not allowed")
     }
   }
 
@@ -216,16 +243,24 @@ object Task {
 
   /** returns the new status if the health status has been added or changed, or if the state changed */
   private[this] def updatedHealthOrState(
-    current: MesosProtos.TaskStatus,
-    update: MesosProtos.TaskStatus): Option[MesosProtos.TaskStatus] = {
+    maybeCurrent: Option[MesosProtos.TaskStatus],
+    maybeUpdate: Option[MesosProtos.TaskStatus]): Option[MesosProtos.TaskStatus] = {
 
-    val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
-    val changed = healthy || current.getState != update.getState
-    if (changed) {
-      Some(update)
-    }
-    else {
-      None
+    maybeUpdate match {
+      case Some(update) =>
+        maybeCurrent match {
+          case Some(current) =>
+            val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
+            val changed = healthy || current.getState != update.getState
+            if (changed) {
+              Some(update)
+            }
+            else {
+              None
+            }
+          case None => Some(update)
+        }
+      case None => None
     }
   }
 
