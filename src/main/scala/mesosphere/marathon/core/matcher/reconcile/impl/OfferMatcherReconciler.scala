@@ -45,7 +45,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
     if (resourcesByTaskId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
     else {
       def createTaskOps(tasksByApp: TasksByApp, rootGroup: Group): MatchedTaskOps = {
-        def spurious(taskId: Id): Boolean =
+        def spurious(taskId: Task.Id): Boolean =
           tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.appId).isEmpty
 
         val taskOps = resourcesByTaskId.iterator.collect {
@@ -58,6 +58,9 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
                 resources = spuriousResources.to[Seq]
               )
             TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
+          //          case (taskId, spuriousResources) if shouldRefreshLastSeen(taskId) =>
+          //            // this is slightly silly but we need to refresh
+
         }.to[Seq]
 
         MatchedTaskOps(offer.getId, taskOps, resendThisOffer = true)

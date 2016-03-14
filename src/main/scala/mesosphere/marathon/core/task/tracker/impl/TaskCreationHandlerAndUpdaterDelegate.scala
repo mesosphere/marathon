@@ -3,10 +3,16 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.task.TaskStateOp.ReservationTimeout
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTrackerConfig, TaskUpdater }
+import mesosphere.marathon.core.task.tracker.{
+  TaskReservationTimeoutHandler,
+  TaskCreationHandler,
+  TaskTrackerConfig,
+  TaskUpdater
+}
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskStatus
 
@@ -21,7 +27,7 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
   clock: Clock,
   conf: TaskTrackerConfig,
   taskTrackerRef: ActorRef)
-    extends TaskCreationHandler with TaskUpdater {
+    extends TaskCreationHandler with TaskUpdater with TaskReservationTimeoutHandler {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -35,6 +41,11 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
   override def terminated(stateOp: TaskStateOp.ForceExpunge): Future[_] = {
     taskUpdate(stateOp.taskId, stateOp)
   }
+
+  override def timeout(stateOp: ReservationTimeout): Future[_] = {
+    taskUpdate(stateOp.taskId, stateOp)
+  }
+
   override def statusUpdate(appId: PathId, status: TaskStatus): Future[_] = {
     val taskId = Task.Id(status.getTaskId.getValue)
     val stateOp = TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus(status), clock.now())

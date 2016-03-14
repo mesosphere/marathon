@@ -21,6 +21,7 @@ class TaskTrackerModule(
 
   def taskUpdater: TaskUpdater = taskTrackerCreatorAndUpdater
   def taskCreationHandler: TaskCreationHandler = taskTrackerCreatorAndUpdater
+  def taskReservationTimeoutHandler: TaskReservationTimeoutHandler = taskTrackerCreatorAndUpdater
 
   private[this] def stateOpResolver(taskTrackerRef: ActorRef): TaskOpProcessorImpl.TaskStateOpResolver =
     new TaskOpProcessorImpl.TaskStateOpResolver(new TaskTrackerDelegate(None, config, taskTrackerRef))
