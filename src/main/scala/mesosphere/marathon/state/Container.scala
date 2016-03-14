@@ -76,31 +76,26 @@ object Container {
 
   // We need validation based on the container type, but don't have dedicated classes. Therefore this approach manually
   // delegates validation to the matching validator
-  implicit val containerValidator: Validator[Container] = {
-    val volumeValidator: Validator[Volume] = new Validator[Volume] {
-      override def apply(volume: Volume): Result = volume match {
-        case pv: PersistentVolume => valid[PersistentVolume](PersistentVolume.persistentVolumeValidator).apply(pv)
-        case dv: DockerVolume     => valid[DockerVolume](DockerVolume.dockerVolumeValidator).apply(dv)
-      }
+  implicit val validContainer: Validator[Container] = {
+    val validGeneralContainer = validator[Container] { container =>
+      container.volumes is every(valid)
     }
 
-    val dockerContainerValidator: Validator[Container] = validator[Container] { container =>
+    val validDockerContainer: Validator[Container] = validator[Container] { container =>
       container.docker is notEmpty
       container.docker.each is valid
-      container.volumes is every(valid(volumeValidator))
     }
 
-    val mesosContainerValidator: Validator[Container] = validator[Container] { container =>
+    val validMesosContainer: Validator[Container] = validator[Container] { container =>
       container.docker is empty
-      container.volumes is every(valid(volumeValidator))
     }
 
     new Validator[Container] {
       override def apply(c: Container): Result = c.`type` match {
-        case Mesos.ContainerInfo.Type.MESOS  => validate(c)(mesosContainerValidator)
-        case Mesos.ContainerInfo.Type.DOCKER => validate(c)(dockerContainerValidator)
+        case Mesos.ContainerInfo.Type.MESOS  => validate(c)(validMesosContainer)
+        case Mesos.ContainerInfo.Type.DOCKER => validate(c)(validDockerContainer)
         case _                               => Failure(Set(RuleViolation(c.`type`, "unknown", None)))
       }
-    }
+    } and validGeneralContainer
   }
 }
