@@ -210,17 +210,26 @@ object Group {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  implicit val groupValidator: Validator[Group] = validator[Group] { group =>
-    group.id is valid
-    group.apps is valid
-    group.groups is valid
-    group is noAppsAndGroupsWithSameName
-    (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
+  private def validNestedGroup(base: PathId): Validator[Group] =
+    validator[Group] { group =>
+      group.id is validPathWithBase(base)
+      group.apps is every(AppDefinition.validNestedAppDefinition(base))
+      group is noAppsAndGroupsWithSameName
+      (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
+      group is validPorts
 
-    group is validPorts
+      group.dependencies is every(validPathWithBase(base))
+      group.groups is every(valid(validNestedGroup(base)))
+    }
+
+  implicit val validRootGroup: Validator[Group] = new Validator[Group] {
+    override def apply(group: Group): Result = {
+      validate(group)(validator =
+        validNestedGroup(PathId.empty))
+    }
   }
 
-  def validWithConfig(maxApps: Option[Int])(implicit validator: Validator[Group]): Validator[Group] = {
+  def validGroupWithConfig(maxApps: Option[Int])(implicit validator: Validator[Group]): Validator[Group] = {
     new Validator[Group] {
       override def apply(group: Group): Result = {
         maxApps.filter(group.transitiveApps.size > _).map { num =>

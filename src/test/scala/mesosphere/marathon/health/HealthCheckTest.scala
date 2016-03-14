@@ -1,7 +1,5 @@
 package mesosphere.marathon.health
 
-import akka.actor.Props
-import akka.testkit.TestActorRef
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.task.Task
@@ -10,8 +8,7 @@ import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, Protos }
 import play.api.libs.json.Json
 
 import scala.concurrent.duration._
-
-import mesosphere.marathon.api.v2.Validation._
+import com.wix.accord.validate
 
 class HealthCheckTest extends MarathonSpec {
 

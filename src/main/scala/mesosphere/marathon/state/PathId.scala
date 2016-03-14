@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import mesosphere.marathon.api.v2.Validation.isTrue
 import mesosphere.marathon.plugin
 
 import scala.language.implicitConversions
@@ -101,41 +102,40 @@ object PathId {
   private[this] val ID_PATH_SEGMENT_PATTERN =
     "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
 
-  /**
-    * For external usage. Needed to overwrite the whole description, e.g. id.path -> id.
-    * @return
-    */
-  implicit def pathIdValidator: Validator[PathId] = {
-    new Validator[PathId] {
-      override def apply(pathId: PathId): Result = {
-        validate(pathId.path)(validator = pathId.path.each should matchRegexFully(ID_PATH_SEGMENT_PATTERN.pattern)) and
-          validChild(pathId)
-      }
+  private val validPathChars = new Validator[PathId] {
+    override def apply(pathId: PathId): Result = {
+      validate(pathId.path)(validator = pathId.path.each should matchRegexFully(ID_PATH_SEGMENT_PATTERN.pattern))
     }
   }
 
   /**
-    * Check if path's parent, if it exists, is a valid parent indeed.
-    * @return
+    * For external usage. Needed to overwrite the whole description, e.g. id.path -> id.
     */
-  private def validChild: Validator[PathId] = {
-    new Validator[PathId] {
-      override def apply(pathId: PathId): Result = {
-        if (pathId.parent == "".toPath) Success
-        else if (pathId.parent.absolute) {
-          val p = pathId.canonicalPath(pathId.parent)
-          if (pathId.parent != PathId.empty && p.parent != pathId.parent) Failure(Set(
-            RuleViolation(pathId,
-              s"""Identifier $pathId is not child of ${pathId.parent}.
-                    |Actual parent: ${p.parent}.
-                    |Hint: use relative paths.""".
-                stripMargin, None)
-          )
-          )
-          else Success
-        }
-        else Failure(Set(RuleViolation(pathId.parent, "Path of parent should be absolute.", None)))
-      }
+  implicit val pathIdValidator = validator[PathId] { path =>
+    path is childOf(path.parent)
+    path is validPathChars
+  }
+
+  /**
+    * Validate path with regards to some parent path.
+    * @param base Path of parent.
+    */
+  def validPathWithBase(base: PathId): Validator[PathId] = validator[PathId] { path =>
+    path is childOf(base)
+    path is validPathChars
+  }
+
+  private def childOf(parent: PathId): Validator[PathId] = {
+    isTrue[PathId](s"Identifier is not child of $parent. Hint: use relative paths.") { child =>
+      parent == PathId.empty || !parent.absolute ||
+        (parent.absolute && child.canonicalPath(parent).parent == parent)
     }
+  }
+
+  /**
+    * Needed for AppDefinitionValidatorTest.testSchemaLessStrictForId.
+    */
+  val absolutePathValidator = isTrue[PathId]("Path needs to be absolute") { path =>
+    path.absolute
   }
 }

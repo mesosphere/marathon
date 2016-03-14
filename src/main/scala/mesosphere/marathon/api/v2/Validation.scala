@@ -12,9 +12,6 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 object Validation {
-
-  def validate[T](t: T)(implicit validator: Validator[T]): Result = validator.apply(t)
-
   def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
     case Success    => t
     case f: Failure => throw new ValidationFailedException(t, f)
