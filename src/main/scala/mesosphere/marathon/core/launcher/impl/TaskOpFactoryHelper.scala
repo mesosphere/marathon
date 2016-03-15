@@ -22,7 +22,7 @@ class TaskOpFactoryHelper(
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
     val stateOp = TaskStateOp.Create(newTask)
-    TaskOp.Launch(taskInfo, stateOp, None, createOperations)
+    TaskOp.Launch(taskInfo, stateOp, oldTask = None, createOperations)
   }
 
   def launchOnReservation(

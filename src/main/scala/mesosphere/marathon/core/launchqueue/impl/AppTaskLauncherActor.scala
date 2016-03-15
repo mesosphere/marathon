@@ -244,11 +244,6 @@ private class AppTaskLauncherActor(
           }
 
         case _ =>
-          // FIXME (3221): Only TaskUpdated and TaskRemoved are propagated to the taskTracker
-          // right now, so we'll only receive Update/Expunge here. It would be good to receive
-          // Failures as well along with an actualState: Option[Task] so we can update/remove
-          // the internal tasksMap. besides, it's ugly to only partly receive stateChanges
-          // (although Failure and NoChange are no changes in that sense)
           log.debug("receiveTaskTrackerUpdate: ignoring unexpected stateChange {}", stateChange)
       }
       replyWithQueuedTaskCount()
@@ -353,11 +348,14 @@ private class AppTaskLauncherActor(
       // We will receive the updated task once it's been persisted. Before that,
       // we can only store the possible state, as we don't have the updated task
       // yet.
-      taskOp.newTask.possibleNewState.foreach { newState =>
-        tasksMap += taskId -> newState
-        scheduleTaskOpTimeout(taskOp)
+      taskOp.newTask.possibleNewState match {
+        case Some(newState) =>
+          tasksMap += taskId -> newState
+          scheduleTaskOpTimeout(taskOp)
+
+        case None =>
+          tasksMap -= taskId
       }
-      // FIXME (3221): remove from taskMap if none?
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
     }
