@@ -40,7 +40,7 @@ private[plugin] class PluginManagerImpl(val config: MarathonConf,
       case _ => plugin
     }
     val serviceLoader = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[T]], classLoader)
-    val providers = serviceLoader.iterator().asScala
+    val providers = serviceLoader.iterator().asScala.toSeq
     val plugins = definitions.plugins.filter(_.plugin == ct.runtimeClass.getName).map { definition =>
       providers
         .find(_.getClass.getName == definition.implementation)
