@@ -62,6 +62,18 @@ class TaskStatusUpdateProcessorImpl @Inject() (
           task = task,
           mesosStatus = status
         ).flatMap(_ => acknowledge(status))
+
+      // If a resident suspended task is deleted, we will receive a TASK_LOST after the OverdueTasksActor
+      // has killed the task. This indirection is needed because the LaunchQueue will only be notified
+      // due to MesosStatusUpdates.
+      case Some(task) if task.reservationWithVolumes.isDefined && status.getState == MesosProtos.TaskState.TASK_LOST =>
+        processUpdate(
+          timestamp = now,
+          appId = taskId.appId,
+          task = task,
+          mesosStatus = status
+        ).flatMap(_ => acknowledge(status))
+
       case _ =>
         killUnknownTaskTimer {
           if (status.getState != MesosProtos.TaskState.TASK_LOST) {
