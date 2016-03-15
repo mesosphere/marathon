@@ -46,7 +46,7 @@ class HealthCheckActorTest
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val actor = TestActorRef[HealthCheckActor](
       Props(
-        new HealthCheckActor(app, holder, mock[MarathonScheduler], HealthCheck(), tracker, system.eventStream) {
+        new HealthCheckActor(app, holder, HealthCheck(), tracker, system.eventStream) {
           override val workerProps = Props {
             latch.countDown()
             new TestActors.EchoActor
@@ -80,7 +80,7 @@ class HealthCheckActorTest
 
     val actor = TestActorRef[HealthCheckActor](
       Props(
-        new HealthCheckActor(app, holder, scheduler, healthCheck, tracker, system.eventStream)
+        new HealthCheckActor(app, holder, healthCheck, tracker, system.eventStream)
       )
     )
 

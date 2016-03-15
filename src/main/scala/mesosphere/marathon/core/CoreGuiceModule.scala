@@ -15,7 +15,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusObservables }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.update.impl.ThrottlingTaskStatusUpdateProcessor
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTracker, TaskUpdater }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskCreationHandler, TaskTracker, TaskUpdater }
 import mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl
 import mesosphere.marathon.core.task.update.impl.steps.{
   ContinueOnErrorStep,
@@ -24,8 +24,7 @@ import mesosphere.marathon.core.task.update.impl.steps.{
   NotifyRateLimiterStepImpl,
   PostToEventStreamStepImpl,
   ScaleAppUpdateStepImpl,
-  TaskStatusEmitterPublishStepImpl,
-  UpdateTaskTrackerStepImpl
+  TaskStatusEmitterPublishStepImpl
 }
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskStatusUpdateStep }
 import mesosphere.marathon.metrics.Metrics
@@ -51,6 +50,9 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def taskUpdater(coreModule: CoreModule): TaskUpdater = coreModule.taskTrackerModule.taskUpdater
+
+  @Provides @Singleton
+  def stateOpProcessor(coreModule: CoreModule): TaskStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
 
   @Provides @Singleton
   def leadershipCoordinator(
@@ -96,7 +98,6 @@ class CoreGuiceModule extends AbstractModule {
   def taskStatusUpdateSteps(
     notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
     notifyRateLimiterStepImpl: NotifyRateLimiterStepImpl,
-    updateTaskTrackerStepImpl: UpdateTaskTrackerStepImpl,
     notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
     taskStatusEmitterPublishImpl: TaskStatusEmitterPublishStepImpl,
     postToEventStreamStepImpl: PostToEventStreamStepImpl,
@@ -107,17 +108,14 @@ class CoreGuiceModule extends AbstractModule {
     // This way we make sure that e.g. the taskTracker already reflects the changes for the update
     // (updateTaskTrackerStepImpl) before we notify the launch queue (notifyLaunchQueueStepImpl).
 
+    // The task tracker is updated before any of these steps are processed.
     Seq(
-
-      // Update the task tracker _first_.
-      //
       // Subsequent steps (for example, the health check subsystem) depend on
       // task tracker lookup to determine the routable host address for running
       // tasks.  In case this status update is the first TASK_RUNNING update
       // in IP-per-container mode, we need to store the assigned container
       // address reliably before attempting to initiate health checks, or
       // publish events to the bus.
-      updateTaskTrackerStepImpl,
       ContinueOnErrorStep(notifyHealthCheckManagerStepImpl),
       ContinueOnErrorStep(notifyRateLimiterStepImpl),
       ContinueOnErrorStep(notifyLaunchQueueStepImpl),

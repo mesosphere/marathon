@@ -1,12 +1,24 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.actor.Status
+import akka.event.EventStream
 import akka.testkit.TestProbe
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, MarathonTaskStatusTestHelper }
+import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
+import mesosphere.marathon.core.CoreGuiceModule
+import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, MarathonTaskStatusTestHelper, TaskStatusEmitter }
+import mesosphere.marathon.core.task.tracker.TaskUpdater
+import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
-import mesosphere.marathon.state.{ PathId, TaskRepository, Timestamp }
+import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, TaskRepository, Timestamp }
 import mesosphere.marathon.test.{ CaptureLogEvents, MarathonActorSupport, Mockito }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import org.apache.mesos.SchedulerDriver
+import org.mockito.ArgumentCaptor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -30,10 +42,12 @@ class TaskOpProcessorImplTest
     val taskState = MarathonTestHelper.mininimalTask(appId)
     val task = taskState.marathonTask
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.runningHealthy)
+    val mesosStatus = stateOp.status.mesosStatus.get
     val expectedChange = TaskStateChange.Update(taskState)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.task(taskState.taskId.idString) returns Future.successful(Some(task))
     f.taskRepository.store(task) returns Future.successful(task)
+    f.taskUpdater.statusUpdate(appId, mesosStatus).asInstanceOf[Future[Unit]] returns Future.successful(())
 
     When("the processor processes an update")
     val result = f.processor.process(
@@ -334,20 +348,104 @@ class TaskOpProcessorImplTest
     f.verifyNoMoreInteractions()
   }
 
+  test("an update for existing task applies the side effects of all steps") {
+    val f = new Fixture
+    val appId = PathId("/app")
+    val app = AppDefinition(appId)
+
+    Given("a taskRepository")
+    val taskState = MarathonTestHelper.mininimalTask(Task.Id.forApp(appId).idString, f.now)
+    val task = taskState.marathonTask
+    val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.finished, f.now)
+    val mesosStatus = stateOp.status.mesosStatus.get
+    val expectedChange = TaskStateChange.Update(taskState)
+    f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
+    f.taskRepository.task(taskState.taskId.idString) returns Future.successful(Some(task))
+    f.taskRepository.store(task) returns Future.successful(task)
+    f.taskUpdater.statusUpdate(appId, mesosStatus).asInstanceOf[Future[Unit]] returns Future.successful(())
+    f.appRepository.app(appId, app.version) returns Future.successful(Some(app))
+    f.launchQueue.notifyOfTaskUpdate(any) returns Future.successful(None)
+
+    When("the processor processes an update")
+    val result = f.processor.process(
+      TaskOpProcessor.Operation(deadline, testActor, taskState.taskId, stateOp)
+    )
+
+    Then("it replies with unit immediately")
+    result.futureValue should be(()) // first wait for the call to complete
+
+    Then("The StateOpResolver is called")
+    verify(f.stateOpResolver).resolve(stateOp)
+
+    And("it calls store")
+    verify(f.taskRepository).store(task)
+
+    And("the taskTracker gets the update")
+    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(expectedChange, TaskTrackerActor.Ack(testActor, expectedChange)))
+
+    And("the healthCheckManager got informed")
+    verify(f.healthCheckManager).update(mesosStatus, taskState.appVersion)
+    And("an app scale check has been triggered")
+    f.schedulerActor.expectMsg(3.seconds, ScaleApp(appId))
+    And("the appRepository got queried")
+    verify(f.appRepository).app(appId, taskState.appVersion)
+    And("the launch queue rate limiter got informed")
+    verify(f.launchQueue).addDelay(app)
+    And("the launch queue has been notified")
+    verify(f.launchQueue).notifyOfTaskUpdate(any)
+
+    And("the appropriate event got published on the event stream")
+    val eventCaptor = ArgumentCaptor.forClass(classOf[MesosStatusUpdateEvent])
+    verify(f.eventBus).publish(eventCaptor.capture())
+    eventCaptor.getValue should not be (null)
+    eventCaptor.getValue.appId should equal (appId)
+
+    And("no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
   class Fixture {
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val taskTrackerProbe = TestProbe()
     lazy val taskRepository = mock[TaskRepository]
     lazy val stateOpResolver = mock[TaskOpProcessorImpl.TaskStateOpResolver]
-    lazy val processor = new TaskOpProcessorImpl(taskTrackerProbe.ref, taskRepository, stateOpResolver)
+    lazy val metrics = new Metrics(new MetricRegistry)
     lazy val now = Timestamp(0)
 
     def stateOpCreate(task: Task) = TaskStateOp.Create(task)
-    def stateOpUpdate(task: Task, status: MarathonTaskStatus) = TaskStateOp.MesosUpdate(task.taskId, status, now)
+    def stateOpUpdate(task: Task, status: MarathonTaskStatus, now: Timestamp = now) = TaskStateOp.MesosUpdate(task.taskId, status, now)
     def stateOpExpunge(task: Task) = TaskStateOp.ForceExpunge(task.taskId)
     def stateOpLaunchOnReservation(task: Task, status: Task.Status) = TaskStateOp.LaunchOnReservation(task.taskId, now, status, Task.NoNetworking)
     def stateOpReservationTimeout(task: Task) = TaskStateOp.ReservationTimeout(task.taskId)
     def stateOpExpunge(task: Task.Reserved) = TaskStateOp.Reserve(task)
+
+    lazy val healthCheckManager: HealthCheckManager = mock[HealthCheckManager]
+    lazy val schedulerActor: TestProbe = TestProbe()
+    lazy val appRepository: AppRepository = mock[AppRepository]
+    lazy val launchQueue: LaunchQueue = mock[LaunchQueue]
+    lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
+    lazy val eventBus: EventStream = mock[EventStream]
+    lazy val taskUpdater: TaskUpdater = mock[TaskUpdater]
+    lazy val taskStatusEmitter: TaskStatusEmitter = mock[TaskStatusEmitter]
+    lazy val guiceModule = new CoreGuiceModule
+    // Use module method to ensure that we keep the list of steps in sync with the test.
+    lazy val statusUpdateSteps = guiceModule.taskStatusUpdateSteps(
+      notifyHealthCheckManager,
+      notifyRateLimiter,
+      notifyLaunchQueue,
+      emitUpdate,
+      postToEventStream,
+      scaleApp
+    )
+
+    // task status update steps
+    lazy val notifyHealthCheckManager = new NotifyHealthCheckManagerStepImpl(healthCheckManager)
+    lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueue, appRepository)
+    lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus)
+    lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueue)
+    lazy val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitter)
+    lazy val scaleApp = new ScaleAppUpdateStepImpl(schedulerActor.ref)
+    lazy val processor = new TaskOpProcessorImpl(taskTrackerProbe.ref, taskRepository, stateOpResolver, statusUpdateSteps, metrics)
 
     def verifyNoMoreInteractions(): Unit = {
       taskTrackerProbe.expectNoMsg(0.seconds)

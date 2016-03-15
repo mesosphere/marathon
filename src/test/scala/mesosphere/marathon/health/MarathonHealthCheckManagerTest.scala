@@ -66,7 +66,6 @@ class MarathonHealthCheckManagerTest
 
     hcManager = new MarathonHealthCheckManager(
       system,
-      mock[MarathonScheduler],
       new MarathonSchedulerDriverHolder,
       eventStream,
       taskTracker,

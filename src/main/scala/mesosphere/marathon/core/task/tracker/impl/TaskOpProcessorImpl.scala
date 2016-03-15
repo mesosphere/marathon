@@ -2,10 +2,15 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import akka.actor.{ ActorRef, Status }
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
+import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
-import mesosphere.marathon.state.TaskRepository
+import mesosphere.marathon.metrics.Metrics.Timer
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.state.{ PathId, TaskRepository, Timestamp }
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -72,14 +77,21 @@ private[tracker] object TaskOpProcessorImpl {
 private[tracker] class TaskOpProcessorImpl(
     taskTrackerRef: ActorRef,
     repo: TaskRepository,
-    stateOpResolver: TaskStateOpResolver) extends TaskOpProcessor {
+    stateOpResolver: TaskStateOpResolver,
+    steps: Seq[TaskStatusUpdateStep],
+    metrics: Metrics) extends TaskOpProcessor {
+  import TaskOpProcessor._
+
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  import TaskOpProcessor._
+  private[this] val stepTimers: Map[String, Timer] = steps.map { step =>
+    step.name -> metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, s"step-${step.name}"))
+  }.toMap
 
   override def process(op: Operation)(implicit ec: ExecutionContext): Future[Unit] = {
     val stateChange = stateOpResolver.resolve(op.stateOp)
 
+    // FIXME (3221): TaskUpdated/TaskRemoved can be done via a NotifyTaskTrackerStep
     stateChange.flatMap {
       case stateChange: TaskStateChange.Expunge =>
         // Used for task termination or as a result from a UpdateStatus action.
@@ -87,6 +99,8 @@ private[tracker] class TaskOpProcessorImpl(
         repo.expunge(op.taskId.idString).map { _ =>
           taskTrackerRef ! TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(op.taskId),
             TaskTrackerActor.Ack(op.sender, stateChange))
+        }.flatMap { _ =>
+          notifyOthers(op.stateOp, stateChange)
         }.recoverWith(tryToRecover(op)(expectedTaskState = None))
 
       case stateChange: TaskStateChange.Failure =>
@@ -108,8 +122,42 @@ private[tracker] class TaskOpProcessorImpl(
         val marathonTask = TaskSerializer.toProto(stateChange.updatedTask)
         repo.store(marathonTask).map { _ =>
           taskTrackerRef ! TaskTrackerActor.TaskUpdated(stateChange, TaskTrackerActor.Ack(op.sender, stateChange))
+        }.flatMap { _ =>
+          notifyOthers(op.stateOp, stateChange)
         }.recoverWith(tryToRecover(op)(expectedTaskState = Some(stateChange.updatedTask)))
+    }
+  }
 
+  private[this] def notifyOthers(stateOp: TaskStateOp, stateChange: TaskStateChange): Future[Unit] = {
+    // compatibility: if it's a statusUpdate that resulted in a Update or Expunge, do as before
+
+    (stateOp, stateChange) match {
+      case (TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus.WithMesosStatus(mesosStatus), now),
+        update: TaskStateChange.Update) =>
+        processStatusUpdateSteps(now, taskId.appId, update.updatedTask, mesosStatus)
+      case _ => Future.successful(())
+    }
+  }
+
+  private[this] def processStatusUpdateSteps(
+    timestamp: Timestamp,
+    appId: PathId,
+    task: Task,
+    mesosStatus: MesosProtos.TaskStatus): Future[Unit] = {
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+    steps.foldLeft(Future.successful(())) { (resultSoFar, nextStep) =>
+      resultSoFar.flatMap { _ =>
+        stepTimers(nextStep.name).timeFuture {
+          log.debug("Executing {} for [{}]", Array[Object](nextStep.name, mesosStatus.getTaskId.getValue): _*)
+          nextStep.processUpdate(timestamp, task, mesosStatus).map { _ =>
+            log.debug(
+              "Done with executing {} for [{}]",
+              Array[Object](nextStep.name, mesosStatus.getTaskId.getValue): _*
+            )
+          }
+        }
+      }
     }
   }
 

@@ -10,7 +10,7 @@ import scala.concurrent.Future
   * * Updating a task (due to a state change, a timeout, a mesos update)
   * * Expunging a task
   */
-trait TaskStateOpHandler {
+trait TaskStateOpProcessor {
   /** Process a TaskStateOp and propagate its result. */
   def process(stateOp: TaskStateOp): Future[Unit]
 }

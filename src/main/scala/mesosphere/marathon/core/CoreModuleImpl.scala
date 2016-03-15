@@ -17,6 +17,7 @@ import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
+import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
 import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
@@ -42,7 +43,8 @@ class CoreModuleImpl @Inject() (
     taskRepository: TaskRepository,
     taskOpFactory: TaskOpFactory,
     leaderInfo: LeaderInfo,
-    clock: Clock) extends CoreModule {
+    clock: Clock,
+    taskStatusUpdateSteps: Seq[TaskStatusUpdateStep]) extends CoreModule {
 
   // INFRASTRUCTURE LAYER
 
@@ -56,7 +58,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val taskBusModule = new TaskBusModule()
   override lazy val taskTrackerModule =
-    new TaskTrackerModule(clock, metrics, marathonConf, leadershipModule, taskRepository)
+    new TaskTrackerModule(clock, metrics, marathonConf, leadershipModule, taskRepository, taskStatusUpdateSteps)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS

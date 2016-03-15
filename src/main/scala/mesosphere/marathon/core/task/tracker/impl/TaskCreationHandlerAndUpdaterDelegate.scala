@@ -6,7 +6,12 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpHandler, TaskCreationHandler, TaskTrackerConfig, TaskUpdater }
+import mesosphere.marathon.core.task.tracker.{
+  TaskStateOpProcessor,
+  TaskCreationHandler,
+  TaskTrackerConfig,
+  TaskUpdater
+}
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskStatus
 
@@ -21,18 +26,17 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
   clock: Clock,
   conf: TaskTrackerConfig,
   taskTrackerRef: ActorRef)
-    extends TaskCreationHandler with TaskUpdater with TaskStateOpHandler {
+    extends TaskCreationHandler with TaskUpdater with TaskStateOpProcessor {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[impl] implicit val timeout: Timeout = conf.internalTaskUpdateRequestTimeout().milliseconds
 
   override def process(stateOp: TaskStateOp): Future[Unit] = {
-    taskUpdate(stateOp.taskId, stateOp).map { stateChange =>
-      // FIXME (3221): propagate the changes via configured steps
-    }
+    taskUpdate(stateOp.taskId, stateOp).map(_ => ())
   }
 
+  // FIXME (3221): remove created, terminated, statusUpdate
   override def created(taskStateOp: TaskStateOp): Future[Unit] = {
     taskUpdate(taskStateOp.taskId, taskStateOp).map(_ => ())
   }
