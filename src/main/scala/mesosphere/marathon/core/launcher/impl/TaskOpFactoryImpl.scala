@@ -8,6 +8,7 @@ import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
+import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
 
@@ -95,7 +96,7 @@ class TaskOpFactoryImpl @Inject() (
             offer, app, tasks.values,
             ResourceSelector(
               config.mesosRole.get.toSet, reserved = true,
-              requiredLabels = TaskLabels.labelsForTask(volumeMatch.task)
+              requiredLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task)
             )
           )
 
@@ -112,7 +113,9 @@ class TaskOpFactoryImpl @Inject() (
           offer, app, tasks.values,
           ResourceSelector(acceptedResourceRoles, reserved = false)
         )
-      matchingResourcesForReservation.map(resourceMatch => reserveAndCreateVolumes(app, offer, resourceMatch))
+      matchingResourcesForReservation.map { resourceMatch =>
+        reserveAndCreateVolumes(request.frameworkId, app, offer, resourceMatch)
+      }
     }
     else None
 
@@ -148,6 +151,7 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   private[this] def reserveAndCreateVolumes(
+    frameworkId: FrameworkId,
     app: AppDefinition,
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
@@ -165,7 +169,7 @@ class TaskOpFactoryImpl @Inject() (
       ),
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = None))
     )
-    taskOperationFactory.reserveAndCreateVolumes(task, resourceMatch.resources, localVolumes)
+    taskOperationFactory.reserveAndCreateVolumes(frameworkId, task, resourceMatch.resources, localVolumes)
   }
 
 }

@@ -10,6 +10,8 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
 
   test("Launch operation succeeds even if principal/role are not set") {
+    val f = new Fixture
+
     Given("a factory without principal or role")
     val factory = new OfferOperationFactory(None, None)
     val taskInfo = MarathonTestHelper.makeOneCPUTask("123").build()
@@ -23,12 +25,14 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
   }
 
   test("Reserve operation fails when principal is not set") {
+    val f = new Fixture
+
     Given("a factory without principal")
     val factory = new OfferOperationFactory(None, Some("role"))
 
     When("We create a reserve operation")
     val error = intercept[WrongConfigurationException] {
-      factory.reserve(Task.Id.forApp(PathId("/test")), Seq(Mesos.Resource.getDefaultInstance))
+      factory.reserve(f.frameworkId, Task.Id.forApp(PathId("/test")), Seq(Mesos.Resource.getDefaultInstance))
     }
 
     Then("A meaningful exception is thrown")
@@ -36,12 +40,14 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
   }
 
   test("Reserve operation fails when role is not set") {
+    val f = new Fixture
+
     Given("a factory without role")
     val factory = new OfferOperationFactory(Some("principal"), None)
 
     When("We create a reserve operation")
     val error = intercept[WrongConfigurationException] {
-      factory.reserve(Task.Id.forApp(PathId("/test")), Seq(Mesos.Resource.getDefaultInstance))
+      factory.reserve(f.frameworkId, Task.Id.forApp(PathId("/test")), Seq(Mesos.Resource.getDefaultInstance))
     }
 
     Then("A meaningful exception is thrown")
@@ -49,6 +55,8 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
   }
 
   test("Reserve operation succeeds") {
+    val f = new Fixture
+
     import scala.collection.JavaConverters._
 
     Given("A simple task")
@@ -56,7 +64,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
     val task = MarathonTestHelper.makeOneCPUTask("123")
 
     When("We create a reserve operation")
-    val operation = factory.reserve(Task.Id(task.getTaskId), task.getResourcesList.asScala)
+    val operation = factory.reserve(f.frameworkId, Task.Id(task.getTaskId), task.getResourcesList.asScala)
 
     Then("The operation is as expected")
     operation.getType shouldEqual Mesos.Offer.Operation.Type.RESERVE
@@ -82,7 +90,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
     val volumes = Seq(f.localVolume("mount"))
 
     When("We create a reserve operation")
-    val operation = factory.createVolumes(Task.Id(task.getTaskId), volumes)
+    val operation = factory.createVolumes(f.frameworkId, Task.Id(task.getTaskId), volumes)
 
     Then("The operation is as expected")
     operation.getType shouldEqual Mesos.Offer.Operation.Type.CREATE
@@ -106,6 +114,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
   }
 
   class Fixture {
+    val frameworkId = MarathonTestHelper.frameworkId
     val principal = Some("principal")
     val role = Some("role")
     val factory = new OfferOperationFactory(principal, role)

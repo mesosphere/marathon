@@ -62,11 +62,6 @@ object TaskOp {
       resources: Iterable[MesosProtos.Resource],
       oldTask: Option[Task] = None) extends TaskOp {
 
-    require(
-      resources.forall(TaskLabels.taskIdForResource(_).isDefined),
-      s"tried to apply an unreserve operation on resources without labels: $resources"
-    )
-
     override lazy val offerOperations: Iterable[MesosProtos.Offer.Operation] = {
       val (withDisk, withoutDisk) = resources.partition(_.hasDisk)
       val reservationsForDisks = withDisk.map(_.toBuilder.clearDisk().build())
