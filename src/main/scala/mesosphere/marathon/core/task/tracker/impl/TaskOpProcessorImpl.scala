@@ -62,6 +62,7 @@ private[tracker] object TaskOpProcessorImpl {
     }
   }
 }
+
 /**
   * Processes durable operations on tasks by
   *
@@ -85,7 +86,7 @@ private[tracker] class TaskOpProcessorImpl(
         // The expunge is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         repo.expunge(op.taskId.idString).map { _ =>
           taskTrackerRef ! TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(op.taskId),
-            TaskTrackerActor.Ack(op.sender))
+            TaskTrackerActor.Ack(op.sender, stateChange))
         }.recoverWith(tryToRecover(op)(expectedTaskState = None))
 
       case stateChange: TaskStateChange.Failure =>
@@ -98,7 +99,7 @@ private[tracker] class TaskOpProcessorImpl(
         // Used if a task status update does not result in any changes.
         // Since we did not change the task state, we inform the sender directly of the success of
         // the operation.
-        op.sender ! (())
+        op.sender ! stateChange
         Future.successful(())
 
       case stateChange: TaskStateChange.Update =>
@@ -106,7 +107,7 @@ private[tracker] class TaskOpProcessorImpl(
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         val marathonTask = TaskSerializer.toProto(stateChange.updatedTask)
         repo.store(marathonTask).map { _ =>
-          taskTrackerRef ! TaskTrackerActor.TaskUpdated(stateChange, TaskTrackerActor.Ack(op.sender))
+          taskTrackerRef ! TaskTrackerActor.TaskUpdated(stateChange, TaskTrackerActor.Ack(op.sender, stateChange))
         }.recoverWith(tryToRecover(op)(expectedTaskState = Some(stateChange.updatedTask)))
 
     }

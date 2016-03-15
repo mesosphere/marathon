@@ -50,7 +50,7 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).store(task)
 
     And("the taskTracker gets the update")
-    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(expectedChange, TaskTrackerActor.Ack(testActor, ())))
+    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(expectedChange, TaskTrackerActor.Ack(testActor, expectedChange)))
 
     And("no more interactions")
     f.verifyNoMoreInteractions()
@@ -222,7 +222,7 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).expunge(taskIdString)
 
     And("the taskTracker gets the update")
-    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(taskId), TaskTrackerActor.Ack(testActor, ())))
+    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(taskId), TaskTrackerActor.Ack(testActor, TaskStateChange.Expunge(taskId))))
 
     And("no more interactions")
     f.verifyNoMoreInteractions()
@@ -328,7 +328,7 @@ class TaskOpProcessorImplTest
     verify(f.stateOpResolver).resolve(stateOp)
 
     And("the initiator gets its ack")
-    expectMsg(())
+    expectMsg(TaskStateChange.NoChange(taskState.taskId))
 
     And("no more interactions")
     f.verifyNoMoreInteractions()

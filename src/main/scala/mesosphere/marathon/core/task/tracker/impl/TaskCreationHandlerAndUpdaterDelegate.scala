@@ -4,9 +4,9 @@ import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTrackerConfig, TaskUpdater }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpHandler, TaskCreationHandler, TaskTrackerConfig, TaskUpdater }
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskStatus
 
@@ -21,17 +21,21 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
   clock: Clock,
   conf: TaskTrackerConfig,
   taskTrackerRef: ActorRef)
-    extends TaskCreationHandler with TaskUpdater {
+    extends TaskCreationHandler with TaskUpdater with TaskStateOpHandler {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[impl] implicit val timeout: Timeout = conf.internalTaskUpdateRequestTimeout().milliseconds
 
-  // FIXME (3221): pass task in and create TaskStateOp on the fly?
-  override def created(taskStateOp: TaskStateOp): Future[Unit] = {
-    taskUpdate(taskStateOp.taskId, taskStateOp)
+  override def process(stateOp: TaskStateOp): Future[Unit] = {
+    taskUpdate(stateOp.taskId, stateOp).map { stateChange =>
+      // FIXME (3221): propagate the changes via configured steps
+    }
   }
-  // FIXME (3221): pass task in and create TaskStateOp on the fly?
+
+  override def created(taskStateOp: TaskStateOp): Future[Unit] = {
+    taskUpdate(taskStateOp.taskId, taskStateOp).map(_ => ())
+  }
   override def terminated(stateOp: TaskStateOp.ForceExpunge): Future[_] = {
     taskUpdate(stateOp.taskId, stateOp)
   }
@@ -41,14 +45,11 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
     taskUpdate(taskId, stateOp)
   }
 
-  private[this] def taskUpdate(
-    taskId: Task.Id,
-    taskStateOp: TaskStateOp): Future[Unit] = {
-
+  private[this] def taskUpdate(taskId: Task.Id, taskStateOp: TaskStateOp): Future[TaskStateChange] = {
     import akka.pattern.ask
     val deadline = clock.now + timeout.duration
     val op: ForwardTaskOp = TaskTrackerActor.ForwardTaskOp(deadline, taskId, taskStateOp)
-    (taskTrackerRef ? op).mapTo[Unit].recover {
+    (taskTrackerRef ? op).mapTo[TaskStateChange].recover {
       case NonFatal(e) =>
         throw new RuntimeException(s"while asking for $taskStateOp on app [${taskId.appId}] and $taskId", e)
     }

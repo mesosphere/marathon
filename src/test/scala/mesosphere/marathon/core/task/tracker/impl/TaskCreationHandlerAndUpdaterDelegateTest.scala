@@ -4,7 +4,7 @@ import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
@@ -20,6 +20,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
     val stateOp = TaskStateOp.Create(task)
+    val expectedStateChange = TaskStateChange.Update(task)
 
     When("created is called")
     val create = f.delegate.created(stateOp)
@@ -30,7 +31,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     )
 
     When("the request is acknowledged")
-    f.taskTrackerProbe.reply(())
+    f.taskTrackerProbe.reply(expectedStateChange)
     Then("The reply is Unit, because task updates are deferred")
     create.futureValue should be(())
   }
@@ -65,6 +66,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
     val stateOp = TaskStateOp.ForceExpunge(task.taskId)
+    val expectedStateChange = TaskStateChange.Expunge(task.taskId)
 
     When("terminated is called")
     val terminated = f.delegate.terminated(stateOp)
@@ -75,9 +77,9 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     )
 
     When("the request is acknowledged")
-    f.taskTrackerProbe.reply(())
+    f.taskTrackerProbe.reply(expectedStateChange)
     Then("The reply is the value of the future")
-    terminated.futureValue should be(())
+    terminated.futureValue should be(expectedStateChange)
   }
 
   test("Terminated fails") {
@@ -108,24 +110,27 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("StatusUpdate succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val taskId = "task1"
+    val task = MarathonTestHelper.mininimalTask(appId)
+    val taskId = task.taskId
+    val taskIdString = taskId.idString
     val now = f.clock.now()
 
-    val update = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(taskId)).buildPartial()
+    val update = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(taskIdString)).buildPartial()
 
     When("created is called")
     val statusUpdate = f.delegate.statusUpdate(appId, update)
-    val stateOp = TaskStateOp.MesosUpdate(Task.Id(taskId), MarathonTaskStatus(update), now)
+    val stateOp = TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus(update), now)
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, Task.Id(taskId), stateOp)
+      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, taskId, stateOp)
     )
 
     When("the request is acknowledged")
-    f.taskTrackerProbe.reply(())
+    val expectedStateChange = TaskStateChange.Update(task)
+    f.taskTrackerProbe.reply(expectedStateChange)
     Then("The reply is the value of the future")
-    statusUpdate.futureValue should be(())
+    statusUpdate.futureValue should be(expectedStateChange)
   }
 
   test("StatusUpdate fails") {
