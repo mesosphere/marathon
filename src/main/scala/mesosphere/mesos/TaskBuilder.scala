@@ -113,7 +113,7 @@ class TaskBuilder(app: AppDefinition,
       .setSlaveId(offer.getSlaveId)
       .addAllResources(resourceMatch.resources.asJava)
 
-    builder.setDiscovery(computeDiscoveryInfo(app))
+    builder.setDiscovery(computeDiscoveryInfo(app, resourceMatch.hostPorts))
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
@@ -169,7 +169,7 @@ class TaskBuilder(app: AppDefinition,
     Some(builder.build -> resourceMatch.hostPorts)
   }
 
-  protected def computeDiscoveryInfo(app: AppDefinition): org.apache.mesos.Protos.DiscoveryInfo = {
+  protected def computeDiscoveryInfo(app: AppDefinition, hostPorts: Seq[Int]): org.apache.mesos.Protos.DiscoveryInfo = {
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
     discoveryInfoBuilder.setName(app.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
@@ -178,7 +178,12 @@ class TaskBuilder(app: AppDefinition,
       case Some(IpAddress(_, _, DiscoveryInfo(ports))) if ports.nonEmpty =>
         ports.map(_.toProto).asJava
       case _ =>
-        app.portDefinitions.map(PortDefinitionSerializer.toProto).asJava
+        // Serialize app.portDefinitions to protos. The port numbers are the service ports, we need to
+        // overwrite them the port numbers assigned to this particular task.
+        app.portDefinitions.zip(hostPorts).map {
+          case (portDefinition, hostPort) =>
+            PortDefinitionSerializer.toProto(portDefinition).toBuilder.setNumber(hostPort).build
+        }.asJava
     }
 
     val portsProto = org.apache.mesos.Protos.Ports.newBuilder

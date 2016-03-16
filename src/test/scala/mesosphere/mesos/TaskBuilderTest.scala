@@ -66,7 +66,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, _) = task.get
+    val (taskInfo, taskPorts) = task.get
 
     val discoveryInfo = taskInfo.getDiscovery
     val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
@@ -75,12 +75,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setPorts(
         MesosProtos.Ports.newBuilder
           .addPorts(
-            MesosProtos.Port.newBuilder.setName("http").setNumber(8080).setProtocol("tcp")
+            MesosProtos.Port.newBuilder.setName("http").setNumber(taskPorts(0)).setProtocol("tcp")
               .setLabels(MesosProtos.Labels.newBuilder().addLabels(
                 MesosProtos.Label.newBuilder().setKey("VIP").setValue("127.0.0.1:8080")
               ))
           ).addPorts(
-              MesosProtos.Port.newBuilder.setName("admin").setNumber(8081).setProtocol("tcp")
+              MesosProtos.Port.newBuilder.setName("admin").setNumber(taskPorts(1)).setProtocol("tcp")
                 .setLabels(MesosProtos.Labels.newBuilder().addLabels(
                   MesosProtos.Label.newBuilder().setKey("VIP").setValue("127.0.0.1:8081")
                 ))
@@ -112,7 +112,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert(task.isDefined)
 
-    val (taskInfo, _) = task.get
+    val (taskInfo, taskPorts) = task.get
 
     val discoveryInfo = taskInfo.getDiscovery
     val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
@@ -121,12 +121,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setPorts(
         MesosProtos.Ports.newBuilder
           .addPorts(
-            MesosProtos.Port.newBuilder.setName("http").setNumber(8080).setProtocol("tcp")
+            MesosProtos.Port.newBuilder.setName("http").setNumber(taskPorts(0)).setProtocol("tcp")
               .setLabels(MesosProtos.Labels.newBuilder().addLabels(
                 MesosProtos.Label.newBuilder().setKey("VIP").setValue("127.0.0.1:8080")
               ))
           ).addPorts(
-              MesosProtos.Port.newBuilder.setName("admin").setNumber(8081).setProtocol("udp")
+              MesosProtos.Port.newBuilder.setName("admin").setNumber(taskPorts(1)).setProtocol("udp")
                 .setLabels(MesosProtos.Labels.newBuilder().addLabels(
                   MesosProtos.Label.newBuilder().setKey("VIP").setValue("127.0.0.1:8081")
                 ))
@@ -1221,8 +1221,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setName(taskInfo.getName)
       .setPorts(
         MesosProtos.Ports.newBuilder
-          .addPorts(MesosProtos.Port.newBuilder.setNumber(8080).setProtocol("tcp"))
-          .addPorts(MesosProtos.Port.newBuilder.setNumber(8081).setProtocol("tcp"))
+          .addPorts(MesosProtos.Port.newBuilder.setNumber(taskPorts(0)).setProtocol("tcp"))
+          .addPorts(MesosProtos.Port.newBuilder.setNumber(taskPorts(1)).setProtocol("tcp"))
       ).build
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
     discoveryInfo should equal(discoveryInfoProto)
