@@ -195,7 +195,7 @@ object ProcessKeeper {
       case Failure(_) =>
         process.destroy()
         throw new IllegalStateException(
-          s"Process $name does not came up within time bounds ($timeout). Give up. $processBuilder")
+          s"Process $name did not come up within time bounds ($timeout). Give up. $processBuilder")
     }
     process
   }
