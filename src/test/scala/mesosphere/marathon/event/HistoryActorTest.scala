@@ -1,7 +1,7 @@
 package mesosphere.marathon.event
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
-import akka.testkit.{ ImplicitSender, TestActorRef, TestKit }
+import akka.actor.{ ActorRef, Props }
+import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId._
@@ -81,6 +81,13 @@ class HistoryActorTest
     verify(failureRepo, times(0)).store(any(), any())
   }
 
+  test("Store UnhealthyTaskKilled") {
+    val message = unhealthyTaskKilled()
+    historyActor ! message
+
+    verify(failureRepo).store(message.appId, TaskFailure.FromUnhealthyTaskKillEvent(message))
+  }
+
   private def statusMessage(state: TaskState) = {
     val ipAddress: NetworkInfo.IPAddress =
       NetworkInfo.IPAddress
@@ -99,6 +106,18 @@ class HistoryActorTest
       ipAddresses = Seq(ipAddress),
       ports = Nil,
       version = Timestamp.now().toString
+    )
+  }
+
+  private def unhealthyTaskKilled() = {
+    val taskId = Task.Id("taskId")
+    UnhealthyTaskKillEvent(
+      appId = StringPathId("app").toPath,
+      taskId = taskId,
+      version = Timestamp(1024),
+      reason = "unknown",
+      host = "localhost",
+      slaveId = None
     )
   }
 }

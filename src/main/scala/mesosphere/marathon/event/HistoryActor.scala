@@ -9,10 +9,15 @@ class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepo
 
   override def preStart(): Unit = {
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
+    eventBus.subscribe(self, classOf[UnhealthyTaskKillEvent])
     eventBus.subscribe(self, classOf[AppTerminatedEvent])
   }
 
   def receive: Receive = {
+
+    case TaskFailure.FromUnhealthyTaskKillEvent(taskFailure) =>
+      taskFailureRepository.store(taskFailure.appId, taskFailure)
+
     case TaskFailure.FromMesosStatusUpdateEvent(taskFailure) =>
       taskFailureRepository.store(taskFailure.appId, taskFailure)
 
