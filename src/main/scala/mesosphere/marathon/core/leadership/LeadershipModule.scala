@@ -4,6 +4,7 @@ import akka.actor.{ ActorRef, ActorRefFactory, Props }
 import com.twitter.common.zookeeper.ZooKeeperClient
 import mesosphere.marathon.LeadershipAbdication
 import mesosphere.marathon.core.leadership.impl._
+import org.slf4j.LoggerFactory
 
 trait LeadershipModule {
   /**
@@ -36,11 +37,13 @@ object LeadershipModule {
 private[leadership] class LeadershipModuleImpl(
     actorRefFactory: ActorRefFactory, zk: ZooKeeperClient, leader: LeadershipAbdication) extends LeadershipModule {
 
+  private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] var whenLeaderRefs = Set.empty[ActorRef]
   private[this] var started: Boolean = false
 
   override def startWhenLeader(props: Props, name: String): ActorRef = {
-    require(!started, "already started")
+    log.info("startWhenLeader: {}", name + props.toString)
+    require(!started, s"already started: $name ${props.toString}")
     val proxyProps = WhenLeaderActor.props(props)
     val actorRef = actorRefFactory.actorOf(proxyProps, name)
     whenLeaderRefs += actorRef
@@ -51,6 +54,9 @@ private[leadership] class LeadershipModuleImpl(
 
   private[this] lazy val coordinator_ = {
     require(!started, "already started")
+    log.info("LeadershipModule is now started")
+    //    throw new scala.RuntimeException("Sorry!")
+
     started = true
 
     val props = LeadershipCoordinatorActor.props(whenLeaderRefs)

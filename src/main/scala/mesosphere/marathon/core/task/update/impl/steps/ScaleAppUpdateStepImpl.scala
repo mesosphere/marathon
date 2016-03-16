@@ -3,7 +3,7 @@ package mesosphere.marathon.core.task.update.impl.steps
 import javax.inject.Named
 
 import akka.actor.ActorRef
-import com.google.inject.Inject
+import com.google.inject.{ Provider, Inject }
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Terminated
@@ -18,8 +18,9 @@ import scala.concurrent.Future
   * Trigger rescale of affected app if a task died.
   */
 class ScaleAppUpdateStepImpl @Inject() (
-    @Named("schedulerActor") schedulerActor: ActorRef) extends TaskStatusUpdateStep {
+    @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef]) extends TaskStatusUpdateStep {
   private[this] val log = LoggerFactory.getLogger(getClass)
+  private[this] lazy val schedulerActor = schedulerActorProvider.get()
 
   override def name: String = "scaleApp"
 
@@ -30,6 +31,7 @@ class ScaleAppUpdateStepImpl @Inject() (
       case Terminated(_) =>
         // Remove from our internal list
         log.info(s"initiating a scale check for app [${taskId.appId}] after $taskId terminated")
+        log.info("schedulerActor: {}", schedulerActor)
         schedulerActor ! ScaleApp(taskId.appId)
 
       case _ =>

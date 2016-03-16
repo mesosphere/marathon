@@ -6,7 +6,7 @@ import akka.actor.ActorRefFactory
 import com.google.inject.name.Names
 import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.appinfo.{ GroupInfoService, AppInfoModule, AppInfoService }
+import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -14,23 +14,22 @@ import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipMo
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusObservables }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
-import mesosphere.marathon.core.task.update.impl.ThrottlingTaskStatusUpdateProcessor
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskCreationHandler, TaskTracker, TaskUpdater }
-import mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker, TaskUpdater }
 import mesosphere.marathon.core.task.update.impl.steps.{
-  ContinueOnErrorStep,
-  NotifyHealthCheckManagerStepImpl,
+  ScaleAppUpdateStepImpl,
+  TaskStatusEmitterPublishStepImpl,
   NotifyLaunchQueueStepImpl,
   NotifyRateLimiterStepImpl,
-  PostToEventStreamStepImpl,
-  ScaleAppUpdateStepImpl,
-  TaskStatusEmitterPublishStepImpl
+  ContinueOnErrorStep,
+  NotifyHealthCheckManagerStepImpl,
+  PostToEventStreamStepImpl
 }
+import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskStatusUpdateStep }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.plugin.http.HttpRequestHandler
-import mesosphere.util.{ CapConcurrentExecutionsMetrics, CapConcurrentExecutions }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 
 /**
   * Provides the glue between guice and the core modules.
@@ -57,7 +56,9 @@ class CoreGuiceModule extends AbstractModule {
   @Provides @Singleton
   def leadershipCoordinator(
     leadershipModule: LeadershipModule,
-    makeSureToInitializeThisBeforeCreatingCoordinator: TaskStatusUpdateProcessor): LeadershipCoordinator =
+    // makeSureToInitializeThisBeforeCreatingCoordinator
+    prerequisite1: TaskStatusUpdateProcessor,
+    prerequisite2: LaunchQueue): LeadershipCoordinator =
     leadershipModule.coordinator()
 
   @Provides @Singleton

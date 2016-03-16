@@ -1,9 +1,10 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import akka.actor.Status
+import akka.actor.{ ActorRef, Status }
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import com.codahale.metrics.MetricRegistry
+import com.google.inject.Provider
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -421,12 +422,24 @@ class TaskOpProcessorImplTest
 
     lazy val healthCheckManager: HealthCheckManager = mock[HealthCheckManager]
     lazy val schedulerActor: TestProbe = TestProbe()
+    lazy val schedulerActorProvider = new Provider[ActorRef] {
+      override def get(): ActorRef = schedulerActor.ref
+    }
     lazy val appRepository: AppRepository = mock[AppRepository]
+    lazy val appRepositoryProvider: Provider[AppRepository] = new Provider[AppRepository] {
+      override def get(): AppRepository = appRepository
+    }
     lazy val launchQueue: LaunchQueue = mock[LaunchQueue]
+    lazy val launchQueueProvider: Provider[LaunchQueue] = new Provider[LaunchQueue] {
+      override def get(): LaunchQueue = launchQueue
+    }
     lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
     lazy val eventBus: EventStream = mock[EventStream]
     lazy val taskUpdater: TaskUpdater = mock[TaskUpdater]
     lazy val taskStatusEmitter: TaskStatusEmitter = mock[TaskStatusEmitter]
+    lazy val taskStatusEmitterProvider: Provider[TaskStatusEmitter] = new Provider[TaskStatusEmitter] {
+      override def get(): TaskStatusEmitter = taskStatusEmitter
+    }
     lazy val guiceModule = new CoreGuiceModule
     // Use module method to ensure that we keep the list of steps in sync with the test.
     lazy val statusUpdateSteps = guiceModule.taskStatusUpdateSteps(
@@ -440,11 +453,11 @@ class TaskOpProcessorImplTest
 
     // task status update steps
     lazy val notifyHealthCheckManager = new NotifyHealthCheckManagerStepImpl(healthCheckManager)
-    lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueue, appRepository)
+    lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueueProvider, appRepositoryProvider)
     lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus)
-    lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueue)
-    lazy val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitter)
-    lazy val scaleApp = new ScaleAppUpdateStepImpl(schedulerActor.ref)
+    lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueueProvider)
+    lazy val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitterProvider)
+    lazy val scaleApp = new ScaleAppUpdateStepImpl(schedulerActorProvider)
     lazy val processor = new TaskOpProcessorImpl(taskTrackerProbe.ref, taskRepository, stateOpResolver, statusUpdateSteps, metrics)
 
     def verifyNoMoreInteractions(): Unit = {

@@ -6,6 +6,7 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
+import com.google.inject.Provider
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -24,11 +25,14 @@ import scala.concurrent.{ Await, Future }
 
 class MarathonHealthCheckManager @Inject() (
     system: ActorSystem,
-    driverHolder: MarathonSchedulerDriverHolder,
+    driverHolderProvider: Provider[MarathonSchedulerDriverHolder],
     @Named(EventModule.busName) eventBus: EventStream,
-    taskTracker: TaskTracker,
+    taskTrackerProvider: Provider[TaskTracker],
     appRepository: AppRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
+
+  private[this] lazy val driverHolder = driverHolderProvider.get()
+  private[this] lazy val taskTracker = taskTrackerProvider.get()
 
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,

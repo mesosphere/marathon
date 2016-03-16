@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
-import com.google.inject.Inject
+import com.google.inject.{ Provider, Inject }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
@@ -10,8 +10,11 @@ import org.apache.mesos.Protos.TaskStatus
 import scala.concurrent.Future
 
 class NotifyRateLimiterStepImpl @Inject() (
-    launchQueue: LaunchQueue,
-    appRepository: AppRepository) extends TaskStatusUpdateStep {
+    launchQueueProvider: Provider[LaunchQueue],
+    appRepositoryProvider: Provider[AppRepository]) extends TaskStatusUpdateStep {
+
+  private[this] lazy val launchQueue = launchQueueProvider.get()
+  private[this] lazy val appRepository = appRepositoryProvider.get()
 
   override def name: String = "notifyRateLimiter"
 

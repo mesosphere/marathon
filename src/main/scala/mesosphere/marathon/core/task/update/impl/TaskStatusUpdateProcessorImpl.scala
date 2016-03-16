@@ -39,7 +39,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   private[this] val killUnknownTaskTimer: Timer =
     metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "killUnknownTask"))
 
-  log.info("Started status update processor ")
+  log.info("Started status update processor")
 
   override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishFutureTimer.timeFuture {
     val now = clock.now()

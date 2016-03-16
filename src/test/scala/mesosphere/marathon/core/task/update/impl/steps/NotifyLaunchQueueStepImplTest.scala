@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
+import com.google.inject.Provider
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
@@ -54,6 +55,9 @@ class NotifyLaunchQueueStepImplTest extends FunSuite with Matchers with GivenWhe
 
   class Fixture {
     val launchQueue = mock[LaunchQueue]
-    val step = new NotifyLaunchQueueStepImpl(launchQueue = launchQueue)
+    val launchQueueProvider = new Provider[LaunchQueue] {
+      override def get(): LaunchQueue = launchQueue
+    }
+    val step = new NotifyLaunchQueueStepImpl(launchQueueProvider = launchQueueProvider)
   }
 }
