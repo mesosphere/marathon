@@ -86,6 +86,6 @@ Because tasks are pinned to nodes, your data can be lost if the node is lost. If
 
 ### Non-unique Roles
 
-In Mesos, volumes are created for *roles*, not for frameworks. If more than one framework is registered with a particular role, the resource offer meant for Marathon may be accepted by another framework. This can result in volume creation failure. Make sure you register Marathon with a unique role that is not used by another framework instance. This also holds true for any other Marathon instance you are running Multiple Marathon instances in HA mode do not need to have unique roles, however, because they are considered one instance.
+In Mesos, volumes are created for *roles*, not for frameworks. If more than one framework is registered with a particular role, the resource offer meant for Marathon may be accepted by another framework. This can result in volume creation failure. Make sure you register Marathon with a unique role that is not used by another framework instance. This also holds true for any other Marathon instance you are running Multiple. Marathon instances in HA mode do not need to have unique roles, however, because they use the same role by design.
 
 For more information, see the [Apache Mesos documentation on persistent volumes](http://mesos.apache.org/documentation/latest/persistent-volume/).
