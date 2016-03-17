@@ -16,17 +16,17 @@ Port configuration for applications in Marathon can be confusing and there is [a
 
 *HOST networking*: `HOST` networking is used by non-Docker Marathon applications and Docker applications that use `HOST` mode networking. In this mode, applications bind directly to one or more ports on the host machine.
 
-*portMapping*: A _port mapping_ is necessary for Docker applications that use `BRIDGE` mode networking and is a tuple containing a host port, container port, service port and protocol. Multiple _port mappings_ may be specified for a Marathon application.
+*portMapping*: A _port mapping_ is necessary for Docker applications that use `BRIDGE` mode networking and is a tuple containing a host port, container port, service port, and protocol. Multiple _port mappings_ may be specified for a Marathon application.
 
-*ports*: The _ports_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. Only one of _ports_ and _portDefinitions_ should be defined at the same time.
+*ports*: The _ports_ array is used to define ports that should be considered as part of a resource offer. You only need to define this array if you are using `HOST` networking and no port mappings are specified. Only one of _ports_ and _portDefinitions_ should be defined at the same time. **Note:** The `portDefinitions` array, defined below, deprecates the `ports` array.
 
-*portDefinitions*: The _portDefinitionss_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. This array is meant to replace the _ports_ array, and makes it possible to specify a port name, protocol and labels. Only one of _ports_ and _portDefinitions_ should be defined at the same time.
+*portDefinitions*: The _portDefinitions_ array is used to define ports that should be considered as part of a resource offer. You only need to define this array if you are using `HOST` networking and no port mappings are specified. This array replaces the _ports_ array and allows you to specify a port name, protocol, and labels. Only one of _ports_ and _portDefinitions_ should be defined at the same time.
 
-*protocol*: _Protocol_ specifies the internet protocol to use for a port (e.g. `tcp` or `udp`). This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
+*protocol*: _protocol_ specifies the internet protocol to use for a port (e.g. `tcp` or `udp`). This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
 
 *requirePorts*: _requirePorts_ is a property that specifies whether Marathon should specifically look for specified ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to `BRIDGE` mode networking.
 
-*servicePort*: A _service port_ is a port used to describe the port that a service should made available at. Marathon does not bind to the service ports specified but will ensure that you cannot have multiple applications that use the same service port running on the same host. Service ports are typically only used by external applications (e.g. HAProxy) to make the application available at the specified port. See [Service Discovery & Load Balancing](service-discovery-load-balancing.html) for more information.
+*servicePort*: A _service port_ is a port used to describe the port where a service should made available. Marathon does not bind to the service ports specified, but will ensure that you cannot have multiple applications that use the same service port running on the same host. Service ports are typically only used by external applications (e.g. HAProxy) to make the application available at the specified port. See [Service Discovery & Load Balancing](service-discovery-load-balancing.html) for more information.
 
 ## Random Port Assignment
 
@@ -34,7 +34,7 @@ Using the value 0 for any port settings indicates to Marathon that you would lik
 
 ## Environment Variables
 
-Each *host port* value is exposed to the running application instance via environment variables `$PORT0`, `$PORT1`, etc. Each Marathon application is given a single port by default, so `$PORT0` is always available. These variables are available inside a Docker container being run by Marathon too.
+Each *host port* value is exposed to the running application instance via environment variables `$PORT0`, `$PORT1`, etc. Each Marathon application is given a single port by default, so `$PORT0` is always available. These variables are also available inside a Docker container being run by Marathon.
 
 When using `BRIDGE` mode networking, be sure to bind your application to the `containerPort`s you have specified in your `portMapping`s. However, if you have set `containerPort` to 0 then this will be the same as `hostPort` and you can use the `$PORT` environment variables.
 
@@ -58,7 +58,7 @@ Host mode is enabled by default for containers. If you wish to be explicit, you 
   },
 ```
 
-For non-Docker applications, you don't need to specify anything.
+For non-Docker applications, you do not need to specify anything.
 
 #### Specifying Ports
 
@@ -81,7 +81,7 @@ Or through the `portDefinitions` array:
 
 In this example, we specify three randomly assigned host ports which would then be available to our command via the environment variables `$PORT0`, `$PORT1` and `$PORT2`. Marathon will also randomly assign three service posts in addition to these three host ports.
 
-You can also specify specific service ports:
+You can also specify service ports:
 
 ```json
     "ports": [
@@ -101,7 +101,7 @@ In this case, host ports `$PORT0`, `$PORT1` and `$PORT3` remain randomly assigne
 
 In this example, as with the previous one, it is necessary to use a service discovery solution such as HAProxy to proxy requests from service ports to host ports.
 
-If you want the applications service ports to be equal to its host ports, you can set `requirePorts` to `true` (`requirePorts` is `false` by default). This will tell Marathon to only schedule this application on agents which have these ports available:
+If you want the applications service ports to be equal to its host ports, you can set `requirePorts` to `true` (`requirePorts` is `false` by default). This will tell Marathon to only schedule this application on agents that have these ports available:
 
 ```json
     "ports": [
@@ -114,8 +114,7 @@ The service and host ports (including the environment variables `$PORT0`, `$PORT
 
 This property is useful if you don't use a service discovery solution to proxy requests from service ports to host ports.
 
-
-Defining the `portDefinitions` array allows you to specify a protocol, a name and labels for each port. When starting
+Defining the `portDefinitions` array allows you to specify a protocol, a name, and labels for each port. When starting
 new tasks, Marathon will pass this metadata to Mesos. Mesos will expose this information in the `discovery` field of the
 task. Custom network discovery solutions can consume this field.
 
@@ -132,10 +131,10 @@ Example port definition requesting a dynamic `tcp` port named `http` with the la
     ],
 ```
 
-The `port` field is mandatory. The `protocol`, `name` and `labels` fields are optional. A port definition in which only
+The `port` field is mandatory. The `protocol`, `name`, and `labels` fields are optional. A port definition in which only
 the `port` field is set is equivalent to an element of the `ports` array.
 
-Note that only the `ports` array and the `portDefinitions` array should not be specified together, unless all their
+Note that only the `ports` array and the `portDefinitions` array should not be specified together unless all their
 elements are equivalent.
 
 #### Referencing Ports
@@ -154,7 +153,7 @@ Alternatively, if you aren't using Docker or had specified a `cmd` in your Marat
 
 ### Bridge Mode
 
-Bridge mode networking allows you to map host ports to ports inside your container and is only applicable to Docker containers. It is particularly useful if you are using a container image with fixed port assignments that you can't modify. Note that it not necessary to `EXPOSE` ports in your Dockerfile.
+Bridge mode networking allows you to map host ports to ports inside your container and is only applicable to Docker containers. It is particularly useful if you are using a container image with fixed port assignments that you cannot modify. Note that it not necessary to `EXPOSE` ports in your Dockerfile.
 
 #### Enabling Bridge Mode
 
@@ -210,7 +209,7 @@ Alternatively, if our process running in the container had fixed ports, we might
   },
 ```
 
-In this case, Marathon will randomly allocate host ports and map these to ports `80`, `443` and `4000` respectively. It's important to note that the `$PORT` variables refer to the host ports. In this case, `$PORT0` will be set to the value of `hostPort` for the first mapping and so on.
+In this case, Marathon will randomly allocate host ports and map these to ports `80`, `443` and `4000` respectively. The `$PORT` variables refer to the host ports. In this case, `$PORT0` will be set to the value of `hostPort` for the first mapping and so on.
 
 ##### Specifying Protocol
 
@@ -233,7 +232,7 @@ You can also specify the protocol for these port mappings. The default is `tcp`:
 
 ##### Specifying Service Ports
 
-By default, Marathon will be creating service ports for each of these ports and assigning them random values. Service ports are used by service discovery solutions and it is often desirable to set these to well known values. You can do this by setting a `servicePort` for each mapping:
+By default, Marathon creates service ports for each of these ports and assigns them random values. Service ports are used by service discovery solutions and it is often desirable to set these to well known values. You can do this by setting a `servicePort` for each mapping:
 
 ```json
   "container": {
@@ -250,7 +249,7 @@ By default, Marathon will be creating service ports for each of these ports and 
   },
 ```
 
-In this example, the host ports `$PORT0`, `$PORT1` and `$PORT3` remain randomly assigned. However, the service ports for this application are now `2001`, `2002` and `3000`. An external proxy, like HAProxy, should be configured to route from the service ports to the host ports.
+In this example, the host ports `$PORT0`, `$PORT1` and `$PORT3` remain randomly assigned. However, the service ports for this application are now `2001`, `2002` and `3000`. Configure an external proxy, like HAProxy, to route from the service ports to the host ports.
 
 #### Referencing Ports
 
@@ -260,13 +259,13 @@ If you set `containerPort` to 0, then you should specify ports in the Dockerfile
 CMD ./my-app --http-port=$PORT0 --https-port=$PORT1 --monitoring-port=$PORT2
 ```
 
-However, if you've specified `containerPort` values, you simply use the same values in the Dockerfile:
+However, if you've specified `containerPort` values, just the same values in the Dockerfile:
 
 ```sh
 CMD ./my-app --http-port=80 --https-port=443 --monitoring-port=4000
 ```
 
-Alternatively, you can specify a `cmd` in your Marathon application definition, it works in the same way as before:
+Alternatively, you can specify a `cmd` in your Marathon application definition. It works in the same way as before:
 
 ```json
     "cmd": "./my-app --http-port=$PORT0 --https-port=$PORT1 --monitoring-port=$PORT2"
