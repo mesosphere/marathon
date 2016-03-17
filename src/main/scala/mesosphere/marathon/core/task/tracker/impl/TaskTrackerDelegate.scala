@@ -8,7 +8,7 @@ import akka.pattern.AskTimeoutException
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ TaskTrackerUpdateSubscriber, TaskTracker, TaskTrackerConfig }
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.PathId
 
@@ -73,14 +73,4 @@ private[tracker] class TaskTrackerDelegate(
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))
 
   private[this] implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
-
-  override def subscribeForUpdates(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)(
-    implicit ec: ExecutionContext): Future[Unit] = {
-    (taskTrackerRef ? TaskTrackerActor.Subscribe(appId, subscriber)).mapTo[Unit]
-  }
-
-  override def unsubscribeFromUpdates(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)(
-    implicit ec: ExecutionContext): Future[Unit] = {
-    (taskTrackerRef ? TaskTrackerActor.Unsubscribe(appId, subscriber)).mapTo[Unit]
-  }
 }

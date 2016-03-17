@@ -156,7 +156,7 @@ object Task {
 
       // if a LaunchOnReservation failed while persisting the task, we want to recreate the reserved task
       case TaskStateOp.Create(task) =>
-        TaskStateChange.Update(task, None) // // FIXME (3221): Some(this)?
+        TaskStateChange.Update(task, None)
 
       // failure case
       case _: TaskStateOp.ForceExpunge =>

@@ -32,7 +32,6 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
     taskUpdate(stateOp.taskId, stateOp)
   }
 
-  // FIXME (3221): remove created, terminated, statusUpdate
   override def created(taskStateOp: TaskStateOp): Future[Unit] = {
     process(taskStateOp).map(_ => ())
   }

@@ -411,8 +411,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     // we are not interested in these. We check for these in LaunchQueueModuleTest
     // Mockito.verifyNoMoreInteractions(offerMatcherManager)
     Mockito.verifyNoMoreInteractions(taskOpFactory)
-    // FIXME (3221): various subscribe/unsubscribe calls cone in here:
-    //    Mockito.verifyNoMoreInteractions(taskTracker)
+    Mockito.verifyNoMoreInteractions(taskTracker)
 
     actorSystem.shutdown()
     actorSystem.awaitTermination()

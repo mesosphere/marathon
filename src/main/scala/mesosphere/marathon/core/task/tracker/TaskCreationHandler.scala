@@ -7,7 +7,7 @@ import scala.concurrent.Future
 /**
   * Notifies the [[TaskTracker]] of task creation and termination.
   */
-// FIXME (3221): The 2 functions are now basically the same and can be consolidated
+// FIXME (3221): This interface can be removed, it is superseded by TaskStateOpProcessor
 trait TaskCreationHandler {
   /**
     * Create a new task.

@@ -93,7 +93,6 @@ private[tracker] class TaskOpProcessorImpl(
   override def process(op: Operation)(implicit ec: ExecutionContext): Future[Unit] = {
     val stateChange = stateOpResolver.resolve(op.stateOp)
 
-    // FIXME (3221): TaskUpdated/TaskRemoved can be done via a NotifyTaskTrackerStep
     stateChange.flatMap {
       case stateChange: TaskStateChange.Expunge =>
         // Used for task termination or as a result from a UpdateStatus action.

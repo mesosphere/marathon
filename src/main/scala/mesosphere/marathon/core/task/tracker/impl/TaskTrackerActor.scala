@@ -5,7 +5,7 @@ import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.{ TaskTrackerUpdateSubscriber, TaskTracker }
+import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
@@ -42,10 +42,6 @@ object TaskTrackerActor {
       runningCount.setValue(0)
     }
   }
-
-  private[impl] case class Subscribe(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)
-
-  private[impl] case class Unsubscribe(appId: PathId, subscriber: TaskTrackerUpdateSubscriber)
 }
 
 /**
@@ -61,7 +57,6 @@ private class TaskTrackerActor(
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val updaterRef = context.actorOf(taskUpdaterProps(self), "updater")
-  private[this] var subscribersByApp: Map[PathId, Set[TaskTrackerUpdateSubscriber]] = Map.empty
 
   override val supervisorStrategy = OneForOneStrategy() { case _: Exception => Escalate }
 
@@ -137,19 +132,6 @@ private class TaskTrackerActor(
       case msg @ TaskTrackerActor.TaskRemoved(taskId, ack) =>
         becomeWithUpdatedApp(taskId.appId)(taskId, newTask = None)
         ack.sendAck()
-
-      case TaskTrackerActor.Subscribe(appId, subscriber) =>
-        val subscribers = subscribersByApp.get(appId).map(_ + subscriber).getOrElse(Set(subscriber))
-        subscribersByApp += appId -> subscribers
-
-      case TaskTrackerActor.Unsubscribe(appId, subscriber) =>
-        val subscribers = subscribersByApp.get(appId).map(_ - subscriber).getOrElse(Set.empty)
-        if (subscribers.nonEmpty) {
-          subscribersByApp += appId -> subscribers
-        }
-        else {
-          subscribersByApp - appId
-        }
     }
   }
 }
