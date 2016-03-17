@@ -24,7 +24,7 @@ Port configuration for applications in Marathon can be confusing and there is [a
 
 *protocol*: _protocol_ specifies the internet protocol to use for a port (e.g. `tcp` or `udp`). This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
 
-*requirePorts*: _requirePorts_ is a property that specifies whether Marathon should specifically look for specified ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to `BRIDGE` mode networking.
+*requirePorts*: _requirePorts_ specifies whether Marathon should look for particular ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to `BRIDGE` mode networking.
 
 *servicePort*: A _service port_ is a port used to describe the port where a service should made available. Marathon does not bind to the service ports specified, but will ensure that you cannot have multiple applications that use the same service port running on the same host. Service ports are typically only used by external applications (e.g. HAProxy) to make the application available at the specified port. See [Service Discovery & Load Balancing](service-discovery-load-balancing.html) for more information.
 
