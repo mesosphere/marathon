@@ -17,6 +17,8 @@ You can assign a VIP to your application from the Marathon web interface. The va
 ## Prerequisite:
 - A pool of VIP addresses
 
+## Steps
+
 1. Access the Marathon web interface at `http://$DCOS_URI/marathon`
 1. Either create a new application or click a previously created application in the list of `Applications`.
 1. If you are creating a new application, choose `Ports and Service Discovery` menu option. If you are editing an application you have already created, click the `Configuration` tab, then click the `Edit` button.
