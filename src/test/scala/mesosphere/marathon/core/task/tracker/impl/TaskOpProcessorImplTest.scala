@@ -44,7 +44,7 @@ class TaskOpProcessorImplTest
     val task = taskState.marathonTask
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.runningHealthy)
     val mesosStatus = stateOp.status.mesosStatus.get
-    val expectedChange = TaskStateChange.Update(taskState)
+    val expectedChange = TaskStateChange.Update(taskState, Some(taskState))
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.task(taskState.taskId.idString) returns Future.successful(Some(task))
     f.taskRepository.store(task) returns Future.successful(task)
@@ -65,7 +65,7 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).store(task)
 
     And("the taskTracker gets the update")
-    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(expectedChange, TaskTrackerActor.Ack(testActor, expectedChange)))
+    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(taskState, TaskTrackerActor.Ack(testActor, expectedChange)))
 
     And("no more interactions")
     f.verifyNoMoreInteractions()
@@ -79,13 +79,12 @@ class TaskOpProcessorImplTest
     val taskState = MarathonTestHelper.stagedTaskForApp(appId)
     val task = taskState.marathonTask
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.running)
-    val expectedChange = TaskStateChange.Update(taskState)
+    val expectedChange = TaskStateChange.Update(taskState, Some(taskState))
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.store(task) returns Future.failed(new RuntimeException("fail"))
     f.taskRepository.task(task.getId) returns Future.successful(Some(task))
 
     When("the processor processes an update")
-
     var result: Try[Unit] = Failure(new RuntimeException("test executing failed"))
     val logs = CaptureLogEvents.forBlock {
       result = Try(f.processor.process(
@@ -100,8 +99,10 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).store(task)
 
     And("logs a warning after detecting the error")
-    logs.head.getLevel should be(ch.qos.logback.classic.Level.WARN)
-    logs.head.getMessage should include(s"[${task.getId}]")
+    logs should have size 2
+    logs.head.getLevel should be(ch.qos.logback.classic.Level.INFO)
+    logs(1).getLevel should be(ch.qos.logback.classic.Level.WARN)
+    logs(1).getMessage should include(s"[${task.getId}]")
 
     And("loads the task")
     verify(f.taskRepository).task(task.getId)
@@ -110,7 +111,7 @@ class TaskOpProcessorImplTest
     result should be(Success(()))
 
     And("the taskTracker gets the update")
-    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(expectedChange, TaskTrackerActor.Ack(testActor, ())))
+    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(taskState, TaskTrackerActor.Ack(testActor, ())))
 
     And("no more interactions")
     f.verifyNoMoreInteractions()
@@ -124,7 +125,7 @@ class TaskOpProcessorImplTest
     val taskState = MarathonTestHelper.mininimalTask(appId)
     val task = taskState.marathonTask
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.running)
-    val expectedChange = TaskStateChange.Update(taskState)
+    val expectedChange = TaskStateChange.Update(taskState, Some(taskState))
     val storeFail: RuntimeException = new scala.RuntimeException("fail")
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.store(task) returns Future.failed(storeFail)
@@ -146,8 +147,10 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).store(task)
 
     And("logs a warning after detecting the error")
-    logs.head.getLevel should be(ch.qos.logback.classic.Level.WARN)
-    logs.head.getMessage should include(s"[${task.getId}]")
+    logs should have size 2
+    logs.head.getLevel should be(ch.qos.logback.classic.Level.INFO)
+    logs(1).getLevel should be(ch.qos.logback.classic.Level.WARN)
+    logs(1).getMessage should include(s"[${task.getId}]")
 
     And("loads the task")
     verify(f.taskRepository).task(task.getId)
@@ -157,7 +160,7 @@ class TaskOpProcessorImplTest
 
     And("the taskTracker gets a task removed and the ack contains the original failure")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(taskState.taskId), TaskTrackerActor.Ack(testActor, Status.Failure(storeFail)))
+      TaskTrackerActor.TaskRemoved(taskState.taskId, TaskTrackerActor.Ack(testActor, Status.Failure(storeFail)))
     )
 
     And("no more interactions")
@@ -173,7 +176,7 @@ class TaskOpProcessorImplTest
     val task = TaskSerializer.toProto(taskState)
     val storeFailed: RuntimeException = new scala.RuntimeException("store failed")
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.running)
-    val expectedChange = TaskStateChange.Update(taskState)
+    val expectedChange = TaskStateChange.Update(taskState, Some(taskState))
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.store(task) returns Future.failed(storeFailed)
     f.taskRepository.task(task.getId) returns Future.failed(new RuntimeException("task failed"))
@@ -200,10 +203,12 @@ class TaskOpProcessorImplTest
     result.failed.get.getCause.getMessage should be(storeFailed.getMessage)
 
     And("logs a two warnings, for store and for task")
-    logs.head.getLevel should be(ch.qos.logback.classic.Level.WARN)
-    logs.head.getMessage should include(s"[${task.getId}]")
+    logs should have size 3
+    logs.head.getLevel should be(ch.qos.logback.classic.Level.INFO)
     logs(1).getLevel should be(ch.qos.logback.classic.Level.WARN)
     logs(1).getMessage should include(s"[${task.getId}]")
+    logs(2).getLevel should be(ch.qos.logback.classic.Level.WARN)
+    logs(2).getMessage should include(s"[${task.getId}]")
 
     And("no more interactions")
     f.verifyNoMoreInteractions()
@@ -218,7 +223,7 @@ class TaskOpProcessorImplTest
     val taskId = taskState.taskId
     val taskIdString = taskId.idString
     val stateOp = f.stateOpExpunge(taskState)
-    val expectedChange = TaskStateChange.Expunge(taskState.taskId)
+    val expectedChange = TaskStateChange.Expunge(taskState)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.expunge(taskIdString) returns Future.successful(Iterable(true))
 
@@ -237,7 +242,7 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).expunge(taskIdString)
 
     And("the taskTracker gets the update")
-    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(taskId), TaskTrackerActor.Ack(testActor, TaskStateChange.Expunge(taskId))))
+    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskRemoved(taskState.taskId, TaskTrackerActor.Ack(testActor, TaskStateChange.Expunge(taskState))))
 
     And("no more interactions")
     f.verifyNoMoreInteractions()
@@ -251,7 +256,7 @@ class TaskOpProcessorImplTest
     val taskState = MarathonTestHelper.mininimalTask(appId)
     val taskId = taskState.taskId
     val stateOp = f.stateOpExpunge(taskState)
-    val expectedChange = TaskStateChange.Expunge(taskState.taskId)
+    val expectedChange = TaskStateChange.Expunge(taskState)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.expunge(taskId.idString) returns Future.failed(new RuntimeException("expunge fails"))
     f.taskRepository.task(taskId.idString) returns Future.successful(None)
@@ -274,7 +279,7 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).task(taskId.idString)
 
     And("the taskTracker gets the update")
-    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(taskId), TaskTrackerActor.Ack(testActor, ())))
+    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskRemoved(taskState.taskId, TaskTrackerActor.Ack(testActor, ())))
 
     And("no more interactions")
     f.verifyNoMoreInteractions()
@@ -290,7 +295,7 @@ class TaskOpProcessorImplTest
     val taskId = task.getId
     val expungeFails: RuntimeException = new scala.RuntimeException("expunge fails")
     val stateOp = f.stateOpExpunge(taskState)
-    val expectedChange = TaskStateChange.Expunge(taskState.taskId)
+    val expectedChange = TaskStateChange.Expunge(taskState)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.expunge(taskId) returns Future.failed(expungeFails)
     f.taskRepository.task(taskId) returns Future.successful(Some(task))
@@ -314,7 +319,7 @@ class TaskOpProcessorImplTest
 
     And("the taskTracker gets the update and the ack contains the expunge failure")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.TaskUpdated(TaskStateChange.Update(taskState), TaskTrackerActor.Ack(testActor, Status.Failure(expungeFails)))
+      TaskTrackerActor.TaskUpdated(taskState, TaskTrackerActor.Ack(testActor, Status.Failure(expungeFails)))
     )
 
     And("no more interactions")
@@ -359,7 +364,7 @@ class TaskOpProcessorImplTest
     val task = taskState.marathonTask
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.finished, f.now)
     val mesosStatus = stateOp.status.mesosStatus.get
-    val expectedChange = TaskStateChange.Update(taskState)
+    val expectedChange = TaskStateChange.Update(taskState, Some(taskState))
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.task(taskState.taskId.idString) returns Future.successful(Some(task))
     f.taskRepository.store(task) returns Future.successful(task)
@@ -382,24 +387,25 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).store(task)
 
     And("the taskTracker gets the update")
-    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(expectedChange, TaskTrackerActor.Ack(testActor, expectedChange)))
-
-    And("the healthCheckManager got informed")
-    verify(f.healthCheckManager).update(mesosStatus, taskState.appVersion)
-    And("an app scale check has been triggered")
-    f.schedulerActor.expectMsg(3.seconds, ScaleApp(appId))
+    f.taskTrackerProbe.expectMsg(TaskTrackerActor.TaskUpdated(taskState, TaskTrackerActor.Ack(testActor, expectedChange)))
     And("the appRepository got queried")
     verify(f.appRepository).app(appId, taskState.appVersion)
+
+    // verify step processing
+    And("the healthCheckManager got informed")
+    verify(f.healthCheckManager).update(mesosStatus, taskState.appVersion)
     And("the launch queue rate limiter got informed")
     verify(f.launchQueue).addDelay(app)
     And("the launch queue has been notified")
     verify(f.launchQueue).notifyOfTaskUpdate(any)
-
+    // status emitter?
     And("the appropriate event got published on the event stream")
     val eventCaptor = ArgumentCaptor.forClass(classOf[MesosStatusUpdateEvent])
     verify(f.eventBus).publish(eventCaptor.capture())
     eventCaptor.getValue should not be (null)
     eventCaptor.getValue.appId should equal (appId)
+    And("an app scale check has been triggered")
+    f.schedulerActor.expectMsg(3.seconds, ScaleApp(appId))
 
     And("no more interactions")
     f.verifyNoMoreInteractions()
@@ -468,8 +474,8 @@ class TaskOpProcessorImplTest
 
     def toLaunched(task: Task, taskStateOp: TaskStateOp.LaunchOnReservation): Task =
       task.update(taskStateOp) match {
-        case TaskStateChange.Update(launchedTask) => launchedTask
-        case _                                    => throw new scala.RuntimeException("taskStateOp did not result in a launched task")
+        case TaskStateChange.Update(updatedTask, _) => updatedTask
+        case _                                      => throw new scala.RuntimeException("taskStateOp did not result in a launched task")
       }
   }
 }

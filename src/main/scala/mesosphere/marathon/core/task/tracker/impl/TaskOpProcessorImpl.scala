@@ -36,7 +36,7 @@ private[tracker] object TaskOpProcessorImpl {
     def resolve(op: TaskStateOp)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
       // FIXME (3221): Create and Expunge are mostly to restore states.
       op match {
-        case op: TaskStateOp.Create              => changeIfNotExists(op.taskId, TaskStateChange.Update(op.task))
+        case op: TaskStateOp.Create              => updateIfNotExists(op.taskId, op.task)
         case op: TaskStateOp.ForceExpunge        => updateExistingTask(op)
         case op: TaskStateOp.LaunchOnReservation => updateExistingTask(op)
         case op: TaskStateOp.MesosUpdate         => updateExistingTask(op)
@@ -45,13 +45,13 @@ private[tracker] object TaskOpProcessorImpl {
       }
     }
 
-    private[this] def changeIfNotExists(taskId: Task.Id, stateChange: TaskStateChange)(
+    private[this] def updateIfNotExists(taskId: Task.Id, updatedTask: Task)(
       implicit ec: ExecutionContext): Future[TaskStateChange] = {
       directTaskTracker.task(taskId).map {
         case Some(existingTask) =>
           TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.appId}] already exists"))
 
-        case None => stateChange
+        case None => TaskStateChange.Update(updatedTask, None)
       }
     }
 
@@ -88,6 +88,8 @@ private[tracker] class TaskOpProcessorImpl(
     step.name -> metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, s"step-${step.name}"))
   }.toMap
 
+  log.info("Started TaskOpProcessor with steps:\n{}", steps.map(step => s"* ${step.name}").mkString("\n"))
+
   override def process(op: Operation)(implicit ec: ExecutionContext): Future[Unit] = {
     val stateChange = stateOpResolver.resolve(op.stateOp)
 
@@ -97,11 +99,10 @@ private[tracker] class TaskOpProcessorImpl(
         // Used for task termination or as a result from a UpdateStatus action.
         // The expunge is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
         repo.expunge(op.taskId.idString).map { _ =>
-          taskTrackerRef ! TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(op.taskId),
-            TaskTrackerActor.Ack(op.sender, stateChange))
+          taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.taskId, TaskTrackerActor.Ack(op.sender, stateChange))
         }.flatMap { _ =>
           notifyOthers(op.stateOp, stateChange)
-        }.recoverWith(tryToRecover(op)(expectedTaskState = None))
+        }.recoverWith(tryToRecover(op)(expectedTaskState = None, oldTaskState = Some(stateChange.task)))
 
       case stateChange: TaskStateChange.Failure =>
         // Used if a task status update for a non-existing task is processed.
@@ -119,12 +120,13 @@ private[tracker] class TaskOpProcessorImpl(
       case stateChange: TaskStateChange.Update =>
         // Used for a create or as a result from a UpdateStatus action.
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        val marathonTask = TaskSerializer.toProto(stateChange.updatedTask)
+        val marathonTask = TaskSerializer.toProto(stateChange.task)
         repo.store(marathonTask).map { _ =>
-          taskTrackerRef ! TaskTrackerActor.TaskUpdated(stateChange, TaskTrackerActor.Ack(op.sender, stateChange))
+          taskTrackerRef ! TaskTrackerActor.TaskUpdated(stateChange.task, TaskTrackerActor.Ack(op.sender, stateChange))
         }.flatMap { _ =>
           notifyOthers(op.stateOp, stateChange)
-        }.recoverWith(tryToRecover(op)(expectedTaskState = Some(stateChange.updatedTask)))
+        }.recoverWith(tryToRecover(op)(
+          expectedTaskState = Some(stateChange.task), oldTaskState = stateChange.oldTask))
     }
   }
 
@@ -134,8 +136,17 @@ private[tracker] class TaskOpProcessorImpl(
     (stateOp, stateChange) match {
       case (TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus.WithMesosStatus(mesosStatus), now),
         update: TaskStateChange.Update) =>
-        processStatusUpdateSteps(now, taskId.appId, update.updatedTask, mesosStatus)
-      case _ => Future.successful(())
+        log.info("StateChange.Update -> notifying taskStatusUpdateSteps")
+        processStatusUpdateSteps(now, taskId.appId, update.task, mesosStatus)
+
+      case (TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus.WithMesosStatus(mesosStatus), now),
+        expunge: TaskStateChange.Expunge) =>
+        log.info("StateChange.Expunge -> notifying taskStatusUpdateSteps")
+        processStatusUpdateSteps(now, taskId.appId, expunge.task, mesosStatus)
+
+      case _ =>
+        log.info(s"Not notifying anyone for $stateOp, $stateChange")
+        Future.successful(())
     }
   }
 
@@ -170,7 +181,7 @@ private[tracker] class TaskOpProcessorImpl(
     * This tries to isolated failures that only effect certain tasks, e.g. errors in the serialization logic
     * which are only triggered for a certain combination of fields.
     */
-  private[this] def tryToRecover(op: Operation)(expectedTaskState: Option[Task])(
+  private[this] def tryToRecover(op: Operation)(expectedTaskState: Option[Task], oldTaskState: Option[Task])(
     implicit ec: ExecutionContext): PartialFunction[Throwable, Future[Unit]] = {
 
     case NonFatal(cause) =>
@@ -184,9 +195,12 @@ private[tracker] class TaskOpProcessorImpl(
       repo.task(op.taskId.idString).map {
         case Some(task) =>
           val taskState = TaskSerializer.fromProto(task)
-          taskTrackerRef ! TaskTrackerActor.TaskUpdated(TaskStateChange.Update(taskState), ack(Some(task)))
+          taskTrackerRef ! TaskTrackerActor.TaskUpdated(taskState, ack(Some(task)))
         case None =>
-          taskTrackerRef ! TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(op.taskId), ack(None))
+          // if there was no old task, there's no need to notify the TaskTracker
+          oldTaskState.foreach { oldTask =>
+            taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.taskId, ack(None))
+          }
       }.recover {
         case NonFatal(loadingFailure) =>
           log.warn(s"${op.taskId} of app [${op.taskId.appId}]: task reloading failed as well", loadingFailure

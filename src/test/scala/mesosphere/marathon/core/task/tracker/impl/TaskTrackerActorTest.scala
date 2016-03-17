@@ -5,7 +5,6 @@ import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.{ Task, TaskStateChange }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
@@ -93,7 +92,9 @@ class TaskTrackerActorTest
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
     val stagedTask = MarathonTestHelper.stagedTaskProto(appId)
+    val stagedTaskState = TaskSerializer.fromProto(stagedTask)
     val runningTask1 = MarathonTestHelper.runningTaskProto(appId)
+    val runningTask1State = TaskSerializer.fromProto(runningTask1)
     val runningTask2 = MarathonTestHelper.runningTaskProto(appId)
     val appDataMap = TaskTracker.TasksByApp.of(
       TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
@@ -102,7 +103,7 @@ class TaskTrackerActorTest
 
     When("staged task gets deleted")
     val probe = TestProbe()
-    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(Task.Id(stagedTask.getId)), TaskTrackerActor.Ack(probe.ref, ())))
+    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskRemoved(stagedTaskState.taskId, TaskTrackerActor.Ack(probe.ref, ())))
     probe.expectMsg(())
 
     Then("it will have set the correct metric counts")
@@ -110,7 +111,7 @@ class TaskTrackerActorTest
     f.actorMetrics.stagedCount.getValue should be(0)
 
     When("running task gets deleted")
-    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskRemoved(TaskStateChange.Expunge(Task.Id(runningTask1.getId)), TaskTrackerActor.Ack(probe.ref, ())))
+    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskRemoved(runningTask1State.taskId, TaskTrackerActor.Ack(probe.ref, ())))
     probe.expectMsg(())
 
     Then("it will have set the correct metric counts")
@@ -123,6 +124,7 @@ class TaskTrackerActorTest
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
     val stagedTask = MarathonTestHelper.stagedTaskProto(appId)
+    val stagedTaskState = TaskSerializer.fromProto(stagedTask)
     val runningTask1 = MarathonTestHelper.runningTaskProto(appId)
     val runningTask2 = MarathonTestHelper.runningTaskProto(appId)
     val appDataMap = TaskTracker.TasksByApp.of(
@@ -134,7 +136,7 @@ class TaskTrackerActorTest
     val probe = TestProbe()
     val stagedTaskNowRunning = MarathonTestHelper.runningTaskProto(stagedTask.getId)
     val taskState = TaskSerializer.fromProto(stagedTaskNowRunning)
-    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskUpdated(TaskStateChange.Update(taskState), TaskTrackerActor.Ack(probe.ref, ())))
+    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskUpdated(taskState, TaskTrackerActor.Ack(probe.ref, ())))
     probe.expectMsg(())
 
     Then("it will have set the correct metric counts")
@@ -158,7 +160,7 @@ class TaskTrackerActorTest
     val probe = TestProbe()
     val newTask = MarathonTestHelper.stagedTaskProto(appId)
     val taskState = TaskSerializer.fromProto(newTask)
-    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskUpdated(TaskStateChange.Update(taskState), TaskTrackerActor.Ack(probe.ref, ())))
+    probe.send(f.taskTrackerActor, TaskTrackerActor.TaskUpdated(taskState, TaskTrackerActor.Ack(probe.ref, ())))
     probe.expectMsg(())
 
     Then("it will have set the correct metric counts")

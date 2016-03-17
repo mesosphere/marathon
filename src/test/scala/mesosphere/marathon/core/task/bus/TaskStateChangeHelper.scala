@@ -9,8 +9,8 @@ object TaskStateChangeHelper {
   def apply(stateChange: TaskStateChange): TaskStateChangeHelper =
     new TaskStateChangeHelper(HandleTaskStateChange(stateChange))
 
-  def expunge(taskId: Task.Id) = TaskStateChangeHelper(
-    TaskStateChange.Expunge(taskId)
+  def expunge(task: Task) = TaskStateChangeHelper(
+    TaskStateChange.Expunge(task)
   )
 
   def failure = TaskStateChangeHelper(
@@ -22,7 +22,7 @@ object TaskStateChangeHelper {
   )
 
   def update(task: Task) = TaskStateChangeHelper(
-    TaskStateChange.Update(task)
+    TaskStateChange.Update(task, None) // there should be a Some(oldTask)
   )
 
 }

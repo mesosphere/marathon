@@ -4,7 +4,7 @@ import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.appinfo.TaskCounts
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ TaskTrackerUpdateSubscriber, TaskTracker }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.metrics.Metrics
@@ -29,9 +29,9 @@ object TaskTrackerActor {
   }
 
   /** Inform the [[TaskTrackerActor]] of an updated task (after persistence). */
-  private[impl] case class TaskUpdated(stateChange: TaskStateChange.Update, ack: Ack)
+  private[impl] case class TaskUpdated(task: Task, ack: Ack)
   /** Inform the [[TaskTrackerActor]] of a removed task (after persistence). */
-  private[impl] case class TaskRemoved(stateChange: TaskStateChange.Expunge, ack: Ack)
+  private[impl] case class TaskRemoved(taskId: Task.Id, ack: Ack)
 
   private[tracker] class ActorMetrics(metrics: Metrics) {
     val stagedCount = metrics.gauge("service.mesosphere.marathon.task.staged.count", new AtomicIntGauge)
@@ -130,16 +130,12 @@ private class TaskTrackerActor(
         val op = TaskOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
         updaterRef.forward(TaskUpdateActor.ProcessTaskOp(op))
 
-      case msg @ TaskTrackerActor.TaskUpdated(stateChange, ack) =>
-        val task = stateChange.updatedTask
+      case msg @ TaskTrackerActor.TaskUpdated(task, ack) =>
         becomeWithUpdatedApp(task.appId)(task.taskId, newTask = Some(task))
-        notifySubscribers(task.appId, stateChange)
         ack.sendAck()
 
-      case msg @ TaskTrackerActor.TaskRemoved(stateChange, ack) =>
-        val taskId = stateChange.taskId
+      case msg @ TaskTrackerActor.TaskRemoved(taskId, ack) =>
         becomeWithUpdatedApp(taskId.appId)(taskId, newTask = None)
-        notifySubscribers(taskId.appId, stateChange)
         ack.sendAck()
 
       case TaskTrackerActor.Subscribe(appId, subscriber) =>
@@ -155,11 +151,5 @@ private class TaskTrackerActor(
           subscribersByApp - appId
         }
     }
-  }
-
-  private[this] def notifySubscribers(appId: PathId, stateChange: TaskStateChange): Unit = {
-    subscribersByApp.get(appId).foreach(_.foreach { subscriber =>
-      subscriber.handleTaskStateChange(stateChange)
-    })
   }
 }

@@ -91,28 +91,29 @@ object Task {
           status = status.copy(
             startedAt = Some(now),
             mesosStatus = mesosStatus))
-        TaskStateChange.Update(updated)
+        TaskStateChange.Update(updated, Some(this))
 
       // case 2: terminal
       case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(_), now) =>
-        TaskStateChange.Expunge(taskId)
+        TaskStateChange.Expunge(this)
 
       // case 3: health or state updated
       case TaskStateOp.MesosUpdate(_, taskStatus, now) =>
         updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus).map { newStatus =>
-          TaskStateChange.Update(copy(status = status.copy(mesosStatus = Some(newStatus))))
+          val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
+          TaskStateChange.Update(updatedTask, Some(this))
         } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
           TaskStateChange.NoChange(taskId)
         }
 
       case TaskStateOp.ForceExpunge(_) =>
-        TaskStateChange.Expunge(taskId)
+        TaskStateChange.Expunge(this)
 
       // FIXME (3221): If the task needs to recreated after a not-accepted taskOp, Create is used.
       // that's neither nice nor obvious, so this should be improved
       case TaskStateOp.Create(task) =>
-        TaskStateChange.Update(task)
+        TaskStateChange.Update(task, None)
 
       case _: TaskStateOp.LaunchOnReservation =>
         TaskStateChange.Failure("LaunchOnReservation on LaunchedEphemeral is not allowed")
@@ -147,15 +148,15 @@ object Task {
 
     override def update(update: TaskStateOp): TaskStateChange = update match {
       case TaskStateOp.LaunchOnReservation(_, appVersion, status, networking) =>
-        TaskStateChange.Update(LaunchedOnReservation(
-          taskId, agentInfo, appVersion, status, networking, reservation))
+        val updatedTask = LaunchedOnReservation(taskId, agentInfo, appVersion, status, networking, reservation)
+        TaskStateChange.Update(updatedTask, Some(this))
 
       case _: TaskStateOp.ReservationTimeout =>
-        TaskStateChange.Expunge(taskId)
+        TaskStateChange.Expunge(this)
 
       // if a LaunchOnReservation failed while persisting the task, we want to recreate the reserved task
       case TaskStateOp.Create(task) =>
-        TaskStateChange.Update(task)
+        TaskStateChange.Update(task, None) // // FIXME (3221): Some(this)?
 
       // failure case
       case _: TaskStateOp.ForceExpunge =>
@@ -195,21 +196,23 @@ object Task {
           status = status.copy(
             startedAt = Some(now),
             mesosStatus = mesosStatus))
-        TaskStateChange.Update(updated)
+        TaskStateChange.Update(updated, Some(this))
 
       // case 2: terminal
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
       case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(_), now) =>
-        TaskStateChange.Update(Task.Reserved(
+        val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None))
-        ))
+        )
+        TaskStateChange.Update(updatedTask, Some(this))
 
       // case 3: health or state updated
       case TaskStateOp.MesosUpdate(_, taskStatus, _) =>
         updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus).map { newStatus =>
-          TaskStateChange.Update(copy(status = status.copy(mesosStatus = Some(newStatus))))
+          val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
+          TaskStateChange.Update(updatedTask, Some(this))
         } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
           TaskStateChange.NoChange(taskId)

@@ -228,13 +228,13 @@ private class AppTaskLauncherActor(
   private[this] def receiveTaskTrackerUpdate: Receive = {
     case ActorTaskTrackerUpdateSubscriber.HandleTaskStateChange(stateChange) =>
       stateChange match {
-        case TaskStateChange.Update(updatedTask) =>
+        case TaskStateChange.Update(updatedTask, _) =>
           log.debug("updating status of {}", updatedTask.taskId)
           tasksMap += updatedTask.taskId -> updatedTask
 
-        case TaskStateChange.Expunge(taskId) =>
-          log.debug("{} finished", taskId)
-          removeTask(taskId)
+        case TaskStateChange.Expunge(task) =>
+          log.debug("{} finished", task.taskId)
+          removeTask(task.taskId)
           // If the app has constraints, we need to reconsider offers that
           // we already rejected. E.g. when a host:unique constraint prevented
           // us to launch tasks on a particular node before, we need to reconsider offers

@@ -47,8 +47,8 @@ object TaskStateOp {
 sealed trait TaskStateChange
 
 object TaskStateChange {
-  case class Update(updatedTask: Task) extends TaskStateChange
-  case class Expunge(taskId: Task.Id) extends TaskStateChange
+  case class Update(task: Task, oldTask: Option[Task]) extends TaskStateChange
+  case class Expunge(task: Task) extends TaskStateChange
   case class NoChange(taskId: Task.Id) extends TaskStateChange
   case class Failure(cause: Throwable) extends TaskStateChange
   object Failure {

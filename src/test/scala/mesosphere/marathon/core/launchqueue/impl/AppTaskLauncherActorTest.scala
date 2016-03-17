@@ -10,7 +10,6 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launcher.TaskOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
-import mesosphere.marathon.core.launchqueue.impl.ActorTaskTrackerUpdateSubscriber.HandleTaskStateChange
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedTaskOps
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpRejected
@@ -19,7 +18,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{ TaskStateChangeHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos, SameAsSeq }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
 import org.mockito
 import org.mockito.Mockito
 import org.scalatest.GivenWhenThen
@@ -263,7 +262,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   }
 
   test("Expunged task is removed from counts") {
-    val update = TaskStateChangeHelper.expunge(marathonTask.taskId)
+    val update = TaskStateChangeHelper.expunge(marathonTask)
     val expectedCounts = QueuedTaskInfo(app, 0, 0, 0, Timestamp(0))
 
     Mockito.when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.forTasks(marathonTask))
@@ -323,7 +322,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
     When("we get a status update about a terminated task")
-    val expunge = TaskStateChangeHelper.expunge(marathonTask.taskId)
+    val expunge = TaskStateChangeHelper.expunge(marathonTask)
     Await.result(launcherRef ? expunge.wrapped, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
     Then("reviveOffers has been called")
