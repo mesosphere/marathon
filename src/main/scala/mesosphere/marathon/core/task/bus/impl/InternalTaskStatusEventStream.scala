@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.bus.impl
 
 import akka.event.japi.SubchannelEventBus
 import akka.util.Subclassification
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
 import mesosphere.marathon.state.PathId
 import rx.lang.scala.Observer
 
@@ -10,7 +10,7 @@ import rx.lang.scala.Observer
   * The internally used eventStream for [[mesosphere.marathon.core.task.bus.TaskStatusObservables]]
   */
 private[bus] class InternalTaskStatusEventStream
-    extends SubchannelEventBus[TaskStatusUpdate, Observer[TaskStatusUpdate], PathId] {
+    extends SubchannelEventBus[TaskUpdate, Observer[TaskUpdate], PathId] {
 
   override val subclassification: Subclassification[PathId] = new Subclassification[PathId] {
     override def isEqual(x: PathId, y: PathId): Boolean = x == y
@@ -20,7 +20,7 @@ private[bus] class InternalTaskStatusEventStream
     override def isSubclass(x: PathId, y: PathId): Boolean = y.isRoot || x == y
   }
 
-  override protected def publish(event: TaskStatusUpdate, subscriber: Observer[TaskStatusUpdate]): Unit =
+  override protected def publish(event: TaskUpdate, subscriber: Observer[TaskUpdate]): Unit =
     subscriber.onNext(event)
-  override protected def classify(event: TaskStatusUpdate): PathId = event.appId
+  override protected def classify(event: TaskUpdate): PathId = event.appId
 }

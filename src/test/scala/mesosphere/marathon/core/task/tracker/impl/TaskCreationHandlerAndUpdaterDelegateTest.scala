@@ -4,13 +4,13 @@ import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.Protos.{ TaskID, TaskStatus }
-import org.scalatest.{ Matchers, GivenWhenThen }
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class TaskCreationHandlerAndUpdaterDelegateTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
@@ -69,7 +69,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val expectedStateChange = TaskStateChange.Expunge(task)
 
     When("terminated is called")
-    val terminated = f.delegate.terminated(stateOp)
+    val terminated = f.delegate.process(stateOp)
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
@@ -116,10 +116,10 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(taskIdString)).buildPartial()
+    val stateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(update), now)
 
     When("created is called")
-    val statusUpdate = f.delegate.statusUpdate(appId, update)
-    val stateOp = TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus(update), now)
+    val statusUpdate = f.delegate.process(stateOp)
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
@@ -136,14 +136,15 @@ class TaskCreationHandlerAndUpdaterDelegateTest
   test("StatusUpdate fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
-    val taskId = Task.Id.forApp(appId)
+    val task = MarathonTestHelper.mininimalTask(appId)
+    val taskId = task.taskId
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(taskId.mesosTaskId).buildPartial()
+    val stateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(update), now)
 
     When("statusUpdate is called")
-    val statusUpdate = f.delegate.statusUpdate(appId, update)
-    val stateOp = TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus(update), now)
+    val statusUpdate = f.delegate.process(stateOp)
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(

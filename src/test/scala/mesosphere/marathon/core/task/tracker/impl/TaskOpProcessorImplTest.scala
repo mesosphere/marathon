@@ -420,7 +420,7 @@ class TaskOpProcessorImplTest
     lazy val now = Timestamp(0)
 
     def stateOpCreate(task: Task) = TaskStateOp.Create(task)
-    def stateOpUpdate(task: Task, status: MarathonTaskStatus, now: Timestamp = now) = TaskStateOp.MesosUpdate(task.taskId, status, now)
+    def stateOpUpdate(task: Task, status: MarathonTaskStatus, now: Timestamp = now) = TaskStateOp.MesosUpdate(task, status, now)
     def stateOpExpunge(task: Task) = TaskStateOp.ForceExpunge(task.taskId)
     def stateOpLaunchOnReservation(task: Task, status: Task.Status) = TaskStateOp.LaunchOnReservation(task.taskId, now, status, Task.NoNetworking)
     def stateOpReservationTimeout(task: Task) = TaskStateOp.ReservationTimeout(task.taskId)

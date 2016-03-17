@@ -4,13 +4,13 @@ import akka.actor.ActorRef
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._
-import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.TaskRepository
 
 /**
   * Provides the interfaces to query the current task state ([[TaskTracker]]) and to
-  * update the task state ([[TaskUpdater]], [[TaskCreationHandler]]).
+  * update the task state ([[TaskStateOpProcessor]]).
   */
 class TaskTrackerModule(
     clock: Clock,
@@ -18,10 +18,9 @@ class TaskTrackerModule(
     config: TaskTrackerConfig,
     leadershipModule: LeadershipModule,
     taskRepository: TaskRepository,
-    updateSteps: Seq[TaskStatusUpdateStep]) {
+    updateSteps: Seq[TaskUpdateStep]) {
   lazy val taskTracker: TaskTracker = new TaskTrackerDelegate(Some(metrics), config, taskTrackerActorRef)
 
-  def taskUpdater: TaskUpdater = taskStateOpProcessor
   def taskCreationHandler: TaskCreationHandler = taskStateOpProcessor
   def stateOpProcessor: TaskStateOpProcessor = taskStateOpProcessor
 

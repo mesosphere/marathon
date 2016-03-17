@@ -4,45 +4,45 @@ import javax.inject.Named
 
 import akka.event.EventStream
 import com.google.inject.Inject
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Terminated
-import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.update.TaskUpdateStep
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.event.{ EventModule, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.Protos.TaskState.{
-  TASK_ERROR,
-  TASK_FAILED,
-  TASK_FINISHED,
-  TASK_KILLED,
-  TASK_LOST,
-  TASK_RUNNING
-}
+import org.apache.mesos.Protos.TaskState.TASK_RUNNING
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.slf4j.LoggerFactory
-import scala.collection.immutable.Seq
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 /**
   * Post this update to the internal event stream.
   */
 class PostToEventStreamStepImpl @Inject() (
-    @Named(EventModule.busName) eventBus: EventStream) extends TaskStatusUpdateStep {
+    @Named(EventModule.busName) eventBus: EventStream) extends TaskUpdateStep {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def name: String = "postTaskStatusEvent"
 
-  override def processUpdate(timestamp: Timestamp, task: Task, status: TaskStatus): Future[_] = {
+  override def processUpdate(update: TaskUpdate): Future[_] = {
+    update.stateOp match {
+      case TaskStateOp.MesosUpdate(task, MarathonTaskStatus.WithMesosStatus(mesosStatus), timestamp) =>
+        mesosStatus.getState match {
+          case Terminated(_) =>
+            postEvent(timestamp, mesosStatus, task)
+          case TASK_RUNNING if task.launched.exists(!_.hasStartedRunning) => // staged, not running
+            postEvent(timestamp, mesosStatus, task)
 
-    status.getState match {
-      case Terminated(_) =>
-        postEvent(timestamp, status, task)
-      case TASK_RUNNING if task.launched.exists(!_.hasStartedRunning) => // staged, not running
-        postEvent(timestamp, status, task)
+          case state: TaskState =>
+            val taskId = task.taskId
+            log.debug(s"Do not post event $state for $taskId of app [${taskId.appId}].")
+        }
 
-      case state: TaskState =>
-        val taskId = task.taskId
-        log.debug(s"Do not post event $state for $taskId of app [${taskId.appId}].")
+      case _ =>
+      // ignore
     }
 
     Future.successful(())

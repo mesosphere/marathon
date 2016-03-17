@@ -20,10 +20,10 @@ class TaskStatusUpdateProcessorImplTest
     extends MarathonSpec with Mockito with ScalaFutures with GivenWhenThen with Matchers {
   test("process update for unknown task that's not lost will result in a kill and ack") {
     fOpt = Some(new Fixture)
-    val origUpdate = TaskStatusUpdateTestHelper.finished // everything != lost is handled in the same way
-    val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(Task.Id.forApp(appId).mesosTaskId).build()
-    val update = origUpdate.withTaskId(status.getTaskId)
-    val taskId = update.wrapped.taskId
+    val origUpdate = TaskStatusUpdateTestHelper.finished() // everything != lost is handled in the same way
+    val status = origUpdate.status
+    val update = origUpdate
+    val taskId = update.wrapped.stateOp.taskId
 
     Given("an unknown task")
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -46,10 +46,10 @@ class TaskStatusUpdateProcessorImplTest
 
   test("process update for known task without launchedTask that's not lost will result in a kill and ack") {
     fOpt = Some(new Fixture)
-    val origUpdate = TaskStatusUpdateTestHelper.finished // everything != lost is handled in the same way
-    val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(Task.Id.forApp(appId).mesosTaskId).build()
-    val update = origUpdate.withTaskId(status.getTaskId)
-    val taskId = update.wrapped.taskId
+    val origUpdate = TaskStatusUpdateTestHelper.finished() // everything != lost is handled in the same way
+    val status = origUpdate.status
+    val update = origUpdate
+    val taskId = update.wrapped.stateOp.taskId
 
     Given("an unknown task")
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -76,10 +76,10 @@ class TaskStatusUpdateProcessorImplTest
   test("update for unknown task (TASK_LOST) will get only acknowledged") {
     fOpt = Some(new Fixture)
 
-    val origUpdate = TaskStatusUpdateTestHelper.lost
-    val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(Task.Id.forApp(appId).mesosTaskId).build()
-    val update = origUpdate.withTaskId(status.getTaskId)
-    val taskId = update.wrapped.taskId
+    val origUpdate = TaskStatusUpdateTestHelper.lost()
+    val status = origUpdate.status
+    val update = origUpdate
+    val taskId = update.wrapped.stateOp.taskId
 
     Given("an unknown task")
     import scala.concurrent.ExecutionContext.Implicits.global

@@ -3,14 +3,14 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ ActorRef, Status }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
-import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics.Timer
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
-import mesosphere.marathon.state.{ PathId, TaskRepository, Timestamp }
-import org.apache.mesos.{ Protos => MesosProtos }
+import mesosphere.marathon.state.TaskRepository
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -78,7 +78,7 @@ private[tracker] class TaskOpProcessorImpl(
     taskTrackerRef: ActorRef,
     repo: TaskRepository,
     stateOpResolver: TaskStateOpResolver,
-    steps: Seq[TaskStatusUpdateStep],
+    steps: Seq[TaskUpdateStep],
     metrics: Metrics) extends TaskOpProcessor {
   import TaskOpProcessor._
 
@@ -137,12 +137,12 @@ private[tracker] class TaskOpProcessorImpl(
       case (TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus.WithMesosStatus(mesosStatus), now),
         update: TaskStateChange.Update) =>
         log.info("StateChange.Update -> notifying taskStatusUpdateSteps")
-        processStatusUpdateSteps(now, taskId.appId, update.task, mesosStatus)
+        processStatusUpdateSteps(TaskUpdate(stateOp, stateChange))
 
       case (TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus.WithMesosStatus(mesosStatus), now),
         expunge: TaskStateChange.Expunge) =>
         log.info("StateChange.Expunge -> notifying taskStatusUpdateSteps")
-        processStatusUpdateSteps(now, taskId.appId, expunge.task, mesosStatus)
+        processStatusUpdateSteps(TaskUpdate(stateOp, stateChange))
 
       case _ =>
         log.info(s"Not notifying anyone for $stateOp, $stateChange")
@@ -150,21 +150,17 @@ private[tracker] class TaskOpProcessorImpl(
     }
   }
 
-  private[this] def processStatusUpdateSteps(
-    timestamp: Timestamp,
-    appId: PathId,
-    task: Task,
-    mesosStatus: MesosProtos.TaskStatus): Future[Unit] = {
+  private[this] def processStatusUpdateSteps(update: TaskUpdate): Future[Unit] = {
 
     import scala.concurrent.ExecutionContext.Implicits.global
     steps.foldLeft(Future.successful(())) { (resultSoFar, nextStep) =>
       resultSoFar.flatMap { _ =>
         stepTimers(nextStep.name).timeFuture {
-          log.debug("Executing {} for [{}]", Array[Object](nextStep.name, mesosStatus.getTaskId.getValue): _*)
-          nextStep.processUpdate(timestamp, task, mesosStatus).map { _ =>
+          log.debug("Executing {} for [{}]", Array[Object](nextStep.name, update.taskId.idString): _*)
+          nextStep.processUpdate(update).map { _ =>
             log.debug(
               "Done with executing {} for [{}]",
-              Array[Object](nextStep.name, mesosStatus.getTaskId.getValue): _*
+              Array[Object](nextStep.name, update.taskId.idString): _*
             )
           }
         }

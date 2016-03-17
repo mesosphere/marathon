@@ -33,7 +33,9 @@ object TaskStateOp {
     status: Task.Status,
     networking: Task.Networking) extends TaskStateOp
 
-  case class MesosUpdate(taskId: Task.Id, status: MarathonTaskStatus, now: Timestamp) extends TaskStateOp
+  case class MesosUpdate(task: Task, status: MarathonTaskStatus, now: Timestamp) extends TaskStateOp {
+    override def taskId: Id = task.taskId
+  }
 
   case class ReservationTimeout(taskId: Task.Id) extends TaskStateOp
 

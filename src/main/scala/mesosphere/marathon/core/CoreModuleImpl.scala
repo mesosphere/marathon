@@ -17,7 +17,7 @@ import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
-import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
 import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
@@ -44,7 +44,7 @@ class CoreModuleImpl @Inject() (
     taskOpFactory: TaskOpFactory,
     leaderInfo: LeaderInfo,
     clock: Clock,
-    taskStatusUpdateSteps: Seq[TaskStatusUpdateStep]) extends CoreModule {
+    taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
 
   // INFRASTRUCTURE LAYER
 

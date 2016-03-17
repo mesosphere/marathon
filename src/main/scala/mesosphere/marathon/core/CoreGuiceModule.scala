@@ -14,18 +14,18 @@ import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipMo
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusObservables }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker, TaskUpdater }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.update.impl.steps.{
-  ScaleAppUpdateStepImpl,
-  TaskStatusEmitterPublishStepImpl,
-  NotifyLaunchQueueStepImpl,
-  NotifyRateLimiterStepImpl,
   ContinueOnErrorStep,
   NotifyHealthCheckManagerStepImpl,
-  PostToEventStreamStepImpl
+  NotifyLaunchQueueStepImpl,
+  NotifyRateLimiterStepImpl,
+  PostToEventStreamStepImpl,
+  ScaleAppUpdateStepImpl,
+  TaskStatusEmitterPublishStepImpl
 }
 import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
-import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskStatusUpdateStep }
+import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.plugin.http.HttpRequestHandler
@@ -46,9 +46,6 @@ class CoreGuiceModule extends AbstractModule {
   @Provides @Singleton
   def taskCreationHandler(coreModule: CoreModule): TaskCreationHandler =
     coreModule.taskTrackerModule.taskCreationHandler
-
-  @Provides @Singleton
-  def taskUpdater(coreModule: CoreModule): TaskUpdater = coreModule.taskTrackerModule.taskUpdater
 
   @Provides @Singleton
   def stateOpProcessor(coreModule: CoreModule): TaskStateOpProcessor = coreModule.taskTrackerModule.stateOpProcessor
@@ -102,7 +99,7 @@ class CoreGuiceModule extends AbstractModule {
     notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
     taskStatusEmitterPublishImpl: TaskStatusEmitterPublishStepImpl,
     postToEventStreamStepImpl: PostToEventStreamStepImpl,
-    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[TaskStatusUpdateStep] = {
+    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[TaskUpdateStep] = {
 
     // This is a sequence on purpose. The specified steps are executed in order for every
     // task status update.

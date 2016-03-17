@@ -11,7 +11,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ResourceLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
+import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
@@ -306,7 +306,7 @@ object MarathonTestHelper {
         prefix = TaskRepository.storePrefix),
       metrics
     )
-    val updateSteps = Seq.empty[TaskStatusUpdateStep]
+    val updateSteps = Seq.empty[TaskUpdateStep]
 
     new TaskTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers

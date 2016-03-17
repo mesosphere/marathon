@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task.tracker
 
-import mesosphere.marathon.core.task.TaskStateOp
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
 
 import scala.concurrent.Future
 
@@ -12,5 +12,5 @@ import scala.concurrent.Future
   */
 trait TaskStateOpProcessor {
   /** Process a TaskStateOp and propagate its result. */
-  def process(stateOp: TaskStateOp): Future[Unit]
+  def process(stateOp: TaskStateOp): Future[TaskStateChange]
 }

@@ -44,7 +44,6 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishFutureTimer.timeFuture {
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
-    val taskStateOp = TaskStateOp.MesosUpdate(taskId, MarathonTaskStatus(status), now)
 
     taskTracker.task(taskId).flatMap {
       case _ if status.getState == MesosProtos.TaskState.TASK_KILLING =>
@@ -53,6 +52,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
         acknowledge(status)
 
       case Some(task) if task.launched.isDefined =>
+        val taskStateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(status), now)
         stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
       case _ =>

@@ -14,9 +14,9 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, Task
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
-import mesosphere.marathon.core.task.tracker.{ TaskTrackerUpdateSubscriber, TaskTracker }
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.{ Task, TaskStateChange }
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -106,13 +106,10 @@ private class AppTaskLauncherActor(
     tasksMap = taskTracker.tasksByAppSync.appTasksMap(app.id).taskStateMap
 
     rateLimiterActor ! RateLimiterActor.GetDelay(app)
-
-    TaskTrackerUpdatesSubscription.register()
   }
 
   override def postStop(): Unit = {
     OfferMatcherRegistration.unregister()
-    TaskTrackerUpdatesSubscription.unregister()
     recheckBackOff.foreach(_.cancel())
 
     if (inFlightTaskOperations.nonEmpty) {
@@ -142,8 +139,7 @@ private class AppTaskLauncherActor(
       receiveStop,
       receiveDelayUpdate,
       receiveTaskLaunchNotification,
-      receiveTaskStatusUpdate,
-      receiveTaskTrackerUpdate,
+      receiveTaskUpdate,
       receiveGetCurrentCount,
       receiveAddCount,
       receiveProcessOffers
@@ -225,12 +221,14 @@ private class AppTaskLauncherActor(
       log.info("Task launch for '{}' was accepted. {}", op.taskId, status)
   }
 
-  private[this] def receiveTaskTrackerUpdate: Receive = {
-    case ActorTaskTrackerUpdateSubscriber.HandleTaskStateChange(stateChange) =>
+  private[this] def receiveTaskUpdate: Receive = {
+    case TaskUpdate(stateOp, stateChange) =>
+      log.info("received TaskUpdate")
+
       stateChange match {
-        case TaskStateChange.Update(updatedTask, _) =>
-          log.debug("updating status of {}", updatedTask.taskId)
-          tasksMap += updatedTask.taskId -> updatedTask
+        case TaskStateChange.Update(task, _) =>
+          log.debug("updating status of {}", task.taskId)
+          tasksMap += task.taskId -> task
 
         case TaskStateChange.Expunge(task) =>
           log.debug("{} finished", task.taskId)
@@ -244,15 +242,8 @@ private class AppTaskLauncherActor(
           }
 
         case _ =>
-          log.debug("receiveTaskTrackerUpdate: ignoring unexpected stateChange {}", stateChange)
+          log.debug("receiveTaskUpdate: ignoring stateChange {}", stateChange)
       }
-      replyWithQueuedTaskCount()
-  }
-
-  // FIXME (3221): remove! Does any LaunchQueue logic depend on receiving the counts?
-  private[this] def receiveTaskStatusUpdate: Receive = {
-    case TaskStatusUpdate(_, taskId, status) =>
-      log.debug("ignoring TaskStatusUpdate")
       replyWithQueuedTaskCount()
   }
 
@@ -437,21 +428,6 @@ private class AppTaskLauncherActor(
         offerMatcherManager.removeSubscription(myselfAsOfferMatcher)(context.dispatcher)
         registeredAsMatcher = false
       }
-    }
-  }
-
-  private[this] object TaskTrackerUpdatesSubscription {
-    private[this] val myselfAsTaskUpdateSubscriber: TaskTrackerUpdateSubscriber =
-      new ActorTaskTrackerUpdateSubscriber(self)
-
-    def register(): Unit = {
-      log.info("Subscribe as listener for {} status updates.", app.id)
-      taskTracker.subscribeForUpdates(app.id, myselfAsTaskUpdateSubscriber)(context.dispatcher)
-    }
-
-    def unregister(): Unit = {
-      log.info("Unsubscribe as listener for {} status updates.", app.id)
-      taskTracker.unsubscribeFromUpdates(app.id, myselfAsTaskUpdateSubscriber)(context.dispatcher)
     }
   }
 }
