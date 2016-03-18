@@ -18,11 +18,14 @@ class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManager: HealthChec
   override def processUpdate(update: TaskUpdate): Future[_] = {
     update.stateOp match {
       // forward health changes to the health check manager
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.WithMesosStatus(mesosStatus), now) =>
-        healthCheckManager.update(mesosStatus, now)
+      case TaskStateOp.MesosUpdate(task, MarathonTaskStatus.WithMesosStatus(mesosStatus), _) =>
+        // it only makes sense to handle health check results for launched tasks
+        task.launched.foreach { launched =>
+          healthCheckManager.update(mesosStatus, launched.appVersion)
+        }
+
       case _ =>
       // not interested in other task updates
-
     }
 
     Future.successful(())

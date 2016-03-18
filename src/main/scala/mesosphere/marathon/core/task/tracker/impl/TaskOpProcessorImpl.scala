@@ -144,7 +144,7 @@ private[tracker] class TaskOpProcessorImpl(
         processStatusUpdateSteps(TaskUpdate(stateOp, stateChange))
 
       case _ =>
-        log.info(s"Not notifying anyone for $stateOp, $stateChange")
+        log.debug(s"Not notifying anyone for $stateOp, $stateChange")
         Future.successful(())
     }
   }
