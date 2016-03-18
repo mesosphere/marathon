@@ -69,24 +69,13 @@ object VolumeSerializer {
 object PersistentVolumeInfoSerializer {
   def toProto(info: PersistentVolumeInfo): Protos.Volume.PersistentVolumeInfo = {
     val builder = Protos.Volume.PersistentVolumeInfo.newBuilder()
-    info.size match {
-      case Some(size) => builder.setSize(size)
-      case None       =>
-    }
-    info.name match {
-      case Some(name) => builder.setName(name)
-      case None       =>
-    }
-    info.providerName match {
-      case Some(providerName) => builder.setProviderName(providerName)
-      case None               =>
-    }
-    info.options match {
-      case Some(options) => options
-        .map{ case (key, value) => mesos.Protos.Label.newBuilder().setKey(key).setValue(value).build }
-        .foreach(builder.addOptions)
-      case None =>
-    }
+    info.size.foreach(builder.setSize)
+    info.name.foreach(builder.setName)
+    info.providerName.foreach(builder.setProviderName)
+    info.options.foreach(_
+      .map{ case (key, value) => mesos.Protos.Label.newBuilder().setKey(key).setValue(value).build }
+      .foreach(builder.addOptions)
+    )
     builder.build
   }
 }
