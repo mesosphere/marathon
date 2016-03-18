@@ -312,7 +312,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
   test("persistent volume with size 0 is invalid") {
     val f = new Fixture
     val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(0)))
+      volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(Some(0))))
     )
     assert(validate(container).isFailure)
   }
@@ -320,7 +320,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
   test("persistent volume with size < 0 is invalid") {
     val f = new Fixture
     val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(-1)))
+      volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(Some(-1))))
     )
     assert(validate(container).isFailure)
   }
@@ -430,7 +430,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     // scalastyle:off magic.number
     def validPersistentVolume: PersistentVolume = PersistentVolume(
       containerPath = "/test",
-      persistent = PersistentVolumeInfo(10),
+      persistent = PersistentVolumeInfo(Some(10)),
       mode = mesos.Volume.Mode.RW)
 
     def validDockerVolume: DockerVolume = DockerVolume(
@@ -438,7 +438,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       hostPath = "/etc/foo",
       mode = mesos.Volume.Mode.RW)
 
-    def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
+    def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(Some(123)), mesos.Volume.Mode.RW)
     val zero = UpgradeStrategy(0, 0)
 
     def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {

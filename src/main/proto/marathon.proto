@@ -190,7 +190,10 @@ message Volume {
 
   // Defining properties of persistent volumes
   message PersistentVolumeInfo {
-    required uint64 size = 1;
+    optional uint64 size = 1;
+    optional string name = 2;
+    optional string providerName = 3;
+    repeated mesos.Label options = 4;
   }
 
   required mesos.Volume.Mode mode = 3;

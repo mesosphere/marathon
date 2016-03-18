@@ -417,7 +417,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
   }
 
   class Fixture {
-    def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
+    def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(Some(123)), mesos.Volume.Mode.RW)
     val zero = UpgradeStrategy(0, 0)
 
     def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
