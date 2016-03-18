@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.state.PathId
@@ -16,7 +16,7 @@ class ContinueOnErrorStepTest extends FunSuite with Matchers with GivenWhenThen 
   test("name uses nested name") {
     object nested extends TaskUpdateStep {
       override def name: String = "nested"
-      override def processUpdate(update: TaskUpdate): Future[_] = {
+      override def processUpdate(update: TaskChanged): Future[_] = {
         throw new scala.RuntimeException("not implemted")
       }
     }

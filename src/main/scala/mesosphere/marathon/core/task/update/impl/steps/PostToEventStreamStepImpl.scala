@@ -6,7 +6,7 @@ import akka.event.EventStream
 import com.google.inject.Inject
 import mesosphere.marathon.core.task.Task.Terminated
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.event.{ EventModule, MesosStatusUpdateEvent }
@@ -27,8 +27,8 @@ class PostToEventStreamStepImpl @Inject() (
 
   override def name: String = "postTaskStatusEvent"
 
-  override def processUpdate(update: TaskUpdate): Future[_] = {
-    update.stateOp match {
+  override def processUpdate(taskChanged: TaskChanged): Future[_] = {
+    taskChanged.stateOp match {
       case TaskStateOp.MesosUpdate(task, MarathonTaskStatus.WithMesosStatus(mesosStatus), timestamp) =>
         mesosStatus.getState match {
           case Terminated(_) =>

@@ -38,6 +38,7 @@ class InfoResource @Inject() (
     "webui_url" -> config.webuiUrl.get,
     "mesos_role" -> config.mesosRole.get,
     "task_launch_timeout" -> config.taskLaunchTimeout.get,
+    "task_reservation_timeout" -> config.taskReservationTimeout.get,
     "reconciliation_initial_delay" -> config.reconciliationInitialDelay.get,
     "reconciliation_interval" -> config.reconciliationInterval.get,
     "mesos_user" -> config.mesosUser.get,

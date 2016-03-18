@@ -142,6 +142,11 @@ trait MarathonConf
       "the TASK_RUNNING state before killing it.",
     default = Some(300000L)) // 300 seconds (5 minutes)
 
+  lazy val taskReservationTimeout = opt[Long]("task_reservation_timeout",
+    descr = "Time, in milliseconds, to wait for a new reservation to be acknowledged " +
+      "via a received offer before deleting it.",
+    default = Some(10000L)) // 10 seconds
+
   lazy val reconciliationInitialDelay = opt[Long]("reconciliation_initial_delay",
     descr = "This is the length of time, in milliseconds, before Marathon " +
       "begins to periodically perform task reconciliation operations",

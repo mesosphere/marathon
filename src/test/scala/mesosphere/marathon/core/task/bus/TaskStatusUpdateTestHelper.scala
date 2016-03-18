@@ -1,13 +1,13 @@
 package mesosphere.marathon.core.task.bus
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.{ TaskStatus, TaskState }
 import org.joda.time.DateTime
 
-class TaskStatusUpdateTestHelper(val wrapped: TaskUpdate) {
+class TaskStatusUpdateTestHelper(val wrapped: TaskChanged) {
   def simpleName = wrapped.stateOp match {
     case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.WithMesosStatus(mesosStatus), _) =>
       mesosStatus.getState.toString
@@ -20,8 +20,8 @@ class TaskStatusUpdateTestHelper(val wrapped: TaskUpdate) {
 }
 
 object TaskStatusUpdateTestHelper {
-  def apply(update: TaskUpdate): TaskStatusUpdateTestHelper =
-    new TaskStatusUpdateTestHelper(update)
+  def apply(taskChanged: TaskChanged): TaskStatusUpdateTestHelper =
+    new TaskStatusUpdateTestHelper(taskChanged)
 
   private def newTaskID(appId: String) = {
     Task.Id.forApp(PathId(appId))
@@ -33,14 +33,14 @@ object TaskStatusUpdateTestHelper {
 
   def taskUpdateFor(task: Task, taskStatus: MarathonTaskStatus, timestamp: Timestamp = defaultTimestamp) = {
     TaskStatusUpdateTestHelper(
-      TaskUpdate(
+      TaskChanged(
         TaskStateOp.MesosUpdate(task, taskStatus, timestamp),
         TaskStateChange.Update(task, None)))
   }
 
   def taskExpungeFor(task: Task, taskStatus: MarathonTaskStatus, timestamp: Timestamp = defaultTimestamp) = {
     TaskStatusUpdateTestHelper(
-      TaskUpdate(
+      TaskChanged(
         TaskStateOp.MesosUpdate(task, taskStatus, timestamp),
         TaskStateChange.Expunge(task)))
   }

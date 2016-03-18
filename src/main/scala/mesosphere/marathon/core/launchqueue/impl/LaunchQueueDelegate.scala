@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 
 import scala.collection.immutable.Seq
@@ -26,8 +26,8 @@ private[launchqueue] class LaunchQueueDelegate(
   override def get(appId: PathId): Option[QueuedTaskInfo] =
     askQueueActor("get")(LaunchQueueDelegate.Count(appId)).asInstanceOf[Option[QueuedTaskInfo]]
 
-  override def notifyOfTaskUpdate(update: TaskUpdate): Future[Option[QueuedTaskInfo]] =
-    askQueueActorFuture("notifyOfTaskUpdate")(update).mapTo[Option[QueuedTaskInfo]]
+  override def notifyOfTaskUpdate(taskChanged: TaskChanged): Future[Option[QueuedTaskInfo]] =
+    askQueueActorFuture("notifyOfTaskUpdate")(taskChanged).mapTo[Option[QueuedTaskInfo]]
 
   override def count(appId: PathId): Int = get(appId).map(_.tasksLeftToLaunch).getOrElse(0)
 

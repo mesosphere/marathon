@@ -91,7 +91,7 @@ class MarathonHealthCheckManagerTest
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
     val update = TaskStateOp.MesosUpdate(marathonTask, MarathonTaskStatus(taskStatus), clock.now())
 
-    taskCreationHandler.created(TaskStateOp.Create(marathonTask)).futureValue
+    taskCreationHandler.created(TaskStateOp.LaunchEphemeral(marathonTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
     taskId
@@ -130,7 +130,7 @@ class MarathonHealthCheckManagerTest
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
-    taskCreationHandler.created(TaskStateOp.Create(marathonTask)).futureValue
+    taskCreationHandler.created(TaskStateOp.LaunchEphemeral(marathonTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
     hcManager.add(appId, app.version, healthCheck)
@@ -236,7 +236,7 @@ class MarathonHealthCheckManagerTest
         versionInfo = AppDefinition.VersionInfo.forNewConfig(version),
         healthChecks = healthChecks
       )).futureValue
-      taskCreationHandler.created(TaskStateOp.Create(task)).futureValue
+      taskCreationHandler.created(TaskStateOp.LaunchEphemeral(task)).futureValue
       val update = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(taskStatus(task.marathonTask)), clock.now())
       stateOpProcessor.process(update).futureValue
     }

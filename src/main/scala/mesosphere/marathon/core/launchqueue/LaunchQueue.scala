@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.launchqueue
 
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 
 import scala.collection.immutable.Seq
@@ -63,5 +63,5 @@ trait LaunchQueue {
   def resetDelay(app: AppDefinition): Unit
 
   /** Notify queue about TaskUpdate */
-  def notifyOfTaskUpdate(update: TaskUpdate): Future[Option[QueuedTaskInfo]]
+  def notifyOfTaskUpdate(taskChanged: TaskChanged): Future[Option[QueuedTaskInfo]]
 }

@@ -205,7 +205,7 @@ class LaunchQueueModuleTest
 
   after {
     verifyNoMoreInteractions(appRepository)
-    //    verifyNoMoreInteractions(taskTracker)
+    verifyNoMoreInteractions(taskTracker)
     verifyNoMoreInteractions(taskOpFactory)
   }
 }

@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task.update
 
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 
 import scala.concurrent.Future
 
@@ -12,5 +12,5 @@ import scala.concurrent.Future
 trait TaskUpdateStep {
   def name: String
 
-  def processUpdate(update: TaskUpdate): Future[_]
+  def processUpdate(taskChanged: TaskChanged): Future[_]
 }

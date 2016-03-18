@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import com.google.inject.Provider
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 
 import scala.concurrent.Future
@@ -17,7 +17,7 @@ class NotifyLaunchQueueStepImpl @Inject() (launchQueueProvider: Provider[LaunchQ
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
 
-  override def processUpdate(update: TaskUpdate): Future[_] = {
-    launchQueue.notifyOfTaskUpdate(update)
+  override def processUpdate(taskChanged: TaskChanged): Future[_] = {
+    launchQueue.notifyOfTaskUpdate(taskChanged)
   }
 }

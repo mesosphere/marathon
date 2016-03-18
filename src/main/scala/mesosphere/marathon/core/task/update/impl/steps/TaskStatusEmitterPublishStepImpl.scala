@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import com.google.inject.Provider
 import mesosphere.marathon.core.task.bus.TaskStatusEmitter
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 
 import scala.concurrent.Future
@@ -19,8 +19,8 @@ class TaskStatusEmitterPublishStepImpl @Inject() (
 
   override def name: String = "emitUpdate"
 
-  override def processUpdate(update: TaskUpdate): Future[_] = {
-    taskStatusEmitter.publish(update)
+  override def processUpdate(taskChanged: TaskChanged): Future[_] = {
+    taskStatusEmitter.publish(taskChanged)
     Future.successful(())
   }
 }

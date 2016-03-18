@@ -21,14 +21,14 @@ class TaskOpFactoryHelper(
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    val stateOp = TaskStateOp.Create(newTask)
+    val stateOp = TaskStateOp.LaunchEphemeral(newTask)
     TaskOp.Launch(taskInfo, stateOp, oldTask = None, createOperations)
   }
 
   def launchOnReservation(
     taskInfo: Mesos.TaskInfo,
-    newTask: TaskStateOp,
-    oldTask: Task): TaskOp.Launch = {
+    newTask: TaskStateOp.LaunchOnReservation,
+    oldTask: Task.Reserved): TaskOp.Launch = {
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 

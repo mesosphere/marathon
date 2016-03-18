@@ -91,7 +91,7 @@ object Task {
           status = status.copy(
             startedAt = Some(now),
             mesosStatus = mesosStatus))
-        TaskStateChange.Update(updated, Some(this))
+        TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
       case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(_), now) =>
@@ -99,30 +99,32 @@ object Task {
 
       // case 3: health or state updated
       case TaskStateOp.MesosUpdate(_, taskStatus, now) =>
-        updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus).map { newStatus =>
-          val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
-          TaskStateChange.Update(updatedTask, Some(this))
-        } getOrElse {
-          log.debug("Ignoring status update for {}. Status did not change.", taskId)
-          TaskStateChange.NoChange(taskId)
+        updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus) match {
+          case Some(newStatus) =>
+            val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
+            TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
+          case None =>
+            log.debug("Ignoring status update for {}. Status did not change.", taskId)
+            TaskStateChange.NoChange(taskId)
         }
 
       case TaskStateOp.ForceExpunge(_) =>
         TaskStateChange.Expunge(this)
 
-      // FIXME (3221): If the task needs to recreated after a not-accepted taskOp, Create is used.
-      // that's neither nice nor obvious, so this should be improved
-      case TaskStateOp.Create(task) =>
-        TaskStateChange.Update(task, None)
+      case TaskStateOp.LaunchEphemeral(task) =>
+        TaskStateChange.Update(newState = task, oldState = None)
+
+      case _: TaskStateOp.Revert =>
+        TaskStateChange.Failure("Revert should not be handed over to a task instance")
 
       case _: TaskStateOp.LaunchOnReservation =>
-        TaskStateChange.Failure("LaunchOnReservation on LaunchedEphemeral is not allowed")
+        TaskStateChange.Failure("LaunchOnReservation on LaunchedEphemeral is unexpected")
 
       case _: TaskStateOp.ReservationTimeout =>
-        TaskStateChange.Failure("ReservationTimeout on LaunchedEphemeral is not allowed")
+        TaskStateChange.Failure("ReservationTimeout on LaunchedEphemeral is unexpected")
 
       case _: TaskStateOp.Reserve =>
-        TaskStateChange.Failure("Reserve on LaunchedEphemeral is not allowed")
+        TaskStateChange.Failure("Reserve on LaunchedEphemeral is unexpected")
     }
   }
 
@@ -149,26 +151,28 @@ object Task {
     override def update(update: TaskStateOp): TaskStateChange = update match {
       case TaskStateOp.LaunchOnReservation(_, appVersion, status, networking) =>
         val updatedTask = LaunchedOnReservation(taskId, agentInfo, appVersion, status, networking, reservation)
-        TaskStateChange.Update(updatedTask, Some(this))
+        TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       case _: TaskStateOp.ReservationTimeout =>
         TaskStateChange.Expunge(this)
 
-      // if a LaunchOnReservation failed while persisting the task, we want to recreate the reserved task
-      case TaskStateOp.Create(task) =>
-        TaskStateChange.Update(task, None)
-
-      // failure case
       case _: TaskStateOp.ForceExpunge =>
-        TaskStateChange.Failure("Expunge on Reserved is not allowed")
+        TaskStateChange.Expunge(this)
 
-      // failure case
       case _: TaskStateOp.Reserve =>
         TaskStateChange.NoChange(taskId)
 
       // failure case
+      case _: TaskStateOp.Revert =>
+        TaskStateChange.Failure("Revert should not be handed over to a task instance")
+
+      // failure case
+      case TaskStateOp.LaunchEphemeral(task) =>
+        TaskStateChange.Failure("Launch should not be handed over to a task instance")
+
+      // failure case
       case _: TaskStateOp.MesosUpdate =>
-        TaskStateChange.Failure("MesosUpdate on Reserved is not allowed")
+        TaskStateChange.Failure("MesosUpdate on Reserved is unexpected")
     }
   }
 
@@ -196,7 +200,7 @@ object Task {
           status = status.copy(
             startedAt = Some(now),
             mesosStatus = mesosStatus))
-        TaskStateChange.Update(updated, Some(this))
+        TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
@@ -206,17 +210,20 @@ object Task {
           agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None))
         )
-        TaskStateChange.Update(updatedTask, Some(this))
+        TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       // case 3: health or state updated
       case TaskStateOp.MesosUpdate(_, taskStatus, _) =>
         updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus).map { newStatus =>
           val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
-          TaskStateChange.Update(updatedTask, Some(this))
+          TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
         } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
           TaskStateChange.NoChange(taskId)
         }
+
+      case _: TaskStateOp.ForceExpunge =>
+        TaskStateChange.Expunge(this)
 
       // failure case: LaunchOnReservation
       case _: TaskStateOp.LaunchOnReservation =>
@@ -224,19 +231,19 @@ object Task {
 
       // failure case: Timeout
       case _: TaskStateOp.ReservationTimeout =>
-        TaskStateChange.Failure("ReservationTimeout on LaunchedOnReservation is not allowed")
+        TaskStateChange.Failure("ReservationTimeout on LaunchedOnReservation is unexpected")
 
       // failure case
-      case TaskStateOp.Create(task) =>
-        TaskStateChange.Failure("Create on LaunchedOnReservation is not allowed")
-
-      // failure case
-      case _: TaskStateOp.ForceExpunge =>
-        TaskStateChange.Failure("Expunge on LaunchedOnReservation is not allowed")
+      case TaskStateOp.LaunchEphemeral(task) =>
+        TaskStateChange.Failure("Launch on LaunchedOnReservation is unexpected")
 
       // failure case
       case _: TaskStateOp.Reserve =>
-        TaskStateChange.Failure("Reserve on LaunchedOnReservation is not allowed")
+        TaskStateChange.Failure("Reserve on LaunchedOnReservation is unexpected")
+
+      // failure case
+      case _: TaskStateOp.Revert =>
+        TaskStateChange.Failure("Revert should not be handed over to a task instance")
     }
   }
 

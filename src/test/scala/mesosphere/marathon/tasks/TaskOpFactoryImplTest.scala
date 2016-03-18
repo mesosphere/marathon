@@ -44,7 +44,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       networking = Task.HostPorts(List.empty)
     )
     assert(inferredTaskOp.isDefined, "task op is not empty")
-    assert(inferredTaskOp.get.newTask == TaskStateOp.Create(expectedTask))
+    assert(inferredTaskOp.get.stateOp == TaskStateOp.LaunchEphemeral(expectedTask))
   }
 
   test("Normal app -> None (insufficient offer)") {

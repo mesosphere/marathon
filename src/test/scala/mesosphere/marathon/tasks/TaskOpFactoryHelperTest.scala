@@ -36,7 +36,7 @@ class TaskOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with Mocki
     val launch = f.helper.launchEphemeral(taskInfo, task)
 
     Then("The result is as expected")
-    launch.newTask shouldEqual TaskStateOp.Create(task)
+    launch.stateOp shouldEqual TaskStateOp.LaunchEphemeral(task)
     launch.taskInfo shouldEqual taskInfo
     launch.oldTask shouldBe empty
     launch.offerOperations should have size 1

@@ -14,10 +14,15 @@ sealed trait TaskStateOp {
 }
 
 object TaskStateOp {
-  // FIXME (3221): Create is used for both launching an ephemeral task, and
-  // re-creating the oldTask state in case an update failed – this is not
-  // very obvious and should be improved.
-  case class Create(task: Task) extends TaskStateOp {
+  /** Launch (aka create) an ephemeral task*/
+  // FIXME (3221): The type should be LaunchedEphemeral but that needs a lot of test adjustments
+  case class LaunchEphemeral(task: Task) extends TaskStateOp {
+    override def taskId: Id = task.taskId
+    override def possibleNewState: Option[Task] = Some(task)
+  }
+
+  /** Revert a task to the given state. Used in case TaskOps are rejected. */
+  case class Revert(task: Task) extends TaskStateOp {
     override def taskId: Id = task.taskId
     override def possibleNewState: Option[Task] = Some(task)
   }
@@ -39,17 +44,14 @@ object TaskStateOp {
 
   case class ReservationTimeout(taskId: Task.Id) extends TaskStateOp
 
-  /**
-    * If a taskOp introduced a new task but was not accepted afterwards, it will be reverted
-    * using this TaskOp.
-    */
+  /** Expunge a task whose TaskOp was rejected */
   case class ForceExpunge(taskId: Task.Id) extends TaskStateOp
 }
 
 sealed trait TaskStateChange
 
 object TaskStateChange {
-  case class Update(task: Task, oldTask: Option[Task]) extends TaskStateChange
+  case class Update(newState: Task, oldState: Option[Task]) extends TaskStateChange
   case class Expunge(task: Task) extends TaskStateChange
   case class NoChange(taskId: Task.Id) extends TaskStateChange
   case class Failure(cause: Throwable) extends TaskStateChange

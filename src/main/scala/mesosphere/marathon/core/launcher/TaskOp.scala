@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.launcher
 
-import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.tasks.ResourceUtil
@@ -11,11 +10,11 @@ import org.apache.mesos.{ Protos => MesosProtos }
   */
 sealed trait TaskOp {
   /** The ID of the affected task. */
-  def taskId: Task.Id = newTask.taskId
+  def taskId: Task.Id = stateOp.taskId
   /** The MarathonTask state before this operation has been applied. */
   def oldTask: Option[Task]
   /** The TaskStateOp that will lead to the new state after this operation has been applied. */
-  def newTask: TaskStateOp
+  def stateOp: TaskStateOp
   /** How would the offer change when Mesos executes this op? */
   def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer
   /** To which Offer.Operations does this task op relate? */
@@ -26,7 +25,7 @@ object TaskOp {
   /** Launch a task on the offer. */
   case class Launch(
       taskInfo: MesosProtos.TaskInfo,
-      newTask: TaskStateOp,
+      stateOp: TaskStateOp,
       oldTask: Option[Task] = None,
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends TaskOp {
 
@@ -37,7 +36,7 @@ object TaskOp {
   }
 
   case class ReserveAndCreateVolumes(
-      newTask: TaskStateOp.Reserve,
+      stateOp: TaskStateOp.Reserve,
       resources: Iterable[MesosProtos.Resource],
       localVolumes: Iterable[LocalVolume],
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends TaskOp {
@@ -50,7 +49,7 @@ object TaskOp {
   }
 
   case class UnreserveAndDestroyVolumes(
-      newTask: TaskStateOp,
+      stateOp: TaskStateOp,
       resources: Iterable[MesosProtos.Resource],
       oldTask: Option[Task] = None) extends TaskOp {
 

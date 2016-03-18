@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
@@ -13,6 +13,7 @@ import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 class TaskOpFactoryImpl @Inject() (
   config: MarathonConf,
@@ -126,7 +127,7 @@ class TaskOpFactoryImpl @Inject() (
   private[this] def launchOnReservation(
     app: AppDefinition,
     offer: Mesos.Offer,
-    task: Task,
+    task: Task.Reserved,
     resourceMatch: Option[ResourceMatcher.ResourceMatch],
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
@@ -155,6 +156,12 @@ class TaskOpFactoryImpl @Inject() (
       Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume)
     }
     val persistentVolumeIds = localVolumes.map(_.id)
+    val now = clock.now()
+    val timeout = Task.Reservation.Timeout(
+      initiated = now,
+      deadline = now + config.taskLaunchTimeout().millis,
+      reason = Task.Reservation.Timeout.Reason.ReservationTimeout
+    )
     val task = Task.Reserved(
       taskId = Task.Id.forApp(app.id),
       agentInfo = Task.AgentInfo(
@@ -162,7 +169,7 @@ class TaskOpFactoryImpl @Inject() (
         agentId = Some(offer.getSlaveId.getValue),
         attributes = offer.getAttributesList.asScala
       ),
-      reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = None))
+      reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
     )
     val taskStateOp = TaskStateOp.Reserve(task)
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, taskStateOp, resourceMatch.resources, localVolumes)

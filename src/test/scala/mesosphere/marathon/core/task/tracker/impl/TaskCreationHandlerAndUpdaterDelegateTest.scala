@@ -15,11 +15,11 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 class TaskCreationHandlerAndUpdaterDelegateTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
 
-  test("Created succeeds") {
+  test("Launch succeeds") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = TaskStateOp.Create(task)
+    val stateOp = TaskStateOp.LaunchEphemeral(task)
     val expectedStateChange = TaskStateChange.Update(task, None)
 
     When("created is called")
@@ -36,11 +36,11 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     create.futureValue should be(())
   }
 
-  test("Created fails") {
+  test("Launch fails") {
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = TaskStateOp.Create(task)
+    val stateOp = TaskStateOp.LaunchEphemeral(task)
 
     When("created is called")
     val create = f.delegate.created(stateOp)
@@ -57,7 +57,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val createValue = create.failed.futureValue
     createValue.getMessage should include(appId.toString)
     createValue.getMessage should include(task.taskId.idString)
-    createValue.getMessage should include("Create")
+    createValue.getMessage should include("Launch")
     createValue.getCause should be(cause)
   }
 

@@ -14,7 +14,7 @@ import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, Task
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskStateChange }
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
@@ -222,16 +222,14 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def receiveTaskUpdate: Receive = {
-    case TaskUpdate(stateOp, stateChange) =>
-      log.info("received TaskUpdate")
-
+    case TaskChanged(stateOp, stateChange) =>
       stateChange match {
-        case TaskStateChange.Update(task, _) =>
-          log.debug("updating status of {}", task.taskId)
-          tasksMap += task.taskId -> task
+        case TaskStateChange.Update(newState, _) =>
+          log.info("receiveTaskUpdate: updating status of {}", newState.taskId)
+          tasksMap += newState.taskId -> newState
 
         case TaskStateChange.Expunge(task) =>
-          log.debug("{} finished", task.taskId)
+          log.info("receiveTaskUpdate: {} finished", task.taskId)
           removeTask(task.taskId)
           // A) If the app has constraints, we need to reconsider offers that
           // we already rejected. E.g. when a host:unique constraint prevented
@@ -244,7 +242,7 @@ private class AppTaskLauncherActor(
           }
 
         case _ =>
-          log.debug("receiveTaskUpdate: ignoring stateChange {}", stateChange)
+          log.info("receiveTaskUpdate: ignoring stateChange {}", stateChange)
       }
       replyWithQueuedTaskCount()
   }
@@ -341,13 +339,9 @@ private class AppTaskLauncherActor(
       // We will receive the updated task once it's been persisted. Before that,
       // we can only store the possible state, as we don't have the updated task
       // yet.
-      taskOp.newTask.possibleNewState match {
-        case Some(newState) =>
-          tasksMap += taskId -> newState
-          scheduleTaskOpTimeout(taskOp)
-
-        case None =>
-          tasksMap -= taskId
+      taskOp.stateOp.possibleNewState.foreach { newState =>
+        tasksMap += taskId -> newState
+        scheduleTaskOpTimeout(taskOp)
       }
 
       OfferMatcherRegistration.manageOfferMatcherStatus()

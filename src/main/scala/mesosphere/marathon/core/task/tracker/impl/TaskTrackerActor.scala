@@ -3,9 +3,11 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
+import com.twitter.util.NonFatal
 import mesosphere.marathon.core.appinfo.TaskCounts
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
+import mesosphere.marathon.core.task.tracker.{ TaskTrackerUpdateStepProcessor, TaskTracker }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
@@ -13,8 +15,12 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.slf4j.LoggerFactory
 
 object TaskTrackerActor {
-  def props(metrics: ActorMetrics, taskLoader: TaskLoader, taskUpdaterProps: ActorRef => Props): Props = {
-    Props(new TaskTrackerActor(metrics, taskLoader, taskUpdaterProps))
+  def props(
+    metrics: ActorMetrics,
+    taskLoader: TaskLoader,
+    updateStepProcessor: TaskTrackerUpdateStepProcessor,
+    taskUpdaterProps: ActorRef => Props): Props = {
+    Props(new TaskTrackerActor(metrics, taskLoader, updateStepProcessor, taskUpdaterProps))
   }
 
   /** Query the current [[TaskTracker.AppTasks]] from the [[TaskTrackerActor]]. */
@@ -23,15 +29,19 @@ object TaskTrackerActor {
   /** Forward an update operation to the child [[TaskUpdateActor]]. */
   private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Task.Id, taskStateOp: TaskStateOp)
 
-  /** Describes where and what to send after an update event has beend processed by the [[TaskTrackerActor]]. */
-  private[impl] case class Ack(initiator: ActorRef, msg: Any = ()) {
-    def sendAck(): Unit = initiator ! msg
+  /** Describes where and what to send after an update event has been processed by the [[TaskTrackerActor]]. */
+  private[impl] case class Ack(initiator: ActorRef, stateChange: TaskStateChange) {
+    def sendAck(): Unit = {
+      val msg = stateChange match {
+        case TaskStateChange.Failure(cause) => Status.Failure(cause)
+        case _                              => stateChange
+      }
+      initiator ! msg
+    }
   }
 
-  /** Inform the [[TaskTrackerActor]] of an updated task (after persistence). */
-  private[impl] case class TaskUpdated(task: Task, ack: Ack)
-  /** Inform the [[TaskTrackerActor]] of a removed task (after persistence). */
-  private[impl] case class TaskRemoved(taskId: Task.Id, ack: Ack)
+  /** Inform the [[TaskTrackerActor]] of a task state change (after persistence). */
+  private[impl] case class StateChanged(taskChanged: TaskChanged, ack: Ack)
 
   private[tracker] class ActorMetrics(metrics: Metrics) {
     val stagedCount = metrics.gauge("service.mesosphere.marathon.task.staged.count", new AtomicIntGauge)
@@ -53,6 +63,7 @@ object TaskTrackerActor {
 private class TaskTrackerActor(
     metrics: TaskTrackerActor.ActorMetrics,
     taskLoader: TaskLoader,
+    updateStepProcessor: TaskTrackerUpdateStepProcessor,
     taskUpdaterProps: ActorRef => Props) extends Actor with Stash {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -125,13 +136,31 @@ private class TaskTrackerActor(
         val op = TaskOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
         updaterRef.forward(TaskUpdateActor.ProcessTaskOp(op))
 
-      case msg @ TaskTrackerActor.TaskUpdated(task, ack) =>
-        becomeWithUpdatedApp(task.appId)(task.taskId, newTask = Some(task))
-        ack.sendAck()
+      case msg @ TaskTrackerActor.StateChanged(change, ack) =>
+        change.stateChange match {
+          case TaskStateChange.Update(task, _) =>
+            becomeWithUpdatedApp(task.appId)(task.taskId, newTask = Some(task))
 
-      case msg @ TaskTrackerActor.TaskRemoved(taskId, ack) =>
-        becomeWithUpdatedApp(taskId.appId)(taskId, newTask = None)
-        ack.sendAck()
+          case TaskStateChange.Expunge(task) =>
+            becomeWithUpdatedApp(task.appId)(task.taskId, newTask = None)
+
+          case _: TaskStateChange.NoChange |
+            _: TaskStateChange.Failure =>
+          // ignore, no state change
+        }
+
+        val originalSender = sender()
+
+        import context.dispatcher
+        updateStepProcessor.process(change).recover {
+          case NonFatal(cause) =>
+            // since we currently only use ContinueOnErrorSteps, we can simply ignore failures here
+            //
+            log.warn("updateStepProcessor.process failed: {}", cause)
+        }.foreach { _ =>
+          ack.sendAck()
+          originalSender ! (())
+        }
     }
   }
 }

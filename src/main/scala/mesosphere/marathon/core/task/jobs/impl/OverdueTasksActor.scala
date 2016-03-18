@@ -3,7 +3,6 @@ package mesosphere.marathon.core.task.jobs.impl
 import akka.actor._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.Task.Reserved
 import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }

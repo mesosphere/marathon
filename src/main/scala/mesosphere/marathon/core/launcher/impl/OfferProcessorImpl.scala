@@ -104,7 +104,7 @@ private[launcher] class OfferProcessorImpl(
       terminatedFuture.flatMap { _ =>
         nextOp.oldTask match {
           case Some(existingTask) =>
-            taskCreationHandler.created(TaskStateOp.Create(existingTask)).map(_ => ())
+            taskCreationHandler.created(TaskStateOp.Revert(existingTask)).map(_ => ())
           case None =>
             taskCreationHandler.terminated(TaskStateOp.ForceExpunge(nextOp.taskId)).map(_ => ())
         }
@@ -122,9 +122,9 @@ private[launcher] class OfferProcessorImpl(
   private[this] def saveTasks(ops: Seq[TaskOpWithSource], savingDeadline: Timestamp): Future[Seq[TaskOpWithSource]] = {
     def saveTask(taskOpWithSource: TaskOpWithSource): Future[Option[TaskOpWithSource]] = {
       val taskId = taskOpWithSource.taskId
-      log.info("Save task [{}]", taskOpWithSource.taskId)
+      log.info("Persisting TaskStateOp for [{}]", taskOpWithSource.taskId)
       taskCreationHandler
-        .created(taskOpWithSource.op.newTask)
+        .created(taskOpWithSource.op.stateOp)
         .map(_ => Some(taskOpWithSource))
         .recoverWith {
           case NonFatal(e) =>

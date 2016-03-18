@@ -62,14 +62,11 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
             case (taskId, spuriousResources) if spurious(taskId) =>
               val unreserveAndDestroy =
                 TaskOp.UnreserveAndDestroyVolumes(
-                  newTask = TaskStateOp.ForceExpunge(taskId),
+                  stateOp = TaskStateOp.ForceExpunge(taskId),
                   oldTask = tasksByApp.task(taskId),
                   resources = spuriousResources.to[Seq]
                 )
               TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
-            //          case (taskId, spuriousResources) if shouldRefreshLastSeen(taskId) =>
-            //            // this is slightly silly but we need to refresh
-
           }.to[Seq]
 
           MatchedTaskOps(offer.getId, taskOps, resendThisOffer = true)

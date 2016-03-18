@@ -24,6 +24,7 @@ import org.mockito.Matchers.any
 import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
+import org.slf4j.LoggerFactory
 
 import scala.collection._
 
@@ -49,7 +50,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   test("SerializeAndDeserialize") {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
 
     val deserializedTask = taskTracker.marathonTaskSync(sampleTask.taskId)
 
@@ -68,7 +69,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   private[this] def testCreatedAndGetTask(call: (TaskTracker, Task.Id) => Option[MarathonTask]): Unit = {
     val sampleTask = makeSampleTask(TEST_APP_NAME)
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
 
     val fetchedTask = call(taskTracker, sampleTask.taskId)
 
@@ -88,9 +89,9 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val task2 = makeSampleTask(TEST_APP_NAME / "b")
     val task3 = makeSampleTask(TEST_APP_NAME / "b")
 
-    stateOpProcessor.process(TaskStateOp.Create(task1)).futureValue
-    stateOpProcessor.process(TaskStateOp.Create(task2)).futureValue
-    stateOpProcessor.process(TaskStateOp.Create(task3)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task1)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task2)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task3)).futureValue
 
     val testAppTasks = call(taskTracker)
 
@@ -117,9 +118,9 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val task2 = makeSampleTask(TEST_APP_NAME)
     val task3 = makeSampleTask(TEST_APP_NAME)
 
-    stateOpProcessor.process(TaskStateOp.Create(task1)).futureValue
-    stateOpProcessor.process(TaskStateOp.Create(task2)).futureValue
-    stateOpProcessor.process(TaskStateOp.Create(task3)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task1)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task2)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task3)).futureValue
 
     val testAppTasks = call(taskTracker).map(_.marathonTask).map(TaskSerializer.fromProto(_))
 
@@ -140,7 +141,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   private[this] def testCount(count: (TaskTracker, PathId) => Int): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
 
-    stateOpProcessor.process(TaskStateOp.Create(task1)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task1)).futureValue
 
     count(taskTracker, TEST_APP_NAME / "a") should be(1)
     count(taskTracker, TEST_APP_NAME / "b") should be(0)
@@ -157,7 +158,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   private[this] def testContains(count: (TaskTracker, PathId) => Boolean): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
 
-    stateOpProcessor.process(TaskStateOp.Create(task1)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task1)).futureValue
 
     count(taskTracker, TEST_APP_NAME / "a") should be(true)
     count(taskTracker, TEST_APP_NAME / "b") should be(false)
@@ -167,7 +168,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val sampleTask = MarathonTestHelper.startingTaskForApp(TEST_APP_NAME)
 
     // CREATE TASK
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
 
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.taskId)
@@ -221,7 +222,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val sampleTask = makeSampleTask(TEST_APP_NAME)
     val terminalStatusUpdate = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, taskState), clock.now())
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
     stateShouldContainKey(state, sampleTask.taskId)
 
@@ -259,22 +260,22 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     val app3_task2 = makeSampleTask(appName3)
     val app3_task3 = makeSampleTask(appName3)
 
-    stateOpProcessor.process(TaskStateOp.Create(app1_task1)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(app1_task1)).futureValue
     stateOpProcessor.process(TaskStateOp.MesosUpdate(app1_task1, makeTaskStatus(app1_task1, TaskState.TASK_RUNNING), clock.now())).futureValue
 
-    stateOpProcessor.process(TaskStateOp.Create(app1_task2)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(app1_task2)).futureValue
     stateOpProcessor.process(TaskStateOp.MesosUpdate(app1_task2, makeTaskStatus(app1_task2, TaskState.TASK_RUNNING), clock.now())).futureValue
 
-    stateOpProcessor.process(TaskStateOp.Create(app2_task1)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(app2_task1)).futureValue
     stateOpProcessor.process(TaskStateOp.MesosUpdate(app2_task1, makeTaskStatus(app2_task1, TaskState.TASK_RUNNING), clock.now())).futureValue
 
-    stateOpProcessor.process(TaskStateOp.Create(app3_task1)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(app3_task1)).futureValue
     stateOpProcessor.process(TaskStateOp.MesosUpdate(app3_task1, makeTaskStatus(app3_task1, TaskState.TASK_RUNNING), clock.now())).futureValue
 
-    stateOpProcessor.process(TaskStateOp.Create(app3_task2)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(app3_task2)).futureValue
     stateOpProcessor.process(TaskStateOp.MesosUpdate(app3_task2, makeTaskStatus(app3_task2, TaskState.TASK_RUNNING), clock.now())).futureValue
 
-    stateOpProcessor.process(TaskStateOp.Create(app3_task3)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(app3_task3)).futureValue
     stateOpProcessor.process(TaskStateOp.MesosUpdate(app3_task3, makeTaskStatus(app3_task3, TaskState.TASK_RUNNING), clock.now())).futureValue
 
     assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
@@ -306,7 +307,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -326,7 +327,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -345,7 +346,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -369,7 +370,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -396,7 +397,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -423,7 +424,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue
@@ -449,7 +450,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
 
-    stateOpProcessor.process(TaskStateOp.Create(sampleTask)).futureValue
+    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
     stateOpProcessor.process(update).futureValue

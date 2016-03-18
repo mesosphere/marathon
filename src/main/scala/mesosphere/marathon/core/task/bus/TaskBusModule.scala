@@ -2,8 +2,8 @@ package mesosphere.marathon.core.task.bus
 
 import mesosphere.marathon.core.task.bus.impl.{
   TaskStatusEmitterImpl,
-  TaskStatusObservablesImpl,
-  InternalTaskStatusEventStream
+  TaskChangeObservablesImpl,
+  InternalTaskChangeEventStream
 }
 
 /**
@@ -15,8 +15,8 @@ import mesosphere.marathon.core.task.bus.impl.{
 class TaskBusModule {
   lazy val taskStatusEmitter: TaskStatusEmitter =
     new TaskStatusEmitterImpl(internalTaskStatusEventStream)
-  lazy val taskStatusObservables: TaskStatusObservables =
-    new TaskStatusObservablesImpl(internalTaskStatusEventStream)
+  lazy val taskStatusObservables: TaskChangeObservables =
+    new TaskChangeObservablesImpl(internalTaskStatusEventStream)
 
-  private[this] lazy val internalTaskStatusEventStream = new InternalTaskStatusEventStream()
+  private[this] lazy val internalTaskStatusEventStream = new InternalTaskChangeEventStream()
 }
