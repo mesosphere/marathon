@@ -104,17 +104,6 @@ case class AppDefinition(
     container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
   }
 
-  /**
-    * @return the disk resources required for volumes
-    */
-  def diskForVolumes: Double = persistentVolumes.map(
-    //TODO(jdef) probably only want to consider "agent" providerName here
-    _.persistent.size match {
-      case Some(size) => size
-      case _          => 0
-    }
-  ).sum.toDouble
-
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(
