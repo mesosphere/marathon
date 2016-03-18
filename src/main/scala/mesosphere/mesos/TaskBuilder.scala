@@ -5,8 +5,9 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ PortMappingSerializer, PortDefinitionSerializer, ContainerSerializer }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ PersistentVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
+import mesosphere.marathon.state.{ PersistentVolume, ExternalVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
 import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
@@ -122,23 +123,35 @@ class TaskBuilder(app: AppDefinition,
 
     val containerProto = computeContainerInfo(resourceMatch.hostPorts)
     val envPrefix: Option[String] = config.envVarsPrefix.get
+
+    def decorateForExternalVolumes(builder: CommandInfo.Builder) = containerProto.foreach { cp =>
+      app.externalVolumes.foreach {
+        ExternalVolumes.build(cp.getType, builder, _)
+      }
+    }
+
     executor match {
       case CommandExecutor() =>
-        builder.setCommand(TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix))
         containerProto.foreach(builder.setContainer)
+        val command = TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
+        decorateForExternalVolumes(command)
+        builder.setCommand(command.build)
 
       case PathExecutor(path) =>
         val executorId = f"marathon-${taskId.idString}" // Fresh executor
         val executorPath = s"'$path'" // TODO: Really escape this.
         val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
-        val command =
-          TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix).toBuilder.setValue(shell)
 
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
-          .setCommand(command)
+
         containerProto.foreach(info.setContainer)
+
+        val command =
+          TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix).setValue(shell)
+        decorateForExternalVolumes(command)
+        info.setCommand(command.build)
         builder.setExecutor(info)
 
         import mesosphere.marathon.api.v2.json.Formats._
@@ -277,7 +290,7 @@ object TaskBuilder {
                   taskId: Option[Task.Id],
                   host: Option[String],
                   ports: Seq[Int],
-                  envPrefix: Option[String]): CommandInfo = {
+                  envPrefix: Option[String]): CommandInfo.Builder = {
     val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(app.portNumbers)
     val envMap: Map[String, String] =
@@ -309,7 +322,7 @@ object TaskBuilder {
 
     app.user.foreach(builder.setUser)
 
-    builder.build
+    builder
   }
 
   def environment(vars: Map[String, String]): Environment = {
