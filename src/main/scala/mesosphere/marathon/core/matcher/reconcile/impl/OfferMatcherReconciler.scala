@@ -9,6 +9,7 @@ import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
 import mesosphere.marathon.state.{ Group, GroupRepository, Timestamp }
+import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
 import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
 import org.slf4j.LoggerFactory
 
@@ -34,39 +35,48 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
   import scala.concurrent.ExecutionContext.Implicits.global
 
   override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedTaskOps] = {
-    val resourcesByTaskId: Map[Task.Id, Iterable[Resource]] = {
+
+    val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
+
+    val resourcesByTaskId: Map[Id, Iterable[Resource]] = {
       import scala.collection.JavaConverters._
-      offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource).collect {
+      offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
         case (Some(taskId), resources) => taskId -> resources
       }
     }
 
-    // do not query taskTracker in the common case
-    if (resourcesByTaskId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
-    else {
-      def createTaskOps(tasksByApp: TasksByApp, rootGroup: Group): MatchedTaskOps = {
-        def spurious(taskId: Id): Boolean =
-          tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.appId).isEmpty
-
-        val taskOps = resourcesByTaskId.iterator.collect {
-          case (taskId, spuriousResources) if spurious(taskId) =>
-            val unreserveAndDestroy =
-              TaskOp.UnreserveAndDestroyVolumes(
-                taskId = taskId, oldTask = tasksByApp.task(taskId), resources = spuriousResources.to[Seq]
-              )
-            TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
-        }.to[Seq]
-
-        MatchedTaskOps(offer.getId, taskOps, resendThisOffer = true)
-      }
-
-      // query in parallel
-      val tasksByAppFuture = taskTracker.tasksByApp()
-      val rootGroupFuture = groupRepository.rootGroupOrEmpty()
-
-      for { tasksByApp <- tasksByAppFuture; rootGroup <- rootGroupFuture } yield createTaskOps(tasksByApp, rootGroup)
-    }
+    processResourcesByTaskId(offer, resourcesByTaskId)
   }
+
+  private[this] def processResourcesByTaskId(
+    offer: Offer, resourcesByTaskId: Map[Id, Iterable[Resource]]): Future[MatchedTaskOps] =
+    {
+      // do not query taskTracker in the common case
+      if (resourcesByTaskId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
+      else {
+        def createTaskOps(tasksByApp: TasksByApp, rootGroup: Group): MatchedTaskOps = {
+          def spurious(taskId: Id): Boolean =
+            tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.appId).isEmpty
+
+          val taskOps = resourcesByTaskId.iterator.collect {
+            case (taskId, spuriousResources) if spurious(taskId) =>
+              val unreserveAndDestroy =
+                TaskOp.UnreserveAndDestroyVolumes(
+                  taskId = taskId, oldTask = tasksByApp.task(taskId), resources = spuriousResources.to[Seq]
+                )
+              TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
+          }.to[Seq]
+
+          MatchedTaskOps(offer.getId, taskOps, resendThisOffer = true)
+        }
+
+        // query in parallel
+        val tasksByAppFuture = taskTracker.tasksByApp()
+        val rootGroupFuture = groupRepository.rootGroupOrEmpty()
+
+        for { tasksByApp <- tasksByAppFuture; rootGroup <- rootGroupFuture } yield createTaskOps(tasksByApp, rootGroup)
+      }
+    }
 
   private[this] def source(offerId: OfferID) = new TaskOpSource {
     override def taskOpAccepted(taskOp: TaskOp): Unit =

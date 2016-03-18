@@ -18,7 +18,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Container, MarathonStore, MarathonTaskState, PathId, PersistentVolume, PersistentVolumeInfo, Residency, TaskRepository, Timestamp, Volume }
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
-import mesosphere.util.state.PersistentStore
+import mesosphere.util.state.{ FrameworkId, PersistentStore }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
@@ -64,6 +64,9 @@ object MarathonTestHelper {
     makeConfig(args: _*)
   }
 
+  val frameworkID: FrameworkID = FrameworkID("marathon")
+  val frameworkId: FrameworkId = FrameworkId("").mergeFromProto(frameworkID)
+
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
                      beginPort: Int = 31000, endPort: Int = 32000, role: String = "*",
                      reservation: Option[ResourceLabels] = None): Offer.Builder = {
@@ -99,7 +102,7 @@ object MarathonTestHelper {
     }
     val offerBuilder = Offer.newBuilder
       .setId(OfferID("1"))
-      .setFrameworkId(FrameworkID("marathon"))
+      .setFrameworkId(frameworkID)
       .setSlaveId(SlaveID("slave0"))
       .setHostname("localhost")
       .addResources(cpusResource)
@@ -195,7 +198,7 @@ object MarathonTestHelper {
 
     val offerBuilder = Offer.newBuilder
       .setId(OfferID("1"))
-      .setFrameworkId(FrameworkID("marathon"))
+      .setFrameworkId(frameworkID)
       .setSlaveId(SlaveID("slave0"))
       .setHostname("localhost")
       .addResources(cpusResource)
@@ -218,7 +221,7 @@ object MarathonTestHelper {
     val diskResource = ScalarResource(Resource.DISK, disk, role)
     Offer.newBuilder
       .setId(OfferID("1"))
-      .setFrameworkId(FrameworkID("marathon"))
+      .setFrameworkId(frameworkID)
       .setSlaveId(SlaveID("slave0"))
       .setHostname("localhost")
       .addResources(cpusResource)
@@ -487,7 +490,7 @@ object MarathonTestHelper {
         Mesos.Resource.ReservationInfo
           .newBuilder()
           .setPrincipal("principal")
-          .setLabels(TaskLabels.labelsForTask(taskId).mesosLabels)
+          .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
       )
       .setDisk(Mesos.Resource.DiskInfo.newBuilder()
         .setPersistence(Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(id.idString))
@@ -500,7 +503,7 @@ object MarathonTestHelper {
   def offerWithVolumes(taskId: String, localVolumeIds: Task.LocalVolumeId*) = {
     import scala.collection.JavaConverters._
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(Task.Id(taskId))),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, Task.Id(taskId))),
       role = "test"
     ).addAllResources(persistentVolumeResources(Task.Id(taskId), localVolumeIds: _*).asJava).build()
   }
