@@ -7,6 +7,7 @@ import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.core.volume.VolumesModule
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
@@ -222,6 +223,7 @@ object Group {
 
   implicit val validRootGroup: Validator[Group] = new Validator[Group] {
     override def apply(group: Group): Result = {
+      group is VolumesModule.validGroup
       validate(group)(validator =
         validNestedGroup(PathId.empty))
     }
@@ -277,4 +279,3 @@ object Group {
     }
   }
 }
-

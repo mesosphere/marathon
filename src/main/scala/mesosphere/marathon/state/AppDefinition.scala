@@ -8,6 +8,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.plugin
+import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -104,10 +105,7 @@ case class AppDefinition(
     container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
   }
 
-  /**
-    * @return the disk resources required for volumes
-    */
-  def diskForVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
+  def diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
@@ -495,6 +493,7 @@ object AppDefinition {
     appDef.disk should be >= 0.0
     appDef must definesCorrectResidencyCombination
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
+    appDef is VolumesModule.validApp
   }
 
   /**
