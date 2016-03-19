@@ -1,34 +1,67 @@
 package mesosphere.marathon.core.volume
 
+import com.wix.accord.dsl._
+import com.wix.accord.Validator
 import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.Volume
 import mesosphere.marathon.state.PersistentVolume
 
+/**
+  * Volumes is an interface implemented by storage volume providers
+  */
 sealed trait Volumes[T <: Volume] {
+  /** name uniquely identifies this volume provider */
   val name: String
+  /** validation implements this provider's specific validation rules */
+  val validation: Validator[Volume]
+
+  /** apply scrapes volumes from an application definition that are supported this volume provider */
   def apply(app: AppDefinition): Iterable[T]
+}
+
+object Volumes {
+  // TODO(jdef) this declaration is crazy. there must be a better way
+  private[this] def makeRegistry[_ <: Volume](providers: Volumes[_ <: Volume]*): Map[String, Volumes[_ <: Volume]] = {
+    providers.foldLeft(Map.empty[String, Volumes[_ <: Volume]]) { (m, p) => m + (p.name -> p) }
+  }
+
+  private[this] val registry = makeRegistry(
+    // list supported providers here
+    AgentVolumes
+  )
+
+  /**
+    * @return the Volumes interface registered for the given name; if name is None then
+    * a default Volumes implementation is returned. None is returned if Some name is given
+    * but no volume provider is registered for that name.
+    */
+  def apply(name: Option[String]): Option[Volumes[_ <: Volume]] = {
+    name match {
+      case None               => Some(AgentVolumes)
+      case Some(providerName) => registry.get(providerName)
+    }
+  }
 }
 
 object AgentVolumes extends Volumes[PersistentVolume] {
 
   val name = "agent"
 
+  val validation = validator[Volume] { v =>
+    // don't invoke validator on v because that's circular, just check the additional
+    // things that we need for agent local volumes.
+    // see implicit validator in the PersistentVolume class for reference.
+    v.asInstanceOf[PersistentVolume].persistent.size.isDefined is true
+  }
+
   def isAgentLocal(volume: PersistentVolume): Boolean = {
     !volume.persistent.providerName.isDefined || volume.persistent.providerName == name
   }
 
-  def validateVolume(volume: PersistentVolume): Unit = {
-    if (!volume.persistent.size.isDefined) {
-      throw new WrongConfigurationException("size must be specified for agent local volumes")
-    }
-  }
-
   override def apply(app: AppDefinition): Iterable[PersistentVolume] = {
-    val result: Iterable[PersistentVolume] = app.persistentVolumes.filter { volume => isAgentLocal(volume) }
-    result.foreach{ validateVolume }
-    result
+    app.persistentVolumes.filter { volume => isAgentLocal(volume) }
   }
 
   def local(app: AppDefinition): Iterable[Task.LocalVolume] = {
@@ -46,5 +79,4 @@ object AgentVolumes extends Volumes[PersistentVolume] {
       }
     ).sum.toDouble
   }
-
 }

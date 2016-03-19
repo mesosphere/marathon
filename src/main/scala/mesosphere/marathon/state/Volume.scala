@@ -4,6 +4,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.Protos
+import mesosphere.marathon.core.volume.Volumes
 import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.{ Protos => Mesos }
 import scala.collection.JavaConverters._
@@ -177,5 +178,7 @@ object PersistentVolume {
     vol.mode is equalTo(Mode.RW)
     //persistent volumes require those CLI parameters provided
     vol is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+    Volumes(vol.persistent.providerName).isDefined is true
+    vol is valid(Volumes(vol.persistent.providerName).get.validation)
   }
 }
