@@ -252,6 +252,79 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getEntity.toString should include("must not be empty")
   }
 
+  test("Creating an app with an external volume for an illegal provider should fail") {
+    Given("An app invalid volume (illegal volume provider)")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body =
+      """
+        |{
+        |  "id": "resident1",
+        |  "cmd": "sleep 100",
+        |  "instances": 0,
+        |  "container": {
+        |    "type": "MESOS",
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "hostPath": "/var",
+        |      "persistent": {
+        |        "size": 10,
+        |        "providerName": "acme"
+        |      },
+        |      "mode": "RW"
+        |    }]
+        |  }
+        |}
+      """.stripMargin.getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The request is processed")
+    val response = appsResource.create(body, false, auth.request)
+
+    Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/persistent.providerName")
+    response.getEntity.toString should include("illegal volume specification")
+    response.getEntity.toString should include("is not one of")
+  }
+
+  test("Creating an app with an external volume with no provider name specified should pass provider validation") {
+    Given("An app with an unnamed volume provider")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body =
+      """
+        |{
+        |  "id": "resident1",
+        |  "cmd": "sleep 100",
+        |  "instances": 0,
+        |  "container": {
+        |    "type": "MESOS",
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "hostPath": "/var",
+        |      "persistent": {
+        |        "size": 10
+        |      },
+        |      "mode": "RW"
+        |    }]
+        |  }
+        |}
+      """.stripMargin.getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The request is processed")
+    val response = appsResource.create(body, false, auth.request)
+
+    Then("The return code indicates create error")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/upgradeStrategy")
+    response.getEntity.toString should include("/isResident")
+    response.getEntity.toString should not include ("/container/volumes(0)/persistent.providerName")
+  }
+
   test("Replace an existing application fails due to mesos container validation") {
     Given("An app update with an invalid container (missing docker field)")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))

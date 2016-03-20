@@ -178,7 +178,7 @@ object PersistentVolume {
     vol.mode is equalTo(Mode.RW)
     //persistent volumes require those CLI parameters provided
     vol is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
-    Volumes(vol.persistent.providerName).isDefined is true
-    vol is valid(Volumes(vol.persistent.providerName).get.validation)
+    vol.persistent.providerName is Volumes.knownProvider
+    vol is Volumes.approved(vol.persistent.providerName)
   }
 }

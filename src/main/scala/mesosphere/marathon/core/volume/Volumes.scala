@@ -1,7 +1,10 @@
 package mesosphere.marathon.core.volume
 
+import com.wix.accord._
+import com.wix.accord.combinators.Fail
 import com.wix.accord.dsl._
 import com.wix.accord.Validator
+import com.wix.accord.ViolationBuilder._
 import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
@@ -43,6 +46,18 @@ object Volumes {
       case Some(providerName) => registry.get(providerName)
     }
   }
+
+  def knownProvider(): Validator[Option[String]] =
+    new NullSafeValidator[Option[String]](
+      test = { !apply(_).isEmpty },
+      failure = _ -> s"is not one of (${registry.keys.mkString(",")})"
+    )
+
+  def approved[T <: Volume](name: Option[String]): Validator[T] =
+    apply(name) match {
+      case None    => new Fail[T]("is an illegal volume specification")
+      case Some(v) => v.validation
+    }
 }
 
 object AgentVolumes extends Volumes[PersistentVolume] {
