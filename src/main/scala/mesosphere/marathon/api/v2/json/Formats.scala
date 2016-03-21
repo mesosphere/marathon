@@ -367,6 +367,7 @@ trait EventFormats {
 
   implicit lazy val SubscribeWrites: Writes[Subscribe] = Json.writes[Subscribe]
   implicit lazy val UnsubscribeWrites: Writes[Unsubscribe] = Json.writes[Unsubscribe]
+  implicit lazy val UnhealthyTaskKillEventWrites: Writes[UnhealthyTaskKillEvent] = Json.writes[UnhealthyTaskKillEvent]
   implicit lazy val EventStreamAttachedWrites: Writes[EventStreamAttached] = Json.writes[EventStreamAttached]
   implicit lazy val EventStreamDetachedWrites: Writes[EventStreamDetached] = Json.writes[EventStreamDetached]
   implicit lazy val AddHealthCheckWrites: Writes[AddHealthCheck] = Json.writes[AddHealthCheck]
@@ -402,6 +403,7 @@ trait EventFormats {
     case event: RemoveHealthCheck          => Json.toJson(event)
     case event: FailedHealthCheck          => Json.toJson(event)
     case event: HealthStatusChanged        => Json.toJson(event)
+    case event: UnhealthyTaskKillEvent     => Json.toJson(event)
     case event: GroupChangeSuccess         => Json.toJson(event)
     case event: GroupChangeFailed          => Json.toJson(event)
     case event: DeploymentSuccess          => Json.toJson(event)
@@ -441,6 +443,7 @@ trait HealthCheckFormats {
       "firstSuccess" -> health.firstSuccess,
       "lastFailure" -> health.lastFailure,
       "lastSuccess" -> health.lastSuccess,
+      "lastFailureCause" -> (if (health.lastFailureCause.isDefined) health.lastFailureCause.get else JsNull),
       "taskId" -> health.taskId
     )
   }

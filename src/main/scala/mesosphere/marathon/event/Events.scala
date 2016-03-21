@@ -152,6 +152,16 @@ case class HealthStatusChanged(
   timestamp: String = Timestamp.now().toString)
     extends MarathonHealthCheckEvent
 
+case class UnhealthyTaskKillEvent(
+  appId: PathId,
+  taskId: Task.Id,
+  version: Timestamp,
+  reason: String,
+  host: String,
+  slaveId: Option[String],
+  eventType: String = "unhealthy_task_kill_event",
+  timestamp: String = Timestamp.now().toString) extends MarathonHealthCheckEvent
+
 // upgrade messages
 
 sealed trait UpgradeEvent extends MarathonEvent
