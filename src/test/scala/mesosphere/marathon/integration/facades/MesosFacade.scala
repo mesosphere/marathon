@@ -16,7 +16,7 @@ object MesosFacade {
     */
   case class ITMesosState(
     version: String,
-    gitTag: String,
+    gitTag: Option[String],
     agents: Iterable[ITAgent])
 
   case class ITAgent(
