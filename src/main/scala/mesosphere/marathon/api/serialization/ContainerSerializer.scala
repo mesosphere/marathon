@@ -113,7 +113,7 @@ object DockerSerializer {
     docker.network foreach builder.setNetwork
 
     docker.portMappings.foreach { pms =>
-      builder.addAllPortMappings(pms.map(PortMappingSerializer.toMesos).asJava)
+      builder.addAllPortMappings(pms.flatMap(PortMappingSerializer.toMesos).asJava)
     }
 
     builder.setPrivileged(docker.privileged)
@@ -152,12 +152,15 @@ object PortMappingSerializer {
       proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap
     )
 
-  def toMesos(mapping: Container.Docker.PortMapping): mesos.Protos.ContainerInfo.DockerInfo.PortMapping = {
-    mesos.Protos.ContainerInfo.DockerInfo.PortMapping.newBuilder
-      .setContainerPort(mapping.containerPort)
-      .setHostPort(mapping.hostPort)
-      .setProtocol(mapping.protocol)
-      .build
+  def toMesos(mapping: Container.Docker.PortMapping): Seq[mesos.Protos.ContainerInfo.DockerInfo.PortMapping] = {
+    def mesosPort(protocol: String) = {
+      mesos.Protos.ContainerInfo.DockerInfo.PortMapping.newBuilder
+        .setContainerPort (mapping.containerPort)
+        .setHostPort(mapping.hostPort)
+        .setProtocol(protocol)
+        .build
+    }
+    mapping.protocol.split(',').map(mesosPort).toList
   }
 
 }
