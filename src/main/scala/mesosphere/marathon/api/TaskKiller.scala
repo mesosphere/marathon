@@ -2,8 +2,8 @@ package mesosphere.marathon.api
 
 import javax.inject.Inject
 
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.plugin.auth.{ Identity, UpdateApp, Authenticator, Authorizer }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -13,6 +13,7 @@ import scala.concurrent.Future
 
 class TaskKiller @Inject() (
     taskTracker: TaskTracker,
+    stateOpProcessor: TaskStateOpProcessor,
     groupManager: GroupManager,
     service: MarathonSchedulerService,
     val config: MarathonConf,
@@ -20,17 +21,27 @@ class TaskKiller @Inject() (
     val authorizer: Authorizer) extends AuthResource {
 
   def kill(appId: PathId,
-           findToKill: (Iterable[Task] => Iterable[Task]))(implicit identity: Identity): Future[Iterable[Task]] = {
+           findToKill: (Iterable[Task] => Iterable[Task]),
+           wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Task]] = {
     result(groupManager.app(appId)) match {
       case Some(app) =>
         checkAuthorization(UpdateApp, app)
 
-        val tasks = taskTracker.appTasksLaunchedSync(appId)
-        val toKill = findToKill(tasks)
-        if (toKill.nonEmpty)
-          service.killTasks(appId, toKill)
+        import scala.concurrent.ExecutionContext.Implicits.global
+        taskTracker.appTasks(appId).map { allTasks =>
+          val allFound = findToKill(allTasks)
 
-        Future.successful(toKill)
+          if (wipe) allFound.foreach { task =>
+            stateOpProcessor.process(TaskStateOp.ForceExpunge(task.taskId))
+          }
+
+          val launched = allFound.filter(_.launched.isDefined)
+          if (launched.nonEmpty)
+            service.killTasks(appId, launched)
+
+          allFound
+        }
+
       case None => Future.failed(UnknownAppException(appId))
     }
   }

@@ -15,7 +15,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ GroupManager, PathId }
-import mesosphere.marathon.{ UnknownGroupException, MarathonConf, MarathonSchedulerService, UnknownAppException }
+import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, UnknownAppException }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -80,6 +80,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                  @QueryParam("host") host: String,
                  @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
                  @QueryParam("force")@DefaultValue("false") force: Boolean = false,
+                 @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
                  @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
 
@@ -89,12 +90,14 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
       }
     }
 
+    if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
+
     if (scale) {
       val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
       deploymentResult(result(deploymentF))
     }
     else {
-      reqToResponse(taskKiller.kill(pathId, findToKill)) {
+      reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
         tasks => ok(jsonObjString("tasks" -> tasks))
       }
     }
@@ -107,16 +110,19 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
                 @PathParam("taskId") id: String,
                 @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
                 @QueryParam("force")@DefaultValue("false") force: Boolean = false,
+                @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
                 @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
     def findToKill(appTasks: Iterable[Task]): Iterable[Task] = appTasks.find(_.taskId == Task.Id(id))
+
+    if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
     if (scale) {
       val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
       deploymentResult(result(deploymentF))
     }
     else {
-      reqToResponse(taskKiller.kill(pathId, findToKill)) {
+      reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
         tasks => tasks.headOption.fold(unknownTask(id))(task => ok(jsonObjString("task" -> task)))
       }
     }

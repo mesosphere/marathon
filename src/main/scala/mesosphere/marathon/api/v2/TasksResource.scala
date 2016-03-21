@@ -103,8 +103,11 @@ class TasksResource @Inject() (
   @Path("delete")
   def killTasks(@QueryParam("scale")@DefaultValue("false") scale: Boolean,
                 @QueryParam("force")@DefaultValue("false") force: Boolean,
+                @QueryParam("wipe")@DefaultValue("false") wipe: Boolean,
                 body: Array[Byte],
                 @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+
+    if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
     val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
     val tasksToAppId = taskIds.map { id =>
@@ -123,7 +126,7 @@ class TasksResource @Inject() (
       affectedApps.foreach(checkAuthorization(UpdateApp, _))
 
       val killed = result(Future.sequence(toKill.map {
-        case (appId, tasks) => taskKiller.kill(appId, _ => tasks)
+        case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe)
       })).flatten
       ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.appId, task, Seq.empty))))
     }

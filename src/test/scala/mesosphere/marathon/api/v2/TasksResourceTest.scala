@@ -5,7 +5,7 @@ import java.util.Collections
 import mesosphere.marathon._
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
@@ -35,12 +35,12 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.forTasks(task1, task2)
-    taskKiller.kill(any, any)(any) returns Future.successful(Iterable.empty[Task])
+    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Task])
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
 
     When("we ask to kill both tasks")
-    val response = taskResource.killTasks(scale = false, force = false, body = bodyBytes, auth.request)
+    val response = taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request)
 
     Then("The response should be OK")
     response.getStatus shouldEqual 200
@@ -49,8 +49,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     response.getEntity shouldEqual """{"tasks":[]}"""
 
     And("Both tasks should be requested to be killed")
-    verify(taskKiller).kill(eq(app1), any)(any)
-    verify(taskKiller).kill(eq(app2), any)(any)
+    verify(taskKiller).kill(eq(app1), any, any)(any)
+    verify(taskKiller).kill(eq(app2), any, any)(any)
 
     And("nothing else should be called on the TaskKiller")
     noMoreInteractions(taskKiller)
@@ -76,7 +76,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
 
     When("we ask to kill both tasks")
-    val response = taskResource.killTasks(scale = true, force = true, body = bodyBytes, auth.request)
+    val response = taskResource.killTasks(scale = true, force = true, wipe = false, body = bodyBytes, auth.request)
 
     Then("The response should be OK")
     response.getStatus shouldEqual 200
@@ -86,6 +86,51 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     And("app1 and app2 is killed with force")
     verify(taskKiller).killAndScale(eq(Map(app1 -> Iterable(task1), app2 -> Iterable(task2))), eq(true))(any)
+
+    And("nothing else should be called on the TaskKiller")
+    noMoreInteractions(taskKiller)
+  }
+
+  test("killTasks with scale and wipe fails") {
+    Given("a request")
+    val app1 = "/my/app-1".toRootPath
+    val taskId1 = Task.Id.forApp(app1).idString
+    val body = s"""{"ids": ["$taskId1"]}"""
+    val bodyBytes = body.toCharArray.map(_.toByte)
+
+    When("we ask to scale AND wipe")
+    val exception = intercept[BadRequestException] {
+      taskResource.killTasks(scale = true, force = false, wipe = true, body = bodyBytes, auth.request)
+    }
+
+    Then("an exception should occur")
+    exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
+  }
+
+  // FIXME (3221): breaks – why?
+  ignore("killTasks with wipe delegates to taskKiller with wipe value") {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    Given("a task that shall be killed")
+    val app1 = "/my/app-1".toRootPath
+    val taskId1 = Task.Id.forApp(app1).idString
+    val body = s"""{"ids": ["$taskId1"]}"""
+    val bodyBytes = body.toCharArray.map(_.toByte)
+    val task1 = MarathonTestHelper.runningTask(taskId1)
+
+    config.zkTimeoutDuration returns 5.seconds
+    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.forTasks(task1)
+    taskTracker.appTasks(app1) returns Future.successful(Seq(task1))
+    groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
+
+    When("we send the request")
+    val response = taskResource.killTasks(scale = false, force = false, wipe = true, body = bodyBytes, auth.request)
+
+    Then("The response should be OK")
+    response.getStatus shouldEqual 200
+
+    And("the taskKiller receives the wipe flag")
+    verify(taskKiller).kill(eq(app1), any, eq(true))
 
     And("nothing else should be called on the TaskKiller")
     noMoreInteractions(taskKiller)
@@ -105,7 +150,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
     When(s"kill task is called")
-    val killTasks = taskResource.killTasks(scale = true, force = false, body, req)
+    val killTasks = taskResource.killTasks(scale = true, force = false, wipe = false, body, req)
     Then("we receive a NotAuthenticated response")
     killTasks.getStatus should be(auth.NotAuthenticatedStatus)
   }
@@ -124,7 +169,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     groupManager.app(appId) returns Future.successful(None)
 
     When(s"kill task is called")
-    val killTasks = taskResource.killTasks(scale = true, force = false, body, req)
+    val killTasks = taskResource.killTasks(scale = true, force = false, wipe = false, body, req)
     Then("we receive a NotAuthenticated response")
     killTasks.getStatus should be(auth.NotAuthenticatedStatus)
   }
@@ -156,7 +201,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val taskId3 = Task.Id.forApp(appId).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
-    taskKiller = new TaskKiller(taskTracker, groupManager, service, config, auth.auth, auth.auth)
+    taskKiller = new TaskKiller(taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth)
     taskResource = new TasksResource(
       service,
       taskTracker,
@@ -173,7 +218,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
 
     When(s"kill task is called")
-    val killTasks = taskResource.killTasks(scale = false, force = false, body, req)
+    val killTasks = taskResource.killTasks(scale = false, force = false, wipe = false, body, req)
     Then("we receive a not authorized response")
     killTasks.getStatus should be(auth.UnauthorizedStatus)
   }
@@ -187,7 +232,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     When("we ask to kill those two tasks")
     val ex = intercept[BadRequestException] {
-      taskResource.killTasks(scale = false, force = false, body = bodyBytes, auth.request)
+      taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request)
     }
 
     Then("An exception should be thrown that points to the invalid taskId")
@@ -199,6 +244,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
   var service: MarathonSchedulerService = _
   var taskTracker: TaskTracker = _
+  var stateOpProcessor: TaskStateOpProcessor = _
   var taskKiller: TaskKiller = _
   var config: MarathonConf = _
   var groupManager: GroupManager = _
@@ -211,6 +257,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     auth = new TestAuthFixture
     service = mock[MarathonSchedulerService]
     taskTracker = mock[TaskTracker]
+    stateOpProcessor = mock[TaskStateOpProcessor]
     taskKiller = mock[TaskKiller]
     config = mock[MarathonConf]
     groupManager = mock[GroupManager]
