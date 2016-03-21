@@ -52,7 +52,7 @@ object Volumes {
 
   /** @return a validator that checks the validity of a volume given the volume provider name */
   def approved[T <: Volume](name: Option[String]): Validator[T] =
-    apply(name).map(_.validation).getOrElse(new Fail[T]("is an illegal volume specification"))
+    apply(name).fold(new Fail[T]("is an illegal volume specification").asInstanceOf[Validator[T]])(_.validation)
 }
 
 object AgentVolumes extends Volumes[PersistentVolume] {
