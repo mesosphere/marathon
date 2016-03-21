@@ -171,13 +171,9 @@ case class PersistentVolume(
     extends Volume
 
 object PersistentVolume {
-  import org.apache.mesos.Protos.Volume.Mode
   implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
     vol.containerPath is notEmpty
     vol.persistent is valid
-    vol.mode is equalTo(Mode.RW)
-    //persistent volumes require those CLI parameters provided
-    vol is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     vol.persistent.providerName is Volumes.knownProvider
     vol is Volumes.approved(vol.persistent.providerName)
   }

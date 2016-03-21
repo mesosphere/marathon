@@ -56,16 +56,25 @@ object Volumes {
 }
 
 object AgentVolumes extends Volumes[PersistentVolume] {
+  import org.apache.mesos.Protos.Volume.Mode
+  import mesosphere.marathon.api.v2.Validation._
 
   /** this is the name of the agent volume provider */
   val name = "agent"
 
-  /** validation checks that size has been specified */
-  val validation = validator[Volume] { v =>
+  val validPersistentVolume = validator[PersistentVolume] { v =>
     // don't invoke validator on v because that's circular, just check the additional
     // things that we need for agent local volumes.
     // see implicit validator in the PersistentVolume class for reference.
-    v.asInstanceOf[PersistentVolume].persistent.size is notEmpty
+    v.persistent.size is notEmpty
+    v.mode is equalTo(Mode.RW)
+    //persistent volumes require those CLI parameters provided
+    v is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+  }
+
+  /** validation checks that size has been specified */
+  val validation = validator[Volume] { v =>
+    v.asInstanceOf[PersistentVolume] is valid(validPersistentVolume)
   }
 
   def isAgentLocal(volume: PersistentVolume): Boolean = {
