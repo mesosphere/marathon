@@ -24,6 +24,11 @@ sealed trait Volumes[T <: Volume] {
   def apply(app: AppDefinition): Iterable[T]
 }
 
+trait LocalVolumes {
+  /** @return a stream of task local volumes, extrapolating them from the app spec */
+  def local(app: AppDefinition): Iterable[Task.LocalVolume]
+}
+
 object Volumes {
   // TODO(jdef) this declaration is crazy. there must be a better way
   private[this] def makeRegistry[_ <: Volume](providers: Volumes[_ <: Volume]*): Map[String, Volumes[_ <: Volume]] = {
@@ -55,14 +60,14 @@ object Volumes {
     apply(name).fold(new Fail[T]("is an illegal volume specification").asInstanceOf[Validator[T]])(_.validation)
 }
 
-object AgentVolumes extends Volumes[PersistentVolume] {
+object AgentVolumes extends Volumes[PersistentVolume] with LocalVolumes {
   import org.apache.mesos.Protos.Volume.Mode
   import mesosphere.marathon.api.v2.Validation._
 
   /** this is the name of the agent volume provider */
   val name = "agent"
 
-  val validPersistentVolume = validator[PersistentVolume] { v =>
+  private val validPersistentVolume = validator[PersistentVolume] { v =>
     // don't invoke validator on v because that's circular, just check the additional
     // things that we need for agent local volumes.
     // see implicit validator in the PersistentVolume class for reference.
@@ -72,9 +77,15 @@ object AgentVolumes extends Volumes[PersistentVolume] {
     v is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
   }
 
+  private val notPersistentVolume = new Fail[Volume]("is not a persistent volume")
+
   /** validation checks that size has been specified */
-  val validation = validator[Volume] { v =>
-    v.asInstanceOf[PersistentVolume] is valid(validPersistentVolume)
+  val validation = new Validator[Volume] {
+    override def apply(v: Volume): Result = v match {
+      // sanity check
+      case pv: PersistentVolume => validate(pv)(validPersistentVolume)
+      case _                    => validate(v)(notPersistentVolume)
+    }
   }
 
   def isAgentLocal(volume: PersistentVolume): Boolean = {
@@ -86,7 +97,7 @@ object AgentVolumes extends Volumes[PersistentVolume] {
   }
 
   /** @return a stream of task local volumes, extrapolating them from the app spec */
-  def local(app: AppDefinition): Iterable[Task.LocalVolume] = {
+  override def local(app: AppDefinition): Iterable[Task.LocalVolume] = {
     apply(app).map{ volume => Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume) }
   }
 
