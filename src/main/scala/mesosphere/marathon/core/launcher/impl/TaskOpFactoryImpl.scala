@@ -91,7 +91,7 @@ class TaskOpFactoryImpl @Inject() (
      */
 
     def maybeLaunchOnReservation = if (needToLaunch) {
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, app, request.reserved)
+      val maybeVolumeMatch = PersistentVolumeMatcher.matchResources(offer, app, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
         val matchingReservedResourcesWithoutVolumes =
@@ -130,7 +130,7 @@ class TaskOpFactoryImpl @Inject() (
     offer: Mesos.Offer,
     task: Task.Reserved,
     resourceMatch: Option[ResourceMatcher.ResourceMatch],
-    volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
+    volumeMatch: Option[PersistentVolumeMatcher.VolumeResourceMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(app, (_) => task.taskId, config).build(offer, resourceMatch, volumeMatch) map {

@@ -47,7 +47,7 @@ object ResourceMatcher {
   case class ResourceSelector(
       acceptedRoles: Set[String], reserved: Boolean, requiredLabels: ResourceLabels = ResourceLabels.empty) {
     def apply(resource: Protos.Resource): Boolean = {
-      // resources with disks are matched by the VolumeMatcher or not at all
+      // resources with disks are matched by the VolumeResourceMatcher or not at all
       val noAssociatedDisk = !resource.hasDisk
       def hasRequiredLabels: Boolean = {
         val labelMap: Map[String, String] =
