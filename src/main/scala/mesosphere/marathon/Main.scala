@@ -24,10 +24,15 @@ class MarathonApp extends App {
       "ZooKeeper timeout too large!"
     )
 
-    val client = new ZooKeeperClient(
-      Amount.of(conf.zooKeeperSessionTimeout().toInt, Time.MILLISECONDS),
-      conf.zooKeeperHostAddresses.asJavaCollection
-    )
+    val sessionTimeout = Amount.of(conf.zooKeeperSessionTimeout().toInt, Time.MILLISECONDS)
+    val zooKeeperServers = conf.zooKeeperHostAddresses.asJavaCollection
+    val client = (conf.zkUsername, conf.zkPassword) match {
+      case (Some(user), Some(pass)) =>
+        new ZooKeeperClient(sessionTimeout, ZooKeeperClient.digestCredentials(user, pass), zooKeeperServers)
+
+      case _ =>
+        new ZooKeeperClient(sessionTimeout, zooKeeperServers)
+    }
 
     // Marathon can't do anything useful without a ZK connection
     // so we wait to proceed until one is available

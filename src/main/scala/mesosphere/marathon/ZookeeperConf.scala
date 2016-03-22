@@ -2,6 +2,7 @@ package mesosphere.marathon
 
 import java.net.InetSocketAddress
 
+import org.apache.zookeeper.ZooDefs
 import org.rogach.scallop.ScallopConf
 
 import scala.concurrent.duration._
@@ -10,10 +11,12 @@ trait ZookeeperConf extends ScallopConf {
 
   //scalastyle:off magic.number
 
-  private val userAndPass = """[^/@]+"""
+  private val user = """[^/:]+"""
+  private val pass = """[^@]+"""
   private val hostAndPort = """[A-z0-9-.]+(?::\d+)?"""
   private val zkNode = """[^/]+"""
-  private val zkURLPattern = s"""^zk://(?:$userAndPass@)?($hostAndPort(?:,$hostAndPort)*)(/$zkNode(?:/$zkNode)*)$$""".r
+  private val zkURLPattern =
+    s"""^zk://(?:($user):($pass)@)?($hostAndPort(?:,$hostAndPort)*)(/$zkNode(?:/$zkNode)*)$$""".r
 
   lazy val zooKeeperTimeout = opt[Long]("zk_timeout",
     descr = "The timeout for ZooKeeper in milliseconds.",
@@ -64,8 +67,16 @@ trait ZookeeperConf extends ScallopConf {
 
   def zkURL: String = zooKeeperUrl.get.get
 
-  lazy val zkHosts = zkURL match { case zkURLPattern(server, _) => server }
-  lazy val zkPath = zkURL match { case zkURLPattern(_, path) => path }
+  lazy val zkHosts = zkURL match { case zkURLPattern(_, _, server, _) => server }
+  lazy val zkPath = zkURL match { case zkURLPattern(_, _, _, path) => path }
+  lazy val zkUsername = zkURL match { case zkURLPattern(u, _, _, _) => Option(u) }
+  lazy val zkPassword = zkURL match { case zkURLPattern(_, p, _, _) => Option(p) }
+
+  lazy val zkDefaultCreationACL = (zkUsername, zkPassword) match {
+    case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
+    case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
+  }
+
   lazy val zkTimeoutDuration = Duration(zooKeeperTimeout(), MILLISECONDS)
   lazy val zkSessionTimeoutDuration = Duration(zooKeeperSessionTimeout(), MILLISECONDS)
 }
