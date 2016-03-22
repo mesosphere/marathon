@@ -42,6 +42,9 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and Marathon scheduler failover.  See the
     description of `--failover_timeout`.
+* <span class="label label-default">v0.16.0</span> `--enable_features` (Optional. Default: None):
+    Enable the selected features. Currently only "vips" can be used to enable networking VIP integration in the UI.
+    Example: `--enable_features vips`
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The

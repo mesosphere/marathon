@@ -42,7 +42,9 @@ class InfoResource @Inject() (
     "reconciliation_interval" -> config.reconciliationInterval.get,
     "mesos_user" -> config.mesosUser.get,
     "leader_proxy_connection_timeout_ms" -> config.leaderProxyConnectionTimeout.get,
-    "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.get)
+    "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.get,
+    "features" -> config.features.get
+  )
 
   // ZooKeeper congiurations
   private[this] lazy val zookeeperConfigValues = Json.obj(

@@ -30,6 +30,36 @@ trait MarathonConf
     required = false,
     noshort = true)
 
+  lazy val AllowedFeatures = Map("vips" -> "Enable networking VIPs in the UI")
+
+  lazy val features = opt[String]("enable_features",
+    descr = s"A comma-separated list of features. Available features are: $AllowedFeaturesString",
+    required = false,
+    default = Some(""),
+    noshort = true,
+    validate = validateFeatures
+  ).map(parseFeatures)
+
+  private[this] lazy val AllowedFeaturesString =
+    AllowedFeatures.map { case (name, description) => s"$name - $description" }.mkString(", ")
+
+  private[this] def parseFeatures(str: String): Set[String] =
+    str.split(',').map(_.trim).filter(_.nonEmpty).toSet
+
+  private[this] def validateFeatures(str: String): Boolean = {
+    val parsed = parseFeatures(str)
+
+    // throw exceptions for better error messages
+    val unknownFeatures = parsed.filter(!AllowedFeatures.contains(_))
+    lazy val unknownFeaturesString = unknownFeatures.mkString(", ")
+    require(
+      unknownFeatures.isEmpty,
+      s"Unknown features specified: $unknownFeaturesString. Available features are: $AllowedFeaturesString"
+    )
+
+    true
+  }
+
   lazy val mesosFailoverTimeout = opt[Long]("failover_timeout",
     descr = "(Default: 1 week) The failover_timeout for mesos in seconds.",
     default = Some(604800L))
