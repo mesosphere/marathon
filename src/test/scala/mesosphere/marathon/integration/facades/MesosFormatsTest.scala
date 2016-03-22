@@ -16,7 +16,6 @@ class MesosFormatsTest extends FunSuite with Matchers with GivenWhenThen {
 
     Then("we can extract some base info")
     status.version should equal("0.28.0")
-    status.gitTag should equal("0.28.0-rc1")
 
     And("we have info about one agent")
     status.agents should have size (1)
