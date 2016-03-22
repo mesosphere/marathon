@@ -25,6 +25,9 @@ private[leadership] case class CuratorCandidate(
 
   private val client = CuratorFrameworkFactory.newClient(zkConnectString,
     new ExponentialBackoffRetry(MinZookeeperBackoffTime, MaxZookeeperBackoffTime))
+  client.start()
+  client.getZookeeperClient.blockUntilConnectedOrTimedOut()
+
   private var latch: Option[LeaderLatch] = None
 
   def newCandidate(zkConnectString: String, path: String, id: String): CuratorCandidate = {
