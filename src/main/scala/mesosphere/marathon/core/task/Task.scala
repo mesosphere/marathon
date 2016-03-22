@@ -147,6 +147,9 @@ object Task {
       case TaskStateOp.ReservationTimeout =>
         TaskStateChange.Expunge
 
+      case TaskStateOp.MesosUpdate(MarathonTaskStatus.Lost(_), _) =>
+        TaskStateChange.Expunge
+
       // failure case: MesosUpdate
       case _: TaskStateOp.MesosUpdate =>
         TaskStateChange.Failure("Unable to handle MesosUpdate op on Reserved task")
