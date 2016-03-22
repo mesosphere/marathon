@@ -29,7 +29,8 @@ private class DeploymentActor(
     taskQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
-    eventBus: EventStream) extends Actor with ActorLogging {
+    eventBus: EventStream,
+    config: UpgradeConfig) extends Actor with ActorLogging {
 
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentActor._
@@ -150,13 +151,13 @@ private class DeploymentActor(
 
   def killTasks(appId: PathId, tasks: Seq[Task]): Future[Unit] = {
     val promise = Promise[Unit]()
-    context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, tasks.map(_.taskId), promise))
+    context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, tasks.map(_.taskId), config, promise))
     promise.future
   }
 
   def stopApp(app: AppDefinition): Future[Unit] = {
     val promise = Promise[Unit]()
-    context.actorOf(Props(classOf[AppStopActor], driver, taskTracker, eventBus, app, promise))
+    context.actorOf(AppStopActor.props(driver, taskTracker, eventBus, app, config, promise))
     promise.future.andThen {
       case Success(_) => scheduler.stopApp(driver, app)
     }
@@ -205,7 +206,8 @@ object DeploymentActor {
     taskQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
-    eventBus: EventStream): Props = {
+    eventBus: EventStream,
+    config: UpgradeConfig): Props = {
     // scalastyle:on parameter.number
 
     Props(new DeploymentActor(
@@ -218,7 +220,8 @@ object DeploymentActor {
       taskQueue,
       storage,
       healthCheckManager,
-      eventBus
+      eventBus,
+      config
     ))
   }
 }

@@ -25,7 +25,8 @@ class DeploymentManager(
     scheduler: SchedulerActions,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
-    eventBus: EventStream) extends Actor with ActorLogging {
+    eventBus: EventStream,
+    config: UpgradeConfig) extends Actor with ActorLogging {
   import context.dispatcher
   import mesosphere.marathon.upgrade.DeploymentManager._
 
@@ -95,7 +96,8 @@ class DeploymentManager(
           taskQueue,
           storage,
           healthCheckManager,
-          eventBus
+          eventBus,
+          config
         ),
         plan.id
       )
@@ -132,4 +134,18 @@ object DeploymentManager {
   final case class DeploymentInfo(
     ref: ActorRef,
     plan: DeploymentPlan)
+
+  def props(
+    appRepository: AppRepository,
+    taskTracker: TaskTracker,
+    taskQueue: LaunchQueue,
+    scheduler: SchedulerActions,
+    storage: StorageProvider,
+    healthCheckManager: HealthCheckManager,
+    eventBus: EventStream,
+    config: UpgradeConfig): Props = {
+    Props(new DeploymentManager(appRepository, taskTracker, taskQueue,
+      scheduler, storage, healthCheckManager, eventBus, config))
+  }
+
 }

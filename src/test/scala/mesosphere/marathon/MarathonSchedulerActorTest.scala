@@ -18,13 +18,12 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, DeploymentStep, StopApplication }
+import mesosphere.marathon.upgrade._
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
 import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
-import org.mockito.Matchers.any
 import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
@@ -139,7 +138,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
-    when(taskTracker.appTasksSync(app.id)).thenReturn(Iterable(taskA))
+    when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA))
     when(taskTracker.marathonTaskSync(taskA.taskId))
       .thenReturn(Some(taskA.marathonTask))
       .thenReturn(None)
@@ -194,7 +193,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
-    when(taskTracker.appTasksSync(app.id)).thenReturn(Iterable[Task](taskA))
+    when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable[Task](taskA))
     when(taskTracker.marathonTaskSync(taskA.taskId))
       .thenReturn(Some(taskA.marathonTask))
       .thenReturn(None)
@@ -374,7 +373,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(deploymentRepo.expunge(any)).thenReturn(Future.successful(Seq(true)))
     when(deploymentRepo.all()).thenReturn(Future.successful(Seq(plan)))
     when(deploymentRepo.store(plan)).thenReturn(Future.successful(plan))
-    when(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
+    when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
 
     val schedulerActor = system.actorOf(
       MarathonSchedulerActor.props(
@@ -388,7 +387,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         queue,
         holder,
         leaderInfo,
-        system.eventStream
+        system.eventStream,
+        conf
       ))
 
     try {
@@ -458,6 +458,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         holder,
         leaderInfo,
         system.eventStream,
+        conf,
         cancellationTimeout = 0.seconds
       )
     )
@@ -540,6 +541,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   var schedulerActions: ActorRef => SchedulerActions = _
   var deploymentManagerProps: SchedulerActions => Props = _
   var historyActorProps: Props = _
+  var conf: UpgradeConfig = _
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -557,6 +559,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     storage = mock[StorageProvider]
     taskFailureEventRepository = mock[TaskFailureRepository]
     leaderInfo = mock[LeaderInfo]
+    conf = mock[UpgradeConfig]
+
     deploymentManagerProps = schedulerActions => Props(new DeploymentManager(
       repo,
       taskTracker,
@@ -564,7 +568,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       schedulerActions,
       storage,
       hcManager,
-      system.eventStream
+      system.eventStream,
+      conf
     ))
     historyActorProps = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
     schedulerActions = ref => new SchedulerActions(
@@ -582,6 +587,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(groupRepo.rootGroup()).thenReturn(Future.successful(None))
     when(queue.get(any[PathId])).thenReturn(None)
     when(taskTracker.countLaunchedAppTasksSync(any[PathId])).thenReturn(0)
+    when(conf.killBatchCycle).thenReturn(1.seconds)
+    when(conf.killBatchSize).thenReturn(100)
   }
 
   def createActor() = {
@@ -597,7 +604,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         queue,
         holder,
         leaderInfo,
-        system.eventStream
+        system.eventStream,
+        conf
       )
     )
   }

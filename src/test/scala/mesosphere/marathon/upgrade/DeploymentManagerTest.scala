@@ -68,8 +68,7 @@ class DeploymentManagerTest
 
   test("deploy") {
     val manager = TestActorRef[DeploymentManager](
-      Props(classOf[DeploymentManager],
-        appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus)
+      DeploymentManager.props(appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus, config)
     )
 
     val app = AppDefinition("app".toRootPath)
@@ -89,8 +88,7 @@ class DeploymentManagerTest
 
   test("StopActor") {
     val manager = TestActorRef[DeploymentManager](
-      Props(classOf[DeploymentManager],
-        appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus)
+      DeploymentManager.props(appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus, config)
     )
     val probe = TestProbe()
 
@@ -111,8 +109,7 @@ class DeploymentManagerTest
 
   test("Cancel deployment") {
     val manager = TestActorRef[DeploymentManager](
-      Props(classOf[DeploymentManager],
-        appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus)
+      DeploymentManager.props(appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus, config)
     )
 
     implicit val timeout = Timeout(1.minute)
