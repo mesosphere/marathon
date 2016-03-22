@@ -413,5 +413,50 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       Then("result should be a success")
       result.isSuccess should be(true)
     }
+
+    it("Group with app in wrong group is not valid") {
+      Given("Group with nested app of wrong path")
+      val invalid = Group(PathId.empty, groups = Set(
+        Group(PathId("nested"), apps = Set(
+          AppDefinition(PathId("/root"), cmd = Some("test"))
+        ))
+      ))
+
+      When("group is validated")
+      val invalidResult = validate(invalid)
+
+      Then("validation is not successful")
+      invalidResult.isSuccess should be(false)
+    }
+
+    it("Group with group in wrong group is not valid") {
+      Given("Group with nested app of wrong path")
+      val invalid = Group(PathId.empty, groups = Set(
+        Group(PathId("nested"), groups = Set(
+          Group(PathId("/root"))
+        ))
+      ))
+
+      When("group is validated")
+      val invalidResult = validate(invalid)
+
+      Then("validation is not successful")
+      invalidResult.isSuccess should be(false)
+    }
+
+    it("Group with app in correct group is valid") {
+      Given("Group with nested app of wrong path")
+      val valid = Group(PathId.empty, groups = Set(
+        Group(PathId("nested"), apps = Set(
+          AppDefinition(PathId("/nested/foo"), cmd = Some("test"))
+        ))
+      ))
+
+      When("group is validated")
+      val validResult = validate(valid)
+
+      Then("validation is successful")
+      validResult.isSuccess should be(true)
+    }
   }
 }

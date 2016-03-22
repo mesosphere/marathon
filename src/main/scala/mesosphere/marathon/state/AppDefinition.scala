@@ -517,7 +517,6 @@ object AppDefinition {
     */
   def validNestedAppDefinition(base: PathId): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.id is PathId.validPathWithBase(base)
-    app.dependencies is every(PathId.validPathWithBase(base))
   } and validBasicAppDefinition
 
   private val definesCorrectResidencyCombination: Validator[AppDefinition] =

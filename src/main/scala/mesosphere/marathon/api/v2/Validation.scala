@@ -5,6 +5,7 @@ import java.net._
 import com.wix.accord._
 import mesosphere.marathon.{ AllConf, ValidationFailedException }
 import mesosphere.marathon.state.FetchUri
+import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
 import scala.collection.GenTraversableOnce
@@ -208,6 +209,18 @@ object Validation {
     import ViolationBuilder._
     override def apply(value: T): Result = {
       if (test(value)) Success else RuleViolation(value, constraint, None)
+    }
+  }
+
+  /**
+    * For debugging purposes only.
+    * Since the macro removes all logging statements in the validator itself.
+    * Usage: info("message") { yourValidator }
+    */
+  def info[T](message: String)(implicit validator: Validator[T]): Validator[T] = new Validator[T] {
+    override def apply(t: T): Result = {
+      LoggerFactory.getLogger(Validation.getClass).info(s"Validate: $message on $t")
+      validator(t)
     }
   }
 }
