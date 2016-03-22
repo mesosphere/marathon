@@ -5,16 +5,15 @@ import com.wix.accord.combinators.Fail
 import com.wix.accord.dsl._
 import com.wix.accord.Validator
 import com.wix.accord.ViolationBuilder._
-import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.Volume
 import mesosphere.marathon.state.PersistentVolume
 
 /**
-  * Volumes is an interface implemented by storage volume providers
+  * VolumeProvider is an interface implemented by storage volume providers
   */
-sealed trait Volumes[T <: Volume] {
+sealed trait VolumeProvider[T <: Volume] {
   /** name uniquely identifies this volume provider */
   val name: String
   /** validation implements this provider's specific validation rules */
@@ -24,43 +23,31 @@ sealed trait Volumes[T <: Volume] {
   def apply(app: AppDefinition): Iterable[T]
 }
 
-trait LocalVolumes {
-  /** @return a stream of task local volumes, extrapolating them from the app spec */
-  def local(app: AppDefinition): Iterable[Task.LocalVolume]
-}
-
-object Volumes {
+protected object VolumeProvider extends VolumeProviderRegistry {
   // TODO(jdef) this declaration is crazy. there must be a better way
-  private[this] def makeRegistry[_ <: Volume](providers: Volumes[_ <: Volume]*): Map[String, Volumes[_ <: Volume]] = {
-    providers.foldLeft(Map.empty[String, Volumes[_ <: Volume]]) { (m, p) => m + (p.name -> p) }
+  private[this] def make[_ <: Volume](prov: VolumeProvider[_ <: Volume]*): Map[String, VolumeProvider[_ <: Volume]] = {
+    prov.foldLeft(Map.empty[String, VolumeProvider[_ <: Volume]]) { (m, p) => m + (p.name -> p) }
   }
 
-  private[this] val registry = makeRegistry(
+  private[this] val registry = make(
     // list supported providers here
-    AgentVolumes
+    AgentVolumeProvider
   )
 
-  /**
-    * @return the Volumes interface registered for the given name; if name is None then
-    * the default Volumes implementation is returned. None is returned if Some name is given
-    * but no volume provider is registered for that name.
-    */
-  def apply(name: Option[String]): Option[Volumes[_ <: Volume]] =
-    registry.get(name.getOrElse(AgentVolumes.name))
+  override def apply(name: Option[String]): Option[VolumeProvider[_ <: Volume]] =
+    registry.get(name.getOrElse(AgentVolumeProvider.name))
 
-  /** @return a validator that checks the validity of a volume provider name */
-  def knownProvider(): Validator[Option[String]] =
+  override def known(): Validator[Option[String]] =
     new NullSafeValidator[Option[String]](
       test = { !apply(_).isEmpty },
       failure = _ -> s"is not one of (${registry.keys.mkString(",")})"
     )
 
-  /** @return a validator that checks the validity of a volume given the volume provider name */
-  def approved[T <: Volume](name: Option[String]): Validator[T] =
+  override def approved[T <: Volume](name: Option[String]): Validator[T] =
     apply(name).fold(new Fail[T]("is an illegal volume specification").asInstanceOf[Validator[T]])(_.validation)
 }
 
-object AgentVolumes extends Volumes[PersistentVolume] with LocalVolumes {
+protected object AgentVolumeProvider extends VolumeProvider[PersistentVolume] with LocalVolumes {
   import org.apache.mesos.Protos.Volume.Mode
   import mesosphere.marathon.api.v2.Validation._
 
@@ -96,13 +83,11 @@ object AgentVolumes extends Volumes[PersistentVolume] with LocalVolumes {
     app.persistentVolumes.filter(isAgentLocal)
   }
 
-  /** @return a stream of task local volumes, extrapolating them from the app spec */
   override def local(app: AppDefinition): Iterable[Task.LocalVolume] = {
     apply(app).map{ volume => Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume) }
   }
 
-  /** @return the aggregate mesos disk resources required for volumes */
-  def diskSize(app: AppDefinition): Double = {
+  override def diskSize(app: AppDefinition): Double = {
     apply(app).map(_.persistent.size).flatten.sum.toDouble
   }
 }

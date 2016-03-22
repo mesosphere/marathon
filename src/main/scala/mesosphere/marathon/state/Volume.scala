@@ -4,7 +4,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.Protos
-import mesosphere.marathon.core.volume.Volumes
+import mesosphere.marathon.core.volume.VolumesModule
 import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.{ Protos => Mesos }
 import scala.collection.JavaConverters._
@@ -174,7 +174,7 @@ object PersistentVolume {
   implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
     vol.containerPath is notEmpty
     vol.persistent is valid
-    vol.persistent.providerName is Volumes.knownProvider
-    vol is Volumes.approved(vol.persistent.providerName)
+    vol.persistent.providerName is VolumesModule.providerRegistry.known
+    vol is VolumesModule.providerRegistry.approved(vol.persistent.providerName)
   }
 }

@@ -5,7 +5,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.volume.AgentVolumes
+import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
@@ -153,7 +153,7 @@ class TaskOpFactoryImpl @Inject() (
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val localVolumes: Iterable[Task.LocalVolume] = AgentVolumes.local(app)
+    val localVolumes: Iterable[Task.LocalVolume] = VolumesModule.localVolumes.local(app)
     val persistentVolumeIds = localVolumes.map(_.id)
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
