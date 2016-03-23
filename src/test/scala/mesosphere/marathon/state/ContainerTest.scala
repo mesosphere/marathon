@@ -5,7 +5,6 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.{
   PortMappingSerializer,
-  VolumeSerializer,
   DockerSerializer,
   ContainerSerializer
 }
@@ -152,7 +151,7 @@ class ContainerTest extends MarathonSpec with Matchers {
     val proto = ContainerSerializer.toProto(f.container)
     assert(mesos.ContainerInfo.Type.DOCKER == proto.getType)
     assert("group/image" == proto.getDocker.getImage)
-    assert(f.container.volumes == proto.getVolumesList.asScala.map(Volume(_)))
+    assert(f.container.volumes == proto.getVolumesList.asScala.map(Volume.fromProto(_)))
     assert(proto.getDocker.hasForcePullImage)
     assert(f.container.docker.get.forcePullImage == proto.getDocker.getForcePullImage)
 
@@ -246,7 +245,7 @@ class ContainerTest extends MarathonSpec with Matchers {
 
     val containerInfo = Protos.ExtendedContainerInfo.newBuilder
       .setType(mesos.ContainerInfo.Type.DOCKER)
-      .addAllVolumes(f.volumes.map(VolumeSerializer.toProto).asJava)
+      .addAllVolumes(f.volumes.map(_.toProto).asJava)
       .setDocker(DockerSerializer.toProto(f.container.docker.get))
       .build
 

@@ -12,6 +12,7 @@ import scala.collection.JavaConverters._
 sealed trait Volume {
   def containerPath: String
   def mode: Mesos.Volume.Mode
+  def toProto: Protos.Volume
 }
 
 object Volume {
@@ -35,32 +36,19 @@ object Volume {
         )
     }
 
-  def apply(proto: Protos.Volume): Volume = {
-    val persistent: Option[PersistentVolumeInfo] =
-      if (proto.hasPersistent) Some(PersistentVolumeInfo(
-        if (proto.getPersistent.hasSize) Some(proto.getPersistent.getSize) else None,
-        if (proto.getPersistent.hasName) Some(proto.getPersistent.getName) else None,
-        if (proto.getPersistent.hasProviderName) Some(proto.getPersistent.getProviderName) else None,
-        if (proto.getPersistent.getOptionsCount() > 0)
-          Some(proto.getPersistent.getOptionsList.asScala.map { p => p.getKey -> p.getValue }.toMap)
-        else None
-      ))
-      else None
-
-    persistent match {
-      case Some(persistentVolumeInfo) =>
-        PersistentVolume(
-          containerPath = proto.getContainerPath,
-          persistent = persistentVolumeInfo,
-          mode = proto.getMode
-        )
-      case None =>
-        DockerVolume(
-          containerPath = proto.getContainerPath,
-          hostPath = proto.getHostPath,
-          mode = proto.getMode
-        )
-    }
+  def fromProto(proto: Protos.Volume): Volume = {
+    if (proto.hasPersistent)
+      PersistentVolume(
+        containerPath = proto.getContainerPath,
+        persistent = PersistentVolumeInfo.fromProto(proto.getPersistent),
+        mode = proto.getMode
+      )
+    else
+      DockerVolume(
+        containerPath = proto.getContainerPath,
+        hostPath = proto.getHostPath,
+        mode = proto.getMode
+      )
   }
 
   def unapply(volume: Volume): Option[(String, Option[String], Mesos.Volume.Mode, Option[PersistentVolumeInfo])] =
@@ -90,7 +78,14 @@ case class DockerVolume(
   containerPath: String,
   hostPath: String,
   mode: Mesos.Volume.Mode)
-    extends Volume
+    extends Volume {
+  override def toProto: Protos.Volume =
+    Protos.Volume.newBuilder()
+      .setContainerPath(containerPath)
+      .setHostPath(hostPath)
+      .setMode(mode)
+      .build()
+}
 
 object DockerVolume {
 
@@ -132,10 +127,23 @@ object DockerVolume {
   * @param options contains storage provider-specific configuration configuration
   */
 case class PersistentVolumeInfo(
-  size: Option[Long] = None,
-  name: Option[String] = None,
-  providerName: Option[String] = None,
-  options: Option[Map[String, String]] = None) // = Map.empty[String, String])
+    size: Option[Long] = None,
+    name: Option[String] = None,
+    providerName: Option[String] = None,
+    options: Option[Map[String, String]] = None) // = Map.empty[String, String])
+    {
+  def toProto: Protos.Volume.PersistentVolumeInfo = {
+    val builder = Protos.Volume.PersistentVolumeInfo.newBuilder()
+    size.foreach(builder.setSize)
+    name.foreach(builder.setName)
+    providerName.foreach(builder.setProviderName)
+    options.foreach(_
+      .map{ case (key, value) => Mesos.Label.newBuilder().setKey(key).setValue(value).build }
+      .foreach(builder.addOptions)
+    )
+    builder.build
+  }
+}
 
 object PersistentVolumeInfo {
   private val OptionNamespaceSeparator = "/"
@@ -155,13 +163,29 @@ object PersistentVolumeInfo {
     info.providerName.each should matchRegex(LabelRegex)
     info.options.each is valid(validOptions)
   }
+
+  def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
+    PersistentVolumeInfo(
+      if (pvi.hasSize) Some(pvi.getSize) else None,
+      if (pvi.hasName) Some(pvi.getName) else None,
+      if (pvi.hasProviderName) Some(pvi.getProviderName) else None,
+      if (pvi.getOptionsCount() > 0)
+        Some(pvi.getOptionsList.asScala.map { p => p.getKey -> p.getValue }.toMap) else None
+    )
 }
 
 case class PersistentVolume(
   containerPath: String,
   persistent: PersistentVolumeInfo,
   mode: Mesos.Volume.Mode)
-    extends Volume
+    extends Volume {
+  override def toProto: Protos.Volume =
+    Protos.Volume.newBuilder()
+      .setContainerPath(containerPath)
+      .setPersistent(persistent.toProto)
+      .setMode(mode)
+      .build()
+}
 
 object PersistentVolume {
   implicit val validPersistentVolume = validator[PersistentVolume] { vol =>

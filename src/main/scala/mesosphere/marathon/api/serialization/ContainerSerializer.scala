@@ -14,7 +14,7 @@ object ContainerSerializer {
   def toProto(container: Container): Protos.ExtendedContainerInfo = {
     val builder = Protos.ExtendedContainerInfo.newBuilder
       .setType(container.`type`)
-      .addAllVolumes(container.volumes.map(VolumeSerializer.toProto).asJava)
+      .addAllVolumes(container.volumes.map(_.toProto).asJava)
     container.docker.foreach { d => builder.setDocker(DockerSerializer.toProto(d)) }
     builder.build
   }
@@ -23,7 +23,7 @@ object ContainerSerializer {
     val maybeDocker = if (proto.hasDocker) Some(DockerSerializer.fromProto(proto.getDocker)) else None
     Container(
       `type` = proto.getType,
-      volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
+      volumes = proto.getVolumesList.asScala.map(Volume.fromProto(_)).to[Seq],
       docker = maybeDocker
     )
   }
@@ -39,39 +39,6 @@ object ContainerSerializer {
     }
 
     container.docker.foreach { d => builder.setDocker(DockerSerializer.toMesos(d)) }
-    builder.build
-  }
-}
-
-object VolumeSerializer {
-
-  def toProto(volume: Volume): Protos.Volume = volume match {
-    case p: PersistentVolume =>
-      Protos.Volume.newBuilder()
-        .setContainerPath(p.containerPath)
-        .setPersistent(PersistentVolumeInfoSerializer.toProto(p.persistent))
-        .setMode(p.mode)
-        .build()
-
-    case d: DockerVolume =>
-      Protos.Volume.newBuilder()
-        .setContainerPath(d.containerPath)
-        .setHostPath(d.hostPath)
-        .setMode(d.mode)
-        .build()
-  }
-}
-
-object PersistentVolumeInfoSerializer {
-  def toProto(info: PersistentVolumeInfo): Protos.Volume.PersistentVolumeInfo = {
-    val builder = Protos.Volume.PersistentVolumeInfo.newBuilder()
-    info.size.foreach(builder.setSize)
-    info.name.foreach(builder.setName)
-    info.providerName.foreach(builder.setProviderName)
-    info.options.foreach(_
-      .map{ case (key, value) => mesos.Protos.Label.newBuilder().setKey(key).setValue(value).build }
-      .foreach(builder.addOptions)
-    )
     builder.build
   }
 }
