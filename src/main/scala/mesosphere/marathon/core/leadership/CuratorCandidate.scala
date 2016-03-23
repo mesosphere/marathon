@@ -3,12 +3,12 @@ package mesosphere.marathon.core.leadership
 import java.lang.Boolean
 import java.net.InetAddress
 
-import com.google.common.base.{ Optional, Supplier }
+import com.google.common.base.{Optional, Supplier}
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Candidate.Leader
-import com.twitter.common.zookeeper.{ Candidate, Group }
+import com.twitter.common.zookeeper.{Candidate, Group}
 import org.apache.curator.framework.CuratorFrameworkFactory
-import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
+import org.apache.curator.framework.recipes.leader.{LeaderLatch, LeaderLatchListener}
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.slf4j.LoggerFactory
 
