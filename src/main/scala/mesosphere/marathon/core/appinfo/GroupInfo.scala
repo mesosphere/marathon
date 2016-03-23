@@ -20,5 +20,6 @@ object GroupInfo {
     case object Groups extends Embed
     case object Apps extends Embed
   }
+  lazy val empty: GroupInfo = GroupInfo(Group.empty, None, None)
 }
 
