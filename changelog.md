@@ -21,6 +21,16 @@ The Authentication and Authorization plugin interface was redesigned in order to
 
 #### Support for Persistent Storage
 
+You can now launch tasks that use persistent volumes by specifying volumes either via the UI or the REST API.
+Marathon will reserve all required resources on a matching agent, and subsequently launch a task on that same agent if
+needed. Data within the volume will be retained even after relaunching the associated task. This release provides basic
+functionality which we plan to extend in the future, so use it at your own risk.
+
+Check it out and give us feedback!
+
+See the [feature documentation](https://mesosphere.github.io/marathon/docs/persistent-volumes.html) for details and
+configuration examples.
+
 #### Support for ports metadata
 
 The v2 REST API was extended to support additional ports metadata (protocol, name, and labels) through the
