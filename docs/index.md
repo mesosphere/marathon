@@ -1,29 +1,39 @@
 ---
-title: A cluster-wide init and control system for services in cgroups or Docker containers
+title: A container orchestration platform for Mesos and DCOS
 ---
 
 <div class="jumbotron text-center">
   <h1>Marathon</h1>
   <p class="lead">
-    A cluster-wide init and control system for services in cgroups or Docker containers
+    A container orchestration platform for Mesos and DCOS
   </p>
   <p>
-    <a href="http://downloads.mesosphere.com/marathon/v0.15.2/marathon-0.15.2.tgz"
+    <a href="http://downloads.mesosphere.com/marathon/v1.0.0-RC1/marathon-1.0.0-RC1.tgz"
         class="btn btn-lg btn-primary">
-      Download Marathon v0.15.2
+      Download Marathon v1.0.0-RC1
     </a>
   </p>
   <a class="btn btn-link"
-      href="http://downloads.mesosphere.com/marathon/v0.15.2/marathon-0.15.2.tgz.sha256">
-    v0.15.2 SHA-256 Checksum
+      href="http://downloads.mesosphere.com/marathon/v1.0.0-RC1/marathon-1.0.0-RC1.tgz.sha256">
+    v1.0.0-RC1 SHA-256 Checksum
   </a> &middot;
   <a class="btn btn-link"
-      href="https://github.com/mesosphere/marathon/releases/tag/v0.15.2">
-    v0.15.2 Release Notes
+      href="https://github.com/mesosphere/marathon/releases/tag/v1.0.0-RC1">
+    v1.0.0-RC1 Release Notes
   </a>
 </div>
 
 ## Overview
+
+Marathon is a production-grade container orchestration platform for <a href="https://mesos.apache.org/">Apache Mesos</a> and <a href="https://mesosphere.com/product/">Mesosphere DCOS</a>.
+
+Highlights of Marathon include:
+
+- High Availability. Marathon runs as an active/passive cluster with leader election for 100% uptime.
+- Multiple container runtimes. Marathon has first-class support for both Mesos containers (using cgroups) and Docker.
+
+
+## Marathon example: A small datacenter
 
 The graphic shown below depicts how Marathon runs on top of
 <a href="https://mesos.apache.org/">Apache Mesos</a> together with
@@ -69,7 +79,7 @@ constraints we previously set.
 Imagine that one of the datacenter workers trips over a power cord and a server
 gets unplugged. No problem for Marathon, it moves the affected search service
 and Rails tasks to a node that has spare capacity. The engineer may be
-temporarily embarrased, but Marathon saves him from having to explain a
+temporarily embarrassed, but Marathon saves him from having to explain a
 difficult situation!
 
 <p class="text-center">
