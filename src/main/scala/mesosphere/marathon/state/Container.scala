@@ -40,22 +40,12 @@ object Container {
       *                      interpreted by external applications such as firewalls.
       */
     case class PortMapping(
-        containerPort: Int = 0,
-        hostPort: Int = 0,
-        servicePort: Int = 0,
-        protocol: String = "tcp",
-        name: Option[String] = None,
-        labels: Map[String, String] = Map.empty[String, String]) {
-
-      require(
-        protocol.split(',').forall(p => p == "tcp" || p == "udp"),
-        "protocol can only be 'tcp', 'udp' or 'udp,tcp'"
-      )
-      require(
-        protocol.split(',').toSet.size == protocol.split(',').toList.length,
-        "protocol cannot contain duplicates"
-      )
-    }
+      containerPort: Int = 0,
+      hostPort: Int = 0,
+      servicePort: Int = 0,
+      protocol: String = "tcp",
+      name: Option[String] = None,
+      labels: Map[String, String] = Map.empty[String, String])
 
     object PortMapping {
       val TCP = "tcp"

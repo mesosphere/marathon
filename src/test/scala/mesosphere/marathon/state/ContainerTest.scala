@@ -326,6 +326,23 @@ class ContainerTest extends MarathonSpec with Matchers {
     assert(readResult4 == f.container2)
   }
 
+  test("Reading JSON with invalid-protocol portMappings") {
+    val json =
+      """
+      {
+        "type": "DOCKER",
+        "docker": {
+          "image": "group/image",
+          "network": "BRIDGE",
+          "portMappings": [
+            { "containerPort": 8080, "hostPort": 32001, "servicePort": 9000, "protocol": "http" }
+          ]
+        }
+      }
+      """
+    assert(validate(fromJson(json)).isFailure)
+  }
+
   test("Reading JSON with multi-protocol portMappings") {
     val json5 =
       """
