@@ -1,6 +1,8 @@
 ---
-title: Stateful Applications Using Local Persistent Volumes
+title: Stateful Applications Using Persistent Volumes
 ---
+
+# Stateful Applications Using Persistent Volumes
 
 Marathon applications lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can create a stateful application by specifying a local persistent volume.
 
