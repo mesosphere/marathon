@@ -119,7 +119,7 @@ class MarathonConfTest extends MarathonSpec with Matchers {
       "--master", "127.0.0.1:5050"
     )
 
-    conf.features() should be(empty)
+    conf.features.get should be(empty)
   }
 
   test("Features should allow vips") {

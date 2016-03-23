@@ -43,8 +43,10 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     during mesos-slave restarts and Marathon scheduler failover.  See the
     description of `--failover_timeout`.
 * <span class="label label-default">v0.16.0</span> `--enable_features` (Optional. Default: None):
-    Enable the selected features. Currently only "vips" can be used to enable networking VIP integration in the UI.
-    Example: `--enable_features vips`
+    Enable the selected features. Options to use:
+    - "vips" can be used to enable the networking VIP integration UI.
+    - "task_killing" can be used to enable the TASK_KILLING state in Mesos (0.28 or later)
+    Example: `--enable_features vips,task_killing`
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
