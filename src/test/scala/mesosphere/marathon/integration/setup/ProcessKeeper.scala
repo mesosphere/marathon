@@ -276,6 +276,10 @@ object ProcessKeeper {
     log.info(s"Cleaning up Processes $processes and Services $services: Done")
   }
 
+  def exitValue(processName: String): Int = {
+    processes(processName).exitValue()
+  }
+
   val shutDownHook: ShutdownHookThread = sys.addShutdownHook {
     shutdown()
   }
