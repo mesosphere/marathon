@@ -1,7 +1,7 @@
 package mesosphere.marathon.api
 
 import mesosphere.marathon._
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.state.{ AppDefinition, Group, GroupManager, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -128,8 +128,15 @@ class TaskKillerTest extends MarathonSpec
     val runningTask = MarathonTestHelper.runningTaskForApp(appId)
     val reservedTask = MarathonTestHelper.residentReservedTask(appId)
     val tasksToKill = Set(runningTask, reservedTask)
+    val launchedTasks = Set(runningTask)
+    val stateOp1 = TaskStateOp.ForceExpunge(runningTask.taskId)
+    val stateOp2 = TaskStateOp.ForceExpunge(reservedTask.taskId)
+
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.appTasks(appId)).thenReturn(Future.successful(tasksToKill))
+    when(f.stateOpProcessor.process(stateOp1)).thenReturn(Future.successful(TaskStateChange.Expunge(runningTask)))
+    when(f.stateOpProcessor.process(stateOp2)).thenReturn(Future.successful(TaskStateChange.Expunge(reservedTask)))
+    when(f.service.killTasks(appId, launchedTasks)).thenReturn(launchedTasks)
 
     val result = f.taskKiller.kill(appId, { tasks =>
       tasks should equal(tasksToKill)
@@ -137,7 +144,7 @@ class TaskKillerTest extends MarathonSpec
     }, wipe = true)
     result.futureValue shouldEqual tasksToKill
     // only task1 is killed
-    verify(f.service, times(1)).killTasks(appId, Set(runningTask))
+    verify(f.service, times(1)).killTasks(appId, launchedTasks)
     // both tasks are expunged from the repo
     verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(runningTask.taskId))
     verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(reservedTask.taskId))
