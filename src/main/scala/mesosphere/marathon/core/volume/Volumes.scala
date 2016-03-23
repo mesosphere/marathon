@@ -15,7 +15,7 @@ import scala.collection.JavaConverters._
 /**
   * VolumeProvider is an interface implemented by storage volume providers
   */
-sealed trait VolumeProvider[T <: Volume] {
+sealed trait VolumeProvider[+T <: Volume] {
   /** name uniquely identifies this volume provider */
   val name: String
   /** validation implements this provider's specific validation rules */
@@ -30,9 +30,9 @@ sealed trait VolumeProvider[T <: Volume] {
   * TODO(jdef) this should probably be renamed RegistryImpl or something
   */
 protected object VolumeProvider extends VolumeProviderRegistry {
-  // TODO(jdef) this declaration is crazy. there must be a better way
-  protected def make[_ <: Volume](prov: VolumeProvider[_ <: Volume]*): Map[String, VolumeProvider[_ <: Volume]] = {
-    prov.foldLeft(Map.empty[String, VolumeProvider[_ <: Volume]]) { (m, p) => m + (p.name -> p) }
+
+  protected def make(prov: VolumeProvider[Volume]*): Map[String, VolumeProvider[Volume]] = {
+    prov.foldLeft(Map.empty[String, VolumeProvider[Volume]]) { (m, p) => m + (p.name -> p) }
   }
 
   protected val registry = make(
@@ -42,7 +42,7 @@ protected object VolumeProvider extends VolumeProviderRegistry {
     DVDIProvider
   )
 
-  protected def providerForName(name: Option[String]): Option[VolumeProvider[_ <: Volume]] =
+  protected def providerForName(name: Option[String]): Option[VolumeProvider[Volume]] =
     registry.get(name.getOrElse(AgentVolumeProvider.name))
 
   override def apply[T <: Volume](v: T): Option[VolumeProvider[T]] =
@@ -51,8 +51,7 @@ protected object VolumeProvider extends VolumeProviderRegistry {
       case pv: PersistentVolume => providerForName(pv.persistent.providerName).map(_.asInstanceOf[VolumeProvider[T]])
     }
 
-  override def apply(name: Option[String]): Option[VolumeProvider[_ <: Volume]] =
-    providerForName(name)
+  override def apply(name: Option[String]): Option[VolumeProvider[Volume]] = providerForName(name)
 
   override def known(): Validator[Option[String]] =
     new NullSafeValidator[Option[String]](
@@ -126,7 +125,8 @@ protected object DVDIProvider
   // special behavior for docker vs. mesos containers
   // - docker containerizer: serialize volumes into mesos proto
   // - docker containerizer: specify "volumeDriver" for the container
-  override def containerInfo(v: Volume, ci: ContainerInfo.Builder): Option[ContainerInfo.Builder] =
+  override protected def containerInfo(cc: ContainerContext, v: Volume): Option[ContainerContext] = {
+    val ci = cc.ci // TODO(jdef) clone?
     if (ci.getType == ContainerInfo.Type.DOCKER && ci.hasDocker)
       Some(v).collect{
         case pv: PersistentVolume if isDVDI(pv) => {
@@ -136,8 +136,9 @@ protected object DVDIProvider
           }
           ci.addVolumes(toMesosVolume(pv))
         }
-      }
+      }.map(ContainerContext(_))
     else None
+  }
 
   protected val dvdiVolumeName = "DVDI_VOLUME_NAME"
   protected val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
@@ -162,7 +163,8 @@ protected object DVDIProvider
 
   // special behavior for docker vs. mesos containers
   // - mesos containerizer: serialize volumes into envvar sets
-  override def commandInfo(v: Volume, ct: ContainerInfo.Type, ci: CommandInfo.Builder): Option[CommandInfo.Builder] =
+  override protected def commandInfo(cc: CommandContext, v: Volume): Option[CommandContext] = {
+    val (ct, ci) = (cc.ct, cc.ci) // TODO(jdef) clone ci?
     if (ct == ContainerInfo.Type.MESOS)
       Some(v).collect{
         case pv: PersistentVolume if isDVDI(pv) => {
@@ -171,8 +173,9 @@ protected object DVDIProvider
           env.addAllVariables(toAdd.asJava)
           ci.setEnvironment(env.build)
         }
-      }
+      }.map(CommandContext(ct, _))
     else None
+  }
 
   def isDVDI(volume: PersistentVolume): Boolean = {
     volume.persistent.providerName.isDefined && volume.persistent.providerName.get == name
@@ -207,8 +210,9 @@ protected object DockerHostVolumeProvider
       .build
 
   /** @return a possibly modified builder if `v` is a DockerVolume */
-  override def containerInfo(v: Volume, ci: ContainerInfo.Builder): Option[ContainerInfo.Builder] = {
-    Some(v).collect{ case dv: DockerVolume => ci.addVolumes(toMesosVolume(dv)) }
+  override protected def containerInfo(cc: ContainerContext, v: Volume): Option[ContainerContext] = {
+    val ci = cc.ci // TODO(jdef) clone?
+    Some(v).collect{ case dv: DockerVolume => ci.addVolumes(toMesosVolume(dv)) }.map(ContainerContext(_))
   }
 
   override def apply(app: AppDefinition): Iterable[DockerVolume] =

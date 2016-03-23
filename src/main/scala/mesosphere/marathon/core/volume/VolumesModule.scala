@@ -14,26 +14,43 @@ trait LocalVolumes {
 }
 
 trait VolumeBuilderSupport {
-  // TODO(jdef) these interfaces are not side-effect free; hard to think of a more
-  // consistent way to impact the serialization process since we need to tweak different
-  // types of things (volumes, envvar, container properties, ...)
-  def containerInfo(v: Volume, ci: ContainerInfo.Builder): Option[ContainerInfo.Builder] = None
-  def commandInfo(v: Volume, ct: ContainerInfo.Type, ci: CommandInfo.Builder): Option[CommandInfo.Builder] = None
+  protected def containerInfo(ci: ContainerContext, v: Volume): Option[ContainerContext] = None
+  protected def commandInfo(cm: CommandContext, v: Volume): Option[CommandContext] = None
+
+  final def apply[C <: Context](c: C, v: Volume): Option[C] = {
+    c match {
+      case ctx: ContainerContext => containerInfo(ctx, v).asInstanceOf[Option[C]]
+      case ctx: CommandContext   => commandInfo(ctx, v).asInstanceOf[Option[C]]
+    }
+  }
+
+  final def apply[C <: Context](volumes: Iterable[Volume])(initialContext: () => C): Option[C] = {
+    if (volumes.isEmpty) None
+    else {
+      var cc = initialContext()
+      volumes.foreach { vol => cc = apply(cc, vol).getOrElse(cc) }
+      Some(cc)
+    }
+  }
 }
+
+sealed trait Context
+final case class ContainerContext(ci: ContainerInfo.Builder) extends Context
+final case class CommandContext(ct: ContainerInfo.Type, ci: CommandInfo.Builder) extends Context
 
 /**
   * VolumeBuilderSupport routes builder calls to the appropriate volume provider.
   */
 object VolumeBuilderSupport extends VolumeBuilderSupport {
-  override def containerInfo(v: Volume, ci: ContainerInfo.Builder): Option[ContainerInfo.Builder] =
+  override protected def containerInfo(ci: ContainerContext, v: Volume): Option[ContainerContext] =
     VolumesModule.providerRegistry(v).filter(_.isInstanceOf[VolumeBuilderSupport]).
       map(_.asInstanceOf[VolumeBuilderSupport]).
-      flatMap(_.containerInfo(v, ci))
+      flatMap(_.containerInfo(ci, v))
 
-  override def commandInfo(v: Volume, ct: ContainerInfo.Type, ci: CommandInfo.Builder): Option[CommandInfo.Builder] =
+  override protected def commandInfo(cm: CommandContext, v: Volume): Option[CommandContext] =
     VolumesModule.providerRegistry(v).filter(_.isInstanceOf[VolumeBuilderSupport]).
       map(_.asInstanceOf[VolumeBuilderSupport]).
-      flatMap(_.commandInfo(v, ct, ci))
+      flatMap(_.commandInfo(cm, v))
 }
 
 trait VolumeProviderRegistry {
@@ -45,7 +62,7 @@ trait VolumeProviderRegistry {
     * the default VolumeProvider implementation is returned. None is returned if Some name is given
     * but no volume provider is registered for that name.
     */
-  def apply(name: Option[String]): Option[VolumeProvider[_ <: Volume]];
+  def apply(name: Option[String]): Option[VolumeProvider[Volume]];
 
   /** @return a validator that checks the validity of a volume provider name */
   def known(): Validator[Option[String]];

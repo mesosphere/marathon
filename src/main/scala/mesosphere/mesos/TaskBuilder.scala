@@ -5,6 +5,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ PortDefinitionSerializer, ContainerSerializer }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.volume.{ VolumesModule, ContainerContext }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ PersistentVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
 import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
@@ -196,7 +197,7 @@ class TaskBuilder(app: AppDefinition,
   protected def computeContainerInfo(ports: Seq[Int]): Option[ContainerInfo] = {
     if (app.container.isEmpty && app.ipAddress.isEmpty) None
     else {
-      val builder = ContainerInfo.newBuilder
+      var builder = ContainerInfo.newBuilder
 
       // Fill in Docker container details if necessary
       app.container.foreach { c =>
@@ -254,6 +255,12 @@ class TaskBuilder(app: AppDefinition,
         builder.setMesos(ContainerInfo.MesosInfo.newBuilder()
           .build())
       }
+
+      // apply changes from volume providers (must do this after we're sure there's a container type)
+      app.container.foreach{ container =>
+        builder = VolumesModule.builders(container.volumes){ () => ContainerContext(builder) }.fold(builder)(_.ci)
+      }
+
       Some(builder.build)
     }
   }

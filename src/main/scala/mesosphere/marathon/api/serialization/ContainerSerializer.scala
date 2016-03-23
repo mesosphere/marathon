@@ -1,7 +1,6 @@
 package mesosphere.marathon.api.serialization
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
@@ -29,15 +28,7 @@ object ContainerSerializer {
   }
 
   def toMesos(container: Container): mesos.Protos.ContainerInfo = {
-    // we only serialize non-agent-local volumes into a Mesos Protobuf. the details are
-    // left up to individual volume provider implementations.
-    var builder = mesos.Protos.ContainerInfo.newBuilder
-      .setType(container.`type`)
-
-    container.volumes.foreach { v =>
-      builder = VolumesModule.builders.containerInfo(v, builder).getOrElse(builder)
-    }
-
+    val builder = mesos.Protos.ContainerInfo.newBuilder.setType(container.`type`)
     container.docker.foreach { d => builder.setDocker(DockerSerializer.toMesos(d)) }
     builder.build
   }
