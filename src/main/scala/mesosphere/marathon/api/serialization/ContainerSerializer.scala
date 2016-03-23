@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.serialization
 
 import mesosphere.marathon.Protos
+import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
@@ -28,12 +29,15 @@ object ContainerSerializer {
   }
 
   def toMesos(container: Container): mesos.Protos.ContainerInfo = {
-    // we can only serialize DockerVolumes into a Mesos Protobuf.
-    // PersistentVolumes and ExternalVolumes are handled differently
-    val serializedVolumes = container.volumes.collect { case dv: DockerVolume => VolumeSerializer.toMesos(dv) }
-    val builder = mesos.Protos.ContainerInfo.newBuilder
+    // we only serialize non-agent-local volumes into a Mesos Protobuf. the details are
+    // left up to individual volume provider implementations.
+    var builder = mesos.Protos.ContainerInfo.newBuilder
       .setType(container.`type`)
-      .addAllVolumes(serializedVolumes.asJava)
+
+    container.volumes.foreach { v =>
+      builder = VolumesModule.builders.containerInfo(v, builder).getOrElse(builder)
+    }
+
     container.docker.foreach { d => builder.setDocker(DockerSerializer.toMesos(d)) }
     builder.build
   }
@@ -56,14 +60,6 @@ object VolumeSerializer {
         .setMode(d.mode)
         .build()
   }
-
-  /** Only DockerVolumes can be serialized into a Mesos Protobuf */
-  def toMesos(volume: DockerVolume): mesos.Protos.Volume =
-    mesos.Protos.Volume.newBuilder
-      .setContainerPath(volume.containerPath)
-      .setHostPath(volume.hostPath)
-      .setMode(volume.mode)
-      .build
 }
 
 object PersistentVolumeInfoSerializer {

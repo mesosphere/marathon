@@ -63,13 +63,6 @@ object Volume {
     }
   }
 
-  def apply(proto: Mesos.Volume): Volume =
-    DockerVolume(
-      containerPath = proto.getContainerPath,
-      hostPath = proto.getHostPath,
-      mode = proto.getMode
-    )
-
   def unapply(volume: Volume): Option[(String, Option[String], Mesos.Volume.Mode, Option[PersistentVolumeInfo])] =
     volume match {
       case persistentVolume: PersistentVolume =>
@@ -88,8 +81,10 @@ object Volume {
 
 /**
   * A volume mapping either from host to container or vice versa.
-  * Both paths can either refer to a directory or a file.  Paths must be
+  * Both paths can either refer to a directory or a file. Paths must be
   * absolute.
+  *
+  * TODO(jdef) rename this as DockerHostVolume for clarity
   */
 case class DockerVolume(
   containerPath: String,
@@ -121,17 +116,15 @@ object DockerVolume {
   *
   * `providerName` is optional; if specified it indicates which storage provider will implement volume
   * lifecycle management operations for the persistent volume. if unspecified, “agent” is assumed.
-  * the provider names “dcos”, “agent”, and are currently reserved. The contents of providerName values
-  * are restricted to the alpha-numeric character range [a-z0-9].
+  * the provider names “dcos”, “agent”, and "docker" are currently reserved. The contents of providerName
+  * values are restricted to the alpha-numeric character range [a-z0-9].
   *
   * `options` contains provider-specific volume options. some items may be required in order for a volume
-  * driver to function properly. Consider a storage provider named “dvdi”. all options specific to that
+  * driver to function properly. Given a storage provider named “dvdi” all options specific to that
   * provider MUST be namespaced with a “dvdi/” prefix.
   *
-  * DCOS-specific options will be prefixed with “dcos/”. an example of a DCOS option might be
+  * future DCOS-specific options will be prefixed with “dcos/”. an example of a DCOS option might be
   * “dcos/label”, a user-assigned, human-friendly label that appears in a UI.
-  *
-  * future: will contain a mix of DCOS, Marathon, and provider-specific options.
   *
   * @param size absolute size of the volume (MB)
   * @param name identifies the volume within the context of the storage provider.

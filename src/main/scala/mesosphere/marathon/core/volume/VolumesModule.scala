@@ -4,6 +4,7 @@ import com.wix.accord.Validator
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.Volume
+import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo }
 
 trait LocalVolumes {
   /** @return a stream of task local volumes, extrapolating them from the app spec */
@@ -12,7 +13,33 @@ trait LocalVolumes {
   def diskSize(app: AppDefinition): Double
 }
 
+trait VolumeBuilderSupport {
+  // TODO(jdef) these interfaces are not side-effect free; hard to think of a more
+  // consistent way to impact the serialization process since we need to tweak different
+  // types of things (volumes, envvar, container properties, ...)
+  def containerInfo(v: Volume, ci: ContainerInfo.Builder): Option[ContainerInfo.Builder] = None
+  def commandInfo(v: Volume, ci: CommandInfo.Builder): Option[CommandInfo.Builder] = None
+}
+
+/**
+  * VolumeBuilderSupport routes builder calls to the appropriate volume provider.
+  */
+object VolumeBuilderSupport extends VolumeBuilderSupport {
+  override def containerInfo(v: Volume, ci: ContainerInfo.Builder): Option[ContainerInfo.Builder] =
+    VolumesModule.providerRegistry(v).filter(_.isInstanceOf[VolumeBuilderSupport]).
+      map(_.asInstanceOf[VolumeBuilderSupport]).
+      flatMap(_.containerInfo(v, ci))
+
+  override def commandInfo(v: Volume, ci: CommandInfo.Builder): Option[CommandInfo.Builder] =
+    VolumesModule.providerRegistry(v).filter(_.isInstanceOf[VolumeBuilderSupport]).
+      map(_.asInstanceOf[VolumeBuilderSupport]).
+      flatMap(_.commandInfo(v, ci))
+}
+
 trait VolumeProviderRegistry {
+  /** @return the VolumeProvider interface registered for the given volume */
+  def apply[T <: Volume](v: T): Option[VolumeProvider[T]];
+
   /**
     * @return the VolumeProvider interface registered for the given name; if name is None then
     * the default VolumeProvider implementation is returned. None is returned if Some name is given
@@ -30,4 +57,5 @@ trait VolumeProviderRegistry {
 object VolumesModule {
   lazy val localVolumes: LocalVolumes = AgentVolumeProvider
   lazy val providerRegistry: VolumeProviderRegistry = VolumeProvider
+  lazy val builders: VolumeBuilderSupport = VolumeBuilderSupport
 }

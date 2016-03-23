@@ -184,9 +184,17 @@ class ContainerTest extends MarathonSpec with Matchers {
   test("ToMesos") {
     val f = fixture()
     val proto = ContainerSerializer.toMesos(f.container)
+
+    def toDockerVolume(proto: mesos.Volume): Volume =
+      DockerVolume(
+        containerPath = proto.getContainerPath,
+        hostPath = proto.getHostPath,
+        mode = proto.getMode
+      )
+
     assert(mesos.ContainerInfo.Type.DOCKER == proto.getType)
     assert("group/image" == proto.getDocker.getImage)
-    assert(f.container.volumes == proto.getVolumesList.asScala.map(Volume(_)))
+    assert(f.container.volumes == proto.getVolumesList.asScala.map(toDockerVolume(_)))
     assert(proto.getDocker.hasForcePullImage)
     assert(f.container.docker.get.forcePullImage == proto.getDocker.getForcePullImage)
 
