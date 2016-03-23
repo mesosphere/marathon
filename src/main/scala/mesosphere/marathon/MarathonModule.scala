@@ -218,7 +218,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
           schedulerActions,
           storage,
           healthCheckManager,
-          eventBus
+          eventBus,
+          conf
         )
       )
     }
@@ -237,7 +238,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         taskQueue,
         driverHolder,
         leaderInfo,
-        eventBus
+        eventBus,
+        conf
       ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
       "MarathonScheduler")
   }

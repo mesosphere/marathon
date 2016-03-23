@@ -15,6 +15,7 @@ trait Mockito extends MockitoSugar {
   def any[T] = org.mockito.Matchers.any[T]
   def anyBoolean = org.mockito.Matchers.anyBoolean
   def anyString = org.mockito.Matchers.anyString
+  def same[T](value: T) = org.mockito.Matchers.same(value)
   def verify[T](t: T, mode: VerificationMode = times(1)) = M.verify(t, mode)
   def times(num: Int) = M.times(num)
   def timeout(millis: Int) = M.timeout(millis)
