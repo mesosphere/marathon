@@ -1,16 +1,25 @@
-## Changes from 0.15.2 to 0.16.0
+## Changes from 0.15.3 to 1.0.0
 
-### Recommended Mesos version is 0.27.0
+### Recommended Mesos version is 0.28.0
 
-### Overview
+### Breaking Changes
 
-#### Default settings for Task Launches have been changed
+#### New default settings for Task Launches
 
 Marathon has a lot of settings to adjust. Our goal is, to have sensible defaults for small and medium size clusters.
 We realized, that some default values are not sufficient in the field and changed them:
+
 - `--launch_tokens` has changed to 100 (was 1000)
 - `--max_tasks_per_offer` has changed to 5 (was 100)
 - `--reconciliation_interval` has changed to 600000 (=10 minutes) (was 300000 (=5 minutes))
+
+#### Updated Auth plugin interface
+
+The Authentication and Authorization plugin interface was redesigned in order to support more sophisticated plugins.
+
+### Overview
+
+#### Support for Persistent Storage
 
 #### Support for ports metadata
 
@@ -19,6 +28,39 @@ The v2 REST API was extended to support additional ports metadata (protocol, nam
 available for service discovery purposes.
 
 Note: the `portDefinitions` array deprecates the `ports` array.
+
+#### Support for HTTP based plugin extensions
+
+Plugins can now implement HTTP endpoints.
+
+#### Added a leaderDuration metric
+
+The metrics include now a gauge that measures the time elapsed since the last leader election happened. This is helpful
+to diagnose stability problems and how often leader election happens.
+
+#### Better error messages
+API error messages are now more consistent and easier to understand for both humans and computers.
+
+#### Lots of documentation updates
+
+#### Improved Task Kill behavior in deployments by performing kills in batches
+When stopping/restarting an application, Marathon will now perform the kills in batches, in order to avoid overwhelming
+Mesos. The batch size and frequency can be controlled via internal configuration parameters.
+
+#### Support the `TASK_KILLING` state available in Mesos 0.28
+It is possible to make Marathon let Mesos use the `TASK_KILLING` state introduced in Mesos 0.28 using the
+`--enable_features task_killing` flag. Marathon doesn't use this task state yet.
+
+## Fixed issues
+
+- #929 - Allow tcp,udp ports in portMappings
+- #3169 - Possible to start app with negative resources
+- #3241 - Serverside validation messages are inconsistent
+- #3338 - Path in health checks validation failure results is broken
+- #3367 - Relative paths for dependencies not working anymore
+- #3377 - Marathon should remove the FrameworkId for special Mesos errors
+- #3385 - Creating an empty group using an existing app ID should return 409
+- #3402 - Race conditions in HttpEventActor
 
 ## Changes from 0.15.1 to 0.15.2
 
