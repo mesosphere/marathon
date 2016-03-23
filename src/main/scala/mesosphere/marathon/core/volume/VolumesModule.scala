@@ -18,7 +18,7 @@ trait VolumeBuilderSupport {
   // consistent way to impact the serialization process since we need to tweak different
   // types of things (volumes, envvar, container properties, ...)
   def containerInfo(v: Volume, ci: ContainerInfo.Builder): Option[ContainerInfo.Builder] = None
-  def commandInfo(v: Volume, ci: CommandInfo.Builder): Option[CommandInfo.Builder] = None
+  def commandInfo(v: Volume, ct: ContainerInfo.Type, ci: CommandInfo.Builder): Option[CommandInfo.Builder] = None
 }
 
 /**
@@ -30,10 +30,10 @@ object VolumeBuilderSupport extends VolumeBuilderSupport {
       map(_.asInstanceOf[VolumeBuilderSupport]).
       flatMap(_.containerInfo(v, ci))
 
-  override def commandInfo(v: Volume, ci: CommandInfo.Builder): Option[CommandInfo.Builder] =
+  override def commandInfo(v: Volume, ct: ContainerInfo.Type, ci: CommandInfo.Builder): Option[CommandInfo.Builder] =
     VolumesModule.providerRegistry(v).filter(_.isInstanceOf[VolumeBuilderSupport]).
       map(_.asInstanceOf[VolumeBuilderSupport]).
-      flatMap(_.commandInfo(v, ci))
+      flatMap(_.commandInfo(v, ct, ci))
 }
 
 trait VolumeProviderRegistry {

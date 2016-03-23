@@ -8,7 +8,9 @@ import com.wix.accord.ViolationBuilder._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.{ DockerVolume, PersistentVolume, Volume }
-import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo, Volume => MesosVolume }
+import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo, Volume => MesosVolume, Environment }
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 /**
   * VolumeProvider is an interface implemented by storage volume providers
@@ -29,18 +31,18 @@ sealed trait VolumeProvider[T <: Volume] {
   */
 protected object VolumeProvider extends VolumeProviderRegistry {
   // TODO(jdef) this declaration is crazy. there must be a better way
-  private[this] def make[_ <: Volume](prov: VolumeProvider[_ <: Volume]*): Map[String, VolumeProvider[_ <: Volume]] = {
+  protected def make[_ <: Volume](prov: VolumeProvider[_ <: Volume]*): Map[String, VolumeProvider[_ <: Volume]] = {
     prov.foldLeft(Map.empty[String, VolumeProvider[_ <: Volume]]) { (m, p) => m + (p.name -> p) }
   }
 
-  private[this] val registry = make(
+  protected val registry = make(
     // list supported providers here
     AgentVolumeProvider,
     DockerHostVolumeProvider,
     DVDIProvider
   )
 
-  private def providerForName(name: Option[String]): Option[VolumeProvider[_ <: Volume]] =
+  protected def providerForName(name: Option[String]): Option[VolumeProvider[_ <: Volume]] =
     registry.get(name.getOrElse(AgentVolumeProvider.name))
 
   override def apply[T <: Volume](v: T): Option[VolumeProvider[T]] =
@@ -73,31 +75,112 @@ protected object VolumeProvider extends VolumeProviderRegistry {
 protected object DVDIProvider
     extends VolumeProvider[PersistentVolume]
     with VolumeBuilderSupport {
+
   val name = "dvdi"
+
+  protected val optionDriver = name + "/driverName"
+  protected val optionIOPS = name + "/iops"
+  protected val optionType = name + "/volumeType"
+
+  protected val validOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opt =>
+    opt.get(optionDriver) as "driverName option" is notEmpty
+    // TODO(jdef) stronger validation for contents of driver name
+    opt.get(optionDriver).each as "driverName option" is notEmpty
+    // TODO(jdef) validate contents of iops and volume type options
+  }
+
+  protected val validPersistentVolume = validator[PersistentVolume] { v =>
+    // don't invoke validator on v because that's circular, just check the additional
+    // things that we need for agent local volumes.
+    // see implicit validator in the PersistentVolume class for reference.
+    v.persistent.name is notEmpty
+    v.persistent.name.each is notEmpty
+    v.persistent.providerName is notEmpty
+    v.persistent.providerName.each is notEmpty
+    v.persistent.providerName.each is equalTo(name) // sanity check
+    v.persistent.options is notEmpty
+    v.persistent.options.each is valid(validOptions)
+  }
+
+  protected val notPersistentVolume = new Fail[Volume]("is not a persistent volume")
 
   // TODO(jdef) implement me; probably need additional context for validation here because,
   // for example, we only allow a single docker volume driver to be specified w/ the docker
   // containerizer (and we don't know which containerizer is used at this point!)
-  val validation: Validator[Volume] = new Fail[Volume]("is not yet implemented")
+  val validation = new Validator[Volume] {
+    override def apply(v: Volume): Result = v match {
+      // sanity check
+      case pv: PersistentVolume => validate(pv)(validPersistentVolume)
+      case _                    => validate(v)(notPersistentVolume)
+    }
+  }
 
-  // TODO(jdef) special behavior for docker vs. mesos containers
+  /** non-agent-local PersistentVolumes can be serialized into a Mesos Protobuf */
+  def toMesosVolume(volume: PersistentVolume): MesosVolume =
+    MesosVolume.newBuilder
+      .setContainerPath(volume.containerPath)
+      .setHostPath(volume.persistent.name.get) // validation should protect us from crashing here since name is req'd
+      .setMode(volume.mode)
+      .build
+
+  // special behavior for docker vs. mesos containers
   // - docker containerizer: serialize volumes into mesos proto
   // - docker containerizer: specify "volumeDriver" for the container
-  override def containerInfo(v: Volume, ci: ContainerInfo.Builder): Option[ContainerInfo.Builder] = None
+  override def containerInfo(v: Volume, ci: ContainerInfo.Builder): Option[ContainerInfo.Builder] =
+    if (ci.getType == ContainerInfo.Type.DOCKER && ci.hasDocker)
+      Some(v).collect{
+        case pv: PersistentVolume if isDVDI(pv) => {
+          val driverName = pv.persistent.options.get(optionDriver)
+          if (ci.getDocker.getVolumeDriver != driverName) {
+            ci.setDocker(ci.getDocker.toBuilder.setVolumeDriver(driverName).build)
+          }
+          ci.addVolumes(toMesosVolume(pv))
+        }
+      }
+    else None
 
-  // TODO(jdef) special behavior for docker vs. mesos containers; we probably need another
-  // parameter here (like container type)
+  protected val dvdiVolumeName = "DVDI_VOLUME_NAME"
+  protected val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
+  protected val dvdiVolumeOpts = "DVDI_VOLUME_OPTS"
+
+  protected def volumeToEnv(v: PersistentVolume, i: Iterable[Environment.Variable]): Seq[Environment.Variable] = {
+    val offset = i.filter(_.getName.startsWith(dvdiVolumeName)).map{ s =>
+      val ss = s.getName.substring(dvdiVolumeName.size)
+      if (ss.length > 0) ss.toInt else 0
+    }.foldLeft(-1)((z, i) => if (i > z) i else z)
+    val suffix = if (offset >= 0) (offset + 1).toString else ""
+
+    def newVar(name: String, value: String): Environment.Variable =
+      Environment.Variable.newBuilder.setName(name).setValue(value).build
+
+    Seq(
+      newVar(dvdiVolumeName + suffix, v.persistent.name.get),
+      newVar(dvdiVolumeDriver + suffix, v.persistent.options.get(optionDriver))
+    // TODO(jdef) support other options here
+    )
+  }
+
+  // special behavior for docker vs. mesos containers
   // - mesos containerizer: serialize volumes into envvar sets
-  override def commandInfo(v: Volume, ci: CommandInfo.Builder): Option[CommandInfo.Builder] = None
+  override def commandInfo(v: Volume, ct: ContainerInfo.Type, ci: CommandInfo.Builder): Option[CommandInfo.Builder] =
+    if (ct == ContainerInfo.Type.MESOS)
+      Some(v).collect{
+        case pv: PersistentVolume if isDVDI(pv) => {
+          val env = if (ci.hasEnvironment) ci.getEnvironment.toBuilder else Environment.newBuilder
+          val toAdd = volumeToEnv(pv, env.getVariablesList)
+          env.addAllVariables(toAdd.asJava)
+          ci.setEnvironment(env.build)
+        }
+      }
+    else None
 
-  // TODO(jdef) this and the func below were copy pasted from AgentProvider .. should probably refactor
-  def isAgentLocal(volume: PersistentVolume): Boolean = {
-    volume.persistent.providerName.getOrElse(name) == name
+  def isDVDI(volume: PersistentVolume): Boolean = {
+    volume.persistent.providerName.isDefined && volume.persistent.providerName.get == name
   }
 
   override def apply(app: AppDefinition): Iterable[PersistentVolume] =
     app.container.fold(Seq.empty[PersistentVolume]) {
-      _.volumes.collect{ case vol: PersistentVolume if isAgentLocal(vol) => vol }
+      _.volumes.collect{ case vol: PersistentVolume if isDVDI(vol) => vol }
     }
 }
 
@@ -142,7 +225,7 @@ protected object AgentVolumeProvider extends VolumeProvider[PersistentVolume] wi
   /** this is the name of the agent volume provider */
   val name = "agent"
 
-  private val validPersistentVolume = validator[PersistentVolume] { v =>
+  protected val validPersistentVolume = validator[PersistentVolume] { v =>
     // don't invoke validator on v because that's circular, just check the additional
     // things that we need for agent local volumes.
     // see implicit validator in the PersistentVolume class for reference.
@@ -152,7 +235,7 @@ protected object AgentVolumeProvider extends VolumeProvider[PersistentVolume] wi
     v is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
   }
 
-  private val notPersistentVolume = new Fail[Volume]("is not a persistent volume")
+  protected val notPersistentVolume = new Fail[Volume]("is not a persistent volume")
 
   /** validation checks that size has been specified */
   val validation = new Validator[Volume] {
