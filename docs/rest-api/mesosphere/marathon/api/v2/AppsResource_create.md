@@ -305,6 +305,7 @@ If a task fails more than `maxConsecutiveFailures`
 health checks consecutively, that task is killed causing Marathon to start
 more instances. These restarts are modulated like any other failing app
 by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
+The kill of the unhealthy task is signalled via `unhealthy_task_kill_event` event.
 
 ###### Health Check Options
 
