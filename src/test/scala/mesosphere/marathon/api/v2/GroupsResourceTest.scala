@@ -136,6 +136,20 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     delete.getStatus should be(auth.UnauthorizedStatus)
   }
 
+  test("access to root group without authentication is allowed") {
+    Given("An unauthenticated request")
+    auth.authenticated = true
+    auth.authorized = false
+    val req = auth.request
+    groupInfo.selectGroup(any, any, any, any) returns Future.successful(None)
+
+    When(s"the root is fetched from index")
+    val root = groupsResource.root(req, embed)
+
+    Then("the request is successful")
+    root.getStatus should be(200)
+  }
+
   test("authenticated delete without authorization leads to a 404 if the resource doesn't exist") {
     Given("A real group manager with no apps")
     useRealGroupManager()
@@ -223,6 +237,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     auth = new TestAuthFixture
     config = mock[MarathonConf]
     groupManager = mock[GroupManager]
+    groupInfo = mock[GroupInfoService]
     groupsResource = new GroupsResource(groupManager, groupInfo, auth.auth, auth.auth, config)
 
     config.zkTimeoutDuration returns 1.second
