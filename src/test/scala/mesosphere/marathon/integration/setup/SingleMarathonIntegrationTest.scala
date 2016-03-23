@@ -51,7 +51,14 @@ trait SingleMarathonIntegrationTest
   override lazy val marathon: MarathonFacade = new MarathonFacade(config.marathonUrl, testBasePath)
   lazy val mesos: MesosFacade = new MesosFacade(s"http://${config.master}")
 
-  def extraMarathonParameters: List[String] = List.empty[String]
+  protected def extraMarathonParameters: List[String] = List.empty[String]
+  protected def marathonParameters: List[String] = List(
+    "--master", config.master,
+    "--event_subscriber", "http_callback",
+    "--access_control_allow_origin", "*",
+    "--reconciliation_initial_delay", "600000",
+    "--min_revive_offers_interval", "100"
+  ) ++ extraMarathonParameters
 
   lazy val marathonProxy = {
     startMarathon(config.marathonBasePort + 1, "--master", config.master, "--event_subscriber", "http_callback")
@@ -83,14 +90,7 @@ trait SingleMarathonIntegrationTest
       ProcessKeeper.startMesosLocal()
       cleanMarathonState()
 
-      val parameters = List(
-        "--master", config.master,
-        "--event_subscriber", "http_callback",
-        "--access_control_allow_origin", "*",
-        "--reconciliation_initial_delay", "600000",
-        "--min_revive_offers_interval", "100"
-      ) ++ extraMarathonParameters
-      startMarathon(config.marathonBasePort, parameters: _*)
+      startMarathon(config.marathonBasePort, marathonParameters: _*)
 
       waitForCleanSlateInMesos()
       log.info("Setting up local mesos/marathon infrastructure: done.")
