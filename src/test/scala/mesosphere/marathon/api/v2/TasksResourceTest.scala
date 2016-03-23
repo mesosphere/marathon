@@ -107,7 +107,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
   }
 
-  // FIXME (3221): breaks – why?
+  // FIXME (3456): breaks – why?
   ignore("killTasks with wipe delegates to taskKiller with wipe value") {
     import scala.concurrent.ExecutionContext.Implicits.global
 

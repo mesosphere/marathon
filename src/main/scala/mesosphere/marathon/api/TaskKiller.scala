@@ -2,12 +2,14 @@ package mesosphere.marathon.api
 
 import javax.inject.Inject
 
+import com.twitter.util.NonFatal
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.plugin.auth.{ Identity, UpdateApp, Authenticator, Authorizer }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 
@@ -20,29 +22,42 @@ class TaskKiller @Inject() (
     val authenticator: Authenticator,
     val authorizer: Authorizer) extends AuthResource {
 
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
   def kill(appId: PathId,
            findToKill: (Iterable[Task] => Iterable[Task]),
            wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Task]] = {
+
     result(groupManager.app(appId)) match {
       case Some(app) =>
         checkAuthorization(UpdateApp, app)
 
         import scala.concurrent.ExecutionContext.Implicits.global
-        taskTracker.appTasks(appId).map { allTasks =>
-          val allFound = findToKill(allTasks)
+        taskTracker.appTasks(appId).flatMap { allTasks =>
+          val foundTasks = findToKill(allTasks)
+          val expungeTasks = if (wipe) expunge(foundTasks) else Future.successful(())
 
-          if (wipe) allFound.foreach { task =>
-            stateOpProcessor.process(TaskStateOp.ForceExpunge(task.taskId))
+          expungeTasks.map { _ =>
+            val launchedTasks = foundTasks.filter(_.launched.isDefined)
+            if (launchedTasks.nonEmpty)
+              service.killTasks(appId, launchedTasks)
+            else launchedTasks
           }
-
-          val launched = allFound.filter(_.launched.isDefined)
-          if (launched.nonEmpty)
-            service.killTasks(appId, launched)
-
-          allFound
         }
 
       case None => Future.failed(UnknownAppException(appId))
+    }
+  }
+
+  private[this] def expunge(tasks: Iterable[Task]): Future[Unit] = {
+    tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
+      resultSoFar.flatMap { _ =>
+        log.info("Expunging {}", nextTask.taskId)
+        stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.taskId)).recover {
+          case NonFatal(cause) =>
+            log.info("Failed to expunge {}, got: {}", nextTask.taskId, cause)
+        }.mapTo[Unit]
+      }
     }
   }
 
