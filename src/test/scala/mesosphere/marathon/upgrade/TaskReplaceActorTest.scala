@@ -456,6 +456,80 @@ class TaskReplaceActorTest
     expectTerminated(ref)
   }
 
+  test("Downscale with rolling upgrade with 1 over-capacity") {
+    val app = AppDefinition(
+      id = "myApp".toPath,
+      instances = 3,
+      healthChecks = Set(HealthCheck()),
+      upgradeStrategy = UpgradeStrategy(1.0, 0.3)
+    )
+
+    val driver = mock[SchedulerDriver]
+    val taskA = MarathonTestHelper.runningTask("taskA_id")
+    val taskB = MarathonTestHelper.runningTask("taskB_id")
+    val taskC = MarathonTestHelper.runningTask("taskC_id")
+    val taskD = MarathonTestHelper.runningTask("taskD_id")
+    val queue = mock[LaunchQueue]
+    val tracker = mock[TaskTracker]
+
+    var oldTaskCount = 4
+
+    when(tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC, taskD))
+    when(driver.killTask(any[TaskID])).thenAnswer(new Answer[Status] {
+      def answer(invocation: InvocationOnMock): Status = {
+        val taskId = Task.Id(invocation.getArguments()(0).asInstanceOf[TaskID])
+        val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString)
+        system.eventStream.publish(update)
+
+        oldTaskCount -= 1
+        Status.DRIVER_RUNNING
+      }
+    })
+
+    val promise = Promise[Unit]()
+
+    val ref = TestActorRef(
+      new TaskReplaceActor(
+        driver,
+        queue,
+        tracker,
+        system.eventStream,
+        app,
+        promise))
+
+    watch(ref)
+
+    // one task is queued directly, one task is killed immediately
+    val queueOrder = org.mockito.Mockito.inOrder(queue)
+    eventually { queueOrder.verify(queue).add(app, 1) }
+    assert(oldTaskCount == 3)
+
+    // first new task becomes healthy and another old task is killed
+    ref ! HealthStatusChanged(app.id, Task.Id("task_0"), app.version, alive = true)
+    eventually { oldTaskCount should be(2) }
+    eventually { queueOrder.verify(queue).add(app, 1) }
+
+    // second new task becomes healthy and another old task is killed
+    ref ! HealthStatusChanged(app.id, Task.Id("task_1"), app.version, alive = true)
+    eventually { oldTaskCount should be(1) }
+    eventually { queueOrder.verify(queue).add(app, 1) }
+
+    // third new task becomes healthy and last old task is killed
+    ref ! HealthStatusChanged(app.id, Task.Id("task_2"), app.version, alive = true)
+    eventually { oldTaskCount should be(0) }
+    eventually { queueOrder.verify(queue, never()).add(app, 1) }
+
+    Await.result(promise.future, 5.seconds)
+
+    // all old tasks are killed
+    verify(driver).killTask(taskA.launchedMesosId.get)
+    verify(driver).killTask(taskB.launchedMesosId.get)
+    verify(driver).killTask(taskC.launchedMesosId.get)
+    verify(driver).killTask(taskD.launchedMesosId.get)
+
+    expectTerminated(ref)
+  }
+
   test("Cancelled") {
     val app = AppDefinition(id = "myApp".toPath, instances = 2)
     val driver = mock[SchedulerDriver]

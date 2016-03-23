@@ -45,7 +45,7 @@ class TaskReplaceActor(
     val nrToKillImmediately = math.max(0, toKill.size - minHealthy)
 
     // make sure at least one task can be started to get the ball rolling
-    if (nrToKillImmediately == 0 && maxCapacity == app.instances)
+    if (maxCapacity == app.instances)
       maxCapacity += 1
 
     log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} of ${app.id.toString} leave " +
