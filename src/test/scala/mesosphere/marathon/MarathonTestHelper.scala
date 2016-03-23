@@ -11,6 +11,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ResourceLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
@@ -241,7 +242,7 @@ object MarathonTestHelper {
 
   def makeTaskFromTaskInfo(taskInfo: TaskInfo,
                            offer: Offer = makeBasicOffer().build(),
-                           version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): Task =
+                           version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): Task.LaunchedEphemeral =
     {
       import scala.collection.JavaConverters._
 
@@ -305,8 +306,9 @@ object MarathonTestHelper {
         prefix = TaskRepository.storePrefix),
       metrics
     )
+    val updateSteps = Seq.empty[TaskUpdateStep]
 
-    new TaskTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo) {
+    new TaskTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val taskTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
@@ -331,8 +333,8 @@ object MarathonTestHelper {
     .setHost("host.some")
     .build()
 
-  def mininimalTask(appId: PathId): Task = mininimalTask(Task.Id.forApp(appId).idString)
-  def mininimalTask(taskId: Task.Id): Task = mininimalTask(taskId.idString)
+  def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forApp(appId).idString)
+  def mininimalTask(taskId: Task.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
   def mininimalTask(taskId: String, now: Timestamp = clock.now()): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
@@ -362,9 +364,9 @@ object MarathonTestHelper {
     Task.Launched(now, status = Task.Status(now), networking = Task.NoNetworking)
   }
 
-  def taskLaunchedOp: TaskStateOp.Launch = {
+  def taskLaunchedOp(taskId: Task.Id): TaskStateOp.LaunchOnReservation = {
     val now = Timestamp.now()
-    TaskStateOp.Launch(now, Task.Status(now), Task.NoNetworking)
+    TaskStateOp.LaunchOnReservation(taskId, now, Task.Status(now), Task.NoNetworking)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =

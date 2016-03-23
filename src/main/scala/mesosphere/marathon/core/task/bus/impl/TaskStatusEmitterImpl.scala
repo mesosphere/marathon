@@ -1,15 +1,22 @@
 package mesosphere.marathon.core.task.bus.impl
 
+import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.bus.TaskStatusEmitter
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import org.slf4j.LoggerFactory
 
-private[bus] class TaskStatusEmitterImpl(internalTaskStatusEventStream: InternalTaskStatusEventStream)
+private[bus] class TaskStatusEmitterImpl(internalTaskStatusEventStream: InternalTaskChangeEventStream)
     extends TaskStatusEmitter {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  override def publish(status: TaskStatusUpdate): Unit = {
-    log.debug("publishing update {}", status)
-    internalTaskStatusEventStream.publish(status)
+  override def publish(taskChanged: TaskChanged): Unit = {
+    taskChanged.stateOp match {
+      case TaskStateOp.MesosUpdate(task, status, timestamp) =>
+        log.debug("publishing update {}", taskChanged)
+        internalTaskStatusEventStream.publish(taskChanged)
+
+      case _ =>
+      // ignore
+    }
   }
 }

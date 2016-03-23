@@ -19,6 +19,7 @@ object MarathonTaskStatusTestHelper {
     mesosStatus = Some(mesosStatus(TaskState.TASK_RUNNING, maybeHealthy = Some(true))))
   val runningUnhealthy = MarathonTaskStatus.Running(
     mesosStatus = Some(mesosStatus(TaskState.TASK_RUNNING, maybeHealthy = Some(false))))
+  val starting = MarathonTaskStatus.Starting(mesosStatus = Some(mesosStatus(TaskState.TASK_STARTING)))
   val staging = MarathonTaskStatus.Staging(mesosStatus = Some(mesosStatus(TaskState.TASK_STAGING)))
   val finished = MarathonTaskStatus.Finished(mesosStatus = Some(mesosStatus(TaskState.TASK_FINISHED)))
   val error = MarathonTaskStatus.Error(mesosStatus = Some(mesosStatus(TaskState.TASK_ERROR)))

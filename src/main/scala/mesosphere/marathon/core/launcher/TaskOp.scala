@@ -1,8 +1,7 @@
 package mesosphere.marathon.core.launcher
 
-import mesosphere.marathon.core.launcher.impl.TaskLabels
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.{ Protos => MesosProtos }
 
@@ -11,14 +10,11 @@ import org.apache.mesos.{ Protos => MesosProtos }
   */
 sealed trait TaskOp {
   /** The ID of the affected task. */
-  def taskId: Task.Id
+  def taskId: Task.Id = stateOp.taskId
   /** The MarathonTask state before this operation has been applied. */
   def oldTask: Option[Task]
-  /**
-    * The MarathonTask state after this operation has been applied.
-    * `None` means that the associated task should be expunged.
-    */
-  def maybeNewTask: Option[Task]
+  /** The TaskStateOp that will lead to the new state after this operation has been applied. */
+  def stateOp: TaskStateOp
   /** How would the offer change when Mesos executes this op? */
   def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer
   /** To which Offer.Operations does this task op relate? */
@@ -29,12 +25,9 @@ object TaskOp {
   /** Launch a task on the offer. */
   case class Launch(
       taskInfo: MesosProtos.TaskInfo,
-      newTask: Task,
+      stateOp: TaskStateOp,
       oldTask: Option[Task] = None,
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends TaskOp {
-
-    override def taskId: Task.Id = newTask.taskId
-    override def maybeNewTask: Option[Task] = Some(newTask)
 
     def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
       import scala.collection.JavaConverters._
@@ -43,22 +36,20 @@ object TaskOp {
   }
 
   case class ReserveAndCreateVolumes(
-      newTask: Task,
+      stateOp: TaskStateOp.Reserve,
       resources: Iterable[MesosProtos.Resource],
       localVolumes: Iterable[LocalVolume],
-      oldTask: Option[Task] = None,
       offerOperations: Iterable[MesosProtos.Offer.Operation]) extends TaskOp {
 
-    override def taskId: Task.Id = newTask.taskId
-    override def maybeNewTask: Option[Task] = Some(newTask)
+    // if the TaskOp is reverted, there should be no old state
+    override def oldTask: Option[Task] = None
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer =
       ResourceUtil.consumeResourcesFromOffer(offer, resources)
   }
 
   case class UnreserveAndDestroyVolumes(
-      taskId: Task.Id,
-      maybeNewTask: Option[Task] = None,
+      stateOp: TaskStateOp,
       resources: Iterable[MesosProtos.Resource],
       oldTask: Option[Task] = None) extends TaskOp {
 

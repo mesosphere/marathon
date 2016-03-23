@@ -1,15 +1,13 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.actor.{ ActorRef, Status }
+import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessor.Action
-import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.StatusUpdateActionResolver
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.TaskRepository
-import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -18,95 +16,110 @@ import scala.util.control.NonFatal
 private[tracker] object TaskOpProcessorImpl {
 
   /**
-    * Maps a task status update to the appropriate [[TaskOpProcessor.Action]].
+    * Maps a [[TaskStateOp]] to the appropriate [[TaskStateChange]].
     *
     * @param directTaskTracker a TaskTracker instance that goes directly to the correct taskTracker
     *                          without going through the WhenLeaderActor indirection.
     */
-  class StatusUpdateActionResolver(clock: Clock, directTaskTracker: TaskTracker) {
+  class TaskStateOpResolver(directTaskTracker: TaskTracker) {
     private[this] val log = LoggerFactory.getLogger(getClass)
 
     /**
-      * Maps the UpdateStatus action to
+      * Maps the TaskStateOp
       *
-      * * a Action.Fail if the task does not exist OR ELSE
-      * * a Action.Noop if the task does not have to be changed OR ELSE
-      * * an Action.Expunge if the TaskStatus update indicates a terminated task OR ELSE
-      * * an Action.Update if the tasks existed and the TaskStatus contains new information OR ELSE
+      * * a TaskStateChange.Failure if the task does not exist OR ELSE
+      * * delegates the TaskStateOp to the existing task that will then determine the state change
       */
-    def resolve(taskId: Task.Id, status: TaskStatus)(
-      implicit ec: ExecutionContext): Future[Action] = {
-      directTaskTracker.task(taskId).map {
-        case Some(existingTask) =>
-          actionForTaskAndStatus(existingTask, status)
-        case None =>
-          Action.Fail(new IllegalStateException(s"$taskId of app [${taskId.appId}] does not exist"))
+    def resolve(op: TaskStateOp)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
+      op match {
+        case op: TaskStateOp.LaunchEphemeral     => updateIfNotExists(op.taskId, op.task)
+        case op: TaskStateOp.LaunchOnReservation => updateExistingTask(op)
+        case op: TaskStateOp.MesosUpdate         => updateExistingTask(op)
+        case op: TaskStateOp.ReservationTimeout  => updateExistingTask(op)
+        case op: TaskStateOp.Reserve             => updateIfNotExists(op.taskId, op.task)
+        case op: TaskStateOp.ForceExpunge        => updateExistingTask(op)
+        case op: TaskStateOp.Revert =>
+          Future.successful(TaskStateChange.Update(newState = op.task, oldState = None))
       }
     }
 
-    private[this] def actionForTaskAndStatus(task: Task, statusUpdate: TaskStatus): Action = {
-      val change = task.update(TaskStateOp.MesosUpdate(MarathonTaskStatus(statusUpdate), clock.now()))
-      change match {
-        case TaskStateChange.Update(updatedTask) => Action.Update(updatedTask)
-        case TaskStateChange.Expunge             => Action.Expunge
-        case TaskStateChange.NoChange            => Action.Noop
-        case TaskStateChange.Failure(cause)      => Action.Fail(cause)
+    private[this] def updateIfNotExists(taskId: Task.Id, updatedTask: Task)(
+      implicit ec: ExecutionContext): Future[TaskStateChange] = {
+      directTaskTracker.task(taskId).map {
+        case Some(existingTask) =>
+          TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.appId}] already exists"))
+
+        case None => TaskStateChange.Update(newState = updatedTask, oldState = None)
+      }
+    }
+
+    private[this] def updateExistingTask(op: TaskStateOp)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
+      directTaskTracker.task(op.taskId).map {
+        case Some(existingTask) =>
+          existingTask.update(op)
+
+        case None =>
+          val taskId = op.taskId
+          TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.appId}] does not exist"))
       }
     }
   }
 }
+
 /**
-  * Processes durable operations on tasks by
-  *
-  * * storing the updated tasks in the task repository
-  * * informing the taskTracker actor of the latest task state
+  * Processes durable operations on tasks by storing the updated tasks in or removing them from the task repository
   */
 private[tracker] class TaskOpProcessorImpl(
     taskTrackerRef: ActorRef,
     repo: TaskRepository,
-    statusUpdateActionResolver: StatusUpdateActionResolver) extends TaskOpProcessor {
-  private[this] val log = LoggerFactory.getLogger(getClass)
-
+    stateOpResolver: TaskStateOpResolver,
+    config: TaskTrackerConfig) extends TaskOpProcessor {
   import TaskOpProcessor._
 
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
   override def process(op: Operation)(implicit ec: ExecutionContext): Future[Unit] = {
-    op.action match {
-
-      case Action.Update(task) =>
-        // Used for a create or as a result from a UpdateStatus action.
-        // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        val marathonTask = TaskSerializer.toProto(task)
-        repo.store(marathonTask).map { _ =>
-          taskTrackerRef ! TaskTrackerActor.TaskUpdated(task, TaskTrackerActor.Ack(op.sender))
-        }.recoverWith(tryToRecover(op)(expectedTaskState = Some(task)))
-
-      case Action.Expunge =>
+    val stateChange = stateOpResolver.resolve(op.stateOp)
+    stateChange.flatMap {
+      case change: TaskStateChange.Expunge =>
         // Used for task termination or as a result from a UpdateStatus action.
         // The expunge is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        repo.expunge(op.taskId.idString).map { _ =>
-          taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.taskId, TaskTrackerActor.Ack(op.sender))
-        }.recoverWith(tryToRecover(op)(expectedTaskState = None))
+        repo.expunge(op.taskId.idString).map { _ => TaskTrackerActor.Ack(op.sender, change) }
+          .recoverWith(tryToRecover(op)(expectedState = None, oldState = Some(change.task)))
+          .flatMap { case ack: TaskTrackerActor.Ack => notifyTaskTrackerActor(op, ack) }
 
-      case Action.UpdateStatus(status) =>
-        statusUpdateActionResolver.resolve(op.taskId, status).flatMap { action: Action =>
-          // Since this action is mapped to another action, we delegate the responsibility to inform
-          // the sender to that other action.
-          process(op.copy(action = action))
-        }
+      case change: TaskStateChange.Failure =>
+        // Used if a task status update for a non-existing task is processed.
+        // Since we did not change the task state, we inform the sender directly of the failed operation.
+        op.sender ! Status.Failure(change.cause)
+        Future.successful(())
 
-      case Action.Noop =>
+      case change: TaskStateChange.NoChange =>
         // Used if a task status update does not result in any changes.
         // Since we did not change the task state, we inform the sender directly of the success of
         // the operation.
-        op.sender ! (())
+        op.sender ! change
         Future.successful(())
 
-      case Action.Fail(cause) =>
-        // Used if a task status update for a non-existing task is processed.
-        // Since we did not change the task state, we inform the sender directly of the failed operation.
-        op.sender ! Status.Failure(cause)
-        Future.successful(())
+      case change: TaskStateChange.Update =>
+        // Used for a create or as a result from a UpdateStatus action.
+        // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
+        val marathonTask = TaskSerializer.toProto(change.newState)
+        repo.store(marathonTask).map { _ => TaskTrackerActor.Ack(op.sender, change) }
+          .recoverWith(tryToRecover(op)(expectedState = Some(change.newState), oldState = change.oldState))
+          .flatMap { case ack: TaskTrackerActor.Ack => notifyTaskTrackerActor(op, ack) }
     }
+  }
+
+  private[this] def notifyTaskTrackerActor(op: Operation, ack: TaskTrackerActor.Ack)(
+    implicit ec: ExecutionContext): Future[Unit] = {
+
+    import akka.pattern.ask
+    import scala.concurrent.duration._
+    implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
+
+    val msg = TaskTrackerActor.StateChanged(taskChanged = TaskChanged(op.stateOp, ack.stateChange), ack)
+    (taskTrackerRef ? msg).mapTo[Unit]
   }
 
   /**
@@ -115,35 +128,34 @@ private[tracker] class TaskOpProcessorImpl(
     *
     * If reloading the tasks also fails, the operation does fail.
     *
-    * This tries to isolated failures that only effect certain tasks, e.g. errors in the serialization logic
+    * This tries to isolate failures that only effect certain tasks, e.g. errors in the serialization logic
     * which are only triggered for a certain combination of fields.
     */
-  private[this] def tryToRecover(
-    op: Operation)(
-      expectedTaskState: Option[Task])(
-        implicit ec: ExecutionContext): PartialFunction[Throwable, Future[Unit]] = {
+  private[this] def tryToRecover(op: Operation)(expectedState: Option[Task], oldState: Option[Task])(
+    implicit ec: ExecutionContext): PartialFunction[Throwable, Future[TaskTrackerActor.Ack]] = {
 
     case NonFatal(cause) =>
-      def ack(actualTaskState: Option[MarathonTask]): TaskTrackerActor.Ack = {
-        val msg = if (expectedTaskState.map(_.marathonTask) == actualTaskState) (()) else Status.Failure(cause)
+      def ack(actualTaskState: Option[MarathonTask], change: TaskStateChange): TaskTrackerActor.Ack = {
+        val msg = if (expectedState.map(_.marathonTask) == actualTaskState) change else TaskStateChange.Failure(cause)
         TaskTrackerActor.Ack(op.sender, msg)
       }
 
-      log.warn(
-        s"${op.taskId} of app [${op.taskId.appId}]: try to recover from failed ${op.action.toString}", cause
-      )
+      log.warn(s"${op.taskId} of app [${op.taskId.appId}]: try to recover from failed ${op.stateOp}", cause)
 
       repo.task(op.taskId.idString).map {
         case Some(task) =>
           val taskState = TaskSerializer.fromProto(task)
-          taskTrackerRef ! TaskTrackerActor.TaskUpdated(taskState, ack(Some(task)))
+          val stateChange = TaskStateChange.Update(taskState, oldState)
+          ack(Some(task), stateChange)
         case None =>
-          taskTrackerRef ! TaskTrackerActor.TaskRemoved(op.taskId, ack(None))
+          val stateChange = oldState match {
+            case Some(oldTask) => TaskStateChange.Expunge(oldTask)
+            case None          => TaskStateChange.NoChange(op.taskId)
+          }
+          ack(None, stateChange)
       }.recover {
         case NonFatal(loadingFailure) =>
-          log.warn(
-            s"${op.taskId} of app [${op.taskId.appId}]: task reloading failed as well", loadingFailure
-          )
+          log.warn(s"${op.taskId} of app [${op.taskId.appId}]: task reloading failed as well", loadingFailure)
           throw cause
       }
   }

@@ -1,6 +1,7 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
+import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => Mesos }
@@ -13,11 +14,11 @@ class TaskOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with Mocki
 
     Given("A non-matching task and taskInfo")
     val task = MarathonTestHelper.mininimalTask("123")
-    val taskInfo = Mesos.TaskInfo.getDefaultInstance
+    val taskInfo = MarathonTestHelper.makeOneCPUTask("456").build()
 
     When("We create a launch operation")
     val error = intercept[AssertionError] {
-      f.helper.launch(taskInfo, task)
+      f.helper.launchEphemeral(taskInfo, task)
     }
 
     Then("An exception is thrown")
@@ -32,10 +33,10 @@ class TaskOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with Mocki
     val taskInfo = MarathonTestHelper.makeOneCPUTask(task.taskId.idString).build()
 
     When("We create a launch operation")
-    val launch = f.helper.launch(taskInfo, task)
+    val launch = f.helper.launchEphemeral(taskInfo, task)
 
     Then("The result is as expected")
-    launch.newTask shouldEqual task
+    launch.stateOp shouldEqual TaskStateOp.LaunchEphemeral(task)
     launch.taskInfo shouldEqual taskInfo
     launch.oldTask shouldBe empty
     launch.offerOperations should have size 1

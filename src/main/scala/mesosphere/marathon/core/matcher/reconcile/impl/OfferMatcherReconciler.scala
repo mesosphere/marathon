@@ -4,12 +4,12 @@ import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
 import mesosphere.marathon.state.{ Group, GroupRepository, Timestamp }
-import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
+import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
 import org.slf4j.LoggerFactory
 
@@ -62,7 +62,9 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
             case (taskId, spuriousResources) if spurious(taskId) =>
               val unreserveAndDestroy =
                 TaskOp.UnreserveAndDestroyVolumes(
-                  taskId = taskId, oldTask = tasksByApp.task(taskId), resources = spuriousResources.to[Seq]
+                  stateOp = TaskStateOp.ForceExpunge(taskId),
+                  oldTask = tasksByApp.task(taskId),
+                  resources = spuriousResources.to[Seq]
                 )
               TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
           }.to[Seq]

@@ -73,6 +73,7 @@ class OfferOperationFactory(
       val disk = {
         val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder()
           .setId(vol.id.idString)
+          .setPrincipal(principal)
 
         val volume = Mesos.Volume.newBuilder()
           .setContainerPath(vol.persistentVolume.containerPath)

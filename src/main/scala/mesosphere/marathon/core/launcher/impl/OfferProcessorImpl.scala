@@ -5,6 +5,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
+import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
@@ -103,9 +104,9 @@ private[launcher] class OfferProcessorImpl(
       terminatedFuture.flatMap { _ =>
         nextOp.oldTask match {
           case Some(existingTask) =>
-            taskCreationHandler.created(existingTask).map(_ => ())
+            taskCreationHandler.created(TaskStateOp.Revert(existingTask)).map(_ => ())
           case None =>
-            taskCreationHandler.terminated(nextOp.taskId).map(_ => ())
+            taskCreationHandler.terminated(TaskStateOp.ForceExpunge(nextOp.taskId)).map(_ => ())
         }
       }
     }.recover {
@@ -121,20 +122,10 @@ private[launcher] class OfferProcessorImpl(
   private[this] def saveTasks(ops: Seq[TaskOpWithSource], savingDeadline: Timestamp): Future[Seq[TaskOpWithSource]] = {
     def saveTask(taskOpWithSource: TaskOpWithSource): Future[Option[TaskOpWithSource]] = {
       val taskId = taskOpWithSource.taskId
-
-      val persistedOp = taskOpWithSource.op.maybeNewTask match {
-        case Some(newTask) =>
-          log.info(
-            s"Save ${taskOpWithSource.taskId} " +
-              s"after applying the effects of ${taskOpWithSource.op.getClass.getSimpleName}"
-          )
-          taskCreationHandler.created(newTask)
-        case None =>
-          log.info(s"Remove ${taskOpWithSource.taskId} because of ${taskOpWithSource.op.getClass.getSimpleName}")
-          taskCreationHandler.terminated(taskId)
-      }
-
-      persistedOp.map(_ => Some(taskOpWithSource))
+      log.info("Persisting TaskStateOp for [{}]", taskOpWithSource.taskId)
+      taskCreationHandler
+        .created(taskOpWithSource.op.stateOp)
+        .map(_ => Some(taskOpWithSource))
         .recoverWith {
           case NonFatal(e) =>
             savingTasksErrorMeter.mark()

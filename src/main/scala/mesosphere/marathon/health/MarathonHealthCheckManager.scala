@@ -2,17 +2,18 @@ package mesosphere.marathon.health
 
 import javax.inject.{ Inject, Named }
 
-import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
+import com.google.inject.Provider
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
 import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
-import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder, ZookeeperConf }
+import mesosphere.marathon.{ MarathonSchedulerDriverHolder, ZookeeperConf }
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
 
@@ -24,12 +25,14 @@ import scala.concurrent.{ Await, Future }
 
 class MarathonHealthCheckManager @Inject() (
     system: ActorSystem,
-    scheduler: MarathonScheduler,
-    driverHolder: MarathonSchedulerDriverHolder,
+    driverHolderProvider: Provider[MarathonSchedulerDriverHolder],
     @Named(EventModule.busName) eventBus: EventStream,
-    taskTracker: TaskTracker,
+    taskTrackerProvider: Provider[TaskTracker],
     appRepository: AppRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
+
+  private[this] lazy val driverHolder = driverHolderProvider.get()
+  private[this] lazy val taskTracker = taskTrackerProvider.get()
 
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,
@@ -63,9 +66,7 @@ class MarathonHealthCheckManager @Inject() (
         Await.result(appRepository.app(appId, appVersion), zkConf.zkTimeoutDuration) match {
           case Some(app: AppDefinition) =>
             val ref = system.actorOf(
-              Props(
-                classOf[HealthCheckActor],
-                app, driverHolder, scheduler, healthCheck, taskTracker, eventBus))
+              HealthCheckActor.props(app, driverHolder, healthCheck, taskTracker, eventBus))
             val newHealthChecksForApp =
               healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 

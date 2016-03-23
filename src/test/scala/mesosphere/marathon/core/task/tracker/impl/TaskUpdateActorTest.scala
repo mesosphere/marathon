@@ -6,7 +6,7 @@ import akka.actor.{ Status, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -25,9 +25,7 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val taskId = Task.Id.forApp(appId)
-    val op = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskOpProcessor.Action.Expunge
-    )
+    val op = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that fails immediately")
     val processingFailure: RuntimeException = new scala.RuntimeException("processing failed")
@@ -53,9 +51,7 @@ class TaskUpdateActorTest
     Given("an op with an already reached deadline")
     val appId = PathId("/app")
     val taskId = Task.Id.forApp(appId)
-    val op = TaskOpProcessor.Operation(
-      f.clock.now, f.opInitiator.ref, taskId, TaskOpProcessor.Action.Expunge
-    )
+    val op = TaskOpProcessor.Operation(f.clock.now(), f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that succeeds immediately")
     f.processor.process(eq(op))(any) returns Future.successful(())
@@ -90,9 +86,7 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val taskId = Task.Id.forApp(appId)
-    val op = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskOpProcessor.Action.Expunge
-    )
+    val op = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that processes it immediately")
     f.processor.process(eq(op))(any) returns Future.successful(())
@@ -117,9 +111,7 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val taskId = Task.Id.forApp(appId)
-    val op = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskOpProcessor.Action.Expunge
-    )
+    val op = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that does not return")
     f.processor.process(eq(op))(any) returns Promise[Unit]().future
@@ -144,13 +136,9 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val task1Id = Task.Id.forApp(appId)
-    val op1 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskOpProcessor.Action.Expunge
-    )
+    val op1 = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskStateOp.ForceExpunge(task1Id))
     val task2Id = Task.Id.forApp(appId)
-    val op2 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, task2Id, TaskOpProcessor.Action.Expunge
-    )
+    val op2 = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task2Id, TaskStateOp.ForceExpunge(task2Id))
 
     And("a processor that does not return")
     val op1Promise: Promise[Unit] = Promise[Unit]()
@@ -193,10 +181,10 @@ class TaskUpdateActorTest
     val appId = PathId("/app")
     val task1Id = Task.Id.forApp(appId)
     val op1 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskOpProcessor.Action.Expunge
+      f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskStateOp.ForceExpunge(task1Id)
     )
     val op2 = TaskOpProcessor.Operation(
-      f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskOpProcessor.Action.Noop
+      f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskStateOp.ForceExpunge(task1Id)
     )
 
     And("a processor that does not return")

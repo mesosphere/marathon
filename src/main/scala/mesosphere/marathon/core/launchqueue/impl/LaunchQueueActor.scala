@@ -2,7 +2,6 @@ package mesosphere.marathon.core.launchqueue.impl
 
 import akka.actor.SupervisorStrategy.Stop
 import akka.actor.{
-  PoisonPill,
   Terminated,
   Actor,
   ActorLogging,
@@ -15,7 +14,7 @@ import akka.event.LoggingReceive
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueue }
-import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import LaunchQueue.QueuedTaskInfo
 
@@ -116,8 +115,8 @@ private[impl] class LaunchQueueActor(
   }
 
   private[this] def receiveTaskUpdateToSuspendedActor: Receive = {
-    case update: TaskStatusUpdate if suspendedLauncherPathIds(update.appId) =>
-      deferMessageToSuspendedActor(update, update.appId)
+    case taskChanged: TaskChanged if suspendedLauncherPathIds(taskChanged.appId) =>
+      deferMessageToSuspendedActor(taskChanged, taskChanged.appId)
   }
 
   private[this] def receiveMessagesToSuspendedActor: Receive = {
@@ -139,12 +138,12 @@ private[impl] class LaunchQueueActor(
   }
 
   private[this] def receiveTaskUpdate: Receive = {
-    case update: TaskStatusUpdate =>
+    case taskChanged: TaskChanged =>
       import context.dispatcher
-      launchers.get(update.appId) match {
+      launchers.get(taskChanged.appId) match {
         case Some(actorRef) =>
           val eventualCount: Future[QueuedTaskInfo] =
-            (actorRef ? update).mapTo[QueuedTaskInfo]
+            (actorRef ? taskChanged).mapTo[QueuedTaskInfo]
           eventualCount.map(Some(_)).pipeTo(sender())
         case None => sender() ! None
       }
