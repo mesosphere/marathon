@@ -22,7 +22,7 @@ Port configuration for applications in Marathon can be confusing and there is [a
 
 *portDefinitions*: The _portDefinitionss_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. This array is meant to replace the _ports_ array, and makes it possible to specify a port name, protocol and labels. Only one of _ports_ and _portDefinitions_ should be defined at the same time.
 
-*protocol*: _Protocol_ specifies the internet protocol to use for a port (e.g. `tcp` or `udp`). This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
+*protocol*: _Protocol_ specifies the internet protocol to use for a port (e.g. `tcp`, `udp` or `udp,tcp` for both). This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
 
 *requirePorts*: _requirePorts_ is a property that specifies whether Marathon should specifically look for specified ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to `BRIDGE` mode networking.
 
