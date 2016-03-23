@@ -7,6 +7,7 @@ import mesosphere.chaos.http.HttpConf
 import org.apache.mesos.Protos.{ Credential, FrameworkInfo, FrameworkID }
 import org.apache.mesos.{ MesosSchedulerDriver, SchedulerDriver }
 import org.slf4j.LoggerFactory
+import FrameworkInfo.Capability
 
 object MarathonSchedulerDriver {
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -66,6 +67,14 @@ object MarathonSchedulerDriver {
 
         credentialBuilder.build()
       }
+
+    // Task Killing Behavior enables a dedicated task update (TASK_KILLING) from mesos before a task is killed.
+    // In Marathon this task update is currently ignored.
+    // It makes sense to enable this feature, to support other tools that parse the mesos state, even if
+    // Marathon does not use it in the moment.
+    // Mesos will implement a custom kill behavior, so this state can be used by Marathon as well.
+    if (config.isFeatureSet(Features.TASK_KILLING))
+      frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.TASK_KILLING_STATE))
 
     val frameworkInfo = frameworkInfoBuilder.build()
 
