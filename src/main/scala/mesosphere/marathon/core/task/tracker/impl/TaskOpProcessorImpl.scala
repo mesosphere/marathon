@@ -3,9 +3,9 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
-import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.TaskRepository
 import org.slf4j.LoggerFactory
