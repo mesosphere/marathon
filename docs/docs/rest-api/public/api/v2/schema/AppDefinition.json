@@ -144,8 +144,8 @@
                   },
                   "protocol": {
                     "type": "string",
-                    "enum": ["tcp", "udp"],
-                    "description": "Protocol of the port (one of ['tcp', 'udp']). Defaults to 'tcp'."
+                    "enum": ["tcp", "udp", "udp,tcp"],
+                    "description": "Protocol of the port (one of ['tcp', 'udp'] or 'udp,tcp' for both). Defaults to 'tcp'."
                   },
                   "servicePort": {
                     "type": "integer",

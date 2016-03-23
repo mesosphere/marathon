@@ -1,6 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
+import mesosphere.marathon.event.UnhealthyTaskKillEvent
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
@@ -64,6 +65,26 @@ object TaskFailure {
       timestamp = Timestamp(proto.getTimestamp),
       slaveId = if (proto.hasSlaveId) Some(proto.getSlaveId) else None
     )
+
+  object FromUnhealthyTaskKillEvent {
+    def unapply(event: UnhealthyTaskKillEvent): Option[TaskFailure] =
+      Some(apply(event))
+
+    def apply(event: UnhealthyTaskKillEvent): TaskFailure = {
+      val UnhealthyTaskKillEvent(appId, taskId, version, reason, host, slaveID, _, timestamp) = event
+
+      TaskFailure(
+        appId,
+        taskId.mesosTaskId,
+        mesos.TaskState.TASK_KILLED,
+        s"Task was killed since health check failed. Reason: $reason",
+        host,
+        version,
+        Timestamp(timestamp),
+        slaveID.map(id => slaveIDToProto(SlaveID(id)))
+      )
+    }
+  }
 
   object FromMesosStatusUpdateEvent {
     def unapply(statusUpdate: MesosStatusUpdateEvent): Option[TaskFailure] =

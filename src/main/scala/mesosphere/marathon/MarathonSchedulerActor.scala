@@ -15,7 +15,7 @@ import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, Deploym
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
+import mesosphere.marathon.upgrade.{ UpgradeConfig, DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos
 import org.apache.mesos.Protos.{ Status, TaskID }
 import org.apache.mesos.SchedulerDriver
@@ -43,6 +43,7 @@ class MarathonSchedulerActor private (
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leaderInfo: LeaderInfo,
     eventBus: EventStream,
+    config: UpgradeConfig,
     cancellationTimeout: FiniteDuration = 1.minute) extends Actor with ActorLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
@@ -158,7 +159,7 @@ class MarathonSchedulerActor private (
       val origSender = sender()
       withLockFor(appId) {
         val promise = Promise[Unit]()
-        context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, taskIds, promise))
+        context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, taskIds, config, promise))
         val res = for {
           _ <- promise.future
           Some(app) <- appRepository.currentVersion(appId)
@@ -336,6 +337,7 @@ object MarathonSchedulerActor {
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leaderInfo: LeaderInfo,
     eventBus: EventStream,
+    config: UpgradeConfig,
     cancellationTimeout: FiniteDuration = 1.minute): Props = {
     Props(new MarathonSchedulerActor(
       createSchedulerActions,
@@ -349,7 +351,9 @@ object MarathonSchedulerActor {
       marathonSchedulerDriverHolder,
       leaderInfo,
       eventBus,
-      cancellationTimeout))
+      config,
+      cancellationTimeout
+    ))
   }
 
   case class RecoverDeployments(deployments: Seq[DeploymentPlan])

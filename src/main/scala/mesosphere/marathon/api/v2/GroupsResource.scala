@@ -11,7 +11,7 @@ import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.core.appinfo.{ GroupSelector, GroupInfoService }
+import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupSelector, GroupInfoService }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -77,8 +77,9 @@ class GroupsResource @Inject() (
 
     def groupResponse(id: PathId) =
       infoService.selectGroup(id, allAuthorized, appEmbed, groupEmbed).map {
-        case Some(info) => ok(info)
-        case None       => unknownGroup(id)
+        case Some(info)        => ok(info)
+        case None if id.isRoot => ok(GroupInfo.empty)
+        case None              => unknownGroup(id)
       }
 
     def groupVersionResponse(id: PathId, version: Timestamp) =
@@ -148,7 +149,7 @@ class GroupsResource @Inject() (
 
       val (deployment, path) = updateOrCreate(id.toRootPath, groupUpdate, force)
       deploymentResult(deployment, Response.created(new URI(path.toString)))
-    }
+    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath))
   }
 
   @PUT
@@ -192,7 +193,7 @@ class GroupsResource @Inject() (
         val (deployment, _) = updateOrCreate(id.toRootPath, groupUpdate, force)
         deploymentResult(deployment)
       }
-    }
+    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath))
   }
 
   @DELETE

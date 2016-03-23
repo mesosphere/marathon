@@ -107,6 +107,17 @@ private[health] class HealthCheckActor(
       // kill the task
       marathonSchedulerDriverHolder.driver.foreach { driver =>
         log.info(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
+        eventBus.publish(
+          UnhealthyTaskKillEvent(
+            appId = task.appId,
+            taskId = task.taskId,
+            version = app.version,
+            reason = health.lastFailureCause.getOrElse("unknown"),
+            host = task.agentInfo.host,
+            slaveId = task.agentInfo.agentId,
+            timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
+          )
+        )
         driver.killTask(task.taskId.mesosTaskId)
       }
     }
