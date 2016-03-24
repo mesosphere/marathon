@@ -17,14 +17,14 @@ private[readiness] class DummyReadinessCheckExecutor extends ReadinessCheckExecu
         readinessCheckInfo.checkName,
         readinessCheckInfo.taskId,
         ready = ready,
-        httpResponse = Some(
+        lastResponse = Some(
           HttpResponse(
             status = if (ready)
               readinessCheckInfo.httpStatusCodesForReady.head
             else
               (500 to 599).find(!readinessCheckInfo.httpStatusCodesForReady(_)).getOrElse(???),
-            mediaType = "application/json",
-            body = "{}".getBytes
+            contentType = "application/json",
+            body = "{}"
           )
         )
       )
