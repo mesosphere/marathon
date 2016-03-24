@@ -25,13 +25,27 @@ title: A container orchestration platform for Mesos and DCOS
 
 ## Overview
 
-Marathon is a production-grade container orchestration platform for <a href="https://mesos.apache.org/">Apache Mesos</a> and <a href="https://mesosphere.com/product/">Mesosphere DCOS</a>.
+Marathon is a production-grade container orchestration platform for [Apache Mesos](https://mesos.apache.org/) and [Mesosphere DCOS](https://mesosphere.com/product/).
 
-Highlights of Marathon include:
+## Features
 
-- High Availability. Marathon runs as an active/passive cluster with leader election for 100% uptime.
-- Multiple container runtimes. Marathon has first-class support for both Mesos containers (using cgroups) and Docker.
+- [High Availability](https://mesosphere.github.io/marathon/docs/high-availability.html). Marathon runs as an active/passive cluster with leader election for 100% uptime.
+- Multiple container runtimes. Marathon has first-class support for both [Mesos containers](https://mesosphere.github.io/marathon/docs/application-basics.html) (using cgroups) and [Docker](https://mesosphere.github.io/marathon/docs/native-docker.html).
+- [Stateful apps](https://mesosphere.github.io/marathon/docs/persistent-volumes.html). Marathon can bind persistent storage volumes to your application. You can run databases like MySQL and Postgres, and have storage accounted for by Mesos.
+- [Beautiful and powerful UI](https://mesosphere.github.io/marathon/docs/marathon-ui.html).
+- [Constraints](https://mesosphere.github.io/marathon/docs/constraints.html). e.g. Only one instance of an application per rack, node, etc.
+- [Service Discovery & Load Balancing](https://mesosphere.github.io/marathon/docs/service-discovery-load-balancing.html). Several methods available.
+- [Health Checks](https://mesosphere.github.io/marathon/docs/health-checks.html). Evaluate your application's health using HTTP or TCP checks.
+- [Event Subscription](https://mesosphere.github.io/marathon/docs/rest-api.html#event-subscriptions). Supply an HTTP endpoint to receive notifications - for example to integrate with an external load balancer.
+- [Metrics](https://mesosphere.github.io/marathon/docs/metrics.html). Query them at /metrics in JSON format or push them to systems like graphite, statsd and Datadog.
+- [Complete REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for easy integration and scriptability.
 
+## DCOS features
+
+Running on DCOS, Marathon gains the following additional features:
+
+- Virtual IP routing. Allocate a dedicated, virtual address to your app. Your app is now reachable anywhere in the cluster, wherever it might be scheduled. Load balancing and rerouting around failures are done automatically.
+- Authorization (DCOS Enterprise Edition only). True multitenancy with each user or group having access to their own applications and groups.
 
 ## Marathon example: A small datacenter
 
