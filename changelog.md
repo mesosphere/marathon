@@ -65,10 +65,9 @@ It is possible to make Marathon let Mesos use the `TASK_KILLING` state introduce
 
 - #929 - Allow tcp,udp ports in portMappings
 - #2751 - Commit suicide on ZK exceptions
-- #3091 - App updates hanging on downscales 
+- #3091 - App updates hanging on downscales
 - #3169 - Possible to start app with negative resources
 - #3241 - Serverside validation messages are inconsistent
-- #3251 - Tried to kill an existing app, said it doesn't exist even though it does 
 - #3338 - Path in health checks validation failure results is broken
 - #3367 - Relative paths for dependencies not working anymore
 - #3377 - Marathon should remove the FrameworkId for special Mesos errors
@@ -76,6 +75,16 @@ It is possible to make Marathon let Mesos use the `TASK_KILLING` state introduce
 - #3402 - Race conditions in HttpEventActor
 - #3423 - Report kills due to failed healthcheck.
 - #3439 - Relative paths in dependencies should be resolvable.
+
+## Changes from 0.15.2 to 0.15.3
+
+This is a bug fix release.
+
+## Fixed issues
+
+- #3192 - Adapt default Mem/CPU settings
+- #3251 - Tried to kill an existing app, said it doesn't exist even though it does
+
 
 ## Changes from 0.15.1 to 0.15.2
 
