@@ -3,6 +3,7 @@ package mesosphere.marathon.api.v2.json
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
+import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.DiscoveryInfo.Port
@@ -275,5 +276,26 @@ class AppUpdateTest extends MarathonSpec {
     import Formats._
     val result = Json.fromJson[AppUpdate](Json.parse(json))
     assert(result == JsError(JsPath \ "ports", ValidationError("Ports must be unique.")))
+  }
+
+  test("update JSON serialization preserves readiness checks") {
+    val update = AppUpdate(
+      id = Some(PathId("/test")),
+      readinessChecks = Some(Seq(ReadinessCheckTestHelper.alternativeHttps))
+    )
+    val json = Json.toJson(update)
+    val reread = json.as[AppUpdate]
+    assert(reread == update)
+  }
+
+  test("update readiness checks are applied to app") {
+    val update = AppUpdate(
+      id = Some(PathId("/test")),
+      readinessChecks = Some(Seq(ReadinessCheckTestHelper.alternativeHttps))
+    )
+    val app = AppDefinition(id = PathId("/test"))
+    val updated = update(app)
+
+    assert(updated.readinessChecks == update.readinessChecks.get)
   }
 }

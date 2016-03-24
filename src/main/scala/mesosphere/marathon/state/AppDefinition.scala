@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
+import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
@@ -63,6 +64,8 @@ case class AppDefinition(
   container: Option[Container] = AppDefinition.DefaultContainer,
 
   healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
+
+  readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
@@ -245,7 +248,9 @@ case class AppDefinition(
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
-      healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
+      healthChecks = proto.getHealthChecksList.iterator().asScala.map(new HealthCheck().mergeFromProto).toSet,
+      readinessChecks =
+        proto.getReadinessCheckDefinitionList.iterator().asScala.map(ReadinessCheckSerializer.fromProto).to[Seq],
       labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
       versionInfo = versionInfoFromProto,
       upgradeStrategy =
@@ -463,6 +468,8 @@ object AppDefinition {
 
   val DefaultHealthChecks: Set[HealthCheck] = Set.empty
 
+  val DefaultReadinessChecks: Seq[ReadinessCheck] = Seq.empty
+
   val DefaultDependencies: Set[PathId] = Set.empty
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
@@ -512,6 +519,7 @@ object AppDefinition {
 
   /**
     * Validator for apps, which are being part of a group.
+    *
     * @param base Path of the parent group.
     * @return
     */
