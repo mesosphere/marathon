@@ -113,7 +113,7 @@ protected object DVDIProvider extends PersistentVolumeProvider with ContextUpdat
     None
   }
 
-  override protected def updated[C <: Context](context: C, v: Volume): Option[C] = {
+  override protected def updated[C <: BuilderContext](context: C, v: Volume): Option[C] = {
     v match {
       case pv: PersistentVolume => {
         if (accepts(pv)) context match {
@@ -171,7 +171,7 @@ protected object DockerHostVolumeProvider
       .build
 
   /** @return a possibly modified builder if `v` is a DockerVolume */
-  override protected def updated[C <: Context](context: C, v: Volume): Option[C] = {
+  override protected def updated[C <: BuilderContext](context: C, v: Volume): Option[C] = {
     context match {
       case cc: ContainerContext => {
         val ci = cc.ci // TODO(jdef) clone?
