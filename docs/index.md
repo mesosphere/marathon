@@ -49,52 +49,42 @@ Running on DCOS, Marathon gains the following additional features:
 
 ## Marathon example: A small datacenter
 
-The graphic shown below depicts how Marathon runs on top of
-<a href="https://mesos.apache.org/">Apache Mesos</a> together with
-the <a href="https://github.com/airbnb/chronos">Chronos</a> framework.
-In this case, Marathon is the first framework to be
-launched and it runs alongside Mesos. In other words, the Marathon scheduler
-processes were started outside of Mesos using `init`, `upstart`, or a similar
-tool. Marathon launches two instances of the Chronos scheduler as a Marathon
-task. If either of the two Chronos tasks dies -- due to underlying slave
-crashes, power loss in the cluster, etc. -- Marathon will re-start a Chronos
-instance on another slave. This approach ensures that two Chronos processes are
-always running.
+The graphic below shows how Marathon runs on <a href="https://mesos.apache.org/">Apache Mesos</a> acting as the orchestrator for other applications and services.
 
-Since Chronos itself is a framework and receives Mesos resource offers, it can
-start tasks on Mesos. In the use case shown below, Chronos is currently running
-two tasks. One dumps a production MySQL database to S3, while another sends an
-email newsletter to all customers via Rake. Meanwhile, Marathon also runs the
-other applications that make up our website, such as JBoss servers, a Jetty
-service, Sinatra, Rails, and so on.
+Marathon is the first framework to be launched, running directly alongside Mesos. This means the Marathon scheduler processes are started directly using `init`, `upstart`, or a similar tool.
+
+Marathon is a powerful way to run other Mesos frameworks: in this case, [Chronos](https://github.com/mesos/chronos). Marathon launches two instances of the Chronos scheduler using the Docker image `mesosphere/chronos`. The Chronos instances appear in orange on the top row.
+
+If either of the two Chronos containers fails for any reason, then Marathon will restart them on another slave. This approach ensures that two Chronos processes are always running.
+
+Since Chronos itself is a framework and receives resource offers, it can start tasks on Mesos.
+In the use case below, Chronos is running two scheduled jobs, shown in blue. One dumps a production MySQL database to S3, while another sends an email newsletter to all customers via Rake.
+
+Meanwhile, Marathon also runs the other application containers - either Docker or Mesos - that make up our website: JBoss servers, Jetty, Sinatra, Rails, and so on.
+
+We have shown that Marathon is responsible for running other frameworks, helps them maintain 100% uptime, and coexists with them creating tasks in Mesos.
 
 <p class="text-center">
   <img src="{{ site.baseurl}}/img/architecture.png" width="423" height="477" alt="">
 </p>
 
-The next graphic shows a more application-centric view of Marathon running
-three applications, each with a different number of tasks: Search (1), Jetty
-(3), and Rails (5).
+The next three images illustrate scaling and container placement.
+
+Below we see Marathon running three applications, each scaled to a different number of tasks: Search (1), Jetty (3), and Rails (5).
 
 <p class="text-center">
   <img src="{{ site.baseurl}}/img/marathon1.png" width="420" height="269" alt="">
 </p>
 
-As the website gains traction and the user base grows, we decide to scale-out
-the search service and our Rails-based application. This is done via a
-REST call to the Marathon API to add more tasks. Marathon will take care of
-placing the new tasks on machines with spare capacity, honoring the
-constraints we previously set.
+As the website gains traction, we decide to scale out the Search service and our Rails-based application.
+
+We use the Marathon REST API call to to add more tasks. Marathon will take care of placing the new tasks on machines with spare capacity, honoring the constraints we previously set. We can see the containers are dynamically placed:
 
 <p class="text-center">
   <img src="{{ site.baseurl}}/img/marathon2.png" width="420" height="269" alt="">
 </p>
 
-Imagine that one of the datacenter workers trips over a power cord and a server
-gets unplugged. No problem for Marathon, it moves the affected search service
-and Rails tasks to a node that has spare capacity. The engineer may be
-temporarily embarrassed, but Marathon saves him from having to explain a
-difficult situation!
+Finally, imagine that one of the datacenter workers trips over a power cord and a server is unplugged. No problem for Marathon: it moves the affected Search service and Rails tasks to a node that has spare capacity. Marathon has maintained our uptime in the face of machine failure.
 
 <p class="text-center">
   <img src="{{ site.baseurl}}/img/marathon3.png" width="417" height="268" alt="">
