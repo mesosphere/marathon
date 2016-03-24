@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
+import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.{ Protos, MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
@@ -782,5 +783,17 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     appAgain.residency should not be empty
     appAgain.residency.get.relaunchEscalationTimeoutSeconds shouldBe 3600
     appAgain.residency.get.taskLostBehavior shouldBe Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER
+  }
+
+  test("app with readinessCheck passes validation") {
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      cmd = Some("sleep 1234"),
+      readinessChecks = Seq(
+        ReadinessCheckTestHelper.alternativeHttps
+      )
+    )
+
+    MarathonTestHelper.validateJsonSchema(app)
   }
 }

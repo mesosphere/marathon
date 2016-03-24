@@ -6,6 +6,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
+import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
@@ -50,6 +51,7 @@ object Formats extends Formats {
 trait Formats
     extends AppAndGroupFormats
     with HealthCheckFormats
+    with ReadinessCheckFormats
     with FetchUriFormats
     with ContainerFormats
     with DeploymentFormats
@@ -479,6 +481,47 @@ trait HealthCheckFormats {
   }
 }
 
+trait ReadinessCheckFormats {
+  import Formats._
+
+  implicit lazy val ReadinessCheckFormat: Format[ReadinessCheck] = {
+    import ReadinessCheck._
+
+    (
+      (__ \ "name").formatNullable[String].withDefault(DefaultName) ~
+      (__ \ "protocol").formatNullable[ReadinessCheck.Protocol].withDefault(DefaultProtocol) ~
+      (__ \ "path").formatNullable[String].withDefault(DefaultPath) ~
+      (__ \ "portName").formatNullable[String].withDefault(DefaultPortName) ~
+      (__ \ "intervalSeconds").formatNullable[Long].withDefault(DefaultInterval.toSeconds).asSeconds ~
+      (__ \ "timeoutSeconds").formatNullable[Long].withDefault(DefaultTimeout.toSeconds).asSeconds ~
+      (__ \ "httpStatusCodesForReady").formatNullable[Set[Int]].withDefault(DefaultHttpStatusCodesForReady) ~
+      (__ \ "preserveLastResponse").formatNullable[Boolean].withDefault(DefaultPreserveLastResponse)
+    )(ReadinessCheck.apply, unlift(ReadinessCheck.unapply))
+  }
+
+  implicit lazy val ReadinessCheckProtocolFormat: Format[ReadinessCheck.Protocol] = {
+    Format(
+      Reads[ReadinessCheck.Protocol] {
+        case JsString(string) =>
+          StringToProtocol.get(string) match {
+            case Some(protocol) => JsSuccess(protocol)
+            case None           => JsError(ProtocolErrorString)
+          }
+        case _: JsValue => JsError(ProtocolErrorString)
+      },
+      Writes[ReadinessCheck.Protocol](protocol => JsString(ProtocolToString(protocol)))
+    )
+  }
+
+  private[this] val ProtocolToString = Map[ReadinessCheck.Protocol, String](
+    ReadinessCheck.Protocol.HTTP -> "HTTP",
+    ReadinessCheck.Protocol.HTTPS -> "HTTPS"
+  )
+  private[this] val StringToProtocol: Map[String, ReadinessCheck.Protocol] =
+    ProtocolToString.map { case (k, v) => (v, k) }
+  private[this] val ProtocolErrorString = s"Chose one of ${StringToProtocol.keys.mkString(", ")}"
+}
+
 trait FetchUriFormats {
   import Formats._
 
@@ -579,7 +622,8 @@ trait AppAndGroupFormats {
             ipAddress: Option[IpAddress],
             version: Timestamp,
             residency: Option[Residency],
-            maybePortDefinitions: Option[Seq[PortDefinition]]) {
+            maybePortDefinitions: Option[Seq[PortDefinition]],
+            readinessChecks: Seq[ReadinessCheck]) {
           def upgradeStrategyOrDefault: UpgradeStrategy = {
             import UpgradeStrategy.{ forResidentTasks, empty }
             upgradeStrategy.getOrElse(if (residency.isDefined) forResidentTasks else empty)
@@ -601,7 +645,8 @@ trait AppAndGroupFormats {
             (__ \ "ipAddress").readNullable[IpAddress] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
             (__ \ "residency").readNullable[Residency] ~
-            (__ \ "portDefinitions").readNullable[Seq[PortDefinition]]
+            (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
+            (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]].withDefault(AppDefinition.DefaultReadinessChecks)
           )(ExtraFields)
             .filter(ValidationError("You cannot specify both uris and fetch fields")) { extra =>
               !(extra.uris.nonEmpty && extra.fetch.nonEmpty)
@@ -641,7 +686,8 @@ trait AppAndGroupFormats {
             acceptedResourceRoles = extra.acceptedResourceRoles,
             ipAddress = extra.ipAddress,
             versionInfo = AppDefinition.VersionInfo.OnlyVersion(extra.version),
-            residency = extra.residencyOrDefault
+            residency = extra.residencyOrDefault,
+            readinessChecks = extra.readinessChecks
           )
         }
       }
@@ -735,6 +781,7 @@ trait AppAndGroupFormats {
         "maxLaunchDelaySeconds" -> app.maxLaunchDelay,
         "container" -> app.container,
         "healthChecks" -> app.healthChecks,
+        "readinessChecks" -> app.readinessChecks,
         "dependencies" -> app.dependencies,
         "upgradeStrategy" -> app.upgradeStrategy,
         "labels" -> app.labels,
@@ -887,7 +934,8 @@ trait AppAndGroupFormats {
         ipAddress: Option[IpAddress],
         residency: Option[Residency],
         ports: Option[Seq[Int]],
-        portDefinitions: Option[Seq[PortDefinition]])
+        portDefinitions: Option[Seq[PortDefinition]],
+        readinessChecks: Option[Seq[ReadinessCheck]])
 
       val extraReads: Reads[ExtraFields] =
         (
@@ -900,7 +948,8 @@ trait AppAndGroupFormats {
           (__ \ "ipAddress").readNullable[IpAddress] ~
           (__ \ "residency").readNullable[Residency] ~
           (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
-          (__ \ "portDefinitions").readNullable[Seq[PortDefinition]]
+          (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
+          (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]]
         )(ExtraFields)
 
       extraReads
@@ -922,7 +971,8 @@ trait AppAndGroupFormats {
             residency = extra.residency,
             portDefinitions = extra.portDefinitions.orElse {
               extra.ports.map { ports => PortDefinitions.apply(ports: _*) }
-            }
+            },
+            readinessChecks = extra.readinessChecks
           )
         }
     }.map(addHealthCheckPortIndexIfNecessary)

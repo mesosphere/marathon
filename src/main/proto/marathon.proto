@@ -46,6 +46,23 @@ message HealthCheckDefinition {
   optional uint32 port = 10;
 }
 
+message ReadinessCheckDefinition {
+  enum Protocol {
+    HTTP = 0;
+    HTTPS = 3;
+  }
+  optional string name = 8;
+  optional Protocol protocol = 1;
+  optional string path = 2;
+  optional string portName = 3;
+
+  optional uint64 intervalMillis = 4;
+  optional uint64 timeoutMillis = 5;
+
+  repeated uint32 httpStatusCodeForReady = 6;
+  optional bool preserveLastResponse = 7;
+}
+
 message IpAddress {
   repeated string groups = 1;
   repeated mesos.Label labels = 2;
@@ -84,6 +101,7 @@ message ServiceDefinition {
   optional IpAddress ipAddress = 25;
   optional ResidencyDefinition residency = 26;
   repeated mesos.Port portDefinitions = 27;
+  repeated ReadinessCheckDefinition readinessCheckDefinition = 28;
 }
 
 message ResourceRoles {
