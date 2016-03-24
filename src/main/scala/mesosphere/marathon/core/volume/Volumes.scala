@@ -26,10 +26,9 @@ sealed trait VolumeProvider[+T <: Volume] {
 }
 
 /**
-  * VolumeProvider (companion?)
-  * TODO(jdef) this should probably be renamed RegistryImpl or something
+  * StaticRegistry is a fixed, precomputed storage provider registry
   */
-protected object VolumeProvider extends VolumeProviderRegistry {
+protected object StaticRegistry extends VolumeProviderRegistry {
 
   protected def make(prov: VolumeProvider[Volume]*): Map[String, VolumeProvider[Volume]] = {
     prov.foldLeft(Map.empty[String, VolumeProvider[Volume]]) { (m, p) => m + (p.name -> p) }

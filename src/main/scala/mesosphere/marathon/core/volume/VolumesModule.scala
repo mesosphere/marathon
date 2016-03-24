@@ -35,6 +35,6 @@ trait VolumeProviderRegistry {
   */
 object VolumesModule {
   lazy val localVolumes: LocalVolumes = AgentVolumeProvider
-  lazy val providers: VolumeProviderRegistry = VolumeProvider
+  lazy val providers: VolumeProviderRegistry = StaticRegistry
   lazy val updates: ContextUpdate = ContextUpdate
 }
