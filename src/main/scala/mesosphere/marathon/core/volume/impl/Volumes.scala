@@ -85,22 +85,45 @@ protected object DVDIProvider extends PersistentVolumeProvider with ContextUpdat
       .setMode(volume.mode)
       .build
 
-  // special behavior for docker vs. mesos containers
-  // - docker containerizer: serialize volumes into mesos proto
-  // - docker containerizer: specify "volumeDriver" for the container
-  override protected def updatedContainer(cc: ContainerContext, v: Volume): Option[ContainerContext] = {
+  def updatedContainer(cc: ContainerContext, pv: PersistentVolume): Option[ContainerContext] = {
+    // special behavior for docker vs. mesos containers
+    // - docker containerizer: serialize volumes into mesos proto
+    // - docker containerizer: specify "volumeDriver" for the container
     val ci = cc.ci // TODO(jdef) clone?
-    if (ci.getType == ContainerInfo.Type.DOCKER && ci.hasDocker)
-      Some(v).collect{
-        case pv: PersistentVolume if accepts(pv) => {
-          val driverName = pv.persistent.options.get(optionDriver)
-          if (ci.getDocker.getVolumeDriver != driverName) {
-            ci.setDocker(ci.getDocker.toBuilder.setVolumeDriver(driverName).build)
-          }
-          ci.addVolumes(toMesosVolume(pv))
+    if (ci.getType == ContainerInfo.Type.DOCKER && ci.hasDocker) {
+      val driverName = pv.persistent.options.get(optionDriver)
+      if (ci.getDocker.getVolumeDriver != driverName) {
+        ci.setDocker(ci.getDocker.toBuilder.setVolumeDriver(driverName).build)
+      }
+      Some(ContainerContext(ci.addVolumes(toMesosVolume(pv))))
+    }
+    None
+  }
+
+  def updatedCommand(cc: CommandContext, pv: PersistentVolume): Option[CommandContext] = {
+    // special behavior for docker vs. mesos containers
+    // - mesos containerizer: serialize volumes into envvar sets
+    val (ct, ci) = (cc.ct, cc.ci) // TODO(jdef) clone ci?
+    if (ct == ContainerInfo.Type.MESOS) {
+      val env = if (ci.hasEnvironment) ci.getEnvironment.toBuilder else Environment.newBuilder
+      val toAdd = volumeToEnv(pv, env.getVariablesList)
+      env.addAllVariables(toAdd.asJava)
+      Some(CommandContext(ct, ci.setEnvironment(env.build)))
+    }
+    None
+  }
+
+  override protected def updated[C <: Context](context: C, v: Volume): Option[C] = {
+    v match {
+      case pv: PersistentVolume => {
+        if (accepts(pv)) context match {
+          case cc: ContainerContext => updatedContainer(cc, pv).map(_.asInstanceOf[C])
+          case cc: CommandContext   => updatedCommand(cc, pv).map(_.asInstanceOf[C])
         }
-      }.map(ContainerContext(_))
-    else None
+        else None
+      }
+      case _ => None
+    }
   }
 
   val dvdiVolumeName = "DVDI_VOLUME_NAME"
@@ -122,22 +145,6 @@ protected object DVDIProvider extends PersistentVolumeProvider with ContextUpdat
       newVar(dvdiVolumeDriver + suffix, v.persistent.options.get(optionDriver))
     // TODO(jdef) support other options here
     )
-  }
-
-  // special behavior for docker vs. mesos containers
-  // - mesos containerizer: serialize volumes into envvar sets
-  override protected def updatedCommand(cc: CommandContext, v: Volume): Option[CommandContext] = {
-    val (ct, ci) = (cc.ct, cc.ci) // TODO(jdef) clone ci?
-    if (ct == ContainerInfo.Type.MESOS)
-      Some(v).collect{
-        case pv: PersistentVolume if accepts(pv) => {
-          val env = if (ci.hasEnvironment) ci.getEnvironment.toBuilder else Environment.newBuilder
-          val toAdd = volumeToEnv(pv, env.getVariablesList)
-          env.addAllVariables(toAdd.asJava)
-          ci.setEnvironment(env.build)
-        }
-      }.map(CommandContext(ct, _))
-    else None
   }
 }
 
@@ -164,9 +171,15 @@ protected object DockerHostVolumeProvider
       .build
 
   /** @return a possibly modified builder if `v` is a DockerVolume */
-  override protected def updatedContainer(cc: ContainerContext, v: Volume): Option[ContainerContext] = {
-    val ci = cc.ci // TODO(jdef) clone?
-    Some(v).collect{ case dv: DockerVolume => ci.addVolumes(toMesosVolume(dv)) }.map(ContainerContext(_))
+  override protected def updated[C <: Context](context: C, v: Volume): Option[C] = {
+    context match {
+      case cc: ContainerContext => {
+        val ci = cc.ci // TODO(jdef) clone?
+        Some(v).collect{ case dv: DockerVolume => ci.addVolumes(toMesosVolume(dv)) }.
+          map(ContainerContext(_).asInstanceOf[C])
+      }
+    }
+    None
   }
 
   override def apply(container: Option[Container]): Iterable[DockerVolume] =

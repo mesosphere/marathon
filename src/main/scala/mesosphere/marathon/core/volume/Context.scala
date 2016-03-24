@@ -23,30 +23,13 @@ final case class CommandContext(ct: ContainerInfo.Type, ci: CommandInfo.Builder)
   */
 trait ContextUpdate {
   /**
-    * Generate an updated ContainerInfo (of ContainerContext) for the given volume
-    * @return an updated ContainerContext or None if ContainerContext is unsupported
-    */
-  protected def updatedContainer(ci: ContainerContext, v: Volume): Option[ContainerContext] = None
-  /**
-    * Generate an updated CommandInfo (of CommandContext) for the given volume
-    * @return an updated CommandContext or None if CommandContext is unsupported
-    */
-  protected def updatedCommand(cm: CommandContext, v: Volume): Option[CommandContext] = None
-
-  /**
     * Generates an updated Context for the given input context `c` and volume `v`.
     * @param c is the initial input Context
     * @param v is the volume that provides metadata with which the initial context is decorated
     * @return a Context decorated with metadata from volume `v`; None if the context is not
     *  supported by the storage provider associated with the given volume.
     */
-  final def updated[C <: Context](c: C, v: Volume): Option[C] = {
-    c match {
-      case ctx: ContainerContext => updatedContainer(ctx, v).asInstanceOf[Option[C]]
-      case ctx: CommandContext   => updatedCommand(ctx, v).asInstanceOf[Option[C]]
-      case _                     => throw new Error(s"unknown context ${c}")
-    }
-  }
+  protected def updated[C <: Context](c: C, v: Volume): Option[C] = None
 
   /**
     * Generates an updated [[Context]] for the given volumes. For subclasses that don't support
@@ -70,13 +53,8 @@ trait ContextUpdate {
   * ContextUpdate (companion) routes update calls to the appropriate volume provider.
   */
 object ContextUpdate extends ContextUpdate {
-  override protected def updatedContainer(ci: ContainerContext, v: Volume): Option[ContainerContext] =
+  override protected def updated[C <: Context](ci: C, v: Volume): Option[C] =
     VolumesModule.providers(v).filter(_.isInstanceOf[ContextUpdate]).
       map(_.asInstanceOf[ContextUpdate]).
-      flatMap(_.updatedContainer(ci, v))
-
-  override protected def updatedCommand(cm: CommandContext, v: Volume): Option[CommandContext] =
-    VolumesModule.providers(v).filter(_.isInstanceOf[ContextUpdate]).
-      map(_.asInstanceOf[ContextUpdate]).
-      flatMap(_.updatedCommand(cm, v))
+      flatMap(_.updated(ci, v))
 }
