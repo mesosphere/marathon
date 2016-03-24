@@ -449,6 +449,56 @@
         }
       }
     },
+    "readinessChecks": {
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Query these readiness checks to determine if a task is ready to serve requests.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name used to identify this readiness check."
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS.",
+            "enum": ["HTTP", "HTTPS"]
+          },
+          "path": {
+            "type": "string",
+            "description": "Path to endpoint exposed by the task that will provide readiness status. Example: /path/to/health."
+          },
+          "portName": {
+            "type": "string",
+            "description": "Name of the port to query as described in the portDefinitions. Example: httpApi."
+          },
+          "intervalSeconds": {
+            "type": "integer",
+            "description": "Number of seconds to wait between readiness checks.",
+            "minimum": 0
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "description": "Number of seconds after which a health check is considered a failure regardless of the response.",
+            "minimum": 0
+          },
+          "httpStatusCodesForReady": {
+            "items": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 999
+            },
+            "description": "The HTTP(s) status code to treat as 'ready'.",
+            "type": "array"
+          },
+          "preserveLastResponse": {
+            "type": "boolean",
+            "description": "If and only if true, preserve the last readiness check responses and expose them in the API as part of a deployment.."
+          }
+        }
+      },
+      "type": "array"
+    },
     "residency": {
       "type": "object",
       "description": "When using local persistent volumes that pin tasks onto agents, these values define how Marathon handles terminal states of these tasks.",

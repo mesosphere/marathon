@@ -3,6 +3,7 @@ package mesosphere.marathon.api.v2.json
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state._
 
@@ -51,6 +52,8 @@ case class AppUpdate(
 
     healthChecks: Option[Set[HealthCheck]] = None,
 
+    readinessChecks: Option[Seq[ReadinessCheck]] = None,
+
     dependencies: Option[Set[PathId]] = None,
 
     upgradeStrategy: Option[UpgradeStrategy] = None,
@@ -97,6 +100,7 @@ case class AppUpdate(
     maxLaunchDelay = maxLaunchDelay.getOrElse(app.maxLaunchDelay),
     container = container.filterNot(_ == Container.Empty).orElse(app.container),
     healthChecks = healthChecks.getOrElse(app.healthChecks),
+    readinessChecks = readinessChecks.getOrElse(app.readinessChecks),
     dependencies = dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy = upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels = labels.getOrElse(app.labels),
