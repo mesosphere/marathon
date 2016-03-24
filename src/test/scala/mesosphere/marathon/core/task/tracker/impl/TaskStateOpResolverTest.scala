@@ -21,7 +21,7 @@ class TaskStateOpResolverTest
     extends FunSuite with Mockito with GivenWhenThen with ScalaFutures with Matchers {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  test("ForceExpunge fails if task does not exist") {
+  test("ForceExpunge results in NoChange if task does not exist") {
     val f = new Fixture
     Given("a non existing taskId")
     f.taskTracker.task(f.notExistingTaskId) returns Future.successful(None)
@@ -33,7 +33,7 @@ class TaskStateOpResolverTest
     verify(f.taskTracker).task(f.notExistingTaskId)
 
     And("the result is a Failure")
-    stateChange shouldBe a[TaskStateChange.Failure]
+    stateChange shouldBe a[TaskStateChange.NoChange]
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()

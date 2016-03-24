@@ -11,6 +11,7 @@ import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.concurrent.Promise
@@ -41,17 +42,10 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[HealthStatusChanged])
 
-    val minHealthy = (app.instances * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
-    val nrToKillImmediately = math.max(0, toKill.size - minHealthy)
+    val ignitionStrategy = computeRestartStrategy(app, tasksToKill.size)
+    maxCapacity = ignitionStrategy.maxCapacity
 
-    // make sure at least one task can be started to get the ball rolling
-    if (maxCapacity == app.instances)
-      maxCapacity += 1
-
-    log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} of ${app.id.toString} leave " +
-      s"$minHealthy tasks running, maximum capacity $maxCapacity, killing $nrToKillImmediately tasks immediately")
-
-    for (_ <- 0 until nrToKillImmediately) {
+    for (_ <- 0 until ignitionStrategy.nrToKillImmediately) {
       killNextOldTask()
     }
 
@@ -169,9 +163,37 @@ class TaskReplaceActor(
 }
 
 object TaskReplaceActor {
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
   val KillComplete = "^TASK_(ERROR|FAILED|FINISHED|LOST|KILLED)$".r
   val FailedToStart = "^TASK_(ERROR|FAILED|LOST|KILLED)$".r
 
   case object RetryKills
+
+  /** Encapsulates the logic how to get a Restart going */
+  private[upgrade] case class RestartStrategy(nrToKillImmediately: Int, maxCapacity: Int)
+
+  private[upgrade] def computeRestartStrategy(app: AppDefinition, runningTasksCount: Int): RestartStrategy = {
+    val minHealthy = (app.instances * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
+    var maxCapacity = (app.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
+    var nrToKillImmediately = math.max(0, runningTasksCount - minHealthy)
+
+    if (nrToKillImmediately == 0 && maxCapacity <= runningTasksCount) {
+      if (app.isResident) {
+        log.info("adjusting nrToKillImmediately to 1 in order to prevent overCapacity for resident app")
+        nrToKillImmediately = 1
+      }
+      else {
+        log.info("increasing maxCapacity by 1 in order to get the restart going")
+        maxCapacity += 1
+      }
+    }
+
+    log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} of ${app.id.toString} leave " +
+      s"$minHealthy tasks running, maximum capacity $maxCapacity, killing $nrToKillImmediately tasks immediately")
+
+    RestartStrategy(nrToKillImmediately = nrToKillImmediately, maxCapacity = maxCapacity)
+  }
+
 }
 
