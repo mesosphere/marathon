@@ -47,7 +47,9 @@ Running on DCOS, Marathon gains the following additional features:
 - Virtual IP routing. Allocate a dedicated, virtual address to your app. Your app is now reachable anywhere in the cluster, wherever it might be scheduled. Load balancing and rerouting around failures are done automatically.
 - Authorization (DCOS Enterprise Edition only). True multitenancy with each user or group having access to their own applications and groups.
 
-## Marathon example: A small datacenter
+## Examples
+
+### Marathon orchestrates both apps and frameworks
 
 The graphic below shows how Marathon runs on <a href="https://mesos.apache.org/">Apache Mesos</a> acting as the orchestrator for other applications and services.
 
@@ -62,15 +64,17 @@ In the use case below, Chronos is running two scheduled jobs, shown in blue. One
 
 Meanwhile, Marathon also runs the other application containers - either Docker or Mesos - that make up our website: JBoss servers, Jetty, Sinatra, Rails, and so on.
 
-We have shown that Marathon is responsible for running other frameworks, helps them maintain 100% uptime, and coexists with them creating tasks in Mesos.
+We have shown that Marathon is responsible for running other frameworks, helps them maintain 100% uptime, and coexists with them creating workloads in Mesos.
 
 <p class="text-center">
   <img src="{{ site.baseurl}}/img/architecture.png" width="423" height="477" alt="">
 </p>
 
+### Scaling and fault recovery
+
 The next three images illustrate scaling and container placement.
 
-Below we see Marathon running three applications, each scaled to a different number of tasks: Search (1), Jetty (3), and Rails (5).
+Below we see Marathon running three applications, each scaled to a different number of containers: Search (1), Jetty (3), and Rails (5).
 
 <p class="text-center">
   <img src="{{ site.baseurl}}/img/marathon1.png" width="420" height="269" alt="">
@@ -78,13 +82,13 @@ Below we see Marathon running three applications, each scaled to a different num
 
 As the website gains traction, we decide to scale out the Search service and our Rails-based application.
 
-We use the Marathon REST API call to to add more tasks. Marathon will take care of placing the new tasks on machines with spare capacity, honoring the constraints we previously set. We can see the containers are dynamically placed:
+We use the Marathon REST API call to to add more instances. Marathon will take care of placing the new containers on machines with spare capacity, honoring the constraints we previously set. We can see the containers are dynamically placed:
 
 <p class="text-center">
   <img src="{{ site.baseurl}}/img/marathon2.png" width="420" height="269" alt="">
 </p>
 
-Finally, imagine that one of the datacenter workers trips over a power cord and a server is unplugged. No problem for Marathon: it moves the affected Search service and Rails tasks to a node that has spare capacity. Marathon has maintained our uptime in the face of machine failure.
+Finally, imagine that one of the datacenter workers trips over a power cord and a server is unplugged. No problem for Marathon: it moves the affected Search and Rails containers to a node that has spare capacity. Marathon has maintained our uptime in the face of machine failure.
 
 <p class="text-center">
   <img src="{{ site.baseurl}}/img/marathon3.png" width="417" height="268" alt="">
