@@ -2,15 +2,21 @@ package mesosphere.marathon.core.volume
 
 import com.wix.accord.Validator
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.state.Volume
+import mesosphere.marathon.state.{ AppDefinition, Container }
+import mesosphere.marathon.state.{ PersistentVolume, Volume }
 import mesosphere.marathon.core.volume.impl._
 
 trait LocalVolumes {
+  self: VolumeProvider[PersistentVolume] =>
+
   /** @return a stream of task local volumes, extrapolating them from the app spec */
-  def local(app: AppDefinition): Iterable[Task.LocalVolume]
+  def local(app: AppDefinition): Iterable[Task.LocalVolume] = {
+    self.apply(app.container).map{ volume => Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume) }
+  }
   /** @return the aggregate mesos disk resources required for volumes */
-  def diskSize(app: AppDefinition): Double
+  def diskSize(container: Option[Container]): Double = {
+    self.apply(container).map(_.persistent.size).flatten.sum.toDouble
+  }
 }
 
 /**
@@ -23,7 +29,7 @@ trait VolumeProvider[+T <: Volume] {
   val validation: Validator[Volume]
 
   /** apply scrapes volumes from an application definition that are supported this volume provider */
-  def apply(app: AppDefinition): Iterable[T]
+  def apply(container: Option[Container]): Iterable[T]
 }
 
 trait VolumeProviderRegistry {

@@ -4,13 +4,42 @@ import com.wix.accord._
 import com.wix.accord.combinators.{ Fail, NilValidator }
 import com.wix.accord.dsl._
 import com.wix.accord.Validator
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.volume._
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.Container
 import mesosphere.marathon.state.{ DockerVolume, PersistentVolume, Volume }
 import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo, Volume => MesosVolume, Environment }
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
+
+protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume] {
+  /**
+    * don't invoke validator on v because that's circular, just check the additional
+    * things that we need for agent local volumes.
+    * see implicit validator in the PersistentVolume class for reference.
+    */
+  val validPersistentVolume: Validator[PersistentVolume]
+
+  /** convenience validator that type-checks for persistent volume */
+  val validation = new Validator[Volume] {
+    val notPersistentVolume = new Fail[Volume]("is not a persistent volume")
+    override def apply(v: Volume): Result = v match {
+      case pv: PersistentVolume => validate(pv)(validPersistentVolume)
+      case _                    => validate(v)(notPersistentVolume)
+    }
+  }
+
+  /**
+    * @return true if volume has a provider name that matches ours exactly
+    */
+  def accepts(volume: PersistentVolume): Boolean = {
+    volume.persistent.providerName.isDefined && volume.persistent.providerName.get == name
+  }
+
+  override def apply(container: Option[Container]): Iterable[PersistentVolume] =
+    container.fold(Seq.empty[PersistentVolume]) {
+      _.volumes.collect{ case vol: PersistentVolume if accepts(vol) => vol }
+    }
+}
 
 /**
   * DVDIProvider (Docker Volume Driver Interface provider) handles persistent volumes allocated
@@ -20,9 +49,7 @@ import scala.collection.JavaConverters._
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected object DVDIProvider
-    extends VolumeProvider[PersistentVolume]
-    with ContextUpdate {
+protected object DVDIProvider extends PersistentVolumeProvider with ContextUpdate {
 
   val name = "dvdi"
 
@@ -37,10 +64,10 @@ protected object DVDIProvider
     // TODO(jdef) validate contents of iops and volume type options
   }
 
+  // TODO(jdef) implement me; probably need additional context for validation here because,
+  // for example, we only allow a single docker volume driver to be specified w/ the docker
+  // containerizer (and we don't know which containerizer is used at this point!)
   val validPersistentVolume = validator[PersistentVolume] { v =>
-    // don't invoke validator on v because that's circular, just check the additional
-    // things that we need for agent local volumes.
-    // see implicit validator in the PersistentVolume class for reference.
     v.persistent.name is notEmpty
     v.persistent.name.each is notEmpty
     v.persistent.providerName is notEmpty
@@ -48,19 +75,6 @@ protected object DVDIProvider
     v.persistent.providerName.each is equalTo(name) // sanity check
     v.persistent.options is notEmpty
     v.persistent.options.each is valid(validOptions)
-  }
-
-  val notPersistentVolume = new Fail[Volume]("is not a persistent volume")
-
-  // TODO(jdef) implement me; probably need additional context for validation here because,
-  // for example, we only allow a single docker volume driver to be specified w/ the docker
-  // containerizer (and we don't know which containerizer is used at this point!)
-  val validation = new Validator[Volume] {
-    override def apply(v: Volume): Result = v match {
-      // sanity check
-      case pv: PersistentVolume => validate(pv)(validPersistentVolume)
-      case _                    => validate(v)(notPersistentVolume)
-    }
   }
 
   /** non-agent-local PersistentVolumes can be serialized into a Mesos Protobuf */
@@ -78,7 +92,7 @@ protected object DVDIProvider
     val ci = cc.ci // TODO(jdef) clone?
     if (ci.getType == ContainerInfo.Type.DOCKER && ci.hasDocker)
       Some(v).collect{
-        case pv: PersistentVolume if isDVDI(pv) => {
+        case pv: PersistentVolume if accepts(pv) => {
           val driverName = pv.persistent.options.get(optionDriver)
           if (ci.getDocker.getVolumeDriver != driverName) {
             ci.setDocker(ci.getDocker.toBuilder.setVolumeDriver(driverName).build)
@@ -116,7 +130,7 @@ protected object DVDIProvider
     val (ct, ci) = (cc.ct, cc.ci) // TODO(jdef) clone ci?
     if (ct == ContainerInfo.Type.MESOS)
       Some(v).collect{
-        case pv: PersistentVolume if isDVDI(pv) => {
+        case pv: PersistentVolume if accepts(pv) => {
           val env = if (ci.hasEnvironment) ci.getEnvironment.toBuilder else Environment.newBuilder
           val toAdd = volumeToEnv(pv, env.getVariablesList)
           env.addAllVariables(toAdd.asJava)
@@ -125,15 +139,6 @@ protected object DVDIProvider
       }.map(CommandContext(ct, _))
     else None
   }
-
-  def isDVDI(volume: PersistentVolume): Boolean = {
-    volume.persistent.providerName.isDefined && volume.persistent.providerName.get == name
-  }
-
-  override def apply(app: AppDefinition): Iterable[PersistentVolume] =
-    app.container.fold(Seq.empty[PersistentVolume]) {
-      _.volumes.collect{ case vol: PersistentVolume if isDVDI(vol) => vol }
-    }
 }
 
 /**
@@ -164,14 +169,14 @@ protected object DockerHostVolumeProvider
     Some(v).collect{ case dv: DockerVolume => ci.addVolumes(toMesosVolume(dv)) }.map(ContainerContext(_))
   }
 
-  override def apply(app: AppDefinition): Iterable[DockerVolume] =
-    app.container.fold(Seq.empty[DockerVolume])(_.volumes.collect{ case vol: DockerVolume => vol })
+  override def apply(container: Option[Container]): Iterable[DockerVolume] =
+    container.fold(Seq.empty[DockerVolume])(_.volumes.collect{ case vol: DockerVolume => vol })
 }
 
 /**
   * AgentVolumeProvider handles persistent volumes allocated from agent resources.
   */
-protected[volume] object AgentVolumeProvider extends VolumeProvider[PersistentVolume] with LocalVolumes {
+protected[volume] object AgentVolumeProvider extends PersistentVolumeProvider with LocalVolumes {
   import org.apache.mesos.Protos.Volume.Mode
   import mesosphere.marathon.api.v2.Validation._
 
@@ -179,40 +184,13 @@ protected[volume] object AgentVolumeProvider extends VolumeProvider[PersistentVo
   val name = "agent"
 
   val validPersistentVolume = validator[PersistentVolume] { v =>
-    // don't invoke validator on v because that's circular, just check the additional
-    // things that we need for agent local volumes.
-    // see implicit validator in the PersistentVolume class for reference.
     v.persistent.size is notEmpty
     v.mode is equalTo(Mode.RW)
     //persistent volumes require those CLI parameters provided
     v is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
   }
 
-  val notPersistentVolume = new Fail[Volume]("is not a persistent volume")
-
-  /** validation checks that size has been specified */
-  val validation = new Validator[Volume] {
-    override def apply(v: Volume): Result = v match {
-      // sanity check
-      case pv: PersistentVolume => validate(pv)(validPersistentVolume)
-      case _                    => validate(v)(notPersistentVolume)
-    }
-  }
-
-  def isAgentLocal(volume: PersistentVolume): Boolean = {
+  override def accepts(volume: PersistentVolume): Boolean = {
     volume.persistent.providerName.getOrElse(name) == name
-  }
-
-  override def apply(app: AppDefinition): Iterable[PersistentVolume] =
-    app.container.fold(Seq.empty[PersistentVolume]) {
-      _.volumes.collect{ case vol: PersistentVolume if isAgentLocal(vol) => vol }
-    }
-
-  override def local(app: AppDefinition): Iterable[Task.LocalVolume] = {
-    apply(app).map{ volume => Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume) }
-  }
-
-  override def diskSize(app: AppDefinition): Double = {
-    apply(app).map(_.persistent.size).flatten.sum.toDouble
   }
 }
