@@ -4,12 +4,26 @@ import com.wix.accord.Validator
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.Volume
+import mesosphere.marathon.core.volume.impl._
 
 trait LocalVolumes {
   /** @return a stream of task local volumes, extrapolating them from the app spec */
   def local(app: AppDefinition): Iterable[Task.LocalVolume]
   /** @return the aggregate mesos disk resources required for volumes */
   def diskSize(app: AppDefinition): Double
+}
+
+/**
+  * VolumeProvider is an interface implemented by storage volume providers
+  */
+trait VolumeProvider[+T <: Volume] {
+  /** name uniquely identifies this volume provider */
+  val name: String
+  /** validation implements this provider's specific validation rules */
+  val validation: Validator[Volume]
+
+  /** apply scrapes volumes from an application definition that are supported this volume provider */
+  def apply(app: AppDefinition): Iterable[T]
 }
 
 trait VolumeProviderRegistry {
