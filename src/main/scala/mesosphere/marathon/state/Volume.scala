@@ -191,7 +191,7 @@ object PersistentVolume {
   implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
     vol.containerPath is notEmpty
     vol.persistent is valid
-    vol.persistent.providerName is VolumesModule.providerRegistry.known
-    vol is VolumesModule.providerRegistry.approved(vol.persistent.providerName)
+    vol.persistent.providerName is VolumesModule.providers.known
+    vol is VolumesModule.providers.approved(vol.persistent.providerName)
   }
 }

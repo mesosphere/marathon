@@ -73,7 +73,7 @@ protected object VolumeProvider extends VolumeProviderRegistry {
   */
 protected object DVDIProvider
     extends VolumeProvider[PersistentVolume]
-    with VolumeBuilderSupport {
+    with ContextUpdate {
 
   val name = "dvdi"
 
@@ -125,7 +125,7 @@ protected object DVDIProvider
   // special behavior for docker vs. mesos containers
   // - docker containerizer: serialize volumes into mesos proto
   // - docker containerizer: specify "volumeDriver" for the container
-  override protected def containerInfo(cc: ContainerContext, v: Volume): Option[ContainerContext] = {
+  override protected def updatedContainer(cc: ContainerContext, v: Volume): Option[ContainerContext] = {
     val ci = cc.ci // TODO(jdef) clone?
     if (ci.getType == ContainerInfo.Type.DOCKER && ci.hasDocker)
       Some(v).collect{
@@ -163,7 +163,7 @@ protected object DVDIProvider
 
   // special behavior for docker vs. mesos containers
   // - mesos containerizer: serialize volumes into envvar sets
-  override protected def commandInfo(cc: CommandContext, v: Volume): Option[CommandContext] = {
+  override protected def updatedCommand(cc: CommandContext, v: Volume): Option[CommandContext] = {
     val (ct, ci) = (cc.ct, cc.ci) // TODO(jdef) clone ci?
     if (ct == ContainerInfo.Type.MESOS)
       Some(v).collect{
@@ -195,7 +195,7 @@ protected object DVDIProvider
   */
 protected object DockerHostVolumeProvider
     extends VolumeProvider[DockerVolume]
-    with VolumeBuilderSupport {
+    with ContextUpdate {
   val name = "docker" // only because we should have a non-empty name
 
   /** no special case validation here, it's handled elsewhere */
@@ -210,7 +210,7 @@ protected object DockerHostVolumeProvider
       .build
 
   /** @return a possibly modified builder if `v` is a DockerVolume */
-  override protected def containerInfo(cc: ContainerContext, v: Volume): Option[ContainerContext] = {
+  override protected def updatedContainer(cc: ContainerContext, v: Volume): Option[ContainerContext] = {
     val ci = cc.ci // TODO(jdef) clone?
     Some(v).collect{ case dv: DockerVolume => ci.addVolumes(toMesosVolume(dv)) }.map(ContainerContext(_))
   }

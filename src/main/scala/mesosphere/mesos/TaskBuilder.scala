@@ -132,7 +132,7 @@ class TaskBuilder(app: AppDefinition,
 
       // apply changes from volume providers (must do this after we're sure there's a container type)
       app.container.foreach{ container =>
-        ci = VolumesModule.builders(container.volumes){ () => CommandContext(ct, ci) }.fold(ci)(_.ci)
+        ci = VolumesModule.updates(container.volumes){ () => CommandContext(ct, ci) }.fold(ci)(_.ci)
       }
       ci
     }
@@ -277,7 +277,7 @@ class TaskBuilder(app: AppDefinition,
 
       // apply changes from volume providers (must do this after we're sure there's a container type)
       app.container.foreach{ container =>
-        builder = VolumesModule.builders(container.volumes){ () => ContainerContext(builder) }.fold(builder)(_.ci)
+        builder = VolumesModule.updates(container.volumes){ () => ContainerContext(builder) }.fold(builder)(_.ci)
       }
 
       Some(builder.build)
