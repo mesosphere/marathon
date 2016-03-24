@@ -473,6 +473,7 @@ trait HealthCheckFormats {
 
 trait ReadinessCheckFormats {
   import Formats._
+  import mesosphere.marathon.core.readiness._
 
   implicit lazy val ReadinessCheckFormat: Format[ReadinessCheck] = {
     import ReadinessCheck._
@@ -502,6 +503,8 @@ trait ReadinessCheckFormats {
       Writes[ReadinessCheck.Protocol](protocol => JsString(ProtocolToString(protocol)))
     )
   }
+  implicit lazy val ReadinessCheckResultFormat: Format[ReadinessCheckResult] = Json.format[ReadinessCheckResult]
+  implicit lazy val ReadinessCheckHttpResponseFormat: Format[HttpResponse] = Json.format[HttpResponse]
 
   private[this] val ProtocolToString = Map[ReadinessCheck.Protocol, String](
     ReadinessCheck.Protocol.HTTP -> "HTTP",
@@ -509,7 +512,7 @@ trait ReadinessCheckFormats {
   )
   private[this] val StringToProtocol: Map[String, ReadinessCheck.Protocol] =
     ProtocolToString.map { case (k, v) => (v, k) }
-  private[this] val ProtocolErrorString = s"Chose one of ${StringToProtocol.keys.mkString(", ")}"
+  private[this] val ProtocolErrorString = s"Choose one of ${StringToProtocol.keys.mkString(", ")}"
 }
 
 trait FetchUriFormats {

@@ -5,7 +5,6 @@ import mesosphere.marathon.core.task.Task
 case class ReadinessCheckResult(name: String,
                                 taskId: Task.Id,
                                 ready: Boolean,
-                                httpResponse: Option[HttpResponse])
+                                lastResponse: Option[HttpResponse])
 
-case class HttpResponse(status: Int, mediaType: String, body: Array[Byte])
-
+case class HttpResponse(status: Int, contentType: String, body: String)
