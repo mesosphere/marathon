@@ -37,7 +37,7 @@ private[tracker] object TaskOpProcessorImpl {
         case op: TaskStateOp.MesosUpdate         => updateExistingTask(op)
         case op: TaskStateOp.ReservationTimeout  => updateExistingTask(op)
         case op: TaskStateOp.Reserve             => updateIfNotExists(op.taskId, op.task)
-        case op: TaskStateOp.ForceExpunge        => updateExistingTask(op)
+        case op: TaskStateOp.ForceExpunge        => expungeTask(op.taskId)
         case op: TaskStateOp.Revert =>
           Future.successful(TaskStateChange.Update(newState = op.task, oldState = None))
       }
@@ -61,6 +61,17 @@ private[tracker] object TaskOpProcessorImpl {
         case None =>
           val taskId = op.taskId
           TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.appId}] does not exist"))
+      }
+    }
+
+    private[this] def expungeTask(taskId: Task.Id)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
+      directTaskTracker.task(taskId).map {
+        case Some(existingTask) =>
+          TaskStateChange.Expunge(existingTask)
+
+        case None =>
+          log.info("Ignoring ForceExpunge for [{}], task does not exist", taskId)
+          TaskStateChange.NoChange(taskId)
       }
     }
   }
