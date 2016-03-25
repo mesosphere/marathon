@@ -48,7 +48,7 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected object DVDIProvider extends PersistentVolumeProvider with ContextUpdate {
+protected case object DVDIProvider extends PersistentVolumeProvider with ContextUpdate {
 
   val name = "dvdi"
 
@@ -162,7 +162,7 @@ protected object DVDIProvider extends PersistentVolumeProvider with ContextUpdat
   * with "non-local" docker volume drivers. If you want to use a docker volume driver then
   * use a PersistentVolume instead.
   */
-protected object DockerHostVolumeProvider
+protected case object DockerHostVolumeProvider
     extends VolumeProvider[DockerVolume]
     with ContextUpdate {
   val name = "docker" // only because we should have a non-empty name
@@ -202,7 +202,7 @@ protected object DockerHostVolumeProvider
 /**
   * AgentVolumeProvider handles persistent volumes allocated from agent resources.
   */
-protected[volume] object AgentVolumeProvider extends PersistentVolumeProvider with LocalVolumes {
+protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvider with LocalVolumes {
   import org.apache.mesos.Protos.Volume.Mode
   import mesosphere.marathon.api.v2.Validation._
 
