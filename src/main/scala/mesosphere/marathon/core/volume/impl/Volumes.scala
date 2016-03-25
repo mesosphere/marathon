@@ -42,16 +42,16 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
 }
 
 protected abstract class ContextUpdateHelper[V <: Volume: ClassTag] extends ContextUpdate {
+
   def accepts(v: V): Boolean
 
   override protected def updated[C <: BuilderContext](context: C, v: Volume): Option[C] = {
     v match {
-      case vol: V => {
-        if (accepts(vol)) context match {
+      case vol: V if accepts(vol) => {
+        context match {
           case cc: ContainerContext => updatedContainer(cc, vol).map(_.asInstanceOf[C])
           case cc: CommandContext   => updatedCommand(cc, vol).map(_.asInstanceOf[C])
         }
-        else None
       }
       case _ => None
     }
