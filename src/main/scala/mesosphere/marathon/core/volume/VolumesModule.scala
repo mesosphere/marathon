@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.volume
 
-import com.wix.accord.Validator
+import com.wix.accord._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, Container }
 import mesosphere.marathon.state.{ PersistentVolume, Volume }
@@ -25,8 +25,10 @@ trait LocalVolumes {
 trait VolumeProvider[+T <: Volume] {
   /** name uniquely identifies this volume provider */
   val name: String
-  /** validation implements this provider's specific validation rules */
+  /** validation implements a provider's volume validation rules */
   val validation: Validator[Volume]
+  /** containerValidation implements a provider's container validation rules */
+  val containerValidation: Validator[Container]
 
   /** apply scrapes volumes from an application definition that are supported this volume provider */
   def apply(container: Option[Container]): Iterable[T]
@@ -48,6 +50,19 @@ trait VolumeProviderRegistry {
 
   /** @return a validator that checks the validity of a volume given the volume provider name */
   def approved[T <: Volume](name: Option[String]): Validator[T];
+
+  /** @return a validator that checks the validity of a container given the related volume providers */
+  def approved(): Validator[Container] = new Validator[Container] {
+    def apply(ct: Container) = ct match {
+      // scalastyle:off null
+      case null => Failure(Set(RuleViolation(null, "is a null", None)))
+      // scalastyle:on null
+
+      // grab all related volume providers and apply their containerValidation
+      case _ => ct.volumes.map(VolumesModule.providers(_)).flatten.distinct.
+        map(_.containerValidation).map(validate(ct)(_)).fold(Success)(_ and _)
+    }
+  }
 }
 
 /**

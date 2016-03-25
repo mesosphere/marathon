@@ -64,9 +64,6 @@ protected object DVDIProvider extends PersistentVolumeProvider with ContextUpdat
     // TODO(jdef) validate contents of iops and volume type options
   }
 
-  // TODO(jdef) implement me; probably need additional context for validation here because,
-  // for example, we only allow a single docker volume driver to be specified w/ the docker
-  // containerizer (and we don't know which containerizer is used at this point!)
   val validPersistentVolume = validator[PersistentVolume] { v =>
     v.persistent.name is notEmpty
     v.persistent.name.each is notEmpty
@@ -75,6 +72,18 @@ protected object DVDIProvider extends PersistentVolumeProvider with ContextUpdat
     v.persistent.providerName.each is equalTo(name) // sanity check
     v.persistent.options is notEmpty
     v.persistent.options.each is valid(validOptions)
+  }
+
+  def driversInUse(ct: Container): Set[String] =
+    ct.volumes.collect{
+      case pv: PersistentVolume if accepts(pv) && !pv.persistent.options.isEmpty =>
+        pv.persistent.options.get.get(optionDriver)
+    }.flatten.foldLeft(Set.empty[String])(_ + _)
+
+  /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
+  val containerValidation: Validator[Container] = validator[Container] { ct =>
+    (ct.`type` is equalTo(ContainerInfo.Type.MESOS)) or (
+      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should be == 1))
   }
 
   /** non-agent-local PersistentVolumes can be serialized into a Mesos Protobuf */
@@ -162,6 +171,11 @@ protected object DockerHostVolumeProvider
   /** no special case validation here, it's handled elsewhere */
   val validation: Validator[Volume] = new NilValidator[Volume]
 
+  // no provider-specific rules at the container level
+  val containerValidation: Validator[Container] = new Validator[Container] {
+    def apply(x: Container) = Success
+  }
+
   /** DockerVolumes can be serialized into a Mesos Protobuf */
   def toMesosVolume(volume: DockerVolume): MesosVolume =
     MesosVolume.newBuilder
@@ -195,6 +209,11 @@ protected[volume] object AgentVolumeProvider extends PersistentVolumeProvider wi
 
   /** this is the name of the agent volume provider */
   val name = "agent"
+
+  // no provider-specific rules at the container level
+  val containerValidation: Validator[Container] = new Validator[Container] {
+    def apply(x: Container) = Success
+  }
 
   val validPersistentVolume = validator[PersistentVolume] { v =>
     v.persistent.size is notEmpty

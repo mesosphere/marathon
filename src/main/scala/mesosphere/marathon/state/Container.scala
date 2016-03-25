@@ -3,6 +3,7 @@ package mesosphere.marathon.state
 import com.wix.accord.dsl._
 import com.wix.accord._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.volume.VolumesModule
 import org.apache.mesos.{ Protos => Mesos }
 import scala.collection.immutable.Seq
 
@@ -81,6 +82,7 @@ object Container {
   implicit val validContainer: Validator[Container] = {
     val validGeneralContainer = validator[Container] { container =>
       container.volumes is every(valid)
+      container is VolumesModule.providers.approved
     }
 
     val validDockerContainer: Validator[Container] = validator[Container] { container =>
