@@ -54,7 +54,5 @@ trait ContextUpdate {
   */
 object ContextUpdate extends ContextUpdate {
   override protected def updated[C <: BuilderContext](ci: C, v: Volume): Option[C] =
-    VolumesModule.providers(v).filter(_.isInstanceOf[ContextUpdate]).
-      map(_.asInstanceOf[ContextUpdate]).
-      flatMap(_.updated(ci, v))
+    VolumesModule.providers(v).collect{ case upd: ContextUpdate => upd.updated(ci, v) }.flatten
 }
