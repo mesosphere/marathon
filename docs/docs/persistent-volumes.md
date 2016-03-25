@@ -25,15 +25,11 @@ You may wish to leave them in the Detached state, however, if you think you will
 
 1. Create a new Marathon application via the web interface.
 1. Click the Volumes tab.
-1. Choose the size of the volume or volumes you will use. Be sure that you choose a volume size that will fit the needs of your application; you will not be able to modify this size after you launch your application. <!-- note, I need to actually do this and see how you can choose more than one volume -->
+1. Choose the size of the volume or volumes you will use. Be sure that you choose a volume size that will fit the needs of your application; you will not be able to modify this size after you launch your application.
 1. Specify the container path, from which your application will read and write data. The container path must be non-nested and cannot contain slashes e.g. `data`, but not  `../../../etc/opt` or `/user/data/`.
 1. Click Create.
 
 **Note:** After you launch your application, you will not be able to change the specifications for your local persistent volumes.
-
-<!--
-<screen shot>
--->
 
 Alternatively, you can configure your application to use persistent local volumes in your application definition JSON file:
 
@@ -67,19 +63,11 @@ Alternatively, you can configure your application to use persistent local volume
 
 ## View the Status of Your Application with Persistent Local Volumes
 
-After you have created your Marathon application, click on the “Volumes” tab of the application detail view [check that vocab] to get detailed information about your app instances and associated volumes.
+After you have created your Marathon application, click on the “Volumes” tab of the application detail view to get detailed information about your app instances and associated volumes.
 
 The Status column tells you if your app instance is attached to the volume or not. The app instance will read as “detached” if you have scaled down your application. Currently the only Operation Type available is read/write (RW).
 
-<!--
-<screen shot>
--->
-
-Clicking on the individual volume brings you to the Volume Detail Page, where you can see information about the individual volume:
-
-<!--
-<screen shot>
--->
+Clicking on the individual volume brings you to the Volume Detail Page, where you can see information about the individual volume.
 
 ## The Mesos Sandbox
 
