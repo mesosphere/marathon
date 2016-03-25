@@ -8,7 +8,6 @@ import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state.Container
 import mesosphere.marathon.state.{ DockerVolume, PersistentVolume, Volume }
 import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo, Volume => MesosVolume, Environment }
-import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
 protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume] {
@@ -115,7 +114,7 @@ protected object DVDIProvider extends PersistentVolumeProvider with ContextUpdat
     val (ct, ci) = (cc.ct, cc.ci) // TODO(jdef) clone ci?
     if (ct == ContainerInfo.Type.MESOS) {
       val env = if (ci.hasEnvironment) ci.getEnvironment.toBuilder else Environment.newBuilder
-      val toAdd = volumeToEnv(pv, env.getVariablesList)
+      val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
       env.addAllVariables(toAdd.asJava)
       Some(CommandContext(ct, ci.setEnvironment(env.build)))
     }
