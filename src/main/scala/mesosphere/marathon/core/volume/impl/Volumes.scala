@@ -9,6 +9,7 @@ import mesosphere.marathon.state.Container
 import mesosphere.marathon.state.{ DockerVolume, PersistentVolume, Volume }
 import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo, Volume => MesosVolume, Environment }
 import scala.collection.JavaConverters._
+import scala.reflect.ClassTag
 
 protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume] {
   /**
@@ -40,6 +41,25 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
     }
 }
 
+protected abstract class ContextUpdateHelper[V <: Volume: ClassTag] extends ContextUpdate {
+  def accepts(v: V): Boolean
+
+  override protected def updated[C <: BuilderContext](context: C, v: Volume): Option[C] = {
+    v match {
+      case vol: V => {
+        if (accepts(vol)) context match {
+          case cc: ContainerContext => updatedContainer(cc, vol).map(_.asInstanceOf[C])
+          case cc: CommandContext   => updatedCommand(cc, vol).map(_.asInstanceOf[C])
+        }
+        else None
+      }
+      case _ => None
+    }
+  }
+  def updatedContainer(cc: ContainerContext, vol: V): Option[ContainerContext] = None
+  def updatedCommand(cc: CommandContext, vol: V): Option[CommandContext] = None
+}
+
 /**
   * DVDIProvider (Docker Volume Driver Interface provider) handles persistent volumes allocated
   * by a specific docker volume driver plugin. This works for both docker and mesos containerizers,
@@ -48,7 +68,7 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected case object DVDIProvider extends PersistentVolumeProvider with ContextUpdate {
+protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume] with PersistentVolumeProvider {
 
   val name = "dvdi"
 
@@ -93,7 +113,7 @@ protected case object DVDIProvider extends PersistentVolumeProvider with Context
       .setMode(volume.mode)
       .build
 
-  def updatedContainer(cc: ContainerContext, pv: PersistentVolume): Option[ContainerContext] = {
+  override def updatedContainer(cc: ContainerContext, pv: PersistentVolume): Option[ContainerContext] = {
     // special behavior for docker vs. mesos containers
     // - docker containerizer: serialize volumes into mesos proto
     // - docker containerizer: specify "volumeDriver" for the container
@@ -108,7 +128,7 @@ protected case object DVDIProvider extends PersistentVolumeProvider with Context
     None
   }
 
-  def updatedCommand(cc: CommandContext, pv: PersistentVolume): Option[CommandContext] = {
+  override def updatedCommand(cc: CommandContext, pv: PersistentVolume): Option[CommandContext] = {
     // special behavior for docker vs. mesos containers
     // - mesos containerizer: serialize volumes into envvar sets
     val (ct, ci) = (cc.ct, cc.ci) // TODO(jdef) clone ci?
@@ -119,19 +139,6 @@ protected case object DVDIProvider extends PersistentVolumeProvider with Context
       Some(CommandContext(ct, ci.setEnvironment(env.build)))
     }
     None
-  }
-
-  override protected def updated[C <: BuilderContext](context: C, v: Volume): Option[C] = {
-    v match {
-      case pv: PersistentVolume => {
-        if (accepts(pv)) context match {
-          case cc: ContainerContext => updatedContainer(cc, pv).map(_.asInstanceOf[C])
-          case cc: CommandContext   => updatedCommand(cc, pv).map(_.asInstanceOf[C])
-        }
-        else None
-      }
-      case _ => None
-    }
   }
 
   val dvdiVolumeName = "DVDI_VOLUME_NAME"
@@ -163,8 +170,8 @@ protected case object DVDIProvider extends PersistentVolumeProvider with Context
   * use a PersistentVolume instead.
   */
 protected case object DockerHostVolumeProvider
-    extends VolumeProvider[DockerVolume]
-    with ContextUpdate {
+    extends ContextUpdateHelper[DockerVolume]
+    with VolumeProvider[DockerVolume] {
   val name = "docker" // only because we should have a non-empty name
 
   /** no special case validation here, it's handled elsewhere */
@@ -183,16 +190,12 @@ protected case object DockerHostVolumeProvider
       .setMode(volume.mode)
       .build
 
-  /** @return a possibly modified builder if `v` is a DockerVolume */
-  override protected def updated[C <: BuilderContext](context: C, v: Volume): Option[C] = {
-    context match {
-      case cc: ContainerContext => {
-        val ci = cc.ci // TODO(jdef) clone?
-        Some(v).collect{ case dv: DockerVolume => ci.addVolumes(toMesosVolume(dv)) }.
-          map(ContainerContext(_).asInstanceOf[C])
-      }
-    }
-    None
+  override def accepts(dv: DockerVolume): Boolean = true
+
+  override def updatedContainer(cc: ContainerContext, dv: DockerVolume): Option[ContainerContext] = {
+    var ci = cc.ci // TODO(jdef) clone?
+    // TODO(jdef) check that this is a DOCKER container type?
+    Some(ContainerContext(ci.addVolumes(toMesosVolume(dv))))
   }
 
   override def apply(container: Option[Container]): Iterable[DockerVolume] =
