@@ -1,8 +1,8 @@
 ---
-title: Stateful Applications Using Persistent Volumes
----
+title: Stateful Applications Using Local Persistent Volumes
+-----------------------------------------------------------
 
-# Stateful Applications Using Persistent Volumes
+# Stateful Applications Using Local Persistent Volumes
 
 <div class="alert alert-danger" role="alert">
   <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 1.0 <br/>
@@ -11,9 +11,11 @@ title: Stateful Applications Using Persistent Volumes
 
 Marathon applications lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can create a stateful application by specifying a local persistent volume.
 
+# Specifying a Local Volume
+
 When you specify a local volume or volumes, tasks and their associated data are “pinned” to the node they are first launched on and will be relaunched on that node if they terminate. The resources the application requires are also reserved. Local volumes enable stateful tasks because the task can be restarted without data loss.
 
-## Scaling your app
+## Scaling your App
 
 When you scale your app down, the volumes and resources associated with the destroyed instances are detached. At this point, you may destroy the volumes from the Marathon web interface.
 
