@@ -5,8 +5,7 @@ import com.wix.accord.combinators.{ Fail, NilValidator }
 import com.wix.accord.dsl._
 import com.wix.accord.Validator
 import mesosphere.marathon.core.volume._
-import mesosphere.marathon.state.Container
-import mesosphere.marathon.state.{ DockerVolume, PersistentVolume, Volume }
+import mesosphere.marathon.state._
 import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo, Volume => MesosVolume, Environment }
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
@@ -93,11 +92,60 @@ protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume]
     v.persistent.options.each is valid(validOptions)
   }
 
+  def nameOf(vol: PersistentVolumeInfo): Option[String] = {
+    if (vol.providerName.isDefined && vol.name.isDefined) {
+      Some(vol.providerName.get + "::" + vol.name.get)
+    }
+    else None
+  }
+
+  // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
+  // task instance across the entire cluster.
+  val groupValidation: Validator[Group] = new Validator[Group] {
+    override def apply(g: Group): Result = {
+      val groupViolations = g.apps.flatMap { app =>
+        val nameCounts = volumeNameCounts(app)
+        val internalNameViolations = {
+          nameCounts.filter(_._2 > 1).map{ e =>
+            RuleViolation(app.id, s"Requested volume ${e._1} is declared more than once within app ${app.id}", None)
+          }
+        }
+        val instancesViolation: Option[RuleViolation] =
+          if (app.instances > 1) Some(RuleViolation(app.id,
+            s"Number of instances is limited to 1 when declaring external volumes in app ${app.id}", None))
+          else None
+        val ruleViolations = DVDIProvider.this.apply(app.container).toSeq.flatMap{ vol =>
+          val name = nameOf(vol.persistent)
+          if (name.isDefined) {
+            for {
+              otherApp <- g.transitiveApps.toList
+              if otherApp != app.id // do not compare to self
+              otherVol <- DVDIProvider.this.apply(otherApp.container)
+              otherName <- nameOf(otherVol.persistent)
+              if name == otherName
+            } yield RuleViolation(app.id,
+              s"Requested volume $name conflicts with a volume in app ${otherApp.id}", None)
+          }
+          else None
+        }
+        if (internalNameViolations.isEmpty && ruleViolations.isEmpty && instancesViolation.isEmpty) None
+        else Some(GroupViolation(app, "app contains conflicting volumes", None,
+          internalNameViolations.toSet ++ instancesViolation.toSet ++ ruleViolations.toSet))
+      }
+      if (groupViolations.isEmpty) Success
+      else Failure(groupViolations.toSet)
+    }
+  }
+
   def driversInUse(ct: Container): Set[String] =
-    ct.volumes.collect{
-      case pv: PersistentVolume if accepts(pv) && !pv.persistent.options.isEmpty =>
-        pv.persistent.options.get.get(optionDriver)
-    }.flatten.foldLeft(Set.empty[String])(_ + _)
+    DVDIProvider.this.apply(Some(ct)).filter(!_.persistent.options.isEmpty).flatMap{ pv =>
+      pv.persistent.options.get.get(optionDriver)
+    }.foldLeft(Set.empty[String])(_ + _)
+
+  /** @return a count of volume references-by-name within an app spec */
+  def volumeNameCounts(app: AppDefinition): Map[String, Int] =
+    DVDIProvider.this.apply(app.container).flatMap{ pv => nameOf(pv.persistent) }.
+      groupBy(identity).mapValues(_.size)
 
   /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
   val containerValidation: Validator[Container] = validator[Container] { ct =>
@@ -178,9 +226,10 @@ protected case object DockerHostVolumeProvider
   val validation: Validator[Volume] = new NilValidator[Volume]
 
   // no provider-specific rules at the container level
-  val containerValidation: Validator[Container] = new Validator[Container] {
-    def apply(x: Container) = Success
-  }
+  val containerValidation: Validator[Container] = new NilValidator[Container]
+
+  // no provider-specific rules at the group level
+  val groupValidation: Validator[Group] = new NilValidator[Group]
 
   /** DockerVolumes can be serialized into a Mesos Protobuf */
   def toMesosVolume(volume: DockerVolume): MesosVolume =
@@ -213,9 +262,10 @@ protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvid
   val name = "agent"
 
   // no provider-specific rules at the container level
-  val containerValidation: Validator[Container] = new Validator[Container] {
-    def apply(x: Container) = Success
-  }
+  val containerValidation: Validator[Container] = new NilValidator[Container]
+
+  // no provider-specific rules at the group level
+  val groupValidation: Validator[Group] = new NilValidator[Group]
 
   val validPersistentVolume = validator[PersistentVolume] { v =>
     v.persistent.size is notEmpty

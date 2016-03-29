@@ -82,7 +82,7 @@ object Container {
   implicit val validContainer: Validator[Container] = {
     val validGeneralContainer = validator[Container] { container =>
       container.volumes is every(valid)
-      container is VolumesModule.providers.approved
+      container is VolumesModule.providers.validContainer
     }
 
     val validDockerContainer: Validator[Container] = validator[Container] { container =>

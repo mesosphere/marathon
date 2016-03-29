@@ -2,8 +2,7 @@ package mesosphere.marathon.core.volume
 
 import com.wix.accord._
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ AppDefinition, Container }
-import mesosphere.marathon.state.{ PersistentVolume, Volume }
+import mesosphere.marathon.state._
 import mesosphere.marathon.core.volume.impl._
 
 trait LocalVolumes {
@@ -29,6 +28,8 @@ trait VolumeProvider[+T <: Volume] {
   val validation: Validator[Volume]
   /** containerValidation implements a provider's container validation rules */
   val containerValidation: Validator[Container]
+  /** groupValidation implements a provider's group validation rules */
+  val groupValidation: Validator[Group]
 
   /** apply scrapes volumes from an application definition that are supported this volume provider */
   def apply(container: Option[Container]): Iterable[T]
@@ -52,7 +53,7 @@ trait VolumeProviderRegistry {
   def approved[T <: Volume](name: Option[String]): Validator[T];
 
   /** @return a validator that checks the validity of a container given the related volume providers */
-  def approved(): Validator[Container] = new Validator[Container] {
+  def validContainer(): Validator[Container] = new Validator[Container] {
     def apply(ct: Container) = ct match {
       // scalastyle:off null
       case null => Failure(Set(RuleViolation(null, "is a null", None)))
@@ -61,6 +62,19 @@ trait VolumeProviderRegistry {
       // grab all related volume providers and apply their containerValidation
       case _ => ct.volumes.map(VolumesModule.providers(_)).flatten.distinct.
         map(_.containerValidation).map(validate(ct)(_)).fold(Success)(_ and _)
+    }
+  }
+  /** @return a validator that checks the validity of a group given the related volume providers */
+  def validGroup(): Validator[Group] = new Validator[Group] {
+    def apply(grp: Group) = grp match {
+      // scalastyle:off null
+      case null => Failure(Set(RuleViolation(null, "is a null", None)))
+      // scalastyle:on null
+
+      // grab all related volume providers and apply their groupValidation
+      case _ => grp.transitiveApps.flatMap{ app => app.container }.flatMap{ ct =>
+        ct.volumes.map(VolumesModule.providers(_))
+      }.flatten.map{ p => validate(grp)(p.groupValidation) }.fold(Success)(_ and _)
     }
   }
 }
