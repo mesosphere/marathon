@@ -111,6 +111,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     val appWithOneReadinessCheckWithFixedPort = AppDefinition(
       id = appId,
       readinessChecks = Seq(ReadinessCheckTestHelper.defaultHttp),
+      requirePorts = true,
       portDefinitions = Seq(
         PortDefinition(
           port = 8080,
@@ -127,11 +128,11 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
       ),
       portDefinitions = Seq(
         PortDefinition(
-          port = AppDefinition.RandomPortValue,
+          port = 1, // service ports, ignore
           name = Some(ReadinessCheckTestHelper.alternativeHttps.portName)
         ),
         PortDefinition(
-          port = AppDefinition.RandomPortValue,
+          port = 2, // service ports, ignore
           name = Some(ReadinessCheckTestHelper.defaultHttp.portName)
         )
       )
