@@ -64,8 +64,9 @@ object ReadinessCheckExecutor {
               checkDef.portName,
               throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found")
             )
-            val fixedPort = app.portDefinitions(portIndex).fixedHostPort
-            fixedPort.getOrElse(launched.hostPorts(portIndex))
+
+            if (app.hasFixedHostPorts) app.portDefinitions(portIndex).port
+            else launched.hostPorts(portIndex)
           }
 
           s"$schema://$host:$port${checkDef.path}"
