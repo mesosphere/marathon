@@ -108,7 +108,7 @@ object MarathonBuild extends Build {
 
   lazy val IntegrationTest = config("integration") extend Test
 
-  lazy val baseSettings = Defaults.defaultSettings ++ Seq (
+  lazy val baseSettings = Seq (
     organization := "mesosphere.marathon",
     scalaVersion := "2.11.7",
     crossScalaVersions := Seq(scalaVersion.value),
