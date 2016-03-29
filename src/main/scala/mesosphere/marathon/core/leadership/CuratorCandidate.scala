@@ -60,10 +60,6 @@ class CuratorCandidate(
 
           override def notLeader(): Unit = latch.synchronized {
             latch.foreach { l =>
-              if (l.getParticipants.isEmpty) {
-                log.warn(s"All candidates have temporarily left the group: $path")
-              }
-
               if (wasLeader) {
                 leader.onDefeated()
                 log.info(s"Candidate $id waiting for the next leader election, current voting: ${l.getParticipants}")
