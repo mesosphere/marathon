@@ -24,6 +24,7 @@ import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
+import scala.util.matching.Regex
 
 class TaskReplaceActorTest
     extends MarathonActorSupport
@@ -461,7 +462,7 @@ class TaskReplaceActorTest
       id = "myApp".toPath,
       instances = 3,
       healthChecks = Set(HealthCheck()),
-      upgradeStrategy = UpgradeStrategy(1.0, 0.3)
+      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1.0, maximumOverCapacity = 0.3)
     )
 
     val driver = mock[SchedulerDriver]
@@ -499,30 +500,32 @@ class TaskReplaceActorTest
 
     watch(ref)
 
-    // one task is queued directly, one task is killed immediately
-    val queueOrder = org.mockito.Mockito.inOrder(queue)
-    eventually { queueOrder.verify(queue).add(app, 1) }
+    // one task is killed directly because we are over capacity
+    val order = org.mockito.Mockito.inOrder(queue, driver)
+    order.verify(driver).killTask(taskA.launchedMesosId.get)
+
+    // the kill is confirmed (see answer above) and the first new task is queued
+    eventually { order.verify(queue).add(app, 1) }
     assert(oldTaskCount == 3)
 
     // first new task becomes healthy and another old task is killed
     ref ! HealthStatusChanged(app.id, Task.Id("task_0"), app.version, alive = true)
     eventually { oldTaskCount should be(2) }
-    eventually { queueOrder.verify(queue).add(app, 1) }
+    eventually { order.verify(queue).add(app, 1) }
 
     // second new task becomes healthy and another old task is killed
     ref ! HealthStatusChanged(app.id, Task.Id("task_1"), app.version, alive = true)
     eventually { oldTaskCount should be(1) }
-    eventually { queueOrder.verify(queue).add(app, 1) }
+    eventually { order.verify(queue).add(app, 1) }
 
     // third new task becomes healthy and last old task is killed
     ref ! HealthStatusChanged(app.id, Task.Id("task_2"), app.version, alive = true)
     eventually { oldTaskCount should be(0) }
-    eventually { queueOrder.verify(queue, never()).add(app, 1) }
+    eventually { order.verify(queue, never()).add(app, 1) }
 
     Await.result(promise.future, 5.seconds)
 
-    // all old tasks are killed
-    verify(driver).killTask(taskA.launchedMesosId.get)
+    // all remaining old tasks are killed
     verify(driver).killTask(taskB.launchedMesosId.get)
     verify(driver).killTask(taskC.launchedMesosId.get)
     verify(driver).killTask(taskD.launchedMesosId.get)
