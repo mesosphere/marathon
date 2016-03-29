@@ -9,7 +9,9 @@ import scala.collection.immutable.Seq
 case class PortDefinition(port: Int,
                           protocol: String = "tcp",
                           name: Option[String] = None,
-                          labels: Map[String, String] = Map.empty[String, String])
+                          labels: Map[String, String] = Map.empty[String, String]) {
+  def fixedHostPort: Option[Int] = if (port != AppDefinition.RandomPortValue) Some(port) else None
+}
 
 object PortDefinition {
   implicit val portDefinitionValidator = validator[PortDefinition] { portDefinition =>
