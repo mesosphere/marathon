@@ -17,13 +17,31 @@ class RestartStrategyTest extends FunSuite with Matchers with GivenWhenThen with
       residency = Some(Residency.default))
 
     When("the ignition strategy is computed")
-    val strategy = computeRestartStrategy(app, app.instances)
+    val strategy = computeRestartStrategy(app, runningTasksCount = app.instances)
 
     Then("the app instance count is not exceeded")
     strategy.maxCapacity shouldBe 1
 
     And("we kill one task")
     strategy.nrToKillImmediately shouldBe 1
+  }
+
+  test("strategy for starting resident app with 1 instance and no tasks running") {
+    Given("A resident app")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      instances = 1,
+      upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
+      residency = Some(Residency.default))
+
+    When("the ignition strategy is computed")
+    val strategy = computeRestartStrategy(app, runningTasksCount = 0)
+
+    Then("the app instance count is not exceeded")
+    strategy.maxCapacity shouldBe 1
+
+    And("we kill no task")
+    strategy.nrToKillImmediately shouldBe 0
   }
 
   test("strategy for resident app with 5 instances") {
@@ -35,24 +53,78 @@ class RestartStrategyTest extends FunSuite with Matchers with GivenWhenThen with
       residency = Some(Residency.default))
 
     When("the ignition strategy is computed")
-    val strategy = computeRestartStrategy(app, app.instances)
+    val strategy = computeRestartStrategy(app, runningTasksCount = app.instances)
+
+    Then("the app instance count is not exceeded")
+    strategy.maxCapacity shouldBe 5
+
+    And("we kill two tasks")
+    strategy.nrToKillImmediately shouldBe 2
+  }
+
+  test("strategy for resident app with 5 instances, already over capacity, maxHealthCapacity = 1") {
+    Given("A resident app")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      instances = 5,
+      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
+      residency = Some(Residency.default))
+
+    When("the ignition strategy is computed")
+    val strategy = computeRestartStrategy(app, runningTasksCount = app.instances + 2)
+
+    Then("the app instance count is not exceeded")
+    strategy.maxCapacity shouldBe 5
+
+    And("we kill three tasks")
+    strategy.nrToKillImmediately shouldBe 3
+  }
+
+  test("strategy for resident app with 5 instances, already under capacity, maxHealthCapacity = 1") {
+    Given("A resident app")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      instances = 5,
+      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
+      residency = Some(Residency.default))
+
+    When("the ignition strategy is computed")
+    val strategy = computeRestartStrategy(app, runningTasksCount = app.instances - 2)
+
+    Then("the app instance count is not exceeded")
+    strategy.maxCapacity shouldBe 5
+
+    And("we kill no tasks")
+    strategy.nrToKillImmediately shouldBe 0
+  }
+
+  test("strategy for resident app with 5 instances, already at capacity, maxHealthCapacity = 1") {
+    Given("A resident app")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      instances = 5,
+      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
+      residency = Some(Residency.default))
+
+    When("the ignition strategy is computed")
+    val strategy = computeRestartStrategy(app, runningTasksCount = app.instances)
 
     Then("the app instance count is not exceeded")
     strategy.maxCapacity shouldBe 5
 
     And("we kill one task")
-    strategy.nrToKillImmediately shouldBe 2
+    strategy.nrToKillImmediately shouldBe 1
   }
 
   test("strategy for normal app with 1 instance") {
-    Given("A resident app")
+    Given("A normal app")
     val app = AppDefinition(
       id = PathId("/app"),
       instances = 1,
-      upgradeStrategy = UpgradeStrategy(0.5, 0))
+      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
 
     When("the ignition strategy is computed")
-    val strategy = computeRestartStrategy(app, app.instances)
+    val strategy = computeRestartStrategy(app, runningTasksCount = app.instances)
 
     Then("the app instance count is exceeded by one")
     strategy.maxCapacity shouldBe 2
@@ -61,32 +133,49 @@ class RestartStrategyTest extends FunSuite with Matchers with GivenWhenThen with
     strategy.nrToKillImmediately shouldBe 0
   }
 
+  test("strategy for normal app with 1 instance and no tasks running") {
+    Given("A normal app")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      instances = 1,
+      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
+
+    When("the ignition strategy is computed")
+    val strategy = computeRestartStrategy(app, runningTasksCount = 0)
+
+    Then("the app instance count does not need to be exceeded (since we can start a task without kills)")
+    strategy.maxCapacity shouldBe 1
+
+    And("we kill no tasks immediately")
+    strategy.nrToKillImmediately shouldBe 0
+  }
+
   test("maxCapacity strategy for normal app is not exceeded when a task can be killed immediately") {
-    Given("A resident app")
+    Given("A normal app")
     val app = AppDefinition(
       id = PathId("/app"),
       instances = 2,
-      upgradeStrategy = UpgradeStrategy(0.5, 0))
+      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
 
     When("the ignition strategy is computed")
-    val strategy = computeRestartStrategy(app, app.instances)
+    val strategy = computeRestartStrategy(app, runningTasksCount = app.instances)
 
     Then("the app instance count is exceeded by one")
     strategy.maxCapacity shouldBe 2
 
-    And("we kill 0 tasks immediately")
+    And("we kill one task immediately")
     strategy.nrToKillImmediately shouldBe 1
   }
 
   test("less running tasks than actual instance count and less than min health capacity") {
-    Given("A resident app")
+    Given("A normal app")
     val app = AppDefinition(
       id = PathId("/app"),
       instances = 10,
       upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 0))
 
     When("the ignition strategy is computed")
-    val strategy = computeRestartStrategy(app, 1) // only 1 launched task!
+    val strategy = computeRestartStrategy(app, runningTasksCount = 1)
 
     Then("the maxCapacity equals the app.instance count")
     strategy.maxCapacity shouldBe 10
@@ -96,7 +185,7 @@ class RestartStrategyTest extends FunSuite with Matchers with GivenWhenThen with
   }
 
   test("max over capacity 1") {
-    Given("A resident app")
+    Given("A normal app")
     val app = AppDefinition(
       id = PathId("/app"),
       instances = 10,
@@ -113,7 +202,7 @@ class RestartStrategyTest extends FunSuite with Matchers with GivenWhenThen with
   }
 
   test("maxOverCapacity 1 and minHealth 1") {
-    Given("A resident app")
+    Given("A normal app")
     val app = AppDefinition(
       id = PathId("/app"),
       instances = 10,
