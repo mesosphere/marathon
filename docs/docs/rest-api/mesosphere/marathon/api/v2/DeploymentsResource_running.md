@@ -20,10 +20,8 @@ Every step contains a list of actions with following types:
 ```http
 GET /v2/deployments HTTP/1.1
 Accept: application/json
-Accept-Encoding: gzip, deflate, compress
 Content-Type: application/json; charset=utf-8
 Host: localhost:8080
-User-Agent: HTTPie/0.7.2
 ```
 
 **Response:**
@@ -31,7 +29,6 @@ User-Agent: HTTPie/0.7.2
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
-Server: Jetty(8.1.11.v20130520)
 Transfer-Encoding: chunked
 
 [
@@ -41,60 +38,68 @@ Transfer-Encoding: chunked
             "/test/db/mongo1", 
             "/test/frontend/app1"
         ], 
+        "currentStep": 2,
+        "currentActions": [
+          {
+              "action": "RestartApplication", 
+              "app": "/test/frontend/app1"
+          }
+        ],
+        "totalSteps": 9,
         "id": "2e72dbf1-2b2a-4204-b628-e8bd160945dd", 
         "steps": [
             [
                 {
                     "action": "RestartApplication", 
-                    "application": "/test/service/srv1"
+                    "app": "/test/service/srv1"
                 }
             ], 
             [
                 {
                     "action": "RestartApplication", 
-                    "application": "/test/db/mongo1"
+                    "app": "/test/db/mongo1"
                 }
             ], 
             [
                 {
                     "action": "RestartApplication", 
-                    "application": "/test/frontend/app1"
+                    "app": "/test/frontend/app1"
                 }
             ], 
             [
                 {
                     "action": "KillAllOldTasksOf", 
-                    "application": "/test/frontend/app1"
+                    "app": "/test/frontend/app1"
                 }
             ], 
             [
                 {
                     "action": "KillAllOldTasksOf", 
-                    "application": "/test/db/mongo1"
+                    "app": "/test/db/mongo1"
                 }
             ], 
             [
                 {
                     "action": "KillAllOldTasksOf", 
-                    "application": "/test/service/srv1"
+                    "app": "/test/service/srv1"
                 }
             ], 
             [
                 {
                     "action": "ScaleApplication", 
-                    "application": "/test/service/srv1"
+                    "app": "/test/service/srv1"
                 }
             ], 
             [
                 {
                     "action": "ScaleApplication", 
-                    "application": "/test/db/mongo1"
+                    "app": "/test/db/mongo1"
                 }
             ], 
             [
                 {
                     "action": "ScaleApplication", 
-                    "application": "/test/frontend/app1"
+                    "app": "/test/frontend/app1"
                 }
             ]
         ], 
