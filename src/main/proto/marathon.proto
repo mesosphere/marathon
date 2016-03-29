@@ -49,18 +49,18 @@ message HealthCheckDefinition {
 message ReadinessCheckDefinition {
   enum Protocol {
     HTTP = 0;
-    HTTPS = 3;
+    HTTPS = 1;
   }
-  optional string name = 8;
-  optional Protocol protocol = 1;
-  optional string path = 2;
-  optional string portName = 3;
+  optional string name = 1;
+  optional Protocol protocol = 2;
+  optional string path = 3;
+  optional string portName = 4;
 
-  optional uint64 intervalMillis = 4;
-  optional uint64 timeoutMillis = 5;
+  optional uint64 intervalMillis = 5;
+  optional uint64 timeoutMillis = 6;
 
-  repeated uint32 httpStatusCodeForReady = 6;
-  optional bool preserveLastResponse = 7;
+  repeated uint32 httpStatusCodeForReady = 7;
+  optional bool preserveLastResponse = 8;
 }
 
 message IpAddress {

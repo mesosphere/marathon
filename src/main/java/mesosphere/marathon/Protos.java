@@ -2383,102 +2383,102 @@ public final class Protos {
   public interface ReadinessCheckDefinitionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // optional string name = 8;
+    // optional string name = 1;
     /**
-     * <code>optional string name = 8;</code>
+     * <code>optional string name = 1;</code>
      */
     boolean hasName();
     /**
-     * <code>optional string name = 8;</code>
+     * <code>optional string name = 1;</code>
      */
     java.lang.String getName();
     /**
-     * <code>optional string name = 8;</code>
+     * <code>optional string name = 1;</code>
      */
     com.google.protobuf.ByteString
         getNameBytes();
 
-    // optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;
+    // optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;
     /**
-     * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;</code>
+     * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;</code>
      */
     boolean hasProtocol();
     /**
-     * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;</code>
+     * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;</code>
      */
     mesosphere.marathon.Protos.ReadinessCheckDefinition.Protocol getProtocol();
 
-    // optional string path = 2;
+    // optional string path = 3;
     /**
-     * <code>optional string path = 2;</code>
+     * <code>optional string path = 3;</code>
      */
     boolean hasPath();
     /**
-     * <code>optional string path = 2;</code>
+     * <code>optional string path = 3;</code>
      */
     java.lang.String getPath();
     /**
-     * <code>optional string path = 2;</code>
+     * <code>optional string path = 3;</code>
      */
     com.google.protobuf.ByteString
         getPathBytes();
 
-    // optional string portName = 3;
+    // optional string portName = 4;
     /**
-     * <code>optional string portName = 3;</code>
+     * <code>optional string portName = 4;</code>
      */
     boolean hasPortName();
     /**
-     * <code>optional string portName = 3;</code>
+     * <code>optional string portName = 4;</code>
      */
     java.lang.String getPortName();
     /**
-     * <code>optional string portName = 3;</code>
+     * <code>optional string portName = 4;</code>
      */
     com.google.protobuf.ByteString
         getPortNameBytes();
 
-    // optional uint64 intervalMillis = 4;
+    // optional uint64 intervalMillis = 5;
     /**
-     * <code>optional uint64 intervalMillis = 4;</code>
+     * <code>optional uint64 intervalMillis = 5;</code>
      */
     boolean hasIntervalMillis();
     /**
-     * <code>optional uint64 intervalMillis = 4;</code>
+     * <code>optional uint64 intervalMillis = 5;</code>
      */
     long getIntervalMillis();
 
-    // optional uint64 timeoutMillis = 5;
+    // optional uint64 timeoutMillis = 6;
     /**
-     * <code>optional uint64 timeoutMillis = 5;</code>
+     * <code>optional uint64 timeoutMillis = 6;</code>
      */
     boolean hasTimeoutMillis();
     /**
-     * <code>optional uint64 timeoutMillis = 5;</code>
+     * <code>optional uint64 timeoutMillis = 6;</code>
      */
     long getTimeoutMillis();
 
-    // repeated uint32 httpStatusCodeForReady = 6;
+    // repeated uint32 httpStatusCodeForReady = 7;
     /**
-     * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+     * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
      */
     java.util.List<java.lang.Integer> getHttpStatusCodeForReadyList();
     /**
-     * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+     * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
      */
     int getHttpStatusCodeForReadyCount();
     /**
-     * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+     * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
      */
     int getHttpStatusCodeForReady(int index);
 
-    // optional bool preserveLastResponse = 7;
+    // optional bool preserveLastResponse = 8;
     /**
-     * <code>optional bool preserveLastResponse = 7;</code>
+     * <code>optional bool preserveLastResponse = 8;</code>
      */
     boolean hasPreserveLastResponse();
     /**
-     * <code>optional bool preserveLastResponse = 7;</code>
+     * <code>optional bool preserveLastResponse = 8;</code>
      */
     boolean getPreserveLastResponse();
   }
@@ -2533,38 +2533,43 @@ public final class Protos {
               }
               break;
             }
-            case 8: {
+            case 10: {
+              bitField0_ |= 0x00000001;
+              name_ = input.readBytes();
+              break;
+            }
+            case 16: {
               int rawValue = input.readEnum();
               mesosphere.marathon.Protos.ReadinessCheckDefinition.Protocol value = mesosphere.marathon.Protos.ReadinessCheckDefinition.Protocol.valueOf(rawValue);
               if (value == null) {
-                unknownFields.mergeVarintField(1, rawValue);
+                unknownFields.mergeVarintField(2, rawValue);
               } else {
                 bitField0_ |= 0x00000002;
                 protocol_ = value;
               }
               break;
             }
-            case 18: {
+            case 26: {
               bitField0_ |= 0x00000004;
               path_ = input.readBytes();
               break;
             }
-            case 26: {
+            case 34: {
               bitField0_ |= 0x00000008;
               portName_ = input.readBytes();
               break;
             }
-            case 32: {
+            case 40: {
               bitField0_ |= 0x00000010;
               intervalMillis_ = input.readUInt64();
               break;
             }
-            case 40: {
+            case 48: {
               bitField0_ |= 0x00000020;
               timeoutMillis_ = input.readUInt64();
               break;
             }
-            case 48: {
+            case 56: {
               if (!((mutable_bitField0_ & 0x00000040) == 0x00000040)) {
                 httpStatusCodeForReady_ = new java.util.ArrayList<java.lang.Integer>();
                 mutable_bitField0_ |= 0x00000040;
@@ -2572,7 +2577,7 @@ public final class Protos {
               httpStatusCodeForReady_.add(input.readUInt32());
               break;
             }
-            case 50: {
+            case 58: {
               int length = input.readRawVarint32();
               int limit = input.pushLimit(length);
               if (!((mutable_bitField0_ & 0x00000040) == 0x00000040) && input.getBytesUntilLimit() > 0) {
@@ -2585,14 +2590,9 @@ public final class Protos {
               input.popLimit(limit);
               break;
             }
-            case 56: {
+            case 64: {
               bitField0_ |= 0x00000040;
               preserveLastResponse_ = input.readBool();
-              break;
-            }
-            case 66: {
-              bitField0_ |= 0x00000001;
-              name_ = input.readBytes();
               break;
             }
           }
@@ -2647,9 +2647,9 @@ public final class Protos {
        */
       HTTP(0, 0),
       /**
-       * <code>HTTPS = 3;</code>
+       * <code>HTTPS = 1;</code>
        */
-      HTTPS(1, 3),
+      HTTPS(1, 1),
       ;
 
       /**
@@ -2657,9 +2657,9 @@ public final class Protos {
        */
       public static final int HTTP_VALUE = 0;
       /**
-       * <code>HTTPS = 3;</code>
+       * <code>HTTPS = 1;</code>
        */
-      public static final int HTTPS_VALUE = 3;
+      public static final int HTTPS_VALUE = 1;
 
 
       public final int getNumber() { return value; }
@@ -2667,7 +2667,7 @@ public final class Protos {
       public static Protocol valueOf(int value) {
         switch (value) {
           case 0: return HTTP;
-          case 3: return HTTPS;
+          case 1: return HTTPS;
           default: return null;
         }
       }
@@ -2720,17 +2720,17 @@ public final class Protos {
     }
 
     private int bitField0_;
-    // optional string name = 8;
-    public static final int NAME_FIELD_NUMBER = 8;
+    // optional string name = 1;
+    public static final int NAME_FIELD_NUMBER = 1;
     private java.lang.Object name_;
     /**
-     * <code>optional string name = 8;</code>
+     * <code>optional string name = 1;</code>
      */
     public boolean hasName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional string name = 8;</code>
+     * <code>optional string name = 1;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -2747,7 +2747,7 @@ public final class Protos {
       }
     }
     /**
-     * <code>optional string name = 8;</code>
+     * <code>optional string name = 1;</code>
      */
     public com.google.protobuf.ByteString
         getNameBytes() {
@@ -2763,33 +2763,33 @@ public final class Protos {
       }
     }
 
-    // optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;
-    public static final int PROTOCOL_FIELD_NUMBER = 1;
+    // optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;
+    public static final int PROTOCOL_FIELD_NUMBER = 2;
     private mesosphere.marathon.Protos.ReadinessCheckDefinition.Protocol protocol_;
     /**
-     * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;</code>
+     * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;</code>
      */
     public boolean hasProtocol() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;</code>
+     * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;</code>
      */
     public mesosphere.marathon.Protos.ReadinessCheckDefinition.Protocol getProtocol() {
       return protocol_;
     }
 
-    // optional string path = 2;
-    public static final int PATH_FIELD_NUMBER = 2;
+    // optional string path = 3;
+    public static final int PATH_FIELD_NUMBER = 3;
     private java.lang.Object path_;
     /**
-     * <code>optional string path = 2;</code>
+     * <code>optional string path = 3;</code>
      */
     public boolean hasPath() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional string path = 2;</code>
+     * <code>optional string path = 3;</code>
      */
     public java.lang.String getPath() {
       java.lang.Object ref = path_;
@@ -2806,7 +2806,7 @@ public final class Protos {
       }
     }
     /**
-     * <code>optional string path = 2;</code>
+     * <code>optional string path = 3;</code>
      */
     public com.google.protobuf.ByteString
         getPathBytes() {
@@ -2822,17 +2822,17 @@ public final class Protos {
       }
     }
 
-    // optional string portName = 3;
-    public static final int PORTNAME_FIELD_NUMBER = 3;
+    // optional string portName = 4;
+    public static final int PORTNAME_FIELD_NUMBER = 4;
     private java.lang.Object portName_;
     /**
-     * <code>optional string portName = 3;</code>
+     * <code>optional string portName = 4;</code>
      */
     public boolean hasPortName() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>optional string portName = 3;</code>
+     * <code>optional string portName = 4;</code>
      */
     public java.lang.String getPortName() {
       java.lang.Object ref = portName_;
@@ -2849,7 +2849,7 @@ public final class Protos {
       }
     }
     /**
-     * <code>optional string portName = 3;</code>
+     * <code>optional string portName = 4;</code>
      */
     public com.google.protobuf.ByteString
         getPortNameBytes() {
@@ -2865,72 +2865,72 @@ public final class Protos {
       }
     }
 
-    // optional uint64 intervalMillis = 4;
-    public static final int INTERVALMILLIS_FIELD_NUMBER = 4;
+    // optional uint64 intervalMillis = 5;
+    public static final int INTERVALMILLIS_FIELD_NUMBER = 5;
     private long intervalMillis_;
     /**
-     * <code>optional uint64 intervalMillis = 4;</code>
+     * <code>optional uint64 intervalMillis = 5;</code>
      */
     public boolean hasIntervalMillis() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     /**
-     * <code>optional uint64 intervalMillis = 4;</code>
+     * <code>optional uint64 intervalMillis = 5;</code>
      */
     public long getIntervalMillis() {
       return intervalMillis_;
     }
 
-    // optional uint64 timeoutMillis = 5;
-    public static final int TIMEOUTMILLIS_FIELD_NUMBER = 5;
+    // optional uint64 timeoutMillis = 6;
+    public static final int TIMEOUTMILLIS_FIELD_NUMBER = 6;
     private long timeoutMillis_;
     /**
-     * <code>optional uint64 timeoutMillis = 5;</code>
+     * <code>optional uint64 timeoutMillis = 6;</code>
      */
     public boolean hasTimeoutMillis() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>optional uint64 timeoutMillis = 5;</code>
+     * <code>optional uint64 timeoutMillis = 6;</code>
      */
     public long getTimeoutMillis() {
       return timeoutMillis_;
     }
 
-    // repeated uint32 httpStatusCodeForReady = 6;
-    public static final int HTTPSTATUSCODEFORREADY_FIELD_NUMBER = 6;
+    // repeated uint32 httpStatusCodeForReady = 7;
+    public static final int HTTPSTATUSCODEFORREADY_FIELD_NUMBER = 7;
     private java.util.List<java.lang.Integer> httpStatusCodeForReady_;
     /**
-     * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+     * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
      */
     public java.util.List<java.lang.Integer>
         getHttpStatusCodeForReadyList() {
       return httpStatusCodeForReady_;
     }
     /**
-     * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+     * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
      */
     public int getHttpStatusCodeForReadyCount() {
       return httpStatusCodeForReady_.size();
     }
     /**
-     * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+     * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
      */
     public int getHttpStatusCodeForReady(int index) {
       return httpStatusCodeForReady_.get(index);
     }
 
-    // optional bool preserveLastResponse = 7;
-    public static final int PRESERVELASTRESPONSE_FIELD_NUMBER = 7;
+    // optional bool preserveLastResponse = 8;
+    public static final int PRESERVELASTRESPONSE_FIELD_NUMBER = 8;
     private boolean preserveLastResponse_;
     /**
-     * <code>optional bool preserveLastResponse = 7;</code>
+     * <code>optional bool preserveLastResponse = 8;</code>
      */
     public boolean hasPreserveLastResponse() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
     /**
-     * <code>optional bool preserveLastResponse = 7;</code>
+     * <code>optional bool preserveLastResponse = 8;</code>
      */
     public boolean getPreserveLastResponse() {
       return preserveLastResponse_;
@@ -2958,29 +2958,29 @@ public final class Protos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getNameBytes());
+      }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeEnum(1, protocol_.getNumber());
+        output.writeEnum(2, protocol_.getNumber());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeBytes(2, getPathBytes());
+        output.writeBytes(3, getPathBytes());
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeBytes(3, getPortNameBytes());
+        output.writeBytes(4, getPortNameBytes());
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeUInt64(4, intervalMillis_);
+        output.writeUInt64(5, intervalMillis_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeUInt64(5, timeoutMillis_);
+        output.writeUInt64(6, timeoutMillis_);
       }
       for (int i = 0; i < httpStatusCodeForReady_.size(); i++) {
-        output.writeUInt32(6, httpStatusCodeForReady_.get(i));
+        output.writeUInt32(7, httpStatusCodeForReady_.get(i));
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeBool(7, preserveLastResponse_);
-      }
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(8, getNameBytes());
+        output.writeBool(8, preserveLastResponse_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -2991,25 +2991,29 @@ public final class Protos {
       if (size != -1) return size;
 
       size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getNameBytes());
+      }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(1, protocol_.getNumber());
+          .computeEnumSize(2, protocol_.getNumber());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, getPathBytes());
+          .computeBytesSize(3, getPathBytes());
       }
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, getPortNameBytes());
+          .computeBytesSize(4, getPortNameBytes());
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(4, intervalMillis_);
+          .computeUInt64Size(5, intervalMillis_);
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(5, timeoutMillis_);
+          .computeUInt64Size(6, timeoutMillis_);
       }
       {
         int dataSize = 0;
@@ -3022,11 +3026,7 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(7, preserveLastResponse_);
-      }
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(8, getNameBytes());
+          .computeBoolSize(8, preserveLastResponse_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3301,16 +3301,16 @@ public final class Protos {
       }
       private int bitField0_;
 
-      // optional string name = 8;
+      // optional string name = 1;
       private java.lang.Object name_ = "";
       /**
-       * <code>optional string name = 8;</code>
+       * <code>optional string name = 1;</code>
        */
       public boolean hasName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional string name = 8;</code>
+       * <code>optional string name = 1;</code>
        */
       public java.lang.String getName() {
         java.lang.Object ref = name_;
@@ -3324,7 +3324,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional string name = 8;</code>
+       * <code>optional string name = 1;</code>
        */
       public com.google.protobuf.ByteString
           getNameBytes() {
@@ -3340,7 +3340,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional string name = 8;</code>
+       * <code>optional string name = 1;</code>
        */
       public Builder setName(
           java.lang.String value) {
@@ -3353,7 +3353,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional string name = 8;</code>
+       * <code>optional string name = 1;</code>
        */
       public Builder clearName() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -3362,7 +3362,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional string name = 8;</code>
+       * <code>optional string name = 1;</code>
        */
       public Builder setNameBytes(
           com.google.protobuf.ByteString value) {
@@ -3375,22 +3375,22 @@ public final class Protos {
         return this;
       }
 
-      // optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;
+      // optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;
       private mesosphere.marathon.Protos.ReadinessCheckDefinition.Protocol protocol_ = mesosphere.marathon.Protos.ReadinessCheckDefinition.Protocol.HTTP;
       /**
-       * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;</code>
+       * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;</code>
        */
       public boolean hasProtocol() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;</code>
+       * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;</code>
        */
       public mesosphere.marathon.Protos.ReadinessCheckDefinition.Protocol getProtocol() {
         return protocol_;
       }
       /**
-       * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;</code>
+       * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;</code>
        */
       public Builder setProtocol(mesosphere.marathon.Protos.ReadinessCheckDefinition.Protocol value) {
         if (value == null) {
@@ -3402,7 +3402,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 1;</code>
+       * <code>optional .mesosphere.marathon.ReadinessCheckDefinition.Protocol protocol = 2;</code>
        */
       public Builder clearProtocol() {
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -3411,16 +3411,16 @@ public final class Protos {
         return this;
       }
 
-      // optional string path = 2;
+      // optional string path = 3;
       private java.lang.Object path_ = "";
       /**
-       * <code>optional string path = 2;</code>
+       * <code>optional string path = 3;</code>
        */
       public boolean hasPath() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional string path = 2;</code>
+       * <code>optional string path = 3;</code>
        */
       public java.lang.String getPath() {
         java.lang.Object ref = path_;
@@ -3434,7 +3434,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional string path = 2;</code>
+       * <code>optional string path = 3;</code>
        */
       public com.google.protobuf.ByteString
           getPathBytes() {
@@ -3450,7 +3450,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional string path = 2;</code>
+       * <code>optional string path = 3;</code>
        */
       public Builder setPath(
           java.lang.String value) {
@@ -3463,7 +3463,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional string path = 2;</code>
+       * <code>optional string path = 3;</code>
        */
       public Builder clearPath() {
         bitField0_ = (bitField0_ & ~0x00000004);
@@ -3472,7 +3472,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional string path = 2;</code>
+       * <code>optional string path = 3;</code>
        */
       public Builder setPathBytes(
           com.google.protobuf.ByteString value) {
@@ -3485,16 +3485,16 @@ public final class Protos {
         return this;
       }
 
-      // optional string portName = 3;
+      // optional string portName = 4;
       private java.lang.Object portName_ = "";
       /**
-       * <code>optional string portName = 3;</code>
+       * <code>optional string portName = 4;</code>
        */
       public boolean hasPortName() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>optional string portName = 3;</code>
+       * <code>optional string portName = 4;</code>
        */
       public java.lang.String getPortName() {
         java.lang.Object ref = portName_;
@@ -3508,7 +3508,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional string portName = 3;</code>
+       * <code>optional string portName = 4;</code>
        */
       public com.google.protobuf.ByteString
           getPortNameBytes() {
@@ -3524,7 +3524,7 @@ public final class Protos {
         }
       }
       /**
-       * <code>optional string portName = 3;</code>
+       * <code>optional string portName = 4;</code>
        */
       public Builder setPortName(
           java.lang.String value) {
@@ -3537,7 +3537,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional string portName = 3;</code>
+       * <code>optional string portName = 4;</code>
        */
       public Builder clearPortName() {
         bitField0_ = (bitField0_ & ~0x00000008);
@@ -3546,7 +3546,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional string portName = 3;</code>
+       * <code>optional string portName = 4;</code>
        */
       public Builder setPortNameBytes(
           com.google.protobuf.ByteString value) {
@@ -3559,22 +3559,22 @@ public final class Protos {
         return this;
       }
 
-      // optional uint64 intervalMillis = 4;
+      // optional uint64 intervalMillis = 5;
       private long intervalMillis_ ;
       /**
-       * <code>optional uint64 intervalMillis = 4;</code>
+       * <code>optional uint64 intervalMillis = 5;</code>
        */
       public boolean hasIntervalMillis() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       /**
-       * <code>optional uint64 intervalMillis = 4;</code>
+       * <code>optional uint64 intervalMillis = 5;</code>
        */
       public long getIntervalMillis() {
         return intervalMillis_;
       }
       /**
-       * <code>optional uint64 intervalMillis = 4;</code>
+       * <code>optional uint64 intervalMillis = 5;</code>
        */
       public Builder setIntervalMillis(long value) {
         bitField0_ |= 0x00000010;
@@ -3583,7 +3583,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional uint64 intervalMillis = 4;</code>
+       * <code>optional uint64 intervalMillis = 5;</code>
        */
       public Builder clearIntervalMillis() {
         bitField0_ = (bitField0_ & ~0x00000010);
@@ -3592,22 +3592,22 @@ public final class Protos {
         return this;
       }
 
-      // optional uint64 timeoutMillis = 5;
+      // optional uint64 timeoutMillis = 6;
       private long timeoutMillis_ ;
       /**
-       * <code>optional uint64 timeoutMillis = 5;</code>
+       * <code>optional uint64 timeoutMillis = 6;</code>
        */
       public boolean hasTimeoutMillis() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
-       * <code>optional uint64 timeoutMillis = 5;</code>
+       * <code>optional uint64 timeoutMillis = 6;</code>
        */
       public long getTimeoutMillis() {
         return timeoutMillis_;
       }
       /**
-       * <code>optional uint64 timeoutMillis = 5;</code>
+       * <code>optional uint64 timeoutMillis = 6;</code>
        */
       public Builder setTimeoutMillis(long value) {
         bitField0_ |= 0x00000020;
@@ -3616,7 +3616,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional uint64 timeoutMillis = 5;</code>
+       * <code>optional uint64 timeoutMillis = 6;</code>
        */
       public Builder clearTimeoutMillis() {
         bitField0_ = (bitField0_ & ~0x00000020);
@@ -3625,7 +3625,7 @@ public final class Protos {
         return this;
       }
 
-      // repeated uint32 httpStatusCodeForReady = 6;
+      // repeated uint32 httpStatusCodeForReady = 7;
       private java.util.List<java.lang.Integer> httpStatusCodeForReady_ = java.util.Collections.emptyList();
       private void ensureHttpStatusCodeForReadyIsMutable() {
         if (!((bitField0_ & 0x00000040) == 0x00000040)) {
@@ -3634,26 +3634,26 @@ public final class Protos {
          }
       }
       /**
-       * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+       * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
        */
       public java.util.List<java.lang.Integer>
           getHttpStatusCodeForReadyList() {
         return java.util.Collections.unmodifiableList(httpStatusCodeForReady_);
       }
       /**
-       * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+       * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
        */
       public int getHttpStatusCodeForReadyCount() {
         return httpStatusCodeForReady_.size();
       }
       /**
-       * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+       * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
        */
       public int getHttpStatusCodeForReady(int index) {
         return httpStatusCodeForReady_.get(index);
       }
       /**
-       * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+       * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
        */
       public Builder setHttpStatusCodeForReady(
           int index, int value) {
@@ -3663,7 +3663,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+       * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
        */
       public Builder addHttpStatusCodeForReady(int value) {
         ensureHttpStatusCodeForReadyIsMutable();
@@ -3672,7 +3672,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+       * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
        */
       public Builder addAllHttpStatusCodeForReady(
           java.lang.Iterable<? extends java.lang.Integer> values) {
@@ -3682,7 +3682,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>repeated uint32 httpStatusCodeForReady = 6;</code>
+       * <code>repeated uint32 httpStatusCodeForReady = 7;</code>
        */
       public Builder clearHttpStatusCodeForReady() {
         httpStatusCodeForReady_ = java.util.Collections.emptyList();
@@ -3691,22 +3691,22 @@ public final class Protos {
         return this;
       }
 
-      // optional bool preserveLastResponse = 7;
+      // optional bool preserveLastResponse = 8;
       private boolean preserveLastResponse_ ;
       /**
-       * <code>optional bool preserveLastResponse = 7;</code>
+       * <code>optional bool preserveLastResponse = 8;</code>
        */
       public boolean hasPreserveLastResponse() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
       /**
-       * <code>optional bool preserveLastResponse = 7;</code>
+       * <code>optional bool preserveLastResponse = 8;</code>
        */
       public boolean getPreserveLastResponse() {
         return preserveLastResponse_;
       }
       /**
-       * <code>optional bool preserveLastResponse = 7;</code>
+       * <code>optional bool preserveLastResponse = 8;</code>
        */
       public Builder setPreserveLastResponse(boolean value) {
         bitField0_ |= 0x00000080;
@@ -3715,7 +3715,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>optional bool preserveLastResponse = 7;</code>
+       * <code>optional bool preserveLastResponse = 8;</code>
        */
       public Builder clearPreserveLastResponse() {
         bitField0_ = (bitField0_ & ~0x00000080);
@@ -31623,13 +31623,13 @@ public final class Protos {
       "mandInfo\022\034\n\rignoreHttp1xx\030\t \001(\010:\005false\022\014" +
       "\n\004port\030\n \001(\r\"5\n\010Protocol\022\010\n\004HTTP\020\000\022\007\n\003TC" +
       "P\020\001\022\013\n\007COMMAND\020\002\022\t\n\005HTTPS\020\003\"\240\002\n\030Readines" +
-      "sCheckDefinition\022\014\n\004name\030\010 \001(\t\022H\n\010protoc" +
-      "ol\030\001 \001(\01626.mesosphere.marathon.Readiness" +
-      "CheckDefinition.Protocol\022\014\n\004path\030\002 \001(\t\022\020" +
-      "\n\010portName\030\003 \001(\t\022\026\n\016intervalMillis\030\004 \001(\004",
-      "\022\025\n\rtimeoutMillis\030\005 \001(\004\022\036\n\026httpStatusCod" +
-      "eForReady\030\006 \003(\r\022\034\n\024preserveLastResponse\030" +
-      "\007 \001(\010\"\037\n\010Protocol\022\010\n\004HTTP\020\000\022\t\n\005HTTPS\020\003\"t" +
+      "sCheckDefinition\022\014\n\004name\030\001 \001(\t\022H\n\010protoc" +
+      "ol\030\002 \001(\01626.mesosphere.marathon.Readiness" +
+      "CheckDefinition.Protocol\022\014\n\004path\030\003 \001(\t\022\020" +
+      "\n\010portName\030\004 \001(\t\022\026\n\016intervalMillis\030\005 \001(\004",
+      "\022\025\n\rtimeoutMillis\030\006 \001(\004\022\036\n\026httpStatusCod" +
+      "eForReady\030\007 \003(\r\022\034\n\024preserveLastResponse\030" +
+      "\010 \001(\010\"\037\n\010Protocol\022\010\n\004HTTP\020\000\022\t\n\005HTTPS\020\001\"t" +
       "\n\tIpAddress\022\016\n\006groups\030\001 \003(\t\022\034\n\006labels\030\002 " +
       "\003(\0132\014.mesos.Label\0229\n\rdiscoveryInfo\030\003 \001(\013" +
       "2\".mesosphere.marathon.DiscoveryInfo\"+\n\r" +
