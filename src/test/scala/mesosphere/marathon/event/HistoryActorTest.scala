@@ -13,6 +13,8 @@ import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
+import scala.collection.immutable.Seq
+
 class HistoryActorTest
     extends MarathonActorSupport
     with MarathonSpec
@@ -103,7 +105,7 @@ class HistoryActorTest
       message = "message",
       appId = "appId".toPath,
       host = "host",
-      ipAddresses = Seq(ipAddress),
+      ipAddresses = Some(Seq(ipAddress)),
       ports = Nil,
       version = Timestamp.now().toString
     )

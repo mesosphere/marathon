@@ -72,7 +72,7 @@ class DeploymentActorTest
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
           system.eventStream.publish(MesosStatusUpdateEvent(
             slaveId = "", taskId = Task.Id.forApp(app2New.id), taskStatus = "TASK_RUNNING", message = "",
-            appId = app2.id, host = "", ipAddresses = Nil, ports = Nil, version = app2New.version.toString)
+            appId = app2.id, host = "", ipAddresses = None, ports = Nil, version = app2New.version.toString)
           )
         true
       }
@@ -89,7 +89,7 @@ class DeploymentActorTest
       def answer(invocation: InvocationOnMock): Future[Unit] = {
         system.eventStream.publish(MesosStatusUpdateEvent(
           slaveId = "", taskId = Task.Id("task3_1"), taskStatus = "TASK_RUNNING", message = "", appId = app3.id, host = "",
-          ipAddresses = Nil, ports = Nil, version = app3.version.toString))
+          ipAddresses = None, ports = Nil, version = app3.version.toString))
         Future.successful(())
       }
     })
@@ -144,7 +144,7 @@ class DeploymentActorTest
       def answer(invocation: InvocationOnMock): Boolean = {
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
           f.system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id(s"task1_${taskIDs.next()}"),
-            "TASK_RUNNING", "", app.id, "", Nil, Nil, appNew.version.toString))
+            "TASK_RUNNING", "", app.id, "", None, Nil, appNew.version.toString))
         true
       }
     })
@@ -245,7 +245,7 @@ class DeploymentActorTest
       driver.killTask(task.taskId.mesosTaskId) answers { args =>
         system.eventStream.publish(MesosStatusUpdateEvent(
           slaveId = "", taskId = task.taskId, taskStatus = "TASK_KILLED", message = "", appId = app.id, host = "",
-          ipAddresses = Nil, ports = Nil, version = app.version.toString))
+          ipAddresses = None, ports = Nil, version = app.version.toString))
         Status.DRIVER_RUNNING
       }
     }

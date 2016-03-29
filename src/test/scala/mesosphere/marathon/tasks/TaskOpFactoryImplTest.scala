@@ -13,6 +13,8 @@ import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.{ GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
+
 class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
 
   test("Copy SlaveID from Offer to Task") {
@@ -41,7 +43,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       status = Task.Status(
         stagedAt = f.clock.now()
       ),
-      networking = Task.HostPorts(List.empty)
+      hostPorts = Seq.empty
     )
     assert(inferredTaskOp.isDefined, "task op is not empty")
     assert(inferredTaskOp.get.stateOp == TaskStateOp.LaunchEphemeral(expectedTask))

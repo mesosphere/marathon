@@ -119,13 +119,16 @@ trait Formats
     )
 
     val launched = task.launched.map { launched =>
-      base ++ Json.obj (
-        "startedAt" -> launched.status.startedAt,
-        "stagedAt" -> launched.status.stagedAt,
-        "ports" -> launched.ports,
-        "ipAddresses" -> launched.ipAddresses,
-        "version" -> launched.appVersion
-      )
+      launched.ipAddresses.foldLeft(
+        base ++ Json.obj (
+          "startedAt" -> launched.status.startedAt,
+          "stagedAt" -> launched.status.stagedAt,
+          "ports" -> launched.hostPorts,
+          "version" -> launched.appVersion
+        )
+      ){
+        case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
+      }
     }.getOrElse(base)
 
     val reservation = task.reservationWithVolumes.map { reservation =>

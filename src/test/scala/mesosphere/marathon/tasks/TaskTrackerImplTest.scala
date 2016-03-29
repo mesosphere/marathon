@@ -24,9 +24,8 @@ import org.mockito.Matchers.any
 import org.mockito.Mockito.{ reset, spy, times, verify }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
-import org.slf4j.LoggerFactory
 
-import scala.collection._
+import scala.collection.immutable.Seq
 
 class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen with MarathonShutdownHookSupport {
 
@@ -473,7 +472,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     MarathonTestHelper
       .stagedTaskForApp(appId)
       .withAgentInfo(_.copy(host = "host", attributes = Iterable(TextAttribute("attr1", "bar"))))
-      .withNetworking(Task.HostPorts(Iterable(999)))
+      .withHostPorts(Seq(999))
   }
 
   def makeTaskStatus(task: Task, state: TaskState = TaskState.TASK_RUNNING) = {
@@ -487,7 +486,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   def containsTask(tasks: Iterable[Task], task: Task) =
     tasks.exists(t => t.taskId == task.taskId
       && t.agentInfo.host == task.agentInfo.host
-      && t.launched.map(_.networking) == task.launched.map(_.networking))
+      && t.launched.map(_.hostPorts) == task.launched.map(_.hostPorts))
   def shouldContainTask(tasks: Iterable[Task], task: Task) =
     assert(containsTask(tasks, task), s"Should contain ${task.taskId}")
   def shouldNotContainTask(tasks: Iterable[Task], task: Task) =

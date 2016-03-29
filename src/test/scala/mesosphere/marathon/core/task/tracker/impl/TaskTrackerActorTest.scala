@@ -4,8 +4,8 @@ import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.TaskStateChange
-import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.{ Task, TaskStateChange }
+import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
@@ -132,19 +132,22 @@ class TaskTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTaskProto(appId)
-    val runningTask1 = MarathonTestHelper.runningTaskProto(appId)
-    val runningTask2 = MarathonTestHelper.runningTaskProto(appId)
+    val stagedTaskProto = MarathonTestHelper.stagedTaskProto(appId)
+    val runningTaskProto1 = MarathonTestHelper.runningTaskProto(appId)
+    val runningTaskProto2 = MarathonTestHelper.runningTaskProto(appId)
     val appDataMap = TaskTracker.TasksByApp.of(
-      TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
+      TaskTracker.AppTasks(appId, Iterable(stagedTaskProto, runningTaskProto1, runningTaskProto2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
     When("staged task transitions to running")
     val probe = TestProbe()
-    val stagedTaskNowRunning = MarathonTestHelper.runningTaskProto(stagedTask.getId)
-    val taskState = TaskSerializer.fromProto(stagedTaskNowRunning)
-    val update = TaskStatusUpdateTestHelper.running(taskState).wrapped
+    val stagedTaskNowRunningProto = MarathonTestHelper.runningTaskProto(stagedTaskProto.getId)
+    val stagedTaskNowRunning = TaskSerializer.fromProto(stagedTaskNowRunningProto)
+    val stagedTask = TaskSerializer.fromProto(stagedTaskProto)
+    val update = TaskStatusUpdateTestHelper.taskUpdateFor(
+      stagedTask,
+      MarathonTaskStatus(stagedTaskNowRunning.mesosStatus.get)).wrapped
     val ack = TaskTrackerActor.Ack(probe.ref, update.stateChange)
 
     probe.send(f.taskTrackerActor, TaskTrackerActor.StateChanged(update, ack))
@@ -161,19 +164,19 @@ class TaskTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTaskProto(appId)
-    val runningTask1 = MarathonTestHelper.runningTaskProto(appId)
-    val runningTask2 = MarathonTestHelper.runningTaskProto(appId)
+    val stagedTaskProto = MarathonTestHelper.stagedTaskProto(appId)
+    val runningTaskProto1 = MarathonTestHelper.runningTaskProto(appId)
+    val runningTaskProto2 = MarathonTestHelper.runningTaskProto(appId)
     val appDataMap = TaskTracker.TasksByApp.of(
-      TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
+      TaskTracker.AppTasks(appId, Iterable(stagedTaskProto, runningTaskProto1, runningTaskProto2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
     When("a new staged task gets added")
     val probe = TestProbe()
-    val newTask = MarathonTestHelper.stagedTaskProto(appId)
-    val taskState = TaskSerializer.fromProto(newTask)
-    val update = TaskStatusUpdateTestHelper.running(taskState).wrapped
+    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forApp(appId).toString)
+    val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).wrapped
+
     val ack = TaskTrackerActor.Ack(probe.ref, update.stateChange)
     probe.send(f.taskTrackerActor, TaskTrackerActor.StateChanged(update, ack))
     probe.expectMsg(update.stateChange)

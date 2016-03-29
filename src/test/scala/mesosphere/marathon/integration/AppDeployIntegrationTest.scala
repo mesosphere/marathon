@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.integration.facades.{ ITDeployment, ITQueueItem, MarathonFacade }
+import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITDeployment, ITQueueItem, MarathonFacade }
 import MarathonFacade._
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
@@ -256,9 +256,12 @@ class AppDeployIntegrationTest
     apps.code should be(200)
     apps.value should have size 1
 
-    val tasks = marathon.tasks(appId)
-    tasks.code should be(200)
-    tasks.value should have size 2
+    val tasksResult: RestResult[List[ITEnrichedTask]] = marathon.tasks(appId)
+    tasksResult.code should be(200)
+
+    val tasks = tasksResult.value
+    tasks should have size 2
+    tasks.foreach(_.ipAddresses.get should not be empty)
   }
 
   test("an unhealthy app fails to deploy") {

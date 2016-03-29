@@ -8,7 +8,7 @@ import mesosphere.marathon.api.v2.json.{ AppUpdate, GroupUpdate }
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
 import mesosphere.marathon.integration.setup.{ RestResult, SprayHttpResponse }
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
@@ -37,6 +37,7 @@ case class ITEnrichedTask(
     id: String,
     host: String,
     ports: Option[Seq[Int]],
+    ipAddresses: Option[Seq[IpAddress]],
     startedAt: Option[Date],
     stagedAt: Option[Date],
     version: Option[String]) {
@@ -91,10 +92,11 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     (__ \ "id").format[String] ~
     (__ \ "host").format[String] ~
     (__ \ "ports").formatNullable[Seq[Int]] ~
+    (__ \ "ipAddresses").formatNullable[Seq[IpAddress]] ~
     (__ \ "startedAt").formatNullable[Date] ~
     (__ \ "stagedAt").formatNullable[Date] ~
     (__ \ "version").formatNullable[String]
-  )(ITEnrichedTask(_, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+  )(ITEnrichedTask(_, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)

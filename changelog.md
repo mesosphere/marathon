@@ -75,6 +75,7 @@ It is possible to make Marathon let Mesos use the `TASK_KILLING` state introduce
 - #3402 - Race conditions in HttpEventActor
 - #3423 - Report kills due to failed healthcheck.
 - #3439 - Relative paths in dependencies should be resolvable.
+- #3575 - Container IP not correctly displayed
 
 ## Changes from 0.15.2 to 0.15.3
 

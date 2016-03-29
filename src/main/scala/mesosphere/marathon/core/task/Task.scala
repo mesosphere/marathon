@@ -5,10 +5,12 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.state.{ AppDefinition, PathId, PersistentVolume, Timestamp }
-import org.apache.mesos.Protos.TaskState
+import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
+
+import scala.collection.immutable.Seq
 
 //scalastyle:off number.of.types
 /**
@@ -52,15 +54,11 @@ sealed trait Task {
     }
   }
 
-  def ipAddresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = launched.map(_.ipAddresses).getOrElse(Iterable.empty)
-
-  def effectiveIpAddress(app: AppDefinition): String = {
-    val maybeContainerIp: Option[String] = ipAddresses.map(_.getIpAddress).headOption
-
-    maybeContainerIp match {
-      case Some(ipAddress) if app.ipAddress.isDefined => ipAddress
-      case _ => agentInfo.host
-    }
+  def effectiveIpAddress(app: AppDefinition): Option[String] = {
+    if (app.ipAddress.isDefined)
+      launched.flatMap(_.ipAddresses).flatMap(_.headOption).map(_.getIpAddress)
+    else
+      Some(agentInfo.host)
   }
 }
 
@@ -73,13 +71,13 @@ object Task {
       agentInfo: AgentInfo,
       appVersion: Timestamp,
       status: Status,
-      networking: Networking) extends Task {
+      hostPorts: Seq[Int]) extends Task {
 
     import LaunchedEphemeral.log
 
     override def reservationWithVolumes: Option[Reservation] = None
 
-    override def launched: Option[Launched] = Some(Task.Launched(appVersion, status, networking))
+    override def launched: Option[Launched] = Some(Task.Launched(appVersion, status, hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -149,8 +147,8 @@ object Task {
     override def launched: Option[Launched] = None
 
     override def update(update: TaskStateOp): TaskStateChange = update match {
-      case TaskStateOp.LaunchOnReservation(_, appVersion, status, networking) =>
-        val updatedTask = LaunchedOnReservation(taskId, agentInfo, appVersion, status, networking, reservation)
+      case TaskStateOp.LaunchOnReservation(_, appVersion, status, hostPorts) =>
+        val updatedTask = LaunchedOnReservation(taskId, agentInfo, appVersion, status, hostPorts, reservation)
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       case _: TaskStateOp.ReservationTimeout =>
@@ -181,14 +179,14 @@ object Task {
       agentInfo: AgentInfo,
       appVersion: Timestamp,
       status: Status,
-      networking: Networking,
+      hostPorts: Seq[Int],
       reservation: Reservation) extends Task {
 
     import LaunchedOnReservation.log
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override def launched: Option[Launched] = Some(Task.Launched(appVersion, status, networking))
+    override def launched: Option[Launched] = Some(Task.Launched(appVersion, status, hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -376,20 +374,18 @@ object Task {
 
   /**
     * Represents a task which has been launched (i.e. sent to Mesos for launching).
+    *
+    * @param hostPorts sequence of ports in the Mesos Agent allocated to the task
     */
   case class Launched(
       appVersion: Timestamp,
       status: Status,
-      networking: Networking) {
+      hostPorts: Seq[Int]) {
 
     def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-    def ports: Iterable[Int] = networking.ports
-
-    def ipAddresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = networking match {
-      case list: NetworkInfoList => list.addresses
-      case _                     => Iterable.empty
-    }
+    def ipAddresses: Option[Seq[MesosProtos.NetworkInfo.IPAddress]] =
+      status.mesosStatus.flatMap(MesosStatus.ipAddresses)
   }
 
   /**
@@ -413,34 +409,6 @@ object Task {
     startedAt: Option[Timestamp] = None,
     mesosStatus: Option[MesosProtos.TaskStatus] = None)
 
-  /** Info on how to reach the task in the network. */
-  sealed trait Networking {
-    def ports: Iterable[Int]
-  }
-
-  /** The task is reachable via host ports which are bound to [[AgentInfo#host]]. */
-  case class HostPorts(ports: Iterable[Int]) extends Networking
-  object HostPorts {
-    def apply(ports: Int*): HostPorts = HostPorts(ports)
-  }
-
-  /**
-    * The task has been launched with one-IP-per-task settings. The ports can be discovered
-    * by inspecting the [[mesosphere.marathon.state.DiscoveryInfo]] in the [[mesosphere.marathon.state.AppDefinition]].
-    */
-  case class NetworkInfoList(networkInfoList: Iterable[MesosProtos.NetworkInfo]) extends Networking {
-    import scala.collection.JavaConverters._
-    def addresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = networkInfoList.flatMap(_.getIpAddressesList.asScala)
-    override def ports: Iterable[Int] = Iterable.empty
-  }
-  object NetworkInfoList {
-    def apply(networkInfoList: MesosProtos.NetworkInfo*): NetworkInfoList = NetworkInfoList(networkInfoList)
-  }
-
-  case object NoNetworking extends Networking {
-    override def ports: Iterable[Int] = Iterable.empty
-  }
-
   object Terminated {
     def isTerminated(state: TaskState): Boolean = state match {
       case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST => true
@@ -448,5 +416,16 @@ object Task {
     }
 
     def unapply(state: TaskState): Option[TaskState] = if (isTerminated(state)) Some(state) else None
+  }
+
+  object MesosStatus {
+    def ipAddresses(mesosStatus: MesosProtos.TaskStatus): Option[Seq[MesosProtos.NetworkInfo.IPAddress]] = {
+      import scala.collection.JavaConverters._
+      if (mesosStatus.hasContainerStatus && mesosStatus.getContainerStatus.getNetworkInfosCount > 0)
+        Some(
+          mesosStatus.getContainerStatus.getNetworkInfosList.asScala.flatMap(_.getIpAddressesList.asScala).toList
+        )
+      else None
+    }
   }
 }

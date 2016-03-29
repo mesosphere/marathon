@@ -4,11 +4,7 @@ import org.apache.mesos.Protos.TaskStatus
 
 sealed trait MarathonTaskStatus {
   def terminal: Boolean = false
-
   def mesosStatus: Option[TaskStatus]
-  def mesosHealth: Option[Boolean] = mesosStatus.flatMap { status =>
-    if (status.hasHealthy) Some(status.getHealthy) else None
-  }
 }
 
 object MarathonTaskStatus {
