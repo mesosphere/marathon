@@ -93,7 +93,7 @@ case class AppDefinition(
     * port mappings.
     */
   def portIndicesAreValid(): Boolean = {
-    val validPortIndices = hostPorts.indices
+    val validPortIndices = portIndices
     healthChecks.forall { hc =>
       hc.protocol == Protocol.COMMAND || hc.portIndex.forall(validPortIndices.contains(_))
     }
@@ -274,7 +274,10 @@ case class AppDefinition(
   def containerServicePorts: Option[Seq[Int]] =
     for (pms <- portMappings) yield pms.map(_.servicePort)
 
-  def hostPorts: Seq[Int] = containerHostPorts.getOrElse(portNumbers)
+  def portIndices: Range = containerHostPorts.getOrElse(portNumbers).indices
+
+  /** Returns true if and only if the host ports of all tasks are the same. */
+  def hasFixedHostPorts: Boolean = requirePorts || ipAddress.isDefined
 
   def servicePorts: Seq[Int] = containerServicePorts.getOrElse(portNumbers)
 
@@ -491,7 +494,7 @@ object AppDefinition {
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer
-    appDef.healthChecks is every(portIndexIsValid(appDef.hostPorts.indices))
+    appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     appDef.mem should be >= 0.0
