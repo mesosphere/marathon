@@ -22,7 +22,7 @@ We will not change the name of a metric non-method-call (see below) metric in a 
 
 ## Metric names
 
-All metric names have to prefixed by a prefix that you specify and are subject to modification by statsd and the like. For example, if we write that the name of a metric is `service.mesosphere.marathon.uptime`, it might be available under `stats.gauges.marathon_test.service.mesosphere.marathon.uptime` in your configuration.
+All metric names have to prefixed by a prefix that you specify and are subject to modification by graphite, datadog, or statsd. For example, if we write that the name of a metric is `service.mesosphere.marathon.uptime`, it might be available under `stats.gauges.marathon_test.service.mesosphere.marathon.uptime` in your configuration.
 
 ## Important metrics
 
@@ -42,7 +42,7 @@ currently running.
 
 <span class="label label-default">v0.15</span> 
 `service.mesosphere.marathon.task.staged.count` (gauge) - The number of tasks that are
-currently staged. Tasks enter staging state after they are launched. A consistently high number of staged tasks indicates a lot of churn in Marathon and Mesos. Either you have many app updates/manual restarts or some of your apps have stability problems and are automatically restarted frequently.
+currently staged. Tasks enter staging state after they are launched. A consistently high number of staged tasks indicates that a lot of tasks are stopping and being restarted. Either you have many app updates/manual restarts or some of your apps have stability problems and are automatically restarted frequently.
 
 ### Task update processing
 
@@ -84,9 +84,9 @@ We have statistics about read and write requests for each repository. To access 
 
 `service.mesosphere.marathon.state.*.write-request-time.count` - The number of write requests.
 
-`service.mesosphere.marathon.state.*.write-request-time.mean` - The exponential weighted average of the write request times.
+`service.mesosphere.marathon.state.*.write-request-time.mean` - The [exponential weighted average](https://dropwizard.github.io/metrics/3.1.0/manual/core/#exponentially-decaying-reservoirs) of the write request times.
 
-**Note:** These were not measured correctly prior to <span class="label label-default">v0.15</span>.
+**Note:** Many of the repository metrics were not measured correctly prior to <span class="label label-default">v0.15</span>.
 
 ### Requests
 
@@ -94,13 +94,11 @@ We have statistics about read and write requests for each repository. To access 
 number of HTTP requests received by Marathon is available under `.count`.
 There are more metrics around HTTP requests under the
 `org.eclipse.jetty.servlet.ServletContextHandler` prefix.
-For more information, look at
-[the code](https://github.com/dropwizard/metrics/blob/796663609f310888240cc8afb58f75396f8391d2/metrics-jetty9/src/main/java/io/dropwizard/metrics/jetty9/InstrumentedHandler.java#L41-L42).
+For more information, consult [the code](https://github.com/dropwizard/metrics/blob/796663609f310888240cc8afb58f75396f8391d2/metrics-jetty9/src/main/java/io/dropwizard/metrics/jetty9/InstrumentedHandler.java#L41-L42).
 
 ### JVM
 
-`jvm.threads.count` (meter) - The total number of threads. If this is above >500, this
-is generally a bad sign. <-- Uh, can we be more precise here? -->
+`jvm.threads.count` (meter) - The total number of threads. This number should be below 500.
 
 `jvm.memory.total.used` (meter) - The total number of bytes used by the Marathon JVM.
 
@@ -115,12 +113,12 @@ These timers can be very valuable in diagnosing problems, but they require detai
 Since these metric names directly correspond to class and method names in our code base,
 expect the names of these metrics to change if the affected code changes.
 
-## Potential issues
+## Potential pitfalls
 
 ### Derived metrics (mean, p99, ...)
 
-Our metrics library calculates derived metrics like "mean" and "p99." Unfortunately, if they are reported to statsd, they do not only relate to the reporting interval but the whole live time of the app with some exponential weighting algorithm. So try to build your dashboard around "counts" rather than "rates" where possible.
+Our metrics library calculates derived metrics like "mean" and "p99." However, Marathon provides these metrics for the entire live of of the app and applies an exponential weighting algorithm as a heuristic. For more precise metrics, build your dashboard around "counts" rather than "rates" where possible.
 
 ### Statsd, derived statistics, and metric names
 
-Statsd typically creates derived statistics (mean, p99) from what is reported. This might interact in a weird fashion with the derived statistics that our codahale metrics package reports.
+Statsd typically creates derived statistics (mean, p99) from mean values Marathon reports. Our codahale metrics package also reports derived statistics, which may differ from those created by statsd. Be sure you know where you are reporting and computing mean values.
