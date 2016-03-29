@@ -12,7 +12,7 @@ import akka.routing.RoundRobinPool
 import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
-import com.twitter.common.zookeeper.{ Candidate, ZooKeeperClient }
+import com.twitter.common.zookeeper.{ Candidate, ZooKeeperClient, Group => ZGroup }
 import com.twitter.util.JavaTimer
 import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
@@ -257,7 +257,12 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     if (conf.highlyAvailable()) {
       log.info("Registering in ZooKeeper with hostPort:" + hostPort)
 
-      val candidate = new core.leadership.CuratorCandidate(zk.getConnectString, conf.zooKeeperLeaderPath, hostPort)
+      val candidate = core.leadership.BackwardsCompatible.createCandidate(
+        zk,
+        conf.zooKeeperCuratorLeaderPath,
+        new ZGroup(zk, Ids.OPEN_ACL_UNSAFE, conf.zooKeeperLeaderPath),
+        hostPort
+      )
       return Some(candidate) //scalastyle:off return
     }
     None
