@@ -37,7 +37,7 @@ class HealthCheckWorkerActorTest
     val task =
       MarathonTestHelper.runningTask("test_id")
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withNetworking(Task.HostPorts(socketPort))
+        .withNetworking(Task.HostPorts.forPorts(socketPort))
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = "test_id".toPath)
@@ -62,7 +62,7 @@ class HealthCheckWorkerActorTest
     val task =
       MarathonTestHelper.runningTask("test_id")
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withNetworking(Task.HostPorts(socketPort))
+        .withNetworking(Task.HostPorts.forPorts(socketPort))
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = "test_id".toPath)

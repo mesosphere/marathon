@@ -63,7 +63,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val f = new Fixture
 
     Given("a MarathonTask with all fields and host ports")
-    val samplePorts = Iterable(80, 81)
+    val samplePorts = Seq(80, 81)
     val marathonTask =
       f.completeTask.toBuilder
         .addAllPorts(samplePorts.map(Integer.valueOf(_)).asJava)

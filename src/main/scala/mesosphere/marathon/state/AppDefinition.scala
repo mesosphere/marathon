@@ -1,14 +1,14 @@
 package mesosphere.marathon.state
 
 import com.wix.accord._
-import mesosphere.marathon.Protos
+import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.plugin
+import mesosphere.marathon.{ Protos, plugin }
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -20,8 +20,6 @@ import org.apache.mesos.{ Protos => mesos }
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-
-import com.wix.accord.dsl._
 
 case class AppDefinition(
 
