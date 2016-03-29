@@ -3,7 +3,7 @@ package mesosphere.marathon.core.volume
 import com.wix.accord._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
-import mesosphere.marathon.core.volume.impl._
+import mesosphere.marathon.core.volume.providers._
 
 trait LocalVolumes {
   self: VolumeProvider[PersistentVolume] =>

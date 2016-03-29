@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.volume.impl
+package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord._
 import com.wix.accord.combinators.Fail

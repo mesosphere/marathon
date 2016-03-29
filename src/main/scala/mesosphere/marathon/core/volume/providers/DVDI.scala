@@ -1,63 +1,12 @@
-package mesosphere.marathon.core.volume.impl
+package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord._
-import com.wix.accord.combinators.{ Fail, NilValidator }
 import com.wix.accord.dsl._
 import com.wix.accord.Validator
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo, Volume => MesosVolume, Environment }
+import org.apache.mesos.Protos.{ ContainerInfo, Volume => MesosVolume, Environment }
 import scala.collection.JavaConverters._
-import scala.reflect.ClassTag
-
-protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume] {
-  /**
-    * don't invoke validator on v because that's circular, just check the additional
-    * things that we need for agent local volumes.
-    * see implicit validator in the PersistentVolume class for reference.
-    */
-  val validPersistentVolume: Validator[PersistentVolume]
-
-  /** convenience validator that type-checks for persistent volume */
-  val validation = new Validator[Volume] {
-    val notPersistentVolume = new Fail[Volume]("is not a persistent volume")
-    override def apply(v: Volume): Result = v match {
-      case pv: PersistentVolume => validate(pv)(validPersistentVolume)
-      case _                    => validate(v)(notPersistentVolume)
-    }
-  }
-
-  /**
-    * @return true if volume has a provider name that matches ours exactly
-    */
-  def accepts(volume: PersistentVolume): Boolean = {
-    volume.persistent.providerName.isDefined && volume.persistent.providerName.get == name
-  }
-
-  override def apply(container: Option[Container]): Iterable[PersistentVolume] =
-    container.fold(Seq.empty[PersistentVolume]) {
-      _.volumes.collect{ case vol: PersistentVolume if accepts(vol) => vol }
-    }
-}
-
-protected abstract class ContextUpdateHelper[V <: Volume: ClassTag] extends ContextUpdate {
-
-  def accepts(v: V): Boolean
-
-  override protected def updated[C <: BuilderContext](context: C, v: Volume): Option[C] = {
-    v match {
-      case vol: V if accepts(vol) => {
-        context match {
-          case cc: ContainerContext => updatedContainer(cc, vol).map(_.asInstanceOf[C])
-          case cc: CommandContext   => updatedCommand(cc, vol).map(_.asInstanceOf[C])
-        }
-      }
-      case _ => None
-    }
-  }
-  def updatedContainer(cc: ContainerContext, vol: V): Option[ContainerContext] = None
-  def updatedCommand(cc: CommandContext, vol: V): Option[CommandContext] = None
-}
 
 /**
   * DVDIProvider (Docker Volume Driver Interface provider) handles persistent volumes allocated
@@ -148,7 +97,7 @@ protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume]
     DVDIProvider.this.apply(app.container).flatMap{ pv => nameOf(pv.persistent) }.
       groupBy(identity).mapValues(_.size)
 
-  protected[impl] def modes(ct: Container): Set[Mode] =
+  protected[providers] def modes(ct: Container): Set[Mode] =
     DVDIProvider.this.apply(Some(ct)).map(v => Set(v.mode)).reduceLeft[Set[Mode]]{ (z, v) => z ++ v }
 
   /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
@@ -213,73 +162,5 @@ protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume]
       newVar(dvdiVolumeDriver + suffix, v.persistent.options.get(optionDriver))
     // TODO(jdef) support other options here
     )
-  }
-}
-
-/**
-  * DockerHostVolumeProvider handles Docker volumes that a user would like to mount at
-  * predetermined host and container paths. Docker host volumes are not intended to be used
-  * with "non-local" docker volume drivers. If you want to use a docker volume driver then
-  * use a PersistentVolume instead.
-  */
-protected case object DockerHostVolumeProvider
-    extends ContextUpdateHelper[DockerVolume]
-    with VolumeProvider[DockerVolume] {
-  val name = "docker" // only because we should have a non-empty name
-
-  /** no special case validation here, it's handled elsewhere */
-  val validation: Validator[Volume] = new NilValidator[Volume]
-
-  // no provider-specific rules at the container level
-  val containerValidation: Validator[Container] = new NilValidator[Container]
-
-  // no provider-specific rules at the group level
-  val groupValidation: Validator[Group] = new NilValidator[Group]
-
-  /** DockerVolumes can be serialized into a Mesos Protobuf */
-  def toMesosVolume(volume: DockerVolume): MesosVolume =
-    MesosVolume.newBuilder
-      .setContainerPath(volume.containerPath)
-      .setHostPath(volume.hostPath)
-      .setMode(volume.mode)
-      .build
-
-  override def accepts(dv: DockerVolume): Boolean = true
-
-  override def updatedContainer(cc: ContainerContext, dv: DockerVolume): Option[ContainerContext] = {
-    var ci = cc.ci // TODO(jdef) clone?
-    // TODO(jdef) check that this is a DOCKER container type?
-    Some(ContainerContext(ci.addVolumes(toMesosVolume(dv))))
-  }
-
-  override def apply(container: Option[Container]): Iterable[DockerVolume] =
-    container.fold(Seq.empty[DockerVolume])(_.volumes.collect{ case vol: DockerVolume => vol })
-}
-
-/**
-  * AgentVolumeProvider handles persistent volumes allocated from agent resources.
-  */
-protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvider with LocalVolumes {
-  import org.apache.mesos.Protos.Volume.Mode
-  import mesosphere.marathon.api.v2.Validation._
-
-  /** this is the name of the agent volume provider */
-  val name = "agent"
-
-  // no provider-specific rules at the container level
-  val containerValidation: Validator[Container] = new NilValidator[Container]
-
-  // no provider-specific rules at the group level
-  val groupValidation: Validator[Group] = new NilValidator[Group]
-
-  val validPersistentVolume = validator[PersistentVolume] { v =>
-    v.persistent.size is notEmpty
-    v.mode is equalTo(Mode.RW)
-    //persistent volumes require those CLI parameters provided
-    v is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
-  }
-
-  override def accepts(volume: PersistentVolume): Boolean = {
-    volume.persistent.providerName.getOrElse(name) == name
   }
 }
