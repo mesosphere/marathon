@@ -1,0 +1,81 @@
+--------------------------------------------------------------
+title: Stateful Applications Using Persistent External Volumes
+--------------------------------------------------------------
+
+# Stateful Applications Using Persistent External Volumes
+
+<div class="alert alert-danger" role="alert">
+  <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 1.0 <br/>
+  The Persistent Storage functionality is considered beta, so use this feature at your own risk. We might add, change, or delete any functionality described in this document.
+</div>
+
+Marathon applications lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can use an external storage service, such as Amazon's Elastic Block Store (EBS), to create a persistent volume that follows your application instance.
+
+Using an external storage service allows your apps to be more fault-tolerant. If a host fails, Marathon reschedules it on another host, along with its associated data, without user intervention.
+
+# Specifying an External Volume
+
+When you install DCOS, add the following to your `genconf.yml` file:
+
+- `rexray_config_method: file`
+
+- `rexray_config_filename: /path/to/rexray.yaml`
+
+<!-- [Learn more](URL). link to installer docs that mention this when they are live-->
+
+## Scaling your App
+
+Apps that use external volumes should only be scaled to a single instance.
+
+If you scale your app down to 0 instances, the volume is unattached from the agent where it was mounted, but it is not deleted. If you scale your app up again, the data that had been associated with it will still be available.
+
+## Create an Application with External Volumes
+
+You specify an external volume in the app definition of your Marathon app. [Learn more about Marathon application definitions](application-basics.html).
+
+```json
+{ 
+  "id": "hello",
+     "cmd": "while [ true ] ; do touch/var/lib/rexray/volumes/test12345/data/hello ; sleep 5 ; done",   
+     "mem": 32,   
+     "cpus": 0.1,   
+     "instances": 1,
+     "env": {
+          "DVDI_VOLUME_DRIVER": "rexray",
+          "DVDI_VOLUME_NAME": "test12345",
+          "DVDI_VOLUME_OPTS":"size=1,volumetype=standard,newfstype=ext4,overwritefs=false"
+     }
+}
+```
+
+In the app definition above, the environment variables (`env`) specify a 1GB volume that will be formatted ext4 once it is created.
+
+- Volumes will always be available under `/var/lib/rexray/volumes/$DVDI_VOLUME_NAME/`. **Note:** This applies only to non-Docker apps; Docker apps can specify the mount point inside the app definition.
+
+- The root path inside the volume for storing data is configurable, but defaults to `data/`. See [the REX-Ray documentation](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#volume-root-path-031) for more information.
+
+- `DVDI_VOLUME_DRIVER` tells `DVDCLI` which Docker volume driver we want to use for storage. The only driver we currently provide is REX-Ray, so this value should always be `rexray`. [Learn more about REX-ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
+
+- `DVDI_VOLUME_NAME` is the name by which REX-Ray looks up your volume. When your task is staged on an agent, REX-Ray queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used.
+
+- `DVDI_VOLUME_OPTS` is the set of volume options passed to DVDCLI. [See the full list of options](https://github.com/emccode/dvdcli/blob/3c3dcbe1490c2c4a150555978f2b4915dafaddf2/README.md#extra-options).
+
+You can define multiple volumes per app by repeating the environment variables with 0, 1 ,2, etc. appended to them. For example, `DVDI_VOLUME_NAME0`.
+
+**Note:** Most of the configuration of your external volume is cannot be changed after you create it. The exceptions are `overwriteFs` and `newFsType`. If `overwriteFs` is true, REX-Ray will reformat the volume every time it is mounted on an agent with the filesystem specified by `newFsType`. If `overwriteFs` is false, howeverm REX-Ray will only format the volume when it is created.
+
+### Docker apps
+
+Refer to the [REX-Ray documentation](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/#docker-containerizer-with-marathon) for an example of an app definition of a Docker app that uses external volumes.
+
+## Potential Pitfalls
+
+- Your storage provider may have particular limitations. For instance, on Amazon's EBS, you can only assign one task per volume.
+
+- The volumes you create are not automatically cleaned up. If you you delete your cluster, go to your storage provider and delete the volumes you no longer need. Find them by searching by `DVDI_VOLUME_NAME`.
+
+- Volumes are not isolated from other clusters. Choose a unique `DVDI_VOLUME_NAME` to avoid conflicts.
+
+- Docker apps do not support external volumes on DCOS installations running Docker older than 1.8. Currently, this means that DCOS Community Edition users cannot create Docker apps with external volumes.
+
+For more information, see the [Apache Mesos documentation on persistent volumes](http://mesos.apache.org/documentation/latest/persistent-volume/).
