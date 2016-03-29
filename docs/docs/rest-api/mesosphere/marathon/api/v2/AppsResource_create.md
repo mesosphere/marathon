@@ -83,7 +83,7 @@ Here is an example of an application JSON which includes all fields.
             "maxConsecutiveFailures": 3
         },
         {
-            "protocol": "HTTP",
+            "protocol": "HTTPS",
             "path": "/machinehealth",
             "gracePeriodSeconds": 3,
             "intervalSeconds": 10,
@@ -291,9 +291,8 @@ A list of services upon which this application depends. An order is derived from
 ##### healthChecks
 
 An array of checks to be performed on running tasks to determine if they are
-operating as expected. Health checks begin immediately upon task launch. For
-design details, refer to the [health checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)
-wiki page.  By default, health checks are executed by the Marathon scheduler.
+operating as expected. Health checks begin immediately upon task launch.
+By default, health checks are executed by the Marathon scheduler.
 In this case, the only supported protocol is `COMMAND` and each app is limited to
 at most one defined health check.
 
@@ -318,7 +317,7 @@ The kill of the unhealthy task is signalled via `unhealthy_task_kill_event` even
 * `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
   check failures after which the unhealthy task should be killed.
 * `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
-  performed. One of "HTTP", "TCP", or "Command".
+  performed. One of "HTTP", "HTTPS", "TCP", or "Command".
 * `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
   will provide health  status. Example: "/path/to/health".
   _Note: only used if `protocol == "HTTP"`._
