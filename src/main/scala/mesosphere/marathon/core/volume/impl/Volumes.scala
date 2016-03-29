@@ -68,6 +68,7 @@ protected abstract class ContextUpdateHelper[V <: Volume: ClassTag] extends Cont
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
 protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume] with PersistentVolumeProvider {
+  import org.apache.mesos.Protos.Volume.Mode
 
   val name = "dvdi"
 
@@ -147,10 +148,14 @@ protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume]
     DVDIProvider.this.apply(app.container).flatMap{ pv => nameOf(pv.persistent) }.
       groupBy(identity).mapValues(_.size)
 
+  protected[impl] def modes(ct: Container): Set[Mode] =
+    DVDIProvider.this.apply(Some(ct)).map(v => Set(v.mode)).reduceLeft[Set[Mode]]{ (z, v) => z ++ v }
+
   /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
   val containerValidation: Validator[Container] = validator[Container] { ct =>
-    (ct.`type` is equalTo(ContainerInfo.Type.MESOS)) or (
-      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should be == 1))
+    (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (modes(ct).each is equalTo(Mode.RW))) or (
+      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should be == 1)
+    )
   }
 
   /** non-agent-local PersistentVolumes can be serialized into a Mesos Protobuf */
