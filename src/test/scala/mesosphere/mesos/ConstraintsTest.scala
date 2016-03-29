@@ -447,7 +447,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val attributes = attrs.map { case (name, value) => TextAttribute(name, value): Attribute }
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
-      .withNetworking(Task.HostPorts(999))
+      .withNetworking(Task.HostPorts.forPorts(999))
   }
 
   def makeOffer(hostname: String, attributes: Iterable[Attribute]) = {
@@ -464,7 +464,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     MarathonTestHelper
       .runningTask(id)
       .withAgentInfo(_.copy(host = host))
-      .withNetworking(Task.HostPorts(999))
+      .withNetworking(Task.HostPorts.forPorts(999))
   }
 
   def makeConstraint(field: String, operator: Operator, value: String) = {

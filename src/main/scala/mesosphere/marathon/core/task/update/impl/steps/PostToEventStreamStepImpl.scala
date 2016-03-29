@@ -69,7 +69,7 @@ class PostToEventStreamStepImpl @Inject() (
           },
           ports = launched.networking match {
             case Task.HostPorts(ports) => ports
-            case _                     => Iterable.empty
+            case _                     => Seq.empty
           },
           version = launched.appVersion.toString,
           timestamp = timestamp.toString
