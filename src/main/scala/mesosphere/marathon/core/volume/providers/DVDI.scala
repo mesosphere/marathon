@@ -88,9 +88,7 @@ protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume]
   }
 
   def driversInUse(ct: Container): Set[String] =
-    DVDIProvider.this.apply(Some(ct)).filter(!_.persistent.options.isEmpty).flatMap{ pv =>
-      pv.persistent.options.get.get(optionDriver)
-    }.foldLeft(Set.empty[String])(_ + _)
+    DVDIProvider.this.apply(Some(ct)).flatMap(_.persistent.options.flatMap(_.get(optionDriver))).toSet
 
   /** @return a count of volume references-by-name within an app spec */
   def volumeNameCounts(app: AppDefinition): Map[String, Int] =
@@ -98,7 +96,7 @@ protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume]
       groupBy(identity).mapValues(_.size)
 
   protected[providers] def modes(ct: Container): Set[Mode] =
-    DVDIProvider.this.apply(Some(ct)).map(v => Set(v.mode)).reduceLeft[Set[Mode]]{ (z, v) => z ++ v }
+    DVDIProvider.this.apply(Some(ct)).map(_.mode).toSet
 
   /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
   val containerValidation: Validator[Container] = validator[Container] { ct =>
