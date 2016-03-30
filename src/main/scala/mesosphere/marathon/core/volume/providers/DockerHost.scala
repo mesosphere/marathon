@@ -12,7 +12,7 @@ import org.apache.mesos.Protos.{ Volume => MesosVolume }
   * with "non-local" docker volume drivers. If you want to use a docker volume driver then
   * use a PersistentVolume instead.
   */
-protected case object DockerHostVolumeProvider
+protected[volume] case object DockerHostVolumeProvider
     extends DecoratorHelper[DockerVolume]
     with VolumeProvider[DockerVolume] {
   val name = "docker" // only because we should have a non-empty name
