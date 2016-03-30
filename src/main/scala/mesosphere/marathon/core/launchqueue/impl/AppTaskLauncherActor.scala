@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.launchqueue.impl
 
-import akka.actor.{ Actor, ActorContext, ActorLogging, ActorRef, Cancellable, Props, Stash }
+import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
@@ -142,28 +142,56 @@ private class AppTaskLauncherActor(
       receiveTaskUpdate,
       receiveGetCurrentCount,
       receiveAddCount,
-      receiveProcessOffers
+      receiveProcessOffers,
+      receiveUnknown
     ).reduce(_.orElse[Any, Unit](_))
   }
 
-  private[this] def receiveWaitingForInFlight: Receive = LoggingReceive.withLabel("waitingForInFlight") {
+  private[this] def stopping: Receive = LoggingReceive.withLabel("stopping") {
+    Seq(
+      receiveStop,
+      receiveWaitingForInFlight,
+      receiveUnknown
+    ).reduce(_.orElse[Any, Unit](_))
+  }
+
+  private[this] def receiveWaitingForInFlight: Receive = {
     case notification: TaskOpNotification =>
       receiveTaskLaunchNotification(notification)
-      waitingForInFlight()
+      waitForInFlightIfNecessary()
 
-    case "waitingForInFlight" => sender() ! "waitingForInFlight" // for testing
+    case AppTaskLauncherActor.Stop => // ignore, already stopping
+
+    case "waitingForInFlight"      => sender() ! "waitingForInFlight" // for testing
+  }
+
+  private[this] def receiveUnknown: Receive = {
+    case msg: Any =>
+      // fail fast and do not let the sender time out
+      sender() ! Status.Failure(new IllegalStateException(s"Unhandled message: $msg"))
   }
 
   private[this] def receiveStop: Receive = {
-    case AppTaskLauncherActor.Stop => waitingForInFlight()
+    case AppTaskLauncherActor.Stop =>
+      if (inFlightTaskOperations.nonEmpty) {
+        // try to stop gracefully but also schedule timeout
+        import context.dispatcher
+        context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, PoisonPill)
+      }
+      waitForInFlightIfNecessary()
   }
 
-  private[this] def waitingForInFlight(): Unit = {
+  private[this] def waitForInFlightIfNecessary(): Unit = {
     if (inFlightTaskOperations.isEmpty) {
       context.stop(self)
     }
     else {
-      context.become(receiveWaitingForInFlight)
+      val taskIds = inFlightTaskOperations.keys.take(3).mkString(", ")
+      log.info(
+        s"Stopping but still waiting for ${inFlightTaskOperations.size} in-flight messages, " +
+          s"first three task ids: $taskIds"
+      )
+      context.become(stopping)
     }
   }
 

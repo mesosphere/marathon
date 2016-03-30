@@ -33,12 +33,21 @@ private[launchqueue] class LaunchQueueDelegate(
 
   override def listApps: Seq[AppDefinition] = list.map(_.app)
 
-  override def purge(appId: PathId): Unit = askQueueActor("purge")(LaunchQueueDelegate.Purge(appId))
+  override def purge(appId: PathId): Unit = {
+    // When purging, we wait for the AppTaskLauncherActor to shut down. This actor will wait for
+    // in-flight task op notifications before complying, therefore we need to adjust the timeout accordingly.
+    val purgeTimeout = config.launchQueueRequestTimeout().milliseconds + config.taskOpNotificationTimeout().millisecond
+    askQueueActor("purge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(appId))
+  }
+
   override def add(app: AppDefinition, count: Int): Unit = askQueueActor("add")(LaunchQueueDelegate.Add(app, count))
 
-  private[this] def askQueueActor[T](method: String)(message: T): Any = {
+  private[this] def askQueueActor[T](
+    method: String,
+    timeout: FiniteDuration = config.launchQueueRequestTimeout().milliseconds)(message: T): Any = {
+
     val answerFuture: Future[Any] = askQueueActorFuture(method)(message)
-    Await.result(answerFuture, config.launchQueueRequestTimeout().milliseconds)
+    Await.result(answerFuture, timeout)
   }
 
   private[this] def askQueueActorFuture[T](method: String)(message: T): Future[Any] = {
