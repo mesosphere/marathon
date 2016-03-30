@@ -19,11 +19,11 @@ import scala.collection.JavaConverters._
 protected case object DVDIProvider extends InjectionHelper[PersistentVolume] with PersistentVolumeProvider {
   import org.apache.mesos.Protos.Volume.Mode
 
-  val name = "dvdi"
+  override val name = Some("dvdi")
 
-  val optionDriver = name + "/driverName"
-  val optionIOPS = name + "/iops"
-  val optionType = name + "/volumeType"
+  val optionDriver = name.get + "/driverName"
+  val optionIOPS = name.get + "/iops"
+  val optionType = name.get + "/volumeType"
 
   val validOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opt =>
     opt.get(optionDriver) as "driverName option" is notEmpty
@@ -37,7 +37,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
     v.persistent.name.each is notEmpty
     v.persistent.providerName is notEmpty
     v.persistent.providerName.each is notEmpty
-    v.persistent.providerName.each is equalTo(name) // sanity check
+    v.persistent.providerName.each is equalTo(name.get) // sanity check
     v.persistent.options is notEmpty
     v.persistent.options.each is valid(validOptions)
   }
@@ -64,15 +64,15 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
           if (app.instances > 1) Some(RuleViolation(app.id,
             s"Number of instances is limited to 1 when declaring external volumes in app ${app.id}", None))
           else None
-        val ruleViolations = DVDIProvider.this.apply(app.container).toSeq.flatMap{ vol =>
+        val ruleViolations = app.container.toSet[Container].flatMap(DVDIProvider.this.collect).flatMap{ vol =>
           val name = nameOf(vol.persistent)
           if (name.isDefined) {
             for {
               otherApp <- g.transitiveApps.toList
-              if otherApp != app.id // do not compare to self
-              otherVol <- DVDIProvider.this.apply(otherApp.container)
+              if otherApp.id != app.id // do not compare to self
+              otherVol <- otherApp.container.toSet[Container].flatMap(DVDIProvider.this.collect)
               otherName <- nameOf(otherVol.persistent)
-              if name == otherName
+              if name.get == otherName
             } yield RuleViolation(app.id,
               s"Requested volume $name conflicts with a volume in app ${otherApp.id}", None)
           }
@@ -88,15 +88,15 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
   }
 
   def driversInUse(ct: Container): Set[String] =
-    DVDIProvider.this.apply(Some(ct)).flatMap(_.persistent.options.flatMap(_.get(optionDriver))).toSet
+    DVDIProvider.this.collect(ct).flatMap(_.persistent.options.flatMap(_.get(optionDriver))).toSet
 
   /** @return a count of volume references-by-name within an app spec */
   def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-    DVDIProvider.this.apply(app.container).flatMap{ pv => nameOf(pv.persistent) }.
+    app.container.toSet[Container].flatMap(DVDIProvider.this.collect).flatMap{ pv => nameOf(pv.persistent) }.
       groupBy(identity).mapValues(_.size)
 
   protected[providers] def modes(ct: Container): Set[Mode] =
-    DVDIProvider.this.apply(Some(ct)).map(_.mode).toSet
+    DVDIProvider.this.collect(ct).map(_.mode).toSet
 
   /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
   val containerValidation: Validator[Container] = validator[Container] { ct =>

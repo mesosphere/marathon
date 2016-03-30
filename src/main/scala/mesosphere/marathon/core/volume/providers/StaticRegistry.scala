@@ -13,18 +13,18 @@ import mesosphere.marathon.state.{ DockerVolume, PersistentVolume, Volume }
 protected[volume] object StaticRegistry extends VolumeProviderRegistry {
 
   def make(prov: VolumeProvider[Volume]*): Map[String, VolumeProvider[Volume]] = {
-    prov.foldLeft(Map.empty[String, VolumeProvider[Volume]]) { (m, p) => m + (p.name -> p) }
+    prov.filter(_.name.isDefined).
+      foldLeft(Map.empty[String, VolumeProvider[Volume]]) { (m, p) => m + (p.name.get -> p) }
   }
 
   val registry = make(
-    // list supported providers here
+    // list supported providers here; all MUST provide a non-empty "name" trait
     AgentVolumeProvider,
-    DockerHostVolumeProvider,
     DVDIProvider
   )
 
   def providerForName(name: Option[String]): Option[VolumeProvider[Volume]] =
-    registry.get(name.getOrElse(AgentVolumeProvider.name))
+    registry.get(name.getOrElse(AgentVolumeProvider.name.get))
 
   override def apply[T <: Volume](v: T): Option[VolumeProvider[T]] =
     v match {

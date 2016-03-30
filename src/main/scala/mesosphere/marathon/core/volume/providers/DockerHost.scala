@@ -15,8 +15,6 @@ import org.apache.mesos.Protos.{ Volume => MesosVolume }
 protected case object DockerHostVolumeProvider
     extends InjectionHelper[DockerVolume]
     with VolumeProvider[DockerVolume] {
-  val name = "docker" // only because we should have a non-empty name
-
   /** no special case validation here, it's handled elsewhere */
   val validation: Validator[Volume] = new NilValidator[Volume]
 
@@ -42,6 +40,6 @@ protected case object DockerHostVolumeProvider
     ContainerContext(container.addVolumes(toMesosVolume(dv)))
   }
 
-  override def apply(container: Option[Container]): Iterable[DockerVolume] =
-    container.fold(Seq.empty[DockerVolume])(_.volumes.collect{ case vol: DockerVolume => vol })
+  override def collect(container: Container): Iterable[DockerVolume] =
+    container.volumes.collect{ case vol: DockerVolume => vol }
 }

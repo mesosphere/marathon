@@ -4,18 +4,17 @@ import com.wix.accord.Validator
 import com.wix.accord.combinators.NilValidator
 import com.wix.accord.dsl._
 import com.wix.accord.Validator
-import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
 
 /**
   * AgentVolumeProvider handles persistent volumes allocated from agent resources.
   */
-protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvider with LocalVolumes {
+protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvider {
   import org.apache.mesos.Protos.Volume.Mode
   import mesosphere.marathon.api.v2.Validation._
 
   /** this is the name of the agent volume provider */
-  val name = "agent"
+  override val name = Some("agent")
 
   // no provider-specific rules at the container level
   val containerValidation: Validator[Container] = new NilValidator[Container]
@@ -33,6 +32,6 @@ protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvid
   override def accepts(volume: PersistentVolume): Boolean = {
     // this should also match if the providerName is not set. By definition a persistent volume
     // without a providerName is a local agent volume.
-    volume.persistent.providerName.getOrElse(name) == name
+    volume.persistent.providerName.getOrElse(name.get) == name.get
   }
 }

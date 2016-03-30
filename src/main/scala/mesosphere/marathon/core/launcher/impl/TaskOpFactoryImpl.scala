@@ -153,7 +153,7 @@ class TaskOpFactoryImpl @Inject() (
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val localVolumes: Iterable[Task.LocalVolume] = VolumesModule.localVolumes.local(app)
+    val localVolumes: Iterable[Task.LocalVolume] = Task.localVolumes(app)
     val persistentVolumeIds = localVolumes.map(_.id)
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(

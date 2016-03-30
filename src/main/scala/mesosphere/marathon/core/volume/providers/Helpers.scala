@@ -30,10 +30,10 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
     volume.persistent.providerName.isDefined && volume.persistent.providerName.get == name
   }
 
-  override def apply(container: Option[Container]): Iterable[PersistentVolume] =
-    container.fold(Seq.empty[PersistentVolume])(_.volumes.collect{
+  override def collect(container: Container): Iterable[PersistentVolume] =
+    container.volumes.collect{
       case vol: PersistentVolume if accepts(vol) => vol
-    })
+    }
 }
 
 protected abstract class InjectionHelper[V <: Volume: ClassTag] extends VolumeInjection {
