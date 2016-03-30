@@ -31,6 +31,8 @@ protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvid
   }
 
   override def accepts(volume: PersistentVolume): Boolean = {
+    // this should also match if the providerName is not set. By definition a persistent volume
+    // without a providerName is a local agent volume.
     volume.persistent.providerName.getOrElse(name) == name
   }
 }
