@@ -235,7 +235,12 @@ trait ContainerFormats {
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mde")
 
-  implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = Json.format[PersistentVolumeInfo]
+  implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = (
+    (__ \ "size").formatNullable[Long] ~
+    (__ \ "name").formatNullable[String] ~
+    (__ \ "providerName").formatNullable[String] ~
+    (__ \ "options").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
+  )(PersistentVolumeInfo(_, _, _, _), unlift(PersistentVolumeInfo.unapply))
 
   implicit lazy val VolumeFormat: Format[Volume] = (
     (__ \ "containerPath").format[String] ~

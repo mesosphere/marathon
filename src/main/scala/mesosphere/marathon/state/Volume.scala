@@ -130,17 +130,14 @@ case class PersistentVolumeInfo(
     size: Option[Long] = None,
     name: Option[String] = None,
     providerName: Option[String] = None,
-    options: Option[Map[String, String]] = None) // = Map.empty[String, String])
-    {
+    options: Map[String, String] = Map.empty[String, String]) {
   def toProto: Protos.Volume.PersistentVolumeInfo = {
     val builder = Protos.Volume.PersistentVolumeInfo.newBuilder()
     size.foreach(builder.setSize)
     name.foreach(builder.setName)
     providerName.foreach(builder.setProviderName)
-    options.foreach(_
-      .map{ case (key, value) => Mesos.Label.newBuilder().setKey(key).setValue(value).build }
+    options.map{ case (key, value) => Mesos.Label.newBuilder().setKey(key).setValue(value).build }
       .foreach(builder.addOptions)
-    )
     builder.build
   }
 }
@@ -161,7 +158,7 @@ object PersistentVolumeInfo {
     info.size.each should be > 0L
     info.name.each should matchRegex(LabelRegex)
     info.providerName.each should matchRegex(LabelRegex)
-    info.options.each is valid(validOptions)
+    info.options is valid(validOptions)
   }
 
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
@@ -169,8 +166,7 @@ object PersistentVolumeInfo {
       if (pvi.hasSize) Some(pvi.getSize) else None,
       if (pvi.hasName) Some(pvi.getName) else None,
       if (pvi.hasProviderName) Some(pvi.getProviderName) else None,
-      if (pvi.getOptionsCount() > 0)
-        Some(pvi.getOptionsList.asScala.map { p => p.getKey -> p.getValue }.toMap) else None
+      pvi.getOptionsList.asScala.map { p => p.getKey -> p.getValue }.toMap
     )
 }
 

@@ -38,8 +38,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
     v.persistent.providerName is notEmpty
     v.persistent.providerName.each is notEmpty
     v.persistent.providerName.each is equalTo(name.get) // sanity check
-    v.persistent.options is notEmpty
-    v.persistent.options.each is valid(validOptions)
+    v.persistent.options is valid(validOptions)
   }
 
   def nameOf(vol: PersistentVolumeInfo): Option[String] = {
@@ -88,7 +87,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
   }
 
   def driversInUse(ct: Container): Set[String] =
-    DVDIProvider.this.collect(ct).flatMap(_.persistent.options.flatMap(_.get(optionDriver))).toSet
+    DVDIProvider.this.collect(ct).flatMap(_.persistent.options.get(optionDriver)).toSet
 
   /** @return a count of volume references-by-name within an app spec */
   def volumeNameCounts(app: AppDefinition): Map[String, Int] =
@@ -119,7 +118,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
     // - docker containerizer: specify "volumeDriver" for the container
     val container = ctx.container // TODO(jdef) clone?
     if (container.getType == ContainerInfo.Type.DOCKER && container.hasDocker) {
-      val driverName = pv.persistent.options.get(optionDriver)
+      val driverName = pv.persistent.options(optionDriver)
       if (container.getDocker.getVolumeDriver != driverName) {
         container.setDocker(container.getDocker.toBuilder.setVolumeDriver(driverName).build)
       }
@@ -157,7 +156,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
 
     Seq(
       newVar(dvdiVolumeName + suffix, v.persistent.name.get),
-      newVar(dvdiVolumeDriver + suffix, v.persistent.options.get(optionDriver))
+      newVar(dvdiVolumeDriver + suffix, v.persistent.options(optionDriver))
     // TODO(jdef) support other options here
     )
   }
