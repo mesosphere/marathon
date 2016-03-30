@@ -31,26 +31,26 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
   }
 
   override def apply(container: Option[Container]): Iterable[PersistentVolume] =
-    container.fold(Seq.empty[PersistentVolume]) {
-      _.volumes.collect{ case vol: PersistentVolume if accepts(vol) => vol }
-    }
+    container.fold(Seq.empty[PersistentVolume])(_.volumes.collect{
+      case vol: PersistentVolume if accepts(vol) => vol
+    })
 }
 
-protected abstract class ContextUpdateHelper[V <: Volume: ClassTag] extends ContextUpdate {
+protected abstract class InjectionHelper[V <: Volume: ClassTag] extends VolumeInjection {
 
   def accepts(v: V): Boolean
 
-  override protected def updated[C <: BuilderContext](context: C, v: Volume): Option[C] = {
+  override protected def inject[C <: InjectionContext](ctx: C, v: Volume): C = {
     v match {
       case vol: V if accepts(vol) => {
-        context match {
-          case cc: ContainerContext => updatedContainer(cc, vol).map(_.asInstanceOf[C])
-          case cc: CommandContext   => updatedCommand(cc, vol).map(_.asInstanceOf[C])
+        ctx match {
+          case cc: ContainerContext => injectContainer(cc, vol).asInstanceOf[C]
+          case cc: CommandContext   => injectCommand(cc, vol).asInstanceOf[C]
         }
       }
-      case _ => None
+      case _ => super.inject(ctx, v)
     }
   }
-  def updatedContainer(cc: ContainerContext, vol: V): Option[ContainerContext] = None
-  def updatedCommand(cc: CommandContext, vol: V): Option[CommandContext] = None
+  def injectContainer(ctx: ContainerContext, vol: V): ContainerContext = ctx
+  def injectCommand(ctx: CommandContext, vol: V): CommandContext = ctx
 }
