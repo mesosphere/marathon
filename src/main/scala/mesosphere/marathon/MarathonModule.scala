@@ -12,7 +12,8 @@ import akka.routing.RoundRobinPool
 import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
-import com.twitter.common.zookeeper.{ Candidate, ZooKeeperClient, Group => ZGroup }
+import com.twitter.common.base.Supplier
+import com.twitter.common.zookeeper.{ Group => ZGroup, CandidateImpl, Candidate, ZooKeeperClient }
 import com.twitter.util.JavaTimer
 import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
@@ -257,12 +258,21 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     if (conf.highlyAvailable()) {
       log.info("Registering in ZooKeeper with hostPort:" + hostPort)
 
-      val candidate = core.leadership.BackwardsCompatible.createCandidate(
-        zk,
-        conf.zooKeeperCuratorLeaderPath,
-        new ZGroup(zk, Ids.OPEN_ACL_UNSAFE, conf.zooKeeperLeaderPath),
-        hostPort
-      )
+      val candidate = if (sys.env.contains("MARATHON_V1_LEADER_ELECTION")) {
+        new CandidateImpl(new ZGroup(zk, Ids.OPEN_ACL_UNSAFE, conf.zooKeeperLeaderPath),
+          new Supplier[Array[Byte]] {
+            def get(): Array[Byte] = {
+              hostPort.getBytes("UTF-8")
+            }
+          })
+      }
+      else
+        core.leadership.BackwardsCompatible.createCandidate(
+          zk,
+          conf.zooKeeperCuratorLeaderPath,
+          new ZGroup(zk, Ids.OPEN_ACL_UNSAFE, conf.zooKeeperLeaderPath),
+          hostPort
+        )
       return Some(candidate) //scalastyle:off return
     }
     None
