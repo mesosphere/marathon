@@ -80,7 +80,7 @@ protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume]
         }
         if (internalNameViolations.isEmpty && ruleViolations.isEmpty && instancesViolation.isEmpty) None
         else Some(GroupViolation(app, "app contains conflicting volumes", None,
-          internalNameViolations.toSet ++ instancesViolation.toSet ++ ruleViolations.toSet))
+          internalNameViolations.toSet[Violation] ++ instancesViolation.toSet ++ ruleViolations.toSet))
       }
       if (groupViolations.isEmpty) Success
       else Failure(groupViolations.toSet)
@@ -101,7 +101,7 @@ protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume]
   /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
   val containerValidation: Validator[Container] = validator[Container] { ct =>
     (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (modes(ct).each is equalTo(Mode.RW))) or (
-      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should be == 1)
+      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should equalTo(1))
     )
   }
 
