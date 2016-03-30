@@ -6,7 +6,6 @@ import Keys._
 import sbtassembly.Plugin._
 import AssemblyKeys._
 import com.typesafe.sbt.SbtScalariform._
-import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
@@ -39,7 +38,6 @@ object MarathonBuild extends Build {
       formatSettings ++
       scalaStyleSettings ++
       revolverSettings ++
-      graphSettings ++
       testSettings ++
       integrationTestSettings ++
       teamCitySetEnvSettings ++
@@ -108,7 +106,7 @@ object MarathonBuild extends Build {
 
   lazy val IntegrationTest = config("integration") extend Test
 
-  lazy val baseSettings = Defaults.defaultSettings ++ Seq (
+  lazy val baseSettings = Seq (
     organization := "mesosphere.marathon",
     scalaVersion := "2.11.7",
     crossScalaVersions := Seq(scalaVersion.value),
