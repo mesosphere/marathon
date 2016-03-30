@@ -16,7 +16,7 @@ import scala.collection.JavaConverters._
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume] with PersistentVolumeProvider {
+protected case object DVDIProvider extends DecoratorHelper[PersistentVolume] with PersistentVolumeProvider {
   import org.apache.mesos.Protos.Volume.Mode
 
   val name = "dvdi"
@@ -113,32 +113,32 @@ protected case object DVDIProvider extends ContextUpdateHelper[PersistentVolume]
       .setMode(volume.mode)
       .build
 
-  override def updatedContainer(cc: ContainerContext, pv: PersistentVolume): Option[ContainerContext] = {
+  override def decoratedContainer(ctx: ContainerContext, pv: PersistentVolume): ContainerContext = {
     // special behavior for docker vs. mesos containers
     // - docker containerizer: serialize volumes into mesos proto
     // - docker containerizer: specify "volumeDriver" for the container
-    val ci = cc.ci // TODO(jdef) clone?
+    val ci = ctx.ci // TODO(jdef) clone?
     if (ci.getType == ContainerInfo.Type.DOCKER && ci.hasDocker) {
       val driverName = pv.persistent.options.get(optionDriver)
       if (ci.getDocker.getVolumeDriver != driverName) {
         ci.setDocker(ci.getDocker.toBuilder.setVolumeDriver(driverName).build)
       }
-      Some(ContainerContext(ci.addVolumes(toMesosVolume(pv))))
+      ContainerContext(ci.addVolumes(toMesosVolume(pv)))
     }
-    None
+    else ctx
   }
 
-  override def updatedCommand(cc: CommandContext, pv: PersistentVolume): Option[CommandContext] = {
+  override def decoratedCommand(ctx: CommandContext, pv: PersistentVolume): CommandContext = {
     // special behavior for docker vs. mesos containers
     // - mesos containerizer: serialize volumes into envvar sets
-    val (ct, ci) = (cc.ct, cc.ci) // TODO(jdef) clone ci?
+    val (ct, ci) = (ctx.ct, ctx.ci) // TODO(jdef) clone ci?
     if (ct == ContainerInfo.Type.MESOS) {
       val env = if (ci.hasEnvironment) ci.getEnvironment.toBuilder else Environment.newBuilder
       val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
       env.addAllVariables(toAdd.asJava)
-      Some(CommandContext(ct, ci.setEnvironment(env.build)))
+      CommandContext(ct, ci.setEnvironment(env.build))
     }
-    None
+    else ctx
   }
 
   val dvdiVolumeName = "DVDI_VOLUME_NAME"

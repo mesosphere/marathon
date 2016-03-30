@@ -36,21 +36,20 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
     }
 }
 
-protected abstract class ContextUpdateHelper[V <: Volume: ClassTag] extends ContextUpdate {
-
+protected abstract class DecoratorHelper[V <: Volume: ClassTag] extends Decorator {
   def accepts(v: V): Boolean
 
-  override protected def updated[C <: BuilderContext](context: C, v: Volume): Option[C] = {
+  override protected def decorated[C <: DecoratorContext](ctx: C, v: Volume): C = {
     v match {
       case vol: V if accepts(vol) => {
-        context match {
-          case cc: ContainerContext => updatedContainer(cc, vol).map(_.asInstanceOf[C])
-          case cc: CommandContext   => updatedCommand(cc, vol).map(_.asInstanceOf[C])
+        ctx match {
+          case cc: ContainerContext => decoratedContainer(cc, vol).asInstanceOf[C]
+          case cc: CommandContext   => decoratedCommand(cc, vol).asInstanceOf[C]
         }
       }
-      case _ => None
+      case _ => ctx
     }
   }
-  def updatedContainer(cc: ContainerContext, vol: V): Option[ContainerContext] = None
-  def updatedCommand(cc: CommandContext, vol: V): Option[CommandContext] = None
+  def decoratedContainer(ctx: ContainerContext, vol: V): ContainerContext = ctx
+  def decoratedCommand(ctx: CommandContext, vol: V): CommandContext = ctx
 }

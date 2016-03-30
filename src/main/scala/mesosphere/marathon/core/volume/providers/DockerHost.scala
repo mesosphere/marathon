@@ -13,7 +13,7 @@ import org.apache.mesos.Protos.{ Volume => MesosVolume }
   * use a PersistentVolume instead.
   */
 protected case object DockerHostVolumeProvider
-    extends ContextUpdateHelper[DockerVolume]
+    extends DecoratorHelper[DockerVolume]
     with VolumeProvider[DockerVolume] {
   val name = "docker" // only because we should have a non-empty name
 
@@ -36,10 +36,9 @@ protected case object DockerHostVolumeProvider
 
   override def accepts(dv: DockerVolume): Boolean = true
 
-  override def updatedContainer(cc: ContainerContext, dv: DockerVolume): Option[ContainerContext] = {
-    var ci = cc.ci // TODO(jdef) clone?
+  override def decoratedContainer(ctx: ContainerContext, dv: DockerVolume): ContainerContext = {
     // TODO(jdef) check that this is a DOCKER container type?
-    Some(ContainerContext(ci.addVolumes(toMesosVolume(dv))))
+    ContainerContext(ctx.ci.addVolumes(toMesosVolume(dv)))
   }
 
   override def apply(container: Option[Container]): Iterable[DockerVolume] =

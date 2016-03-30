@@ -21,7 +21,7 @@ trait LocalVolumes {
 /**
   * VolumeProvider is an interface implemented by storage volume providers
   */
-trait VolumeProvider[+T <: Volume] {
+trait VolumeProvider[+T <: Volume] extends Decorator {
   /** name uniquely identifies this volume provider */
   val name: String
   /** validation implements a provider's volume validation rules */
@@ -85,5 +85,5 @@ trait VolumeProviderRegistry {
 object VolumesModule {
   lazy val localVolumes: LocalVolumes = AgentVolumeProvider
   lazy val providers: VolumeProviderRegistry = StaticRegistry
-  lazy val updates: ContextUpdate = ContextUpdate
+  lazy val decorators: Decorator = Decorator
 }

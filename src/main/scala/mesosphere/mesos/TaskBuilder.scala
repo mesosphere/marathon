@@ -127,14 +127,12 @@ class TaskBuilder(app: AppDefinition,
     def decorateCommandInfo(initialCi: CommandInfo.Builder): CommandInfo.Builder = {
       // we may not actually have a container specified, which means that we're using mesos native
       // containerization
-      var ct: ContainerInfo.Type = containerProto.fold(ContainerInfo.Type.MESOS)(_.getType)
-      var ci: CommandInfo.Builder = initialCi
+      val ct: ContainerInfo.Type = containerProto.fold(ContainerInfo.Type.MESOS)(_.getType)
 
       // apply changes from volume providers (must do this after we're sure there's a container type)
-      app.container.foreach{ container =>
-        ci = VolumesModule.updates(container.volumes){ () => CommandContext(ct, ci) }.fold(ci)(_.ci)
-      }
-      ci
+      app.container.map { container =>
+        VolumesModule.decorators(container.volumes, CommandContext(ct, initialCi)).ci
+      }.getOrElse(initialCi)
     }
 
     executor match {
@@ -277,7 +275,7 @@ class TaskBuilder(app: AppDefinition,
 
       // apply changes from volume providers (must do this after we're sure there's a container type)
       app.container.foreach{ container =>
-        builder = VolumesModule.updates(container.volumes){ () => ContainerContext(builder) }.fold(builder)(_.ci)
+        builder = VolumesModule.decorators(container.volumes, ContainerContext(builder)).ci
       }
 
       Some(builder.build)
