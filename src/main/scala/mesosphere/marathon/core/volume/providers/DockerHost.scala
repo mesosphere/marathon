@@ -34,7 +34,7 @@ protected[volume] case object DockerHostVolumeProvider
       .setMode(volume.mode)
       .build
 
-  override def accepts(dv: DockerVolume): Boolean = true
+  protected def accepts(dv: DockerVolume): Boolean = true
 
   override def decoratedContainer(ctx: ContainerContext, dv: DockerVolume): ContainerContext = {
     // TODO(jdef) check that this is a DOCKER container type?
