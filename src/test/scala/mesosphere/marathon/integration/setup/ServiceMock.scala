@@ -6,7 +6,7 @@ import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import mesosphere.marathon.integration.setup.ServiceMock._
 import org.eclipse.jetty.server.handler.AbstractHandler
 import org.eclipse.jetty.server.{ Request, Server }
-import play.api.libs.json.{ JsResultException, Format, Json, Writes }
+import play.api.libs.json._
 import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 
@@ -58,12 +58,18 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
         ok(Json.obj("result" -> s"Received cmd: interrupt"))
       case ("POST", "/v1/plan/restart") =>
         val pos = Json.parse(request.getInputStream).as[BlockPosition]
-        plan.allBlocks.dropWhile(_.name != pos.block_id).foreach(_.rollback())
-        ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
+        if (plan.validPosition(pos)) {
+          plan.allBlocks.dropWhile(_.name != pos.block_id).foreach(_.rollback())
+          ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
+        }
+        else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/v1/plan/force_complete") =>
         val pos = Json.parse(request.getInputStream).as[BlockPosition]
-        plan.allBlocks.takeWhile(_.name != pos.block_id).foreach(_.doFinalize())
-        ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
+        if (plan.validPosition(pos)) {
+          plan.allBlocks.takeWhile(_.name != pos.block_id).foreach(_.doFinalize())
+          ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
+        }
+        else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/admin/rollback") =>
         plan.rollback()
         ok(Json.obj("Result" -> plan.status))
@@ -94,9 +100,10 @@ object ServiceMock {
   case class Plan(phases: List[Phase]) {
     var errors: List[String] = List.empty
     def isDone = phases.forall(_.isDone)
-    def status = currentPhase.fold("Complete")(_.status)
+    def status: Status = currentPhase.fold[Status](Complete)(_.status)
     def currentPhase: Option[Phase] = phases.find(_.currentBlock.isDefined)
     def allBlocks: List[Block] = phases.flatMap(_.blocks)
+    def validPosition(pos: BlockPosition): Boolean = allBlocks.exists(_.name == pos.block_id)
 
     /**
       * Go to next state.
@@ -120,7 +127,7 @@ object ServiceMock {
 
   case class Phase(name: String, blocks: List[Block]) {
     def isDone = blocks.forall(_.isDone)
-    def status = currentBlock.fold("Complete")(_.status)
+    def status: Status = currentBlock.fold[Status](Complete)(_.status)
     def currentBlock: Option[Block] = blocks.find(b => b.isInProgress || b.notStarted)
     def next(withContinue: Boolean): Boolean = {
       currentBlock.fold(true) { block =>
@@ -128,48 +135,62 @@ object ServiceMock {
         if (done) block.next(withContinue) else done
       }
     }
-    def rollback(): Unit = blocks.foreach(_.rollback)
+    def rollback(): Unit = blocks.foreach(_.rollback())
   }
 
   case class Block(name: String, var decisionPoint: Boolean) {
-    private var inProgress: Boolean = false
-    private var done: Boolean = false
+    var status: Status = Pending
+    def isDone = status.isDone
+    def isInProgress = status.isInProgress
+    def notStarted = !isInProgress && !isDone
 
-    def isDone = done
-    def isInProgress = inProgress
-    def notStarted = !inProgress && !done
-
-    def status: String = {
-      if (done) "Complete"
-      else if (inProgress && decisionPoint) "Waiting"
-      else if (inProgress && !decisionPoint) "InProgress"
-      else "Pending"
-    }
-
-    def next(withContinue: Boolean): Boolean = {
-      if (notStarted) inProgress = true
-      else if (inProgress && !(decisionPoint ^ withContinue)) {
-        inProgress = false
-        done = true
+    def next(decideYes: Boolean): Boolean = {
+      status = status match {
+        case Pending if decisionPoint => Waiting
+        case Pending                  => InProgress
+        case Waiting if decideYes     => Complete
+        case InProgress               => Complete
+        case current                  => current
       }
-      done
+      isDone
     }
 
     def rollback(): Unit = {
-      inProgress = false
-      done = false
+      status = Pending
     }
 
     def doFinalize(): Unit = {
-      inProgress = false
-      done = true
+      status = Complete
     }
+  }
+
+  sealed trait Status {
+    def isDone: Boolean
+    def isInProgress: Boolean
+    override def toString: String = getClass.getSimpleName.replaceAllLiterally("$", "")
+  }
+  case object Complete extends Status {
+    override def isDone: Boolean = true
+    override def isInProgress: Boolean = false
+  }
+  case object Pending extends Status {
+    override def isDone: Boolean = false
+    override def isInProgress: Boolean = false
+  }
+  case object Waiting extends Status {
+    override def isDone: Boolean = false
+    override def isInProgress: Boolean = false
+  }
+  case object InProgress extends Status {
+    override def isDone: Boolean = false
+    override def isInProgress: Boolean = true
   }
 
   case class BlockPosition(phase_id: String, block_id: String)
 
   implicit val blockPositionFormat: Format[BlockPosition] = Json.format[BlockPosition]
 
+  implicit val statusWrites: Writes[Status] = Writes { status => JsString(status.toString) }
   implicit val blockWrites: Writes[Block] = Writes { block =>
     Json.obj(
       "has_decision_point" -> block.decisionPoint,
