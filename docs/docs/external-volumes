@@ -15,13 +15,11 @@ Using an external storage service allows your apps to be more fault-tolerant. If
 
 # Specifying an External Volume
 
-When you install DCOS, add the following to your `genconf.yml` file:
+If you are running Marathon on DCOS, add the following to the `genconf.yml` file you use during DCOS installation. [Learn more](https://docs.mesosphere.com/concepts/installing/installing-enterprise-edition/configuration-parameters/).
 
 - `rexray_config_method: file`
 
 - `rexray_config_filename: /path/to/rexray.yaml`
-
-<!-- [Learn more](URL). link to installer docs that mention this when they are live-->
 
 ## Scaling your App
 
@@ -50,11 +48,11 @@ You specify an external volume in the app definition of your Marathon app. [Lear
 
 In the app definition above, the environment variables (`env`) specify a 1GB volume that will be formatted ext4 once it is created.
 
-- Volumes will always be available under `/var/lib/rexray/volumes/$DVDI_VOLUME_NAME/`. **Note:** This applies only to non-Docker apps; Docker apps can specify the mount point inside the app definition.
+- Volumes will always be available under `$REXRAY_HOME/var/lib/rexray/volumes/$DVDI_VOLUME_NAME`. **Note:** This applies only to non-Docker apps; Docker apps can specify the mount point inside the app definition. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
 
-- The root path inside the volume for storing data is configurable, but defaults to `data/`. See [the REX-Ray documentation](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#volume-root-path-031) for more information.
+- The root path inside the volume for storing data is configurable, but defaults to `data/`. See [the REX-Ray documentation on root paths](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#volume-root-path-031) for more information.
 
-- `DVDI_VOLUME_DRIVER` tells `DVDCLI` which Docker volume driver we want to use for storage. The only driver we currently provide is REX-Ray, so this value should always be `rexray`. [Learn more about REX-ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
+- `DVDI_VOLUME_DRIVER` tells `DVDCLI` which Docker volume driver we want to use for storage. If you are running Marathon on DCOS, this value should always be `rexray`. [Learn more about REX-ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
 
 - `DVDI_VOLUME_NAME` is the name by which REX-Ray looks up your volume. When your task is staged on an agent, REX-Ray queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used.
 
