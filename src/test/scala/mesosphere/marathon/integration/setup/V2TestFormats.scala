@@ -71,6 +71,7 @@ object V2TestFormats {
       "maxLaunchDelaySeconds" -> update.maxLaunchDelay.map(_.toSeconds),
       "container" -> update.container,
       "healthChecks" -> update.healthChecks,
+      "readinessChecks" -> update.readinessChecks,
       "dependencies" -> update.dependencies,
       "upgradeStrategy" -> update.upgradeStrategy,
       "labels" -> update.labels,

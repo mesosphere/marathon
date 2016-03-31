@@ -367,7 +367,7 @@ class HealthCheckTest extends MarathonSpec {
   test("getPort") {
     import MarathonTestHelper.Implicits._
     val check = new HealthCheck(port = Some(1234))
-    val task = MarathonTestHelper.runningTask("test_id").withNetworking(Task.HostPorts(4321))
+    val task = MarathonTestHelper.runningTask("test_id").withNetworking(Task.HostPorts.forPorts(4321))
 
     assert(check.hostPort(task.launched.get).contains(1234))
   }

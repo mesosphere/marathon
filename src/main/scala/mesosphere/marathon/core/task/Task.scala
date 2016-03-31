@@ -384,7 +384,7 @@ object Task {
 
     def hasStartedRunning: Boolean = status.startedAt.isDefined
 
-    def ports: Iterable[Int] = networking.ports
+    def ports: Seq[Int] = networking.ports
 
     def ipAddresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = networking match {
       case list: NetworkInfoList => list.addresses
@@ -415,13 +415,13 @@ object Task {
 
   /** Info on how to reach the task in the network. */
   sealed trait Networking {
-    def ports: Iterable[Int]
+    def ports: Seq[Int]
   }
 
   /** The task is reachable via host ports which are bound to [[AgentInfo#host]]. */
-  case class HostPorts(ports: Iterable[Int]) extends Networking
+  case class HostPorts(ports: Seq[Int]) extends Networking
   object HostPorts {
-    def apply(ports: Int*): HostPorts = HostPorts(ports)
+    def forPorts(ports: Int*): HostPorts = new HostPorts(ports)
   }
 
   /**
@@ -431,14 +431,14 @@ object Task {
   case class NetworkInfoList(networkInfoList: Iterable[MesosProtos.NetworkInfo]) extends Networking {
     import scala.collection.JavaConverters._
     def addresses: Iterable[MesosProtos.NetworkInfo.IPAddress] = networkInfoList.flatMap(_.getIpAddressesList.asScala)
-    override def ports: Iterable[Int] = Iterable.empty
+    override def ports: Seq[Int] = Seq.empty
   }
   object NetworkInfoList {
     def apply(networkInfoList: MesosProtos.NetworkInfo*): NetworkInfoList = NetworkInfoList(networkInfoList)
   }
 
   case object NoNetworking extends Networking {
-    override def ports: Iterable[Int] = Iterable.empty
+    override def ports: Seq[Int] = Seq.empty
   }
 
   object Terminated {

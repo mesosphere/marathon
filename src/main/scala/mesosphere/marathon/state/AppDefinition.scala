@@ -1,13 +1,14 @@
 package mesosphere.marathon.state
 
 import com.wix.accord._
-import mesosphere.marathon.Protos
+import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.plugin
+import mesosphere.marathon.{ Protos, plugin }
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -19,8 +20,6 @@ import org.apache.mesos.{ Protos => mesos }
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-
-import com.wix.accord.dsl._
 
 case class AppDefinition(
 
@@ -64,6 +63,8 @@ case class AppDefinition(
 
   healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
 
+  readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
+
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
   upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
@@ -92,7 +93,7 @@ case class AppDefinition(
     * port mappings.
     */
   def portIndicesAreValid(): Boolean = {
-    val validPortIndices = hostPorts.indices
+    val validPortIndices = portIndices
     healthChecks.forall { hc =>
       hc.protocol == Protocol.COMMAND || hc.portIndex.forall(validPortIndices.contains(_))
     }
@@ -245,7 +246,9 @@ case class AppDefinition(
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
-      healthChecks = proto.getHealthChecksList.asScala.map(new HealthCheck().mergeFromProto).toSet,
+      healthChecks = proto.getHealthChecksList.iterator().asScala.map(new HealthCheck().mergeFromProto).toSet,
+      readinessChecks =
+        proto.getReadinessCheckDefinitionList.iterator().asScala.map(ReadinessCheckSerializer.fromProto).to[Seq],
       labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
       versionInfo = versionInfoFromProto,
       upgradeStrategy =
@@ -271,7 +274,10 @@ case class AppDefinition(
   def containerServicePorts: Option[Seq[Int]] =
     for (pms <- portMappings) yield pms.map(_.servicePort)
 
-  def hostPorts: Seq[Int] = containerHostPorts.getOrElse(portNumbers)
+  def portIndices: Range = containerHostPorts.getOrElse(portNumbers).indices
+
+  /** Returns true if and only if the host ports of all tasks are the same. */
+  def hasFixedHostPorts: Boolean = requirePorts || ipAddress.isDefined
 
   def servicePorts: Seq[Int] = containerServicePorts.getOrElse(portNumbers)
 
@@ -463,6 +469,8 @@ object AppDefinition {
 
   val DefaultHealthChecks: Set[HealthCheck] = Set.empty
 
+  val DefaultReadinessChecks: Seq[ReadinessCheck] = Seq.empty
+
   val DefaultDependencies: Set[PathId] = Set.empty
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
@@ -486,7 +494,7 @@ object AppDefinition {
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer
-    appDef.healthChecks is every(portIndexIsValid(appDef.hostPorts.indices))
+    appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     appDef.mem should be >= 0.0
@@ -512,6 +520,7 @@ object AppDefinition {
 
   /**
     * Validator for apps, which are being part of a group.
+    *
     * @param base Path of the parent group.
     * @return
     */

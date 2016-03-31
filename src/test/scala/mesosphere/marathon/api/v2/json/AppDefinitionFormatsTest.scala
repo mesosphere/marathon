@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
@@ -230,5 +231,15 @@ class AppDefinitionFormatsTest
     val json = Json.toJson(a1.copy(residency = Some(Residency(7200, Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER))))
     (json \ "residency" \ "relaunchEscalationTimeoutSeconds").as[Long] should equal(7200)
     (json \ "residency" \ "taskLostBehavior").as[String] should equal(Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER.name())
+  }
+
+  test("AppDefinition JSON includes readinessChecks") {
+    val app = AppDefinition(id = PathId("/test"), cmd = Some("sleep 123"), readinessChecks = Seq(
+      ReadinessCheckTestHelper.alternativeHttps
+    ))
+    val appJson = Json.toJson(app)
+    val rereadApp = appJson.as[AppDefinition]
+    rereadApp.readinessChecks should have size (1)
+    rereadApp should equal(app)
   }
 }
