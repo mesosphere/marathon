@@ -516,7 +516,7 @@ object AppDefinition {
 
   private val definesCorrectResidencyCombination: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
-      !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
+      !(app.residency.isDefined ^ app.persistentVolumes.exists(_.persistent.name.isEmpty))
     }
 
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =
