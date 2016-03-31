@@ -8,6 +8,7 @@ import mesosphere.marathon.integration.setup.{ RestResult, IntegrationFunSuite, 
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ Tag, BeforeAndAfter, GivenWhenThen, Matchers }
+import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.util.Try
@@ -21,6 +22,8 @@ class ResidentTaskIntegrationTest
     with GivenWhenThen {
 
   import Fixture._
+
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
   //clean up state before running the test case
   before(cleanUp())
@@ -155,14 +158,16 @@ class ResidentTaskIntegrationTest
     val newVersion = f.restartSuccessfully(app)
     val all = f.allTasks(app.id)
 
-    And("all 5 tasks are restarted and of the new version")
-    all.map(_.version).forall(_.contains(newVersion)) shouldBe true
+    log.info("tasks after relaunch: {}", all.mkString(";"))
+
+    Then("no extra task was created")
+    all.size shouldBe 5
 
     And("exactly 5 instances are running")
     all.count(_.launched) shouldBe 5
 
-    And("no extra task was created")
-    all.size shouldBe 5
+    And("all 5 tasks are restarted and of the new version")
+    all.map(_.version).forall(_.contains(newVersion)) shouldBe true
   }
 
   test("Config Change") { f =>
@@ -180,14 +185,16 @@ class ResidentTaskIntegrationTest
     val newVersion = f.updateSuccessfully(app.id, AppUpdate(cmd = Some("sleep 1234"))).toString
     val all = f.allTasks(app.id)
 
-    Then("all 5 tasks are of the new version")
-    all.map(_.version).forall(_.contains(newVersion)) shouldBe true
+    log.info("tasks after config change: {}", all.mkString(";"))
+
+    Then("no extra task was created")
+    all should have size (5)
 
     And("exactly 5 instances are running")
     all.filter(_.launched) should have size (5)
 
-    And("no extra task was created")
-    all should have size (5)
+    And("all 5 tasks are of the new version")
+    all.map(_.version).forall(_.contains(newVersion)) shouldBe true
   }
 
   /**

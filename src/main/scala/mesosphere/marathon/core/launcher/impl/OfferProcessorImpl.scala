@@ -122,7 +122,7 @@ private[launcher] class OfferProcessorImpl(
   private[this] def saveTasks(ops: Seq[TaskOpWithSource], savingDeadline: Timestamp): Future[Seq[TaskOpWithSource]] = {
     def saveTask(taskOpWithSource: TaskOpWithSource): Future[Option[TaskOpWithSource]] = {
       val taskId = taskOpWithSource.taskId
-      log.info("Persisting TaskStateOp for [{}]", taskOpWithSource.taskId)
+      log.info(s"Processing ${taskOpWithSource.op.stateOp} for ${taskOpWithSource.taskId}")
       taskCreationHandler
         .created(taskOpWithSource.op.stateOp)
         .map(_ => Some(taskOpWithSource))
