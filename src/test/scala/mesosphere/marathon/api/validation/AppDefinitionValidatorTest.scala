@@ -3,6 +3,7 @@ package mesosphere.marathon.api.validation
 import mesosphere.marathon.Protos.HealthCheckDefinition
 import mesosphere.marathon.api.v2.Validation._
 import com.wix.accord.validate
+import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
@@ -459,6 +460,93 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val to3 = from.copy(residency = None, container = None)
     Then("Should be valid")
     AppDefinition.validAppDefinition(to3).isSuccess should be(true)
+  }
+
+  test("A application with label MARATHON_SINGLE_INSTANCE_APP may not have an instance count > 1") {
+    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an instance count of 0")
+    val app = AppDefinition(
+      cmd = Some("sleep 1000"),
+      instances = 0,
+      upgradeStrategy = UpgradeStrategy(0, 0),
+      labels = Map[String, String](
+        AppDefinition.Labels.SingleInstanceApp -> true.toString
+      )
+    )
+    Then("the validation succeeds")
+    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+
+    When("the instance count is set to 1")
+    val appWith1Instance = app.copy(instances = 1)
+    Then("the validation succeeds")
+    AppDefinition.validAppDefinition(appWith1Instance).isSuccess shouldBe true
+
+    When("the instance count is set to 2")
+    val appWith2Instances = app.copy(instances = 2)
+    Then("the validation fails")
+    AppDefinition.validAppDefinition(appWith2Instances).isFailure shouldBe true
+  }
+
+  test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,0) is invalid") {
+    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,0)")
+    val app = AppDefinition(
+      cmd = Some("sleep 1000"),
+      upgradeStrategy = UpgradeStrategy(1, 0),
+      labels = Map[String, String](
+        AppDefinition.Labels.SingleInstanceApp -> true.toString
+      )
+    )
+    Then("the validation fails")
+    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+  }
+
+  test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,1) is invalid") {
+    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,1)")
+    val app = AppDefinition(
+      cmd = Some("sleep 1000"),
+      upgradeStrategy = UpgradeStrategy(1, 1),
+      labels = Map[String, String](
+        AppDefinition.Labels.SingleInstanceApp -> true.toString
+      )
+    )
+    Then("the validation fails")
+    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+  }
+
+  test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,1) is invalid") {
+    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,1)")
+    val app = AppDefinition(
+      cmd = Some("sleep 1000"),
+      upgradeStrategy = UpgradeStrategy(0, 1),
+      labels = Map[String, String](
+        AppDefinition.Labels.SingleInstanceApp -> true.toString
+      )
+    )
+    Then("the validation fails")
+    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+  }
+
+  test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,0) is valid") {
+    Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,0)")
+    val app = AppDefinition(
+      cmd = Some("sleep 1000"),
+      upgradeStrategy = UpgradeStrategy(0, 0),
+      labels = Map[String, String](
+        AppDefinition.Labels.SingleInstanceApp -> true.toString
+      )
+    )
+    Then("the validation fails")
+    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+  }
+
+  test("readinessChecks are invalid for normal apps") {
+    Given("a normal app with a defined readinessCheck")
+    val app = AppDefinition(
+      id = PathId("/test"),
+      cmd = Some("true"),
+      readinessChecks = Seq(ReadinessCheck()))
+
+    Then("validation fails")
+    AppDefinition.validAppDefinition(app).isFailure shouldBe true
   }
 
   class Fixture {

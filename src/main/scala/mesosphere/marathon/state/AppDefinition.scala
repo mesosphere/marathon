@@ -9,7 +9,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.{ Protos, plugin }
-import mesosphere.marathon.state.AppDefinition.VersionInfo
+import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.mesos.TaskBuilder
@@ -69,7 +69,7 @@ case class AppDefinition(
 
   upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
 
-  labels: Map[String, String] = AppDefinition.DefaultLabels,
+  labels: Map[String, String] = Labels.Default,
 
   acceptedResourceRoles: Option[Set[String]] = None,
 
@@ -100,6 +100,8 @@ case class AppDefinition(
   }
 
   def isResident: Boolean = residency.isDefined
+
+  def isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
 
   def persistentVolumes: Iterable[PersistentVolume] = {
     container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
@@ -475,7 +477,14 @@ object AppDefinition {
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
-  val DefaultLabels: Map[String, String] = Map.empty
+  object Labels {
+    val Default: Map[String, String] = Map.empty
+
+    val DcosMigrationApiPath = "DCOS_MIGRATION_API_PATH"
+    val DcosMigrationApiVersion = "DCOS_MIGRATION_API_VERSION"
+    val DcosPackageFrameworkName = "DCOS_PACKAGE_FRAMEWORK_NAME"
+    val SingleInstanceApp = "MARATHON_SINGLE_INSTANCE_APP"
+  }
 
   /**
     * This default is only used in tests
@@ -501,8 +510,11 @@ object AppDefinition {
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
     appDef.disk should be >= 0.0
-    appDef must definesCorrectResidencyCombination
-    (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
+    appDef must complyWithResidencyRules
+    appDef must complyWithMigrationAPI
+    appDef must complyWithSingleInstanceLabelRules
+    appDef must complyWithReadinessCheckRules
+    appDef must complyWithUpgradeStrategyRules
   }
 
   /**
@@ -528,7 +540,7 @@ object AppDefinition {
     app.id is PathId.validPathWithBase(base)
   } and validBasicAppDefinition
 
-  private val definesCorrectResidencyCombination: Validator[AppDefinition] =
+  private val complyWithResidencyRules: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
       !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
     }
@@ -540,6 +552,38 @@ object AppDefinition {
       val container = app.container.exists(_ != Container.Empty)
       (cmd ^ args) || (!(cmd || args) && container)
     }
+
+  private val complyWithMigrationAPI: Validator[AppDefinition] =
+    isTrue("DCOS_PACKAGE_FRAMEWORK_NAME and DCOS_MIGRATION_API_PATH must be defined" +
+      " when using DCOS_MIGRATION_API_VERSION") { app =>
+      val understandsMigrationProtocol = app.labels.get(AppDefinition.Labels.DcosMigrationApiVersion).exists(_.nonEmpty)
+
+      // if the api version IS NOT set, we're ok
+      // if the api version IS set, we expect to see a valid version, a frameworkName and a path
+      def compliesWithMigrationApi =
+        app.labels.get(AppDefinition.Labels.DcosMigrationApiVersion).fold(true) { apiVersion =>
+          apiVersion == "v1" &&
+            app.labels.get(AppDefinition.Labels.DcosPackageFrameworkName).exists(_.nonEmpty) &&
+            app.labels.get(AppDefinition.Labels.DcosMigrationApiPath).exists(_.nonEmpty)
+        }
+
+      !understandsMigrationProtocol || (understandsMigrationProtocol && compliesWithMigrationApi)
+    }
+
+  private val complyWithSingleInstanceLabelRules: Validator[AppDefinition] =
+    isTrue("Single instance app may only have one instance") { app =>
+      (!app.isSingleInstance) || (app.instances <= 1)
+    }
+
+  private val complyWithReadinessCheckRules: Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app.readinessChecks.size should be <= 1
+    app.readinessChecks is every(ReadinessCheck.readinessCheckValidator(app.portDefinitions))
+  }
+
+  private val complyWithUpgradeStrategyRules: Validator[AppDefinition] = validator[AppDefinition] { appDef =>
+    (appDef.isSingleInstance is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForSingleInstanceApps)
+    (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
+  }
 
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") { hc =>
