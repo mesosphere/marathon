@@ -119,6 +119,6 @@ expect the names of these metrics to change if the affected code changes.
 
 Our metrics library calculates derived metrics like "mean" and "p99." However, Marathon provides these metrics for the entire live of of the app and applies an exponential weighting algorithm as a heuristic. For more precise metrics, build your dashboard around "counts" rather than "rates" where possible.
 
-### Statsd, derived statistics, and metric names
+### Statsd and derived statistics
 
-Statsd typically creates derived statistics (mean, p99) from mean values Marathon reports. Our codahale metrics package also reports derived statistics, which may differ from those created by statsd. Be sure you know where you are reporting and computing mean values.
+Statsd typically creates derived statistics (mean, p99) from mean values Marathon reports. Our codahale metrics package also reports derived statistics. To avoid accidentally aggregating statistics, be sure you know where you are reporting and computing mean values.
