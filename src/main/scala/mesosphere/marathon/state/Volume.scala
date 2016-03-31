@@ -148,7 +148,7 @@ object PersistentVolumeInfo {
   private val LabelPattern = "[a-z0-9](?:[-a-z0-9]*[a-z0-9])?"
 
   private val LabelRegex = "^" + LabelPattern + "$"
-  private val OptionKeyRegex = "^" + LabelRegex + OptionNamespaceSeparator + OptionNamePattern + "$"
+  private val OptionKeyRegex = "^" + LabelPattern + OptionNamespaceSeparator + OptionNamePattern + "$"
 
   implicit val validOptions = validator[Map[String, String]] {
     option => option.keys.each should matchRegex(OptionKeyRegex)
