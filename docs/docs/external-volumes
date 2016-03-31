@@ -36,7 +36,7 @@ You specify an external volume in the app definition of your Marathon app. [Lear
 ```json
 { 
   "id": "hello",
-     "cmd": "while [ true ] ; do touch/var/lib/rexray/volumes/test12345/data/hello ; sleep 5 ; done",   
+     "cmd": "while [ true ] ; do touch /var/lib/rexray/volumes/test12345/data/hello ; sleep 5 ; done",   
      "mem": 32,   
      "cpus": 0.1,   
      "instances": 1,
