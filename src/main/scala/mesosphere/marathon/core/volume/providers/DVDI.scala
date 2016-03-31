@@ -50,10 +50,10 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
 
   private def getInstanceViolations(app: AppDefinition) = {
     if (app.container.isDefined &&
-        DVDIProvider.this.collect(app.container.get).nonEmpty &&
-        app.instances > 1)
+      DVDIProvider.this.collect(app.container.get).nonEmpty &&
+      app.instances > 1)
       Some(RuleViolation(app.id,
-          s"Number of instances is limited to 1 when declaring external volumes in app ${app.id}", None))
+        s"Number of instances is limited to 1 when declaring external volumes in app ${app.id}", None))
     else None
   }
 
@@ -83,17 +83,22 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
           }
           else None
         }
-        if (internalNameViolations.isEmpty && ruleViolations.isEmpty && instancesViolation.isEmpty) None
+        if (internalNameViolations.isEmpty && ruleViolations.isEmpty && instanceViolations.isEmpty) None
         else Some(GroupViolation(app, "app contains conflicting volumes", None,
-          internalNameViolations.toSet[Violation] ++ instancesViolation.toSet ++ ruleViolations.toSet))
+          internalNameViolations.toSet[Violation] ++ instanceViolations.toSet ++ ruleViolations.toSet))
       }
       if (groupViolations.isEmpty) Success
       else Failure(groupViolations.toSet)
     }
   }
 
-  def driversInUse(ct: Container): Set[String] =
-    DVDIProvider.this.collect(ct).flatMap(_.persistent.options.get(optionDriver)).toSet
+  def driversInUse(ct: Container): Set[String] = {
+    log.info(s"container: $ct")
+
+    val s = DVDIProvider.this.collect(ct).flatMap(_.persistent.options.get(optionDriver)).toSet
+    log.info(s"driver: $s")
+    s
+  }
 
   /** @return a count of volume references-by-name within an app spec */
   def volumeNameCounts(app: AppDefinition): Map[String, Int] =
