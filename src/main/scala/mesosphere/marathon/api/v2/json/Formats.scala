@@ -633,7 +633,7 @@ trait AppAndGroupFormats {
             (__ \ "dependencies").readNullable[Set[PathId]].withDefault(AppDefinition.DefaultDependencies) ~
             (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
-            (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultLabels) ~
+            (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.Labels.Default) ~
             (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
             (__ \ "ipAddress").readNullable[IpAddress] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~

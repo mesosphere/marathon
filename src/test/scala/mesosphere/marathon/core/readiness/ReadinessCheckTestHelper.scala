@@ -10,8 +10,8 @@ object ReadinessCheckTestHelper {
     protocol = ReadinessCheck.Protocol.HTTPS,
     path = "/v1/plan",
     portName = "dcosMigrationApi",
-    interval = 2.seconds,
-    timeout = 20.seconds,
+    interval = 10.seconds,
+    timeout = 2.seconds,
     httpStatusCodesForReady = Set(201),
     preserveLastResponse = true
   )

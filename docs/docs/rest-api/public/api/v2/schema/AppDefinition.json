@@ -474,12 +474,12 @@
           },
           "intervalSeconds": {
             "type": "integer",
-            "description": "Number of seconds to wait between readiness checks.",
+            "description": "Number of seconds to wait between readiness checks. Defaults to 30 seconds",
             "minimum": 0
           },
           "timeoutSeconds": {
             "type": "integer",
-            "description": "Number of seconds after which a health check is considered a failure regardless of the response.",
+            "description": "Number of seconds after which a health check is considered a failure regardless of the response. Must be smaller than intervalSeconds. Defaults to 10 seconds.",
             "minimum": 0
           },
           "httpStatusCodesForReady": {
