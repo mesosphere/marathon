@@ -7,6 +7,7 @@ import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
@@ -580,7 +581,7 @@ trait AppAndGroupFormats {
             upgradeStrategy.getOrElse(if (residency.isDefined) forResidentTasks else empty)
           }
           def residencyOrDefault: Option[Residency] = {
-            residency.orElse(if (app.persistentVolumes.nonEmpty) Some(Residency.defaultResidency) else None)
+            residency.orElse(if (app.residentVolumes.nonEmpty) Some(Residency.defaultResidency) else None)
           }
         }
 
