@@ -492,7 +492,6 @@ object AppDefinition {
     appDef must definesCorrectResidencyCombination
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
     appDef is VolumesModule.providers.validApp
-    // TODO(jdef) check upgradeStrategy for DVDI volumes
   }
 
   /**

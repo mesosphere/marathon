@@ -63,9 +63,17 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
   private def volumesForApp(app: AppDefinition): Iterable[PersistentVolume] =
     app.container.toSet[Container].flatMap(collect)
 
+  // for now this matches the validation for resident tasks, but probably won't be as
+  // restrictive in the future.
+  val validUpgradeStrategy: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
+    strategy.minimumHealthCapacity should be <= 0.5
+    strategy.maximumOverCapacity should be == 0.0
+  }
+
   val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
     app is appBasicValidation
     app.container.each is containerValidation
+    app.upgradeStrategy is validUpgradeStrategy
   }
 
   val appBasicValidation: Validator[AppDefinition] = new Validator[AppDefinition] {
