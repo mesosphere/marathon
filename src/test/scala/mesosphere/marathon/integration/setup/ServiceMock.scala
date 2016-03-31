@@ -3,10 +3,11 @@ package mesosphere.marathon.integration.setup
 import java.util.Date
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
-import mesosphere.marathon.integration.setup.ServiceMock.Plan
+import mesosphere.marathon.integration.setup.ServiceMock._
 import org.eclipse.jetty.server.handler.AbstractHandler
 import org.eclipse.jetty.server.{ Request, Server }
-import play.api.libs.json.{ Json, Writes }
+import play.api.libs.json.{ JsResultException, Format, Json, Writes }
+import scala.util.control.NonFatal
 import scala.util.parsing.combinator.RegexParsers
 
 /**
@@ -46,22 +47,22 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
     def ok[T](t: T)(implicit writes: Writes[T]): Unit = status(t, 200)
     def error[T](t: T)(implicit writes: Writes[T]): Unit = status(t, 503)
 
-    (request.getMethod, request.getPathInfo) match {
+    def handleRequest(): Unit = (request.getMethod, request.getPathInfo) match {
       case ("GET", "/v1/plan") =>
         if (plan.isDone) ok(plan) else error(plan)
       case ("POST", "/v1/plan/continue") =>
         plan.next(withContinue = true)
         ok(Json.obj("result" -> s"Received cmd: continue"))
       case ("POST", "/v1/plan/interrupt") =>
-        plan.allBlocks.dropWhile(_.isInProgress).headOption.foreach(_.decisionPoint = true)
+        plan.allBlocks.dropWhile(b => b.isDone | b.isInProgress).headOption.foreach(_.decisionPoint = true)
         ok(Json.obj("result" -> s"Received cmd: interrupt"))
       case ("POST", "/v1/plan/restart") =>
-        val toBlock = (Json.parse(request.getInputStream) \ "block_id").as[String]
-        plan.allBlocks.dropWhile(_.name != toBlock).foreach(_.rollback())
+        val pos = Json.parse(request.getInputStream).as[BlockPosition]
+        plan.allBlocks.dropWhile(_.name != pos.block_id).foreach(_.rollback())
         ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
       case ("POST", "/v1/plan/force_complete") =>
-        val toBlock = (Json.parse(request.getInputStream) \ "block_id").as[String]
-        plan.allBlocks.takeWhile(_.name != toBlock).foreach(_.doFinalize())
+        val pos = Json.parse(request.getInputStream).as[BlockPosition]
+        plan.allBlocks.takeWhile(_.name != pos.block_id).foreach(_.doFinalize())
         ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
       case ("POST", "/admin/rollback") =>
         plan.rollback()
@@ -76,7 +77,15 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
         plan.errors ::= s"Got an error at ${new Date}"
         ok(plan.errors)
     }
-    baseRequest.setHandled(true)
+
+    try {
+      baseRequest.setHandled(true)
+      handleRequest()
+    }
+    catch {
+      case js: JsResultException => error(Json.obj("error" -> "Invalid Json", "details" -> js.errors.toString()))
+      case NonFatal(ex)          => error(Json.obj("error" -> ex.getMessage))
+    }
   }
 }
 
@@ -156,6 +165,10 @@ object ServiceMock {
       done = true
     }
   }
+
+  case class BlockPosition(phase_id: String, block_id: String)
+
+  implicit val blockPositionFormat: Format[BlockPosition] = Json.format[BlockPosition]
 
   implicit val blockWrites: Writes[Block] = Writes { block =>
     Json.obj(
