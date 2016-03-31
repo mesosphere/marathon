@@ -27,7 +27,7 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
     * @return true if volume has a provider name that matches ours exactly
     */
   def accepts(volume: PersistentVolume): Boolean = {
-    volume.persistent.providerName.isDefined && volume.persistent.providerName.get == name
+    volume.persistent.providerName.isDefined && volume.persistent.providerName == name
   }
 
   override def collect(container: Container): Iterable[PersistentVolume] =
