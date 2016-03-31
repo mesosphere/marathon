@@ -41,51 +41,61 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
     v.persistent.options is valid(validOptions)
   }
 
-  def nameOf(vol: PersistentVolumeInfo): Option[String] = {
+  private def nameOf(vol: PersistentVolumeInfo): Option[String] = {
     if (vol.providerName.isDefined && vol.name.isDefined) {
       Some(vol.providerName.get + "::" + vol.name.get)
     }
     else None
   }
 
-  private def getInstanceViolations(app: AppDefinition) = {
-    if (app.container.isDefined &&
-      DVDIProvider.this.collect(app.container.get).nonEmpty &&
-      app.instances > 1)
+  private def instanceViolations(app: AppDefinition): Option[RuleViolation] = {
+    if (volumesForApp(app).nonEmpty && app.instances > 1)
       Some(RuleViolation(app.id,
-        s"Number of instances is limited to 1 when declaring external volumes in app ${app.id}", None))
+        s"Number of instances is limited to 1 when declaring DVDI volumes in app ${app.id}", None))
     else None
+  }
+
+  private def nameViolations(app: AppDefinition): Iterable[RuleViolation] =
+    volumeNameCounts(app).filter(_._2 > 1).map{ e =>
+      RuleViolation(app.id, s"Requested DVDI volume ${e._1} is declared more than once within app ${app.id}", None)
+    }
+
+  private def volumesForApp(app: AppDefinition): Iterable[PersistentVolume] =
+    app.container.toSet[Container].flatMap(collect)
+
+  val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app is appBasicValidation
+    app.container.each is containerValidation
+  }
+
+  val appBasicValidation: Validator[AppDefinition] = new Validator[AppDefinition] {
+    override def apply(app: AppDefinition): Result = {
+      val nv = nameViolations(app)
+      val iv = instanceViolations(app)
+      if (nv.isEmpty && iv.isEmpty) Success
+      else Failure(nv.toSet[Violation] ++ iv.toSet)
+    }
   }
 
   // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
   // task instance across the entire cluster.
   val groupValidation: Validator[Group] = new Validator[Group] {
     override def apply(g: Group): Result = {
+      val transitiveApps = g.transitiveApps.toList
       val groupViolations = g.apps.flatMap { app =>
-        val nameCounts = volumeNameCounts(app)
-        val internalNameViolations = {
-          nameCounts.filter(_._2 > 1).map{ e =>
-            RuleViolation(app.id, s"Requested volume ${e._1} is declared more than once within app ${app.id}", None)
-          }
+        val ruleViolations = volumesForApp(app).flatMap{ vol => nameOf(vol.persistent) }.flatMap{ name =>
+          for {
+            otherApp <- transitiveApps
+            if otherApp.id != app.id // do not compare to self
+            otherVol <- volumesForApp(otherApp)
+            otherName <- nameOf(otherVol.persistent)
+            if name == otherName
+          } yield RuleViolation(app.id,
+            s"Requested volume $name conflicts with a volume in app ${otherApp.id}", None)
         }
-        val instanceViolations = getInstanceViolations(app)
-        val ruleViolations = app.container.toSet[Container].flatMap(DVDIProvider.this.collect).flatMap{ vol =>
-          val name = nameOf(vol.persistent)
-          if (name.isDefined) {
-            for {
-              otherApp <- g.transitiveApps.toList
-              if otherApp.id != app.id // do not compare to self
-              otherVol <- otherApp.container.toSet[Container].flatMap(DVDIProvider.this.collect)
-              otherName <- nameOf(otherVol.persistent)
-              if name.get == otherName
-            } yield RuleViolation(app.id,
-              s"Requested volume $name conflicts with a volume in app ${otherApp.id}", None)
-          }
-          else None
-        }
-        if (internalNameViolations.isEmpty && ruleViolations.isEmpty && instanceViolations.isEmpty) None
+        if (ruleViolations.isEmpty) None
         else Some(GroupViolation(app, "app contains conflicting volumes", None,
-          internalNameViolations.toSet[Violation] ++ instanceViolations.toSet ++ ruleViolations.toSet))
+          ruleViolations.toSet))
       }
       if (groupViolations.isEmpty) Success
       else Failure(groupViolations.toSet)
@@ -93,15 +103,14 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
   }
 
   def driversInUse(ct: Container): Set[String] =
-    DVDIProvider.this.collect(ct).flatMap(_.persistent.options.get(optionDriver)).toSet
+    collect(ct).flatMap(_.persistent.options.get(optionDriver)).toSet
 
   /** @return a count of volume references-by-name within an app spec */
   def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-    app.container.toSet[Container].flatMap(DVDIProvider.this.collect).flatMap{ pv => nameOf(pv.persistent) }.
-      groupBy(identity).mapValues(_.size)
+    volumesForApp(app).flatMap{ pv => nameOf(pv.persistent) }.groupBy(identity).mapValues(_.size)
 
   protected[providers] def modes(ct: Container): Set[Mode] =
-    DVDIProvider.this.collect(ct).map(_.mode).toSet
+    collect(ct).map(_.mode).toSet
 
   /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
   val containerValidation: Validator[Container] = validator[Container] { ct =>

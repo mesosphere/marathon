@@ -16,8 +16,9 @@ protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvid
   /** this is the name of the agent volume provider */
   override val name = Some("agent")
 
-  // no provider-specific rules at the container level
-  val containerValidation: Validator[Container] = new NilValidator[Container]
+  // no provider-specific rules at the app level
+  // TODO(jdef) could/should refactor resident validation from AppDefinition to here
+  val appValidation: Validator[AppDefinition] = new NilValidator[AppDefinition]
 
   // no provider-specific rules at the group level
   val groupValidation: Validator[Group] = new NilValidator[Group]

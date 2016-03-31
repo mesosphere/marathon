@@ -18,8 +18,8 @@ protected case object DockerHostVolumeProvider
   /** no special case validation here, it's handled elsewhere */
   val validation: Validator[Volume] = new NilValidator[Volume]
 
-  // no provider-specific rules at the container level
-  val containerValidation: Validator[Container] = new NilValidator[Container]
+  // no provider-specific rules at the app level
+  val appValidation: Validator[AppDefinition] = new NilValidator[AppDefinition]
 
   // no provider-specific rules at the group level
   val groupValidation: Validator[Group] = new NilValidator[Group]

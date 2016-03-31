@@ -12,8 +12,8 @@ trait VolumeProvider[+T <: Volume] extends VolumeInjection {
   val name: Option[String] = None
   /** validation implements a provider's volume validation rules */
   val validation: Validator[Volume]
-  /** containerValidation implements a provider's container validation rules */
-  val containerValidation: Validator[Container]
+  /** appValidation implements a provider's app validation rules */
+  val appValidation: Validator[AppDefinition]
   /** groupValidation implements a provider's group validation rules */
   val groupValidation: Validator[Group]
 
@@ -39,15 +39,16 @@ trait VolumeProviderRegistry {
   def approved[T <: Volume](name: Option[String]): Validator[T]
 
   /** @return a validator that checks the validity of a container given the related volume providers */
-  def validContainer(): Validator[Container] = new Validator[Container] {
-    def apply(ct: Container) = ct match {
+  def validApp(): Validator[AppDefinition] = new Validator[AppDefinition] {
+    def apply(app: AppDefinition) = app match {
       // scalastyle:off null
       case null => Failure(Set(RuleViolation(null, "is a null", None)))
       // scalastyle:on null
 
-      // grab all related volume providers and apply their containerValidation
-      case _ => ct.volumes.map(VolumesModule.providers(_)).flatten.distinct.
-        map(_.containerValidation).map(validate(ct)(_)).fold(Success)(_ and _)
+      // grab all related volume providers and apply their appValidation
+      case _ => app.container.toSet[Container].flatMap{ ct =>
+        ct.volumes.map(VolumesModule.providers(_))
+      }.flatten.map(_.appValidation).map(validate(app)(_)).fold(Success)(_ and _)
     }
   }
   /** @return a validator that checks the validity of a group given the related volume providers */
