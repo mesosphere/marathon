@@ -6,10 +6,13 @@ import mesosphere.marathon.state._
 import org.apache.mesos.Protos.Volume.Mode
 import org.scalatest.Matchers
 
-class DVDIVolumeValidationTest extends MarathonSpec with Matchers {
-  case class TC(volumes: Iterable[PersistentVolume], wantsValid: Boolean)
+sealed trait TCHelpers {
   val PVI = PersistentVolumeInfo.apply _
   val PV = PersistentVolume.apply _
+}
+
+class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with TCHelpers {
+  case class TC(volumes: Iterable[PersistentVolume], wantsValid: Boolean)
   // validation concerns are split at different levels:
   // - between state/Volume and providers/*
   //     > containerPath, in particular, in enforced in state/Volume and not at the
@@ -71,6 +74,112 @@ class DVDIVolumeValidationTest extends MarathonSpec with Matchers {
       val result = validate(v)(DVDIProvider.validPersistentVolume)
       assert(result.isSuccess == tc.wantsValid,
         s"expected ${tc.wantsValid} instead of $result for volume $v")
+    }
+  }
+}
+
+//def volumeToEnv(v: PersistentVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable]
+class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHelpers {
+  import org.apache.mesos.Protos.Environment
+  case class TC(pv: PersistentVolume, env: Seq[Environment.Variable], wantsEnv: Seq[Environment.Variable])
+
+  def mkVar(name: String, value: String): Environment.Variable =
+    Environment.Variable.newBuilder.setName(name).setValue(value).build
+
+  val ttVolumeToEnv = Array[TC](
+    TC(
+      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      Seq[Environment.Variable](),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
+        mkVar("DVDI_VOLUME_NAME", "foo"),
+        mkVar("DVDI_VOLUME_DRIVER", "bar")
+      )
+    ),
+    TC(
+      PV("/path", PVI(Some(1L), Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      Seq[Environment.Variable](),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
+        mkVar("DVDI_VOLUME_NAME", "foo"),
+        mkVar("DVDI_VOLUME_DRIVER", "bar"),
+        mkVar("DVDI_VOLUME_OPTS", "size=1")
+      )
+    ),
+    TC(
+      PV("/path", PVI(Some(1L), Some("foo"), Some("dvdi"), Map(
+        "dvdi/driverName" -> "bar",
+        "dvdi/size" -> "2"
+      )), Mode.RO),
+      Seq[Environment.Variable](),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
+        mkVar("DVDI_VOLUME_NAME", "foo"),
+        mkVar("DVDI_VOLUME_DRIVER", "bar"),
+        mkVar("DVDI_VOLUME_OPTS", "size=1")
+      )
+    ),
+    TC(
+      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map(
+        "dvdi/driverName" -> "bar",
+        "dvdi/size" -> "abc"
+      )), Mode.RO),
+      Seq[Environment.Variable](),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
+        mkVar("DVDI_VOLUME_NAME", "foo"),
+        mkVar("DVDI_VOLUME_DRIVER", "bar"),
+        mkVar("DVDI_VOLUME_OPTS", "size=abc")
+      )
+    ),
+    TC(
+      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH0", "/tmp"),
+        mkVar("DVDI_VOLUME_NAME0", "qaz"),
+        mkVar("DVDI_VOLUME_DRIVER0", "wsx")
+      ),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH1", "/path"),
+        mkVar("DVDI_VOLUME_NAME1", "foo"),
+        mkVar("DVDI_VOLUME_DRIVER1", "bar")
+      )
+    ),
+    TC(
+      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH", "/tmp"),
+        mkVar("DVDI_VOLUME_NAME", "qaz"),
+        mkVar("DVDI_VOLUME_DRIVER", "wsx")
+      ),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH1", "/path"),
+        mkVar("DVDI_VOLUME_NAME1", "foo"),
+        mkVar("DVDI_VOLUME_DRIVER1", "bar")
+      )
+    ),
+    TC(
+      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH", "/tmp"),
+        mkVar("DVDI_VOLUME_NAME", "qaz"),
+        mkVar("DVDI_VOLUME_DRIVER", "wsx"),
+        mkVar("DVDI_VOLUME_CONTAINERPATH1", "/var"),
+        mkVar("DVDI_VOLUME_NAME1", "edc"),
+        mkVar("DVDI_VOLUME_DRIVER1", "rfv")
+      ),
+      Seq[Environment.Variable](
+        mkVar("DVDI_VOLUME_CONTAINERPATH2", "/path"),
+        mkVar("DVDI_VOLUME_NAME2", "foo"),
+        mkVar("DVDI_VOLUME_DRIVER2", "bar")
+      )
+    ) // TC
+  )
+  test("volumeToEnv") {
+    for (tc <- ttVolumeToEnv) {
+      assertResult(tc.wantsEnv, "generated environment vars don't match expectations") {
+        DVDIProvider.volumeToEnv(tc.pv, tc.env)
+      }
     }
   }
 }

@@ -171,6 +171,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
     super.injectCommand(ctx, pv)
   }
 
+  val dvdiVolumeContainerPath = "DVDI_VOLUME_CONTAINERPATH"
   val dvdiVolumeName = "DVDI_VOLUME_NAME"
   val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
   val dvdiVolumeOpts = "DVDI_VOLUME_OPTS"
@@ -191,6 +192,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
       Environment.Variable.newBuilder.setName(name).setValue(value).build
 
     var vars = Seq[Environment.Variable](
+      mkVar(dvdiVolumeContainerPath + suffix, v.containerPath),
       mkVar(dvdiVolumeName + suffix, v.persistent.name.get),
       mkVar(dvdiVolumeDriver + suffix, v.persistent.options(OptionDriver.fullName))
     )
