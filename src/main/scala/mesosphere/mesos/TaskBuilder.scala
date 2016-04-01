@@ -131,7 +131,9 @@ class TaskBuilder(app: AppDefinition,
 
       // apply changes from volume providers (must do this after we're sure there's a container type)
       app.container.map{ container =>
-        VolumesModule.inject(container.volumes, CommandContext(ct, initialCi)).command
+        val injector = VolumesModule.providers.commandInjector
+        val pvs: Iterable[PersistentVolume] = container.volumes.collect { case pv: PersistentVolume => pv }
+        injector(pvs, CommandContext(ct, initialCi)).command
       }.getOrElse(initialCi)
     }
 
@@ -275,7 +277,8 @@ class TaskBuilder(app: AppDefinition,
 
       // apply changes from volume providers (must do this after we're sure there's a container type)
       app.container.foreach{ container =>
-        builder = VolumesModule.inject(container.volumes, ContainerContext(builder)).container
+        val injector = VolumesModule.providers.containerInjector
+        builder = injector(container.volumes, ContainerContext(builder)).container
       }
 
       Some(builder.build)

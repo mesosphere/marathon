@@ -2,6 +2,7 @@ package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord.Validator
 import com.wix.accord.combinators.NilValidator
+import com.wix.accord.dsl._
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.{ Volume => MesosVolume }
@@ -12,14 +13,11 @@ import org.apache.mesos.Protos.{ Volume => MesosVolume }
   * with "non-local" docker volume drivers. If you want to use a docker volume driver then
   * use a PersistentVolume instead.
   */
-protected case object DockerHostVolumeProvider
-    extends InjectionHelper[DockerVolume]
-    with VolumeProvider[DockerVolume] {
-  /** no special case validation here, it's handled elsewhere */
-  val validation: Validator[Volume] = new NilValidator[Volume]
-
-  // no provider-specific rules at the app level
-  val appValidation: Validator[AppDefinition] = new NilValidator[AppDefinition]
+protected[volume] case object DockerHostVolumeProvider
+    extends VolumeProvider[DockerVolume] {
+  val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app.container.get.`type` is equalTo("DOCKER")
+  }
 
   // no provider-specific rules at the group level
   val groupValidation: Validator[Group] = new NilValidator[Group]
@@ -32,12 +30,9 @@ protected case object DockerHostVolumeProvider
       .setMode(volume.mode)
       .build
 
-  override def accepts(dv: DockerVolume): Boolean = true
-
-  override def injectContainer(ctx: ContainerContext, dv: DockerVolume): ContainerContext = {
-    val container = ctx.container // TODO(jdef) clone?
-    // TODO(jdef) check that this is a DOCKER container type?
-    ContainerContext(container.addVolumes(toMesosVolume(dv)))
+  val containerInjector = new ContainerInjector[DockerVolume] {
+    override def inject(ctx: ContainerContext, dv: DockerVolume): ContainerContext =
+      ContainerContext(ctx.container.addVolumes(toMesosVolume(dv)))
   }
 
   override def collect(container: Container): Iterable[DockerVolume] =

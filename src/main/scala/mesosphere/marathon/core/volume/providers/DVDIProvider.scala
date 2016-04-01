@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.volume.providers
 
-import com.wix.accord._
+import com.wix.accord.{ Validator, _ }
 import com.wix.accord.dsl._
-import com.wix.accord.Validator
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{ ContainerInfo, Volume => MesosVolume, Environment }
+import org.apache.mesos.Protos.{ ContainerInfo, Environment, Volume => MesosVolume }
+
 import scala.collection.JavaConverters._
 
 /**
@@ -16,36 +16,36 @@ import scala.collection.JavaConverters._
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
-    with PersistentVolumeProvider with OptionSupport {
+protected[volume] case object DVDIProvider
+    extends AbstractPersistentVolumeProvider("dvdi")
+    with OptionSupport {
 
   import org.apache.mesos.Protos.Volume.Mode
 
-  val NAME = "dvdi"
-  override val name = Some(NAME)
+  abstract class ProviderOption(
+    override val name: String,
+    override val required: Boolean = false) extends NamedOption(DVDIProvider.this.name, name, required)
 
-  sealed trait OptNS { val namespace: String = NAME }
-  case object OptionDriver extends NamedLabelOption
-    with RequiredOption with OptNS { override val name = "driverName" }
-  case object OptionVolumeType extends NamedLabelOption with OptNS { override val name = "volumetype" }
-  case object OptionNewFSType extends NamedLabelOption with OptNS { override val name = "newfstype" }
-  case object OptionIOPS extends NamedNaturalNumberOption with OptNS { override val name = "iops" }
-  case object OptionOverwriteFS extends NamedBooleanOption with OptNS { override val name = "overwritefs" }
+  case object OptionDriverName extends ProviderOption("driverName", true) with NamedLabel
+  case object OptionVolumeType extends ProviderOption("volumetype") with NamedLabel
+  case object OptionNewFSType extends ProviderOption("newfstype") with NamedLabel
+  case object OptionIOPS extends ProviderOption("iops") with NamedNaturalNumber
+  case object OptionOverwriteFS extends ProviderOption("overwritefs") with NamedBoolean
 
   val validOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opt =>
-    opt is OptionDriver.validOption
+    opt is OptionDriverName.validOption
     opt is OptionVolumeType.validOption
     opt is OptionNewFSType.validOption
     opt is OptionIOPS.validOption
     opt is OptionOverwriteFS.validOption
   }
 
-  val validPersistentVolume = validator[PersistentVolume] { v =>
+  val volumeValidation = validator[PersistentVolume] { v =>
     v.persistent.name is notEmpty
     v.persistent.name.each is notEmpty
     v.persistent.providerName is notEmpty
     v.persistent.providerName.each is notEmpty
-    v.persistent.providerName.each is equalTo(name.get) // sanity check
+    v.persistent.providerName.each is equalTo(name) // sanity check
     v.persistent.options is valid(validOptions)
   }
 
@@ -75,13 +75,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
   // restrictive in the future.
   val validUpgradeStrategy: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
     strategy.minimumHealthCapacity should be <= 0.5
-    strategy.maximumOverCapacity should be == 0.0
-  }
-
-  val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
-    app is appBasicValidation
-    app.container.each is containerValidation
-    app.upgradeStrategy is validUpgradeStrategy
+    strategy.maximumOverCapacity should equalTo(0.0)
   }
 
   val appBasicValidation: Validator[AppDefinition] = new Validator[AppDefinition] {
@@ -91,6 +85,29 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
       if (nv.isEmpty && iv.isEmpty) Success
       else Failure(nv.toSet[Violation] ++ iv.toSet)
     }
+  }
+
+  def driversInUse(ct: Container): Set[String] =
+    collect(ct).flatMap(_.persistent.options.get(OptionDriverName.fullName)).toSet
+
+  /** @return a count of volume references-by-name within an app spec */
+  def volumeNameCounts(app: AppDefinition): Map[String, Int] =
+    volumesForApp(app).flatMap{ pv => nameOf(pv.persistent) }.groupBy(identity).mapValues(_.size)
+
+  protected[providers] def modes(ct: Container): Set[Mode] =
+    collect(ct).map(_.mode).toSet
+
+  /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
+  val containerValidation: Validator[Container] = validator[Container] { ct =>
+    (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (modes(ct).each is equalTo(Mode.RW))) or (
+      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should equalTo(1))
+    )
+  }
+
+  val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app is appBasicValidation
+    app.container.each is containerValidation
+    app.upgradeStrategy is validUpgradeStrategy
   }
 
   // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
@@ -110,29 +127,11 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
             s"Requested volume $name conflicts with a volume in app ${otherApp.id}", None)
         }
         if (ruleViolations.isEmpty) None
-        else Some(GroupViolation(app, "app contains conflicting volumes", None,
-          ruleViolations.toSet))
+        else Some(GroupViolation(app, "app contains conflicting volumes", None, ruleViolations.toSet))
       }
       if (groupViolations.isEmpty) Success
       else Failure(groupViolations.toSet)
     }
-  }
-
-  def driversInUse(ct: Container): Set[String] =
-    collect(ct).flatMap(_.persistent.options.get(OptionDriver.fullName)).toSet
-
-  /** @return a count of volume references-by-name within an app spec */
-  def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-    volumesForApp(app).flatMap{ pv => nameOf(pv.persistent) }.groupBy(identity).mapValues(_.size)
-
-  protected[providers] def modes(ct: Container): Set[Mode] =
-    collect(ct).map(_.mode).toSet
-
-  /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
-  val containerValidation: Validator[Container] = validator[Container] { ct =>
-    (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (modes(ct).each is equalTo(Mode.RW))) or (
-      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should equalTo(1))
-    )
   }
 
   /** non-agent-local PersistentVolumes can be serialized into a Mesos Protobuf */
@@ -143,32 +142,36 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
       .setMode(volume.mode)
       .build
 
-  override def injectContainer(ctx: ContainerContext, pv: PersistentVolume): ContainerContext = {
-    // special behavior for docker vs. mesos containers
-    // - docker containerizer: serialize volumes into mesos proto
-    // - docker containerizer: specify "volumeDriver" for the container
-    val container = ctx.container // TODO(jdef) clone?
-    if (container.getType == ContainerInfo.Type.DOCKER && container.hasDocker) {
-      val driverName = pv.persistent.options(OptionDriver.fullName)
-      if (container.getDocker.getVolumeDriver != driverName) {
-        container.setDocker(container.getDocker.toBuilder.setVolumeDriver(driverName).build)
+  val containerInjector = new ContainerInjector[PersistentVolume] {
+    override def inject(ctx: ContainerContext, pv: PersistentVolume): ContainerContext = {
+      // special behavior for docker vs. mesos containers
+      // - docker containerizer: serialize volumes into mesos proto
+      // - docker containerizer: specify "volumeDriver" for the container
+      val container = ctx.container // TODO(jdef) clone?
+      if (container.getType == ContainerInfo.Type.DOCKER && container.hasDocker) {
+        val driverName = pv.persistent.options(OptionDriverName.fullName)
+        if (container.getDocker.getVolumeDriver != driverName) {
+          container.setDocker(container.getDocker.toBuilder.setVolumeDriver(driverName).build)
+        }
+        ContainerContext(container.addVolumes(toMesosVolume(pv)))
       }
-      ContainerContext(container.addVolumes(toMesosVolume(pv)))
+      else ctx
     }
-    super.injectContainer(ctx, pv)
   }
 
-  override def injectCommand(ctx: CommandContext, pv: PersistentVolume): CommandContext = {
-    // special behavior for docker vs. mesos containers
-    // - mesos containerizer: serialize volumes into envvar sets
-    val (containerType, command) = (ctx.containerType, ctx.command) // TODO(jdef) clone command?
-    if (containerType == ContainerInfo.Type.MESOS) {
-      val env = if (command.hasEnvironment) command.getEnvironment.toBuilder else Environment.newBuilder
-      val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
-      env.addAllVariables(toAdd.asJava)
-      CommandContext(containerType, command.setEnvironment(env.build))
+  val commandInjector = new CommandInjector[PersistentVolume] {
+    override def inject(ctx: CommandContext, pv: PersistentVolume): CommandContext = {
+      // special behavior for docker vs. mesos containers
+      // - mesos containerizer: serialize volumes into envvar sets
+      val (containerType, command) = (ctx.containerType, ctx.command) // TODO(jdef) clone command?
+      if (containerType == ContainerInfo.Type.MESOS) {
+        val env = if (command.hasEnvironment) command.getEnvironment.toBuilder else Environment.newBuilder
+        val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
+        env.addAllVariables(toAdd.asJava)
+        CommandContext(containerType, command.setEnvironment(env.build))
+      }
+      else ctx
     }
-    super.injectCommand(ctx, pv)
   }
 
   val dvdiVolumeContainerPath = "DVDI_VOLUME_CONTAINERPATH"
@@ -176,12 +179,12 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
   val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
   val dvdiVolumeOpts = "DVDI_VOLUME_OPTS"
 
-  def volumeToEnv(v: PersistentVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable] = {
+  def volumeToEnv(vol: PersistentVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable] = {
     import OptionLabelPatterns._
 
     val suffix = {
       val offset = i.filter(_.getName.startsWith(dvdiVolumeName)).map{ s =>
-        val ss = s.getName.substring(dvdiVolumeName.size)
+        val ss = s.getName.substring(dvdiVolumeName.length)
         if (ss.length > 0) ss.toInt else 0
       }.foldLeft(-1)((z, i) => if (i > z) i else z)
 
@@ -191,26 +194,27 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
     def mkVar(name: String, value: String): Environment.Variable =
       Environment.Variable.newBuilder.setName(name).setValue(value).build
 
-    var vars = Seq[Environment.Variable](
-      mkVar(dvdiVolumeContainerPath + suffix, v.containerPath),
-      mkVar(dvdiVolumeName + suffix, v.persistent.name.get),
-      mkVar(dvdiVolumeDriver + suffix, v.persistent.options(OptionDriver.fullName))
+    val vars = Seq[Environment.Variable](
+      mkVar(dvdiVolumeContainerPath + suffix, vol.containerPath),
+      mkVar(dvdiVolumeName + suffix, vol.persistent.name.get),
+      mkVar(dvdiVolumeDriver + suffix, vol.persistent.options(OptionDriverName.fullName))
     )
 
     val optsVar = {
-      val prefix: String = NAME + OptionNamespaceSeparator
+      val prefix: String = name + OptionNamespaceSeparator
       // don't let the user override these
-      val ignore = Set(OptionDriver.fullName.toLowerCase)
+      val ignore = Set(OptionDriverName.fullName.toLowerCase)
       // persistent.size trumps any user-specified dvdi/size option
-      val opts = v.persistent.options ++
-        v.persistent.size.fold(Map.empty[String, String]){ sz => Map(prefix + "size" -> sz.toString) }
+      val opts = vol.persistent.options ++ Map[String, String](
+        vol.persistent.size.map(prefix + "size" -> _.toString).toList: _*
+      )
 
       // forward all dvdi/* options to the dvdcli driver, stripping the dvdi/ prefix
       // and trimming the values
       opts.filterKeys{ k =>
         k.startsWith(prefix) && !ignore.contains(k.toLowerCase)
       }.map{
-        case (k, v) => k.substring(prefix.size) + "=" + v.trim()
+        case (k, v) => k.substring(prefix.length) + "=" + v.trim()
       }.mkString(",")
     }
 

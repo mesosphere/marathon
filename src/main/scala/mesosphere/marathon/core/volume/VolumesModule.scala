@@ -1,17 +1,13 @@
 package mesosphere.marathon.core.volume
 
 import com.wix.accord._
-import mesosphere.marathon.state._
 import mesosphere.marathon.core.volume.providers._
+import mesosphere.marathon.state._
 
 /**
   * VolumeProvider is an interface implemented by storage volume providers
   */
-trait VolumeProvider[+T <: Volume] extends VolumeInjection {
-  /** name uniquely identifies this volume provider */
-  val name: Option[String] = None
-  /** validation implements a provider's volume validation rules */
-  val validation: Validator[Volume]
+trait VolumeProvider[+T <: Volume] {
   /** appValidation implements a provider's app validation rules */
   val appValidation: Validator[AppDefinition]
   /** groupValidation implements a provider's group validation rules */
@@ -21,22 +17,23 @@ trait VolumeProvider[+T <: Volume] extends VolumeInjection {
   def collect(container: Container): Iterable[T]
 }
 
+trait PersistentVolumeProvider[+T <: PersistentVolume] extends VolumeProvider[T] {
+  val name: String
+
+  /**
+    * don't invoke validator on v because that's circular, just check the additional
+    * things that we need for agent local volumes.
+    * see implicit validator in the PersistentVolume class for reference.
+    */
+  val volumeValidation: Validator[PersistentVolume]
+
+  val containerInjector: ContainerInjector[PersistentVolume]
+  val commandInjector: CommandInjector[PersistentVolume]
+}
+
 trait VolumeProviderRegistry {
   /** @return the VolumeProvider interface registered for the given volume */
   def apply[T <: Volume](v: T): Option[VolumeProvider[T]]
-
-  /**
-    * @return the VolumeProvider interface registered for the given name; if name is None then
-    * the default VolumeProvider implementation is returned. None is returned if Some name is given
-    * but no volume provider is registered for that name.
-    */
-  def apply(name: Option[String]): Option[VolumeProvider[Volume]]
-
-  /** @return a validator that checks the validity of a volume provider name */
-  def known(): Validator[Option[String]]
-
-  /** @return a validator that checks the validity of a volume given the volume provider name */
-  def approved[T <: Volume](name: Option[String]): Validator[T]
 
   /** @return a validator that checks the validity of a container given the related volume providers */
   def validApp(): Validator[AppDefinition] = new Validator[AppDefinition] {
@@ -51,6 +48,7 @@ trait VolumeProviderRegistry {
       }.flatten.map(_.appValidation).map(validate(app)(_)).fold(Success)(_ and _)
     }
   }
+
   /** @return a validator that checks the validity of a group given the related volume providers */
   def validGroup(): Validator[Group] = new Validator[Group] {
     def apply(grp: Group) = grp match {
@@ -64,13 +62,25 @@ trait VolumeProviderRegistry {
       }.flatten.map{ p => validate(grp)(p.groupValidation) }.fold(Success)(_ and _)
     }
   }
+
+  val containerInjector: ContainerInjector[Volume]
+}
+
+trait PersistentVolumeProviderRegistry extends VolumeProviderRegistry {
+  /**
+    * @return the PersistentVolumeProvider interface registered for the given name; if name is None then
+    * the default PersistenVolumeProvider implementation is returned. None is returned if Some name is given
+    * but no volume provider is registered for that name.
+    */
+  def apply(name: Option[String]): Option[PersistentVolumeProvider[PersistentVolume]]
+
+  val commandInjector: CommandInjector[PersistentVolume]
 }
 
 /**
   * API facade for callers interested in storage volumes
   */
 object VolumesModule {
-  lazy val localVolumes: VolumeProvider[PersistentVolume] = AgentVolumeProvider
-  lazy val providers: VolumeProviderRegistry = StaticRegistry
-  lazy val inject: VolumeInjection = VolumeInjection
+  lazy val localVolumes: VolumeProvider[PersistentVolume] = ResidentVolumeProvider
+  lazy val providers: PersistentVolumeProviderRegistry = StaticRegistry
 }
