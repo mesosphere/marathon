@@ -101,6 +101,7 @@ protected[volume] case object DVDIProvider
   val containerValidation: Validator[Container] = validator[Container] { ct =>
     (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (modes(ct).each is equalTo(Mode.RW))) or (
       (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should equalTo(1))
+    // TODO(jdef) fail validation if/when user specifies "size" when using docker containerizer?
     )
   }
 
@@ -142,7 +143,7 @@ protected[volume] case object DVDIProvider
       .setMode(volume.mode)
       .build
 
-  val containerInjector = new ContainerInjector[Volume] {
+  override val containerInjector = new ContainerInjector[Volume] {
     override def inject(ctx: ContainerContext, v: Volume): ContainerContext =
       v match {
         case pv: PersistentVolume => {
@@ -163,7 +164,7 @@ protected[volume] case object DVDIProvider
       }
   }
 
-  val commandInjector = new CommandInjector[PersistentVolume] {
+  override val commandInjector = new CommandInjector[PersistentVolume] {
     override def inject(ctx: CommandContext, pv: PersistentVolume): CommandContext = {
       // special behavior for docker vs. mesos containers
       // - mesos containerizer: serialize volumes into envvar sets

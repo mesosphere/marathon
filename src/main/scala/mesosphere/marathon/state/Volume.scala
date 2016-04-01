@@ -71,8 +71,6 @@ object Volume {
   * A volume mapping either from host to container or vice versa.
   * Both paths can either refer to a directory or a file. Paths must be
   * absolute.
-  *
-  * TODO(jdef) rename this as DockerHostVolume for clarity
   */
 case class DockerVolume(
   containerPath: String,

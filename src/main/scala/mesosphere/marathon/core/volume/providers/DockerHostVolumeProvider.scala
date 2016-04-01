@@ -5,7 +5,7 @@ import com.wix.accord.combinators.NilValidator
 import com.wix.accord.dsl._
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{ Volume => MesosVolume }
+import org.apache.mesos.Protos.{ ContainerInfo, Volume => MesosVolume }
 
 /**
   * DockerHostVolumeProvider handles Docker volumes that a user would like to mount at
@@ -32,10 +32,11 @@ protected[volume] case object DockerHostVolumeProvider
 
   val containerInjector = new ContainerInjector[Volume] {
     override def inject(ctx: ContainerContext, v: Volume): ContainerContext =
-      v match {
+      if (ctx.container.getType == ContainerInfo.Type.DOCKER) v match {
         case dv: DockerVolume => ContainerContext(ctx.container.addVolumes(toMesosVolume(dv)))
-        case _                => ctx
+        case _                => ctx // TODO(jdef) log a warning here
       }
+      else ctx
   }
 
   override def collect(container: Container): Iterable[DockerVolume] =

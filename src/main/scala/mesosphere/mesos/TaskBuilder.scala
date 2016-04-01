@@ -125,15 +125,13 @@ class TaskBuilder(app: AppDefinition,
     val envPrefix: Option[String] = config.envVarsPrefix.get
 
     def decorateCommandInfo(initialCi: CommandInfo.Builder): CommandInfo.Builder = {
-      // we may not actually have a container specified, which means that we're using mesos native
-      // containerization
-      var ct: ContainerInfo.Type = containerProto.fold(ContainerInfo.Type.MESOS)(_.getType)
-
-      // apply changes from volume providers (must do this after we're sure there's a container type)
-      app.container.fold(initialCi){ container =>
-        import VolumesModule._
-        val pvs: Iterable[PersistentVolume] = container.volumes.collect { case pv: PersistentVolume => pv }
-        inject(CommandContext(ct, initialCi), pvs).command
+      containerProto.fold(initialCi){ ctp =>
+        // apply changes from volume providers
+        app.container.fold(initialCi){ container =>
+          import VolumesModule._
+          val pvs: Iterable[PersistentVolume] = container.volumes.collect { case pv: PersistentVolume => pv }
+          inject(CommandContext(ctp.getType, initialCi), pvs).command
+        }
       }
     }
 
@@ -267,12 +265,10 @@ class TaskBuilder(app: AppDefinition,
       }
 
       // Set container type to MESOS by default (this is a required field)
-      if (!builder.hasType)
-        builder.setType(ContainerInfo.Type.MESOS)
+      if (!builder.hasType) builder.setType(ContainerInfo.Type.MESOS)
 
       if (builder.getType.equals(ContainerInfo.Type.MESOS)) {
-        builder.setMesos(ContainerInfo.MesosInfo.newBuilder()
-          .build())
+        builder.setMesos(ContainerInfo.MesosInfo.newBuilder().build())
       }
 
       // apply changes from volume providers (must do this after we're sure there's a container type)

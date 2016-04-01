@@ -56,7 +56,7 @@ object VolumesModule {
 
   implicit val commandInjector: CommandInjector[PersistentVolume] = new CommandInjector[PersistentVolume] {
     override def inject(ctx: CommandContext, pv: PersistentVolume): CommandContext =
-      providers(pv.persistent.name).fold(ctx){ p => p.commandInjector.inject(ctx, pv) }
+      providers(pv.persistent.providerName).fold(ctx){ p => p.commandInjector.inject(ctx, pv) }
   }
 
   implicit val containerInjector: ContainerInjector[Volume] = new ContainerInjector[Volume] {
