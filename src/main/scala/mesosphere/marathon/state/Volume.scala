@@ -2,11 +2,12 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.Protos
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.volume.VolumesModule
 import org.apache.mesos.Protos.Volume.Mode
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
+
 import scala.collection.JavaConverters._
 
 sealed trait Volume {

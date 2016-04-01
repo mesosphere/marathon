@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.volume.providers
 
-import com.wix.accord._
+import com.wix.accord.{Validator, _}
 import com.wix.accord.dsl._
-import com.wix.accord.Validator
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{ ContainerInfo, Volume => MesosVolume, Environment }
+import org.apache.mesos.Protos.{ContainerInfo, Environment, Volume => MesosVolume}
+
 import scala.collection.JavaConverters._
 
 /**

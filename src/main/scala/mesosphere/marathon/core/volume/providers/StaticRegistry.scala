@@ -1,11 +1,9 @@
 package mesosphere.marathon.core.volume.providers
 
-import com.wix.accord._
+import com.wix.accord.{Validator, _}
 import com.wix.accord.combinators.Fail
-import com.wix.accord.Validator
-import com.wix.accord.ViolationBuilder._
 import mesosphere.marathon.core.volume._
-import mesosphere.marathon.state.{ DockerVolume, PersistentVolume, Volume }
+import mesosphere.marathon.state.{DockerVolume, PersistentVolume, Volume}
 
 /**
   * StaticRegistry is a fixed, precomputed storage provider registry

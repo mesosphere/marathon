@@ -3,15 +3,14 @@ package mesosphere.marathon.core.volume.providers
 import com.wix.accord.Validator
 import com.wix.accord.combinators.NilValidator
 import com.wix.accord.dsl._
-import com.wix.accord.Validator
 import mesosphere.marathon.state._
 
 /**
   * AgentVolumeProvider handles persistent volumes allocated from agent resources.
   */
 protected[volume] case object AgentVolumeProvider extends AbstractPersistentVolumeProvider("agent") {
-  import org.apache.mesos.Protos.Volume.Mode
   import mesosphere.marathon.api.v2.Validation._
+  import org.apache.mesos.Protos.Volume.Mode
 
   // no provider-specific rules at the app level
   // TODO(jdef) could/should refactor resident validation from AppDefinition to here

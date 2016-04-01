@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.volume
 
 import mesosphere.marathon.state.Volume
-import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo }
+import org.apache.mesos.Protos.{CommandInfo, ContainerInfo}
 
 /**
   * InjectionContext captures additional metadata required for decorating mesos Task protobufs with

@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.volume
 
 import com.wix.accord._
-import mesosphere.marathon.state._
 import mesosphere.marathon.core.volume.providers._
+import mesosphere.marathon.state._
 
 /**
   * VolumeProvider is an interface implemented by storage volume providers

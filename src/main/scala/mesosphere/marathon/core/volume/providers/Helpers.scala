@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord._
-import com.wix.accord.dsl._
 import com.wix.accord.combinators.Fail
+import com.wix.accord.dsl._
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
 

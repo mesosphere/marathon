@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.volume.providers
 
-import com.wix.accord.dsl._
 import com.wix.accord.Validator
 import com.wix.accord.combinators.NilValidator
+import com.wix.accord.dsl._
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{ Volume => MesosVolume }
+import org.apache.mesos.Protos.{Volume => MesosVolume}
 
 /**
   * DockerHostVolumeProvider handles Docker volumes that a user would like to mount at
