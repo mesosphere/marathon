@@ -17,7 +17,7 @@ When you specify a local volume or volumes, tasks and their associated data are 
 
 When you scale your app down, the volumes and resources associated with the destroyed instances are detached. At this point, you may destroy the volumes from the Marathon web interface.
 
-You may wish to leave them in the Detached state, however, if you think you will be scaling your app up again; the data on the volume will still be there. However, since all the resources your application needs are also reserved when a volume is detched, you may wish to destroy detached volumes in order to allow other applications and frameworks to use the resources.
+You may wish to leave them in the Detached state, however, if you think you will be scaling your app up again; the data on the volume will still be there. However, since all the resources your application needs are also reserved when a volume is detached, you may wish to destroy detached volumes in order to allow other applications and frameworks to use the resources.
 
 **Note:** If your app is deleted, any associated volumes will also be deleted.
 
