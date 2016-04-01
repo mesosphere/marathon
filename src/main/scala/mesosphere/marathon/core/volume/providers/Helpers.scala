@@ -97,12 +97,11 @@ protected trait InjectionHelper[V <: Volume] extends VolumeInjection {
 
   override protected def inject[C <: InjectionContext](ctx: C, v: Volume): C = {
     v match {
-      case vol: V if accepts(vol) => {
+      case vol: V if accepts(vol) =>
         ctx match {
           case cc: ContainerContext => injectContainer(cc, vol).asInstanceOf[C]
           case cc: CommandContext   => injectCommand(cc, vol).asInstanceOf[C]
         }
-      }
       case _ => super.inject(ctx, v)
     }
   }
