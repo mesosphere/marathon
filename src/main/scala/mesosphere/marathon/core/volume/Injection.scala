@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.volume
 
-import mesosphere.marathon.state.Volume
+import mesosphere.marathon.state._
 import org.apache.mesos.Protos.{ CommandInfo, ContainerInfo }
 
 /**
@@ -25,7 +25,7 @@ final case class CommandContext(containerType: ContainerInfo.Type, command: Comm
 trait VolumeInjector[V <: Volume, C <: InjectionContext] {
   /**
     * Generates an updated InjectionContext for the given input context `c` and volume `v`.
- *
+    *
     * @param c is the initial input InjectionContext
     * @param v is the volume that provides metadata with which the initial context is decorated
     * @return a InjectionContext decorated with metadata from volume `v`; None if the context is not
@@ -49,3 +49,18 @@ trait VolumeInjector[V <: Volume, C <: InjectionContext] {
 trait ContainerInjector[V <: Volume] extends VolumeInjector[V, ContainerContext]
 trait CommandInjector[V <: Volume] extends VolumeInjector[V, CommandContext]
 
+trait VolumeInjection {
+  def apply[V <: Volume, C <: InjectionContext](c: C, vols: Iterable[V])(implicit injector: VolumeInjector[V, C]): C
+}
+
+object VolumeInjection extends VolumeInjection {
+  def inject[V <: Volume, C <: InjectionContext](c: C, v: V)(implicit injector: VolumeInjector[V, C]): C =
+    injector.inject(c, v)
+
+  override def apply[V <: Volume, C <: InjectionContext](c: C, vols: Iterable[V])(
+    implicit injector: VolumeInjector[V, C]): C = {
+    var ctx: C = c
+    vols.foreach{ v => ctx = inject(ctx, v) }
+    ctx
+  }
+}

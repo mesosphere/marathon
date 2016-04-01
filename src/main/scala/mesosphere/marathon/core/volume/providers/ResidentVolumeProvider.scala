@@ -35,6 +35,6 @@ protected[volume] case object ResidentVolumeProvider
     volume.persistent.providerName.getOrElse(name) == name
   }
 
-  val containerInjector = new ContainerInjector[PersistentVolume] {}
+  val containerInjector = new ContainerInjector[Volume] {}
   val commandInjector = new CommandInjector[PersistentVolume] {}
 }

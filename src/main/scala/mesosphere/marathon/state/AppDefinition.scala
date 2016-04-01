@@ -491,7 +491,7 @@ object AppDefinition {
     appDef.disk should be >= 0.0
     appDef must definesCorrectResidencyCombination
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
-    appDef is VolumesModule.providers.validApp
+    appDef is VolumesModule.validApp
   }
 
   /**

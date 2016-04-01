@@ -130,11 +130,11 @@ class TaskBuilder(app: AppDefinition,
       var ct: ContainerInfo.Type = containerProto.fold(ContainerInfo.Type.MESOS)(_.getType)
 
       // apply changes from volume providers (must do this after we're sure there's a container type)
-      app.container.map{ container =>
-        val injector = VolumesModule.providers.commandInjector
+      app.container.fold(initialCi){ container =>
+        import VolumesModule._
         val pvs: Iterable[PersistentVolume] = container.volumes.collect { case pv: PersistentVolume => pv }
-        injector(pvs, CommandContext(ct, initialCi)).command
-      }.getOrElse(initialCi)
+        inject(CommandContext(ct, initialCi), pvs).command
+      }
     }
 
     executor match {
@@ -277,8 +277,8 @@ class TaskBuilder(app: AppDefinition,
 
       // apply changes from volume providers (must do this after we're sure there's a container type)
       app.container.foreach{ container =>
-        val injector = VolumesModule.providers.containerInjector
-        builder = injector(container.volumes, ContainerContext(builder)).container
+        import VolumesModule._
+        inject(ContainerContext(builder), container.volumes)
       }
 
       Some(builder.build)

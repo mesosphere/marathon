@@ -142,21 +142,25 @@ protected[volume] case object DVDIProvider
       .setMode(volume.mode)
       .build
 
-  val containerInjector = new ContainerInjector[PersistentVolume] {
-    override def inject(ctx: ContainerContext, pv: PersistentVolume): ContainerContext = {
-      // special behavior for docker vs. mesos containers
-      // - docker containerizer: serialize volumes into mesos proto
-      // - docker containerizer: specify "volumeDriver" for the container
-      val container = ctx.container // TODO(jdef) clone?
-      if (container.getType == ContainerInfo.Type.DOCKER && container.hasDocker) {
-        val driverName = pv.persistent.options(OptionDriverName.fullName)
-        if (container.getDocker.getVolumeDriver != driverName) {
-          container.setDocker(container.getDocker.toBuilder.setVolumeDriver(driverName).build)
+  val containerInjector = new ContainerInjector[Volume] {
+    override def inject(ctx: ContainerContext, v: Volume): ContainerContext =
+      v match {
+        case pv: PersistentVolume => {
+          // special behavior for docker vs. mesos containers
+          // - docker containerizer: serialize volumes into mesos proto
+          // - docker containerizer: specify "volumeDriver" for the container
+          val container = ctx.container // TODO(jdef) clone?
+          if (container.getType == ContainerInfo.Type.DOCKER && container.hasDocker) {
+            val driverName = pv.persistent.options(OptionDriverName.fullName)
+            if (container.getDocker.getVolumeDriver != driverName) {
+              container.setDocker(container.getDocker.toBuilder.setVolumeDriver(driverName).build)
+            }
+            ContainerContext(container.addVolumes(toMesosVolume(pv)))
+          }
+          else ctx
         }
-        ContainerContext(container.addVolumes(toMesosVolume(pv)))
+        case _ => ctx
       }
-      else ctx
-    }
   }
 
   val commandInjector = new CommandInjector[PersistentVolume] {

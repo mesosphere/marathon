@@ -218,7 +218,7 @@ object Group {
       group is noAppsAndGroupsWithSameName
       (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
       group is validPorts
-      group is VolumesModule.providers.validGroup
+      group is VolumesModule.validGroup
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
     }
 
