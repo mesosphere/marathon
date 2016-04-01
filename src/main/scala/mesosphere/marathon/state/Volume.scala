@@ -3,10 +3,10 @@ package mesosphere.marathon.state
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos
-import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.Validation.oneOf
 import mesosphere.marathon.core.volume.VolumesModule
 import org.apache.mesos.Protos.Volume.Mode
-import org.apache.mesos.{Protos => Mesos}
+import org.apache.mesos.{ Protos => Mesos }
 
 import scala.collection.JavaConverters._
 
@@ -14,6 +14,8 @@ sealed trait Volume {
   def containerPath: String
   def mode: Mesos.Volume.Mode
   def toProto: Protos.Volume
+
+  val validVolume: Validator[Volume]
 }
 
 object Volume {
@@ -61,12 +63,7 @@ object Volume {
     }
 
   implicit val validVolume: Validator[Volume] = new Validator[Volume] {
-    override def apply(volume: Volume): Result = {
-      volume match {
-        case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
-        case dv: DockerVolume     => validate(dv)(DockerVolume.validDockerVolume)
-      }
-    } and validate(volume)(validator[Volume] { v => VolumesModule.providers(v).isDefined is true })
+    override def apply(v: Volume): Result = v.validVolume(v)
   }
 }
 
@@ -88,14 +85,18 @@ case class DockerVolume(
       .setHostPath(hostPath)
       .setMode(mode)
       .build()
-}
 
-object DockerVolume {
+  val validDockerVolume = validator[DockerVolume] { dv =>
+    dv.containerPath is notEmpty
+    dv.hostPath is notEmpty
+    dv.mode is oneOf(Mode.RW, Mode.RO)
+  }
 
-  implicit val validDockerVolume = validator[DockerVolume] { vol =>
-    vol.containerPath is notEmpty
-    vol.hostPath is notEmpty
-    vol.mode is oneOf(Mode.RW, Mode.RO)
+  override val validVolume = new Validator[Volume] {
+    override def apply(v: Volume): Result = v match {
+      case dv: DockerVolume => validDockerVolume(dv)
+      case v: Any           => Failure(Set[Violation](RuleViolation(v, "no docker volume", None)))
+    }
   }
 }
 
@@ -182,19 +183,29 @@ case class PersistentVolume(
   persistent: PersistentVolumeInfo,
   mode: Mesos.Volume.Mode)
     extends Volume {
+
   override def toProto: Protos.Volume =
     Protos.Volume.newBuilder()
       .setContainerPath(containerPath)
       .setPersistent(persistent.toProto)
       .setMode(mode)
       .build()
-}
 
-object PersistentVolume {
-  implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
-    vol.containerPath is notEmpty
-    vol.persistent is valid
-    vol.persistent.providerName is VolumesModule.providers.known
-    vol is VolumesModule.providers.approved(vol.persistent.providerName)
+  val validPersistentVolume = validator[PersistentVolume] { pv =>
+    pv.containerPath is notEmpty
+    pv.persistent is valid
+  }
+
+  override val validVolume = new Validator[Volume] {
+    override def apply(v: Volume): Result = v match {
+      case pv: PersistentVolume =>
+        VolumesModule.providers(pv.persistent.providerName) match {
+          case Some(p) => (validPersistentVolume and p.volumeValidation)(pv)
+          case None => Failure(Set[Violation](RuleViolation(v,
+            s"is no persistent volume provider name", Some("persistent.providerName")
+          )))
+        }
+      case v: Any => Failure(Set[Violation](RuleViolation(v, "no persistent volume", None)))
+    }
   }
 }

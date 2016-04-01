@@ -2,6 +2,7 @@ package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord._
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.volume.PersistentVolumeProvider
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.Volume.Mode
 import org.scalatest.Matchers
@@ -71,7 +72,7 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
   )
   test("validPersistentVolume") {
     for (tc <- ttValidateVolume; v <- tc.volumes) {
-      val result = validate(v)(DVDIProvider.validPersistentVolume)
+      val result = validate(v)(DVDIProvider.volumeValidation)
       assert(result.isSuccess == tc.wantsValid,
         s"expected ${tc.wantsValid} instead of $result for volume $v")
     }

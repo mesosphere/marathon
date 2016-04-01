@@ -3,12 +3,15 @@ package mesosphere.marathon.core.volume.providers
 import com.wix.accord.Validator
 import com.wix.accord.combinators.NilValidator
 import com.wix.accord.dsl._
+import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
 
 /**
   * AgentVolumeProvider handles persistent volumes allocated from agent resources.
   */
-protected[volume] case object AgentVolumeProvider extends AbstractPersistentVolumeProvider("agent") {
+protected[volume] case object AgentVolumeProvider
+    extends AbstractPersistentVolumeProvider("agent") {
+
   import mesosphere.marathon.api.v2.Validation._
   import org.apache.mesos.Protos.Volume.Mode
 
@@ -19,7 +22,7 @@ protected[volume] case object AgentVolumeProvider extends AbstractPersistentVolu
   // no provider-specific rules at the group level
   val groupValidation: Validator[Group] = new NilValidator[Group]
 
-  val validPersistentVolume = validator[PersistentVolume] { v =>
+  val volumeValidation = validator[PersistentVolume] { v =>
     v.persistent.size is notEmpty
     v.mode is equalTo(Mode.RW)
     //persistent volumes require those CLI parameters provided
@@ -31,4 +34,7 @@ protected[volume] case object AgentVolumeProvider extends AbstractPersistentVolu
     // without a providerName is a local agent volume.
     volume.persistent.providerName.getOrElse(name) == name
   }
+
+  val containerInjector = new ContainerInjection[PersistentVolume] {}
+  val commandInjector = new CommandInjection[PersistentVolume] {}
 }

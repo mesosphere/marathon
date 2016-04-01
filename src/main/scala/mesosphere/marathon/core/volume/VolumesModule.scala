@@ -7,9 +7,7 @@ import mesosphere.marathon.state._
 /**
   * VolumeProvider is an interface implemented by storage volume providers
   */
-trait VolumeProvider[+T <: Volume] extends VolumeInjection {
-  /** validation implements a provider's volume validation rules */
-  val validation: Validator[Volume]
+trait VolumeProvider[+T <: Volume] {
   /** appValidation implements a provider's app validation rules */
   val appValidation: Validator[AppDefinition]
   /** groupValidation implements a provider's group validation rules */
@@ -21,6 +19,16 @@ trait VolumeProvider[+T <: Volume] extends VolumeInjection {
 
 trait PersistentVolumeProvider[+T <: PersistentVolume] extends VolumeProvider[T] {
   val name: String
+
+  /**
+    * don't invoke validator on v because that's circular, just check the additional
+    * things that we need for agent local volumes.
+    * see implicit validator in the PersistentVolume class for reference.
+    */
+  val volumeValidation: Validator[PersistentVolume]
+
+  val containerInjector: ContainerInjection[PersistentVolume]
+  val commandInjector: CommandInjection[PersistentVolume]
 }
 
 trait VolumeProviderRegistry {
@@ -54,6 +62,8 @@ trait VolumeProviderRegistry {
       }.flatten.map{ p => validate(grp)(p.groupValidation) }.fold(Success)(_ and _)
     }
   }
+
+  val containerInjector: ContainerInjection[Volume]
 }
 
 trait PersistentVolumeProviderRegistry extends VolumeProviderRegistry {
@@ -64,11 +74,7 @@ trait PersistentVolumeProviderRegistry extends VolumeProviderRegistry {
     */
   def apply(name: Option[String]): Option[PersistentVolumeProvider[PersistentVolume]]
 
-  /** @return a validator that checks the validity of a persistent volume provider name */
-  def known(): Validator[Option[String]]
-
-  /** @return a validator that checks the validity of a persistent volume given the volume provider name */
-  def approved[T <: PersistentVolume](name: Option[String]): Validator[T]
+  val commandInjector: CommandInjection[PersistentVolume]
 }
 
 /**
@@ -77,5 +83,4 @@ trait PersistentVolumeProviderRegistry extends VolumeProviderRegistry {
 object VolumesModule {
   lazy val localVolumes: VolumeProvider[PersistentVolume] = AgentVolumeProvider
   lazy val providers: PersistentVolumeProviderRegistry = StaticRegistry
-  lazy val inject: VolumeInjection = VolumeInjection
 }

@@ -285,8 +285,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
     response.getEntity.toString should include("/container/volumes(0)/persistent.providerName")
-    response.getEntity.toString should include("illegal volume specification")
-    response.getEntity.toString should include("is not one of")
+    response.getEntity.toString should include("is no persistent volume provider name")
   }
 
   test("Creating an app with an external volume with no provider name specified should pass provider validation") {

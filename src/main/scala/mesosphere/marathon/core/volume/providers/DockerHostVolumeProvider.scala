@@ -5,7 +5,7 @@ import com.wix.accord.combinators.NilValidator
 import com.wix.accord.dsl._
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{Volume => MesosVolume}
+import org.apache.mesos.Protos.{ Volume => MesosVolume }
 
 /**
   * DockerHostVolumeProvider handles Docker volumes that a user would like to mount at
@@ -14,11 +14,7 @@ import org.apache.mesos.Protos.{Volume => MesosVolume}
   * use a PersistentVolume instead.
   */
 protected[volume] case object DockerHostVolumeProvider
-    extends InjectionHelper[DockerVolume]
-    with VolumeProvider[DockerVolume] {
-  /** no special case validation here, it's handled elsewhere */
-  val validation: Validator[Volume] = new NilValidator[Volume]
-
+    extends VolumeProvider[DockerVolume] {
   val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.container.get.`type` is equalTo("DOCKER")
   }
@@ -34,10 +30,9 @@ protected[volume] case object DockerHostVolumeProvider
       .setMode(volume.mode)
       .build
 
-  override def accepts(dv: DockerVolume): Boolean = true
-
-  override def injectContainer(ctx: ContainerContext, dv: DockerVolume): ContainerContext = {
-    ContainerContext(ctx.container.addVolumes(toMesosVolume(dv)))
+  val containerInjector = new ContainerInjection[DockerVolume] {
+    override def inject(ctx: ContainerContext, dv: DockerVolume): ContainerContext =
+      ContainerContext(ctx.container.addVolumes(toMesosVolume(dv)))
   }
 
   override def collect(container: Container): Iterable[DockerVolume] =
