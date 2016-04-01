@@ -175,20 +175,44 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
   val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
   val dvdiVolumeOpts = "DVDI_VOLUME_OPTS"
 
-  def volumeToEnv(v: PersistentVolume, i: Iterable[Environment.Variable]): Seq[Environment.Variable] = {
-    val offset = i.filter(_.getName.startsWith(dvdiVolumeName)).map{ s =>
-      val ss = s.getName.substring(dvdiVolumeName.size)
-      if (ss.length > 0) ss.toInt else 0
-    }.foldLeft(-1)((z, i) => if (i > z) i else z)
-    val suffix = if (offset >= 0) (offset + 1).toString else ""
+  def volumeToEnv(v: PersistentVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable] = {
+    import OptionLabelPatterns._
 
-    def newVar(name: String, value: String): Environment.Variable =
+    val suffix = {
+      val offset = i.filter(_.getName.startsWith(dvdiVolumeName)).map{ s =>
+        val ss = s.getName.substring(dvdiVolumeName.size)
+        if (ss.length > 0) ss.toInt else 0
+      }.foldLeft(-1)((z, i) => if (i > z) i else z)
+
+      if (offset >= 0) (offset + 1).toString else ""
+    }
+
+    def mkVar(name: String, value: String): Environment.Variable =
       Environment.Variable.newBuilder.setName(name).setValue(value).build
 
-    Seq(
-      newVar(dvdiVolumeName + suffix, v.persistent.name.get),
-      newVar(dvdiVolumeDriver + suffix, v.persistent.options(OptionDriver.fullName))
-    // TODO(jdef) support other options here
+    var vars = Seq[Environment.Variable](
+      mkVar(dvdiVolumeName + suffix, v.persistent.name.get),
+      mkVar(dvdiVolumeDriver + suffix, v.persistent.options(OptionDriver.fullName))
     )
+
+    val optsVar = {
+      val prefix: String = NAME + OptionNamespaceSeparator
+      // don't let the user override these
+      val ignore = Set(OptionDriver.fullName.toLowerCase)
+      // persistent.size trumps any user-specified dvdi/size option
+      val opts = v.persistent.options ++
+        v.persistent.size.fold(Map.empty[String, String]){ sz => Map(prefix + "size" -> sz.toString) }
+
+      // forward all dvdi/* options to the dvdcli driver, stripping the dvdi/ prefix
+      // and trimming the values
+      opts.filterKeys{ k =>
+        k.startsWith(prefix) && !ignore.contains(k.toLowerCase)
+      }.map{
+        case (k, v) => k.substring(prefix.size) + "=" + v.trim()
+      }.mkString(",")
+    }
+
+    if (optsVar.isEmpty) vars
+    else { vars :+ mkVar(dvdiVolumeOpts + suffix, optsVar) }
   }
 }
