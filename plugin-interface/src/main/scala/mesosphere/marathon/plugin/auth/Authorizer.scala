@@ -1,6 +1,6 @@
 package mesosphere.marathon.plugin.auth
 
-import mesosphere.marathon.plugin.http.{ HttpRequest, HttpResponse }
+import mesosphere.marathon.plugin.http.HttpResponse
 import mesosphere.marathon.plugin.plugin.Plugin
 
 /**
@@ -26,9 +26,8 @@ trait Authorizer extends Plugin {
     * This method is called in the case that the identity is not authorized to access the resource.
     * The main purpose of this implementation is to customize the http response (e.g. response code, redirect etc.)
     * @param principal the identity that has tried to access a resource with a given action.
-    * @param request the related request.
     * @param response the response to customize.
     */
-  def handleNotAuthorized(principal: Identity, request: HttpRequest, response: HttpResponse)
+  def handleNotAuthorized(principal: Identity, response: HttpResponse)
 }
 

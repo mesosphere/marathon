@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.tracker.impl
 import java.util.concurrent.TimeoutException
 
 import akka.actor.ActorRef
+import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
@@ -31,10 +32,9 @@ private[tracker] class TaskTrackerDelegate(
   override def tasksByAppSync: TaskTracker.TasksByApp = {
     import ExecutionContext.Implicits.global
     Await.result(tasksByApp(), taskTrackerQueryTimeout.duration)
-
   }
+
   override def tasksByApp()(implicit ec: ExecutionContext): Future[TaskTracker.TasksByApp] = {
-    import akka.pattern.ask
     def futureCall(): Future[TaskTracker.TasksByApp] =
       (taskTrackerRef ? TaskTrackerActor.List).mapTo[TaskTracker.TasksByApp].recover {
         case e: AskTimeoutException =>
@@ -46,6 +46,8 @@ private[tracker] class TaskTrackerDelegate(
     tasksByAppTimer.fold(futureCall())(_.timeFuture(futureCall()))
   }
 
+  override def countLaunchedAppTasksSync(appId: PathId): Int =
+    tasksByAppSync.appTasks(appId).count(_.launched.isDefined)
   override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.marathonAppTasks(appId).size
   override def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
     tasksByApp().map(_.marathonAppTasks(appId).size)
@@ -61,6 +63,7 @@ private[tracker] class TaskTrackerDelegate(
     tasksByAppSync.appTasks(appId)
   override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]] =
     tasksByApp().map(_.appTasks(appId))
+  override def appTasksLaunchedSync(appId: PathId): Iterable[Task] = appTasksSync(appId).filter(_.launched.isDefined)
 
   override def task(taskId: Task.Id)(
     implicit ec: ExecutionContext): Future[Option[Task]] =
@@ -70,5 +73,4 @@ private[tracker] class TaskTrackerDelegate(
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))
 
   private[this] implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
-
 }

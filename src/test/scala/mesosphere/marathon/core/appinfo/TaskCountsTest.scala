@@ -16,12 +16,11 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
   }
 
   test("one task without explicit task state is treated as staged task") {
+    val f = new Fixture
     Given("one unstaged task")
-    val oneTaskWithoutTaskState = Seq(
-      MarathonTestHelper.stagedTask("task1").withLaunched(_.withStatus(_.copy(mesosStatus = None)))
-    )
+    val oneTaskWithoutTaskState = f.taskWithoutState
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneTaskWithoutTaskState, healthStatuses = Map.empty)
+    val counts = TaskCounts(appTasks = Seq(oneTaskWithoutTaskState), healthStatuses = Map.empty)
     Then("the task without taskState is counted as staged")
     counts should be(TaskCounts.zero.copy(tasksStaged = 1))
   }
@@ -171,4 +170,19 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
   private[this] val notAliveHealth = Seq(Health(Task.Id("task1"), lastFailure = Some(Timestamp(1))))
   require(notAliveHealth.forall(!_.alive))
   private[this] val mixedHealth = aliveHealth ++ notAliveHealth
+}
+
+class Fixture {
+  val taskWithoutState = Task.LaunchedEphemeral(
+    Task.Id("task1"),
+    Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+    appVersion = Timestamp(0),
+    Task.Status(
+      stagedAt = Timestamp(1),
+      startedAt = None,
+      mesosStatus = None
+    ),
+    Task.NoNetworking
+  )
+
 }

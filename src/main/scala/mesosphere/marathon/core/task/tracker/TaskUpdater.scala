@@ -8,6 +8,7 @@ import scala.concurrent.Future
 /**
   * Notifies the [[TaskTracker]] of task updates.
   */
+// FIXME (3221): This trait is superseded by TaskStateOpProcessor and can be removed
 trait TaskUpdater {
   /**
     * Process a status update for an existing task and either updates the tasks or removes

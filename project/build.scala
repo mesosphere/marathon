@@ -6,7 +6,6 @@ import Keys._
 import sbtassembly.Plugin._
 import AssemblyKeys._
 import com.typesafe.sbt.SbtScalariform._
-import net.virtualvoid.sbt.graph.Plugin.graphSettings
 import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
 import scalariform.formatter.preferences._
 import sbtbuildinfo.Plugin._
@@ -39,7 +38,6 @@ object MarathonBuild extends Build {
       formatSettings ++
       scalaStyleSettings ++
       revolverSettings ++
-      graphSettings ++
       testSettings ++
       integrationTestSettings ++
       teamCitySetEnvSettings ++
@@ -108,7 +106,7 @@ object MarathonBuild extends Build {
 
   lazy val IntegrationTest = config("integration") extend Test
 
-  lazy val baseSettings = Defaults.defaultSettings ++ Seq (
+  lazy val baseSettings = Seq (
     organization := "mesosphere.marathon",
     scalaVersion := "2.11.7",
     crossScalaVersions := Seq(scalaVersion.value),
@@ -285,7 +283,7 @@ object Dependency {
     val Chaos = "0.8.4"
     val Guava = "18.0"
     val JacksonCCM = "0.1.2"
-    val MesosUtils = "0.27.0"
+    val MesosUtils = "0.28.0"
     val Akka = "2.3.9"
     val Spray = "1.3.2"
     val TwitterCommons = "0.0.76"
@@ -302,7 +300,7 @@ object Dependency {
     val PlayJson = "2.4.3"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
-    val MarathonUI = "0.16.0-SNAPSHOT"
+    val MarathonUI = "1.0.0"
     val MarathonApiConsole = "0.1.1"
     val Graphite = "3.1.2"
     val DataDog = "1.1.3"

@@ -15,7 +15,7 @@ import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, Deploym
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
+import mesosphere.marathon.upgrade.{ UpgradeConfig, DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos
 import org.apache.mesos.Protos.{ Status, TaskID }
 import org.apache.mesos.SchedulerDriver
@@ -43,6 +43,7 @@ class MarathonSchedulerActor private (
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leaderInfo: LeaderInfo,
     eventBus: EventStream,
+    config: UpgradeConfig,
     cancellationTimeout: FiniteDuration = 1.minute) extends Actor with ActorLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
@@ -158,7 +159,7 @@ class MarathonSchedulerActor private (
       val origSender = sender()
       withLockFor(appId) {
         val promise = Promise[Unit]()
-        context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, taskIds, promise))
+        context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, taskIds, config, promise))
         val res = for {
           _ <- promise.future
           Some(app) <- appRepository.currentVersion(appId)
@@ -336,6 +337,7 @@ object MarathonSchedulerActor {
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leaderInfo: LeaderInfo,
     eventBus: EventStream,
+    config: UpgradeConfig,
     cancellationTimeout: FiniteDuration = 1.minute): Props = {
     Props(new MarathonSchedulerActor(
       createSchedulerActions,
@@ -349,7 +351,9 @@ object MarathonSchedulerActor {
       marathonSchedulerDriverHolder,
       leaderInfo,
       eventBus,
-      cancellationTimeout))
+      config,
+      cancellationTimeout
+    ))
   }
 
   case class RecoverDeployments(deployments: Seq[DeploymentPlan])
@@ -433,18 +437,17 @@ class SchedulerActions(
     healthCheckManager.removeAllFor(app.id)
 
     log.info(s"Stopping app ${app.id}")
-    val tasks = taskTracker.appTasksSync(app.id)
+    taskTracker.appTasks(app.id).map { tasks =>
+      for (taskId <- tasks.iterator.flatMap(_.launchedMesosId)) {
+        log.info(s"Killing task [${taskId.getValue}]")
+        driver.killTask(taskId)
+      }
+      taskQueue.purge(app.id)
+      taskQueue.resetDelay(app)
+      // TODO after all tasks have been killed we should remove the app from taskTracker
 
-    for (taskId <- tasks.iterator.flatMap(_.launchedMesosId)) {
-      log.info(s"Killing task [${taskId.getValue}]")
-      driver.killTask(taskId)
+      eventBus.publish(AppTerminatedEvent(app.id))
     }
-    taskQueue.purge(app.id)
-    taskQueue.resetDelay(app)
-    // TODO after all tasks have been killed we should remove the app from taskTracker
-
-    eventBus.publish(AppTerminatedEvent(app.id))
-    Future.successful(())
   }
 
   def scaleApps(): Future[Unit] = {
@@ -514,13 +517,13 @@ class SchedulerActions(
     * Make sure the app is running the correct number of instances
     */
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    val currentCount = taskTracker.countAppTasksSync(app.id)
+    val launchedCount = taskTracker.countLaunchedAppTasksSync(app.id)
     val targetCount = app.instances
 
-    if (targetCount > currentCount) {
-      log.info(s"Need to scale ${app.id} from $currentCount up to $targetCount instances")
+    if (targetCount > launchedCount) {
+      log.info(s"Need to scale ${app.id} from $launchedCount up to $targetCount instances")
 
-      val queuedOrRunning = taskQueue.get(app.id).map(_.totalTaskCount).getOrElse(currentCount)
+      val queuedOrRunning = taskQueue.get(app.id).map(_.finalTaskCount).getOrElse(launchedCount)
       val toQueue = targetCount - queuedOrRunning
 
       if (toQueue > 0) {
@@ -531,11 +534,11 @@ class SchedulerActions(
         log.info(s"Already queued or started $queuedOrRunning tasks for ${app.id}. Not scaling.")
       }
     }
-    else if (targetCount < currentCount) {
-      log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
+    else if (targetCount < launchedCount) {
+      log.info(s"Scaling ${app.id} from $launchedCount down to $targetCount instances")
       taskQueue.purge(app.id)
 
-      val toKill = taskTracker.appTasksSync(app.id).take(currentCount - targetCount)
+      val toKill = taskTracker.appTasksLaunchedSync(app.id).take(launchedCount - targetCount)
       val taskIds: Iterable[TaskID] = toKill.flatMap(_.launchedMesosId)
       log.info(s"Killing tasks: ${taskIds.map(_.getValue)}")
       for (taskId <- taskIds) {

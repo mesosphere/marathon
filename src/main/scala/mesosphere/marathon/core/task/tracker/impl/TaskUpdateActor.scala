@@ -106,7 +106,7 @@ private[impl] class TaskUpdateActor(
       val activeCount = metrics.numberOfActiveOps.decrement()
       if (log.isDebugEnabled) {
         val queuedCount = metrics.numberOfQueuedOps.getValue
-        log.debug(s"Finished processing ${op.action} for app [${op.appId}] and ${op.taskId} "
+        log.debug(s"Finished processing ${op.stateOp} for app [${op.appId}] and ${op.taskId} "
           + s"$activeCount active, $queuedCount queued.");
       }
 
@@ -121,7 +121,7 @@ private[impl] class TaskUpdateActor(
     operationsByTaskId(taskId).headOption foreach { op =>
       val queuedCount = metrics.numberOfQueuedOps.decrement()
       val activeCount = metrics.numberOfActiveOps.increment()
-      log.debug(s"Start processing ${op.action} for app [${op.appId}] and ${op.taskId}. "
+      log.debug(s"Start processing ${op.stateOp} for app [${op.appId}] and ${op.taskId}. "
         + s"$activeCount active, $queuedCount queued.")
 
       import context.dispatcher
@@ -129,14 +129,14 @@ private[impl] class TaskUpdateActor(
         if (op.deadline <= clock.now()) {
           metrics.timedOutOpsMeter.mark()
           op.sender ! Status.Failure(
-            new TimeoutException(s"Timeout: ${op.action} for app [${op.appId}] and ${op.taskId}.")
+            new TimeoutException(s"Timeout: ${op.stateOp} for app [${op.appId}] and ${op.taskId}.")
           )
           Future.successful(())
         }
         else
           metrics.processOpTimer.timeFuture(processor.process(op))
       }.map { _ =>
-        log.debug(s"Finished processing ${op.action} for app [${op.appId}] and ${op.taskId}")
+        log.debug(s"Finished processing ${op.stateOp} for app [${op.appId}] and ${op.taskId}")
         FinishedTaskOp(op)
       }
 

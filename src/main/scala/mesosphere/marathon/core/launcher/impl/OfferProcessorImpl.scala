@@ -2,9 +2,10 @@ package mesosphere.marathon.core.launcher.impl
 
 import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.launcher.{ TaskOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOp, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
+import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
@@ -73,7 +74,7 @@ private[launcher] class OfferProcessorImpl(
           }
       }.flatMap {
         case MatchedTaskOps(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
-        case MatchedTaskOps(offerId, tasks, _)             => launchTasks(offerId, tasks)
+        case MatchedTaskOps(offerId, tasks, _)             => acceptOffer(offerId, tasks)
       }
   }
 
@@ -84,7 +85,7 @@ private[launcher] class OfferProcessorImpl(
     Future.successful(())
   }
 
-  private[this] def launchTasks(offerId: OfferID, taskOpsWithSource: Seq[TaskOpWithSource]): Future[Unit] = {
+  private[this] def acceptOffer(offerId: OfferID, taskOpsWithSource: Seq[TaskOpWithSource]): Future[Unit] = {
     if (taskLauncher.acceptOffer(offerId, taskOpsWithSource.map(_.op))) {
       log.debug("Offer [{}]. Task launch successful", offerId.getValue)
       taskOpsWithSource.foreach(_.accept())
@@ -103,9 +104,9 @@ private[launcher] class OfferProcessorImpl(
       terminatedFuture.flatMap { _ =>
         nextOp.oldTask match {
           case Some(existingTask) =>
-            taskCreationHandler.created(existingTask).map(_ => ())
+            taskCreationHandler.created(TaskStateOp.Revert(existingTask)).map(_ => ())
           case None =>
-            taskCreationHandler.terminated(nextOp.taskId).map(_ => ())
+            taskCreationHandler.terminated(TaskStateOp.ForceExpunge(nextOp.taskId)).map(_ => ())
         }
       }
     }.recover {
@@ -121,9 +122,9 @@ private[launcher] class OfferProcessorImpl(
   private[this] def saveTasks(ops: Seq[TaskOpWithSource], savingDeadline: Timestamp): Future[Seq[TaskOpWithSource]] = {
     def saveTask(taskOpWithSource: TaskOpWithSource): Future[Option[TaskOpWithSource]] = {
       val taskId = taskOpWithSource.taskId
-      log.info("Save task [{}]", taskOpWithSource.taskId)
+      log.info(s"Processing ${taskOpWithSource.op.stateOp} for ${taskOpWithSource.taskId}")
       taskCreationHandler
-        .created(taskOpWithSource.op.newTask)
+        .created(taskOpWithSource.op.stateOp)
         .map(_ => Some(taskOpWithSource))
         .recoverWith {
           case NonFatal(e) =>

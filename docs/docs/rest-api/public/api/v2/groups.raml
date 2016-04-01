@@ -5,6 +5,32 @@ get:
   description:
     Get the group with all applications and all transitive child groups.
   is: [ secured ]
+  queryParameters:
+    embed:
+      required: false
+      description:
+        Embeds nested resources that match the supplied path.
+        You can specify this parameter multiple times with different values.
+        Unknown embed parameters are ignored.
+        If you omit this parameter, it defaults to <code>group.groups</code>, <code>group.apps</code>
+
+        - <code>group.groups</code> embed all child groups of each group<br/>
+
+        - <code>group.apps</code> embed all apps of each group<br/>
+
+        - <code>group.apps.tasks</code> embed all tasks of each application<br/>
+
+        - <code>group.apps.counts</code> embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy) <br/>
+
+        - <code>group.apps.deployments</code> embed all deployment identifier, if the related app currently is in deployment.
+
+        - <code>group.apps.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.
+
+        - <code>group.apps.taskStats</code> exposes task statistics in the JSON.
+
+      enum: [ group.groups, group.apps, group.apps.tasks, group.apps.count, group.apps.deployments, group.apps.lastTaskFailure, group.apps.failures, group.apps.taskStats ]
+      repeat: true
+      example: group.apps
   responses:
     200:
       description: The group with all transitive dependencies.
@@ -76,8 +102,10 @@ put:
               "message":"Object is not valid",
               "details": [
                 {
-                  "attribute":"apps[0].id",
-                  "error":"identifier /app is not child of /group. Hint: use relative paths."
+                  "path":"/apps(0)/id",
+                  "errors": [
+                    "identifier /app is not child of /group. Hint: use relative paths."
+                  ]
                 }
               ]
             }
@@ -117,8 +145,10 @@ post:
               "message":"Object is not valid",
               "details": [
                 {
-                  "attribute":"apps[0].id",
-                  "error":"identifier /app is not child of /group. Hint: use relative paths."
+                  "path":"/apps(0)/id",
+                  "errors": [
+                    "identifier /app is not child of /group. Hint: use relative paths."
+                  ]
                 }
               ]
             }

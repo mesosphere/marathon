@@ -10,12 +10,12 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
 import play.api.data.validation.ValidationError
-import play.api.libs.json.{ JsError, Json }
+import play.api.libs.json.{ JsPath, JsError, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-import mesosphere.marathon.api.v2.Validation._
+import com.wix.accord._
 
 import scala.util.Try
 
@@ -28,29 +28,46 @@ class AppUpdateTest extends MarathonSpec {
       val violations = validate(update)
       assert(violations.isFailure)
       assert(ValidationHelper.getAllRuleConstrains(violations).exists(v =>
-        v.property.getOrElse(false) == path && v.message == template
+        v.path.getOrElse(false) == path && v.message == template
       ))
     }
 
     def shouldNotViolate(update: AppUpdate, path: String, template: String): Unit = {
       val violations = validate(update)
       assert(!ValidationHelper.getAllRuleConstrains(violations).exists(v =>
-        v.property.getOrElse(false) == path && v.message == template))
+        v.path.getOrElse(false) == path && v.message == template))
     }
 
     val update = AppUpdate()
 
     shouldViolate(
-      update.copy(ports = Some(Seq(9000, 8080, 9000))),
-      "ports",
-      "Elements must be unique."
+      update.copy(portDefinitions = Some(PortDefinitions(9000, 8080, 9000))),
+      "/portDefinitions",
+      "Ports must be unique."
+    )
+
+    shouldViolate(
+      update.copy(portDefinitions = Some(Seq(
+        PortDefinition(port = 9000, name = Some("foo")),
+        PortDefinition(port = 9001, name = Some("foo"))))
+      ),
+      "/portDefinitions",
+      "Port names must be unique."
     )
 
     shouldNotViolate(
-      update.copy(ports = Some(Seq(AppDefinition.RandomPortValue, 8080, AppDefinition.RandomPortValue))),
-      "ports",
-      "Elements must be unique."
+      update.copy(portDefinitions = Some(Seq(
+        PortDefinition(port = 9000, name = Some("foo")),
+        PortDefinition(port = 9001, name = Some("bar"))))
+      ),
+      "/portDefinitions",
+      "Port names must be unique."
     )
+
+    shouldViolate(update.copy(mem = Some(-3.0)), "/mem", "got -3.0, expected 0.0 or more")
+    shouldViolate(update.copy(cpus = Some(-3.0)), "/cpus", "got -3.0, expected 0.0 or more")
+    shouldViolate(update.copy(disk = Some(-3.0)), "/disk", "got -3.0, expected 0.0 or more")
+    shouldViolate(update.copy(instances = Some(-3)), "/instances", "got -3, expected 0 or more")
   }
 
   private[this] def fromJsonString(json: String): AppUpdate = {
@@ -62,7 +79,7 @@ class AppUpdateTest extends MarathonSpec {
     JsonTestHelper.assertSerializationRoundtripWorks(update0)
   }
 
-  test("SerializationRoundtrip for extended definition") {
+  ignore("SerializationRoundtrip for extended definition") {
     val update1 = AppUpdate(
       cmd = Some("sleep 60"),
       args = None,
@@ -75,7 +92,6 @@ class AppUpdateTest extends MarathonSpec {
       executor = Some("/opt/executors/bin/some.executor"),
       constraints = Some(Set()),
       fetch = Some(Seq(FetchUri(uri = "http://dl.corp.org/prodX-1.2.3.tgz"))),
-      ports = Some(Seq(0, 0)),
       backoff = Some(2.seconds),
       backoffFactor = Some(1.2),
       maxLaunchDelay = Some(1.minutes),
@@ -230,5 +246,34 @@ class AppUpdateTest extends MarathonSpec {
     import Formats._
     val result = Json.fromJson[AppUpdate](Json.parse(json))
     assert(result == JsError(ValidationError("You cannot specify both uris and fetch fields")))
+  }
+
+  test("update may not have both ports and portDefinitions") {
+    val json =
+      """
+      {
+        "id": "app",
+        "ports": [1],
+        "portDefinitions": [{"port": 2}]
+      }
+      """
+
+    import Formats._
+    val result = Json.fromJson[AppUpdate](Json.parse(json))
+    assert(result == JsError(ValidationError("You cannot specify both ports and port definitions")))
+  }
+
+  test("update may not have duplicated ports") {
+    val json =
+      """
+      {
+        "id": "app",
+        "ports": [1, 1]
+      }
+      """
+
+    import Formats._
+    val result = Json.fromJson[AppUpdate](Json.parse(json))
+    assert(result == JsError(JsPath \ "ports", ValidationError("Ports must be unique.")))
   }
 }

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
 import mesosphere.marathon.{ MarathonTestHelper, AppStartCanceledException, MarathonSpec, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verify
@@ -17,14 +17,14 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Promise }
+import scala.concurrent.{ Future, Await, Promise }
 
 class AppStartActorTest
     extends MarathonActorSupport
     with MarathonSpec
     with Matchers
     with BeforeAndAfterAll
-    with MockitoSugar {
+    with Mockito {
 
   var driver: SchedulerDriver = _
   var scheduler: SchedulerActions = _
@@ -104,6 +104,8 @@ class AppStartActorTest
   }
 
   test("Failed") {
+    scheduler.stopApp(any, any).asInstanceOf[Future[Unit]] returns Future.successful(())
+
     val app = AppDefinition(id = PathId("app"), instances = 10)
     val promise = Promise[Unit]()
     val ref = TestActorRef[AppStartActor](

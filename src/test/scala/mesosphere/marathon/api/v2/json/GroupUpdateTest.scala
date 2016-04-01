@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.state.{ AppDefinition, Timestamp, PathId, Group }
-import mesosphere.marathon.api.v2.Validation._
+import com.wix.accord.validate
 import org.scalatest.{ GivenWhenThen, Matchers, FunSuite }
 import PathId._
 

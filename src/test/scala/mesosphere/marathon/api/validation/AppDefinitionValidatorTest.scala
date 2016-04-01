@@ -2,54 +2,17 @@ package mesosphere.marathon.api.validation
 
 import mesosphere.marathon.Protos.HealthCheckDefinition
 import mesosphere.marathon.api.v2.Validation._
+import com.wix.accord.validate
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
 import mesosphere.marathon._
 import org.apache.mesos.{ Protos => mesos }
-import org.scalatest.Matchers
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 
-class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
-
-  class Fixture {
-    def validDockerContainer: Container = Container(
-      `type` = mesos.ContainerInfo.Type.DOCKER,
-      volumes = Nil,
-      docker = Some(Docker(image = "foo/bar:latest"))
-    )
-
-    def invalidDockerContainer: Container = Container(
-      `type` = mesos.ContainerInfo.Type.DOCKER,
-      volumes = Nil,
-      docker = None
-    )
-
-    def validMesosContainer: Container = Container(
-      `type` = mesos.ContainerInfo.Type.MESOS,
-      volumes = Nil,
-      docker = None
-    )
-
-    def invalidMesosContainer: Container = Container(
-      `type` = mesos.ContainerInfo.Type.MESOS,
-      volumes = Nil,
-      docker = Some(Docker(image = "foo/bar:latest"))
-    )
-
-    // scalastyle:off magic.number
-    def validPersistentVolume: PersistentVolume = PersistentVolume(
-      containerPath = "/test",
-      persistent = PersistentVolumeInfo(10),
-      mode = mesos.Volume.Mode.RW)
-
-    def validDockerVolume: DockerVolume = DockerVolume(
-      containerPath = "/test",
-      hostPath = "/etc/foo",
-      mode = mesos.Volume.Mode.RW)
-
-  }
+class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
 
   test("only cmd") {
     val app = AppDefinition(
@@ -362,4 +325,133 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers {
     assert(validate(container).isFailure)
   }
 
+  test("Validation for update of resident apps") {
+    Given("A resident app definition")
+    val f = new Fixture
+    val from = f.validResident
+
+    When("Check if update to itself is valid")
+    val to = from
+    Then("Should be valid")
+    AppDefinition.residentUpdateIsValid(from)(to).isSuccess should be(true)
+
+    When("Check if default upgrade strategy is valid")
+    val to2 = from.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
+    Then("Should be invalid")
+    AppDefinition.residentUpdateIsValid(from)(to2).isSuccess should be(false)
+
+    When("Check if removing a volume is valid")
+    val to3 = f.residentApp(from.id.toString, Seq(f.vol1))
+    Then("Should be invalid")
+    AppDefinition.residentUpdateIsValid(from)(to3).isSuccess should be(false)
+
+    When("Check if adding a volume is valid")
+    val to4 = f.residentApp(from.id.toString, Seq(f.vol1, f.vol2, f.vol3))
+    Then("Should be invalid")
+    AppDefinition.residentUpdateIsValid(from)(to4).isSuccess should be(false)
+
+    When("Check if changing a volume is valid")
+    val to5 = f.residentApp(from.id.toString, Seq(f.vol1, f.vol3))
+    Then("Should be invalid")
+    AppDefinition.residentUpdateIsValid(from)(to5).isSuccess should be(false)
+
+    When("Check if changing mem is valid")
+    val to6 = from.copy(mem = 123)
+    Then("Should be invalid")
+    AppDefinition.residentUpdateIsValid(from)(to6).isSuccess should be(false)
+
+    When("Check if changing cpu is valid")
+    val to7 = from.copy(cpus = 123)
+    Then("Should be invalid")
+    AppDefinition.residentUpdateIsValid(from)(to7).isSuccess should be(false)
+
+    When("Check if changing disk is valid")
+    val to8 = from.copy(disk = 123)
+    Then("Should be invalid")
+    AppDefinition.residentUpdateIsValid(from)(to8).isSuccess should be(false)
+
+    When("Check if changing ports is valid")
+    val to9 = from.copy(portDefinitions = Seq.empty)
+    Then("Should be invalid")
+    AppDefinition.residentUpdateIsValid(from)(to9).isSuccess should be(false)
+  }
+
+  test("Validation for defining a resident app") {
+    Given("A resident app definition")
+    val f = new Fixture
+    val from = f.validResident
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+
+    When("Check if only defining residency without persistent volumes is valid")
+    val to1 = from.copy(container = None)
+    Then("Should be invalid")
+    AppDefinition.validAppDefinition(to1).isSuccess should be(false)
+
+    When("Check if only defining local volumes without residency is valid")
+    val to2 = from.copy(residency = None)
+    Then("Should be invalid")
+    AppDefinition.validAppDefinition(to2).isSuccess should be(false)
+
+    When("Check if defining local volumes and residency is valid")
+    Then("Should be valid")
+    AppDefinition.validAppDefinition(from).isSuccess should be(true)
+
+    When("Check if defining no local volumes and no residency is valid")
+    val to3 = from.copy(residency = None, container = None)
+    Then("Should be valid")
+    AppDefinition.validAppDefinition(to3).isSuccess should be(true)
+  }
+
+  class Fixture {
+    def validDockerContainer: Container = Container(
+      `type` = mesos.ContainerInfo.Type.DOCKER,
+      volumes = Nil,
+      docker = Some(Docker(image = "foo/bar:latest"))
+    )
+
+    def invalidDockerContainer: Container = Container(
+      `type` = mesos.ContainerInfo.Type.DOCKER,
+      volumes = Nil,
+      docker = None
+    )
+
+    def validMesosContainer: Container = Container(
+      `type` = mesos.ContainerInfo.Type.MESOS,
+      volumes = Nil,
+      docker = None
+    )
+
+    def invalidMesosContainer: Container = Container(
+      `type` = mesos.ContainerInfo.Type.MESOS,
+      volumes = Nil,
+      docker = Some(Docker(image = "foo/bar:latest"))
+    )
+
+    // scalastyle:off magic.number
+    def validPersistentVolume: PersistentVolume = PersistentVolume(
+      containerPath = "/test",
+      persistent = PersistentVolumeInfo(10),
+      mode = mesos.Volume.Mode.RW)
+
+    def validDockerVolume: DockerVolume = DockerVolume(
+      containerPath = "/test",
+      hostPath = "/etc/foo",
+      mode = mesos.Volume.Mode.RW)
+
+    def persistentVolume(path: String) = PersistentVolume(path, PersistentVolumeInfo(123), mesos.Volume.Mode.RW)
+    val zero = UpgradeStrategy(0, 0)
+
+    def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
+      AppDefinition(
+        id = PathId(id),
+        cmd = Some("test"),
+        container = Some(Container(mesos.ContainerInfo.Type.MESOS, volumes)),
+        residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT))
+      )
+    }
+    val vol1 = persistentVolume("foo")
+    val vol2 = persistentVolume("bla")
+    val vol3 = persistentVolume("test")
+    val validResident = residentApp("/app1", Seq(vol1, vol2)).copy(upgradeStrategy = zero)
+  }
 }

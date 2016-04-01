@@ -1,6 +1,6 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.ActorSystem
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -10,15 +10,14 @@ import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFinished, DeploymentStepInfo }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, SchedulerActions }
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
-import org.mockito.Matchers.{ any, same }
-import org.mockito.Mockito.{ times, verify, verifyNoMoreInteractions, when }
+import org.mockito.Mockito.{ verifyNoMoreInteractions, when }
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.Future
@@ -28,28 +27,13 @@ class DeploymentActorTest
     extends MarathonSpec
     with Matchers
     with BeforeAndAfterAll
-    with MockitoSugar {
-
-  var tracker: TaskTracker = _
-  var queue: LaunchQueue = _
-  var driver: SchedulerDriver = _
-  var scheduler: SchedulerActions = _
-  var storage: StorageProvider = _
-  var hcManager: HealthCheckManager = _
+    with Mockito {
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
-  before {
-    driver = mock[SchedulerDriver]
-    tracker = mock[TaskTracker]
-    queue = mock[LaunchQueue]
-    scheduler = mock[SchedulerActions]
-    storage = mock[StorageProvider]
-    hcManager = mock[HealthCheckManager]
-  }
-
   test("Deploy") {
-    implicit val system = ActorSystem("TestSystem")
+    val f = new Fixture
+    implicit val system = f.system
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
@@ -73,30 +57,16 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(origGroup, targetGroup)
 
-    when(tracker.appTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2))
-    when(tracker.appTasksSync(app2.id)).thenReturn(Set(task2_1))
-    when(tracker.appTasksSync(app3.id)).thenReturn(Set(task3_1))
-    when(tracker.appTasksSync(app4.id)).thenReturn(Set(task4_1))
+    when(f.tracker.appTasksLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2))
+    when(f.tracker.appTasksLaunchedSync(app2.id)).thenReturn(Set(task2_1))
+    when(f.tracker.appTasksLaunchedSync(app3.id)).thenReturn(Set(task3_1))
+    when(f.tracker.appTasksLaunchedSync(app4.id)).thenReturn(Set(task4_1))
 
-    when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
-      def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent(
-          slaveId = "", taskId = Task.Id("task1_2"), taskStatus = "TASK_KILLED", message = "", appId = app1.id, host = "",
-          ipAddresses = Nil, ports = Nil, version = app1New.version.toString))
-        Status.DRIVER_RUNNING
-      }
-    })
+    f.driverKillSendsStatusKilledFor(app1, task1_2)
+    f.driverKillSendsStatusKilledFor(app2, task2_1)
+    f.driverKillSendsStatusKilledFor(app4, task4_1)
 
-    when(driver.killTask(task2_1.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
-      def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent(
-          slaveId = "", taskId = Task.Id("task2_1"), taskStatus = "TASK_KILLED", message = "", appId = app2.id, host = "",
-          ipAddresses = Nil, ports = Nil, version = app2.version.toString))
-        Status.DRIVER_RUNNING
-      }
-    })
-
-    when(queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
+    when(f.queue.add(same(app2New), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
         println(invocation.getArguments.toSeq)
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
@@ -108,14 +78,14 @@ class DeploymentActorTest
       }
     })
 
-    when(scheduler.startApp(driver, app3)).thenAnswer(new Answer[Future[Unit]] {
+    when(f.scheduler.startApp(f.driver, app3)).thenAnswer(new Answer[Future[Unit]] {
       def answer(invocation: InvocationOnMock): Future[Unit] = {
         // system.eventStream.publish(MesosStatusUpdateEvent("", "task3_1", "TASK_RUNNING", "", app3.id, "", "", Nil, app3.version.toString))
         Future.successful(())
       }
     })
 
-    when(scheduler.scale(driver, app3)).thenAnswer(new Answer[Future[Unit]] {
+    when(f.scheduler.scale(f.driver, app3)).thenAnswer(new Answer[Future[Unit]] {
       def answer(invocation: InvocationOnMock): Future[Unit] = {
         system.eventStream.publish(MesosStatusUpdateEvent(
           slaveId = "", taskId = Task.Id("task3_1"), taskStatus = "TASK_RUNNING", message = "", appId = app3.id, host = "",
@@ -124,41 +94,17 @@ class DeploymentActorTest
       }
     })
 
-    when(driver.killTask(task4_1.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
-      def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent(
-          slaveId = "", taskId = Task.Id("task4_1"), taskStatus = "TASK_FINISHED", message = "", appId = app4.id,
-          host = "", ipAddresses = Nil, ports = Nil, version = app4.version.toString
-        ))
-        Status.DRIVER_RUNNING
-      }
-    })
-
     try {
-      TestActorRef(
-        DeploymentActor.props(
-          managerProbe.ref,
-          receiverProbe.ref,
-          driver,
-          scheduler,
-          plan,
-          tracker,
-          queue,
-          storage,
-          hcManager,
-          system.eventStream
-        )
-      )
-
+      f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       plan.steps.zipWithIndex.foreach {
         case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
       }
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
-      verify(scheduler).startApp(driver, app3.copy(instances = 0))
-      verify(driver, times(1)).killTask(task1_2.taskId.mesosTaskId)
-      verify(scheduler).stopApp(driver, app4.copy(instances = 0))
+      verify(f.scheduler).startApp(f.driver, app3.copy(instances = 0))
+      verify(f.driver, times(1)).killTask(task1_2.taskId.mesosTaskId)
+      verify(f.scheduler).stopApp(f.driver, app4.copy(instances = 0))
     }
     finally {
       system.shutdown()
@@ -166,7 +112,8 @@ class DeploymentActorTest
   }
 
   test("Restart app") {
-    implicit val system = ActorSystem("TestSystem")
+    val f = new Fixture
+    implicit val system = f.system
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
@@ -180,68 +127,45 @@ class DeploymentActorTest
     val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app.version, startedAt = 0)
     val task1_2 = MarathonTestHelper.runningTask("task1_2", appVersion = app.version, startedAt = 1000)
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Set(task1_1, task1_2))
+    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Set(task1_1, task1_2))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(driver.killTask(task1_1.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
-      def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id("task1_1"), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
-        Status.DRIVER_RUNNING
-      }
-    })
-
-    when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
-      def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id("task1_2"), "TASK_KILLED", "", app.id, "", Nil, Nil, app.version.toString))
-        Status.DRIVER_RUNNING
-      }
-    })
+    f.driverKillSendsStatusKilledFor(app, task1_1)
+    f.driverKillSendsStatusKilledFor(app, task1_2)
 
     val taskIDs = Iterator.from(3)
 
-    when(queue.count(appNew.id)).thenAnswer(new Answer[Int] {
+    when(f.queue.count(appNew.id)).thenAnswer(new Answer[Int] {
       override def answer(p1: InvocationOnMock): Int = appNew.instances
     })
 
-    when(queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Boolean] {
+    when(f.queue.add(same(appNew), any[Int])).thenAnswer(new Answer[Boolean] {
       def answer(invocation: InvocationOnMock): Boolean = {
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
-          system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id(s"task1_${taskIDs.next()}"),
+          f.system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id(s"task1_${taskIDs.next()}"),
             "TASK_RUNNING", "", app.id, "", Nil, Nil, appNew.version.toString))
         true
       }
     })
 
     try {
-      TestActorRef(
-        DeploymentActor.props(
-          managerProbe.ref,
-          receiverProbe.ref,
-          driver,
-          scheduler,
-          plan,
-          tracker,
-          queue,
-          storage,
-          hcManager,
-          system.eventStream
-        )
-      )
 
+      f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       receiverProbe.expectMsg(DeploymentFinished(plan))
 
-      verify(driver).killTask(task1_1.taskId.mesosTaskId)
-      verify(driver).killTask(task1_2.taskId.mesosTaskId)
-      verify(queue).add(appNew, 2)
+      verify(f.driver).killTask(task1_1.taskId.mesosTaskId)
+      verify(f.driver).killTask(task1_2.taskId.mesosTaskId)
+      verify(f.queue).add(appNew, 2)
     }
     finally {
-      system.shutdown()
+      f.system.shutdown()
     }
   }
 
   test("Restart suspended app") {
-    implicit val system = ActorSystem("TestSystem")
+    val f = new Fixture
+    implicit val system = f.system
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
 
@@ -254,33 +178,20 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
-    when(tracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
+    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
 
     try {
-      TestActorRef(
-        DeploymentActor.props(
-          managerProbe.ref,
-          receiverProbe.ref,
-          driver,
-          scheduler,
-          plan,
-          tracker,
-          queue,
-          storage,
-          hcManager,
-          system.eventStream
-        )
-      )
-
+      f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       receiverProbe.expectMsg(DeploymentFinished(plan))
     }
     finally {
-      system.shutdown()
+      f.system.shutdown()
     }
   }
 
   test("Scale with tasksToKill") {
-    implicit val system = ActorSystem("TestSystem")
+    val f = new Fixture
+    implicit val system = f.system
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 3)
@@ -297,30 +208,12 @@ class DeploymentActorTest
 
     val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Set(task1_2)))
 
-    when(tracker.appTasksSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
+    when(f.tracker.appTasksLaunchedSync(app1.id)).thenReturn(Set(task1_1, task1_2, task1_3))
 
-    when(driver.killTask(task1_2.taskId.mesosTaskId)).thenAnswer(new Answer[Status] {
-      def answer(invocation: InvocationOnMock): Status = {
-        system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id("task1_2"), "TASK_KILLED", "", app1.id, "", Nil, Nil, app1New.version.toString))
-        Status.DRIVER_RUNNING
-      }
-    })
+    f.driverKillSendsStatusKilledFor(app1, task1_2)
 
     try {
-      TestActorRef(
-        DeploymentActor.props(
-          managerProbe.ref,
-          receiverProbe.ref,
-          driver,
-          scheduler,
-          plan,
-          tracker,
-          queue,
-          storage,
-          hcManager,
-          system.eventStream
-        )
-      )
+      f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
 
       plan.steps.zipWithIndex.foreach {
         case (step, num) => managerProbe.expectMsg(5.seconds, DeploymentStepInfo(plan, step, num + 1))
@@ -328,11 +221,50 @@ class DeploymentActorTest
 
       managerProbe.expectMsg(5.seconds, DeploymentFinished(plan))
 
-      verify(driver, times(1)).killTask(task1_2.taskId.mesosTaskId)
-      verifyNoMoreInteractions(driver)
+      verify(f.driver, times(1)).killTask(task1_2.taskId.mesosTaskId)
+      verifyNoMoreInteractions(f.driver)
     }
     finally {
-      system.shutdown()
+      f.system.shutdown()
     }
+  }
+
+  class Fixture {
+    val tracker: TaskTracker = mock[TaskTracker]
+    val queue: LaunchQueue = mock[LaunchQueue]
+    val driver: SchedulerDriver = mock[SchedulerDriver]
+    val scheduler: SchedulerActions = mock[SchedulerActions]
+    val storage: StorageProvider = mock[StorageProvider]
+    val hcManager: HealthCheckManager = mock[HealthCheckManager]
+    val config: UpgradeConfig = mock[UpgradeConfig]
+    implicit val system = ActorSystem("TestSystem")
+    config.killBatchSize returns 100
+    config.killBatchCycle returns 10.seconds
+
+    def driverKillSendsStatusKilledFor(app: AppDefinition, task: Task): Unit = {
+      driver.killTask(task.taskId.mesosTaskId) answers { args =>
+        system.eventStream.publish(MesosStatusUpdateEvent(
+          slaveId = "", taskId = task.taskId, taskStatus = "TASK_KILLED", message = "", appId = app.id, host = "",
+          ipAddresses = Nil, ports = Nil, version = app.version.toString))
+        Status.DRIVER_RUNNING
+      }
+    }
+
+    def deploymentActor(manager: ActorRef, receiver: ActorRef, plan: DeploymentPlan) = TestActorRef(
+      DeploymentActor.props(
+        manager,
+        receiver,
+        driver,
+        scheduler,
+        plan,
+        tracker,
+        queue,
+        storage,
+        hcManager,
+        system.eventStream,
+        config
+      )
+    )
+
   }
 }

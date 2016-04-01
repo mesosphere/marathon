@@ -3,11 +3,11 @@ package mesosphere.mesos
 import com.google.protobuf.{ ByteString, TextFormat }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
-import mesosphere.marathon.api.serialization.ContainerSerializer
+import mesosphere.marathon.api.serialization.{ PortDefinitionSerializer, ContainerSerializer }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ AppDefinition, DiscoveryInfo, IpAddress, PathId }
-import mesosphere.mesos.ResourceMatcher.ResourceMatch
+import mesosphere.marathon.state.{ PersistentVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
+import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
@@ -21,67 +21,75 @@ class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => Task.Id,
                   config: MarathonConf) {
 
-  import mesosphere.mesos.protos.Implicits._
+  val log = LoggerFactory.getLogger(getClass)
 
-  val log = LoggerFactory.getLogger(getClass.getName)
+  def build(
+    offer: Offer,
+    resourceMatchOpt: Option[ResourceMatcher.ResourceMatch],
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch] = None): Option[(TaskInfo, Seq[Int])] = {
+
+    def logInsufficientResources(): Unit = {
+      val appHostPorts = if (app.requirePorts) app.portNumbers else app.portNumbers.map(_ => 0)
+      val containerHostPorts: Option[Seq[Int]] = app.containerHostPorts
+      val hostPorts = containerHostPorts.getOrElse(appHostPorts)
+      val staticHostPorts = hostPorts.filter(_ != 0)
+      val numberDynamicHostPorts = hostPorts.count(_ == 0)
+
+      val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
+        Some(s"[${staticHostPorts.mkString(", ")}] required")
+      }
+      else {
+        None
+      }
+
+      val maybeDynamic: Option[String] = if (numberDynamicHostPorts > 0) {
+        Some(s"$numberDynamicHostPorts dynamic")
+      }
+      else {
+        None
+      }
+
+      val portStrings = Seq(maybeStatic, maybeDynamic).flatten.mkString(" + ")
+
+      val portsString = s"ports=($portStrings)"
+
+      log.info(
+        s"Offer [${offer.getId.getValue}]. Insufficient resources for [${app.id}] (need cpus=${app.cpus}, " +
+          s"mem=${app.mem}, disk=${app.disk}, $portsString, available in offer: " +
+          s"[${TextFormat.shortDebugString(offer)}]"
+      )
+    }
+
+    resourceMatchOpt match {
+      case Some(resourceMatch) =>
+        build(offer, resourceMatch, volumeMatchOpt)
+      case _ =>
+        if (log.isInfoEnabled) logInsufficientResources()
+        None
+    }
+  }
 
   def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Int])] = {
 
-    val acceptedResourceRoles: Set[String] = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
-
-    if (log.isDebugEnabled) {
-      log.debug(s"acceptedResourceRoles $acceptedResourceRoles")
+    val acceptedResourceRoles: Set[String] = {
+      val roles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      if (log.isDebugEnabled) log.debug(s"acceptedResourceRoles $roles")
+      roles
     }
 
-    ResourceMatcher.matchResources(
-      offer, app, runningTasks,
-      acceptedResourceRoles = acceptedResourceRoles) match {
+    val resourceMatch =
+      ResourceMatcher.matchResources(
+        offer, app, runningTasks, ResourceSelector(acceptedResourceRoles, reserved = false))
 
-        case Some(ResourceMatch(cpu, mem, disk, ranges)) =>
-          build(offer, cpu, mem, disk, ranges)
-
-        case _ =>
-          def logInsufficientResources(): Unit = {
-            val appHostPorts = if (app.requirePorts) app.ports else app.ports.map(_ => 0)
-            val containerHostPorts: Option[Seq[Int]] = app.containerHostPorts
-            val hostPorts = containerHostPorts.getOrElse(appHostPorts)
-            val staticHostPorts = hostPorts.filter(_ != 0)
-            val numberDynamicHostPorts = hostPorts.count(_ == 0)
-
-            val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
-              Some(s"[${staticHostPorts.mkString(", ")}] required")
-            }
-            else {
-              None
-            }
-
-            val maybeDynamic: Option[String] = if (numberDynamicHostPorts > 0) {
-              Some(s"$numberDynamicHostPorts dynamic")
-            }
-            else {
-              None
-            }
-
-            val portStrings = Seq(maybeStatic, maybeDynamic).flatten.mkString(" + ")
-
-            val portsString = s"ports=($portStrings)"
-
-            log.info(
-              s"Offer [${offer.getId.getValue}]. Insufficient resources for [${app.id}] (need cpus=${app.cpus}, " +
-                s"mem=${app.mem}, disk=${app.disk}, $portsString, available in offer: " +
-                s"[${TextFormat.shortDebugString(offer)}]"
-            )
-          }
-
-          if (log.isInfoEnabled) logInsufficientResources()
-          None
-      }
+    build(offer, resourceMatch)
   }
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
-  private def build(offer: Offer, cpuRole: String, memRole: String, diskRole: String,
-                    portsResources: Seq[RangesResource]): Some[(TaskInfo, Seq[Int])] = {
+  private[this] def build(
+    offer: Offer,
+    resourceMatch: ResourceMatch,
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): Some[(TaskInfo, Seq[Int])] = {
 
     val executor: Executor = if (app.executor == "") {
       config.executor
@@ -91,8 +99,6 @@ class TaskBuilder(app: AppDefinition,
     }
 
     val host: Option[String] = Some(offer.getHostname)
-
-    val ports = portsResources.flatMap(_.ranges.flatMap(_.asScala()).to[Seq].map(_.toInt))
 
     val labels = app.labels.map {
       case (key, value) =>
@@ -105,32 +111,20 @@ class TaskBuilder(app: AppDefinition,
       .setName(app.id.toHostname)
       .setTaskId(taskId.mesosTaskId)
       .setSlaveId(offer.getSlaveId)
-      .addResources(ScalarResource(Resource.CPUS, app.cpus, cpuRole))
-      .addResources(ScalarResource(Resource.MEM, app.mem, memRole))
+      .addAllResources(resourceMatch.resources.asJava)
 
-    val discoveryInfoProto = computeDiscoveryInfo(app)
-    discoveryInfoProto.map(builder.setDiscovery)
-
-    if (app.disk != 0) {
-      // This is only supported since Mesos 0.22.0 and will result in TASK_LOST messages in combination
-      // with older mesos versions. So if the user leaves this untouched, we will NOT pass it to
-      // Mesos. If the user chooses a value != 0, we assume that they rely on this value and we DO pass it to Mesos
-      // irrespective of the version.
-      //
-      // This is not enforced in Mesos without specifically configuring the appropriate enforcer.
-      builder.addResources(ScalarResource(Resource.DISK, app.disk, diskRole))
-    }
+    builder.setDiscovery(computeDiscoveryInfo(app, resourceMatch.hostPorts))
 
     if (labels.nonEmpty)
       builder.setLabels(Labels.newBuilder.addAllLabels(labels.asJava))
 
-    portsResources.foreach(builder.addResources(_))
+    volumeMatchOpt.foreach(_.persistentVolumeResources.foreach(builder.addResources(_)))
 
-    val containerProto = computeContainerInfo(ports)
+    val containerProto = computeContainerInfo(resourceMatch.hostPorts)
     val envPrefix: Option[String] = config.envVarsPrefix.get
     executor match {
       case CommandExecutor() =>
-        builder.setCommand(TaskBuilder.commandInfo(app, Some(taskId), host, ports, envPrefix))
+        builder.setCommand(TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix))
         containerProto.foreach(builder.setContainer)
 
       case PathExecutor(path) =>
@@ -138,7 +132,8 @@ class TaskBuilder(app: AppDefinition,
         val executorPath = s"'$path'" // TODO: Really escape this.
         val cmd = app.cmd orElse app.args.map(_ mkString " ") getOrElse ""
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
-        val command = TaskBuilder.commandInfo(app, Some(taskId), host, ports, envPrefix).toBuilder.setValue(shell)
+        val command =
+          TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix).toBuilder.setValue(shell)
 
         val info = ExecutorInfo.newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
@@ -171,26 +166,31 @@ class TaskBuilder(app: AppDefinition,
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
 
-    Some(builder.build -> ports)
+    Some(builder.build -> resourceMatch.hostPorts)
   }
 
-  protected def computeDiscoveryInfo(app: AppDefinition): Option[org.apache.mesos.Protos.DiscoveryInfo] = {
-    // TODO (gkleiman@): fill in DiscoveryInfo even if an app doesn't request an IP-per-task
-    app.ipAddress match {
+  protected def computeDiscoveryInfo(app: AppDefinition, hostPorts: Seq[Int]): org.apache.mesos.Protos.DiscoveryInfo = {
+    val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
+    discoveryInfoBuilder.setName(app.id.toHostname)
+    discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
+
+    val portProtos = app.ipAddress match {
       case Some(IpAddress(_, _, DiscoveryInfo(ports))) if ports.nonEmpty =>
-        val builder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
-
-        builder.setName(app.id.toHostname)
-        // TODO(gkleiman@) define the default visibility
-        builder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
-
-        val portsProto = org.apache.mesos.Protos.Ports.newBuilder
-        portsProto.addAllPorts(ports.map(_.toProto).asJava)
-        builder.setPorts(portsProto)
-
-        Some(builder.build)
-      case _ => None
+        ports.map(_.toProto).asJava
+      case _ =>
+        // Serialize app.portDefinitions to protos. The port numbers are the service ports, we need to
+        // overwrite them the port numbers assigned to this particular task.
+        app.portDefinitions.zip(hostPorts).map {
+          case (portDefinition, hostPort) =>
+            PortDefinitionSerializer.toProto(portDefinition).toBuilder.setNumber(hostPort).build
+        }.asJava
     }
+
+    val portsProto = org.apache.mesos.Protos.Ports.newBuilder
+    portsProto.addAllPorts(portProtos)
+    discoveryInfoBuilder.setPorts(portsProto)
+
+    discoveryInfoBuilder.build
   }
 
   protected def computeContainerInfo(ports: Seq[Int]): Option[ContainerInfo] = {
@@ -250,6 +250,10 @@ class TaskBuilder(app: AppDefinition,
       if (!builder.hasType)
         builder.setType(ContainerInfo.Type.MESOS)
 
+      if (builder.getType.equals(ContainerInfo.Type.MESOS)) {
+        builder.setMesos(ContainerInfo.MesosInfo.newBuilder()
+          .build())
+      }
       Some(builder.build)
     }
   }
@@ -268,7 +272,7 @@ object TaskBuilder {
                   ports: Seq[Int],
                   envPrefix: Option[String]): CommandInfo = {
     val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
-    val declaredPorts = containerPorts.getOrElse(app.ports)
+    val declaredPorts = containerPorts.getOrElse(app.portNumbers)
     val envMap: Map[String, String] =
       taskContextEnv(app, taskId) ++
         addPrefix(envPrefix, portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _).toMap) ++

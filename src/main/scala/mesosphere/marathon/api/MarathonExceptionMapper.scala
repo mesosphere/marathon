@@ -1,19 +1,20 @@
 package mesosphere.marathon.api
 
-import javax.ws.rs.ext.{ Provider, ExceptionMapper }
-import javax.ws.rs.core.{ MediaType, Response }
-import com.fasterxml.jackson.databind.JsonMappingException
-import com.google.inject.Singleton
-import org.slf4j.LoggerFactory
-
-import scala.concurrent.TimeoutException
-import mesosphere.marathon.{ Exception => _, _ }
-import com.sun.jersey.api.NotFoundException
-import com.fasterxml.jackson.core.JsonParseException
 import javax.ws.rs.WebApplicationException
 import javax.ws.rs.core.Response.Status
-import play.api.libs.json.{ JsValue, Json, JsObject, JsResultException }
+import javax.ws.rs.core.{ MediaType, Response }
+import javax.ws.rs.ext.{ ExceptionMapper, Provider }
+
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.databind.JsonMappingException
+import com.google.inject.Singleton
+import com.sun.jersey.api.NotFoundException
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.{ Exception => _, _ }
+import org.slf4j.LoggerFactory
+import play.api.libs.json.{ JsResultException, JsValue, Json }
+
+import scala.concurrent.TimeoutException
 
 @Provider
 @Singleton
@@ -42,6 +43,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     //scalastyle:off magic.number
     case e: TimeoutException           => 503 // Service Unavailable
     case e: UnknownAppException        => 404 // Not found
+    case e: UnknownGroupException      => 404 // Not found
     case e: AppLockedException         => 409 // Conflict
     case e: ConflictingChangeException => 409 // Conflict
     case e: BadRequestException        => 400 // Bad Request

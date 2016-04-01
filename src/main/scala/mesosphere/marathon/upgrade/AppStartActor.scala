@@ -9,6 +9,7 @@ import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.Promise
+import scala.util.control.NonFatal
 
 class AppStartActor(
     val driver: SchedulerDriver,
@@ -30,7 +31,9 @@ class AppStartActor(
     eventBus.unsubscribe(self)
     if (!promise.isCompleted) {
       if (promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
-        scheduler.stopApp(driver, app)
+        scheduler.stopApp(driver, app).onFailure {
+          case NonFatal(e) => log.error(s"while stopping app ${app.id}", e)
+        }(context.dispatcher)
       }
     }
   }

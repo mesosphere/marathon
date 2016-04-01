@@ -2,7 +2,7 @@
 
 Create and start a new application.
 
-Here is an example of an application JSON which includes all fields. 
+Here is an example of an application JSON which includes all fields.
 
 ```javascript
 {
@@ -11,9 +11,9 @@ Here is an example of an application JSON which includes all fields.
     "args": ["/bin/sh", "-c", "env && sleep 300"]
     "cpus": 1.5,
     "mem": 256.0,
-    "ports": [
-        8080,
-        9000
+    "portDefinitions": [
+        { "port": 8080, "protocol": "tcp", "name": "http", labels: { "VIP_0": "10.0.0.1:80" } },
+        { "port": 9000, "protocol": "tcp", "name": "admin" }
     ],
     "requirePorts": false,
     "instances": 3,
@@ -83,7 +83,7 @@ Here is an example of an application JSON which includes all fields.
             "maxConsecutiveFailures": 3
         },
         {
-            "protocol": "HTTP",
+            "protocol": "HTTPS",
             "path": "/machinehealth",
             "gracePeriodSeconds": 3,
             "intervalSeconds": 10,
@@ -115,14 +115,14 @@ Here is an example of an application JSON which includes all fields.
 }
 ```
 
-##### id (String) 
+##### id (String)
 
 Unique identifier for the app consisting of a series of names separated by slashes.
 Each name must be at least 1 character and may
 only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters
 (`a-z`). The name may not begin or end with a dash.
 
-The allowable format is represented by the following regular expression 
+The allowable format is represented by the following regular expression
 `^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$`
 
 ##### cmd (String)
@@ -139,9 +139,10 @@ The number of CPU`s this application needs per instance. This number does not ha
 
 ##### mem (Float)
 
-The amount of memory in MB that is needed for the application per instance. 
+The amount of memory in MB that is needed for the application per instance.
 
 ##### ports (Array of Integers)
+Since <span class="label label-default">v0.16.0</span>: __Deprecated__ . Use portDefinitions instead.
 
 An array of required port resources on the host.
 
@@ -167,14 +168,42 @@ via the task resource.
 We will probably provide an alternative way to configure this for non-Docker apps in the future
 as well, see [Rethink ports API](https://github.com/mesosphere/marathon/issues/670).
 
+##### portsDefinitions (Array of Objects)
+
+Since <span class="label label-default">v0.16.0</span>:
+
+An array of required port resources on the host.
+
+The portDefinitions array currently serves multiple roles:
+
+* The number of items in the array determines how many dynamic ports are allocated
+  for every task.
+* For every port that is zero, a globally unique (cluster-wide) port is assigned and
+  provided as part of the app definition to be used in load balancing definitions.
+  See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.html)
+  for details.
+
+Since this is confusing, we recommend to configure ports assignment for Docker containers for `BRIDGE` networking in
+`container.docker.portMappings` instead, see [Docker Containers doc page]({{ site.baseurl
+}}/docs/native-docker.html#bridged-networking-mode)).
+
+Alternatively or if you use the Mesos Containerizer, pass zeros as port values to generate one or more arbitrary
+free ports for each application instance.
+
+Each port value is exposed to the instance via environment variables `$PORT0`, `$PORT1`, etc. Ports assigned to running
+instances are also available via the task resource.
+
+We will probably provide an alternative way to configure this for non-Docker apps in the future
+as well, see [Rethink ports API](https://github.com/mesosphere/marathon/issues/670).
+
 ##### requirePorts (Boolean)
 
 Normally, the host ports of your tasks are automatically assigned. This corresponds to the
 `requirePorts` value `false` which is the default.
 
-If you need more control and want to specify your host ports in advance, you can
- set `requirePorts` to `true`. This way the ports you have specified are used as host ports. That also
- means that Marathon can schedule the associated tasks only on hosts that have the specified ports available.
+If you need more control and want to specify your host ports in advance, you can set `requirePorts` to `true`. This way
+the ports you have specified are used as host ports. That also means that Marathon can schedule the associated tasks
+only on hosts that have the specified ports available.
 
 ##### instances (Integer)
 
@@ -194,7 +223,7 @@ the Mesos slave.  For a discussion of docker-specific options, see the
 [native docker document]({{site.baseurl}}/docs/native-docker.html).
 
 ##### env (Object with String values)
- 
+
 Key value pairs that get added to the environment variables of the process to start.
 
 ##### constraints
@@ -262,20 +291,20 @@ A list of services upon which this application depends. An order is derived from
 ##### healthChecks
 
 An array of checks to be performed on running tasks to determine if they are
-operating as expected. Health checks begin immediately upon task launch. For
-design details, refer to the [health checks](https://github.com/mesosphere/marathon/wiki/Health-Checks)
-wiki page.  By default, health checks are executed by the Marathon scheduler.
+operating as expected. Health checks begin immediately upon task launch.
+By default, health checks are executed by the Marathon scheduler.
 In this case, the only supported protocol is `COMMAND` and each app is limited to
 at most one defined health check.
 
 An HTTP health check is considered passing if (1) its HTTP response code is between
 200 and 399, inclusive, and (2) its response is received within the
-`timeoutSeconds` period. 
+`timeoutSeconds` period.
 
 If a task fails more than `maxConsecutiveFailures`
 health checks consecutively, that task is killed causing Marathon to start
 more instances. These restarts are modulated like any other failing app
 by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
+The kill of the unhealthy task is signalled via `unhealthy_task_kill_event` event.
 
 ###### Health Check Options
 
@@ -288,7 +317,7 @@ by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
 * `maxConsecutiveFailures`(Optional. Default: 3) : Number of consecutive health
   check failures after which the unhealthy task should be killed.
 * `protocol` (Optional. Default: "HTTP"): Protocol of the requests to be
-  performed. One of "HTTP", "TCP", or "Command".
+  performed. One of "HTTP", "HTTPS", "TCP", or "Command".
 * `path` (Optional. Default: "/"): Path to endpoint exposed by the task that
   will provide health  status. Example: "/path/to/health".
   _Note: only used if `protocol == "HTTP"`._
@@ -298,7 +327,7 @@ by `backoffSeconds`, `backoffFactor` and `maxLaunchDelaySeconds`.
   variables like `$PORT1`.
 * `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
   health check is considered a failure regardless of the response.
-  
+
 ##### backoffSeconds, backoffFactor and maxLaunchDelaySeconds
 
 Configures exponential backoff behavior when launching potentially sick apps.
@@ -459,8 +488,8 @@ Transfer-Encoding: chunked
     "id": "/my-app",
     "instances": 2,
     "mem": 50.0,
-    "ports": [
-        0
+    "portDefinitions": [
+        {"port": 0}
     ],
     "requirePorts": false,
     "storeUrls": [],
@@ -475,7 +504,7 @@ Transfer-Encoding: chunked
 ```
 
 ##### Example (create an app with an already existing ID)
-If the ID you are trying to create already exists, then the create operation fails. 
+If the ID you are trying to create already exists, then the create operation fails.
 
 **Request:**
 

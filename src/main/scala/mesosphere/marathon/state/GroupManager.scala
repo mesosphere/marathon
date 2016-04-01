@@ -5,23 +5,21 @@ import javax.inject.{ Inject, Named }
 
 import akka.event.EventStream
 import com.google.inject.Singleton
-
+import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, ModuleNames, PortRangeExhaustedException }
+import mesosphere.marathon._
 import mesosphere.util.CapConcurrentExecutions
-import scala.concurrent.ExecutionContext.Implicits.global
 import org.slf4j.LoggerFactory
-import mesosphere.marathon.core.task.Task
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
-
-import mesosphere.marathon.api.v2.Validation._
 
 /**
   * The group manager is the facade for all group related actions.
@@ -39,8 +37,9 @@ class GroupManager @Singleton @Inject() (
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
   private[this] val zkName = groupRepo.zkRootName
 
-  def rootGroup(): Future[Group] =
+  def rootGroup(): Future[Group] = {
     groupRepo.group(zkName).map(_.getOrElse(Group.empty))
+  }
 
   /**
     * Get all available versions for given group identifier.
@@ -156,8 +155,9 @@ class GroupManager @Singleton @Inject() (
       from <- rootGroup()
       (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
       to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
-      _ = validateOrThrow(to)(validator = Group.groupWithConfigValidator(config.maxApps.get))
+      _ = validateOrThrow(to)(Group.validGroupWithConfig(config.maxApps.get))
       plan = DeploymentPlan(from, to, resolve, version, toKill)
+      _ = validateOrThrow(plan)
       _ = log.info(s"Computed new deployment plan:\n$plan")
       _ <- scheduler.deploy(plan, force)
       _ <- storeUpdatedApps(plan)
@@ -169,6 +169,7 @@ class GroupManager @Singleton @Inject() (
       case Success(plan) =>
         log.info(s"Deployment acknowledged. Waiting to get processed:\n$plan")
         eventBus.publish(GroupChangeSuccess(gid, version.toString))
+      case Failure(ex: AccessDeniedException) => // If the request was not authorized, we should not publish an event
       case Failure(ex) =>
         log.warn(s"Deployment failed for change: $version", ex)
         eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
@@ -203,7 +204,7 @@ class GroupManager @Singleton @Inject() (
   //scalastyle:off method.length
   private[state] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = from.transitiveApps.flatMap(_.ports) ++ to.transitiveApps.flatMap(_.ports)
+    var taken = from.transitiveApps.flatMap(_.portNumbers) ++ to.transitiveApps.flatMap(_.portNumbers)
 
     def nextGlobalFreePort: Int = synchronized {
       val port = portRange.find(!taken.contains(_))
@@ -216,12 +217,19 @@ class GroupManager @Singleton @Inject() (
       port
     }
 
+    def mergeServicePortsAndPortDefinitions(portDefinitions: Seq[PortDefinition], servicePorts: Seq[Int]) = {
+      portDefinitions.zipAll(servicePorts, AppDefinition.RandomPortDefinition, AppDefinition.RandomPortValue).map {
+        case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
+      }
+    }
+
     def assignPorts(app: AppDefinition): AppDefinition = {
+
       //all ports that are already assigned in old app definition, but not used in the new definition
       //if the app uses dynamic ports (0), it will get always the same ports assigned
       val assignedAndAvailable = mutable.Queue(
         from.app(app.id)
-          .map(_.ports.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
+          .map(_.portNumbers.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
           .getOrElse(Nil): _*
       )
 
@@ -249,7 +257,7 @@ class GroupManager @Singleton @Inject() (
       }
 
       app.copy(
-        ports = servicePorts,
+        portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, servicePorts),
         container = newContainer.orElse(app.container)
       )
     }
@@ -259,7 +267,9 @@ class GroupManager @Singleton @Inject() (
         case app: AppDefinition if app.hasDynamicPort => assignPorts(app)
         case app: AppDefinition =>
           // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-          app.copy(ports = app.servicePorts)
+          app.copy(
+            portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
+          )
       }
 
     dynamicApps.foldLeft(to) { (group, app) =>

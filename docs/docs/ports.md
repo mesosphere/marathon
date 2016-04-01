@@ -18,9 +18,11 @@ Port configuration for applications in Marathon can be confusing and there is [a
 
 *portMapping*: A _port mapping_ is necessary for Docker applications that use `BRIDGE` mode networking and is a tuple containing a host port, container port, service port and protocol. Multiple _port mappings_ may be specified for a Marathon application.
 
-*ports*: The _ports_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified.
+*ports*: The _ports_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. Only one of _ports_ and _portDefinitions_ should be defined at the same time.
 
-*protocol*: _Protocol_ specifies the internet protocol to use for a port (e.g. `tcp` or `udp`). This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
+*portDefinitions*: The _portDefinitionss_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. This array is meant to replace the _ports_ array, and makes it possible to specify a port name, protocol and labels. Only one of _ports_ and _portDefinitions_ should be defined at the same time.
+
+*protocol*: _Protocol_ specifies the internet protocol to use for a port (e.g. `tcp`, `udp` or `udp,tcp` for both). This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
 
 *requirePorts*: _requirePorts_ is a property that specifies whether Marathon should specifically look for specified ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to `BRIDGE` mode networking.
 
@@ -68,6 +70,15 @@ You can specify the ports that are available through the `ports` array:
     ],
 ```
 
+Or through the `portDefinitions` array:
+
+```json
+    "portDefinitions": [
+      {"port": 0}, {"port": 0}, {"port": 0}
+    ],
+```
+
+
 In this example, we specify three randomly assigned host ports which would then be available to our command via the environment variables `$PORT0`, `$PORT1` and `$PORT2`. Marathon will also randomly assign three service posts in addition to these three host ports.
 
 You can also specify specific service ports:
@@ -78,7 +89,15 @@ You can also specify specific service ports:
     ],
 ```
 
-In this case, host ports `$PORT0`, `$PORT1` and `$PORT3` remain randomly assigned. However, the three service ports for this application are now `2001`, `2002` and `3000`. 
+Or:
+
+```json
+    "portDefinitions": [
+        {"port": 2001}, {"port": 2002}, {"port": 3000}
+    ],
+```
+
+In this case, host ports `$PORT0`, `$PORT1` and `$PORT3` remain randomly assigned. However, the three service ports for this application are now `2001`, `2002` and `3000`.
 
 In this example, as with the previous one, it is necessary to use a service discovery solution such as HAProxy to proxy requests from service ports to host ports.
 
@@ -94,6 +113,30 @@ If you want the applications service ports to be equal to its host ports, you ca
 The service and host ports (including the environment variables `$PORT0`, `$PORT1`, and `$PORT2`), are both now `2001`, `2002` and `3000`.
 
 This property is useful if you don't use a service discovery solution to proxy requests from service ports to host ports.
+
+
+Defining the `portDefinitions` array allows you to specify a protocol, a name and labels for each port. When starting
+new tasks, Marathon will pass this metadata to Mesos. Mesos will expose this information in the `discovery` field of the
+task. Custom network discovery solutions can consume this field.
+
+Example port definition requesting a dynamic `tcp` port named `http` with the label `VIP_0` set to `10.0.0.1:80`:
+
+```json
+    "portDefinitions": [
+        {
+            "port": 0,
+            "protocol": "tcp",
+            "name": "http",
+            "labels": {"VIP_0": "10.0.0.1:80"}
+        }
+    ],
+```
+
+The `port` field is mandatory. The `protocol`, `name` and `labels` fields are optional. A port definition in which only
+the `port` field is set is equivalent to an element of the `ports` array.
+
+Note that only the `ports` array and the `portDefinitions` array should not be specified together, unless all their
+elements are equivalent.
 
 #### Referencing Ports
 

@@ -13,7 +13,10 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
 
   class Fixture {
     val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), ipAddress = None)
-    val appWithIpAddress = AppDefinition(id = PathId("/foo/bar"), ports = Seq.empty[Int], ipAddress = Some(IpAddress()))
+    val appWithIpAddress = AppDefinition(
+      id = PathId("/foo/bar"),
+      portDefinitions = Seq.empty,
+      ipAddress = Some(IpAddress()))
 
     val networkWithoutIp = MesosProtos.NetworkInfo.newBuilder.build()
 
@@ -30,6 +33,8 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
 
     val host: String = "agent1.mesos"
 
+    import MarathonTestHelper.Implicits._
+
     val taskWithoutIp =
       MarathonTestHelper
         .runningTaskForApp(appWithoutIpAddress.id)
@@ -39,31 +44,31 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
       MarathonTestHelper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
-        .withLaunched(_.copy(networking = Task.NetworkInfoList(networkWithOneIp1)))
+        .withNetworking(Task.NetworkInfoList(networkWithOneIp1))
 
     val taskWithMultipleNetworksAndOneIp =
       MarathonTestHelper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
-        .withLaunched(_.copy(networking = Task.NetworkInfoList(networkWithoutIp, networkWithOneIp1)))
+        .withNetworking(Task.NetworkInfoList(networkWithoutIp, networkWithOneIp1))
 
     val taskWithMultipleNetworkAndNoIp =
       MarathonTestHelper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
-        .withLaunched(_.copy(networking = Task.NetworkInfoList(networkWithoutIp, networkWithoutIp)))
+        .withNetworking(Task.NetworkInfoList(networkWithoutIp, networkWithoutIp))
 
     val taskWithOneNetworkAndMultipleIPs =
       MarathonTestHelper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
-        .withLaunched(_.copy(networking = Task.NetworkInfoList(networkWithMultipleIps)))
+        .withNetworking(Task.NetworkInfoList(networkWithMultipleIps))
 
     val taskWithMultipleNetworkAndMultipleIPs =
       MarathonTestHelper
         .runningTaskForApp(appWithoutIpAddress.id)
         .withAgentInfo(_.copy(host = host))
-        .withLaunched(_.copy(networking = Task.NetworkInfoList(networkWithOneIp1, networkWithOneIp2)))
+        .withNetworking(Task.NetworkInfoList(networkWithOneIp1, networkWithOneIp2))
   }
 
   test("effectiveIpAddress returns the agent address for MarathonTask instances without their own IP addresses") {

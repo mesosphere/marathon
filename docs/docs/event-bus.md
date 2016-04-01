@@ -35,28 +35,28 @@ Fired every time Marathon receives an API request that modifies an app (create, 
   "uri": "/v2/apps/my-app",
   "appDefinition": {
     "args": [],
-    "backoffFactor": 1.15, 
-    "backoffSeconds": 1, 
-    "cmd": "sleep 30", 
-    "constraints": [], 
-    "container": null, 
-    "cpus": 0.2, 
-    "dependencies": [], 
-    "disk": 0.0, 
-    "env": {}, 
-    "executor": "", 
-    "healthChecks": [], 
-    "id": "/my-app", 
-    "instances": 2, 
-    "mem": 32.0, 
-    "ports": [10001], 
-    "requirePorts": false, 
-    "storeUrls": [], 
+    "backoffFactor": 1.15,
+    "backoffSeconds": 1,
+    "cmd": "sleep 30",
+    "constraints": [],
+    "container": null,
+    "cpus": 0.2,
+    "dependencies": [],
+    "disk": 0.0,
+    "env": {},
+    "executor": "",
+    "healthChecks": [],
+    "id": "/my-app",
+    "instances": 2,
+    "mem": 32.0,
+    "ports": [10001],
+    "requirePorts": false,
+    "storeUrls": [],
     "upgradeStrategy": {
         "minimumHealthCapacity": 1.0
-    }, 
-    "uris": [], 
-    "user": null, 
+    },
+    "uris": [],
+    "user": null,
     "version": "2014-09-09T05:57:50.866Z"
   }
 }
@@ -191,6 +191,19 @@ Fired when a new http callback subscriber is added or removed:
 }
 ```
 
+``` json
+{
+  "appId":"/my-app",
+  "taskId":"my-app_0-1396592784349",
+  "version":"2016-03-16T13:05:00.590Z",
+  "reason":"500 Internal Server Error",
+  "host":"localhost",
+  "slaveId":"4fb620fa-ba8d-4eb0-8ae3-f2912aaf015c-S0",
+  "eventType":"unhealthy_task_kill_event",
+  "timestamp":"2016-03-21T09:15:10.764Z"
+}
+```
+
 ### Deployments
 
 ```json
@@ -235,44 +248,44 @@ Fired when a new http callback subscriber is added or removed:
   "plan": {
     "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b",
     "original": {
-      "apps": [], 
-      "dependencies": [], 
-      "groups": [], 
-      "id": "/", 
+      "apps": [],
+      "dependencies": [],
+      "groups": [],
+      "id": "/",
       "version": "2014-09-09T06:30:49.667Z"
     },
     "target": {
       "apps": [
         {
           "args": [],
-          "backoffFactor": 1.15, 
-          "backoffSeconds": 1, 
-          "cmd": "sleep 30", 
-          "constraints": [], 
-          "container": null, 
-          "cpus": 0.2, 
-          "dependencies": [], 
-          "disk": 0.0, 
-          "env": {}, 
-          "executor": "", 
-          "healthChecks": [], 
-          "id": "/my-app", 
-          "instances": 2, 
-          "mem": 32.0, 
-          "ports": [10001], 
-          "requirePorts": false, 
-          "storeUrls": [], 
+          "backoffFactor": 1.15,
+          "backoffSeconds": 1,
+          "cmd": "sleep 30",
+          "constraints": [],
+          "container": null,
+          "cpus": 0.2,
+          "dependencies": [],
+          "disk": 0.0,
+          "env": {},
+          "executor": "",
+          "healthChecks": [],
+          "id": "/my-app",
+          "instances": 2,
+          "mem": 32.0,
+          "ports": [10001],
+          "requirePorts": false,
+          "storeUrls": [],
           "upgradeStrategy": {
               "minimumHealthCapacity": 1.0
-          }, 
-          "uris": [], 
-          "user": null, 
+          },
+          "uris": [],
+          "user": null,
           "version": "2014-09-09T05:57:50.866Z"
         }
-      ], 
-      "dependencies": [], 
-      "groups": [], 
-      "id": "/", 
+      ],
+      "dependencies": [],
+      "groups": [],
+      "id": "/",
       "version": "2014-09-09T05:57:50.866Z"
     },
     "steps": [
@@ -301,44 +314,44 @@ Fired when a new http callback subscriber is added or removed:
   "plan": {
     "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b",
     "original": {
-      "apps": [], 
-      "dependencies": [], 
-      "groups": [], 
-      "id": "/", 
+      "apps": [],
+      "dependencies": [],
+      "groups": [],
+      "id": "/",
       "version": "2014-09-09T06:30:49.667Z"
     },
     "target": {
       "apps": [
         {
           "args": [],
-          "backoffFactor": 1.15, 
-          "backoffSeconds": 1, 
-          "cmd": "sleep 30", 
-          "constraints": [], 
-          "container": null, 
-          "cpus": 0.2, 
-          "dependencies": [], 
-          "disk": 0.0, 
-          "env": {}, 
-          "executor": "", 
-          "healthChecks": [], 
-          "id": "/my-app", 
-          "instances": 2, 
-          "mem": 32.0, 
-          "ports": [10001], 
-          "requirePorts": false, 
-          "storeUrls": [], 
+          "backoffFactor": 1.15,
+          "backoffSeconds": 1,
+          "cmd": "sleep 30",
+          "constraints": [],
+          "container": null,
+          "cpus": 0.2,
+          "dependencies": [],
+          "disk": 0.0,
+          "env": {},
+          "executor": "",
+          "healthChecks": [],
+          "id": "/my-app",
+          "instances": 2,
+          "mem": 32.0,
+          "ports": [10001],
+          "requirePorts": false,
+          "storeUrls": [],
           "upgradeStrategy": {
               "minimumHealthCapacity": 1.0
-          }, 
-          "uris": [], 
-          "user": null, 
+          },
+          "uris": [],
+          "user": null,
           "version": "2014-09-09T05:57:50.866Z"
         }
-      ], 
-      "dependencies": [], 
-      "groups": [], 
-      "id": "/", 
+      ],
+      "dependencies": [],
+      "groups": [],
+      "id": "/",
       "version": "2014-09-09T05:57:50.866Z"
     },
     "steps": [
@@ -367,44 +380,44 @@ Fired when a new http callback subscriber is added or removed:
   "plan": {
     "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b",
     "original": {
-      "apps": [], 
-      "dependencies": [], 
-      "groups": [], 
-      "id": "/", 
+      "apps": [],
+      "dependencies": [],
+      "groups": [],
+      "id": "/",
       "version": "2014-09-09T06:30:49.667Z"
     },
     "target": {
       "apps": [
         {
           "args": [],
-          "backoffFactor": 1.15, 
-          "backoffSeconds": 1, 
-          "cmd": "sleep 30", 
-          "constraints": [], 
-          "container": null, 
-          "cpus": 0.2, 
-          "dependencies": [], 
-          "disk": 0.0, 
-          "env": {}, 
-          "executor": "", 
-          "healthChecks": [], 
-          "id": "/my-app", 
-          "instances": 2, 
-          "mem": 32.0, 
-          "ports": [10001], 
-          "requirePorts": false, 
-          "storeUrls": [], 
+          "backoffFactor": 1.15,
+          "backoffSeconds": 1,
+          "cmd": "sleep 30",
+          "constraints": [],
+          "container": null,
+          "cpus": 0.2,
+          "dependencies": [],
+          "disk": 0.0,
+          "env": {},
+          "executor": "",
+          "healthChecks": [],
+          "id": "/my-app",
+          "instances": 2,
+          "mem": 32.0,
+          "ports": [10001],
+          "requirePorts": false,
+          "storeUrls": [],
           "upgradeStrategy": {
               "minimumHealthCapacity": 1.0
-          }, 
-          "uris": [], 
-          "user": null, 
+          },
+          "uris": [],
+          "user": null,
           "version": "2014-09-09T05:57:50.866Z"
         }
-      ], 
-      "dependencies": [], 
-      "groups": [], 
-      "id": "/", 
+      ],
+      "dependencies": [],
+      "groups": [],
+      "id": "/",
       "version": "2014-09-09T05:57:50.866Z"
     },
     "steps": [

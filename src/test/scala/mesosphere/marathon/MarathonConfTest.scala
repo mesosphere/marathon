@@ -1,9 +1,10 @@
 package mesosphere.marathon
 
+import org.scalatest.Matchers
+
 import scala.util.{ Failure, Try }
 
-class MarathonConfTest extends MarathonSpec {
-
+class MarathonConfTest extends MarathonSpec with Matchers {
   private[this] val principal = "foo"
   private[this] val secretFile = "/bar/baz"
 
@@ -68,7 +69,8 @@ class MarathonConfTest extends MarathonSpec {
     val triedConfig = Try(MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050",
       "--default_accepted_resource_roles", "*,marathon"
-    ))
+    )
+    )
     assert(triedConfig.isFailure)
     triedConfig match {
       case Failure(e) if e.getMessage ==
@@ -111,5 +113,33 @@ class MarathonConfTest extends MarathonSpec {
     )
     assert(conf.defaultAcceptedResourceRolesSet == Set("*", "marathon"))
   }
-}
 
+  test("Features should be empty by default") {
+    val conf = MarathonTestHelper.makeConfig(
+      "--master", "127.0.0.1:5050"
+    )
+
+    conf.features.get should be(empty)
+  }
+
+  test("Features should allow vips") {
+    val conf = MarathonTestHelper.makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--enable_features", "vips"
+    )
+
+    conf.features() should be(Set("vips"))
+  }
+
+  test("Features should not allow unknown features") {
+    val confTry = Try(
+      MarathonTestHelper.makeConfig(
+        "--master", "127.0.0.1:5050",
+        "--enable_features", "unknown"
+      )
+    )
+
+    confTry.isFailure should be(true)
+    confTry.failed.get.getMessage should include("Unknown features specified: unknown.")
+  }
+}

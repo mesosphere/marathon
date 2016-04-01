@@ -9,6 +9,7 @@ import mesosphere.marathon.api.serialization.{
   DockerSerializer,
   ContainerSerializer
 }
+import com.wix.accord._
 import org.scalatest.Matchers
 import org.apache.mesos.{ Protos => mesos }
 import play.api.libs.json.Json
@@ -39,8 +40,18 @@ class ContainerTest extends MarathonSpec with Matchers {
           image = "group/image",
           network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
           portMappings = Some(Seq(
-            Container.Docker.PortMapping(8080, 32001, 9000, Container.Docker.PortMapping.TCP),
-            Container.Docker.PortMapping(8081, 32002, 9001, Container.Docker.PortMapping.UDP)
+            Container.Docker.PortMapping(
+              containerPort = 8080,
+              hostPort = 32001,
+              servicePort = 9000,
+              protocol = Container.Docker.PortMapping.TCP,
+              name = Some("http"),
+              labels = Map("foo" -> "bar")),
+            Container.Docker.PortMapping(
+              containerPort = 8081,
+              hostPort = 32002,
+              servicePort = 9001,
+              protocol = Container.Docker.PortMapping.UDP)
           )
           )
         )
@@ -77,6 +88,29 @@ class ContainerTest extends MarathonSpec with Matchers {
             Parameter("def", "789")
           ),
           forcePullImage = true
+        )
+      )
+    )
+
+    lazy val container5 = Container(
+      `type` = mesos.ContainerInfo.Type.DOCKER,
+      volumes = Nil,
+      docker = Some(
+        Container.Docker(
+          image = "group/image",
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(
+              containerPort = 8080,
+              hostPort = 32001,
+              servicePort = 9000,
+              protocol = "tcp,udp"),
+            Container.Docker.PortMapping(
+              containerPort = 8081,
+              hostPort = 32002,
+              servicePort = 9001,
+              protocol = "udp,tcp")
+          ))
         )
       )
     )
@@ -143,6 +177,8 @@ class ContainerTest extends MarathonSpec with Matchers {
     assert(proto3.getDocker.hasForcePullImage)
     assert(f.container3.docker.get.forcePullImage == proto3.getDocker.getForcePullImage)
 
+    val proto5 = ContainerSerializer.toProto(f.container5)
+    assert(proto5.getDocker.getPortMappingsCount == 2)
   }
 
   test("ToMesos") {
@@ -187,6 +223,14 @@ class ContainerTest extends MarathonSpec with Matchers {
     )
     assert(proto3.getDocker.hasForcePullImage)
     assert(f.container3.docker.get.forcePullImage == proto3.getDocker.getForcePullImage)
+
+    val proto5 = ContainerSerializer.toMesos(f.container5)
+    assert(proto5.getDocker.getPortMappingsCount == 4)
+    val pms5 = proto5.getDocker.getPortMappingsList.asScala
+    assert(pms5.groupBy(_.getHostPort).contains(32001))
+    assert(pms5.groupBy(_.getHostPort).contains(32002))
+    assert(pms5.groupBy(_.getHostPort)(32001).map(_.getProtocol).toSet == Set("tcp", "udp"))
+    assert(pms5.groupBy(_.getHostPort)(32002).map(_.getProtocol).toSet == Set("tcp", "udp"))
   }
 
   test("ConstructFromProto") {
@@ -259,6 +303,7 @@ class ContainerTest extends MarathonSpec with Matchers {
     val f = fixture()
     assert (readResult3 == f.container)
   }
+
   test("Reading JSON with portMappings") {
     val json4 =
       """
@@ -268,8 +313,9 @@ class ContainerTest extends MarathonSpec with Matchers {
           "image": "group/image",
           "network": "BRIDGE",
           "portMappings": [
-            { "containerPort": 8080, "hostPort": 32001, "servicePort": 9000, "protocol": "tcp"},
-            { "containerPort": 8081, "hostPort": 32002, "servicePort": 9001, "protocol": "udp"}
+            { "containerPort": 8080, "hostPort": 32001, "servicePort": 9000, "protocol": "tcp", "name": "http",
+              "labels": { "foo": "bar" } },
+            { "containerPort": 8081, "hostPort": 32002, "servicePort": 9001, "protocol": "udp" }
           ]
         }
       }
@@ -280,7 +326,62 @@ class ContainerTest extends MarathonSpec with Matchers {
     assert(readResult4 == f.container2)
   }
 
-  test("SerializationRoundTrip  with privileged, networking and parameters") {
+  test("Reading JSON with invalid-protocol portMappings") {
+    val json =
+      """
+      {
+        "type": "DOCKER",
+        "docker": {
+          "image": "group/image",
+          "network": "BRIDGE",
+          "portMappings": [
+            { "containerPort": 8080, "hostPort": 32001, "servicePort": 9000, "protocol": "http" }
+          ]
+        }
+      }
+      """
+    assert(validate(fromJson(json)).isFailure)
+  }
+
+  test("Reading JSON with multi-protocol portMappings") {
+    val json5 =
+      """
+      {
+        "type": "DOCKER",
+        "docker": {
+          "image": "group/image",
+          "network": "BRIDGE",
+          "portMappings": [
+            { "containerPort": 8080, "hostPort": 32001, "servicePort": 9000, "protocol": "tcp,udp" },
+            { "containerPort": 8081, "hostPort": 32002, "servicePort": 9001, "protocol": "udp,tcp" }
+          ]
+        }
+      }
+      """
+
+    val readResult5 = fromJson(json5)
+    val f = fixture()
+    assert(readResult5 == f.container5)
+  }
+
+  test("Reading JSON with non-unique multi-protocol portMappings") {
+    val json =
+      """
+      {
+        "type": "DOCKER",
+        "docker": {
+          "image": "group/image",
+          "network": "BRIDGE",
+          "portMappings": [
+            { "containerPort": 8080, "hostPort": 32001, "servicePort": 9000, "protocol": "tcp,udp,udp" }
+          ]
+        }
+      }
+      """
+    assert(validate(fromJson(json)).isFailure)
+  }
+
+  test("SerializationRoundTrip with privileged, networking and parameters") {
     JsonTestHelper.assertSerializationRoundtripWorks(fixture().container3)
   }
 

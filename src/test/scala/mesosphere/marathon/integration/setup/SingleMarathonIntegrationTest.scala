@@ -3,12 +3,14 @@ package mesosphere.marathon.integration.setup
 import java.io.File
 
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.integration.facades.{ MesosFacade, ITEnrichedTask, ITDeploymentResult, MarathonFacade }
 import mesosphere.marathon.state.{ DockerVolume, AppDefinition, Container, PathId }
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
 import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
 import org.slf4j.LoggerFactory
+import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{ FiniteDuration, _ }
@@ -47,8 +49,16 @@ trait SingleMarathonIntegrationTest
 
   val testBasePath: PathId = PathId("/marathonintegrationtest")
   override lazy val marathon: MarathonFacade = new MarathonFacade(config.marathonUrl, testBasePath)
+  lazy val mesos: MesosFacade = new MesosFacade(s"http://${config.master}")
 
-  def extraMarathonParameters: List[String] = List.empty[String]
+  protected def extraMarathonParameters: List[String] = List.empty[String]
+  protected def marathonParameters: List[String] = List(
+    "--master", config.master,
+    "--event_subscriber", "http_callback",
+    "--access_control_allow_origin", "*",
+    "--reconciliation_initial_delay", "600000",
+    "--min_revive_offers_interval", "100"
+  ) ++ extraMarathonParameters
 
   lazy val marathonProxy = {
     startMarathon(config.marathonBasePort + 1, "--master", config.master, "--event_subscriber", "http_callback")
@@ -80,15 +90,9 @@ trait SingleMarathonIntegrationTest
       ProcessKeeper.startMesosLocal()
       cleanMarathonState()
 
-      val parameters = List(
-        "--master", config.master,
-        "--event_subscriber", "http_callback",
-        "--access_control_allow_origin", "*",
-        "--reconciliation_initial_delay", "600000",
-        "--min_revive_offers_interval", "100"
-      ) ++ extraMarathonParameters
-      startMarathon(config.marathonBasePort, parameters: _*)
+      startMarathon(config.marathonBasePort, marathonParameters: _*)
 
+      waitForCleanSlateInMesos()
       log.info("Setting up local mesos/marathon infrastructure: done.")
     }
     else {
@@ -127,7 +131,7 @@ trait SingleMarathonIntegrationTest
 
   def waitForTasks(appId: PathId, num: Int, maxWait: FiniteDuration = 30.seconds): List[ITEnrichedTask] = {
     def checkTasks: Option[List[ITEnrichedTask]] = {
-      val tasks = Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil)
+      val tasks = Try(marathon.tasks(appId)).map(_.value).getOrElse(Nil).filter(_.launched)
       if (tasks.size == num) Some(tasks) else None
     }
     WaitTestSupport.waitFor(s"$num tasks to launch", maxWait)(checkTasks)
@@ -219,14 +223,14 @@ trait SingleMarathonIntegrationTest
   }
 
   def taskProxyChecks(appId: PathId, versionId: String, state: Boolean): Seq[IntegrationHealthCheck] = {
-    marathon.tasks(appId).value.flatMap(_.ports).map { port =>
+    marathon.tasks(appId).value.flatMap(_.ports).flatMap(_.map { port =>
       val check = new IntegrationHealthCheck(appId, versionId, port, state)
       ExternalMarathonIntegrationTest.healthChecks
         .filter(c => c.appId == appId && c.versionId == versionId)
         .foreach(ExternalMarathonIntegrationTest.healthChecks -= _)
       ExternalMarathonIntegrationTest.healthChecks += check
       check
-    }
+    })
   }
 
   def cleanUp(withSubscribers: Boolean = false, maxWait: FiniteDuration = 30.seconds) {
@@ -239,6 +243,8 @@ trait SingleMarathonIntegrationTest
       waitForChange(deleteResult)
     }
 
+    waitForCleanSlateInMesos()
+
     val apps = marathon.listAppsInBaseGroup
     require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
     val groups = marathon.listGroupsInBaseGroup
@@ -249,5 +255,22 @@ trait SingleMarathonIntegrationTest
     events.clear()
     ExternalMarathonIntegrationTest.healthChecks.clear()
     log.info("CLEAN UP finished !!!!!!!!!")
+  }
+
+  def waitForCleanSlateInMesos(): Boolean = {
+    require(mesos.state.value.agents.size == 1, "one agent expected")
+    WaitTestSupport.waitUntil("clean slate in Mesos", 30.seconds) {
+      val agent = mesos.state.value.agents.head
+      val empty = agent.usedResources.isEmpty && agent.reservedResourcesByRole.isEmpty
+      if (!empty) {
+        import mesosphere.marathon.integration.facades.MesosFormats._
+        log.info(
+          "Waiting for blank slate Mesos...\n \"used_resources\": "
+            + Json.prettyPrint(Json.toJson(agent.usedResources)) + "\n \"reserved_resources\": "
+            + Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
+        )
+      }
+      empty
+    }
   }
 }

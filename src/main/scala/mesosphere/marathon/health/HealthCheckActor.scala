@@ -7,12 +7,11 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.{ MarathonScheduler, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.MarathonSchedulerDriverHolder
 
-class HealthCheckActor(
+private[health] class HealthCheckActor(
     app: AppDefinition,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    marathonScheduler: MarathonScheduler,
     healthCheck: HealthCheck,
     taskTracker: TaskTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
@@ -61,7 +60,7 @@ class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.appTasksSync(app.id).map(_.taskId).toSet
+    val activeTaskIds = taskTracker.appTasksLaunchedSync(app.id).map(_.taskId).toSet
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
     taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
@@ -108,6 +107,17 @@ class HealthCheckActor(
       // kill the task
       marathonSchedulerDriverHolder.driver.foreach { driver =>
         log.info(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
+        eventBus.publish(
+          UnhealthyTaskKillEvent(
+            appId = task.appId,
+            taskId = task.taskId,
+            version = app.version,
+            reason = health.lastFailureCause.getOrElse("unknown"),
+            host = task.agentInfo.host,
+            slaveId = task.agentInfo.agentId,
+            timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
+          )
+        )
         driver.killTask(task.taskId.mesosTaskId)
       }
     }
@@ -182,6 +192,21 @@ class HealthCheckActor(
 }
 
 object HealthCheckActor {
+  def props(
+    app: AppDefinition,
+    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+    healthCheck: HealthCheck,
+    taskTracker: TaskTracker,
+    eventBus: EventStream): Props = {
+
+    Props(new HealthCheckActor(
+      app,
+      marathonSchedulerDriverHolder,
+      healthCheck,
+      taskTracker,
+      eventBus))
+  }
+
   // self-sent every healthCheck.intervalSeconds
   case object Tick
   case class GetTaskHealth(taskId: Task.Id)

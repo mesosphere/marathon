@@ -65,7 +65,6 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
                                     system: ActorSystem,
                                     @Named(STORE_EVENT_SUBSCRIBERS) store: EntityStore[EventSubscribers]): ActorRef = {
     implicit val timeout = HttpEventModule.timeout
-    implicit val ec = HttpEventModule.executionContext
     val local_ip = java.net.InetAddress.getLocalHost.getHostAddress
 
     val actor = system.actorOf(Props(new SubscribersKeeperActor(store)))
@@ -76,7 +75,7 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
         f.onFailure {
           case th: Throwable =>
             log.warn(s"Failed to add $url to event subscribers. exception message => ${th.getMessage}")
-        }
+        }(ExecutionContext.global)
       }
     }
 
@@ -87,9 +86,6 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
 object HttpEventModule {
   final val StatusUpdateActor = "EventsActor"
   final val SubscribersKeeperActor = "SubscriberKeeperActor"
-
-  val executorService = Executors.newCachedThreadPool()
-  val executionContext = ExecutionContext.fromExecutorService(executorService)
 
   //TODO(everpeace) this should be configurable option?
   val timeout = Timeout(10 seconds)

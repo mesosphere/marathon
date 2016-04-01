@@ -42,6 +42,11 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and Marathon scheduler failover.  See the
     description of `--failover_timeout`.
+* <span class="label label-default">v0.16.0</span> `--enable_features` (Optional. Default: None):
+    Enable the selected features. Options to use:
+    - "vips" can be used to enable the networking VIP integration UI.
+    - "task_killing" can be used to enable the TASK_KILLING state in Mesos (0.28 or later)
+    Example: `--enable_features vips,task_killing`
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
@@ -49,7 +54,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     not re-registered with Mesos this long after a failover, Mesos will shut
     down all running tasks started by Marathon.  Requires checkpointing to be
     enabled.
-* `--framework_name` (Optional. Default: marathon-VERSION): The framework name
+* `--framework_name` (Optional. Default: marathon): The framework name
     to register with Mesos.
 * <span class="label label-default">v0.13.0</span> `--[disable_]ha` (Optional. Default: enabled):
     Run Marathon in HA mode with leader election.
@@ -104,8 +109,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Additional callback URLs may also be set dynamically via the REST API.
 * `--zk` (Optional. Default: None): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
-* `--zk_max_versions` (Optional. Default: None): Limit the number of versions
-    stored for one entity.
+* `--zk_max_versions` (Optional. Default: 25): Limit the number of versions stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
     in milliseconds.
 *  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 1.800.000 (30 minutes)): Timeout for ZooKeeper
@@ -130,7 +134,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Enable compression of zk nodes, if the size of the node is bigger than the configured threshold.
 * <span class="label label-default">v0.11.1</span> `--zk_compression_threshold` (Optional. Default:
    64 KB): Threshold in bytes, when compression is applied to the zk node
-* <span class="label label-default">v0.11.1</span> `--max_apps` (Optional):
+* <span class="label label-default">v0.11.1</span> `--max_apps` (Optional. Default: None):
     The maximum number of applications that may be created.
 * <span class="label label-default">v0.13.0</span> `--store_cache` (Optional. Default: true): Enable an in memory cache for the storage layer.
 * <span class="label label-default">v0.13.0</span> `--on_elected_prepare_timeout` (Optional. Default: 3 minutes):
@@ -152,12 +156,12 @@ resource offers Marathon receives from Mesos more efficiently, we added a new of
 to start as many tasks as possible per task offer cycle. The maximum number of tasks to start on one offer is
 configurable with the following startup parameters:
 
-* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 1): Launch at most this
+* <span class="label label-default">v0.8.2</span> `--max_tasks_per_offer` (Optional. Default: 5): Launch at most this
     number of tasks per Mesos offer. Usually,
     there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.
 
 To prevent overloading Mesos itself, you can also restrict how many tasks Marathon launches per time interval.
-By default, we allow 1000 unconfirmed task launches every 30 seconds. In addition, Marathon launches
+By default, we allow 100 unconfirmed task launches every 30 seconds. In addition, Marathon launches
 more tasks when it gets feedback about running and healthy tasks from Mesos.
 
 * <span class="label label-default">v0.11.0</span> `--launch_token_refresh_interval` (Optional. Default: 30000):
@@ -277,7 +281,7 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of
     concurrent HTTP requests, that is allowed concurrently before requests get answered directly with a
     HTTP 503 Service Temporarily Unavailable.
-    
+
 ### Metrics Flags
 
 * <span class="label label-default">v0.13.0</span> `--[disable_]metrics` (Optional. Default: enabled):
@@ -285,22 +289,22 @@ The Web Site flags control the behavior of Marathon's web site, including the us
     Enabling this might noticeably degrade performance but it helps finding performance problems.
     These measurements can be disabled with --disable_metrics. Other metrics are not affected.
 * <span class="label label-default">v0.13.0</span> `--reporter_graphite` (Optional. Default: disabled):
-    Report metrics to [Graphite](http://graphite.wikidot.com) as defined by the given URL. 
-    Example: `tcp://localhost:2003?prefix=marathon-test&interval=10` 
+    Report metrics to [Graphite](http://graphite.wikidot.com) as defined by the given URL.
+    Example: `tcp://localhost:2003?prefix=marathon-test&interval=10`
     The URL can have several parameters to refine the functionality.
     * prefix: (Default: None) the prefix for all metrics
     * interval: (Default: 10) the interval to report to graphite in seconds
 * <span class="label label-default">v0.13.0</span> `--reporter_datadog` (Optional. Default: disabled):
-    Report metrics to [Datadog](https://www.datadoghq.com) as defined by the given URL. 
+    Report metrics to [Datadog](https://www.datadoghq.com) as defined by the given URL.
     Either use UDP to talk to a datadog agent or HTTP to talk directly to DatadogHQ.
     Example (UDP to agent): `udp://localhost:8125?prefix=marathon-test&tags=marathon&interval=10`
     Example (HTTP to DataDogHQ): `http://datadog?apiKey=abc&prefix=marathon-test&tags=marathon&interval=10`
     The URL can have several parameters to refine the functionality.
-    * expansions: (Default: all) which metric data should be expanded. can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999 
+    * expansions: (Default: all) which metric data should be expanded. can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999
     * interval: (Default: 10) the interval in seconds to report to Datadog
     * prefix: (Default: marathon_test) the prefix is prepended to all metric names
     * tags: (Default: empty) the tags to send with each metric. Can be either simple value like `foo` or key value like `foo:bla`
-    * apiKey: (Default: empty) the api key to use, when directly connecting to Datadog (HTTP) 
+    * apiKey: (Default: empty) the api key to use, when directly connecting to Datadog (HTTP)
 
 ### Debug Flags
 

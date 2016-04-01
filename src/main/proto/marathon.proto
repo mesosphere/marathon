@@ -83,6 +83,7 @@ message ServiceDefinition {
   optional int64 last_config_change_at = 24;
   optional IpAddress ipAddress = 25;
   optional ResidencyDefinition residency = 26;
+  repeated mesos.Port portDefinitions = 27;
 }
 
 message ResourceRoles {
@@ -90,8 +91,31 @@ message ResourceRoles {
 }
 
 message MarathonTask {
-  message ReservationWithVolumes {
+  message Reservation {
+    message State {
+      enum Type {
+        New = 1;
+        Launched = 2;
+        Suspended = 3;
+        Garbage = 4;
+        Unknown = 5;
+      }
+      message Timeout {
+        enum Reason {
+          RelaunchEscalationTimeout = 1;
+          ReservationTimeout = 2;
+        }
+
+        required int64 initiated = 1;
+        required int64 deadline = 2;
+        required Reason reason = 3;
+      }
+      required Type type = 1;
+      optional Timeout timeout = 2;
+    }
+
     repeated string local_volume_ids = 1;
+    required State state = 2;
   }
 
   required string id = 1;
@@ -105,7 +129,7 @@ message MarathonTask {
   optional mesos.TaskStatus status = 9;
   optional mesos.SlaveID slaveId = 10;
   repeated mesos.NetworkInfo networks = 11;
-  optional ReservationWithVolumes reservation_with_volumes = 12; // since 0.16, a list of volumes can be associated with the task ID
+  optional Reservation reservation = 12; // since 0.16, a list of volumes can be associated with the task ID
 }
 
 message MarathonApp {
@@ -132,6 +156,8 @@ message ExtendedContainerInfo {
       required uint32 host_port = 1;
       required uint32 container_port = 2;
       optional string protocol = 3;
+      optional string name = 4;
+      repeated mesos.Label labels = 5;
       optional uint32 service_port = 100 [default = 0];
     }
 

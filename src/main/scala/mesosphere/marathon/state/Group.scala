@@ -3,6 +3,7 @@ package mesosphere.marathon.state
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
@@ -17,7 +18,7 @@ case class Group(
     apps: Set[AppDefinition] = defaultApps,
     groups: Set[Group] = defaultGroups,
     dependencies: Set[PathId] = defaultDependencies,
-    version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] {
+    version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] with IGroup {
 
   override def mergeFromProto(msg: GroupDefinition): Group = Group.fromProto(msg)
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
@@ -84,7 +85,7 @@ case class Group(
   }
 
   /**
-    * Add the given app definition to this group replacing any priorly existing app definition with the same ID.
+    * Add the given app definition to this group replacing any previously existing app definition with the same ID.
     *
     * If a group exists with a conflicting ID which does not contain any app definition, replace that as well.
     */
@@ -209,17 +210,24 @@ object Group {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  implicit val groupValidator: Validator[Group] = validator[Group] { group =>
-    group.id is valid
-    group.apps is valid
-    group.groups is valid
-    group is noAppsAndGroupsWithSameName
-    (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
+  private def validNestedGroup(base: PathId): Validator[Group] =
+    validator[Group] { group =>
+      group.id is validPathWithBase(base)
+      group.apps is every(AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base)))
+      group is noAppsAndGroupsWithSameName
+      (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
+      group is validPorts
+      group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
+    }
 
-    group is validPorts
+  implicit val validRootGroup: Validator[Group] = new Validator[Group] {
+    override def apply(group: Group): Result = {
+      validate(group)(validator =
+        validNestedGroup(PathId.empty))
+    }
   }
 
-  def groupWithConfigValidator(maxApps: Option[Int])(implicit validator: Validator[Group]): Validator[Group] = {
+  def validGroupWithConfig(maxApps: Option[Int])(implicit validator: Validator[Group]): Validator[Group] = {
     new Validator[Group] {
       override def apply(group: Group): Result = {
         maxApps.filter(group.transitiveApps.size > _).map { num =>
@@ -232,23 +240,15 @@ object Group {
   }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
-    new Validator[Group] {
-      def apply(group: Group) = {
-        val groupIds = group.groups.map(_.id)
-        val clashingIds = group.apps.map(_.id).intersect(groupIds)
-
-        if (clashingIds.isEmpty) Success
-        else Failure(Set(RuleViolation(group,
-          s"Groups and Applications may not have the same identifier: ${clashingIds.mkString(", ")}.", None)))
-      }
+    isTrue(s"Groups and Applications may not have the same identifier.") { group =>
+      val groupIds = group.groups.map(_.id)
+      val clashingIds = group.apps.map(_.id).intersect(groupIds)
+      clashingIds.isEmpty
     }
 
   private def noCyclicDependencies(group: Group): Validator[Set[PathId]] =
-    new Validator[Set[PathId]] {
-      def apply(dependencies: Set[PathId]) = {
-        if (group.hasNonCyclicDependencies) Success
-        else Failure(Set(RuleViolation(group, "Dependency graph has cyclic dependencies.", None)))
-      }
+    isTrue("Dependency graph has cyclic dependencies.") { _ =>
+      group.hasNonCyclicDependencies
     }
 
   private def validPorts: Validator[Group] = {

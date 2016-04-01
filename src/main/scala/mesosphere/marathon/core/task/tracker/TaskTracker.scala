@@ -12,8 +12,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   * The TaskTracker exposes the latest known state for every task.
   *
   * It is an read-only interface. For modification, see
-  * * [[TaskCreationHandler]] for creating/removing tasks
-  * * [[TaskUpdater]] for updating a task state according to a status update
+  * * [[TaskStateOpProcessor]] for create, update, delete operations
   *
   * FIXME: To allow introducing the new asynchronous [[TaskTracker]] without needing to
   * refactor a lot of code at once, synchronous methods are still available but should be
@@ -21,6 +20,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   */
 trait TaskTracker {
 
+  def appTasksLaunchedSync(appId: PathId): Iterable[Task]
   def appTasksSync(appId: PathId): Iterable[Task]
   def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]]
 
@@ -32,6 +32,7 @@ trait TaskTracker {
   def tasksByAppSync: TaskTracker.TasksByApp
   def tasksByApp()(implicit ec: ExecutionContext): Future[TaskTracker.TasksByApp]
 
+  def countLaunchedAppTasksSync(appId: PathId): Int
   def countAppTasksSync(appId: PathId): Int
   def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int]
 

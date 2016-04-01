@@ -4,11 +4,11 @@ title: Service Discovery & Load Balancing
 
 # Service Discovery & Load Balancing
 
-Once our app is up and running, we need a way to send traffic to it, from other applications on the same cluster, and from external clients.
+When your app is up and running, you need a way to send traffic to it, from other applications on the same cluster, and from external clients.
 
 There are several ways to do this:
 * [Mesos-DNS](https://github.com/mesosphere/mesos-dns) provides service discovery through the domain name system ([DNS](http://en.wikipedia.org/wiki/Domain_Name_System)).
-* [Marathon-lb](https://github.com/mesosphere/marathon-lb) provides port based service discovery using HAProxy, a lightweight TCP/HTTP proxy.
+* [Marathon-lb](https://github.com/mesosphere/marathon-lb) provides port-based service discovery using HAProxy, a lightweight TCP/HTTP proxy.
 * [haproxy-marathon-bridge](https://github.com/mesosphere/marathon/blob/master/examples/haproxy-marathon-bridge) *(DEPRECATED)* is an example script that configures a local HAProxy installation.
 
 For a detailed description of how ports work in Marathon, see [Ports](ports.html).
@@ -36,6 +36,6 @@ For more information, see the [Marathon-lb repository](https://github.com/mesosp
 
 ## haproxy-marathon-bridge (DEPRECATED)
 
-Marathon ships with a simple shell script called `haproxy-marathon-bridge`, which uses Marathon's REST API to create a config file for HAProxy. The `haproxy-marathon-bridge` provides minimal functionality and is easier to understand for beginners or serves as a good starting point for a custom implementation. Note that this script is now deprecated and should not be used as-is in production. For production use, please consider using Marathon-lb, above.
+Marathon ships with a simple shell script called `haproxy-marathon-bridge`, which uses Marathon's REST API to create a config file for HAProxy. The `haproxy-marathon-bridge` provides minimal functionality and is easier to understand for beginners or can serve as a starting point for a custom implementation. Note that this script is now deprecated and should not be used as-is in production. For production use, consider using Marathon-lb, above.
 
 For a full list of HAProxy configurations, consult [the HAProxy configuration docs](http://cbonte.github.io/haproxy-dconv/configuration-1.5.html).

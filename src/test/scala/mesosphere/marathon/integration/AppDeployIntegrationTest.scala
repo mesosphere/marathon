@@ -7,15 +7,16 @@ import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.integration.facades.{ ITDeployment, ITQueueItem, MarathonFacade }
+import MarathonFacade._
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.integration.setup.MarathonFacade._
 import mesosphere.marathon.state._
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
+import org.apache.mesos.{ Protos => MesosProtos }
 
 class AppDeployIntegrationTest
     extends IntegrationFunSuite
@@ -197,7 +198,7 @@ class AppDeployIntegrationTest
     Given("a new app")
     val app = appProxy(testBasePath / "http-app", "v1", instances = 1, withHealth = false).
       copy(
-        ports = immutable.Seq[Int](31000),
+        portDefinitions = PortDefinitions(31000),
         requirePorts = true,
         healthChecks = Set(healthCheck.copy(port = Some(31000)))
       )
@@ -533,7 +534,7 @@ class AppDeployIntegrationTest
     Given("a new app with constraints that cannot be fulfilled")
     val c = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Operator.CLUSTER).setValue("na").build()
     val appId = testBasePath / "app"
-    val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, ports = List.empty)
+    val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, portDefinitions = List.empty)
 
     val create = marathon.createAppV2(app)
     create.code should be (201) // Created
@@ -558,7 +559,7 @@ class AppDeployIntegrationTest
     Given("a new app with constraints that cannot be fulfilled")
     val c = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Operator.CLUSTER).setValue("na").build()
     val appId = testBasePath / "app"
-    val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, ports = List.empty)
+    val app = AppDefinition(appId, constraints = Set(c), cmd = Some("na"), instances = 5, portDefinitions = List.empty)
 
     val create = marathon.createAppV2(app)
     create.code should be (201) // Created
@@ -583,8 +584,6 @@ class AppDeployIntegrationTest
   }
 
   test("Docker info is not automagically created") {
-    import org.apache.mesos
-
     Given("An app with MESOS container")
     val appId = testBasePath / "app"
     val app = AppDefinition(
@@ -592,12 +591,12 @@ class AppDeployIntegrationTest
       cmd = Some("sleep 1"),
       instances = 0,
       container = Some(Container(
-        `type` = mesos.Protos.ContainerInfo.Type.MESOS
+        `type` = MesosProtos.ContainerInfo.Type.MESOS
       ))
     )
 
     app.container should not be empty
-    app.container.get.`type` should equal(mesos.Protos.ContainerInfo.Type.MESOS)
+    app.container.get.`type` should equal(MesosProtos.ContainerInfo.Type.MESOS)
 
     When("The request is sent")
     val result = marathon.createAppV2(app)
@@ -614,7 +613,7 @@ class AppDeployIntegrationTest
 
     Then("The container should still be of type MESOS")
     maybeContainer1 should not be empty
-    maybeContainer1.get.`type` should equal(mesos.Protos.ContainerInfo.Type.MESOS)
+    maybeContainer1.get.`type` should equal(MesosProtos.ContainerInfo.Type.MESOS)
 
     And("container.docker should not be set")
     maybeContainer1.get.docker shouldBe (empty)
@@ -632,7 +631,7 @@ class AppDeployIntegrationTest
 
     Then("The container should still be of type MESOS")
     maybeContainer2 should not be empty
-    maybeContainer2.get.`type` should equal(mesos.Protos.ContainerInfo.Type.MESOS)
+    maybeContainer2.get.`type` should equal(MesosProtos.ContainerInfo.Type.MESOS)
 
     And("container.docker should not be set")
     maybeContainer1.get.docker shouldBe (empty)

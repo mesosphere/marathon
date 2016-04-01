@@ -60,7 +60,8 @@ class AppDefinitionFormatsTest
     (r1 \ "uris").as[Seq[String]] should equal (DefaultUris)
     (r1 \ "fetch").as[Seq[FetchUri]] should equal (DefaultFetch)
     (r1 \ "storeUrls").as[Seq[String]] should equal (DefaultStoreUrls)
-    (r1 \ "ports").as[Seq[Long]] should equal (DefaultPorts.map(_.toInt))
+    (r1 \ "ports").as[Seq[Long]] should equal (DefaultPortDefinitions.map(_.port))
+    (r1 \ "portDefinitions").as[Seq[PortDefinition]] should equal (DefaultPortDefinitions)
     (r1 \ "requirePorts").as[Boolean] should equal (DefaultRequirePorts)
     (r1 \ "backoffSeconds").as[Long] should equal (DefaultBackoff.toSeconds)
     (r1 \ "backoffFactor").as[Double] should equal (DefaultBackoffFactor)
@@ -107,7 +108,7 @@ class AppDefinitionFormatsTest
     r1.constraints should equal (DefaultConstraints)
     r1.fetch should equal (DefaultFetch)
     r1.storeUrls should equal (DefaultStoreUrls)
-    r1.ports should equal (DefaultPorts)
+    r1.portDefinitions should equal (DefaultPortDefinitions)
     r1.requirePorts should equal (DefaultRequirePorts)
     r1.backoff should equal (DefaultBackoff)
     r1.backoffFactor should equal (DefaultBackoffFactor)
@@ -150,14 +151,6 @@ class AppDefinitionFormatsTest
     }
   }
 
-  test("FromJSON should fail when 'cpus' is less than or equal to 0") {
-    var json1 = Json.parse(""" { "id": "test", "cpus": 0.0 }""")
-    a[JsResultException] shouldBe thrownBy { json1.as[AppDefinition] }
-
-    val json2 = Json.parse(""" { "id": "test", "cpus": -1.0 }""")
-    a[JsResultException] shouldBe thrownBy { json2.as[AppDefinition] }
-  }
-
   test("""ToJSON should correctly handle missing acceptedResourceRoles""") {
     val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = None)
     val json = Json.toJson(appDefinition)
@@ -185,6 +178,37 @@ class AppDefinitionFormatsTest
   test("FromJSON should fail when 'acceptedResourceRoles' is defined but empty") {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": [] }""")
     a[JsResultException] shouldBe thrownBy { json.as[AppDefinition] }
+  }
+
+  test("FromJSON should read the default upgrade strategy") {
+    val json = Json.parse(""" { "id": "test" }""")
+    val appDef = json.as[AppDefinition]
+    appDef.upgradeStrategy should be(UpgradeStrategy.empty)
+  }
+
+  test("FromJSON should read the residency upgrade strategy") {
+    val json = Json.parse(""" { "id": "test", "residency": {}}""")
+    val appDef = json.as[AppDefinition]
+    appDef.upgradeStrategy should be(UpgradeStrategy.forResidentTasks)
+  }
+
+  test("FromJSON should read the default residency automatically residency ") {
+    val json = Json.parse(
+      """
+        |{
+        |  "id": "resident",
+        |  "container": {
+        |    "type": "MESOS",
+        |    "volumes": [{
+        |      "containerPath": "var",
+        |      "persistent": { "size": 10 },
+        |      "mode": "RW"
+        |    }]
+        |  }
+        |}
+      """.stripMargin)
+    val appDef = json.as[AppDefinition]
+    appDef.residency should be(Some(Residency.defaultResidency))
   }
 
   test("""FromJSON should parse "residency" """) {

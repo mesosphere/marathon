@@ -13,18 +13,18 @@ trait AppInfoService {
     *
     * @param embed specifies which fields in the resulting AppInfo s are filled.
     */
-  def queryForAppId(appId: PathId, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]]
+  def selectApp(appId: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]]
   /**
     * Return the app infos for all apps that are directly or indirectly contained in the
     * group with the given path.
     *
     * @param embed specifies which fields in the resulting AppInfo s are filled.
     */
-  def queryAllInGroup(groupId: PathId, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]]
+  def selectAppsInGroup(groupId: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]]
   /**
     * Return app infos for all apps.
     *
     * @param embed specifies which fields in the resulting AppInfo s are filled.
     */
-  def queryAll(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]]
+  def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]]
 }

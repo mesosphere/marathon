@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.flow.impl
 
-import akka.actor.{ Scheduler, Cancellable, Actor, ActorLogging, Props }
+import akka.actor.{ Cancellable, Actor, ActorLogging, Props }
 import akka.event.{ EventStream, LoggingReceive }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock

@@ -9,6 +9,7 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.{ after, ask }
 import akka.util.Timeout
+import com.codahale.metrics.Gauge
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Candidate
@@ -19,6 +20,7 @@ import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -27,6 +29,7 @@ import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
+import com.codahale.metrics.MetricRegistry
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -73,7 +76,8 @@ class MarathonSchedulerService @Inject() (
   migration: Migration,
   @Named("schedulerActor") schedulerActor: ActorRef,
   @Named(EventModule.busName) eventStream: EventStream,
-  leadershipCallbacks: Seq[LeadershipCallback] = Seq.empty)
+  leadershipCallbacks: Seq[LeadershipCallback] = Seq.empty,
+  metrics: Metrics = new Metrics(new MetricRegistry))
     extends AbstractExecutionThreadService with Leader with LeadershipAbdication {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -137,10 +141,6 @@ class MarathonSchedulerService @Inject() (
       }
       .mapTo[RunningDeployments]
       .map(_.plans)
-
-  def getApp(appId: PathId): Option[AppDefinition] = {
-    Await.result(appRepository.currentVersion(appId), config.zkTimeoutDuration)
-  }
 
   def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
     Await.result(appRepository.app(appId, version), config.zkTimeoutDuration)
@@ -289,6 +289,9 @@ class MarathonSchedulerService @Inject() (
 
       // We successfully took over leadership. Time to reset backoff
       resetOfferLeadershipBackOff()
+
+      // Start the leader duration metric
+      startLeaderDurationMetric()
     }
     catch {
       case NonFatal(e) => // catch Scala and Java exceptions
@@ -311,6 +314,7 @@ class MarathonSchedulerService @Inject() (
     // Note that abdication command will be ran upon driver shutdown.
     leader.set(false)
     stopDriver()
+    stopLeaderDurationMetric()
   }
 
   private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = synchronized {
@@ -416,5 +420,19 @@ class MarathonSchedulerService @Inject() (
       abdicationCommand()
       offerLeadership()
     }
+  }
+
+  private def startLeaderDurationMetric() = {
+    metrics.gauge("service.mesosphere.marathon.leaderDuration", new Gauge[Long] {
+      val startedAt = System.currentTimeMillis()
+
+      override def getValue: Long =
+        {
+          System.currentTimeMillis() - startedAt
+        }
+    })
+  }
+  private def stopLeaderDurationMetric() = {
+    metrics.registry.remove("service.mesosphere.marathon.leaderDuration")
   }
 }

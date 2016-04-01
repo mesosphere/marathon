@@ -14,14 +14,13 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment }
 import mesosphere.marathon.{ MarathonConf, MarathonTestHelper, SchedulerActions }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
-import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
 import scala.concurrent.Await
@@ -33,7 +32,7 @@ class DeploymentManagerTest
     with Matchers
     with BeforeAndAfter
     with BeforeAndAfterAll
-    with MockitoSugar
+    with Mockito
     with ImplicitSender {
 
   var driver: SchedulerDriver = _
@@ -69,8 +68,7 @@ class DeploymentManagerTest
 
   test("deploy") {
     val manager = TestActorRef[DeploymentManager](
-      Props(classOf[DeploymentManager],
-        appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus)
+      DeploymentManager.props(appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus, config)
     )
 
     val app = AppDefinition("app".toRootPath)
@@ -79,6 +77,7 @@ class DeploymentManagerTest
     val newGroup = Group("/".toRootPath, Set(app))
     val plan = DeploymentPlan(oldGroup, newGroup)
 
+    taskQueue.get(app.id) returns None
     manager ! PerformDeployment(driver, plan)
 
     awaitCond(
@@ -89,8 +88,7 @@ class DeploymentManagerTest
 
   test("StopActor") {
     val manager = TestActorRef[DeploymentManager](
-      Props(classOf[DeploymentManager],
-        appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus)
+      DeploymentManager.props(appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus, config)
     )
     val probe = TestProbe()
 
@@ -111,8 +109,7 @@ class DeploymentManagerTest
 
   test("Cancel deployment") {
     val manager = TestActorRef[DeploymentManager](
-      Props(classOf[DeploymentManager],
-        appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus)
+      DeploymentManager.props(appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus, config)
     )
 
     implicit val timeout = Timeout(1.minute)

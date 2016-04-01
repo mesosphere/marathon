@@ -1,14 +1,14 @@
 package mesosphere.marathon.api.v2
 
 import javax.inject.Inject
-import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
+import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status._
 import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.plugin.auth.{ Authorizer, Authenticator, UpdateAppOrGroup }
+import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentPlan }
@@ -29,13 +29,11 @@ class DeploymentsResource @Inject() (
     with Logging {
 
   @GET
-  def running(@Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-    doIfAuthenticated(req, resp) { implicit identity =>
-      val infos = result(service.listRunningDeployments())
-        .filter(_.plan.affectedApplicationIds.exists(isAllowedToView))
-        .map { currentStep => toInfo(currentStep.plan, currentStep) }
-      ok(jsonString(infos))
-    }
+  def running(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val infos = result(service.listRunningDeployments())
+      .filter(_.plan.affectedApplications.exists(isAuthorized(ViewApp, _)))
+      .map { currentStep => toInfo(currentStep.plan, currentStep) }
+    ok(jsonString(infos))
   }
 
   @DELETE
@@ -43,25 +41,24 @@ class DeploymentsResource @Inject() (
   def cancel(
     @PathParam("id") id: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @Context req: HttpServletRequest, @Context resp: HttpServletResponse): Response = {
-
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val plan = result(service.listRunningDeployments()).find(_.plan.id == id).map(_.plan)
     plan.fold(notFound(s"DeploymentPlan $id does not exist")) { deployment =>
-      doIfAuthorized(req, resp, UpdateAppOrGroup, deployment.affectedApplicationIds.toSeq: _*) { _ =>
-        deployment match {
-          case plan: DeploymentPlan if force =>
-            // do not create a new deployment to return to the previous state
-            log.info(s"Canceling deployment [$id]")
-            service.cancelDeployment(id)
-            status(ACCEPTED) // 202: Accepted
-          case plan: DeploymentPlan =>
-            // create a new deployment to return to the previous state
-            deploymentResult(result(groupManager.update(
-              plan.original.id,
-              plan.revert,
-              force = true
-            )))
-        }
+      deployment.affectedApplications.foreach(checkAuthorization(UpdateApp, _))
+
+      deployment match {
+        case plan: DeploymentPlan if force =>
+          // do not create a new deployment to return to the previous state
+          log.info(s"Canceling deployment [$id]")
+          service.cancelDeployment(id)
+          status(ACCEPTED) // 202: Accepted
+        case plan: DeploymentPlan =>
+          // create a new deployment to return to the previous state
+          deploymentResult(result(groupManager.update(
+            plan.original.id,
+            plan.revert,
+            force = true
+          )))
       }
     }
   }

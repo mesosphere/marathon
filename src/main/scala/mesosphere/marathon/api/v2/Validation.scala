@@ -5,14 +5,14 @@ import java.net._
 import com.wix.accord._
 import mesosphere.marathon.{ AllConf, ValidationFailedException }
 import mesosphere.marathon.state.FetchUri
+import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
+import scala.collection.GenTraversableOnce
 import scala.reflect.ClassTag
 import scala.util.Try
 
 object Validation {
-
-  def validate[T](t: T)(implicit validator: Validator[T]): Result = validator.apply(t)
   def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
     case Success    => t
     case f: Failure => throw new ValidationFailedException(t, f)
@@ -29,7 +29,7 @@ object Validation {
       override def apply(seq: Iterable[T]): Result = {
 
         val violations = seq.map(item => (item, validator(item))).zipWithIndex.collect {
-          case ((item, f: Failure), pos: Int) => GroupViolation(item, "not valid", Some(s"[$pos]"), f.violations)
+          case ((item, f: Failure), pos: Int) => GroupViolation(item, "not valid", Some(s"($pos)"), f.violations)
         }
 
         if (violations.isEmpty) Success
@@ -39,38 +39,60 @@ object Validation {
   }
 
   implicit lazy val failureWrites: Writes[Failure] = Writes { f =>
-    Json.obj("message" -> "Object is not valid",
-      "details" -> f.violations.flatMap(allRuleViolationsWithFullDescription(_)))
-  }
-
-  implicit lazy val ruleViolationWrites: Writes[RuleViolation] = Writes { v =>
     Json.obj(
-      "attribute" -> v.description,
-      "error" -> v.constraint
-    )
+      "message" -> "Object is not valid",
+      "details" -> {
+        f.violations
+          .flatMap(allRuleViolationsWithFullDescription(_))
+          .groupBy(_.description)
+          .map {
+            case (description, ruleViolation) =>
+              Json.obj(
+                "path" -> description,
+                "errors" -> ruleViolation.map(r => JsString(r.constraint))
+              )
+          }
+      })
   }
 
-  private def allRuleViolationsWithFullDescription(violation: Violation,
-                                                   parentDesc: Option[String] = None): Set[RuleViolation] = {
-    def concatPath(parent: String, child: Option[String], attachDot: Boolean): String = {
-      child.map(c => parent + c + { if (attachDot) "." else "" }).getOrElse(parent)
+  def allRuleViolationsWithFullDescription(violation: Violation,
+                                           parentDesc: Option[String] = None,
+                                           prependSlash: Boolean = false): Set[RuleViolation] = {
+    def concatPath(parent: String, child: Option[String], slash: Boolean): String = {
+      child.map(c => parent + { if (slash) "/" else "" } + c).getOrElse(parent)
     }
 
     violation match {
-      case r: RuleViolation => Set(parentDesc.map(p =>
-        r.withDescription(concatPath(p, r.description, attachDot = false)))
-        .getOrElse(r))
-      case g: GroupViolation => g.children.flatMap { c =>
-        val desc = parentDesc.map { p =>
-          val attachDot = g.value match {
-            case _: Iterable[_] => false
-            case _              => true
-          }
-          Some(concatPath(p, g.description, attachDot))
+      case r: RuleViolation => Set(
+        parentDesc.map {
+          p =>
+            r.description.map {
+              // Error is on object level, having a parent description. Omit 'value', prepend '/' as root.
+              case "value"   => r.withDescription("/" + p)
+              // Error is on property level, having a parent description. Prepend '/' as root.
+              case s: String => r.withDescription(concatPath("/" + p, r.description, prependSlash))
+              // Error is on unknown level, having a parent description. Prepend '/' as root.
+            } getOrElse r.withDescription("/" + p)
         } getOrElse {
-          g.description.map(d => concatPath("", Some(d), attachDot = true))
+          r.withDescription(r.description.map {
+            // Error is on object level, having no parent description, being a root error.
+            case "value"   => "/"
+            // Error is on property level, having no parent description, being a property of root error.
+            case s: String => "/" + s
+          } getOrElse "/")
+        })
+      case g: GroupViolation => g.children.flatMap { c =>
+        val dot = g.value match {
+          case _: Iterable[_] => false
+          case _              => true
         }
-        allRuleViolationsWithFullDescription(c, desc)
+
+        val desc = parentDesc.map {
+          p => Some(concatPath(p, g.description, prependSlash))
+        } getOrElse {
+          g.description.map(d => concatPath("", Some(d), prependSlash))
+        }
+        allRuleViolationsWithFullDescription(c, desc, dot)
       }
     }
   }
@@ -109,14 +131,38 @@ object Validation {
     }
   }
 
-  def elementsAreUnique[A](p: Seq[A] => Seq[A] = { seq: Seq[A] => seq }): Validator[Seq[A]] = {
+  def elementsAreUnique[A](errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
-      def apply(seq: Seq[A]) = {
-        val filteredSeq = p(seq)
-        if (filteredSeq.size == filteredSeq.distinct.size) Success
-        else Failure(Set(RuleViolation(seq, "Elements must be unique.", None)))
-      }
+      def apply(seq: Seq[A]) = areUnique(seq, errorMessage)
     }
+  }
+
+  def elementsAreUniqueBy[A, B](fn: A => B,
+                                errorMessage: String = "Elements must be unique.",
+                                filter: B => Boolean = { _: B => true }): Validator[Seq[A]] = {
+    new Validator[Seq[A]] {
+      def apply(seq: Seq[A]) = areUnique(seq.map(fn).filter(filter), errorMessage)
+    }
+  }
+
+  def elementsAreUniqueByOptional[A, B](fn: A => GenTraversableOnce[B],
+                                        errorMessage: String = "Elements must be unique.",
+                                        filter: B => Boolean = { _: B => true }): Validator[Seq[A]] = {
+    new Validator[Seq[A]] {
+      def apply(seq: Seq[A]) = areUnique(seq.flatMap(fn).filter(filter), errorMessage)
+    }
+  }
+
+  def elementsAreUniqueWithFilter[A](fn: A => Boolean,
+                                     errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
+    new Validator[Seq[A]] {
+      def apply(seq: Seq[A]) = areUnique(seq.filter(fn), errorMessage)
+    }
+  }
+
+  private[this] def areUnique[A](seq: Seq[A], errorMessage: String): Result = {
+    if (seq.size == seq.distinct.size) Success
+    else Failure(Set(RuleViolation(seq, errorMessage, None)))
   }
 
   def theOnlyDefinedOptionIn[A <: Product: ClassTag, B](product: A): Validator[Option[B]] =
@@ -138,6 +184,14 @@ object Validation {
       }
     }
 
+  def oneOf[T <: AnyRef](options: Set[T]): Validator[T] = {
+    import ViolationBuilder._
+    new NullSafeValidator[T](
+      test = options.contains,
+      failure = _ -> s"is not one of (${options.mkString(",")})"
+    )
+  }
+
   def oneOf[T <: AnyRef](options: T*): Validator[T] = {
     import ViolationBuilder._
     new NullSafeValidator[T](
@@ -146,12 +200,27 @@ object Validation {
     )
   }
 
-  def configValueSet[T <: AnyRef](config: String*): Validator[T] = {
-    new Validator[T] {
-      override def apply(t: T): Result = {
-        if (config.forall(AllConf.suppliedOptionNames)) Success else Failure(Set(RuleViolation(t,
-          s"""You have to supply ${config.mkString(", ")} on the command line.""", None)))
-      }
+  def configValueSet[T <: AnyRef](config: String*): Validator[T] =
+    isTrue(s"""You have to supply ${config.mkString(", ")} on the command line.""") { _ =>
+      config.forall(AllConf.suppliedOptionNames)
+    }
+
+  def isTrue[T](constraint: String)(test: T => Boolean): Validator[T] = new Validator[T] {
+    import ViolationBuilder._
+    override def apply(value: T): Result = {
+      if (test(value)) Success else RuleViolation(value, constraint, None)
+    }
+  }
+
+  /**
+    * For debugging purposes only.
+    * Since the macro removes all logging statements in the validator itself.
+    * Usage: info("message") { yourValidator }
+    */
+  def info[T](message: String)(implicit validator: Validator[T]): Validator[T] = new Validator[T] {
+    override def apply(t: T): Result = {
+      LoggerFactory.getLogger(Validation.getClass).info(s"Validate: $message on $t")
+      validator(t)
     }
   }
 }

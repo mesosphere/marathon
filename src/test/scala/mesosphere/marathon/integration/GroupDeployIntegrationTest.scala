@@ -5,6 +5,7 @@ import mesosphere.marathon.integration.setup.{ IntegrationFunSuite, IntegrationH
 import mesosphere.marathon.state.{ AppDefinition, PathId, UpgradeStrategy }
 import org.apache.http.HttpStatus
 import org.scalatest._
+import play.api.libs.json.JsObject
 import spray.http.DateTime
 
 import scala.concurrent.duration._
@@ -256,8 +257,9 @@ class GroupDeployIntegrationTest
     When("The group gets posted")
     val result = marathon.createGroup(group)
 
-    Then("An unsuccessfull response has been posted, with an error indicating cyclic dependencies")
-    (result.entityJson \\ "error").filter(j => j.as[String].contains("cyclic dependencies")) should have size 1
+    Then("An unsuccessful response has been posted, with an error indicating cyclic dependencies")
+    val errors = (result.entityJson \ "details" \\ "errors").flatMap(_.as[Seq[String]])
+    errors.find(_.contains("cyclic dependencies")) shouldBe defined
   }
 
   test("Applications with dependencies get deployed in the correct order") {

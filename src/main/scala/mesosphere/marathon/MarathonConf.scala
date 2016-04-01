@@ -7,6 +7,7 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
+import mesosphere.marathon.upgrade.UpgradeConfig
 import org.rogach.scallop.ScallopConf
 import scala.sys.SystemProperties
 
@@ -16,7 +17,7 @@ trait MarathonConf
     extends ScallopConf with ZookeeperConf with LeaderProxyConf
     with LaunchTokenConfig with OfferMatcherManagerConfig with OfferProcessorConfig with ReviveOffersConfig
     with MarathonSchedulerServiceConfig with LaunchQueueConfig with PluginManagerConfiguration
-    with TaskStatusUpdateConfig with TaskTrackerConfig {
+    with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig {
 
   //scalastyle:off magic.number
 
@@ -29,6 +30,31 @@ trait MarathonConf
     descr = "The host and port (e.g. \"http://mesos_host:5050\") of the Mesos master.",
     required = false,
     noshort = true)
+
+  lazy val features = opt[String]("enable_features",
+    descr = s"A comma-separated list of features. Available features are: ${Features.description}",
+    required = false,
+    default = None,
+    noshort = true,
+    validate = validateFeatures
+  ).map(parseFeatures)
+
+  private[this] def parseFeatures(str: String): Set[String] =
+    str.split(',').map(_.trim).filter(_.nonEmpty).toSet
+
+  private[this] def validateFeatures(str: String): Boolean = {
+    val parsed = parseFeatures(str)
+    // throw exceptions for better error messages
+    val unknownFeatures = parsed.filter(!Features.availableFeatures.contains(_))
+    lazy val unknownFeaturesString = unknownFeatures.mkString(", ")
+    require(
+      unknownFeatures.isEmpty,
+      s"Unknown features specified: $unknownFeaturesString. Available features are: ${Features.description}"
+    )
+    true
+  }
+
+  def isFeatureSet(name: String): Boolean = features.get.exists(_.contains(name))
 
   lazy val mesosFailoverTimeout = opt[Long]("failover_timeout",
     descr = "(Default: 1 week) The failover_timeout for mesos in seconds.",
@@ -141,6 +167,11 @@ trait MarathonConf
     descr = "Time, in milliseconds, to wait for a task to enter " +
       "the TASK_RUNNING state before killing it.",
     default = Some(300000L)) // 300 seconds (5 minutes)
+
+  lazy val taskReservationTimeout = opt[Long]("task_reservation_timeout",
+    descr = "Time, in milliseconds, to wait for a new reservation to be acknowledged " +
+      "via a received offer before deleting it.",
+    default = Some(10000L)) // 10 seconds
 
   lazy val reconciliationInitialDelay = opt[Long]("reconciliation_initial_delay",
     descr = "This is the length of time, in milliseconds, before Marathon " +

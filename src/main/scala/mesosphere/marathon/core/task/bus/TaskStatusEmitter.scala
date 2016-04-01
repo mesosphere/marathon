@@ -1,5 +1,7 @@
 package mesosphere.marathon.core.task.bus
 
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+
 trait TaskStatusEmitter {
-  def publish(status: TaskStatusObservables.TaskStatusUpdate)
+  def publish(taskChanged: TaskChanged)
 }

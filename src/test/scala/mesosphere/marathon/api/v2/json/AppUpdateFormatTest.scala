@@ -25,14 +25,6 @@ class AppUpdateFormatTest extends MarathonSpec with Matchers {
     }
   }
 
-  test("FromJSON should fail when 'cpus' is less than or equal to 0") {
-    val json1 = Json.parse(""" { "id": "test", "cpus": 0.0 }""")
-    a[JsResultException] shouldBe thrownBy { json1.as[AppUpdate] }
-
-    val json2 = Json.parse(""" { "id": "test", "cpus": -1.0 }""")
-    a[JsResultException] shouldBe thrownBy { json2.as[AppUpdate] }
-  }
-
   test("""FromJSON should parse "acceptedResourceRoles": ["production", "*"] """) {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["production", "*"] }""")
     val appUpdate = json.as[AppUpdate]

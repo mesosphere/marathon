@@ -6,7 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTracker }
 import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.health.HealthCheck
@@ -93,7 +93,7 @@ class TaskStartActorTest
     (counts, description) <- Seq(
       Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 1)) -> "with one task left to launch",
       Some(LaunchQueueTestHelper.zeroCounts.copy(taskLaunchesInFlight = 1)) -> "with one task in flight",
-      Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLaunchedOrRunning = 1)) -> "with one task already running"
+      Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLaunched = 1)) -> "with one task already running"
     )
   ) {
     test(s"Start success $description") {
@@ -137,7 +137,7 @@ class TaskStartActorTest
     when(launchQueue.get(app.id)).thenReturn(None)
     val task =
       MarathonTestHelper.startingTaskForApp(app.id, appVersion = Timestamp(1024))
-    taskCreationHandler.created(task).futureValue
+    taskCreationHandler.created(TaskStateOp.LaunchEphemeral(task)).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -310,7 +310,7 @@ class TaskStartActorTest
 
     val outdatedTask = MarathonTestHelper.stagedTaskForApp(app.id, appVersion = Timestamp(1024))
     val taskId = outdatedTask.taskId
-    taskCreationHandler.created(outdatedTask).futureValue
+    taskCreationHandler.created(TaskStateOp.LaunchEphemeral(outdatedTask)).futureValue
 
     val ref = TestActorRef(Props(
       classOf[TaskStartActor],
@@ -333,7 +333,7 @@ class TaskStartActorTest
     Mockito.reset(launchQueue)
 
     // let existing task die
-    when(taskTracker.countAppTasksSync(app.id)).thenReturn(0)
+    when(taskTracker.countLaunchedAppTasksSync(app.id)).thenReturn(0)
     when(launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 4)))
     system.eventStream.publish(MesosStatusUpdateEvent(
       slaveId = "", taskId = taskId, taskStatus = "TASK_ERROR", message = "", appId = app.id, host = "",
@@ -353,7 +353,7 @@ class TaskStartActorTest
 
     // launch 4 of the tasks
     when(launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = app.instances)))
-    when(taskTracker.countAppTasksSync(app.id)).thenReturn(4)
+    when(taskTracker.countLaunchedAppTasksSync(app.id)).thenReturn(4)
     List(0, 1, 2, 3) foreach { i =>
       system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id(s"task-$i"), "TASK_RUNNING", "", app.id, "", Nil, Nil, app.version.toString))
     }

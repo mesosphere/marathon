@@ -1,6 +1,8 @@
 package mesosphere.marathon
 
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.launcher.TaskOpFactory
+import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueueModule }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
@@ -9,8 +11,6 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.{ AppRepository, PathId }
-import mesosphere.marathon.tasks.TaskFactory.CreatedTask
-import mesosphere.marathon.tasks._
 import mesosphere.marathon.test.MarathonShutdownHookSupport
 import org.mockito.Matchers
 import org.mockito.Mockito.{ when => call, _ }
@@ -42,7 +42,7 @@ class LaunchQueueModuleTest
     assert(list.size == 1)
     assert(list.head.app == app)
     assert(list.head.tasksLeftToLaunch == 1)
-    assert(list.head.tasksLaunchedOrRunning == 0)
+    assert(list.head.tasksLaunched == 0)
     assert(list.head.taskLaunchesInFlight == 0)
     verify(taskTracker).tasksByAppSync
   }
@@ -127,12 +127,13 @@ class LaunchQueueModuleTest
     }
 
     When("we ask for matching an offer")
-    call(taskFactory.newTask(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(None)
+    call(taskOpFactory.buildTaskOp(Matchers.any())).thenReturn(None)
     val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
     val matchedTasks = Await.result(matchFuture, 3.seconds)
 
     Then("the offer gets passed to the task factory and respects the answer")
-    verify(taskFactory).newTask(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
+    val request = TaskOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
+    verify(taskOpFactory).buildTaskOp(request)
     assert(matchedTasks.offerId == offer.getId)
     assert(matchedTasks.opsWithSource == Seq.empty)
 
@@ -144,11 +145,11 @@ class LaunchQueueModuleTest
     val taskId = Task.Id.forApp(PathId("/test"))
     val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
     val marathonTask = MarathonTestHelper.mininimalTask(taskId)
-    val createdTask = CreatedTask(mesosTask, marathonTask)
+    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
 
     Given("An app in the queue")
     call(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.empty)
-    call(taskFactory.newTask(Matchers.any(), Matchers.any(), Matchers.any())).thenReturn(Some(createdTask))
+    call(taskOpFactory.buildTaskOp(Matchers.any())).thenReturn(Some(launch))
     taskQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
@@ -159,7 +160,8 @@ class LaunchQueueModuleTest
     val matchedTasks = Await.result(matchFuture, 3.seconds)
 
     Then("the offer gets passed to the task factory and respects the answer")
-    verify(taskFactory).newTask(Matchers.eq(app), Matchers.eq(offer), Matchers.argThat(SameAsSeq(Seq.empty)))
+    val request = TaskOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
+    verify(taskOpFactory).buildTaskOp(request)
     assert(matchedTasks.offerId == offer.getId)
     assert(matchedTasks.launchedTaskInfos == Seq(mesosTask))
 
@@ -173,7 +175,7 @@ class LaunchQueueModuleTest
   private[this] var offerMatcherManager: DummyOfferMatcherManager = _
   private[this] var appRepository: AppRepository = _
   private[this] var taskTracker: TaskTracker = _
-  private[this] var taskFactory: TaskFactory = _
+  private[this] var taskOpFactory: TaskOpFactory = _
   private[this] var module: LaunchQueueModule = _
 
   private[this] def taskQueue = module.taskQueue
@@ -184,7 +186,7 @@ class LaunchQueueModuleTest
 
     offerMatcherManager = new DummyOfferMatcherManager()
     taskTracker = mock[TaskTracker]("taskTracker")
-    taskFactory = mock[TaskFactory]("taskFactory")
+    taskOpFactory = mock[TaskOpFactory]("taskOpFactory")
     appRepository = mock[AppRepository]("appRepository")
 
     val config: LaunchQueueConfig = new LaunchQueueConfig {}
@@ -197,13 +199,13 @@ class LaunchQueueModuleTest
       maybeOfferReviver = None,
       appRepository,
       taskTracker,
-      taskFactory
+      taskOpFactory
     )
   }
 
   after {
     verifyNoMoreInteractions(appRepository)
     verifyNoMoreInteractions(taskTracker)
-    verifyNoMoreInteractions(taskFactory)
+    verifyNoMoreInteractions(taskOpFactory)
   }
 }

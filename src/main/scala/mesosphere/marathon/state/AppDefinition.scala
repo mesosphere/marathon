@@ -5,12 +5,12 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.serialization.ContainerSerializer
+import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
@@ -50,7 +50,7 @@ case class AppDefinition(
 
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
-  ports: Seq[Int] = AppDefinition.DefaultPorts,
+  portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
 
   requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
 
@@ -78,11 +78,13 @@ case class AppDefinition(
 
   residency: Option[Residency] = AppDefinition.DefaultResidency)
 
-    extends MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    extends plugin.AppDefinition with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 
-  require(ipAddress.isEmpty || ports.isEmpty, "IP address and ports are not allowed at the same time")
+  require(ipAddress.isEmpty || portDefinitions.isEmpty, "IP address and ports are not allowed at the same time")
+
+  lazy val portNumbers: Seq[Int] = portDefinitions.map(_.port)
 
   /**
     * Returns true if all health check port index values are in the range
@@ -95,6 +97,17 @@ case class AppDefinition(
       hc.protocol == Protocol.COMMAND || hc.portIndex.forall(validPortIndices.contains(_))
     }
   }
+
+  def isResident: Boolean = residency.isDefined
+
+  def persistentVolumes: Iterable[PersistentVolume] = {
+    container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
+  }
+
+  /**
+    * @return the disk resources required for volumes
+    */
+  def diskForVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
@@ -120,7 +133,7 @@ case class AppDefinition(
       .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
-      .addAllPorts(ports.map(i => i: Integer).asJava)
+      .addAllPortDefinitions(portDefinitions.map(PortDefinitionSerializer.toProto).asJava)
       .setRequirePorts(requirePorts)
       .setBackoff(backoff.toMillis)
       .setBackoffFactor(backoffFactor)
@@ -153,6 +166,8 @@ case class AppDefinition(
         builder.setLastConfigChangeAt(fullInfo.lastConfigChangeAt.toDateTime.getMillis)
       case _ => // ignore
     }
+
+    residency.foreach { r => builder.setResidency(ResidencySerializer.toProto(r)) }
 
     builder.build
   }
@@ -201,14 +216,22 @@ case class AppDefinition(
 
     val ipAddressOption = if (proto.hasIpAddress) Some(IpAddress.fromProto(proto.getIpAddress)) else None
 
+    val residencyOption = if (proto.hasResidency) Some(ResidencySerializer.fromProto(proto.getResidency)) else None
+
+    // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
+    // until the deprecation cycle is complete.
+    val portDefinitions =
+      if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.asScala.map(_.intValue): _*)
+      else proto.getPortDefinitionsList.asScala.map(PortDefinitionSerializer.fromProto).to[Seq]
+
     AppDefinition(
-      id = proto.getId.toPath,
+      id = PathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = commandOption,
       args = argsOption,
       executor = proto.getExecutor,
       instances = proto.getInstances,
-      ports = proto.getPortsList.asScala.map(_.intValue).to[Seq],
+      portDefinitions = portDefinitions,
       requirePorts = proto.getRequirePorts,
       backoff = proto.getBackoff.milliseconds,
       backoffFactor = proto.getBackoffFactor,
@@ -229,7 +252,8 @@ case class AppDefinition(
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
-      ipAddress = ipAddressOption
+      ipAddress = ipAddressOption,
+      residency = residencyOption
     )
   }
 
@@ -242,18 +266,16 @@ case class AppDefinition(
     } yield pms
 
   def containerHostPorts: Option[Seq[Int]] =
-    for (pms <- portMappings) yield pms.map(_.hostPort.toInt)
+    for (pms <- portMappings) yield pms.map(_.hostPort)
 
   def containerServicePorts: Option[Seq[Int]] =
-    for (pms <- portMappings) yield pms.map(_.servicePort.toInt)
+    for (pms <- portMappings) yield pms.map(_.servicePort)
 
-  def hostPorts: Seq[Int] =
-    containerHostPorts.getOrElse(ports.map(_.toInt))
+  def hostPorts: Seq[Int] = containerHostPorts.getOrElse(portNumbers)
 
-  def servicePorts: Seq[Int] =
-    containerServicePorts.getOrElse(ports.map(_.toInt))
+  def servicePorts: Seq[Int] = containerServicePorts.getOrElse(portNumbers)
 
-  def hasDynamicPort: Boolean = servicePorts.contains(0)
+  def hasDynamicPort: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
@@ -284,7 +306,7 @@ case class AppDefinition(
         constraints != to.constraints ||
         fetch != to.fetch ||
         storeUrls != to.storeUrls ||
-        ports != to.ports ||
+        portDefinitions != to.portDefinitions ||
         requirePorts != to.requirePorts ||
         backoff != to.backoff ||
         backoffFactor != to.backoffFactor ||
@@ -374,7 +396,7 @@ object AppDefinition {
       * @param version The versioning timestamp (we are currently assuming that this is the same as lastChangeAt)
       * @param lastScalingAt The time stamp of the last change including scaling or restart changes
       * @param lastConfigChangeAt The time stamp of the last change that changed configuration
-      *                               besides scaling or restarting
+      *                           besides scaling or restarting
       */
     case class FullVersionInfo(
         version: Timestamp,
@@ -396,6 +418,7 @@ object AppDefinition {
   }
 
   val RandomPortValue: Int = 0
+  val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])
 
   // App defaults
   val DefaultId: PathId = PathId.empty
@@ -426,7 +449,7 @@ object AppDefinition {
 
   val DefaultStoreUrls: Seq[String] = Seq.empty
 
-  val DefaultPorts: Seq[Int] = Seq(RandomPortValue)
+  val DefaultPortDefinitions: Seq[PortDefinition] = Seq(RandomPortDefinition)
 
   val DefaultRequirePorts: Boolean = false
 
@@ -456,6 +479,24 @@ object AppDefinition {
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
+  private val validBasicAppDefinition = validator[AppDefinition] { appDef =>
+    appDef.upgradeStrategy is valid
+    appDef.container.each is valid
+    appDef.storeUrls is every(urlCanBeResolvedValidator)
+    appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
+    appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
+    appDef is containsCmdArgsOrContainer
+    appDef.healthChecks is every(portIndexIsValid(appDef.hostPorts.indices))
+    appDef.instances should be >= 0
+    appDef.fetch is every(fetchUriIsValid)
+    appDef.mem should be >= 0.0
+    appDef.cpus should be >= 0.0
+    appDef.instances should be >= 0
+    appDef.disk should be >= 0.0
+    appDef must definesCorrectResidencyCombination
+    (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
+  }
+
   /**
     * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.
     * If users had already one invalid app definition, each deployment would cause a complete revalidation of
@@ -463,51 +504,76 @@ object AppDefinition {
     * Until the user changed all invalid apps, the user would get weird validation
     * errors for every deployment potentially unrelated to the deployed apps.
     */
-  implicit val appDefinitionValidator = validator[AppDefinition] { appDef =>
-    appDef.id is valid
-    appDef.dependencies is valid
-    appDef.upgradeStrategy is valid
-    appDef.container.each is valid
-    appDef.storeUrls is every(urlCanBeResolvedValidator)
-    appDef.ports is elementsAreUnique(filterOutRandomPorts)
-    appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
-    appDef is containsCmdArgsContainerValidator
-    appDef is portIndicesAreValid
-    appDef.instances.intValue should be >= 0
-    appDef.fetch is every(fetchUriIsValid)
-  }
+  implicit val validAppDefinition: Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app.id is valid
+    app.id is PathId.absolutePathValidator
+    app.dependencies is every(PathId.validPathWithBase(app.id.parent))
+  } and validBasicAppDefinition
 
-  def filterOutRandomPorts(ports: scala.Seq[Int]): scala.Seq[Int] = {
-    ports.filterNot(_ == AppDefinition.RandomPortValue)
-  }
+  /**
+    * Validator for apps, which are being part of a group.
+    * @param base Path of the parent group.
+    * @return
+    */
+  def validNestedAppDefinition(base: PathId): Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app.id is PathId.validPathWithBase(base)
+  } and validBasicAppDefinition
 
-  private def containsCmdArgsContainerValidator: Validator[AppDefinition] = {
-    new Validator[AppDefinition] {
-      override def apply(app: AppDefinition): Result = {
-        val cmd = app.cmd.nonEmpty
-        val args = app.args.nonEmpty
-        val container = app.container.exists(_ != Container.Empty)
-        if ((cmd ^ args) || (!(cmd || args) && container)) Success
-        else Failure(Set(RuleViolation(app,
-          "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.", None)))
+  private val definesCorrectResidencyCombination: Validator[AppDefinition] =
+    isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
+      !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
+    }
+
+  private val containsCmdArgsOrContainer: Validator[AppDefinition] =
+    isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.") { app =>
+      val cmd = app.cmd.nonEmpty
+      val args = app.args.nonEmpty
+      val container = app.container.exists(_ != Container.Empty)
+      (cmd ^ args) || (!(cmd || args) && container)
+    }
+
+  private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
+    isTrue("Health check port indices must address an element of the ports array or container port mappings.") { hc =>
+      hc.protocol == Protocol.COMMAND || (hc.portIndex match {
+        case Some(idx) => hostPortsIndices contains idx
+        case None      => hostPortsIndices.length == 1 && hostPortsIndices.head == 0
+      })
+    }
+
+  def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
+    val changeNoVolumes =
+      isTrue[AppDefinition]("Persistent volumes can not be changed!") { to =>
+        val fromVolumes = from.persistentVolumes
+        val toVolumes = to.persistentVolumes
+        def sameSize = fromVolumes.size == toVolumes.size
+        def noChange = from.persistentVolumes.forall { fromVolume =>
+          toVolumes.find(_.containerPath == fromVolume.containerPath).contains(fromVolume)
+        }
+        sameSize && noChange
       }
+
+    val changeNoResources =
+      isTrue[AppDefinition]("Resident Tasks may not change resource requirements!") { to =>
+        from.cpus == to.cpus &&
+          from.mem == to.mem &&
+          from.disk == to.disk &&
+          from.portDefinitions == to.portDefinitions
+      }
+
+    validator[AppDefinition] { app =>
+      app should changeNoVolumes
+      app should changeNoResources
+      app.upgradeStrategy is UpgradeStrategy.validForResidentTasks
     }
   }
 
-  private def portIndicesAreValid: Validator[AppDefinition] = {
+  def updateIsValid(from: Group): Validator[AppDefinition] = {
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
-        val appDef = app
-        val validPortIndices = appDef.hostPorts.indices
-
-        if (appDef.healthChecks.forall { hc =>
-          hc.protocol == Protocol.COMMAND || (hc.portIndex match {
-            case Some(idx) => validPortIndices contains idx
-            case None      => validPortIndices.length == 1 && validPortIndices.head == 0
-          })
-        }) Success
-        else Failure(Set(RuleViolation(app,
-          "Health check port indices must address an element of the ports array or container port mappings.", None)))
+        from.transitiveApps.find(_.id == app.id) match {
+          case (Some(last)) if last.isResident || app.isResident => residentUpdateIsValid(last)(app)
+          case _ => Success
+        }
       }
     }
   }

@@ -113,7 +113,7 @@ object DockerSerializer {
     docker.network foreach builder.setNetwork
 
     docker.portMappings.foreach { pms =>
-      builder.addAllPortMappings(pms.map(PortMappingSerializer.toMesos).asJava)
+      builder.addAllPortMappings(pms.flatMap(PortMappingSerializer.toMesos).asJava)
     }
 
     builder.setPrivileged(docker.privileged)
@@ -128,12 +128,18 @@ object DockerSerializer {
 
 object PortMappingSerializer {
   def toProto(mapping: Container.Docker.PortMapping): Protos.ExtendedContainerInfo.DockerInfo.PortMapping = {
-    Protos.ExtendedContainerInfo.DockerInfo.PortMapping.newBuilder
+    val builder = Protos.ExtendedContainerInfo.DockerInfo.PortMapping.newBuilder
       .setContainerPort(mapping.containerPort)
       .setHostPort(mapping.hostPort)
       .setProtocol(mapping.protocol)
       .setServicePort(mapping.servicePort)
-      .build
+
+    mapping.name.foreach(builder.setName)
+    mapping.labels
+      .map { case (key, value) => mesos.Protos.Label.newBuilder.setKey(key).setValue(value).build }
+      .foreach(builder.addLabels)
+
+    builder.build
   }
 
   def fromProto(proto: Protos.ExtendedContainerInfo.DockerInfo.PortMapping): PortMapping =
@@ -141,15 +147,20 @@ object PortMappingSerializer {
       proto.getContainerPort,
       proto.getHostPort,
       proto.getServicePort,
-      proto.getProtocol
+      proto.getProtocol,
+      if (proto.hasName) Some(proto.getName) else None,
+      proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap
     )
 
-  def toMesos(mapping: Container.Docker.PortMapping): mesos.Protos.ContainerInfo.DockerInfo.PortMapping = {
-    mesos.Protos.ContainerInfo.DockerInfo.PortMapping.newBuilder
-      .setContainerPort(mapping.containerPort)
-      .setHostPort(mapping.hostPort)
-      .setProtocol(mapping.protocol)
-      .build
+  def toMesos(mapping: Container.Docker.PortMapping): Seq[mesos.Protos.ContainerInfo.DockerInfo.PortMapping] = {
+    def mesosPort(protocol: String) = {
+      mesos.Protos.ContainerInfo.DockerInfo.PortMapping.newBuilder
+        .setContainerPort (mapping.containerPort)
+        .setHostPort(mapping.hostPort)
+        .setProtocol(protocol)
+        .build
+    }
+    mapping.protocol.split(',').map(mesosPort).toList
   }
 
 }

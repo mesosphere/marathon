@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.Protos
@@ -66,6 +67,13 @@ object Volume {
       case dockerVolume: DockerVolume =>
         Some((dockerVolume.containerPath, Some(dockerVolume.hostPath), dockerVolume.mode, None))
     }
+
+  implicit val validVolume: Validator[Volume] = new Validator[Volume] {
+    override def apply(volume: Volume): Result = volume match {
+      case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
+      case dv: DockerVolume     => validate(dv)(DockerVolume.validDockerVolume)
+    }
+  }
 }
 
 /**
@@ -81,7 +89,7 @@ case class DockerVolume(
 
 object DockerVolume {
 
-  implicit val dockerVolumeValidator = validator[DockerVolume] { vol =>
+  implicit val validDockerVolume = validator[DockerVolume] { vol =>
     vol.containerPath is notEmpty
     vol.hostPath is notEmpty
     vol.mode is oneOf(Mode.RW, Mode.RO)
@@ -91,8 +99,8 @@ object DockerVolume {
 case class PersistentVolumeInfo(size: Long)
 
 object PersistentVolumeInfo {
-  implicit val persistentVolumeInfoValidator = validator[PersistentVolumeInfo] { info =>
-    (info.size > 0) is true
+  implicit val validPersistentVolumeInfo = validator[PersistentVolumeInfo] { info =>
+    info.size should be > 0L
   }
 }
 
@@ -104,11 +112,11 @@ case class PersistentVolume(
 
 object PersistentVolume {
   import org.apache.mesos.Protos.Volume.Mode
-  implicit val persistentVolumeValidator = validator[PersistentVolume] { vol =>
+  implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
     vol.containerPath is notEmpty
     vol.persistent is valid
     vol.mode is equalTo(Mode.RW)
     //persistent volumes require those CLI parameters provided
-    vol is valid(configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file"))
+    vol is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
   }
 }

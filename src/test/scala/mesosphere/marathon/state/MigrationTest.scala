@@ -62,6 +62,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.appRepo.apps() returns Future.successful(Seq.empty)
     f.appRepo.allPathIds() returns Future.successful(Seq.empty)
     f.groupRepo.group("root") returns Future.successful(None)
+    f.groupRepo.listVersions(any) returns Future.successful(Seq.empty)
 
     val result = f.migration.applyMigrationSteps(StorageVersions(0, 8, 0)).futureValue
     result should not be 'empty

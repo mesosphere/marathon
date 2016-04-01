@@ -2,6 +2,8 @@ package mesosphere.marathon.integration.setup
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
+import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
+
 import scala.annotation.tailrec
 import scala.concurrent.duration.{ FiniteDuration, _ }
 
@@ -50,6 +52,10 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
     waitForEventMatching(s"event $kind to arrive", maxWait) { event =>
       event.eventType == kind && fn(event)
     }
+  }
+
+  def waitForStatusUpdates(kinds: String*) = kinds.foreach { kind =>
+    waitForEventWith("status_update_event", _.info("taskStatus") == kind)
   }
 
   /**

@@ -40,7 +40,7 @@ private[leadership] class LeadershipModuleImpl(
   private[this] var started: Boolean = false
 
   override def startWhenLeader(props: Props, name: String): ActorRef = {
-    require(!started, "already started")
+    require(!started, s"already started: $name")
     val proxyProps = WhenLeaderActor.props(props)
     val actorRef = actorRefFactory.actorOf(proxyProps, name)
     whenLeaderRefs += actorRef

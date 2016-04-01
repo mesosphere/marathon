@@ -4,15 +4,15 @@ title: SSL and Basic Access Authentication
 
 # SSL and Basic Access Authentication
 
-Marathon enables securing its API endpoints via SSL and limiting access to them
+Marathon enables you to secure its API endpoints via SSL and limit access to them
 with HTTP basic access authentication. If you plan to use basic authentication,
-we suggest enabling SSL as well otherwise the username and password will be
+we suggest enabling SSL as well. Otherwise the username and password will be
 transmitted unencrypted and easily read by unintended parties.
 
 ## Enabling SSL
 
 If you already have a Java keystore, pass it to Marathon along with the
-keystore's password to enable SSL:
+keystore's password:
 
 ```sh
 $ cd /path/to/marathon
@@ -22,7 +22,7 @@ $ ./bin/start --master zk://localhost:2181/mesos \
    --ssl_keystore_password $MARATHON_JKS_PASSWORD
 ```
 
-By default, Marathon serves SSL requests on port 8443 (that can be changed with
+By default, Marathon serves SSL requests on port 8443 (this port can be changed with
 the `--https_port`
 [command line flag]({{ site.baseurl }}/docs/command-line-flags.html)). Once
   Marathon is running, access its API and UI via its HTTPS port:
@@ -32,6 +32,8 @@ $ curl https://localhost:8443/v2/apps
 ```
 
 ### Generating a keystore with an SSL key and certificate
+
+If you do not already have a Java keystore, follow the steps below to create one.
 
 <div class="alert alert-warning">
   <strong>Careful:</strong> Modern browsers and most tools will give users a
@@ -51,9 +53,9 @@ $ curl https://localhost:8443/v2/apps
 
 2. Acquire a certificate for the key by one of the following methods:
   * **(Recommended)** Purchase a certificate from a trusted certificate
-    authority. This ensures users of your Marathon instances' API and UI will
-    already trust the SSL certificate, preventing extra steps for your users.
-  * (Untrusted) Generate a certificate for the key. This command prompts for a
+    authority. This ensures that users of the API and UI of your Marathon instances will
+    already trust the SSL certificate, preventing extra steps for them.
+  * (Untrusted) Generate a certificate for the key. The following command prompts for
     information to secure the keystore. The "Common Name" must be the
     fully-qualified hostname of where you intend to use the certificate.
 
@@ -68,7 +70,7 @@ $ curl https://localhost:8443/v2/apps
    used by the Java keystore. If the certificate you received is not in the
    `.pem` format, see the
    [Jetty SSL configuration](http://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#loading-keys-and-certificates)
-   docs for how to convert it.
+   docs to learn how to convert it.
 
     ```sh
     # Read key password from env variable `MARATHON_KEY_PASSWORD`
@@ -119,8 +121,8 @@ $ curl https://localhost:8443/v2/apps
   easily be read by unintended parties.
 </div>
 
-Pass the username and password separated by a colon (:) to the
-`--http_credentials` command line flag to enable basic authentication. *Note:
+Enable basic authentication by passing the username and password separated by a colon (:) to the
+`--http_credentials` command line flag. *Note:
 The username cannot contain a colon.*
 
 ```sh

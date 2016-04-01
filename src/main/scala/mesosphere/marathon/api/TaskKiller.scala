@@ -2,53 +2,84 @@ package mesosphere.marathon.api
 
 import javax.inject.Inject
 
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import com.twitter.util.NonFatal
+import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.plugin.auth.{ Identity, UpdateApp, Authenticator, Authorizer }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ MarathonSchedulerService, UnknownAppException }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
+import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class TaskKiller @Inject() (
     taskTracker: TaskTracker,
+    stateOpProcessor: TaskStateOpProcessor,
     groupManager: GroupManager,
-    service: MarathonSchedulerService) {
+    service: MarathonSchedulerService,
+    val config: MarathonConf,
+    val authenticator: Authenticator,
+    val authorizer: Authorizer) extends AuthResource {
 
-  def kill(
-    appId: PathId,
-    findToKill: (Iterable[Task] => Iterable[Task])): Future[Iterable[Task]] = {
+  private[this] val log = LoggerFactory.getLogger(getClass)
 
-    val tasks = taskTracker.appTasksSync(appId).filter(_.launched.isDefined)
-    if (tasks.nonEmpty) {
-      val toKill = findToKill(tasks)
-      service.killTasks(appId, toKill)
-      Future.successful(toKill)
+  def kill(appId: PathId,
+           findToKill: (Iterable[Task] => Iterable[Task]),
+           wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Task]] = {
+
+    result(groupManager.app(appId)) match {
+      case Some(app) =>
+        checkAuthorization(UpdateApp, app)
+
+        import scala.concurrent.ExecutionContext.Implicits.global
+        taskTracker.appTasks(appId).flatMap { allTasks =>
+          val foundTasks = findToKill(allTasks)
+          val expungeTasks = if (wipe) expunge(foundTasks) else Future.successful(())
+
+          expungeTasks.map { _ =>
+            val launchedTasks = foundTasks.filter(_.launched.isDefined)
+            if (launchedTasks.nonEmpty) {
+              service.killTasks(appId, launchedTasks)
+              foundTasks
+            }
+            else foundTasks
+          }
+        }
+
+      case None => Future.failed(UnknownAppException(appId))
     }
-    else {
-      //The task manager does not know about apps with 0 tasks
-      //prior versions of Marathon accepted this call with an empty iterable
-      import scala.concurrent.ExecutionContext.Implicits.global
-      groupManager.app(appId).map {
-        case Some(app) => Iterable.empty[Task]
-        case None      => throw new UnknownAppException(appId)
+  }
+
+  private[this] def expunge(tasks: Iterable[Task])(implicit ec: ExecutionContext): Future[Unit] = {
+    tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
+      resultSoFar.flatMap { _ =>
+        log.info("Expunging {}", nextTask.taskId)
+        stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.taskId)).map(_ => ()).recover {
+          case NonFatal(cause) =>
+            log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.taskId, cause): _*)
+        }
       }
     }
   }
 
   def killAndScale(appId: PathId,
                    findToKill: (Iterable[Task] => Iterable[Task]),
-                   force: Boolean): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.appTasksSync(appId))), force)
+                   force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
+    killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId))), force)
   }
 
-  def killAndScale(appTasks: Map[PathId, Iterable[Task]], force: Boolean): Future[DeploymentPlan] = {
+  def killAndScale(appTasks: Map[PathId, Iterable[Task]],
+                   force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
+      checkAuthorization(UpdateApp, app)
       appTasks.get(app.id).fold(app) { toKill => app.copy(instances = app.instances - toKill.size) }
     }
+
     def updateGroup(group: Group): Group = {
       group.copy(apps = group.apps.map(scaleApp), groups = group.groups.map(updateGroup))
     }
+
     def killTasks = groupManager.update(
       PathId.empty,
       updateGroup,
@@ -56,6 +87,7 @@ class TaskKiller @Inject() (
       force = force,
       toKill = appTasks
     )
+
     appTasks.keys.find(id => !taskTracker.hasAppTasksSync(id))
       .map(id => Future.failed(UnknownAppException(id)))
       .getOrElse(killTasks)

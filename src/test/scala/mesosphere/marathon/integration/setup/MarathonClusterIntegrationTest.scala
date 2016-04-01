@@ -1,5 +1,6 @@
 package mesosphere.marathon.integration.setup
 
+import mesosphere.marathon.integration.facades.MarathonFacade
 import org.scalatest.{ ConfigMap, Suite }
 import org.slf4j.LoggerFactory
 

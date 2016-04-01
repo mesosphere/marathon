@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 /**
   * Start an actor system for all test methods and provide akka TestKit utility methods.
   */
-class MarathonActorSupport extends Suite with TestKitBase with BeforeAndAfterAll {
+trait MarathonActorSupport extends Suite with TestKitBase with BeforeAndAfterAll {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
