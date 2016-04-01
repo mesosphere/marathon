@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.volume.providers
 
+import com.wix.accord.dsl._
 import com.wix.accord.Validator
 import com.wix.accord.combinators.NilValidator
 import mesosphere.marathon.core.volume._
@@ -18,8 +19,9 @@ protected[volume] case object DockerHostVolumeProvider
   /** no special case validation here, it's handled elsewhere */
   val validation: Validator[Volume] = new NilValidator[Volume]
 
-  // no provider-specific rules at the app level
-  val appValidation: Validator[AppDefinition] = new NilValidator[AppDefinition]
+  val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app.container.get.`type` is equalTo("DOCKER")
+  }
 
   // no provider-specific rules at the group level
   val groupValidation: Validator[Group] = new NilValidator[Group]
@@ -35,9 +37,7 @@ protected[volume] case object DockerHostVolumeProvider
   override def accepts(dv: DockerVolume): Boolean = true
 
   override def injectContainer(ctx: ContainerContext, dv: DockerVolume): ContainerContext = {
-    val container = ctx.container // TODO(jdef) clone?
-    // TODO(jdef) check that this is a DOCKER container type?
-    ContainerContext(container.addVolumes(toMesosVolume(dv)))
+    ContainerContext(ctx.container.addVolumes(toMesosVolume(dv)))
   }
 
   override def collect(container: Container): Iterable[DockerVolume] =
