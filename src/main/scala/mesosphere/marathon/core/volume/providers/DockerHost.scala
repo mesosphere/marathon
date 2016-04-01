@@ -12,7 +12,7 @@ import org.apache.mesos.Protos.{ Volume => MesosVolume }
   * with "non-local" docker volume drivers. If you want to use a docker volume driver then
   * use a PersistentVolume instead.
   */
-protected case object DockerHostVolumeProvider
+protected[volume] case object DockerHostVolumeProvider
     extends InjectionHelper[DockerVolume]
     with VolumeProvider[DockerVolume] {
   /** no special case validation here, it's handled elsewhere */

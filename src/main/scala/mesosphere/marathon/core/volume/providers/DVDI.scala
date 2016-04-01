@@ -16,7 +16,7 @@ import scala.collection.JavaConverters._
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
+protected[volume] case object DVDIProvider extends InjectionHelper[PersistentVolume]
     with PersistentVolumeProvider with OptionSupport {
 
   import org.apache.mesos.Protos.Volume.Mode
