@@ -5,9 +5,10 @@ import com.wix.accord.dsl._
 import com.wix.accord.combinators.Fail
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
-import scala.reflect.ClassTag
 
-protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume] {
+protected[volume] abstract class AbstractPersistentVolumeProvider(
+    val name: String
+) extends PersistentVolumeProvider[PersistentVolume] {
   /**
     * don't invoke validator on v because that's circular, just check the additional
     * things that we need for agent local volumes.
@@ -28,14 +29,13 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
     * @return true if volume has a provider name that matches ours exactly
     */
   def accepts(volume: PersistentVolume): Boolean = {
-    volume.persistent.providerName.isDefined && volume.persistent.providerName == name
+    volume.persistent.providerName.isDefined && volume.persistent.providerName.contains(name)
   }
 
   override def collect(container: Container): Iterable[PersistentVolume] =
     container.volumes.collect{
       case vol: PersistentVolume if accepts(vol) => vol
     }
-
 }
 
 protected trait OptionSupport {
@@ -94,8 +94,7 @@ protected trait OptionSupport {
   }
 }
 
-protected abstract class InjectionHelper[V <: Volume: ClassTag] extends VolumeInjection {
-
+protected trait InjectionHelper[V <: Volume] extends VolumeInjection {
   def accepts(v: V): Boolean
 
   override protected def inject[C <: InjectionContext](ctx: C, v: Volume): C = {

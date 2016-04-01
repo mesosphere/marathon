@@ -16,15 +16,13 @@ import scala.collection.JavaConverters._
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected[volume] case object DVDIProvider extends InjectionHelper[PersistentVolume]
-    with PersistentVolumeProvider with OptionSupport {
+protected[volume] case object DVDIProvider
+  extends AbstractPersistentVolumeProvider("dvdi")
+    with InjectionHelper[PersistentVolume] with OptionSupport {
 
   import org.apache.mesos.Protos.Volume.Mode
 
-  val NAME = "dvdi"
-  override val name = Some(NAME)
-
-  sealed trait OptNS { val namespace: String = NAME }
+  sealed trait OptNS { val namespace: String = name }
   case object OptionDriver extends NamedLabelOption
     with RequiredOption with OptNS { override val name = "driverName" }
   case object OptionVolumeType extends NamedLabelOption with OptNS { override val name = "volumetype" }
@@ -45,7 +43,7 @@ protected[volume] case object DVDIProvider extends InjectionHelper[PersistentVol
     v.persistent.name.each is notEmpty
     v.persistent.providerName is notEmpty
     v.persistent.providerName.each is notEmpty
-    v.persistent.providerName.each is equalTo(name.get) // sanity check
+    v.persistent.providerName.each is equalTo(name) // sanity check
     v.persistent.options is valid(validOptions)
   }
 
@@ -75,7 +73,7 @@ protected[volume] case object DVDIProvider extends InjectionHelper[PersistentVol
   // restrictive in the future.
   val validUpgradeStrategy: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
     strategy.minimumHealthCapacity should be <= 0.5
-    strategy.maximumOverCapacity should be == 0.0
+    strategy.maximumOverCapacity should equalTo(0.0)
   }
 
   val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
@@ -198,7 +196,7 @@ protected[volume] case object DVDIProvider extends InjectionHelper[PersistentVol
     )
 
     val optsVar = {
-      val prefix: String = NAME + OptionNamespaceSeparator
+      val prefix: String = name + OptionNamespaceSeparator
       // don't let the user override these
       val ignore = Set(OptionDriver.fullName.toLowerCase)
       // persistent.size trumps any user-specified dvdi/size option

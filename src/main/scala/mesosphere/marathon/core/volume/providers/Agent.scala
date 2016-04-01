@@ -9,12 +9,9 @@ import mesosphere.marathon.state._
 /**
   * AgentVolumeProvider handles persistent volumes allocated from agent resources.
   */
-protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvider {
+protected[volume] case object AgentVolumeProvider extends AbstractPersistentVolumeProvider("agent") {
   import org.apache.mesos.Protos.Volume.Mode
   import mesosphere.marathon.api.v2.Validation._
-
-  /** this is the name of the agent volume provider */
-  override val name = Some("agent")
 
   // no provider-specific rules at the app level
   // TODO(jdef) could/should refactor resident validation from AppDefinition to here
@@ -33,6 +30,6 @@ protected[volume] case object AgentVolumeProvider extends PersistentVolumeProvid
   override def accepts(volume: PersistentVolume): Boolean = {
     // this should also match if the providerName is not set. By definition a persistent volume
     // without a providerName is a local agent volume.
-    volume.persistent.providerName.getOrElse(name.get) == name.get
+    volume.persistent.providerName.getOrElse(name) == name
   }
 }
