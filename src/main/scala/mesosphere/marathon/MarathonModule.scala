@@ -22,6 +22,7 @@ import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launcher.TaskOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
 import mesosphere.marathon.event.{ EventModule, HistoryActor }
@@ -191,6 +192,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     leaderInfo: LeaderInfo,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
+    readinessCheckExecutor: ReadinessCheckExecutor,
     taskFailureRepository: TaskFailureRepository): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
@@ -219,6 +221,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
           storage,
           healthCheckManager,
           eventBus,
+          readinessCheckExecutor,
           conf
         )
       )

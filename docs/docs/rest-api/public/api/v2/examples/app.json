@@ -73,6 +73,18 @@
       "timeoutSeconds": 20
     }
   ],
+  "readinessChecks": [
+    {
+      "name": "myReadyCheck",
+      "protocol": "HTTP",
+      "path": "/v1/plan"
+      "portName": "http"
+      "interval": 10000,
+      "timeout": 10000,
+      "httpStatusCodesForReady": [ 200 ],
+      "preserveLastResponse": false
+    }
+  ],
   "labels": {
     "owner": "zeus",
     "note": "Away from olympus"
@@ -100,7 +112,7 @@
   ],
   "portDefinitions": [
     {
-      "port": 0
+      "port": 0,
       "protocol": "tcp",
       "name": "http",
       "labels": { "vip": "192.168.0.1:80" }

@@ -10,11 +10,9 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.GroupManager
-import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
-import mesosphere.marathon.upgrade.{ DeploymentAction, DeploymentPlan }
+import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.util.Logging
-import play.api.libs.json.{ JsObject, Json }
 
 @Path("v2/deployments")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -32,8 +30,7 @@ class DeploymentsResource @Inject() (
   def running(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val infos = result(service.listRunningDeployments())
       .filter(_.plan.affectedApplications.exists(isAuthorized(ViewApp, _)))
-      .map { currentStep => toInfo(currentStep.plan, currentStep) }
-    ok(jsonString(infos))
+    ok(infos)
   }
 
   @DELETE
@@ -62,26 +59,4 @@ class DeploymentsResource @Inject() (
       }
     }
   }
-
-  private def toInfo(
-    deployment: DeploymentPlan,
-    currentStepInfo: DeploymentStepInfo): JsObject = {
-
-    val steps = deployment.steps.map(step => step.actions.map(actionToMap)).map(Json.toJson(_))
-    Json.obj(
-      "id" -> deployment.id,
-      "version" -> deployment.version,
-      "affectedApps" -> deployment.affectedApplicationIds.map(_.toString),
-      "steps" -> steps,
-      "currentActions" -> currentStepInfo.step.actions.map(actionToMap),
-      "currentStep" -> currentStepInfo.nr,
-      "totalSteps" -> deployment.steps.size
-    )
-  }
-
-  def actionToMap(action: DeploymentAction): Map[String, String] =
-    Map(
-      "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id.toString
-    )
 }

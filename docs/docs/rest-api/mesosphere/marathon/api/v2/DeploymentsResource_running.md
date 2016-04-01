@@ -42,7 +42,20 @@ Transfer-Encoding: chunked
         "currentActions": [
           {
               "action": "RestartApplication", 
-              "app": "/test/frontend/app1"
+              "app": "/test/frontend/app1",
+              "readinessChecks": [
+                  {
+                      "lastResponse": {
+                          "body": "{}", 
+                          "contentType": "application/json", 
+                          "status": 500
+                      }, 
+                      "name": "myReadyCheck", 
+                      "ready": false, 
+                      "taskId": "test_frontend_app1.c9de6033"
+                  }
+              ]
+
           }
         ],
         "totalSteps": 9,
