@@ -1,8 +1,8 @@
----
-title: Setting Up and Running Marathon
----
+-----------------------
+title: Install Marathon
+-----------------------
 
-## Setting Up And Running Marathon
+## Install Marathon
 
 
 ### Requirements
@@ -41,27 +41,15 @@ $ tar xzf marathon-0.15.2.tgz
 
 SHA-256 checksums are available by appending `.sha256` to the URLs.
 
-### Versioning
-
-Starting with version 0.9.0 Marathon will adhere to [semantic versioning](http://semver.org).
-That means we are committed to keep our documented REST API compatible across releases unless we change the MAJOR version
-(the first number in the version tuple). If you depend on undocumented features, please tell us about them by [raising a GitHub issue](https://github.com/mesosphere/marathon/issues/new). API parts which we explicitly marked as EXPERIMENTAL are exempted from this rule. We will not introduce new features in PATCH version increments (the last number in the version tuple).
-
-We might change the command line interfaces of the Marathon server process in rare cases in a MINOR version upgrade.
-Please check the release notes for these.
-
-Furthermore, we will provide release candidates for all new MAJOR/MINOR versions and invite our users to test them and
-give us feedback (particularly on violations of the versioning policy).
-
 ### Upgrading to a Newer Version
 
 [See here]({{ site.baseurl }}/docs/upgrade/index.html) for our guide on upgrading to a new version.
 
-### Running in Production Mode
+### Running in High Availability (HA) Mode
 
-To launch Marathon in *production mode*, you need to have both
+To launch Marathon in *high availability mode*, you need to have both
 ZooKeeper and Mesos running. The following command launches
-Marathon in *production mode*. Point your web browser to
+Marathon in *high availability mode*. Point your web browser to
 `localhost:8080` and you should see the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html).
 
 ``` console
