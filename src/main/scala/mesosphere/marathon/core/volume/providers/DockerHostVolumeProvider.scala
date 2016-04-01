@@ -30,7 +30,7 @@ protected[volume] case object DockerHostVolumeProvider
       .setMode(volume.mode)
       .build
 
-  val containerInjector = new ContainerInjection[DockerVolume] {
+  val containerInjector = new ContainerInjector[DockerVolume] {
     override def inject(ctx: ContainerContext, dv: DockerVolume): ContainerContext =
       ContainerContext(ctx.container.addVolumes(toMesosVolume(dv)))
   }

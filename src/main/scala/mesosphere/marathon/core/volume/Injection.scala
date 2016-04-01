@@ -20,11 +20,12 @@ final case class CommandContext(containerType: ContainerInfo.Type, command: Comm
   extends InjectionContext
 
 /**
-  * VolumeInjection implementations inject InjectionContext's with additional metadata for a given Volume.
+  * VolumeInjector implementations inject InjectionContext's with additional metadata for a given Volume.
   */
-trait VolumeInjection[V <: Volume, C <: InjectionContext] {
+trait VolumeInjector[V <: Volume, C <: InjectionContext] {
   /**
     * Generates an updated InjectionContext for the given input context `c` and volume `v`.
+ *
     * @param c is the initial input InjectionContext
     * @param v is the volume that provides metadata with which the initial context is decorated
     * @return a InjectionContext decorated with metadata from volume `v`; None if the context is not
@@ -45,6 +46,6 @@ trait VolumeInjection[V <: Volume, C <: InjectionContext] {
   }
 }
 
-trait ContainerInjection[V <: Volume] extends VolumeInjection[V, ContainerContext]
-trait CommandInjection[V <: Volume] extends VolumeInjection[V, CommandContext]
+trait ContainerInjector[V <: Volume] extends VolumeInjector[V, ContainerContext]
+trait CommandInjector[V <: Volume] extends VolumeInjector[V, CommandContext]
 

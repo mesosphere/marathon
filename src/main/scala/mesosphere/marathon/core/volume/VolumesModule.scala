@@ -27,8 +27,8 @@ trait PersistentVolumeProvider[+T <: PersistentVolume] extends VolumeProvider[T]
     */
   val volumeValidation: Validator[PersistentVolume]
 
-  val containerInjector: ContainerInjection[PersistentVolume]
-  val commandInjector: CommandInjection[PersistentVolume]
+  val containerInjector: ContainerInjector[PersistentVolume]
+  val commandInjector: CommandInjector[PersistentVolume]
 }
 
 trait VolumeProviderRegistry {
@@ -63,7 +63,7 @@ trait VolumeProviderRegistry {
     }
   }
 
-  val containerInjector: ContainerInjection[Volume]
+  val containerInjector: ContainerInjector[Volume]
 }
 
 trait PersistentVolumeProviderRegistry extends VolumeProviderRegistry {
@@ -74,7 +74,7 @@ trait PersistentVolumeProviderRegistry extends VolumeProviderRegistry {
     */
   def apply(name: Option[String]): Option[PersistentVolumeProvider[PersistentVolume]]
 
-  val commandInjector: CommandInjection[PersistentVolume]
+  val commandInjector: CommandInjector[PersistentVolume]
 }
 
 /**

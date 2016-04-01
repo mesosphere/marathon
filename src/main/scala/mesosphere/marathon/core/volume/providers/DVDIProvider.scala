@@ -142,7 +142,7 @@ protected[volume] case object DVDIProvider
       .setMode(volume.mode)
       .build
 
-  val containerInjector = new ContainerInjection[PersistentVolume] {
+  val containerInjector = new ContainerInjector[PersistentVolume] {
     override def inject(ctx: ContainerContext, pv: PersistentVolume): ContainerContext = {
       // special behavior for docker vs. mesos containers
       // - docker containerizer: serialize volumes into mesos proto
@@ -159,7 +159,7 @@ protected[volume] case object DVDIProvider
     }
   }
 
-  val commandInjector = new CommandInjection[PersistentVolume] {
+  val commandInjector = new CommandInjector[PersistentVolume] {
     override def inject(ctx: CommandContext, pv: PersistentVolume): CommandContext = {
       // special behavior for docker vs. mesos containers
       // - mesos containerizer: serialize volumes into envvar sets
