@@ -37,8 +37,8 @@ class TaskKillActorTest
     val ref = f.killActor(PathId("/test"), tasks.map(_.taskId), promise)
     watch(ref)
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.taskId, "TASK_KILLED", "", PathId.empty, "", Nil, Nil, ""))
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.taskId, "TASK_KILLED", "", PathId.empty, "", Nil, Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.taskId, "TASK_KILLED", "", PathId.empty, "", None, Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.taskId, "TASK_KILLED", "", PathId.empty, "", None, Nil, ""))
 
     Await.result(promise.future, 5.seconds) should be(())
     verify(f.driver).killTask(taskA.taskId.mesosTaskId)
@@ -121,8 +121,8 @@ class TaskKillActorTest
     ref.underlyingActor.periodicalCheck.cancel()
     ref ! KillNextBatch
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.taskId, "TASK_KILLED", "", PathId.empty, "", Nil, Nil, ""))
-    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.taskId, "TASK_KILLED", "", PathId.empty, "", Nil, Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskA.taskId, "TASK_KILLED", "", PathId.empty, "", None, Nil, ""))
+    system.eventStream.publish(MesosStatusUpdateEvent("", taskB.taskId, "TASK_KILLED", "", PathId.empty, "", None, Nil, ""))
 
     Await.result(promise.future, 5.seconds) should be(())
     verify(f.driver, times(2)).killTask(taskA.launchedMesosId.get)

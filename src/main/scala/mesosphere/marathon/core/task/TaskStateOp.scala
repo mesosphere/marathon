@@ -4,6 +4,8 @@ import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 
+import scala.collection.immutable.Seq
+
 sealed trait TaskStateOp {
   def taskId: Task.Id
   /**
@@ -36,7 +38,7 @@ object TaskStateOp {
     taskId: Task.Id,
     appVersion: Timestamp,
     status: Task.Status,
-    networking: Task.Networking) extends TaskStateOp
+    hostPorts: Seq[Int]) extends TaskStateOp
 
   case class MesosUpdate(task: Task, status: MarathonTaskStatus, now: Timestamp) extends TaskStateOp {
     override def taskId: Id = task.taskId

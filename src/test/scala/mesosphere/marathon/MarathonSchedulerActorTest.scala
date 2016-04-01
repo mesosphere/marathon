@@ -156,7 +156,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       message = "",
       appId = app.id,
       host = "",
-      ipAddresses = Nil,
+      ipAddresses = None,
       ports = Nil,
       version = app.version.toString
     )
@@ -206,7 +206,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val statusUpdateEvent = MesosStatusUpdateEvent(
       slaveId = "", taskId = taskA.taskId, taskStatus = "TASK_KILLED", message = "", appId = app.id,
-      host = "", ipAddresses = Nil, ports = Nil, version = "",
+      host = "", ipAddresses = None, ports = Nil, version = "",
       timestamp = app.version.toString
     )
 
@@ -293,7 +293,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         system.eventStream.publish(
           MesosStatusUpdateEvent(
             slaveId = "", taskId = taskA.taskId, taskStatus = "TASK_KILLED", message = "", appId = app.id, host = "",
-            ipAddresses = Nil, ports = Nil, version = app.version.toString
+            ipAddresses = None, ports = Nil, version = app.version.toString
           )
         )
         Status.DRIVER_RUNNING

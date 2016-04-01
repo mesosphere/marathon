@@ -43,35 +43,42 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
   def doCheck(
     app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck): Future[Option[HealthResult]] =
-
-    check.hostPort(launched) match {
-      case None => Future.successful {
-        Some(Unhealthy(task.taskId, launched.appVersion, "Missing/invalid port index and no explicit port specified"))
-      }
-      case Some(port) => check.protocol match {
-        case HTTP  => http(app, task, launched, check, port)
-        case TCP   => tcp(app, task, launched, check, port)
-        case HTTPS => https(app, task, launched, check, port)
-        case COMMAND =>
-          Future.failed {
-            val message = s"COMMAND health checks can only be performed " +
-              "by the Mesos executor."
-            log.warning(message)
-            new UnsupportedOperationException(message)
+    task.effectiveIpAddress(app) match {
+      case Some(host) =>
+        check.hostPort(launched) match {
+          case None => Future.successful {
+            Some(
+              Unhealthy(task.taskId, launched.appVersion, "Missing/invalid port index and no explicit port specified"))
           }
-        case _ =>
-          Future.failed {
-            val message = s"Unknown health check protocol: [${check.protocol}]"
-            log.warning(message)
-            new UnsupportedOperationException(message)
+          case Some(port) => check.protocol match {
+            case HTTP  => http(task, launched, check, host, port)
+            case TCP   => tcp(task, launched, check, host, port)
+            case HTTPS => https(task, launched, check, host, port)
+            case COMMAND =>
+              Future.failed {
+                val message = s"COMMAND health checks can only be performed " +
+                  "by the Mesos executor."
+                log.warning(message)
+                new UnsupportedOperationException(message)
+              }
+            case _ =>
+              Future.failed {
+                val message = s"Unknown health check protocol: [${check.protocol}]"
+                log.warning(message)
+                new UnsupportedOperationException(message)
+              }
           }
-      }
+        }
+      case None =>
+        Future.failed {
+          val message = "Health check failed: unable to get the task's effective IP address"
+          log.warning(message)
+          new UnsupportedOperationException(message)
+        }
     }
 
   def http(
-    app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck,
-    port: Int): Future[Option[HealthResult]] = {
-    val host = task.effectiveIpAddress(app)
+    task: Task, launched: Task.Launched, check: HealthCheck, host: String, port: Int): Future[Option[HealthResult]] = {
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"http://$host:$port$absolutePath"
@@ -97,9 +104,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   }
 
   def tcp(
-    app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck,
-    port: Int): Future[Option[HealthResult]] = {
-    val host = task.effectiveIpAddress(app)
+    task: Task, launched: Task.Launched, check: HealthCheck, host: String, port: Int): Future[Option[HealthResult]] = {
     val address = s"$host:$port"
     val timeoutMillis = check.timeout.toMillis.toInt
     log.debug("Checking the health of [{}] via TCP", address)
@@ -116,10 +121,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   }
 
   def https(
-    app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck,
-    port: Int): Future[Option[HealthResult]] = {
-
-    val host = task.effectiveIpAddress(app)
+    task: Task, launched: Task.Launched, check: HealthCheck, host: String, port: Int): Future[Option[HealthResult]] = {
     val rawPath = check.path.getOrElse("")
     val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
     val url = s"https://$host:$port$absolutePath"

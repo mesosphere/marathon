@@ -13,6 +13,8 @@ import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
+
 class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhenThen with ScalaFutures {
   test("name") {
     new Fixture().step.name should be ("postTaskStatusEvent")
@@ -40,7 +42,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         message = taskStatusMessage,
         appId = appId,
         host = host,
-        ipAddresses = Nil,
+        ipAddresses = Some(Seq(ipAddress)),
         ports = portsList,
         version = version.toString,
         timestamp = updateTimestamp.toString
@@ -83,7 +85,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     val existingTask = stagedMarathonTask
 
     When("we receive a terminal status update")
-    val status = runningTaskStatus.toBuilder.setState(terminalTaskState).build()
+    val status = runningTaskStatus.toBuilder.setState(terminalTaskState).clearContainerStatus().build()
     val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
       f.step.processUpdate(taskUpdate).futureValue
@@ -99,7 +101,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
         message = taskStatusMessage,
         appId = appId,
         host = host,
-        ipAddresses = Nil,
+        ipAddresses = None,
         ports = portsList,
         version = version.toString,
         timestamp = updateTimestamp.toString
@@ -116,6 +118,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
   private[this] val appId = PathId("/test")
   private[this] val taskId = Task.Id.forApp(appId)
   private[this] val host = "some.host.local"
+  private[this] val ipAddress = MarathonTestHelper.mesosIpAddress("127.0.0.1")
   private[this] val portsList = Seq(10, 11, 12)
   private[this] val version = Timestamp(1)
   private[this] val updateTimestamp = Timestamp(100)
@@ -128,13 +131,16 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       .setTaskId(taskId.mesosTaskId)
       .setSlaveId(slaveId)
       .setMessage(taskStatusMessage)
+      .setContainerStatus(
+        MarathonTestHelper.containerStatusWithNetworkInfo(MarathonTestHelper.networkInfoWithIPAddress(ipAddress))
+      )
       .build()
 
   import MarathonTestHelper.Implicits._
   private[this] val stagedMarathonTask =
     MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
       .withAgentInfo(_.copy(host = host))
-      .withNetworking(Task.HostPorts(portsList))
+      .withHostPorts(portsList)
 
   class Fixture {
     val eventStream = new EventStream()

@@ -40,13 +40,13 @@ class AppStopActorTest
     val statusUpdateEventA =
       MesosStatusUpdateEvent(
         slaveId = "", taskId = Task.Id("task_a"), taskStatus = "TASK_FAILED", message = "", appId = app.id, host = "",
-        ipAddresses = Nil, ports = Nil, version = app.version.toString
+        ipAddresses = None, ports = Nil, version = app.version.toString
       )
 
     val statusUpdateEventB =
       MesosStatusUpdateEvent(
         slaveId = "", taskId = Task.Id("task_b"), taskStatus = "TASK_LOST", message = "", appId = app.id, host = "",
-        ipAddresses = Nil, ports = Nil, version = app.version.toString
+        ipAddresses = None, ports = Nil, version = app.version.toString
       )
 
     val Some(taskFailureA) =

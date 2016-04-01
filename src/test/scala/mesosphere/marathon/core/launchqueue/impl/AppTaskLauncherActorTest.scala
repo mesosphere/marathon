@@ -23,6 +23,7 @@ import org.mockito
 import org.mockito.Mockito
 import org.scalatest.GivenWhenThen
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -370,7 +371,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val taskId = Task.Id.forApp(app.id)
     val task = MarathonTestHelper.makeOneCPUTask(taskId.idString).build()
     val marathonTask = MarathonTestHelper.mininimalTask(task.getTaskId.getValue).copy(
-      appVersion = app.version, status = Task.Status(app.version, None, None), networking = Task.NoNetworking)
+      appVersion = app.version, status = Task.Status(app.version, None, None), hostPorts = Seq.empty)
   }
 
   private[this] implicit val timeout: Timeout = 3.seconds

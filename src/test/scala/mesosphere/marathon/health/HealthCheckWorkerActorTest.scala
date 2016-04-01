@@ -12,6 +12,7 @@ import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.Matchers
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
@@ -37,7 +38,7 @@ class HealthCheckWorkerActorTest
     val task =
       MarathonTestHelper.runningTask("test_id")
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withNetworking(Task.HostPorts(socketPort))
+        .withHostPorts(Seq(socketPort))
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = "test_id".toPath)
@@ -62,7 +63,7 @@ class HealthCheckWorkerActorTest
     val task =
       MarathonTestHelper.runningTask("test_id")
         .withAgentInfo(_.copy(host = InetAddress.getLocalHost.getCanonicalHostName))
-        .withNetworking(Task.HostPorts(socketPort))
+        .withHostPorts(Seq(socketPort))
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = "test_id".toPath)

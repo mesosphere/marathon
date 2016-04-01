@@ -7,6 +7,8 @@ import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
+
 class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
   test("count no tasks") {
     When("getting counts for no tasks")
@@ -174,15 +176,15 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
 
 class Fixture {
   val taskWithoutState = Task.LaunchedEphemeral(
-    Task.Id("task1"),
-    Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+    taskId = Task.Id("task1"),
+    agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
     appVersion = Timestamp(0),
-    Task.Status(
+    status = Task.Status(
       stagedAt = Timestamp(1),
       startedAt = None,
       mesosStatus = None
     ),
-    Task.NoNetworking
+    hostPorts = Seq.empty
   )
 
 }

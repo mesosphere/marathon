@@ -6,6 +6,8 @@ import akka.event.EventStream
 import akka.testkit.TestProbe
 import mesosphere.marathon.event.MarathonEvent
 
+import scala.collection.immutable.Seq
+
 class CaptureEvents(eventStream: EventStream) {
   /**
     * Captures the events send to the EventStream while the block is executing.

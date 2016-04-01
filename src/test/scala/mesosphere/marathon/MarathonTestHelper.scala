@@ -26,6 +26,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
+import scala.collection.JavaConverters
 import scala.collection.immutable.Seq
 import scala.util.Random
 
@@ -257,7 +258,7 @@ object MarathonTestHelper {
         status = Task.Status(
           stagedAt = now
         ),
-        networking = Task.HostPorts(Seq(1, 2, 3))
+        hostPorts = Seq(1, 2, 3)
       )
     }
 
@@ -345,7 +346,7 @@ object MarathonTestHelper {
         startedAt = None,
         mesosStatus = None
       ),
-      networking = Task.NoNetworking
+      hostPorts = Seq.empty
     )
   }
 
@@ -361,12 +362,12 @@ object MarathonTestHelper {
 
   def taskLaunched: Task.Launched = {
     val now = Timestamp.now()
-    Task.Launched(now, status = Task.Status(now), networking = Task.NoNetworking)
+    Task.Launched(now, status = Task.Status(now), hostPorts = Seq.empty)
   }
 
   def taskLaunchedOp(taskId: Task.Id): TaskStateOp.LaunchOnReservation = {
     val now = Timestamp.now()
-    TaskStateOp.LaunchOnReservation(taskId, now, Task.Status(now), Task.NoNetworking)
+    TaskStateOp.LaunchOnReservation(taskId = taskId, appVersion = now, status = Task.Status(now), hostPorts = Seq.empty)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
@@ -398,15 +399,15 @@ object MarathonTestHelper {
     stagedAt: Long = 2,
     mesosStatus: Option[Mesos.TaskStatus] = None): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
-      Task.Id(taskId),
-      Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
-      appVersion,
-      Task.Status(
+      taskId = Task.Id(taskId),
+      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      appVersion = appVersion,
+      status = Task.Status(
         stagedAt = Timestamp(stagedAt),
         startedAt = None,
         mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STAGING))
       ),
-      Task.NoNetworking
+      hostPorts = Seq.empty
     )
 
   def stagedTaskProto(appId: PathId): Protos.MarathonTask = stagedTaskProto(Task.Id.forApp(appId).idString)
@@ -541,7 +542,7 @@ object MarathonTestHelper {
         startedAt = None,
         mesosStatus = None
       ),
-      networking = Task.NoNetworking,
+      hostPorts = Seq.empty,
       reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
   }
 
@@ -557,9 +558,21 @@ object MarathonTestHelper {
     docker = None
   )
 
-  def addNetworking(task: Task, networking: Task.Networking): Task = task match {
-    case launchedEphemeral: Task.LaunchedEphemeral         => launchedEphemeral.copy(networking = networking)
-    case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(networking = networking)
+  def mesosIpAddress(ipAddress: String) = {
+    Mesos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ipAddress).build
+  }
+
+  def networkInfoWithIPAddress(ipAddress: Mesos.NetworkInfo.IPAddress) = {
+    Mesos.NetworkInfo.newBuilder().addIpAddresses(ipAddress).build
+  }
+
+  def containerStatusWithNetworkInfo(networkInfo: Mesos.NetworkInfo) = {
+    Mesos.ContainerStatus.newBuilder().addNetworkInfos(networkInfo).build
+  }
+
+  def hostPorts(task: Task, hostPorts: Seq[Int]): Task = task match {
+    case launchedEphemeral: Task.LaunchedEphemeral         => launchedEphemeral.copy(hostPorts = hostPorts)
+    case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(hostPorts = hostPorts)
     case reserved: Task.Reserved                           => throw new scala.RuntimeException("Reserved task cannot have networking")
   }
 
@@ -576,10 +589,32 @@ object MarathonTestHelper {
           launchedOnReservation.copy(agentInfo = update(launchedOnReservation.agentInfo))
       }
 
-      def withNetworking(update: Task.Networking): Task = task match {
-        case launchedEphemeral: Task.LaunchedEphemeral         => launchedEphemeral.copy(networking = update)
-        case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(networking = update)
-        case reserved: Task.Reserved                           => throw new scala.RuntimeException("Reserved task cannot have networking")
+      def withHostPorts(update: Seq[Int]): Task = task match {
+        case launchedEphemeral: Task.LaunchedEphemeral         => launchedEphemeral.copy(hostPorts = update)
+        case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(hostPorts = update)
+        case reserved: Task.Reserved                           => throw new scala.RuntimeException("Reserved task cannot have hostPorts")
+      }
+
+      def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): Task = {
+        def containerStatus(networkInfos: scala.collection.Seq[NetworkInfo]) = {
+          import JavaConverters._
+          Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
+        }
+
+        def mesosStatus(mesosStatus: Option[TaskStatus], networkInfos: scala.collection.Seq[NetworkInfo]): Option[TaskStatus] =
+          Some(mesosStatus.getOrElse(Mesos.TaskStatus.getDefaultInstance).toBuilder
+            .setContainerStatus(containerStatus(networkInfos))
+            .build)
+
+        task match {
+          case launchedEphemeral: Task.LaunchedEphemeral =>
+            val updatedStatus = launchedEphemeral.status.copy(mesosStatus = mesosStatus(launchedEphemeral.mesosStatus, update))
+            launchedEphemeral.copy(status = updatedStatus)
+          case launchedOnReservation: Task.LaunchedOnReservation =>
+            val updatedStatus = launchedOnReservation.status.copy(mesosStatus = mesosStatus(launchedOnReservation.mesosStatus, update))
+            launchedOnReservation.copy(status = updatedStatus)
+          case reserved: Task.Reserved => throw new scala.RuntimeException("Reserved task cannot have status")
+        }
       }
 
       def withStatus(update: Task.Status => Task.Status): Task = task match {

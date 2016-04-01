@@ -50,8 +50,8 @@ class TasksResource @Inject() (
 
     val taskList = taskTracker.tasksByAppSync
 
-    val tasks = taskList.appTasksMap.values.view.flatMap { app =>
-      app.tasks.view.map(t => app.appId -> t)
+    val tasks = taskList.appTasksMap.values.view.flatMap { appTasks =>
+      appTasks.tasks.view.map(t => appTasks.appId -> t)
     }
 
     val appIds = taskList.allAppIdsWithTasks
@@ -60,7 +60,7 @@ class TasksResource @Inject() (
 
     val appToPorts = appIdsToApps.map {
       case (appId, app) => appId -> app.map(_.servicePorts).getOrElse(Nil)
-    }.toMap
+    }
 
     val health = appIds.flatMap { appId =>
       result(healthCheckManager.statuses(appId))

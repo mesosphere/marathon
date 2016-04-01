@@ -60,13 +60,13 @@ class AppStartActorTest
       MesosStatusUpdateEvent(
         slaveId = "", taskId = Task.Id("task_a"),
         taskStatus = "TASK_RUNNING", message = "", appId = app
-          .id, host = "", ipAddresses = Nil, ports = Nil, version = app.version.toString
+          .id, host = "", ipAddresses = None, ports = Nil, version = app.version.toString
       )
     )
     system.eventStream.publish(
       MesosStatusUpdateEvent(
         slaveId = "", taskId = Task.Id("task_b"), taskStatus = "TASK_RUNNING", message = "", appId = app.id, host = "",
-        ipAddresses = Nil, ports = Nil, version = app.version.toString
+        ipAddresses = None, ports = Nil, version = app.version.toString
       )
     )
 

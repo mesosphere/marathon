@@ -107,7 +107,7 @@ case class HealthCheck(
   }
 
   def hostPort(launched: Task.Launched): Option[Int] = {
-    def portViaIndex: Option[Int] = portIndex.flatMap(launched.ports.toVector.lift(_))
+    def portViaIndex: Option[Int] = portIndex.flatMap(launched.hostPorts.lift(_))
     port.orElse(portViaIndex)
   }
 
