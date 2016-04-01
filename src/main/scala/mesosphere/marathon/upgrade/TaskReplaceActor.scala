@@ -1,12 +1,14 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ Actor, ActorLogging, Cancellable }
+import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
@@ -18,19 +20,18 @@ import scala.concurrent.Promise
 import scala.concurrent.duration._
 
 class TaskReplaceActor(
-    driver: SchedulerDriver,
-    taskQueue: LaunchQueue,
-    taskTracker: TaskTracker,
-    eventBus: EventStream,
-    app: AppDefinition,
-    promise: Promise[Unit]) extends Actor with ActorLogging {
+    val deploymentManager: ActorRef,
+    val status: DeploymentStatus,
+    val driver: SchedulerDriver,
+    val taskQueue: LaunchQueue,
+    val taskTracker: TaskTracker,
+    val eventBus: EventStream,
+    val readinessCheckExecutor: ReadinessCheckExecutor,
+    val app: AppDefinition,
+    promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
   import context.dispatcher
 
   val tasksToKill = taskTracker.appTasksLaunchedSync(app.id)
-  val appId = app.id
-  val version = app.version
-  val versionString = app.version.toString
-  var healthy = Set.empty[Task.Id]
   var newTasksStarted: Int = 0
   var oldTaskIds = tasksToKill.map(_.taskId).to[SortedSet]
   val toKill = oldTaskIds.to[mutable.Queue]
@@ -39,6 +40,7 @@ class TaskReplaceActor(
   val periodicalRetryKills: Cancellable = context.system.scheduler.schedule(15.seconds, 15.seconds, self, RetryKills)
 
   override def preStart(): Unit = {
+    super.preStart()
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[HealthStatusChanged])
 
@@ -62,33 +64,17 @@ class TaskReplaceActor(
       promise.tryFailure(
         new TaskUpgradeCanceledException(
           "The task upgrade has been cancelled"))
+    super.postStop()
   }
 
-  override def receive: Receive = {
-    val behavior =
-      if (app.healthChecks.nonEmpty)
-        healthCheckingBehavior
-      else
-        taskStateBehavior
+  override def receive: Receive = readinessBehavior orElse replaceBehavior
 
-    behavior orElse commonBehavior: PartialFunction[Any, Unit] // type annotation makes Intellij happy
-  }
-
-  def taskStateBehavior: Receive = {
-    case MesosStatusUpdateEvent(slaveId, taskId, "TASK_RUNNING", _, `appId`, _, _, _, `versionString`, _, _) =>
-      handleStartedTask(taskId)
-  }
-
-  def healthCheckingBehavior: Receive = {
-    case HealthStatusChanged(`appId`, taskId, `version`, true, _, _) if !healthy(taskId) =>
-      handleStartedTask(taskId)
-  }
-
-  def commonBehavior: Receive = {
+  def replaceBehavior: Receive = {
     // New task failed to start, restart it
     case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       log.error(s"New task $taskId failed on slave $slaveId during app $appId restart")
       healthy -= taskId
+      ready -= taskId
       taskQueue.add(app)
 
     // Old task successfully killed
@@ -104,6 +90,11 @@ class TaskReplaceActor(
     case x: Any => log.debug(s"Received $x")
   }
 
+  override def taskIsReady(taskId: Id): Unit = {
+    killNextOldTask(Some(taskId))
+    checkFinished()
+  }
+
   def reconcileNewTasks(): Unit = {
     val leftCapacity = math.max(0, maxCapacity - oldTaskIds.size - newTasksStarted)
     val tasksNotStartedYet = math.max(0, app.instances - newTasksStarted)
@@ -113,12 +104,6 @@ class TaskReplaceActor(
       taskQueue.add(app, tasksToStartNow)
       newTasksStarted += tasksToStartNow
     }
-  }
-
-  def handleStartedTask(taskId: Task.Id): Unit = {
-    healthy += taskId
-    killNextOldTask(Some(taskId))
-    checkFinished()
   }
 
   def killNextOldTask(maybeNewTaskId: Option[Task.Id] = None): Unit = {
@@ -138,13 +123,14 @@ class TaskReplaceActor(
   }
 
   def checkFinished(): Unit = {
-    if (healthy.size == app.instances && oldTaskIds.isEmpty) {
-      log.info(s"App All new tasks for $appId are healthy and all old tasks have been killed")
+    if (ready.size == app.instances && oldTaskIds.isEmpty) {
+      log.info(s"App All new tasks for $appId are ready and all old tasks have been killed")
       promise.success(())
       context.stop(self)
     }
     else if (log.isDebugEnabled) {
-      log.debug(s"For app: [${app.id}] there are [${healthy.size}] healthy new instances and " +
+      log.debug(s"For app: [${app.id}] there are [${healthy.size}] healthy and " +
+        s"[${ready.size}] ready new instances and " +
         s"[${oldTaskIds.size}] old instances.")
     }
   }
@@ -169,6 +155,21 @@ object TaskReplaceActor {
   val FailedToStart = "^TASK_(ERROR|FAILED|LOST|KILLED)$".r
 
   case object RetryKills
+
+  //scalastyle:off
+  def props(
+    deploymentManager: ActorRef,
+    status: DeploymentStatus,
+    driver: SchedulerDriver,
+    taskQueue: LaunchQueue,
+    taskTracker: TaskTracker,
+    eventBus: EventStream,
+    readinessCheckExecutor: ReadinessCheckExecutor,
+    app: AppDefinition,
+    promise: Promise[Unit]): Props = Props(
+    new TaskReplaceActor(deploymentManager, status, driver, taskQueue, taskTracker, eventBus,
+      readinessCheckExecutor, app, promise)
+  )
 
   /** Encapsulates the logic how to get a Restart going */
   private[upgrade] case class RestartStrategy(nrToKillImmediately: Int, maxCapacity: Int)

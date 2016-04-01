@@ -12,6 +12,7 @@ import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
+import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskChangeObservables }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
@@ -91,6 +92,9 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def authenticator(coreModule: CoreModule): Authenticator = coreModule.authModule.authenticator
+
+  @Provides @Singleton
+  def readinessCheckExecutor(coreModule: CoreModule): ReadinessCheckExecutor = coreModule.readinessModule.readinessCheckExecutor //scalastyle:ignore
 
   @Provides @Singleton
   def taskStatusUpdateSteps(

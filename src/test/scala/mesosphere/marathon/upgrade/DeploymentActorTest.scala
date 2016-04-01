@@ -4,6 +4,7 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestActorRef, TestProbe }
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.MesosStatusUpdateEvent
@@ -237,6 +238,7 @@ class DeploymentActorTest
     val storage: StorageProvider = mock[StorageProvider]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
     val config: UpgradeConfig = mock[UpgradeConfig]
+    val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     implicit val system = ActorSystem("TestSystem")
     config.killBatchSize returns 100
     config.killBatchCycle returns 10.seconds
@@ -262,6 +264,7 @@ class DeploymentActorTest
         storage,
         hcManager,
         system.eventStream,
+        readinessCheckExecutor,
         config
       )
     )
