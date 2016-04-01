@@ -42,11 +42,11 @@ protected trait OptionSupport {
   import OptionLabelPatterns._
 
   /** NamedOption represents a (named) configurable item type that provides validation rules */
-  trait NamedOption {
-    val namespace: String
-    val name: String
-    val validValue: Validator[String]
-    def required: Boolean = false
+  abstract class NamedOption(
+      val namespace: String,
+      val name: String,
+      val required: Boolean = false
+  ) {
     def fullName: String = namespace + OptionNamespaceSeparator + name
     def from(m: Map[String, String]): Option[String] = m.get(fullName)
 
@@ -56,23 +56,21 @@ protected trait OptionSupport {
         else Success
       )
     }
-  }
 
-  trait RequiredOption extends NamedOption {
-    override def required: Boolean = true
+    val validValue: Validator[String]
   }
 
   /** supply a validator to enforce that values conform to expectations of "labels" */
-  trait NamedLabelOption extends NamedOption {
-    override val validValue: Validator[String] = validator[String] { v =>
+  trait NamedLabel {
+    val validValue: Validator[String] = validator[String] { v =>
       v should matchRegex(LabelRegex)
     }
   }
 
   /** supply a validator to enforce that values parse to natural (whole, positive) numbers */
-  trait NamedNaturalNumberOption extends NamedOption {
+  trait NamedNaturalNumber {
     import scala.util.Try
-    override val validValue: Validator[String] = new Validator[String] {
+    val validValue: Validator[String] = new Validator[String] {
       override def apply(v: String): Result = {
         val parsed: Try[Long] = Try(v.toLong)
         if (parsed.isSuccess && parsed.get > 0) Success
@@ -82,9 +80,9 @@ protected trait OptionSupport {
   }
 
   /** supply a validator to enforce that values parse to booleans */
-  trait NamedBooleanOption extends NamedOption {
+  trait NamedBoolean {
     import scala.util.Try
-    override val validValue: Validator[String] = new Validator[String] {
+    val validValue: Validator[String] = new Validator[String] {
       override def apply(v: String): Result = {
         val parsed: Try[Boolean] = Try(v.toBoolean)
         if (parsed.isSuccess) Success

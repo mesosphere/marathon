@@ -22,16 +22,19 @@ protected[volume] case object DVDIProvider
 
   import org.apache.mesos.Protos.Volume.Mode
 
-  sealed trait OptNS { val namespace: String = name }
-  case object OptionDriver extends NamedLabelOption
-    with RequiredOption with OptNS { override val name = "driverName" }
-  case object OptionVolumeType extends NamedLabelOption with OptNS { override val name = "volumetype" }
-  case object OptionNewFSType extends NamedLabelOption with OptNS { override val name = "newfstype" }
-  case object OptionIOPS extends NamedNaturalNumberOption with OptNS { override val name = "iops" }
-  case object OptionOverwriteFS extends NamedBooleanOption with OptNS { override val name = "overwritefs" }
+  abstract class ProviderOption(
+      override val name: String,
+      override val required: Boolean = false
+  ) extends NamedOption(DVDIProvider.this.name, name, required)
+
+  case object OptionDriverName extends ProviderOption("driverName", true) with NamedLabel
+  case object OptionVolumeType extends ProviderOption("volumetype") with NamedLabel
+  case object OptionNewFSType extends ProviderOption("newfstype") with NamedLabel
+  case object OptionIOPS extends ProviderOption("iops") with NamedNaturalNumber
+  case object OptionOverwriteFS extends ProviderOption("overwritefs") with NamedBoolean
 
   val validOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opt =>
-    opt is OptionDriver.validOption
+    opt is OptionDriverName.validOption
     opt is OptionVolumeType.validOption
     opt is OptionNewFSType.validOption
     opt is OptionIOPS.validOption
@@ -117,7 +120,7 @@ protected[volume] case object DVDIProvider
   }
 
   def driversInUse(ct: Container): Set[String] =
-    collect(ct).flatMap(_.persistent.options.get(OptionDriver.fullName)).toSet
+    collect(ct).flatMap(_.persistent.options.get(OptionDriverName.fullName)).toSet
 
   /** @return a count of volume references-by-name within an app spec */
   def volumeNameCounts(app: AppDefinition): Map[String, Int] =
@@ -147,7 +150,7 @@ protected[volume] case object DVDIProvider
     // - docker containerizer: specify "volumeDriver" for the container
     val container = ctx.container // TODO(jdef) clone?
     if (container.getType == ContainerInfo.Type.DOCKER && container.hasDocker) {
-      val driverName = pv.persistent.options(OptionDriver.fullName)
+      val driverName = pv.persistent.options(OptionDriverName.fullName)
       if (container.getDocker.getVolumeDriver != driverName) {
         container.setDocker(container.getDocker.toBuilder.setVolumeDriver(driverName).build)
       }
@@ -192,13 +195,13 @@ protected[volume] case object DVDIProvider
     var vars = Seq[Environment.Variable](
       mkVar(dvdiVolumeContainerPath + suffix, v.containerPath),
       mkVar(dvdiVolumeName + suffix, v.persistent.name.get),
-      mkVar(dvdiVolumeDriver + suffix, v.persistent.options(OptionDriver.fullName))
+      mkVar(dvdiVolumeDriver + suffix, v.persistent.options(OptionDriverName.fullName))
     )
 
     val optsVar = {
       val prefix: String = name + OptionNamespaceSeparator
       // don't let the user override these
-      val ignore = Set(OptionDriver.fullName.toLowerCase)
+      val ignore = Set(OptionDriverName.fullName.toLowerCase)
       // persistent.size trumps any user-specified dvdi/size option
       val opts = v.persistent.options ++
         v.persistent.size.fold(Map.empty[String, String]){ sz => Map(prefix + "size" -> sz.toString) }
