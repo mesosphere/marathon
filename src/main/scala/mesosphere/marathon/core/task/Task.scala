@@ -4,7 +4,8 @@ import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.state.{ AppDefinition, PathId, PersistentVolume, Timestamp }
+import mesosphere.marathon.core.volume.VolumesModule
+import mesosphere.marathon.state.{ AppDefinition, Container, PathId, PersistentVolume, Timestamp }
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -349,6 +350,13 @@ object Task {
       }
     }
 
+  }
+
+  /** @return a stream of task local volumes, extrapolating them from the app spec */
+  def localVolumes(app: AppDefinition): Iterable[LocalVolume] = {
+    app.container.toSet[Container].flatMap(VolumesModule.localVolumes.collect).map{ volume =>
+      Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume)
+    }
   }
 
   case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)

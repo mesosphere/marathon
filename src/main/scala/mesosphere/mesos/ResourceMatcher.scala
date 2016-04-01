@@ -2,7 +2,8 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.launcher.impl.ResourceLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.core.volume.VolumesModule
+import mesosphere.marathon.state.{ AppDefinition, Container }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
 import mesosphere.mesos.protos.{ ScalarResource, RangesResource, Resource }
 import org.apache.mesos.Protos
@@ -46,7 +47,7 @@ object ResourceMatcher {
   case class ResourceSelector(
       acceptedRoles: Set[String], reserved: Boolean, requiredLabels: ResourceLabels = ResourceLabels.empty) {
     def apply(resource: Protos.Resource): Boolean = {
-      // resources with disks are matched by the VolumeMatcher or not at all
+      // resources with disks are matched by the VolumeResourceMatcher or not at all
       val noAssociatedDisk = !resource.hasDisk
       def hasRequiredLabels: Boolean = {
         val labelMap: Map[String, String] =
@@ -98,11 +99,15 @@ object ResourceMatcher {
 
     // Local volumes only need to be matched if we are making a reservation for resident tasks --
     // that means if the resources that are matched are still unreserved.
-    val diskMatch = if (!selector.reserved && app.diskForVolumes > 0) {
-      scalarResourceMatch(Resource.DISK, app.disk + app.diskForVolumes, ScalarMatchResult.Scope.IncludingLocalVolumes)
-    }
-    else {
-      scalarResourceMatch(Resource.DISK, app.disk, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+    val diskMatch = {
+      val sz = app.container.toSet[Container].flatMap(VolumesModule.localVolumes.collect).
+        flatMap(_.persistent.size).sum.toDouble
+      if (!selector.reserved && sz > 0) {
+        scalarResourceMatch(Resource.DISK, app.disk + sz, ScalarMatchResult.Scope.IncludingLocalVolumes)
+      }
+      else {
+        scalarResourceMatch(Resource.DISK, app.disk, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+      }
     }
 
     val scalarMatchResults = Iterable(

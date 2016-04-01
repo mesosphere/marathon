@@ -93,7 +93,7 @@ class OfferOperationFactory(
       Mesos.Resource.newBuilder()
         .setName("disk")
         .setType(Mesos.Value.Type.SCALAR)
-        .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
+        .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.get.toDouble).build())
         .setRole(role)
         .setReservation(reservation)
         .setDisk(disk)

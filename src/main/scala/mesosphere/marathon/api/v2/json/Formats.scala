@@ -7,6 +7,7 @@ import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
@@ -235,7 +236,12 @@ trait ContainerFormats {
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mde")
 
-  implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = Json.format[PersistentVolumeInfo]
+  implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = (
+    (__ \ "size").formatNullable[Long] ~
+    (__ \ "name").formatNullable[String] ~
+    (__ \ "providerName").formatNullable[String] ~
+    (__ \ "options").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
+  )(PersistentVolumeInfo(_, _, _, _), unlift(PersistentVolumeInfo.unapply))
 
   implicit lazy val VolumeFormat: Format[Volume] = (
     (__ \ "containerPath").format[String] ~
@@ -575,7 +581,7 @@ trait AppAndGroupFormats {
             upgradeStrategy.getOrElse(if (residency.isDefined) forResidentTasks else empty)
           }
           def residencyOrDefault: Option[Residency] = {
-            residency.orElse(if (app.persistentVolumes.nonEmpty) Some(Residency.defaultResidency) else None)
+            residency.orElse(if (app.residentVolumes.nonEmpty) Some(Residency.defaultResidency) else None)
           }
         }
 

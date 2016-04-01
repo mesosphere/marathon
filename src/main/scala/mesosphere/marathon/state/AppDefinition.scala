@@ -8,6 +8,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.plugin
+import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -100,14 +101,9 @@ case class AppDefinition(
 
   def isResident: Boolean = residency.isDefined
 
-  def persistentVolumes: Iterable[PersistentVolume] = {
-    container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
+  def residentVolumes: Iterable[PersistentVolume] = {
+    container.toSet[Container].flatMap(VolumesModule.localVolumes.collect)
   }
-
-  /**
-    * @return the disk resources required for volumes
-    */
-  def diskForVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
@@ -495,6 +491,7 @@ object AppDefinition {
     appDef.disk should be >= 0.0
     appDef must definesCorrectResidencyCombination
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
+    appDef is VolumesModule.providers.validApp
   }
 
   /**
@@ -521,7 +518,7 @@ object AppDefinition {
 
   private val definesCorrectResidencyCombination: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
-      !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
+      !(app.residency.isDefined ^ app.residentVolumes.nonEmpty)
     }
 
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =
@@ -542,11 +539,11 @@ object AppDefinition {
 
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
     val changeNoVolumes =
-      isTrue[AppDefinition]("Persistent volumes can not be changed!") { to =>
-        val fromVolumes = from.persistentVolumes
-        val toVolumes = to.persistentVolumes
+      isTrue[AppDefinition]("Resident volumes can not be changed!") { to =>
+        val fromVolumes = from.residentVolumes
+        val toVolumes = to.residentVolumes
         def sameSize = fromVolumes.size == toVolumes.size
-        def noChange = from.persistentVolumes.forall { fromVolume =>
+        def noChange = from.residentVolumes.forall { fromVolume =>
           toVolumes.find(_.containerPath == fromVolume.containerPath).contains(fromVolume)
         }
         sameSize && noChange

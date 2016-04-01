@@ -7,10 +7,10 @@ import org.apache.mesos.{ Protos => Mesos }
 import scala.collection.JavaConverters._
 
 object PersistentVolumeMatcher {
-  def matchVolumes(
+  def matchResources(
     offer: Mesos.Offer,
     app: AppDefinition,
-    waitingTasks: Iterable[Task.Reserved]): Option[VolumeMatch] = {
+    waitingTasks: Iterable[Task.Reserved]): Option[VolumeResourceMatch] = {
 
     // find all offered persistent volumes
     val availableVolumes: Map[String, Mesos.Resource] = offer.getResourcesList.asScala.collect {
@@ -26,9 +26,9 @@ object PersistentVolumeMatcher {
     }
 
     waitingTasks.toStream
-      .flatMap { task => resourcesForTask(task).flatMap(rs => Some(VolumeMatch(task, rs))) }
+      .flatMap { task => resourcesForTask(task).flatMap(rs => Some(VolumeResourceMatch(task, rs))) }
       .headOption
   }
 
-  case class VolumeMatch(task: Task.Reserved, persistentVolumeResources: Iterable[Mesos.Resource])
+  case class VolumeResourceMatch(task: Task.Reserved, persistentVolumeResources: Iterable[Mesos.Resource])
 }

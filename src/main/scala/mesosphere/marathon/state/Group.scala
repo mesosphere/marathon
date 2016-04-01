@@ -7,6 +7,7 @@ import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.core.volume.VolumesModule
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
@@ -217,6 +218,7 @@ object Group {
       group is noAppsAndGroupsWithSameName
       (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
       group is validPorts
+      group is VolumesModule.providers.validGroup
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
     }
 
@@ -277,4 +279,3 @@ object Group {
     }
   }
 }
-

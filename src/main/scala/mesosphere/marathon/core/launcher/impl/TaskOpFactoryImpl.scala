@@ -5,6 +5,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
@@ -90,7 +91,7 @@ class TaskOpFactoryImpl @Inject() (
      */
 
     def maybeLaunchOnReservation = if (needToLaunch) {
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, app, request.reserved)
+      val maybeVolumeMatch = PersistentVolumeMatcher.matchResources(offer, app, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
         val matchingReservedResourcesWithoutVolumes =
@@ -129,7 +130,7 @@ class TaskOpFactoryImpl @Inject() (
     offer: Mesos.Offer,
     task: Task.Reserved,
     resourceMatch: Option[ResourceMatcher.ResourceMatch],
-    volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
+    volumeMatch: Option[PersistentVolumeMatcher.VolumeResourceMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(app, (_) => task.taskId, config).build(offer, resourceMatch, volumeMatch) map {
@@ -152,9 +153,7 @@ class TaskOpFactoryImpl @Inject() (
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val localVolumes: Iterable[Task.LocalVolume] = app.persistentVolumes.map { volume =>
-      Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume)
-    }
+    val localVolumes: Iterable[Task.LocalVolume] = Task.localVolumes(app)
     val persistentVolumeIds = localVolumes.map(_.id)
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
