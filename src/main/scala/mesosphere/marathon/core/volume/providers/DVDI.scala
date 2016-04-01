@@ -128,8 +128,7 @@ protected[volume] case object DVDIProvider
             s"Requested volume $name conflicts with a volume in app ${otherApp.id}", None)
         }
         if (ruleViolations.isEmpty) None
-        else Some(GroupViolation(app, "app contains conflicting volumes", None,
-          ruleViolations.toSet))
+        else Some(GroupViolation(app, "app contains conflicting volumes", None, ruleViolations.toSet))
       }
       if (groupViolations.isEmpty) Success
       else Failure(groupViolations.toSet)
@@ -177,12 +176,12 @@ protected[volume] case object DVDIProvider
   val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
   val dvdiVolumeOpts = "DVDI_VOLUME_OPTS"
 
-  def volumeToEnv(v: PersistentVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable] = {
+  def volumeToEnv(vol: PersistentVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable] = {
     import OptionLabelPatterns._
 
     val suffix = {
       val offset = i.filter(_.getName.startsWith(dvdiVolumeName)).map{ s =>
-        val ss = s.getName.substring(dvdiVolumeName.size)
+        val ss = s.getName.substring(dvdiVolumeName.length)
         if (ss.length > 0) ss.toInt else 0
       }.foldLeft(-1)((z, i) => if (i > z) i else z)
 
@@ -192,10 +191,10 @@ protected[volume] case object DVDIProvider
     def mkVar(name: String, value: String): Environment.Variable =
       Environment.Variable.newBuilder.setName(name).setValue(value).build
 
-    var vars = Seq[Environment.Variable](
-      mkVar(dvdiVolumeContainerPath + suffix, v.containerPath),
-      mkVar(dvdiVolumeName + suffix, v.persistent.name.get),
-      mkVar(dvdiVolumeDriver + suffix, v.persistent.options(OptionDriverName.fullName))
+    val vars = Seq[Environment.Variable](
+      mkVar(dvdiVolumeContainerPath + suffix, vol.containerPath),
+      mkVar(dvdiVolumeName + suffix, vol.persistent.name.get),
+      mkVar(dvdiVolumeDriver + suffix, vol.persistent.options(OptionDriverName.fullName))
     )
 
     val optsVar = {
@@ -203,15 +202,15 @@ protected[volume] case object DVDIProvider
       // don't let the user override these
       val ignore = Set(OptionDriverName.fullName.toLowerCase)
       // persistent.size trumps any user-specified dvdi/size option
-      val opts = v.persistent.options ++
-        v.persistent.size.fold(Map.empty[String, String]){ sz => Map(prefix + "size" -> sz.toString) }
+      val opts = vol.persistent.options ++
+                 vol.persistent.size.fold(Map.empty[String, String]){ sz => Map(prefix + "size" -> sz.toString) }
 
       // forward all dvdi/* options to the dvdcli driver, stripping the dvdi/ prefix
       // and trimming the values
       opts.filterKeys{ k =>
         k.startsWith(prefix) && !ignore.contains(k.toLowerCase)
       }.map{
-        case (k, v) => k.substring(prefix.size) + "=" + v.trim()
+        case (k, v) => k.substring(prefix.length) + "=" + v.trim()
       }.mkString(",")
     }
 
