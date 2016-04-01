@@ -63,7 +63,7 @@ class CoreModuleImpl @Inject() (
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
   // READINESS CHECKS
-  lazy val readinessModule = new ReadinessModule()
+  lazy val readinessModule = new ReadinessModule(actorSystem)
 
   // OFFER MATCHING AND LAUNCHING TASKS
 

@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.readiness
 
-import mesosphere.marathon.core.readiness.impl.DummyReadinessCheckExecutor
+import akka.actor.ActorSystem
+import mesosphere.marathon.core.readiness.impl.ReadinessCheckExecutorImpl
 
 /**
   * Exposes everything necessary to execute readiness checks on tasks.
@@ -12,6 +13,6 @@ import mesosphere.marathon.core.readiness.impl.DummyReadinessCheckExecutor
   * * it needs to load some data
   * * ...
   */
-class ReadinessModule {
-  lazy val readinessCheckExecutor: ReadinessCheckExecutor = new DummyReadinessCheckExecutor()
+class ReadinessModule(actorSystem: ActorSystem) {
+  lazy val readinessCheckExecutor: ReadinessCheckExecutor = new ReadinessCheckExecutorImpl()(actorSystem)
 }
