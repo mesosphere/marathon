@@ -93,9 +93,12 @@ class TaskOpFactoryImpl @Inject() (
       val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, app, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
+        // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
+        // by the Reserved task that we actually want to launch
+        val tasksToConsiderForConstraints = tasks - volumeMatch.task.taskId
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
-            offer, app, tasks.values,
+            offer, app, tasksToConsiderForConstraints.values,
             ResourceSelector(
               config.mesosRole.get.toSet, reserved = true,
               requiredLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task)
