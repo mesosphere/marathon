@@ -296,7 +296,7 @@ class MarathonSchedulerActor private (
                 existingPlan.affectedApplicationIds.intersect(plan.affectedApplicationIds).nonEmpty
               }
               val relatedDeploymentIds: Seq[String] = plans.collect {
-                case DeploymentStepInfo(p, _, _) if intersectsWithNewPlan(p) => p.id
+                case DeploymentStepInfo(p, _, _, _) if intersectsWithNewPlan(p) => p.id
               }
               origSender ! CommandFailed(cmd, AppLockedException(relatedDeploymentIds))
           }

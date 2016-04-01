@@ -151,8 +151,8 @@ case class AppDefinition(
       .addAllLabels(appLabels.asJava)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
-
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
+    readinessChecks.foreach { r => builder.addReadinessCheckDefinition(ReadinessCheckSerializer.toProto(r)) }
 
     acceptedResourceRoles.foreach { acceptedResourceRoles =>
       val roles = Protos.ResourceRoles.newBuilder()

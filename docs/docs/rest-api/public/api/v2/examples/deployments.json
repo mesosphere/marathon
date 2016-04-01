@@ -22,7 +22,19 @@
     "currentActions": [
       {
         "action": "ScaleApplication",
-        "app": "/foo"
+        "app": "/foo",
+        "readinessChecks": [
+          {
+            "lastResponse": {
+              "body": "{}",
+              "contentType": "application/json",
+              "status": 500
+            },
+            "name": "myReadyCheck",
+            "ready": false,
+            "taskId": "foo.c9de6033"
+          }
+        ]
       }
     ],
     "currentStep": 2,

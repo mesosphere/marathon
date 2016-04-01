@@ -10,6 +10,7 @@ import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
@@ -542,6 +543,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   var deploymentManagerProps: SchedulerActions => Props = _
   var historyActorProps: Props = _
   var conf: UpgradeConfig = _
+  var readinessCheckExecutor: ReadinessCheckExecutor = _
 
   implicit val defaultTimeout: Timeout = 5.seconds
 
@@ -560,6 +562,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     taskFailureEventRepository = mock[TaskFailureRepository]
     leaderInfo = mock[LeaderInfo]
     conf = mock[UpgradeConfig]
+    readinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     deploymentManagerProps = schedulerActions => Props(new DeploymentManager(
       repo,
@@ -569,6 +572,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       storage,
       hcManager,
       system.eventStream,
+      readinessCheckExecutor,
       conf
     ))
     historyActorProps = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))

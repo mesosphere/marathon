@@ -14,6 +14,7 @@ import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
+import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => mesos }
@@ -340,6 +341,23 @@ trait DeploymentFormats {
   }
 
   implicit lazy val DeploymentStepWrites: Writes[DeploymentStep] = Json.writes[DeploymentStep]
+
+  implicit lazy val DeploymentStepInfoWrites: Writes[DeploymentStepInfo] = Writes { info =>
+    def currentAction(action: DeploymentAction): JsObject = Json.obj (
+      "action" -> action.getClass.getSimpleName,
+      "app" -> action.app.id,
+      "readinessChecks" -> info.readinessChecksByApp(action.app.id)
+    )
+    Json.obj(
+      "id" -> info.plan.id,
+      "version" -> info.plan.version,
+      "affectedApps" -> info.plan.affectedApplicationIds,
+      "steps" -> info.plan.steps,
+      "currentActions" -> info.step.actions.map(currentAction),
+      "currentStep" -> info.nr,
+      "totalSteps" -> info.plan.steps.size
+    )
+  }
 }
 
 trait EventFormats {
