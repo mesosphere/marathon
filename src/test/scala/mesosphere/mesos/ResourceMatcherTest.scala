@@ -1,14 +1,20 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.MarathonTestHelper.Implicits._
+import mesosphere.marathon.Protos.{ Constraint }
 import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, PortDefinitions }
+import mesosphere.marathon.state.{ Timestamp, AppDefinition, PortDefinitions }
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.protos.Resource
+import mesosphere.mesos.protos.{ TextAttribute, Resource }
+import org.apache.mesos.Protos.Attribute
 import org.scalatest.Matchers
+
+import mesosphere.mesos.protos.Implicits._
 
 class ResourceMatcherTest extends MarathonSpec with Matchers {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
@@ -291,5 +297,103 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, ResourceSelector.wildcard)
 
     resOpt should be (empty)
+  }
+
+  test("match resources success with constraints and old tasks in previous version") {
+    val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0)
+      .addAttributes(TextAttribute("region", "pl-east"))
+      .addAttributes(TextAttribute("zone", "pl-east-1b"))
+      .build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      cpus = 1.0,
+      mem = 128.0,
+      disk = 0.0,
+      versionInfo = OnlyVersion(Timestamp(2)),
+      constraints = Set(
+        Constraint.newBuilder
+          .setField("region")
+          .setOperator(Operator.GROUP_BY)
+          .setValue("2")
+          .build(),
+        Constraint.newBuilder
+          .setField("zone")
+          .setOperator(Operator.GROUP_BY)
+          .setValue("4")
+          .build()
+      )
+    )
+    val oldVersion = Timestamp(1)
+    //We have 4 tasks spread across 2 DC and 3 zones
+    //We want to launch new task (with  new version).
+    //According to constraints it should be placed
+    //in pl-east-1b
+    val tasks = Set(
+
+      task("1", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      task("2", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      task("3", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+
+      task("4", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1a")),
+      task("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
+    )
+
+    val resOpt = ResourceMatcher.matchResources(offer, app, tasks, ResourceSelector.wildcard)
+
+    resOpt should not be empty
+  }
+
+  test("match resources fail with constraints and old tasks deployed since last config change") {
+    val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0)
+      .addAttributes(TextAttribute("region", "pl-east"))
+      .addAttributes(TextAttribute("zone", "pl-east-1b"))
+      .build()
+    val oldVersion = Timestamp(1)
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      cpus = 1.0,
+      mem = 128.0,
+      disk = 0.0,
+      versionInfo = FullVersionInfo(
+        version = Timestamp(5),
+        lastScalingAt = Timestamp(5),
+        lastConfigChangeAt = oldVersion
+      ),
+      constraints = Set(
+        Constraint.newBuilder
+          .setField("region")
+          .setOperator(Operator.GROUP_BY)
+          .setValue("2")
+          .build(),
+        Constraint.newBuilder
+          .setField("zone")
+          .setOperator(Operator.GROUP_BY)
+          .setValue("4")
+          .build()
+      )
+    )
+
+    //We have 4 tasks spread across 2 DC and 3 zones
+    //We want to scale our application.
+    //But it will conflict with previously launched tasks.
+    val tasks = Set(
+
+      task("1", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      task("2", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+      task("3", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
+
+      task("4", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1a")),
+      task("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
+    )
+
+    val resOpt = ResourceMatcher.matchResources(offer, app, tasks, ResourceSelector.wildcard)
+
+    resOpt should be (empty)
+  }
+
+  def task(id: String, version: Timestamp, attrs: Map[String, String]): Task = {
+    val attributes = attrs.map { case (name, value) => TextAttribute(name, value): Attribute }
+    MarathonTestHelper.stagedTask(id, appVersion = version)
+      .withAgentInfo(_.copy(attributes = attributes))
   }
 }
