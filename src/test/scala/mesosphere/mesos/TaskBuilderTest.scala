@@ -2,6 +2,7 @@ package mesosphere.mesos
 
 import com.google.common.collect.Lists
 import com.google.protobuf.TextFormat
+import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -697,6 +698,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     // and run only one per machine
     val app = MarathonTestHelper.makeBasicApp().copy(
       instances = 10,
+      versionInfo = OnlyVersion(Timestamp(10)),
       constraints = Set(
         Protos.Constraint.newBuilder.setField("rackid").setOperator(Protos.Constraint.Operator.GROUP_BY).setValue("3").build,
         Protos.Constraint.newBuilder.setField("hostname").setOperator(Protos.Constraint.Operator.UNIQUE).build

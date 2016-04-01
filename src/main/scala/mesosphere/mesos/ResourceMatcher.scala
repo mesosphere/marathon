@@ -116,7 +116,7 @@ object ResourceMatcher {
     def portsMatchOpt: Option[PortsMatch] = new PortsMatcher(app, offer, selector).portsMatch
 
     def meetsAllConstraints: Boolean = {
-      lazy val tasks = runningTasks
+      lazy val tasks = runningTasks.filter(_.launched.exists(_.appVersion >= app.versionInfo.lastConfigChangeVersion))
       val badConstraints = app.constraints.filterNot { constraint =>
         Constraints.meetsConstraint(tasks, offer, constraint)
       }
