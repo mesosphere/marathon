@@ -6,7 +6,7 @@ title: Upgrading to a Newer Version
 
 We generally recommend creating a backup of the ZooKeeper state before upgrading to be able to downgrade in case of problems after an upgrade. This can be done by creating a copy of ZooKeeper's [data directory](http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#The+Data+Directory).
 
-## Upgrading a non HA installation
+## Upgrading a non-HA installation
 Upgrading to a newer version of Marathon should be executed in the following order:
 
 1. Tear down the running instance of Marathon.
