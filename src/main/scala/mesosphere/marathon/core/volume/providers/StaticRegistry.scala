@@ -12,12 +12,12 @@ protected[volume] object StaticRegistry extends PersistentVolumeProviderRegistry
 
   val registry = make(
     // list supported providers here; all MUST provide a non-empty "name" trait
-    AgentVolumeProvider,
+    ResidentVolumeProvider,
     DVDIProvider
   )
 
   def providerForName(name: Option[String]): Option[PersistentVolumeProvider[PersistentVolume]] =
-    registry.get(name.getOrElse(AgentVolumeProvider.name))
+    registry.get(name.getOrElse(ResidentVolumeProvider.name))
 
   def apply[T <: Volume](v: T): Option[VolumeProvider[T]] =
     v match {
@@ -29,7 +29,7 @@ protected[volume] object StaticRegistry extends PersistentVolumeProviderRegistry
 
   val commandInjector = new CommandInjection[PersistentVolume] {
     override def inject(c: CommandContext, pv: PersistentVolume): CommandContext = {
-      registry.get(pv.persistent.providerName.getOrElse(AgentVolumeProvider.name)).
+      registry.get(pv.persistent.providerName.getOrElse(ResidentVolumeProvider.name)).
         fold(c)(p => p.commandInjector.inject(c, pv))
     }
   }
@@ -39,7 +39,7 @@ protected[volume] object StaticRegistry extends PersistentVolumeProviderRegistry
       v match {
         case dv: DockerVolume => DockerHostVolumeProvider.containerInjector.inject(c, dv)
         case pv: PersistentVolume =>
-          registry.get(pv.persistent.providerName.getOrElse(AgentVolumeProvider.name)).
+          registry.get(pv.persistent.providerName.getOrElse(ResidentVolumeProvider.name)).
             fold(c)(p => p.containerInjector.inject(c, pv))
       }
     }

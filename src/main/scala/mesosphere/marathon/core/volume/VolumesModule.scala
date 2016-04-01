@@ -81,6 +81,6 @@ trait PersistentVolumeProviderRegistry extends VolumeProviderRegistry {
   * API facade for callers interested in storage volumes
   */
 object VolumesModule {
-  lazy val localVolumes: VolumeProvider[PersistentVolume] = AgentVolumeProvider
+  lazy val localVolumes: VolumeProvider[PersistentVolume] = ResidentVolumeProvider
   lazy val providers: PersistentVolumeProviderRegistry = StaticRegistry
 }
