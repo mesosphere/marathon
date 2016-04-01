@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord._
+import com.wix.accord.dsl._
 import com.wix.accord.combinators.Fail
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
@@ -34,6 +35,63 @@ protected trait PersistentVolumeProvider extends VolumeProvider[PersistentVolume
     container.volumes.collect{
       case vol: PersistentVolume if accepts(vol) => vol
     }
+
+}
+
+protected trait OptionSupport {
+  import OptionLabelPatterns._
+
+  /** NamedOption represents a (named) configurable item type that provides validation rules */
+  trait NamedOption {
+    val namespace: String
+    val name: String
+    val validValue: Validator[String]
+    def required: Boolean = false
+    def fullName: String = namespace + OptionNamespaceSeparator + name
+    def from(m: Map[String, String]): Option[String] = m.get(fullName)
+
+    def validOption: Validator[Map[String, String]] = new Validator[Map[String, String]] {
+      override def apply(m: Map[String, String]): Result = from(m).map(validValue).getOrElse(
+        if (required) Failure(Set(RuleViolation(fullName, "is a required option, but is not present", None)))
+        else Success
+      )
+    }
+  }
+
+  trait RequiredOption extends NamedOption {
+    override def required: Boolean = true
+  }
+
+  /** supply a validator to enforce that values conform to expectations of "labels" */
+  trait NamedLabelOption extends NamedOption {
+    override val validValue: Validator[String] = validator[String] { v =>
+      v should matchRegex(LabelRegex)
+    }
+  }
+
+  /** supply a validator to enforce that values parse to natural (whole, positive) numbers */
+  trait NamedNaturalNumberOption extends NamedOption {
+    import scala.util.Try
+    override val validValue: Validator[String] = new Validator[String] {
+      override def apply(v: String): Result = {
+        val parsed: Try[Long] = Try(v.toLong)
+        if (parsed.isSuccess && parsed.get > 0) Success
+        else Failure(Set(RuleViolation(v, s"Expected a valid, positive integer instead of $v", None)))
+      }
+    }
+  }
+
+  /** supply a validator to enforce that values parse to booleans */
+  trait NamedBooleanOption extends NamedOption {
+    import scala.util.Try
+    override val validValue: Validator[String] = new Validator[String] {
+      override def apply(v: String): Result = {
+        val parsed: Try[Boolean] = Try(v.toBoolean)
+        if (parsed.isSuccess) Success
+        else Failure(Set(RuleViolation(v, s"Expected a valid boolean instead of $v", None)))
+      }
+    }
+  }
 }
 
 protected abstract class InjectionHelper[V <: Volume: ClassTag] extends VolumeInjection {

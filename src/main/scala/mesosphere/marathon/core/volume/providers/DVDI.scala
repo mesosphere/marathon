@@ -16,20 +16,28 @@ import scala.collection.JavaConverters._
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected case object DVDIProvider extends InjectionHelper[PersistentVolume] with PersistentVolumeProvider {
+protected case object DVDIProvider extends InjectionHelper[PersistentVolume]
+    with PersistentVolumeProvider with OptionSupport {
+
   import org.apache.mesos.Protos.Volume.Mode
 
-  override val name = Some("dvdi")
+  val NAME = "dvdi"
+  override val name = Some(NAME)
 
-  val optionDriver = name.get + "/driverName"
-  val optionIOPS = name.get + "/iops"
-  val optionType = name.get + "/volumeType"
+  sealed trait OptNS { val namespace: String = NAME }
+  case object OptionDriver extends NamedLabelOption
+    with RequiredOption with OptNS { override val name = "driverName" }
+  case object OptionVolumeType extends NamedLabelOption with OptNS { override val name = "volumetype" }
+  case object OptionNewFSType extends NamedLabelOption with OptNS { override val name = "newfstype" }
+  case object OptionIOPS extends NamedNaturalNumberOption with OptNS { override val name = "iops" }
+  case object OptionOverwriteFS extends NamedBooleanOption with OptNS { override val name = "overwritefs" }
 
   val validOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opt =>
-    opt.get(optionDriver) as "driverName option" is notEmpty
-    // TODO(jdef) stronger validation for contents of driver name
-    opt.get(optionDriver).each as "driverName option" is notEmpty
-    // TODO(jdef) validate contents of iops and volume type options
+    opt is OptionDriver.validOption
+    opt is OptionVolumeType.validOption
+    opt is OptionNewFSType.validOption
+    opt is OptionIOPS.validOption
+    opt is OptionOverwriteFS.validOption
   }
 
   val validPersistentVolume = validator[PersistentVolume] { v =>
@@ -111,7 +119,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
   }
 
   def driversInUse(ct: Container): Set[String] =
-    collect(ct).flatMap(_.persistent.options.get(optionDriver)).toSet
+    collect(ct).flatMap(_.persistent.options.get(OptionDriver.fullName)).toSet
 
   /** @return a count of volume references-by-name within an app spec */
   def volumeNameCounts(app: AppDefinition): Map[String, Int] =
@@ -141,7 +149,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
     // - docker containerizer: specify "volumeDriver" for the container
     val container = ctx.container // TODO(jdef) clone?
     if (container.getType == ContainerInfo.Type.DOCKER && container.hasDocker) {
-      val driverName = pv.persistent.options(optionDriver)
+      val driverName = pv.persistent.options(OptionDriver.fullName)
       if (container.getDocker.getVolumeDriver != driverName) {
         container.setDocker(container.getDocker.toBuilder.setVolumeDriver(driverName).build)
       }
@@ -179,7 +187,7 @@ protected case object DVDIProvider extends InjectionHelper[PersistentVolume] wit
 
     Seq(
       newVar(dvdiVolumeName + suffix, v.persistent.name.get),
-      newVar(dvdiVolumeDriver + suffix, v.persistent.options(optionDriver))
+      newVar(dvdiVolumeDriver + suffix, v.persistent.options(OptionDriver.fullName))
     // TODO(jdef) support other options here
     )
   }

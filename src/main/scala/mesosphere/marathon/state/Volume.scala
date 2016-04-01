@@ -144,13 +144,17 @@ case class PersistentVolumeInfo(
   }
 }
 
-object PersistentVolumeInfo {
-  private val OptionNamespaceSeparator = "/"
-  private val OptionNamePattern = "[A-Za-z0-9](?:[-A-Za-z0-9\\._:]*[A-Za-z0-9])?"
-  private val LabelPattern = "[a-z0-9](?:[-a-z0-9]*[a-z0-9])?"
+object OptionLabelPatterns {
+  val OptionNamespaceSeparator = "/"
+  val OptionNamePattern = "[A-Za-z0-9](?:[-A-Za-z0-9\\._:]*[A-Za-z0-9])?"
+  val LabelPattern = "[a-z0-9](?:[-a-z0-9]*[a-z0-9])?"
 
-  private val LabelRegex = "^" + LabelPattern + "$"
-  private val OptionKeyRegex = "^" + LabelPattern + OptionNamespaceSeparator + OptionNamePattern + "$"
+  val LabelRegex = "^" + LabelPattern + "$"
+  val OptionKeyRegex = "^" + LabelPattern + OptionNamespaceSeparator + OptionNamePattern + "$"
+}
+
+object PersistentVolumeInfo {
+  import OptionLabelPatterns._
 
   implicit val validOptions = validator[Map[String, String]] {
     option => option.keys.each should matchRegex(OptionKeyRegex)
