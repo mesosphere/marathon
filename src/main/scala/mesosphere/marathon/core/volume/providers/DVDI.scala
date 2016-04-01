@@ -79,12 +79,6 @@ protected[volume] case object DVDIProvider
     strategy.maximumOverCapacity should equalTo(0.0)
   }
 
-  val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
-    app is appBasicValidation
-    app.container.each is containerValidation
-    app.upgradeStrategy is validUpgradeStrategy
-  }
-
   val appBasicValidation: Validator[AppDefinition] = new Validator[AppDefinition] {
     override def apply(app: AppDefinition): Result = {
       val nv = nameViolations(app)
@@ -92,6 +86,29 @@ protected[volume] case object DVDIProvider
       if (nv.isEmpty && iv.isEmpty) Success
       else Failure(nv.toSet[Violation] ++ iv.toSet)
     }
+  }
+
+  def driversInUse(ct: Container): Set[String] =
+    collect(ct).flatMap(_.persistent.options.get(OptionDriverName.fullName)).toSet
+
+  /** @return a count of volume references-by-name within an app spec */
+  def volumeNameCounts(app: AppDefinition): Map[String, Int] =
+    volumesForApp(app).flatMap{ pv => nameOf(pv.persistent) }.groupBy(identity).mapValues(_.size)
+
+  protected[providers] def modes(ct: Container): Set[Mode] =
+    collect(ct).map(_.mode).toSet
+
+  /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
+  val containerValidation: Validator[Container] = validator[Container] { ct =>
+    (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (modes(ct).each is equalTo(Mode.RW))) or (
+      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should equalTo(1))
+      )
+  }
+
+  val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app is appBasicValidation
+    app.container.each is containerValidation
+    app.upgradeStrategy is validUpgradeStrategy
   }
 
   // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
@@ -117,23 +134,6 @@ protected[volume] case object DVDIProvider
       if (groupViolations.isEmpty) Success
       else Failure(groupViolations.toSet)
     }
-  }
-
-  def driversInUse(ct: Container): Set[String] =
-    collect(ct).flatMap(_.persistent.options.get(OptionDriverName.fullName)).toSet
-
-  /** @return a count of volume references-by-name within an app spec */
-  def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-    volumesForApp(app).flatMap{ pv => nameOf(pv.persistent) }.groupBy(identity).mapValues(_.size)
-
-  protected[providers] def modes(ct: Container): Set[Mode] =
-    collect(ct).map(_.mode).toSet
-
-  /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
-  val containerValidation: Validator[Container] = validator[Container] { ct =>
-    (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (modes(ct).each is equalTo(Mode.RW))) or (
-      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should equalTo(1))
-    )
   }
 
   /** non-agent-local PersistentVolumes can be serialized into a Mesos Protobuf */
