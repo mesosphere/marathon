@@ -3,10 +3,12 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
+import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 
@@ -26,13 +28,22 @@ class AppInfoBaseData(
 
   if (log.isDebugEnabled) log.debug(s"new AppInfoBaseData $this")
 
+  lazy val runningDeployments: Future[Seq[DeploymentStepInfo]] = marathonSchedulerService.listRunningDeployments()
+
+  lazy val readinessChecksByAppFuture: Future[Map[PathId, Seq[ReadinessCheckResult]]] = {
+    runningDeployments.map { infos =>
+      infos.foldLeft(Map.empty[PathId, Vector[ReadinessCheckResult]].withDefaultValue(Vector.empty)) { (result, info) =>
+        result ++ info.readinessChecksByApp.map {
+          case (appId, checkResults) => appId -> (result(appId) ++ checkResults)
+        }
+      }
+    }
+  }
+
   lazy val runningDeploymentsByAppFuture: Future[Map[PathId, Seq[Identifiable]]] = {
     log.debug("Retrieving running deployments")
 
-    val allRunningDeploymentsFuture: Future[Seq[DeploymentPlan]] =
-      for {
-        stepInfos <- marathonSchedulerService.listRunningDeployments()
-      } yield stepInfos.map(_.plan)
+    val allRunningDeploymentsFuture: Future[Seq[DeploymentPlan]] = runningDeployments.map(_.map(_.plan))
 
     allRunningDeploymentsFuture.map { allDeployments =>
       val byApp = Map.empty[PathId, Vector[DeploymentPlan]].withDefaultValue(Vector.empty)
@@ -60,6 +71,8 @@ class AppInfoBaseData(
         embed match {
           case AppInfo.Embed.Counts =>
             appData.taskCountsFuture.map(counts => info.copy(maybeCounts = Some(counts)))
+          case AppInfo.Embed.Readiness =>
+            readinessChecksByAppFuture.map(checks => info.copy(maybeReadinessCheckResults = Some(checks(app.id))))
           case AppInfo.Embed.Deployments =>
             runningDeploymentsByAppFuture.map(deployments => info.copy(maybeDeployments = Some(deployments(app.id))))
           case AppInfo.Embed.LastTaskFailure =>
