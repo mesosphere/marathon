@@ -26,7 +26,7 @@ checks consecutively, that task is killed.
   "intervalSeconds": 60,
   "timeoutSeconds": 20,
   "maxConsecutiveFailures": 3,
-  "ignoreHttp1xx": false,
+  "ignoreHttp1xx": false
 }
 ```
 
