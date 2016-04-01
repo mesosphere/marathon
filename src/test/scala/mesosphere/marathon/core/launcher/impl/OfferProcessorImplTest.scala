@@ -13,6 +13,7 @@ import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.GivenWhenThen
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
@@ -112,7 +113,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
         taskId = dummyTask.taskId,
         appVersion = clock.now(),
         status = Task.Status(clock.now()),
-        networking = Task.NoNetworking)
+        hostPorts = Seq.empty)
       val launch = f.launchWithOldTask(
         task,
         taskStateOp,

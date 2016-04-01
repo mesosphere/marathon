@@ -12,6 +12,8 @@ import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.Seq
+
 //scalastyle:off number.of.types
 
 trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
@@ -223,8 +225,8 @@ case class MesosStatusUpdateEvent(
   message: String,
   appId: PathId,
   host: String,
-  ipAddresses: Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress],
-  ports: Iterable[Int],
+  ipAddresses: Option[Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress]],
+  ports: Seq[Int],
   version: String,
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent

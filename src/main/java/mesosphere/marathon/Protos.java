@@ -10320,29 +10320,49 @@ public final class Protos {
      */
     org.apache.mesos.Protos.SlaveIDOrBuilder getSlaveIdOrBuilder();
 
-    // repeated .mesos.NetworkInfo networks = 11;
+    // repeated .mesos.NetworkInfo OBSOLETE_networks = 11;
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
     java.util.List<org.apache.mesos.Protos.NetworkInfo> 
-        getNetworksList();
+        getOBSOLETENetworksList();
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
-    org.apache.mesos.Protos.NetworkInfo getNetworks(int index);
+    org.apache.mesos.Protos.NetworkInfo getOBSOLETENetworks(int index);
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
-    int getNetworksCount();
+    int getOBSOLETENetworksCount();
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
     java.util.List<? extends org.apache.mesos.Protos.NetworkInfoOrBuilder> 
-        getNetworksOrBuilderList();
+        getOBSOLETENetworksOrBuilderList();
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
-    org.apache.mesos.Protos.NetworkInfoOrBuilder getNetworksOrBuilder(
+    org.apache.mesos.Protos.NetworkInfoOrBuilder getOBSOLETENetworksOrBuilder(
         int index);
 
     // optional .mesosphere.marathon.MarathonTask.Reservation reservation = 12;
@@ -10512,10 +10532,10 @@ public final class Protos {
             }
             case 90: {
               if (!((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
-                networks_ = new java.util.ArrayList<org.apache.mesos.Protos.NetworkInfo>();
+                oBSOLETENetworks_ = new java.util.ArrayList<org.apache.mesos.Protos.NetworkInfo>();
                 mutable_bitField0_ |= 0x00000400;
               }
-              networks_.add(input.readMessage(org.apache.mesos.Protos.NetworkInfo.PARSER, extensionRegistry));
+              oBSOLETENetworks_.add(input.readMessage(org.apache.mesos.Protos.NetworkInfo.PARSER, extensionRegistry));
               break;
             }
             case 98: {
@@ -10549,7 +10569,7 @@ public final class Protos {
           oBSOLETEStatuses_ = java.util.Collections.unmodifiableList(oBSOLETEStatuses_);
         }
         if (((mutable_bitField0_ & 0x00000400) == 0x00000400)) {
-          networks_ = java.util.Collections.unmodifiableList(networks_);
+          oBSOLETENetworks_ = java.util.Collections.unmodifiableList(oBSOLETENetworks_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -13002,40 +13022,60 @@ public final class Protos {
       return slaveId_;
     }
 
-    // repeated .mesos.NetworkInfo networks = 11;
-    public static final int NETWORKS_FIELD_NUMBER = 11;
-    private java.util.List<org.apache.mesos.Protos.NetworkInfo> networks_;
+    // repeated .mesos.NetworkInfo OBSOLETE_networks = 11;
+    public static final int OBSOLETE_NETWORKS_FIELD_NUMBER = 11;
+    private java.util.List<org.apache.mesos.Protos.NetworkInfo> oBSOLETENetworks_;
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
-    public java.util.List<org.apache.mesos.Protos.NetworkInfo> getNetworksList() {
-      return networks_;
+    public java.util.List<org.apache.mesos.Protos.NetworkInfo> getOBSOLETENetworksList() {
+      return oBSOLETENetworks_;
     }
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
     public java.util.List<? extends org.apache.mesos.Protos.NetworkInfoOrBuilder> 
-        getNetworksOrBuilderList() {
-      return networks_;
+        getOBSOLETENetworksOrBuilderList() {
+      return oBSOLETENetworks_;
     }
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
-    public int getNetworksCount() {
-      return networks_.size();
+    public int getOBSOLETENetworksCount() {
+      return oBSOLETENetworks_.size();
     }
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
-    public org.apache.mesos.Protos.NetworkInfo getNetworks(int index) {
-      return networks_.get(index);
+    public org.apache.mesos.Protos.NetworkInfo getOBSOLETENetworks(int index) {
+      return oBSOLETENetworks_.get(index);
     }
     /**
-     * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+     * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+     *
+     * <pre>
+     * status already contained this, so this field was redundant
+     * </pre>
      */
-    public org.apache.mesos.Protos.NetworkInfoOrBuilder getNetworksOrBuilder(
+    public org.apache.mesos.Protos.NetworkInfoOrBuilder getOBSOLETENetworksOrBuilder(
         int index) {
-      return networks_.get(index);
+      return oBSOLETENetworks_.get(index);
     }
 
     // optional .mesosphere.marathon.MarathonTask.Reservation reservation = 12;
@@ -13083,7 +13123,7 @@ public final class Protos {
       version_ = "1970-01-01T00:00:00.000Z";
       status_ = org.apache.mesos.Protos.TaskStatus.getDefaultInstance();
       slaveId_ = org.apache.mesos.Protos.SlaveID.getDefaultInstance();
-      networks_ = java.util.Collections.emptyList();
+      oBSOLETENetworks_ = java.util.Collections.emptyList();
       reservation_ = mesosphere.marathon.Protos.MarathonTask.Reservation.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
@@ -13119,8 +13159,8 @@ public final class Protos {
           return false;
         }
       }
-      for (int i = 0; i < getNetworksCount(); i++) {
-        if (!getNetworks(i).isInitialized()) {
+      for (int i = 0; i < getOBSOLETENetworksCount(); i++) {
+        if (!getOBSOLETENetworks(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -13168,8 +13208,8 @@ public final class Protos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeMessage(10, slaveId_);
       }
-      for (int i = 0; i < networks_.size(); i++) {
-        output.writeMessage(11, networks_.get(i));
+      for (int i = 0; i < oBSOLETENetworks_.size(); i++) {
+        output.writeMessage(11, oBSOLETENetworks_.get(i));
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         output.writeMessage(12, reservation_);
@@ -13228,9 +13268,9 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(10, slaveId_);
       }
-      for (int i = 0; i < networks_.size(); i++) {
+      for (int i = 0; i < oBSOLETENetworks_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(11, networks_.get(i));
+          .computeMessageSize(11, oBSOLETENetworks_.get(i));
       }
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         size += com.google.protobuf.CodedOutputStream
@@ -13348,7 +13388,7 @@ public final class Protos {
           getOBSOLETEStatusesFieldBuilder();
           getStatusFieldBuilder();
           getSlaveIdFieldBuilder();
-          getNetworksFieldBuilder();
+          getOBSOLETENetworksFieldBuilder();
           getReservationFieldBuilder();
         }
       }
@@ -13394,11 +13434,11 @@ public final class Protos {
           slaveIdBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000200);
-        if (networksBuilder_ == null) {
-          networks_ = java.util.Collections.emptyList();
+        if (oBSOLETENetworksBuilder_ == null) {
+          oBSOLETENetworks_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000400);
         } else {
-          networksBuilder_.clear();
+          oBSOLETENetworksBuilder_.clear();
         }
         if (reservationBuilder_ == null) {
           reservation_ = mesosphere.marathon.Protos.MarathonTask.Reservation.getDefaultInstance();
@@ -13493,14 +13533,14 @@ public final class Protos {
         } else {
           result.slaveId_ = slaveIdBuilder_.build();
         }
-        if (networksBuilder_ == null) {
+        if (oBSOLETENetworksBuilder_ == null) {
           if (((bitField0_ & 0x00000400) == 0x00000400)) {
-            networks_ = java.util.Collections.unmodifiableList(networks_);
+            oBSOLETENetworks_ = java.util.Collections.unmodifiableList(oBSOLETENetworks_);
             bitField0_ = (bitField0_ & ~0x00000400);
           }
-          result.networks_ = networks_;
+          result.oBSOLETENetworks_ = oBSOLETENetworks_;
         } else {
-          result.networks_ = networksBuilder_.build();
+          result.oBSOLETENetworks_ = oBSOLETENetworksBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
           to_bitField0_ |= 0x00000080;
@@ -13615,29 +13655,29 @@ public final class Protos {
         if (other.hasSlaveId()) {
           mergeSlaveId(other.getSlaveId());
         }
-        if (networksBuilder_ == null) {
-          if (!other.networks_.isEmpty()) {
-            if (networks_.isEmpty()) {
-              networks_ = other.networks_;
+        if (oBSOLETENetworksBuilder_ == null) {
+          if (!other.oBSOLETENetworks_.isEmpty()) {
+            if (oBSOLETENetworks_.isEmpty()) {
+              oBSOLETENetworks_ = other.oBSOLETENetworks_;
               bitField0_ = (bitField0_ & ~0x00000400);
             } else {
-              ensureNetworksIsMutable();
-              networks_.addAll(other.networks_);
+              ensureOBSOLETENetworksIsMutable();
+              oBSOLETENetworks_.addAll(other.oBSOLETENetworks_);
             }
             onChanged();
           }
         } else {
-          if (!other.networks_.isEmpty()) {
-            if (networksBuilder_.isEmpty()) {
-              networksBuilder_.dispose();
-              networksBuilder_ = null;
-              networks_ = other.networks_;
+          if (!other.oBSOLETENetworks_.isEmpty()) {
+            if (oBSOLETENetworksBuilder_.isEmpty()) {
+              oBSOLETENetworksBuilder_.dispose();
+              oBSOLETENetworksBuilder_ = null;
+              oBSOLETENetworks_ = other.oBSOLETENetworks_;
               bitField0_ = (bitField0_ & ~0x00000400);
-              networksBuilder_ = 
+              oBSOLETENetworksBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getNetworksFieldBuilder() : null;
+                   getOBSOLETENetworksFieldBuilder() : null;
             } else {
-              networksBuilder_.addAllMessages(other.networks_);
+              oBSOLETENetworksBuilder_.addAllMessages(other.oBSOLETENetworks_);
             }
           }
         }
@@ -13677,8 +13717,8 @@ public final class Protos {
             return false;
           }
         }
-        for (int i = 0; i < getNetworksCount(); i++) {
-          if (!getNetworks(i).isInitialized()) {
+        for (int i = 0; i < getOBSOLETENetworksCount(); i++) {
+          if (!getOBSOLETENetworks(i).isInitialized()) {
             
             return false;
           }
@@ -14803,244 +14843,316 @@ public final class Protos {
         return slaveIdBuilder_;
       }
 
-      // repeated .mesos.NetworkInfo networks = 11;
-      private java.util.List<org.apache.mesos.Protos.NetworkInfo> networks_ =
+      // repeated .mesos.NetworkInfo OBSOLETE_networks = 11;
+      private java.util.List<org.apache.mesos.Protos.NetworkInfo> oBSOLETENetworks_ =
         java.util.Collections.emptyList();
-      private void ensureNetworksIsMutable() {
+      private void ensureOBSOLETENetworksIsMutable() {
         if (!((bitField0_ & 0x00000400) == 0x00000400)) {
-          networks_ = new java.util.ArrayList<org.apache.mesos.Protos.NetworkInfo>(networks_);
+          oBSOLETENetworks_ = new java.util.ArrayList<org.apache.mesos.Protos.NetworkInfo>(oBSOLETENetworks_);
           bitField0_ |= 0x00000400;
          }
       }
 
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.mesos.Protos.NetworkInfo, org.apache.mesos.Protos.NetworkInfo.Builder, org.apache.mesos.Protos.NetworkInfoOrBuilder> networksBuilder_;
+          org.apache.mesos.Protos.NetworkInfo, org.apache.mesos.Protos.NetworkInfo.Builder, org.apache.mesos.Protos.NetworkInfoOrBuilder> oBSOLETENetworksBuilder_;
 
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public java.util.List<org.apache.mesos.Protos.NetworkInfo> getNetworksList() {
-        if (networksBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(networks_);
+      public java.util.List<org.apache.mesos.Protos.NetworkInfo> getOBSOLETENetworksList() {
+        if (oBSOLETENetworksBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(oBSOLETENetworks_);
         } else {
-          return networksBuilder_.getMessageList();
+          return oBSOLETENetworksBuilder_.getMessageList();
         }
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public int getNetworksCount() {
-        if (networksBuilder_ == null) {
-          return networks_.size();
+      public int getOBSOLETENetworksCount() {
+        if (oBSOLETENetworksBuilder_ == null) {
+          return oBSOLETENetworks_.size();
         } else {
-          return networksBuilder_.getCount();
+          return oBSOLETENetworksBuilder_.getCount();
         }
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public org.apache.mesos.Protos.NetworkInfo getNetworks(int index) {
-        if (networksBuilder_ == null) {
-          return networks_.get(index);
+      public org.apache.mesos.Protos.NetworkInfo getOBSOLETENetworks(int index) {
+        if (oBSOLETENetworksBuilder_ == null) {
+          return oBSOLETENetworks_.get(index);
         } else {
-          return networksBuilder_.getMessage(index);
+          return oBSOLETENetworksBuilder_.getMessage(index);
         }
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public Builder setNetworks(
+      public Builder setOBSOLETENetworks(
           int index, org.apache.mesos.Protos.NetworkInfo value) {
-        if (networksBuilder_ == null) {
+        if (oBSOLETENetworksBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureNetworksIsMutable();
-          networks_.set(index, value);
+          ensureOBSOLETENetworksIsMutable();
+          oBSOLETENetworks_.set(index, value);
           onChanged();
         } else {
-          networksBuilder_.setMessage(index, value);
+          oBSOLETENetworksBuilder_.setMessage(index, value);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public Builder setNetworks(
+      public Builder setOBSOLETENetworks(
           int index, org.apache.mesos.Protos.NetworkInfo.Builder builderForValue) {
-        if (networksBuilder_ == null) {
-          ensureNetworksIsMutable();
-          networks_.set(index, builderForValue.build());
+        if (oBSOLETENetworksBuilder_ == null) {
+          ensureOBSOLETENetworksIsMutable();
+          oBSOLETENetworks_.set(index, builderForValue.build());
           onChanged();
         } else {
-          networksBuilder_.setMessage(index, builderForValue.build());
+          oBSOLETENetworksBuilder_.setMessage(index, builderForValue.build());
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public Builder addNetworks(org.apache.mesos.Protos.NetworkInfo value) {
-        if (networksBuilder_ == null) {
+      public Builder addOBSOLETENetworks(org.apache.mesos.Protos.NetworkInfo value) {
+        if (oBSOLETENetworksBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureNetworksIsMutable();
-          networks_.add(value);
+          ensureOBSOLETENetworksIsMutable();
+          oBSOLETENetworks_.add(value);
           onChanged();
         } else {
-          networksBuilder_.addMessage(value);
+          oBSOLETENetworksBuilder_.addMessage(value);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public Builder addNetworks(
+      public Builder addOBSOLETENetworks(
           int index, org.apache.mesos.Protos.NetworkInfo value) {
-        if (networksBuilder_ == null) {
+        if (oBSOLETENetworksBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureNetworksIsMutable();
-          networks_.add(index, value);
+          ensureOBSOLETENetworksIsMutable();
+          oBSOLETENetworks_.add(index, value);
           onChanged();
         } else {
-          networksBuilder_.addMessage(index, value);
+          oBSOLETENetworksBuilder_.addMessage(index, value);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public Builder addNetworks(
+      public Builder addOBSOLETENetworks(
           org.apache.mesos.Protos.NetworkInfo.Builder builderForValue) {
-        if (networksBuilder_ == null) {
-          ensureNetworksIsMutable();
-          networks_.add(builderForValue.build());
+        if (oBSOLETENetworksBuilder_ == null) {
+          ensureOBSOLETENetworksIsMutable();
+          oBSOLETENetworks_.add(builderForValue.build());
           onChanged();
         } else {
-          networksBuilder_.addMessage(builderForValue.build());
+          oBSOLETENetworksBuilder_.addMessage(builderForValue.build());
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public Builder addNetworks(
+      public Builder addOBSOLETENetworks(
           int index, org.apache.mesos.Protos.NetworkInfo.Builder builderForValue) {
-        if (networksBuilder_ == null) {
-          ensureNetworksIsMutable();
-          networks_.add(index, builderForValue.build());
+        if (oBSOLETENetworksBuilder_ == null) {
+          ensureOBSOLETENetworksIsMutable();
+          oBSOLETENetworks_.add(index, builderForValue.build());
           onChanged();
         } else {
-          networksBuilder_.addMessage(index, builderForValue.build());
+          oBSOLETENetworksBuilder_.addMessage(index, builderForValue.build());
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public Builder addAllNetworks(
+      public Builder addAllOBSOLETENetworks(
           java.lang.Iterable<? extends org.apache.mesos.Protos.NetworkInfo> values) {
-        if (networksBuilder_ == null) {
-          ensureNetworksIsMutable();
-          super.addAll(values, networks_);
+        if (oBSOLETENetworksBuilder_ == null) {
+          ensureOBSOLETENetworksIsMutable();
+          super.addAll(values, oBSOLETENetworks_);
           onChanged();
         } else {
-          networksBuilder_.addAllMessages(values);
+          oBSOLETENetworksBuilder_.addAllMessages(values);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public Builder clearNetworks() {
-        if (networksBuilder_ == null) {
-          networks_ = java.util.Collections.emptyList();
+      public Builder clearOBSOLETENetworks() {
+        if (oBSOLETENetworksBuilder_ == null) {
+          oBSOLETENetworks_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000400);
           onChanged();
         } else {
-          networksBuilder_.clear();
+          oBSOLETENetworksBuilder_.clear();
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public Builder removeNetworks(int index) {
-        if (networksBuilder_ == null) {
-          ensureNetworksIsMutable();
-          networks_.remove(index);
+      public Builder removeOBSOLETENetworks(int index) {
+        if (oBSOLETENetworksBuilder_ == null) {
+          ensureOBSOLETENetworksIsMutable();
+          oBSOLETENetworks_.remove(index);
           onChanged();
         } else {
-          networksBuilder_.remove(index);
+          oBSOLETENetworksBuilder_.remove(index);
         }
         return this;
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public org.apache.mesos.Protos.NetworkInfo.Builder getNetworksBuilder(
+      public org.apache.mesos.Protos.NetworkInfo.Builder getOBSOLETENetworksBuilder(
           int index) {
-        return getNetworksFieldBuilder().getBuilder(index);
+        return getOBSOLETENetworksFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public org.apache.mesos.Protos.NetworkInfoOrBuilder getNetworksOrBuilder(
+      public org.apache.mesos.Protos.NetworkInfoOrBuilder getOBSOLETENetworksOrBuilder(
           int index) {
-        if (networksBuilder_ == null) {
-          return networks_.get(index);  } else {
-          return networksBuilder_.getMessageOrBuilder(index);
+        if (oBSOLETENetworksBuilder_ == null) {
+          return oBSOLETENetworks_.get(index);  } else {
+          return oBSOLETENetworksBuilder_.getMessageOrBuilder(index);
         }
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
       public java.util.List<? extends org.apache.mesos.Protos.NetworkInfoOrBuilder> 
-           getNetworksOrBuilderList() {
-        if (networksBuilder_ != null) {
-          return networksBuilder_.getMessageOrBuilderList();
+           getOBSOLETENetworksOrBuilderList() {
+        if (oBSOLETENetworksBuilder_ != null) {
+          return oBSOLETENetworksBuilder_.getMessageOrBuilderList();
         } else {
-          return java.util.Collections.unmodifiableList(networks_);
+          return java.util.Collections.unmodifiableList(oBSOLETENetworks_);
         }
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public org.apache.mesos.Protos.NetworkInfo.Builder addNetworksBuilder() {
-        return getNetworksFieldBuilder().addBuilder(
+      public org.apache.mesos.Protos.NetworkInfo.Builder addOBSOLETENetworksBuilder() {
+        return getOBSOLETENetworksFieldBuilder().addBuilder(
             org.apache.mesos.Protos.NetworkInfo.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
-      public org.apache.mesos.Protos.NetworkInfo.Builder addNetworksBuilder(
+      public org.apache.mesos.Protos.NetworkInfo.Builder addOBSOLETENetworksBuilder(
           int index) {
-        return getNetworksFieldBuilder().addBuilder(
+        return getOBSOLETENetworksFieldBuilder().addBuilder(
             index, org.apache.mesos.Protos.NetworkInfo.getDefaultInstance());
       }
       /**
-       * <code>repeated .mesos.NetworkInfo networks = 11;</code>
+       * <code>repeated .mesos.NetworkInfo OBSOLETE_networks = 11;</code>
+       *
+       * <pre>
+       * status already contained this, so this field was redundant
+       * </pre>
        */
       public java.util.List<org.apache.mesos.Protos.NetworkInfo.Builder> 
-           getNetworksBuilderList() {
-        return getNetworksFieldBuilder().getBuilderList();
+           getOBSOLETENetworksBuilderList() {
+        return getOBSOLETENetworksFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.mesos.Protos.NetworkInfo, org.apache.mesos.Protos.NetworkInfo.Builder, org.apache.mesos.Protos.NetworkInfoOrBuilder> 
-          getNetworksFieldBuilder() {
-        if (networksBuilder_ == null) {
-          networksBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+          getOBSOLETENetworksFieldBuilder() {
+        if (oBSOLETENetworksBuilder_ == null) {
+          oBSOLETENetworksBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               org.apache.mesos.Protos.NetworkInfo, org.apache.mesos.Protos.NetworkInfo.Builder, org.apache.mesos.Protos.NetworkInfoOrBuilder>(
-                  networks_,
+                  oBSOLETENetworks_,
                   ((bitField0_ & 0x00000400) == 0x00000400),
                   getParentForChildren(),
                   isClean());
-          networks_ = null;
+          oBSOLETENetworks_ = null;
         }
-        return networksBuilder_;
+        return oBSOLETENetworksBuilder_;
       }
 
       // optional .mesosphere.marathon.MarathonTask.Reservation reservation = 12;
@@ -29818,82 +29930,82 @@ public final class Protos {
       "athon.IpAddress\022;\n\tresidency\030\032 \001(\0132(.mes" +
       "osphere.marathon.ResidencyDefinition\022$\n\017" +
       "portDefinitions\030\033 \003(\0132\013.mesos.Port\"\035\n\rRe" +
-      "sourceRoles\022\014\n\004role\030\001 \003(\t\"\247\007\n\014MarathonTa" +
+      "sourceRoles\022\014\n\004role\030\001 \003(\t\"\260\007\n\014MarathonTa" +
       "sk\022\n\n\002id\030\001 \002(\t\022\014\n\004host\030\002 \001(\t\022\r\n\005ports\030\003 " +
       "\003(\r\022$\n\nattributes\030\004 \003(\0132\020.mesos.Attribut" +
       "e\022\021\n\tstaged_at\030\005 \001(\003\022\022\n\nstarted_at\030\006 \001(\003" +
       "\022,\n\021OBSOLETE_statuses\030\007 \003(\0132\021.mesos.Task",
       "Status\022)\n\007version\030\010 \001(\t:\0301970-01-01T00:0" +
       "0:00.000Z\022!\n\006status\030\t \001(\0132\021.mesos.TaskSt" +
-      "atus\022\037\n\007slaveId\030\n \001(\0132\016.mesos.SlaveID\022$\n" +
-      "\010networks\030\013 \003(\0132\022.mesos.NetworkInfo\022B\n\013r" +
-      "eservation\030\014 \001(\0132-.mesosphere.marathon.M" +
-      "arathonTask.Reservation\032\231\004\n\013Reservation\022" +
-      "\030\n\020local_volume_ids\030\001 \003(\t\022B\n\005state\030\002 \002(\013" +
-      "23.mesosphere.marathon.MarathonTask.Rese" +
-      "rvation.State\032\253\003\n\005State\022F\n\004type\030\001 \002(\01628." +
-      "mesosphere.marathon.MarathonTask.Reserva",
-      "tion.State.Type\022L\n\007timeout\030\002 \001(\0132;.mesos" +
-      "phere.marathon.MarathonTask.Reservation." +
-      "State.Timeout\032\303\001\n\007Timeout\022\021\n\tinitiated\030\001" +
-      " \002(\003\022\020\n\010deadline\030\002 \002(\003\022R\n\006reason\030\003 \002(\0162B" +
-      ".mesosphere.marathon.MarathonTask.Reserv" +
-      "ation.State.Timeout.Reason\"?\n\006Reason\022\035\n\031" +
-      "RelaunchEscalationTimeout\020\001\022\026\n\022Reservati" +
-      "onTimeout\020\002\"F\n\004Type\022\007\n\003New\020\001\022\014\n\010Launched" +
-      "\020\002\022\r\n\tSuspended\020\003\022\013\n\007Garbage\020\004\022\013\n\007Unknow" +
-      "n\020\005\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(\t\0220\n\005task",
-      "s\030\002 \003(\0132!.mesosphere.marathon.MarathonTa" +
-      "sk\"1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007" +
-      "options\030\002 \003(\014\"\332\004\n\025ExtendedContainerInfo\022" +
-      "\'\n\004type\030\001 \002(\0162\031.mesos.ContainerInfo.Type" +
-      "\022,\n\007volumes\030\002 \003(\0132\033.mesosphere.marathon." +
-      "Volume\022E\n\006docker\030\003 \001(\01325.mesosphere.mara" +
-      "thon.ExtendedContainerInfo.DockerInfo\032\242\003" +
-      "\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022>\n\007network\030\002" +
-      " \001(\0162\'.mesos.ContainerInfo.DockerInfo.Ne" +
-      "twork:\004HOST\022X\n\rport_mappings\030\003 \003(\0132A.mes",
-      "osphere.marathon.ExtendedContainerInfo.D" +
-      "ockerInfo.PortMapping\022\031\n\nprivileged\030\004 \001(" +
-      "\010:\005false\022$\n\nparameters\030\005 \003(\0132\020.mesos.Par" +
-      "ameter\022\030\n\020force_pull_image\030\006 \001(\010\032\217\001\n\013Por" +
-      "tMapping\022\021\n\thost_port\030\001 \002(\r\022\026\n\016container" +
-      "_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\014\n\004name\030\004 " +
-      "\001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.Label\022\027\n\014ser" +
-      "vice_port\030d \001(\r:\0010\"\336\001\n\006Volume\022 \n\004mode\030\003 " +
-      "\002(\0162\022.mesos.Volume.Mode\022\026\n\016container_pat" +
-      "h\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033\n\005image\030\004 \001(",
-      "\0132\014.mesos.Image\022D\n\npersistent\030\005 \001(\01320.me" +
-      "sosphere.marathon.Volume.PersistentVolum" +
-      "eInfo\032$\n\024PersistentVolumeInfo\022\014\n\004size\030\001 " +
-      "\002(\004\")\n\020EventSubscribers\022\025\n\rcallback_urls" +
-      "\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022" +
-      "\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"Z\n\031Upgrade" +
-      "StrategyDefinition\022\035\n\025minimumHealthCapac" +
-      "ity\030\001 \002(\001\022\036\n\023maximumOverCapacity\030\002 \001(\001:\001" +
-      "1\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007ver" +
-      "sion\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere.ma",
-      "rathon.ServiceDefinition\0224\n\006groups\030\004 \003(\013" +
-      "2$.mesosphere.marathon.GroupDefinition\022\024" +
-      "\n\014dependencies\030\005 \003(\t\"\245\001\n\030DeploymentPlanD" +
-      "efinition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226" +
-      "\n\010original\030\004 \002(\0132$.mesosphere.marathon.G" +
-      "roupDefinition\0224\n\006target\030\005 \002(\0132$.mesosph" +
-      "ere.marathon.GroupDefinition\"\306\001\n\013TaskFai" +
-      "lure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r." +
-      "mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.Task" +
-      "State\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000",
-      "\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007" +
-      "slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStore" +
-      "Entry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005val" +
-      "ue\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005false\"\326\001\n\023" +
-      "ResidencyDefinition\022(\n relaunchEscalatio" +
-      "nTimeoutSeconds\030\001 \001(\003\022S\n\020taskLostBehavio" +
-      "r\030\002 \001(\01629.mesosphere.marathon.ResidencyD" +
-      "efinition.TaskLostBehavior\"@\n\020TaskLostBe" +
-      "havior\022\032\n\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020\n\014WA" +
-      "IT_FOREVER\020\001B\035\n\023mesosphere.marathonB\006Pro",
-      "tos"
+      "atus\022\037\n\007slaveId\030\n \001(\0132\016.mesos.SlaveID\022-\n" +
+      "\021OBSOLETE_networks\030\013 \003(\0132\022.mesos.Network" +
+      "Info\022B\n\013reservation\030\014 \001(\0132-.mesosphere.m" +
+      "arathon.MarathonTask.Reservation\032\231\004\n\013Res" +
+      "ervation\022\030\n\020local_volume_ids\030\001 \003(\t\022B\n\005st" +
+      "ate\030\002 \002(\01323.mesosphere.marathon.Marathon" +
+      "Task.Reservation.State\032\253\003\n\005State\022F\n\004type" +
+      "\030\001 \002(\01628.mesosphere.marathon.MarathonTas",
+      "k.Reservation.State.Type\022L\n\007timeout\030\002 \001(" +
+      "\0132;.mesosphere.marathon.MarathonTask.Res" +
+      "ervation.State.Timeout\032\303\001\n\007Timeout\022\021\n\tin" +
+      "itiated\030\001 \002(\003\022\020\n\010deadline\030\002 \002(\003\022R\n\006reaso" +
+      "n\030\003 \002(\0162B.mesosphere.marathon.MarathonTa" +
+      "sk.Reservation.State.Timeout.Reason\"?\n\006R" +
+      "eason\022\035\n\031RelaunchEscalationTimeout\020\001\022\026\n\022" +
+      "ReservationTimeout\020\002\"F\n\004Type\022\007\n\003New\020\001\022\014\n" +
+      "\010Launched\020\002\022\r\n\tSuspended\020\003\022\013\n\007Garbage\020\004\022" +
+      "\013\n\007Unknown\020\005\"M\n\013MarathonApp\022\014\n\004name\030\001 \001(",
+      "\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.marathon.M" +
+      "arathonTask\"1\n\rContainerInfo\022\017\n\005image\030\001 " +
+      "\002(\014:\000\022\017\n\007options\030\002 \003(\014\"\332\004\n\025ExtendedConta" +
+      "inerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Container" +
+      "Info.Type\022,\n\007volumes\030\002 \003(\0132\033.mesosphere." +
+      "marathon.Volume\022E\n\006docker\030\003 \001(\01325.mesosp" +
+      "here.marathon.ExtendedContainerInfo.Dock" +
+      "erInfo\032\242\003\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022>\n\007" +
+      "network\030\002 \001(\0162\'.mesos.ContainerInfo.Dock" +
+      "erInfo.Network:\004HOST\022X\n\rport_mappings\030\003 ",
+      "\003(\0132A.mesosphere.marathon.ExtendedContai" +
+      "nerInfo.DockerInfo.PortMapping\022\031\n\nprivil" +
+      "eged\030\004 \001(\010:\005false\022$\n\nparameters\030\005 \003(\0132\020." +
+      "mesos.Parameter\022\030\n\020force_pull_image\030\006 \001(" +
+      "\010\032\217\001\n\013PortMapping\022\021\n\thost_port\030\001 \002(\r\022\026\n\016" +
+      "container_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\014" +
+      "\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.Lab" +
+      "el\022\027\n\014service_port\030d \001(\r:\0010\"\336\001\n\006Volume\022 " +
+      "\n\004mode\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016cont" +
+      "ainer_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033\n\005i",
+      "mage\030\004 \001(\0132\014.mesos.Image\022D\n\npersistent\030\005" +
+      " \001(\01320.mesosphere.marathon.Volume.Persis" +
+      "tentVolumeInfo\032$\n\024PersistentVolumeInfo\022\014" +
+      "\n\004size\030\001 \002(\004\")\n\020EventSubscribers\022\025\n\rcall" +
+      "back_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005maj" +
+      "or\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"Z" +
+      "\n\031UpgradeStrategyDefinition\022\035\n\025minimumHe" +
+      "althCapacity\030\001 \002(\001\022\036\n\023maximumOverCapacit" +
+      "y\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition\022\n\n\002id\030\001 \002" +
+      "(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.meso",
+      "sphere.marathon.ServiceDefinition\0224\n\006gro" +
+      "ups\030\004 \003(\0132$.mesosphere.marathon.GroupDef" +
+      "inition\022\024\n\014dependencies\030\005 \003(\t\"\245\001\n\030Deploy" +
+      "mentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versio" +
+      "n\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosphere.m" +
+      "arathon.GroupDefinition\0224\n\006target\030\005 \002(\0132" +
+      "$.mesosphere.marathon.GroupDefinition\"\306\001" +
+      "\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id" +
+      "\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.m" +
+      "esos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004hos",
+      "t\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030" +
+      "\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T" +
+      "\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002" +
+      "(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005f" +
+      "alse\"\326\001\n\023ResidencyDefinition\022(\n relaunch" +
+      "EscalationTimeoutSeconds\030\001 \001(\003\022S\n\020taskLo" +
+      "stBehavior\030\002 \001(\01629.mesosphere.marathon.R" +
+      "esidencyDefinition.TaskLostBehavior\"@\n\020T" +
+      "askLostBehavior\022\032\n\026RELAUNCH_AFTER_TIMEOU" +
+      "T\020\000\022\020\n\014WAIT_FOREVER\020\001B\035\n\023mesosphere.mara",
+      "thonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -29941,7 +30053,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_MarathonTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_MarathonTask_descriptor,
-              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "OBSOLETEStatuses", "Version", "Status", "SlaveId", "Networks", "Reservation", });
+              new java.lang.String[] { "Id", "Host", "Ports", "Attributes", "StagedAt", "StartedAt", "OBSOLETEStatuses", "Version", "Status", "SlaveId", "OBSOLETENetworks", "Reservation", });
           internal_static_mesosphere_marathon_MarathonTask_Reservation_descriptor =
             internal_static_mesosphere_marathon_MarathonTask_descriptor.getNestedTypes().get(0);
           internal_static_mesosphere_marathon_MarathonTask_Reservation_fieldAccessorTable = new

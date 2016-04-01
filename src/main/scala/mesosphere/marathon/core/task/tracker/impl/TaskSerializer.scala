@@ -50,15 +50,7 @@ object TaskSerializer {
       mesosStatus = opt(_.hasStatus, _.getStatus)
     )
 
-    def networking = if (proto.getPortsCount != 0) {
-      Task.HostPorts(proto.getPortsList.iterator().asScala.map(_.intValue()).toVector)
-    }
-    else if (proto.getNetworksCount != 0) {
-      Task.NetworkInfoList(proto.getNetworksList.asScala)
-    }
-    else {
-      Task.NoNetworking
-    }
+    def hostPorts = proto.getPortsList.iterator().asScala.map(_.intValue()).toVector
 
     def launchedTask: Option[Task.Launched] = {
       if (proto.hasStagedAt) {
@@ -66,7 +58,7 @@ object TaskSerializer {
           Task.Launched(
             appVersion = appVersion,
             status = taskStatus,
-            networking = networking
+            hostPorts = hostPorts
           )
         )
       }
@@ -93,14 +85,14 @@ object TaskSerializer {
 
       case (Some(reservation), Some(launched)) =>
         Task.LaunchedOnReservation(
-          taskId, agentInfo, launched.appVersion, launched.status, launched.networking, reservation)
+          taskId, agentInfo, launched.appVersion, launched.status, launched.hostPorts, reservation)
 
       case (Some(reservation), None) =>
         Task.Reserved(taskId, agentInfo, reservation)
 
       case (None, Some(launched)) =>
         Task.LaunchedEphemeral(
-          taskId, agentInfo, launched.appVersion, launched.status, launched.networking)
+          taskId, agentInfo, launched.appVersion, launched.status, launched.hostPorts)
 
       case (None, None) =>
         val msg = s"Unable to deserialize task $taskId, agentInfo=$agentInfo. It is neither reserved nor launched"
@@ -122,18 +114,12 @@ object TaskSerializer {
     def setReservation(reservation: Task.Reservation): Unit = {
       builder.setReservation(ReservationSerializer.toProto(reservation))
     }
-    def setLaunched(appVersion: Timestamp, status: Task.Status, networking: Task.Networking): Unit = {
+    def setLaunched(appVersion: Timestamp, status: Task.Status, hostPorts: Seq[Int]): Unit = {
       builder.setVersion(appVersion.toString)
       builder.setStagedAt(status.stagedAt.toDateTime.getMillis)
       status.startedAt.foreach(startedAt => builder.setStartedAt(startedAt.toDateTime.getMillis))
       status.mesosStatus.foreach(status => builder.setStatus(status))
-      networking match {
-        case Task.HostPorts(hostPorts) =>
-          builder.addAllPorts(hostPorts.view.map(Integer.valueOf(_)).asJava)
-        case Task.NetworkInfoList(networkInfoList) =>
-          builder.addAllNetworks(networkInfoList.asJava)
-        case Task.NoNetworking => // nothing
-      }
+      builder.addAllPorts(hostPorts.map(Integer.valueOf).asJava)
     }
 
     setId(task.taskId)
@@ -141,13 +127,13 @@ object TaskSerializer {
 
     task match {
       case launched: Task.LaunchedEphemeral =>
-        setLaunched(launched.appVersion, launched.status, launched.networking)
+        setLaunched(launched.appVersion, launched.status, launched.hostPorts)
 
       case reserved: Task.Reserved =>
         setReservation(reserved.reservation)
 
       case launchedOnR: Task.LaunchedOnReservation =>
-        setLaunched(launchedOnR.appVersion, launchedOnR.status, launchedOnR.networking)
+        setLaunched(launchedOnR.appVersion, launchedOnR.status, launchedOnR.hostPorts)
         setReservation(launchedOnR.reservation)
     }
 

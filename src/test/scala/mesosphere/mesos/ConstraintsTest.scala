@@ -10,6 +10,7 @@ import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
 import org.apache.mesos.Protos.{ Attribute, Offer }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.util.Random
 
@@ -447,7 +448,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     val attributes = attrs.map { case (name, value) => TextAttribute(name, value): Attribute }
     MarathonTestHelper.stagedTask(id)
       .withAgentInfo(_.copy(attributes = attributes))
-      .withNetworking(Task.HostPorts(999))
+      .withHostPorts(Seq(999))
   }
 
   def makeOffer(hostname: String, attributes: Iterable[Attribute]) = {
@@ -464,7 +465,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     MarathonTestHelper
       .runningTask(id)
       .withAgentInfo(_.copy(host = host))
-      .withNetworking(Task.HostPorts(999))
+      .withHostPorts(Seq(999))
   }
 
   def makeConstraint(field: String, operator: Operator, value: String) = {

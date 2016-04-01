@@ -55,7 +55,7 @@ class TaskOpFactoryImpl @Inject() (
           status = Task.Status(
             stagedAt = clock.now()
           ),
-          networking = Task.HostPorts(ports)
+          hostPorts = ports
         )
 
         taskOperationFactory.launchEphemeral(taskInfo, task)
@@ -140,7 +140,7 @@ class TaskOpFactoryImpl @Inject() (
           status = Task.Status(
             stagedAt = clock.now()
           ),
-          networking = Task.HostPorts(ports))
+          hostPorts = ports)
 
         taskOperationFactory.launchOnReservation(taskInfo, taskStateOp, task)
     }

@@ -6,9 +6,11 @@ import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonTestHelper, SerializationFailedException }
-import org.apache.mesos.Protos.{ Attribute, TaskStatus }
+import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
+
+import scala.collection.immutable.Seq
 
 class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenWhenThen {
   import scala.collection.JavaConverters._
@@ -63,7 +65,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val f = new Fixture
 
     Given("a MarathonTask with all fields and host ports")
-    val samplePorts = Iterable(80, 81)
+    val samplePorts = Seq(80, 81)
     val marathonTask =
       f.completeTask.toBuilder
         .addAllPorts(samplePorts.map(Integer.valueOf(_)).asJava)
@@ -73,8 +75,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val taskState = TaskSerializer.fromProto(marathonTask)
 
     Then("we get the expected task state")
-    val expectedState = f.fullSampleTaskStateWithoutNetworking.copy(
-      networking = Task.HostPorts(samplePorts))
+    val expectedState = f.fullSampleTaskStateWithoutNetworking.copy(hostPorts = samplePorts)
 
     taskState should be(expectedState)
 
@@ -85,13 +86,18 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     marathonTask2 should equal(marathonTask)
   }
 
-  test("full marathonTask with NetworkInfoList => Task") {
+  test("full marathonTask with NetworkInfoList in Status => Task") {
     val f = new Fixture
 
-    Given("a MarathonTask with all fields and host ports")
+    Given("a MarathonTask with all fields and status with network infos")
     val marathonTask =
       f.completeTask.toBuilder
-        .addAllNetworks(f.sampleNetworks.asJava)
+        .setStatus(
+          TaskStatus.newBuilder()
+            .setTaskId(f.taskId.mesosTaskId)
+            .setState(TaskState.TASK_RUNNING)
+            .setContainerStatus(ContainerStatus.newBuilder().addAllNetworkInfos(f.sampleNetworks.asJava))
+        )
         .build()
 
     When("we convert it to task")
@@ -99,8 +105,8 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val taskState = TaskSerializer.fromProto(marathonTask)
 
     Then("we get the expected task state")
-    val expectedState = f.fullSampleTaskStateWithoutNetworking.copy(
-      networking = Task.NetworkInfoList(f.sampleNetworks))
+    import MarathonTestHelper.Implicits._
+    val expectedState = f.fullSampleTaskStateWithoutNetworking.withNetworkInfos(f.sampleNetworks)
 
     taskState should be(expectedState)
 
@@ -178,8 +184,8 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setState(MesosProtos.TaskState.TASK_RUNNING)
         .build()
     private[this] val sampleSlaveId: MesosProtos.SlaveID.Builder = MesosProtos.SlaveID.newBuilder().setValue("slaveId")
-    val sampleNetworks: Iterable[MesosProtos.NetworkInfo] =
-      Iterable(
+    val sampleNetworks: Seq[MesosProtos.NetworkInfo] =
+      Seq(
         MesosProtos.NetworkInfo.newBuilder()
           .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.newBuilder().setIpAddress("1.2.3.4"))
           .build()
@@ -194,7 +200,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
           startedAt = Some(Timestamp(startedAtLong)),
           mesosStatus = Some(sampleTaskStatus)
         ),
-        networking = Task.NoNetworking,
+        hostPorts = Seq.empty,
         reservation = Task.Reservation(
           Seq(LocalVolumeId(appId, "my-volume", "uuid-123")),
           Task.Reservation.State.Launched)
@@ -239,7 +245,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       private[this] val startedAt = now - 55.seconds
       private[this] val mesosStatus = MarathonTestHelper.statusForState(taskId.idString, MesosProtos.TaskState.TASK_RUNNING)
       private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus))
-      private[this] val hostPorts = Task.HostPorts(Seq(1, 2, 3))
+      private[this] val hostPorts = Seq(1, 2, 3)
 
       def reservedProto = MarathonTask.newBuilder()
         .setId(taskId.idString)
@@ -272,7 +278,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setStagedAt(stagedAt.toDateTime.getMillis)
         .setStartedAt(startedAt.toDateTime.getMillis)
         .setStatus(mesosStatus)
-        .addAllPorts(hostPorts.ports.view.map(Integer.valueOf(_)).asJava)
+        .addAllPorts(hostPorts.map(Integer.valueOf).asJava)
         .build()
 
       def launchedOnReservationProto = launchedEphemeralProto.toBuilder

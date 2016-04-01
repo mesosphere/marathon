@@ -10,6 +10,7 @@ import mesosphere.marathon.test.Mockito
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 /**
@@ -49,7 +50,7 @@ class TaskStateOpResolverTest
       taskId = f.notExistingTaskId,
       appVersion = Timestamp(0),
       status = Task.Status(Timestamp(0)),
-      networking = Task.NoNetworking)).futureValue
+      hostPorts = Seq.empty)).futureValue
 
     Then("taskTracker.task is called")
     verify(f.taskTracker).task(f.notExistingTaskId)

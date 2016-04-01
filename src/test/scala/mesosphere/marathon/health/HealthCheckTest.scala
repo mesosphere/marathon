@@ -2,11 +2,11 @@ package mesosphere.marathon.health
 
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Command
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, Protos }
 import play.api.libs.json.Json
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import com.wix.accord.validate
 
@@ -367,7 +367,7 @@ class HealthCheckTest extends MarathonSpec {
   test("getPort") {
     import MarathonTestHelper.Implicits._
     val check = new HealthCheck(port = Some(1234))
-    val task = MarathonTestHelper.runningTask("test_id").withNetworking(Task.HostPorts(4321))
+    val task = MarathonTestHelper.runningTask("test_id").withHostPorts(Seq(4321))
 
     assert(check.hostPort(task.launched.get).contains(1234))
   }

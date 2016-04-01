@@ -21,6 +21,7 @@ import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
@@ -402,7 +403,7 @@ class TaskOpProcessorImplTest
     def stateOpLaunch(task: Task) = TaskStateOp.LaunchEphemeral(task)
     def stateOpUpdate(task: Task, status: MarathonTaskStatus, now: Timestamp = now) = TaskStateOp.MesosUpdate(task, status, now)
     def stateOpExpunge(task: Task) = TaskStateOp.ForceExpunge(task.taskId)
-    def stateOpLaunchOnReservation(task: Task, status: Task.Status) = TaskStateOp.LaunchOnReservation(task.taskId, now, status, Task.NoNetworking)
+    def stateOpLaunchOnReservation(task: Task, status: Task.Status) = TaskStateOp.LaunchOnReservation(task.taskId, now, status, Seq.empty)
     def stateOpReservationTimeout(task: Task) = TaskStateOp.ReservationTimeout(task.taskId)
     def stateOpReserve(task: Task) = TaskStateOp.Reserve(task.asInstanceOf[Task.Reserved])
 
