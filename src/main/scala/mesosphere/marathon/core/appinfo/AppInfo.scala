@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.appinfo
 
+import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.state.{ AppDefinition, Identifiable, TaskFailure }
 
 import scala.collection.immutable.Seq
@@ -14,6 +15,7 @@ case class AppInfo(
   maybeTasks: Option[Seq[EnrichedTask]] = None,
   maybeCounts: Option[TaskCounts] = None,
   maybeDeployments: Option[Seq[Identifiable]] = None,
+  maybeReadinessCheckResults: Option[Seq[ReadinessCheckResult]] = None,
   maybeLastTaskFailure: Option[TaskFailure] = None,
   maybeTaskStats: Option[TaskStatsByVersion] = None)
 
@@ -22,6 +24,7 @@ object AppInfo {
   object Embed {
     case object Tasks extends Embed
     case object Deployments extends Embed
+    case object Readiness extends Embed
     case object Counts extends Embed
     case object LastTaskFailure extends Embed
     case object TaskStats extends Embed

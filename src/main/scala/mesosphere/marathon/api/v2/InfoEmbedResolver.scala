@@ -13,6 +13,7 @@ private[v2] object InfoEmbedResolver {
 
   private[this] val EmbedTasks = "tasks"
   private[this] val EmbedDeployments = "deployments"
+  private[this] val EmbedReadiness = "readiness"
 
   /* deprecated, use lastTaskFailure, tasks, deployments instead */
   private[this] val EmbedTasksAndFailures = "failures"
@@ -37,6 +38,7 @@ private[v2] object InfoEmbedResolver {
           s"Use ${prefix}tasks, ${prefix}lastTaskFailure, ${prefix}deployments instead.")
         Set(AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments)
       case EmbedDeployments     => Set(AppInfo.Embed.Deployments)
+      case EmbedReadiness       => Set(AppInfo.Embed.Readiness)
       case EmbedLastTaskFailure => Set(AppInfo.Embed.LastTaskFailure)
       case EmbedCounts          => Set(AppInfo.Embed.Counts)
       case EmbedTaskStats       => Set(AppInfo.Embed.TaskStats)

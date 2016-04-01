@@ -346,7 +346,7 @@ trait DeploymentFormats {
     def currentAction(action: DeploymentAction): JsObject = Json.obj (
       "action" -> action.getClass.getSimpleName,
       "app" -> action.app.id,
-      "readinessChecks" -> info.readinessChecksByApp(action.app.id)
+      "readinessCheckResults" -> info.readinessChecksByApp(action.app.id)
     )
     Json.obj(
       "id" -> info.plan.id,
@@ -880,6 +880,7 @@ trait AppAndGroupFormats {
       val maybeJson = Seq[Option[JsObject]](
         info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
         info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
+        info.maybeReadinessCheckResults.map(readiness => Json.obj("readinessCheckResults" -> readiness)),
         info.maybeTasks.map(tasks => Json.obj("tasks" -> tasks)),
         info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure)),
         info.maybeTaskStats.map(taskStats => Json.obj("taskStats" -> taskStats))
