@@ -298,13 +298,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(task.isDefined)
 
     val (taskInfo, taskPorts) = task.get
-    val range = taskInfo.getResourcesList.asScala
-      .find(r => r.getName == Resource.PORTS)
-      .map(r => r.getRanges.getRange(0))
-    assert(range.isDefined)
+    val rangeResourceOpt = taskInfo.getResourcesList.asScala.find(r => r.getName == Resource.PORTS)
+    val ranges = rangeResourceOpt.fold(Seq.empty[MesosProtos.Value.Range])(_.getRanges.getRangeList.asScala.to[Seq])
+    val rangePorts = ranges.flatMap(r => r.getBegin to r.getEnd).toSet
+    assert(2 == rangePorts.size)
     assert(2 == taskPorts.size)
-    assert(taskPorts.head == range.get.getBegin.toInt)
-    assert(taskPorts(1) == range.get.getEnd.toInt)
+    assert(taskPorts.toSet == rangePorts.toSet)
 
     assert(!taskInfo.hasExecutor)
     assert(taskInfo.hasCommand)

@@ -127,8 +127,8 @@ trait Formats
           "version" -> launched.appVersion
         )
       ){
-        case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
-      }
+          case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
+        }
     }.getOrElse(base)
 
     val reservation = task.reservationWithVolumes.map { reservation =>
