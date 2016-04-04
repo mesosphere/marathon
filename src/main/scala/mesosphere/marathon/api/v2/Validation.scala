@@ -184,6 +184,14 @@ object Validation {
       }
     }
 
+  def notOneOf[T <: AnyRef](options: T*): Validator[T] = {
+    import ViolationBuilder._
+    new NullSafeValidator[T](
+      test = !options.contains(_),
+      failure = _ -> s"can not be one of (${options.mkString(",")})"
+    )
+  }
+
   def oneOf[T <: AnyRef](options: Set[T]): Validator[T] = {
     import ViolationBuilder._
     new NullSafeValidator[T](

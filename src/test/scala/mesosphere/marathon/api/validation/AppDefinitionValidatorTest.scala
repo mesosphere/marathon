@@ -294,6 +294,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
   }
 
   test("persistent volume with missing containerPath is invalid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     val f = new Fixture
     val container = f.validDockerContainer.copy(
       volumes = Seq(f.validPersistentVolume.copy(containerPath = ""))
@@ -302,6 +303,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
   }
 
   test("persistent volume with mode RO is invalid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     val f = new Fixture
     val container = f.validDockerContainer.copy(
       volumes = Seq(f.validPersistentVolume.copy(mode = mesos.Volume.Mode.RO))
@@ -310,6 +312,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
   }
 
   test("persistent volume with size 0 is invalid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     val f = new Fixture
     val container = f.validDockerContainer.copy(
       volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(0)))
@@ -318,9 +321,65 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
   }
 
   test("persistent volume with size < 0 is invalid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     val f = new Fixture
     val container = f.validDockerContainer.copy(
       volumes = Seq(f.validPersistentVolume.copy(persistent = PersistentVolumeInfo(-1)))
+    )
+    assert(validate(container).isFailure)
+  }
+
+  test("persistent volume with container path '.' is invalid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+    val f = new Fixture
+    val container = f.validDockerContainer.copy(
+      volumes = Seq(f.validPersistentVolume.copy(containerPath = "."))
+    )
+    assert(validate(container).isFailure)
+  }
+
+  test("persistent volume with container path '..' is invalid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+    val f = new Fixture
+    val container = f.validDockerContainer.copy(
+      volumes = Seq(f.validPersistentVolume.copy(containerPath = ".."))
+    )
+    assert(validate(container).isFailure)
+  }
+
+  test("persistent volume with container path '.hidden' is valid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+    val f = new Fixture
+    val container = f.validDockerContainer.copy(
+      volumes = Seq(f.validPersistentVolume.copy(containerPath = ".hidden"))
+    )
+    val foo = validate(container)
+    assert(validate(container).isSuccess)
+  }
+
+  test("persistent volume with container path with dots in the middle is valid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+    val f = new Fixture
+    val container = f.validDockerContainer.copy(
+      volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo..bar"))
+    )
+    assert(validate(container).isSuccess)
+  }
+
+  test("persistent volume with container path starting with a forward slash is invalid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+    val f = new Fixture
+    val container = f.validDockerContainer.copy(
+      volumes = Seq(f.validPersistentVolume.copy(containerPath = "/path"))
+    )
+    assert(validate(container).isFailure)
+  }
+
+  test("persistent volume with container path containing forward slashes is invalid") {
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+    val f = new Fixture
+    val container = f.validDockerContainer.copy(
+      volumes = Seq(f.validPersistentVolume.copy(containerPath = "foo/bar"))
     )
     assert(validate(container).isFailure)
   }
@@ -429,7 +488,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
 
     // scalastyle:off magic.number
     def validPersistentVolume: PersistentVolume = PersistentVolume(
-      containerPath = "/test",
+      containerPath = "test",
       persistent = PersistentVolumeInfo(10),
       mode = mesos.Volume.Mode.RW)
 

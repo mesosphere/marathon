@@ -112,8 +112,13 @@ case class PersistentVolume(
 
 object PersistentVolume {
   import org.apache.mesos.Protos.Volume.Mode
+
+  val NoSlashesPattern = """^[^/]*$""".r
+
   implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
     vol.containerPath is notEmpty
+    vol.containerPath is notOneOf(".", "..")
+    vol.containerPath should matchRegexFully(NoSlashesPattern)
     vol.persistent is valid
     vol.mode is equalTo(Mode.RW)
     //persistent volumes require those CLI parameters provided
