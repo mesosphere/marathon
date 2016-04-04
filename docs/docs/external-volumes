@@ -72,12 +72,6 @@ In the `volumes` section of app definition above:
 
 - Volumes will always be available under `$REXRAY_HOME/var/lib/rexray/volumes/$DVDI_VOLUME_NAME`. **Note:** This applies only to non-Docker apps; Docker apps can specify the mount point inside the app definition. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
 
-- `DVDI_VOLUME_OPTS` is the set of volume options passed to DVDCLI. [See the full list of options](https://github.com/emccode/dvdcli/blob/3c3dcbe1490c2c4a150555978f2b4915dafaddf2/README.md#extra-options).
-
-You can define multiple volumes per app by repeating the environment variables with 0, 1 ,2, etc. appended to them. For example, `DVDI_VOLUME_NAME0`.
-
-**Note:** Most of the configuration of your external volume is cannot be changed after you create it. The exceptions are `overwriteFs` and `newFsType`. If `overwriteFs` is true, REX-Ray will reformat the volume every time it is mounted on an agent with the filesystem specified by `newFsType`. If `overwriteFs` is false, howeverm REX-Ray will only format the volume when it is created.
-
 ### Using a Docker Container
 
 Below is a sample app definition that uses a Docker container and specifies an external volume:
