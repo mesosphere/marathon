@@ -210,4 +210,21 @@ class DiscoveryInfoTest extends MarathonSpec with Matchers {
       "Invalid protocol. Only 'udp' or 'tcp' are allowed.")
     )
   }
+
+  test("Read discovery info with a port with an invalid name") {
+    val json =
+      """
+      {
+        "ports": [
+          { "name": "???", "number": 80, "protocol": "tcp" }
+        ]
+      }
+      """
+
+    val readResult = Json.fromJson[DiscoveryInfo](Json.parse(json))
+    readResult should be(JsError(
+      (JsPath() \ "ports")(0) \ "name",
+      s"Port name must fully match regular expression ${PortAssignment.PortNamePattern}")
+    )
+  }
 }

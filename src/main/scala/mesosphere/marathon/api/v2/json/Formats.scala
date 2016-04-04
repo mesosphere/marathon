@@ -267,6 +267,13 @@ trait IpAddressFormats {
       )
   }
 
+  private[this] lazy val ValidPortName: Reads[String] = {
+    implicitly[Reads[String]]
+      .filter(ValidationError(s"Port name must fully match regular expression ${PortAssignment.PortNamePattern}"))(
+        PortAssignment.PortNamePattern.pattern.matcher(_).matches()
+      )
+  }
+
   private[this] lazy val ValidPorts: Reads[Seq[DiscoveryInfo.Port]] = {
     def hasUniquePortNames(ports: Seq[DiscoveryInfo.Port]): Boolean = {
       ports.map(_.name).toSet.size == ports.size
@@ -285,7 +292,7 @@ trait IpAddressFormats {
 
   implicit lazy val PortFormat: Format[DiscoveryInfo.Port] = (
     (__ \ "number").format[Int] ~
-    (__ \ "name").format[String] ~
+    (__ \ "name").format[String](ValidPortName) ~
     (__ \ "protocol").format[String](ValidPortProtocol)
   )(DiscoveryInfo.Port(_, _, _), unlift(DiscoveryInfo.Port.unapply))
 
