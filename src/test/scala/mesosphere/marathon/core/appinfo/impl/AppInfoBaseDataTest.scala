@@ -2,6 +2,7 @@ package mesosphere.marathon.core.appinfo.impl
 
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.{ Health, HealthCheckManager }
@@ -183,6 +184,32 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     Then("we get an empty list of deployments")
     appInfo should be(AppInfo(app, maybeDeployments = Some(
       Seq.empty
+    )))
+
+    And("the marathonSchedulerService should have been called to retrieve the deployments")
+    verify(f.marathonSchedulerService, times(1)).listRunningDeployments()
+
+    And("we have no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("requesting readiness check results") {
+    val f = new Fixture
+    Given("One related and one unrelated deployment")
+    val emptyGroup = Group.empty
+    val deployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Set(app)))
+    val taskId: Task.Id = Task.Id.forApp(app.id)
+    val result = ReadinessCheckResult("foo", taskId, ready = false, None)
+    f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
+      DeploymentStepInfo(deployment, DeploymentStep(Seq.empty), 1, Map(taskId -> result))
+    ))
+
+    When("Getting AppInfos without counts")
+    val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Readiness)).futureValue
+
+    Then("we get an counts in the appInfo")
+    appInfo should be(AppInfo(app, maybeReadinessCheckResults = Some(
+      Seq(result)
     )))
 
     And("the marathonSchedulerService should have been called to retrieve the deployments")
