@@ -16,7 +16,7 @@ import org.apache.mesos.Protos.{ ContainerInfo, Volume => MesosVolume }
 protected[volume] case object DockerHostVolumeProvider
     extends VolumeProvider[DockerVolume] {
   val appValidation: Validator[AppDefinition] = validator[AppDefinition] { app =>
-    app.container.get.`type` is equalTo("DOCKER")
+    app.container.get.`type` as "app.container.type" is equalTo(ContainerInfo.Type.DOCKER)
   }
 
   // no provider-specific rules at the group level

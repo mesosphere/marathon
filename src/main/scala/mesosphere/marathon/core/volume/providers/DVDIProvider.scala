@@ -114,8 +114,8 @@ protected[volume] case object DVDIProvider
 
   /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
   val containerValidation: Validator[Container] = validator[Container] { ct =>
-    (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (ct is validMesosContainer)) or (
-      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (ct is validDockerContainer)
+    (ct.`type` as "container.type" is equalTo(ContainerInfo.Type.MESOS) and (ct is validMesosContainer)) or (
+      (ct.`type` as "container.type" is equalTo(ContainerInfo.Type.DOCKER)) and (ct is validDockerContainer)
     )
   }
 

@@ -324,7 +324,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getEntity.toString should not include ("/container/volumes(0)/persistent.provider")
   }
 
-  test("Creating an app with an external volume should pass validation") {
+  test("Creating an app with an external volume and MESOS containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
     val group = Group(PathId("/"), Set(app))
@@ -346,6 +346,124 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |        "name": "namedfoo",
         |        "options": {"external/driver": "bar"}
         |      },
+        |      "mode": "RW"
+        |    }]
+        |  }
+        |}
+      """.stripMargin.getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The request is processed")
+    val response = appsResource.create(body, false, auth.request)
+
+    Then("The return code indicates create success")
+    response.getStatus should be(201)
+  }
+
+  test("Creating an app with an external volume and DOCKER containerizer should pass validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body =
+      """
+        |{
+        |  "id": "external1",
+        |  "cmd": "sleep 100",
+        |  "instances": 1,
+        |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
+        |  "container": {
+        |    "type": "DOCKER",
+        |    "docker": {"image": "fop"},
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "persistent": {
+        |        "provider": "external",
+        |        "name": "namedfoo",
+        |        "options": {"external/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    }]
+        |  }
+        |}
+      """.stripMargin.getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The request is processed")
+    val response = appsResource.create(body, false, auth.request)
+
+    Then("The return code indicates create success")
+    response.getStatus should be(201)
+  }
+
+  test("Creating an app with an external volume, and docker volume and DOCKER containerizer should pass validation") {
+    Given("An app with a named, non-'agent' volume provider and a docker host volume")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body =
+      """
+        |{
+        |  "id": "external1",
+        |  "cmd": "sleep 100",
+        |  "instances": 1,
+        |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
+        |  "container": {
+        |    "type": "DOCKER",
+        |    "docker": {"image": "fop"},
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "persistent": {
+        |        "provider": "external",
+        |        "name": "namedfoo",
+        |        "options": {"external/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    },{
+        |      "hostPath": "/ert",
+        |      "containerPath": "/ert",
+        |      "mode": "RW"
+        |    }]
+        |  }
+        |}
+      """.stripMargin.getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The request is processed")
+    val response = appsResource.create(body, false, auth.request)
+
+    Then("The return code indicates create success")
+    response.getStatus should be(201)
+  }
+
+  test("Creating an app with a duplicate external volume name (unfortunately) passes validation") {
+    // we'll need to mitigate this with documentation: probably deprecating support for using
+    // volume names with non-persistent volumes.
+    Given("An app with DOCKER containerizer and multiple references to the same named volume")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body =
+      """
+        |{
+        |  "id": "external1",
+        |  "cmd": "sleep 100",
+        |  "instances": 1,
+        |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
+        |  "container": {
+        |    "type": "DOCKER",
+        |    "docker": {"image": "fop"},
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "persistent": {
+        |        "provider": "external",
+        |        "name": "namedfoo",
+        |        "options": {"external/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    },{
+        |      "hostPath": "namedfoo",
+        |      "containerPath": "/ert",
         |      "mode": "RW"
         |    }]
         |  }
