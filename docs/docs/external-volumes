@@ -1,21 +1,21 @@
 --------------------------------------------------------------
-title: Stateful Applications Using Persistent External Volumes
+title: Stateful Applications Using External Persistent Volumes
 --------------------------------------------------------------
 
-# Stateful Applications Using Persistent External Volumes
+# Stateful Applications Using External Persistent Volumes
 
 <div class="alert alert-danger" role="alert">
   <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 1.0 <br/>
   The Persistent Storage functionality is considered beta, so use this feature at your own risk. We might add, change, or delete any functionality described in this document.
 </div>
 
-Marathon applications lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can use an external storage service, such as Amazon's Elastic Block Store (EBS), to create a persistent volume that follows your application instance.
+Marathon applications normally lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can use an external storage service, such as Amazon's Elastic Block Store (EBS), to create a persistent volume that follows your application instance.
 
 Using an external storage service allows your apps to be more fault-tolerant. If a host fails, Marathon reschedules it on another host, along with its associated data, without user intervention.
 
 # Specifying an External Volume
 
-If you are running Marathon on DCOS, add the following to the `genconf.yml` file you use during DCOS installation. [Learn more](https://docs.mesosphere.com/concepts/installing/installing-enterprise-edition/configuration-parameters/).
+If you are running Marathon on DCOS, add the following to the `genconf/config.yml` file you use during DCOS installation. [Learn more](https://docs.mesosphere.com/concepts/installing/installing-enterprise-edition/configuration-parameters/).
 
 - `rexray_config_method: file`
 
