@@ -23,8 +23,8 @@ protected[volume] case object DVDIProvider
   import org.apache.mesos.Protos.Volume.Mode
 
   abstract class ProviderOption(
-    override val name: String,
-    override val required: Boolean = false) extends NamedOption(DVDIProvider.this.name, name, required)
+    name: String,
+    required: Boolean = false) extends NamedOption(DVDIProvider.this.name, name, required)
 
   case object OptionDriverName extends ProviderOption("driver", true) with NamedLabel
   case object OptionVolumeType extends ProviderOption("volumetype") with NamedLabel
