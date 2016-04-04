@@ -116,16 +116,18 @@ protected[volume] case object DVDIProvider
   val groupValidation: Validator[Group] = new Validator[Group] {
     override def apply(g: Group): Result = {
       val transitiveApps = g.transitiveApps.toList
+
+      val appsByVolume = g.apps.flatMap { app =>
+        volumesForApp(app).flatMap{ vol => nameOf(vol.persistent).map(_ -> app.id) }
+      }.groupBy[String](_._1).mapValues(_.map(_._2))
+
       val groupViolations = g.apps.flatMap { app =>
         val ruleViolations = volumesForApp(app).flatMap{ vol => nameOf(vol.persistent) }.flatMap{ name =>
           for {
-            otherApp <- transitiveApps
-            if otherApp.id != app.id // do not compare to self
-            otherVol <- volumesForApp(otherApp)
-            otherName <- nameOf(otherVol.persistent)
-            if name == otherName
+            otherApp <- appsByVolume(name)
+            if otherApp != app.id // do not compare to self
           } yield RuleViolation(app.id,
-            s"Requested volume $name conflicts with a volume in app ${otherApp.id}", None)
+            s"Requested volume $name conflicts with a volume in app $otherApp", None)
         }
         if (ruleViolations.isEmpty) None
         else Some(GroupViolation(app, "app contains conflicting volumes", None, ruleViolations.toSet))
