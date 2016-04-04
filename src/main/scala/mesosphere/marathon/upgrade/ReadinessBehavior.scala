@@ -47,8 +47,9 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   def taskIsReady(taskId: Task.Id): Unit
 
   /**
-    * Call this method, if a task terminates.
+    * Actors extending this trait should call this method when they detect that a task is terminated
     * The task will be removed from subsequent sets and all subscriptions will get canceled.
+    *
     * @param taskId the id of the task that has been terminated.
     */
   def taskTerminated(taskId: Task.Id): Unit = {
