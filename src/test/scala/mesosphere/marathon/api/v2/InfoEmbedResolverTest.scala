@@ -6,7 +6,7 @@ import org.scalatest.{ Matchers, GivenWhenThen }
 
 class InfoEmbedResolverTest extends MarathonSpec with GivenWhenThen with Matchers {
 
-  val prefixes = Seq("", "app.", "apps.")
+  val prefixes = Seq("", "app.", "apps.", "group.apps.")
 
   for (prefix <- prefixes) {
     test(s"resolve ${prefix}lastTaskFailure") {
@@ -32,6 +32,15 @@ class InfoEmbedResolverTest extends MarathonSpec with GivenWhenThen with Matcher
       val resolved = InfoEmbedResolver.resolveApp(Set(s"${prefix}deployments"))
       Then("it should resolve correctly")
       resolved should be (Set(AppInfo.Embed.Deployments))
+    }
+  }
+
+  for (prefix <- prefixes) {
+    test(s"resolve ${prefix}readiness") {
+      When(s"embed=${prefix}readiness")
+      val resolved = InfoEmbedResolver.resolveApp(Set(s"${prefix}readiness"))
+      Then("it should resolve correctly")
+      resolved should be (Set(AppInfo.Embed.Readiness))
     }
   }
 

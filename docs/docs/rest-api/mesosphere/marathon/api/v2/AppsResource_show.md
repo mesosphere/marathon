@@ -110,10 +110,9 @@ The objects in the list only contain the id of the deployment, e.g.:
 ##### readiness (Array of Objects)
 
 A list of readiness check results.
-Only available if the app has readiness checks defined and also only available during a deployment 
-in the start phase.
+Only available during a deployment in the start phase.
  
- The object in the list contains a readiness check in the format of:
+The object in the list contains a readiness check in the format of:
  
  ```javascript
  {
