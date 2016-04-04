@@ -20,14 +20,16 @@ protected[volume] abstract class AbstractPersistentVolumeProvider(
     }
 }
 
-protected trait OptionSupport {
+protected[providers] object OptionSupport {
   import OptionLabelPatterns._
 
   /** NamedOption represents a (named) configurable item type that provides validation rules */
   abstract class NamedOption(
       val namespace: String,
       val name: String,
-      val required: Boolean = false) {
+      val required: Boolean,
+      val validValue: Validator[String]) {
+
     def fullName: String = namespace + OptionNamespaceSeparator + name
     def from(m: Map[String, String]): Option[String] = m.get(fullName)
 
@@ -37,39 +39,30 @@ protected trait OptionSupport {
         else Success
       )
     }
-
-    val validValue: Validator[String]
   }
 
-  /** supply a validator to enforce that values conform to expectations of "labels" */
-  trait NamedLabel {
-    val validValue: Validator[String] = validator[String] { v =>
-      v should matchRegex(LabelRegex)
+  /** a validator to enforce that values conform to expectations of "labels" */
+  lazy val labelValidator: Validator[String] = validator[String] { v =>
+    v should matchRegex(LabelRegex)
+  }
+
+  /** a validator to enforce that values parse to natural (whole, positive) numbers */
+  lazy val naturalNumberValidator: Validator[String] = new Validator[String] {
+    override def apply(v: String): Result = {
+      import scala.util.Try
+      val parsed: Try[Long] = Try(v.toLong)
+      if (parsed.isSuccess && parsed.get > 0) Success
+      else Failure(Set(RuleViolation(v, s"Expected a valid, positive integer instead of $v", None)))
     }
   }
 
-  /** supply a validator to enforce that values parse to natural (whole, positive) numbers */
-  trait NamedNaturalNumber {
-    import scala.util.Try
-    val validValue: Validator[String] = new Validator[String] {
-      override def apply(v: String): Result = {
-        val parsed: Try[Long] = Try(v.toLong)
-        if (parsed.isSuccess && parsed.get > 0) Success
-        else Failure(Set(RuleViolation(v, s"Expected a valid, positive integer instead of $v", None)))
-      }
-    }
-  }
-
-  /** supply a validator to enforce that values parse to booleans */
-  trait NamedBoolean {
-    import scala.util.Try
-    val validValue: Validator[String] = new Validator[String] {
-      override def apply(v: String): Result = {
-        val parsed: Try[Boolean] = Try(v.toBoolean)
-        if (parsed.isSuccess) Success
-        else Failure(Set(RuleViolation(v, s"Expected a valid boolean instead of $v", None)))
-      }
+  /** a validator to enforce that values parse to booleans */
+  lazy val booleanValidator: Validator[String] = new Validator[String] {
+    override def apply(v: String): Result = {
+      import scala.util.Try
+      val parsed: Try[Boolean] = Try(v.toBoolean)
+      if (parsed.isSuccess) Success
+      else Failure(Set(RuleViolation(v, s"Expected a valid boolean instead of $v", None)))
     }
   }
 }
-

@@ -17,20 +17,22 @@ import scala.collection.JavaConverters._
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
 protected[volume] case object DVDIProvider
-    extends AbstractPersistentVolumeProvider("external")
-    with OptionSupport {
+    extends AbstractPersistentVolumeProvider("external") {
 
   import org.apache.mesos.Protos.Volume.Mode
+  import OptionSupport._
 
   abstract class ProviderOption(
     name: String,
-    required: Boolean = false) extends NamedOption(DVDIProvider.this.name, name, required)
+    required: Boolean = false,
+    validValue: Validator[String] = labelValidator) extends NamedOption(
+    DVDIProvider.this.name, name, required, validValue)
 
-  case object OptionDriverName extends ProviderOption("driver", true) with NamedLabel
-  case object OptionVolumeType extends ProviderOption("volumetype") with NamedLabel
-  case object OptionNewFSType extends ProviderOption("newfstype") with NamedLabel
-  case object OptionIOPS extends ProviderOption("iops") with NamedNaturalNumber
-  case object OptionOverwriteFS extends ProviderOption("overwritefs") with NamedBoolean
+  case object OptionDriverName extends ProviderOption("driver", true)
+  case object OptionVolumeType extends ProviderOption("volumetype")
+  case object OptionNewFSType extends ProviderOption("newfstype")
+  case object OptionIOPS extends ProviderOption("iops", validValue = naturalNumberValidator)
+  case object OptionOverwriteFS extends ProviderOption("overwritefs", validValue = booleanValidator)
 
   val validOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opt =>
     opt is OptionDriverName.validOption
