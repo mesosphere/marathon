@@ -39,7 +39,7 @@ Alternatively, you can configure your application to use persistent local volume
   "id": "/sesame/samson",
   "residency": {
     "relaunchEscalationTimeoutSeconds": 30,
-    "taskLostBehavior": "relaunchAfterTimeout"
+    "taskLostBehavior": "WAIT_FOREVER"
   },
   "cpus": 0.5,
   "mem": 512.0,
@@ -52,7 +52,7 @@ Alternatively, you can configure your application to use persistent local volume
         "containerPath": "data",
         "mode": "RW",
         "persistent": {
-          "size": 1234
+          "size": 10
         } </b>
       }
     ]
@@ -77,7 +77,7 @@ While persistent local volumes allow your application to read and write data to 
 
 ### Replication and Backups
 
-Because tasks are pinned to nodes, your data can be lost if the node is lost. If you need to guard against data loss, you must set up replication and backups. 
+Because tasks are pinned to nodes, your data will be lost if the node is lost. This is the  case when the Mesos agent is disconnected from the master and does not re-register within a certain timeframe, probably due to a network partition or the agent host crashing. If you need to guard against data loss, you must set up replication and backups. 
 
 ### Non-unique Roles
 
