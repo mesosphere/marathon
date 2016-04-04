@@ -1,94 +1,95 @@
 ---
-title: Setting Up and Running Marathon
+title: A container orchestration platform for Mesos and DCOS
 ---
 
+<div class="jumbotron text-center">
+  <h1>Marathon</h1>
+  <p class="lead">
+    A container orchestration platform for Mesos and DCOS
+  </p>
+  <p>
+    <a href="http://downloads.mesosphere.com/marathon/v1.0.0-RC1/marathon-1.0.0-RC1.tgz"
+        class="btn btn-lg btn-primary">
+      Download Marathon v1.0.0-RC1
+    </a>
+  </p>
+  <a class="btn btn-link"
+      href="http://downloads.mesosphere.com/marathon/v1.0.0-RC1/marathon-1.0.0-RC1.tgz.sha256">
+    v1.0.0-RC1 SHA-256 Checksum
+  </a> &middot;
+  <a class="btn btn-link"
+      href="https://github.com/mesosphere/marathon/releases/tag/v1.0.0-RC1">
+    v1.0.0-RC1 Release Notes
+  </a>
+</div>
 
-## Installing Marathon
+## Overview
 
+Marathon is a production-grade container orchestration platform for Mesosphere's [Datacenter Operating System (DCOS)](https://mesosphere.com/product/) and [Apache Mesos](https://mesos.apache.org/).
 
-### Requirements
+## Features
 
-* [Apache Mesos][Mesos] 0.28.0+
-* [Apache ZooKeeper][ZooKeeper]
-* JDK 1.8+
+- [High Availability](https://mesosphere.github.io/marathon/docs/high-availability.html). Marathon runs as an active/passive cluster with leader election for 100% uptime.
+- Multiple container runtimes. Marathon has first-class support for both [Mesos containers](https://mesosphere.github.io/marathon/docs/application-basics.html) (using cgroups) and [Docker](https://mesosphere.github.io/marathon/docs/native-docker.html).
+- [Stateful apps](https://mesosphere.github.io/marathon/docs/persistent-volumes.html). Marathon can bind persistent storage volumes to your application. You can run databases like MySQL and Postgres, and have storage accounted for by Mesos.
+- [Beautiful and powerful UI](https://mesosphere.github.io/marathon/docs/marathon-ui.html).
+- [Constraints](https://mesosphere.github.io/marathon/docs/constraints.html). e.g. Only one instance of an application per rack, node, etc.
+- [Service Discovery & Load Balancing](https://mesosphere.github.io/marathon/docs/service-discovery-load-balancing.html). Several methods available.
+- [Health Checks](https://mesosphere.github.io/marathon/docs/health-checks.html). Evaluate your application's health using HTTP or TCP checks.
+- [Event Subscription](https://mesosphere.github.io/marathon/docs/rest-api.html#event-subscriptions). Supply an HTTP endpoint to receive notifications - for example to integrate with an external load balancer.
+- [Metrics](https://mesosphere.github.io/marathon/docs/metrics.html). Query them at /metrics in JSON format or push them to systems like graphite, statsd and Datadog.
+- [Complete REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for easy integration and scriptability.
 
-### Installation
+## DCOS features
 
-#### Install Mesos
+Running on DCOS, Marathon gains the following additional features:
 
-Marathon runs atop Apache Mesos. You can install Mesos via your system's package manager.
-Current builds and instructions on how to set up repositories for major Linux distributions are available on the Mesosphere [downloads page](http://mesosphere.com/downloads/).
+- Virtual IP routing. Allocate a dedicated, virtual address to your app. Your app is now reachable anywhere in the cluster, wherever it might be scheduled. Load balancing and rerouting around failures are done automatically.
+- Authorization (DCOS Enterprise Edition only). True multitenancy with each user or group having access to their own applications and groups.
 
-If you want to build Mesos from source, see the
-Mesos [Getting Started](http://mesos.apache.org/gettingstarted/) page or the
-[Mesosphere tutorial](http://mesosphere.com/2013/08/01/distributed-fault-tolerant-framework-apache-mesos/)
-for details. Running `make install` will install Mesos in `/usr/local`.
+## Examples
 
-#### Install Marathon
+### Marathon orchestrates both apps and frameworks
 
-#### Through your Package Manager
+The graphic below shows how Marathon runs on <a href="https://mesos.apache.org/">Apache Mesos</a> acting as the orchestrator for other applications and services.
 
-Marathon packages are available from Mesosphere's [repositories](http://mesosphere.com/2014/07/17/mesosphere-package-repositories/).
+Marathon is the first framework to be launched, running directly alongside Mesos. This means the Marathon scheduler processes are started directly using `init`, `upstart`, or a similar tool.
 
-#### From a Tarball
+Marathon is a powerful way to run other Mesos frameworks: in this case, [Chronos](https://github.com/mesos/chronos). Marathon launches two instances of the Chronos scheduler using the Docker image `mesosphere/chronos`. The Chronos instances appear in orange on the top row.
 
-Download and unpack the latest Marathon release.
+If either of the two Chronos containers fails for any reason, then Marathon will restart them on another slave. This approach ensures that two Chronos processes are always running.
 
-``` bash
-$ curl -O http://downloads.mesosphere.com/marathon/v1.0.0-RC1/marathon-1.0.0-RC1.tgz
-$ tar xzf marathon-1.0.0-RC1.tgz
-```
+Since Chronos itself is a framework and receives resource offers, it can start tasks on Mesos.
+In the use case below, Chronos is running two scheduled jobs, shown in blue. One dumps a production MySQL database to S3, while another sends an email newsletter to all customers via Rake.
 
-SHA-256 checksums are available by appending `.sha256` to the URLs.
+Meanwhile, Marathon also runs the other application containers - either Docker or Mesos - that make up our website: JBoss servers, Jetty, Sinatra, Rails, and so on.
 
-### Versioning
+We have shown that Marathon is responsible for running other frameworks, helps them maintain 100% uptime, and coexists with them creating workloads in Mesos.
 
-As of version 0.9.0, Marathon adheres to [semantic versioning](http://semver.org).
-That means our documented REST API remains compatible across releases unless we change the MAJOR version
-(the first number in the version tuple). If you depend on undocumented features, please tell us about them by [raising a GitHub issue](https://github.com/mesosphere/marathon/issues/new). Portions of the API marked as EXPERIMENTAL are exempt from this rule. We do not introduce new features in PATCH version increments (the last number in the version tuple).
+<p class="text-center">
+  <img src="{{ site.baseurl}}/img/architecture.png" width="423" height="477" alt="">
+</p>
 
-In rare cases, we may change the Marathon command line flags in a MINOR version upgrade. The release notes document these instances.
+### Scaling and fault recovery
 
-We provide release candidates for all new MAJOR/MINOR versions and invite our users to test them and
-give us feedback, particularly on violations of the versioning policy.
+The next three images illustrate scaling and container placement.
 
-### Upgrading to a Newer Version
+Below we see Marathon running three applications, each scaled to a different number of containers: Search (1), Jetty (3), and Rails (5).
 
-See [the Marathon upgrade guide](https://mesosphere.github.io/marathon/docs/upgrade/index.html) to learn how to upgrade to a new version.
+<p class="text-center">
+  <img src="{{ site.baseurl}}/img/marathon1.png" width="420" height="269" alt="">
+</p>
 
-### Running in High Availability Mode
+As the website gains traction, we decide to scale out the Search service and our Rails-based application.
 
-Both ZooKeeper and Mesos need to be running in order to launch Marathon in *high availability mode*.
+We use the Marathon REST API call to to add more instances. Marathon will take care of placing the new containers on machines with spare capacity, honoring the constraints we previously set. We can see the containers are dynamically placed:
 
-Point your web browser to
-`localhost:8080` and you should see the [Marathon UI]({{ site.baseurl }}/docs/marathon-ui.html).
+<p class="text-center">
+  <img src="{{ site.baseurl}}/img/marathon2.png" width="420" height="269" alt="">
+</p>
 
-``` console
-$ ./bin/start --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
-```
+Finally, imagine that one of the datacenter workers trips over a power cord and a server is unplugged. No problem for Marathon: it moves the affected Search and Rails containers to a node that has spare capacity. Marathon has maintained our uptime in the face of machine failure.
 
-Marathon uses `--master` to find the Mesos masters, and `--zk` to find ZooKeepers
-for storing state. They are separate options because Mesos masters can also be
-discovered in other ways.
-
-For all configuration options, see the [command line flags](command-line-flags.html) doc. For more information on the high-availability feature of Marathon, see the [high availability](high-availability.html) doc.
-
-### Mesos Library
-
-`MESOS_NATIVE_JAVA_LIBRARY`: `bin/start` searches the common installation paths,
-`/usr/lib` and `/usr/local/lib`, for the Mesos native library. If the
-library lives elsewhere in your configuration, set the environment variable
-`MESOS_NATIVE_JAVA_LIBRARY` to its full path.
-
-For example:
-
-```console
-$ MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.dylib ./bin/start --master local --zk zk://localhost:2181/marathon
-```
-
-### Launch an Application
-
-For an introduction to Marathon application definitions and how they are executed, see [Application Basics](application-basics.html).
-
-[Mesos]: https://mesos.apache.org/ "Apache Mesos"
-[Zookeeper]: https://zookeeper.apache.org/ "Apache ZooKeeper"
+<p class="text-center">
+  <img src="{{ site.baseurl}}/img/marathon3.png" width="417" height="268" alt="">
+</p>
