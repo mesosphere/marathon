@@ -40,8 +40,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   def commonBehavior: Receive = {
     case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, `appId`, _, _, _, `versionString`, _, _) => // scalastyle:off line.size.limit
       log.warning(s"New task [$taskId] failed during app ${app.id.toString} scaling, queueing another task")
-      healthy -= taskId
-      ready -= taskId
+      taskTerminated(taskId)
       taskQueue.add(app)
 
     case Sync =>
@@ -56,12 +55,12 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
 
   override def taskIsReady(taskId: Id): Unit = {
     log.info(s"New task $taskId now ready during app ${app.id.toString} scaling, " +
-      s"${nrToStart - ready.size} more to go")
+      s"${nrToStart - readyTasks.size} more to go")
     checkFinished()
   }
 
   def checkFinished(): Unit = {
-    if (ready.size == nrToStart) success()
+    if (readyTasks.size == nrToStart) success()
   }
 
   def success(): Unit

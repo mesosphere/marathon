@@ -73,8 +73,7 @@ class TaskReplaceActor(
     // New task failed to start, restart it
     case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       log.error(s"New task $taskId failed on slave $slaveId during app $appId restart")
-      healthy -= taskId
-      ready -= taskId
+      taskTerminated(taskId)
       taskQueue.add(app)
 
     // Old task successfully killed
@@ -123,14 +122,14 @@ class TaskReplaceActor(
   }
 
   def checkFinished(): Unit = {
-    if (ready.size == app.instances && oldTaskIds.isEmpty) {
+    if (readyTasks.size == app.instances && oldTaskIds.isEmpty) {
       log.info(s"App All new tasks for $appId are ready and all old tasks have been killed")
       promise.success(())
       context.stop(self)
     }
     else if (log.isDebugEnabled) {
-      log.debug(s"For app: [${app.id}] there are [${healthy.size}] healthy and " +
-        s"[${ready.size}] ready new instances and " +
+      log.debug(s"For app: [${app.id}] there are [${healthyTasks.size}] healthy and " +
+        s"[${readyTasks.size}] ready new instances and " +
         s"[${oldTaskIds.size}] old instances.")
     }
   }
