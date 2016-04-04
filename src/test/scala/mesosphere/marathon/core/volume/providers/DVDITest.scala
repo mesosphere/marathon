@@ -19,7 +19,7 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
   //     > containerPath, in particular, in enforced in state/Volume and not at the
   //       provider-level
   // - between validateVolume, validateApp, validateGroup
-  val ttValidateVolume = Array[TC](
+  val ttValidateVolume = Seq[TC](
     TC(
       // various combinations of INVALID external persistent volume parameters
       Set[PersistentVolume](
@@ -70,8 +70,8 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
       ), true
     )
   )
-  test("validPersistentVolume") {
-    for (tc <- ttValidateVolume; v <- tc.volumes) {
+  for ((tc, idx) <- ttValidateVolume.zipWithIndex; (v, vidx) <- tc.volumes.zipWithIndex) {
+    test(s"validPersistentVolume $idx,$vidx") {
       val result = validate(v)(DVDIProvider.volumeValidation)
       assert(result.isSuccess == tc.wantsValid,
         s"expected ${tc.wantsValid} instead of $result for volume $v")
@@ -87,7 +87,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
   def mkVar(name: String, value: String): Environment.Variable =
     Environment.Variable.newBuilder.setName(name).setValue(value).build
 
-  val ttVolumeToEnv = Array[TC](
+  val ttVolumeToEnv = Seq[TC](
     TC(
       PV("/path", PVI(None, Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](),
@@ -176,8 +176,8 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ) // TC
   )
-  test("volumeToEnv") {
-    for (tc <- ttVolumeToEnv) {
+  for ((tc, idx) <- ttVolumeToEnv.zipWithIndex) {
+    test(s"volumeToEnv $idx") {
       assertResult(tc.wantsEnv, "generated environment vars don't match expectations") {
         DVDIProvider.volumeToEnv(tc.pv, tc.env)
       }
