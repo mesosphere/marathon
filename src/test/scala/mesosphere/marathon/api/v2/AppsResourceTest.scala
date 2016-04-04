@@ -270,7 +270,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      "hostPath": "/var",
         |      "persistent": {
         |        "size": 10,
-        |        "providerName": "acme"
+        |        "provider": "acme"
         |      },
         |      "mode": "RW"
         |    }]
@@ -284,7 +284,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
-    response.getEntity.toString should include("/container/volumes(0)/persistent.providerName")
+    response.getEntity.toString should include("/container/volumes(0)/persistent.provider")
     response.getEntity.toString should include("is no persistent volume provider name")
   }
 
@@ -321,7 +321,43 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getStatus should be(422)
     response.getEntity.toString should include("/upgradeStrategy")
     response.getEntity.toString should include("/isResident")
-    response.getEntity.toString should not include ("/container/volumes(0)/persistent.providerName")
+    response.getEntity.toString should not include ("/container/volumes(0)/persistent.provider")
+  }
+
+  test("Creating an app with an external volume should pass validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body =
+      """
+        |{
+        |  "id": "external1",
+        |  "cmd": "sleep 100",
+        |  "instances": 1,
+        |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
+        |  "container": {
+        |    "type": "MESOS",
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "persistent": {
+        |        "size": 10,
+        |        "provider": "external",
+        |        "name": "namedfoo",
+        |        "options": {"external/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    }]
+        |  }
+        |}
+      """.stripMargin.getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The request is processed")
+    val response = appsResource.create(body, false, auth.request)
+
+    Then("The return code indicates create success")
+    response.getStatus should be(201)
   }
 
   test("Replace an existing application fails due to mesos container validation") {

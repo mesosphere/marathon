@@ -21,52 +21,52 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
   // - between validateVolume, validateApp, validateGroup
   val ttValidateVolume = Array[TC](
     TC(
-      // various combinations of INVALID dvdi persistent volume parameters
+      // various combinations of INVALID external persistent volume parameters
       Set[PersistentVolume](
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverNam" -> "bar", "dvdi/volumetype" -> "io1")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/volumetype" -> "io1 ")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/newfstype" -> " xfs")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/newfstype" -> "")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/iops" -> "0")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/iops" -> "b")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/overwritefs" -> "b")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driverNam" -> "bar", "external/volumetype" -> "io1")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/volumetype" -> "io1 ")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/newfstype" -> " xfs")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/newfstype" -> "")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/iops" -> "0")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/iops" -> "b")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/overwritefs" -> "b")), Mode.RO),
         PV("", PVI(None, None, None, Map.empty[String, String]), Mode.RO),
-        PV("", PVI(None, Some("f"), None, Map("dvdi/driverName" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("qaz"), Map("dvdi/driverName" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map("dvdi/driverName" -> "")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map("driverName" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some(""), Map("dvdi/driverName" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some(""), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
-        PV("", PVI(None, None, Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
-        PV("", PVI(None, None, None, Map("dvdi/driverName" -> "bar")), Mode.RO),
-        PV("", PVI(None, None, Some("dvdi"), Map.empty[String, String]), Mode.RO),
+        PV("", PVI(None, Some("f"), None, Map("external/driver" -> "bar")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("qaz"), Map("external/driver" -> "bar")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map("external/driver" -> "")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map("driver" -> "bar")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some(""), Map("external/driver" -> "bar")), Mode.RO),
+        PV("", PVI(None, Some(""), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
+        PV("", PVI(None, None, Some("external"), Map("external/driver" -> "bar")), Mode.RO),
+        PV("", PVI(None, None, None, Map("external/driver" -> "bar")), Mode.RO),
+        PV("", PVI(None, None, Some("external"), Map.empty[String, String]), Mode.RO),
         PV("", PVI(None, Some("f"), None, Map.empty[String, String]), Mode.RO),
         PV("", PVI(Some(1L), None, None, Map.empty[String, String]), Mode.RO)
       ), false
     ),
     TC(
-      // various combinations of VALID dvdi persistent volume parameters
+      // various combinations of VALID external persistent volume parameters
       Set[PersistentVolume](
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/volumetype" -> "io1")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/newfstype" -> "xfs")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/iops" -> "1")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/overwritefs" -> "true")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map(
-          "dvdi/driverName" -> "bar", "dvdi/overwritefs" -> "false")), Mode.RO),
-        PV("", PVI(Some(1L), Some("f"), Some("dvdi"), Map("dvdi/driverName" -> "bar", "a" -> "b")), Mode.RO),
-        PV("", PVI(Some(1L), Some("f"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO)
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/volumetype" -> "io1")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/newfstype" -> "xfs")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/iops" -> "1")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/overwritefs" -> "true")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map(
+          "external/driver" -> "bar", "external/overwritefs" -> "false")), Mode.RO),
+        PV("", PVI(Some(1L), Some("f"), Some("external"), Map("external/driver" -> "bar", "a" -> "b")), Mode.RO),
+        PV("", PVI(Some(1L), Some("f"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
+        PV("", PVI(None, Some("f"), Some("external"), Map("external/driver" -> "bar")), Mode.RO)
       ), true
     )
   )
@@ -89,7 +89,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
 
   val ttVolumeToEnv = Array[TC](
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      PV("/path", PVI(None, Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
@@ -98,7 +98,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(Some(1L), Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      PV("/path", PVI(Some(1L), Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
@@ -108,9 +108,9 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(Some(1L), Some("foo"), Some("dvdi"), Map(
-        "dvdi/driverName" -> "bar",
-        "dvdi/size" -> "2"
+      PV("/path", PVI(Some(1L), Some("foo"), Some("external"), Map(
+        "external/driver" -> "bar",
+        "external/size" -> "2"
       )), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
@@ -121,9 +121,9 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map(
-        "dvdi/driverName" -> "bar",
-        "dvdi/size" -> "abc"
+      PV("/path", PVI(None, Some("foo"), Some("external"), Map(
+        "external/driver" -> "bar",
+        "external/size" -> "abc"
       )), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
@@ -134,7 +134,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      PV("/path", PVI(None, Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH0", "/tmp"),
         mkVar("DVDI_VOLUME_NAME0", "qaz"),
@@ -147,7 +147,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      PV("/path", PVI(None, Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/tmp"),
         mkVar("DVDI_VOLUME_NAME", "qaz"),
@@ -160,7 +160,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("dvdi"), Map("dvdi/driverName" -> "bar")), Mode.RO),
+      PV("/path", PVI(None, Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/tmp"),
         mkVar("DVDI_VOLUME_NAME", "qaz"),

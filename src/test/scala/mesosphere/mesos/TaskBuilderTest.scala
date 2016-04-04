@@ -311,13 +311,13 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           volumes = Seq[Volume](
             PersistentVolume("/container/path", PersistentVolumeInfo(
               name = Some("namedFoo"),
-              providerName = Some("dvdi"),
-              options = Map[String, String]("dvdi/driverName" -> "bar")
+              providerName = Some("external"),
+              options = Map[String, String]("external/driver" -> "bar")
             ), MesosProtos.Volume.Mode.RW),
             PersistentVolume("/container/path2", PersistentVolumeInfo(
               name = Some("namedEdc"),
-              providerName = Some("dvdi"),
-              options = Map[String, String]("dvdi/driverName" -> "ert")
+              providerName = Some("external"),
+              options = Map[String, String]("external/driver" -> "ert")
             ), MesosProtos.Volume.Mode.RO)
           )
         ))
@@ -364,14 +364,14 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           volumes = Seq[Volume](
             PersistentVolume("/container/path", PersistentVolumeInfo(
               name = Some("namedFoo"),
-              providerName = Some("dvdi"),
-              options = Map[String, String]("dvdi/driverName" -> "bar")
+              providerName = Some("external"),
+              options = Map[String, String]("external/driver" -> "bar")
             ), MesosProtos.Volume.Mode.RW),
             PersistentVolume("/container/path2", PersistentVolumeInfo(
               size = Some(2L),
               name = Some("namedEdc"),
-              providerName = Some("dvdi"),
-              options = Map[String, String]("dvdi/driverName" -> "ert")
+              providerName = Some("external"),
+              options = Map[String, String]("external/driver" -> "ert")
             ), MesosProtos.Volume.Mode.RW)
           )
         ))

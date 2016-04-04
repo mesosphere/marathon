@@ -239,7 +239,7 @@ trait ContainerFormats {
   implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = (
     (__ \ "size").formatNullable[Long] ~
     (__ \ "name").formatNullable[String] ~
-    (__ \ "providerName").formatNullable[String] ~
+    (__ \ "provider").formatNullable[String] ~
     (__ \ "options").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
   )(PersistentVolumeInfo(_, _, _, _), unlift(PersistentVolumeInfo.unapply))
 

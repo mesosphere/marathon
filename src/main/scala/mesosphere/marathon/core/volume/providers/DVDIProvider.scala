@@ -17,7 +17,7 @@ import scala.collection.JavaConverters._
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
 protected[volume] case object DVDIProvider
-    extends AbstractPersistentVolumeProvider("dvdi")
+    extends AbstractPersistentVolumeProvider("external")
     with OptionSupport {
 
   import org.apache.mesos.Protos.Volume.Mode
@@ -26,7 +26,7 @@ protected[volume] case object DVDIProvider
     override val name: String,
     override val required: Boolean = false) extends NamedOption(DVDIProvider.this.name, name, required)
 
-  case object OptionDriverName extends ProviderOption("driverName", true) with NamedLabel
+  case object OptionDriverName extends ProviderOption("driver", true) with NamedLabel
   case object OptionVolumeType extends ProviderOption("volumetype") with NamedLabel
   case object OptionNewFSType extends ProviderOption("newfstype") with NamedLabel
   case object OptionIOPS extends ProviderOption("iops") with NamedNaturalNumber
