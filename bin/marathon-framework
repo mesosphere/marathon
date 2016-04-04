@@ -75,6 +75,9 @@ function load_options_and_log {
       cmd+=( --master "$(cat /etc/mesos/zk)" )
     fi
   fi
+  
+  env | grep ^NO_LOGGER > /dev/null && cmd+=( --no-logger )
+  
   echo "${cmd[@]}"
 
   if [[ "${cmd[@]} $@" == *'--no-logger'* ]]
