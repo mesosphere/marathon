@@ -97,11 +97,25 @@ protected[volume] case object DVDIProvider
   protected[providers] def modes(ct: Container): Set[Mode] =
     collect(ct).map(_.mode).toSet
 
+  /** @return true if PersistentInfo.size is defined for any DVDI volume in the container */
+  protected[providers] def isSizeDefinedForAny(ct: Container): Boolean =
+    collect(ct).flatMap(_.persistent.size).toSet.nonEmpty
+
+  val validMesosContainer: Validator[Container] = validator[Container] { ct =>
+    modes(ct).each as "read/write modes specified" is equalTo(Mode.RW)
+  }
+
+  val validDockerContainer: Validator[Container] = validator[Container] { ct =>
+    // only allow a single docker volume driver to be specified
+    driversInUse(ct).size as "count of driver names specified" should equalTo(1)
+    // fail validation if/when user specifies "size"
+    isSizeDefinedForAny(ct) as "is size defined for any" is equalTo(false)
+  }
+
   /** Only allow a single docker volume driver to be specified w/ the docker containerizer. */
   val containerValidation: Validator[Container] = validator[Container] { ct =>
-    (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (modes(ct).each is equalTo(Mode.RW))) or (
-      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (driversInUse(ct).size should equalTo(1))
-    // TODO(jdef) fail validation if/when user specifies "size" when using docker containerizer?
+    (ct.`type` is equalTo(ContainerInfo.Type.MESOS) and (ct is validMesosContainer)) or (
+      (ct.`type` is equalTo(ContainerInfo.Type.DOCKER)) and (ct is validDockerContainer)
     )
   }
 
