@@ -353,7 +353,7 @@ object Task {
 
   /** @return a stream of task local volumes, extrapolating them from the app spec */
   def localVolumes(app: AppDefinition): Iterable[LocalVolume] = {
-    app.container.toSet[Container].flatMap(VolumesModule.localVolumes.collect).map{ volume =>
+    app.residentVolumes.map{ volume =>
       Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume)
     }
   }

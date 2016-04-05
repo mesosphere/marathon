@@ -5,18 +5,18 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
 
-protected[volume] abstract class AbstractPersistentVolumeProvider(
-    val name: String) extends PersistentVolumeProvider[PersistentVolume] {
+protected[volume] abstract class AbstractExternalVolumeProvider(
+    val name: String) extends ExternalVolumeProvider {
   /**
     * @return true if volume has a provider name that matches ours exactly
     */
-  def accepts(volume: PersistentVolume): Boolean = {
-    volume.persistent.providerName.isDefined && volume.persistent.providerName.contains(name)
+  def accepts(volume: ExternalVolume): Boolean = {
+    volume.external.providerName == name
   }
 
-  override def collect(container: Container): Iterable[PersistentVolume] =
+  override def collect(container: Container): Iterable[ExternalVolume] =
     container.volumes.collect{
-      case vol: PersistentVolume if accepts(vol) => vol
+      case vol: ExternalVolume if accepts(vol) => vol
     }
 }
 
@@ -25,14 +25,14 @@ protected[providers] object OptionSupport {
 
   def validIfDefined[T](implicit validator: Validator[T]): Validator[Option[T]] = new Validator[Option[T]] {
     override def apply(opt: Option[T]): Result = opt match {
-      case None => Success
+      case None    => Success
       case Some(t) => validator(t)
     }
   }
 
   def definedAnd[T](implicit validator: Validator[T]): Validator[Option[T]] = new Validator[Option[T]] {
     override def apply(opt: Option[T]): Result = opt match {
-      case None => Failure(Set(RuleViolation(None, "not defined", None)))
+      case None    => Failure(Set(RuleViolation(None, "not defined", None)))
       case Some(t) => validator(t)
     }
   }

@@ -309,14 +309,14 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           `type` = MesosProtos.ContainerInfo.Type.DOCKER,
           docker = Some(Docker()), // must have this to force docker container serialization
           volumes = Seq[Volume](
-            PersistentVolume("/container/path", PersistentVolumeInfo(
-              name = Some("namedFoo"),
-              providerName = Some("external"),
+            ExternalVolume("/container/path", ExternalVolumeInfo(
+              name = "namedFoo",
+              providerName = "external",
               options = Map[String, String]("external/driver" -> "bar")
             ), MesosProtos.Volume.Mode.RW),
-            PersistentVolume("/container/path2", PersistentVolumeInfo(
-              name = Some("namedEdc"),
-              providerName = Some("external"),
+            ExternalVolume("/container/path2", ExternalVolumeInfo(
+              name = "namedEdc",
+              providerName = "external",
               options = Map[String, String]("external/driver" -> "ert")
             ), MesosProtos.Volume.Mode.RO)
           )
@@ -345,7 +345,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       s"missing expected volume namedFoo, got instead: ${taskInfo.getContainer.getVolumesList}")
   }
 
-  test("build creates task for MESOS container using named, external [PersistentVolume] volumes") {
+  test("build creates task for MESOS container using named, external [ExternalVolume] volumes") {
     val offer = MarathonTestHelper.makeBasicOffer(
       cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
     ).build
@@ -362,15 +362,15 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         container = Some(Container(
           `type` = MesosProtos.ContainerInfo.Type.MESOS,
           volumes = Seq[Volume](
-            PersistentVolume("/container/path", PersistentVolumeInfo(
-              name = Some("namedFoo"),
-              providerName = Some("external"),
+            ExternalVolume("/container/path", ExternalVolumeInfo(
+              name = "namedFoo",
+              providerName = "external",
               options = Map[String, String]("external/driver" -> "bar")
             ), MesosProtos.Volume.Mode.RW),
-            PersistentVolume("/container/path2", PersistentVolumeInfo(
+            ExternalVolume("/container/path2", ExternalVolumeInfo(
               size = Some(2L),
-              name = Some("namedEdc"),
-              providerName = Some("external"),
+              name = "namedEdc",
+              providerName = "external",
               options = Map[String, String]("external/driver" -> "ert")
             ), MesosProtos.Volume.Mode.RW)
           )

@@ -102,7 +102,7 @@ case class AppDefinition(
   def isResident: Boolean = residency.isDefined
 
   def residentVolumes: Iterable[PersistentVolume] = {
-    container.toSet[Container].flatMap(VolumesModule.localVolumes.collect)
+    container.toSet[Container].flatMap(_.volumes.collect { case pv: PersistentVolume => pv })
   }
 
   //scalastyle:off method.length

@@ -119,7 +119,7 @@ class ContainerTest extends MarathonSpec with Matchers {
       volumes = Seq[Volume](
         PersistentVolume(
           containerPath = "/local/container/",
-          persistent = PersistentVolumeInfo(Some(1024)),
+          persistent = PersistentVolumeInfo(1024),
           mode = mesos.Volume.Mode.RW
         )
       ),

@@ -271,8 +271,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "hostPath": "/var",
-        |      "persistent": {
+        |      "external": {
         |        "size": 10,
+        |        "name": "foo",
         |        "provider": "acme"
         |      },
         |      "mode": "RW"
@@ -282,10 +283,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
-    response.getEntity.toString should include("/container/volumes(0)/persistent.provider")
-    response.getEntity.toString should include("is no persistent volume provider name")
+    response.getEntity.toString should include("/container/volumes(0)/external.providerName")
+    response.getEntity.toString should include("is not a external volume provider name")
   }
 
+  /* TODO(jdef) this test contains JSON that's not even parsable, so JsResultException is thrown
   test("Creating an app with an external volume with no provider name specified should not pass provider validation") {
     Given("An app with an unnamed volume provider")
     val response = createAppWithVolumes("MESOS",
@@ -293,7 +295,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "hostPath": "/var",
-        |      "persistent": {
+        |      "external": {
         |        "size": 10
         |      },
         |      "mode": "RW"
@@ -301,11 +303,13 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       """.stripMargin
     )
 
-    Then("The return code indicates create error")
-    response.getStatus should be(422)
-    response.getEntity.toString should include("You have to supply mesos_authentication_principal")
-    response.getEntity.toString should not include ("/container/volumes(0)/persistent.provider")
+    Then("The return code indicates parse error")
+    response.getStatus should be(500)
+    response.getEntity.toString should include("/container/volumes(0)/external/provider")
+    response.getEntity.toString should include("/container/volumes(0)/external/name")
+    response.getEntity.toString should not include ("/container/volumes(0)/external.providerName")
   }
+  */
 
   test("Creating an app with an external volume and MESOS containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider")
@@ -313,7 +317,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       """
         |    "volumes": [{
         |      "containerPath": "/var",
-        |      "persistent": {
+        |      "external": {
         |        "size": 10,
         |        "provider": "external",
         |        "name": "namedfoo",
@@ -334,7 +338,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       """
         |    "volumes": [{
         |      "containerPath": "/var",
-        |      "persistent": {
+        |      "external": {
         |        "provider": "external",
         |        "name": "namedfoo",
         |        "options": {"external/driver": "bar"}
@@ -348,13 +352,13 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getStatus should be(201)
   }
 
-  test("Creating an app with an external volume without options and DOCKER containerizer should pass validation") {
+  test("Creating an app with an external volume without options and DOCKER containerizer should NOT pass validation") {
     Given("An app with a named, non-'agent' volume provider")
     val response = createAppWithVolumes("DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
-        |      "persistent": {
+        |      "external": {
         |        "provider": "external",
         |        "name": "namedfoo"
         |      },
@@ -363,8 +367,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       """.stripMargin
     )
 
-    Then("The return code indicates create success")
-    response.getStatus should be(201)
+    Then("The return code indicates create failure")
+    response.getStatus should be(422)
   }
 
   test("Creating an app with an external volume, and docker volume and DOCKER containerizer should pass validation") {
@@ -373,7 +377,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       """
         |    "volumes": [{
         |      "containerPath": "/var",
-        |      "persistent": {
+        |      "external": {
         |        "provider": "external",
         |        "name": "namedfoo",
         |        "options": {"external/driver": "bar"}
@@ -399,7 +403,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       """
         |    "volumes": [{
         |      "containerPath": "/var",
-        |      "persistent": {
+        |      "external": {
         |        "provider": "external",
         |        "name": "namedfoo",
         |        "options": {"external/driver": "bar"}

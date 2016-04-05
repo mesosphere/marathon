@@ -3,7 +3,7 @@ package mesosphere.marathon.core.volume
 import com.wix.accord._
 import mesosphere.marathon.core.volume.providers._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{ContainerInfo, CommandInfo}
+import org.apache.mesos.Protos.{ ContainerInfo, CommandInfo }
 
 /**
   * VolumeProvider is an interface implemented by storage volume providers
@@ -21,18 +21,16 @@ trait VolumeProvider[+T <: Volume] {
   def build(builder: ContainerInfo.Builder, v: Volume): Unit
 }
 
-trait PersistentVolumeProvider[+T <: PersistentVolume] extends VolumeProvider[T] {
+trait ExternalVolumeProvider extends VolumeProvider[ExternalVolume] {
   val name: String
 
   /**
-    * don't invoke validator on v because that's circular, just check the additional
-    * things that we need for agent local volumes.
-    * see implicit validator in the PersistentVolume class for reference.
+    * see implicit validator in the ExternalVolume class for reference.
     */
-  val volumeValidation: Validator[PersistentVolume]
+  val volumeValidation: Validator[ExternalVolume]
 
-  /** build adds v to the given builder **/
-  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: PersistentVolume): Unit
+  /** build adds ev to the given builder **/
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit
 }
 
 trait VolumeProviderRegistry {
@@ -40,28 +38,27 @@ trait VolumeProviderRegistry {
   def apply[T <: Volume](v: T): Option[VolumeProvider[T]]
 }
 
-trait PersistentVolumeProviderRegistry extends VolumeProviderRegistry {
+trait ExternalVolumeProviderRegistry extends VolumeProviderRegistry {
   /**
-    * @return the PersistentVolumeProvider interface registered for the given name; if name is None then
+    * @return the ExternalVolumeProvider interface registered for the given name; if name is None then
     * the default PersistenVolumeProvider implementation is returned. None is returned if Some name is given
     * but no volume provider is registered for that name.
     */
-  def apply(name: Option[String]): Option[PersistentVolumeProvider[PersistentVolume]]
+  def apply(name: String): Option[ExternalVolumeProvider]
 }
 
 /**
   * API facade for callers interested in storage volumes
   */
 object VolumesModule {
-  lazy val localVolumes: VolumeProvider[PersistentVolume] = ResidentVolumeProvider
-  lazy val providers: PersistentVolumeProviderRegistry = StaticRegistry
+  lazy val providers: ExternalVolumeProviderRegistry = StaticRegistry
 
   def build(builder: ContainerInfo.Builder, v: Volume): Unit = {
     providers(v).foreach { _.build(builder, v) }
   }
 
-  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: PersistentVolume): Unit = {
-    providers(pv.persistent.providerName).foreach { _.build(containerType, builder, pv) }
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit = {
+    providers(ev.external.providerName).foreach { _.build(containerType, builder, ev) }
   }
 
   /** @return a validator that checks the validity of a container given the related volume providers */

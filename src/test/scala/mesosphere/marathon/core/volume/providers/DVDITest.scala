@@ -2,18 +2,18 @@ package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord._
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.volume.PersistentVolumeProvider
+import mesosphere.marathon.core.volume.ExternalVolumeProvider
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.Volume.Mode
 import org.scalatest.Matchers
 
 sealed trait TCHelpers {
-  val PVI = PersistentVolumeInfo.apply _
-  val PV = PersistentVolume.apply _
+  val EVI = ExternalVolumeInfo.apply _
+  val EV = ExternalVolume.apply _
 }
 
 class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with TCHelpers {
-  case class TC(volumes: Iterable[PersistentVolume], wantsValid: Boolean)
+  case class TC(volumes: Iterable[ExternalVolume], wantsValid: Boolean)
   // validation concerns are split at different levels:
   // - between state/Volume and providers/*
   //     > containerPath, in particular, in enforced in state/Volume and not at the
@@ -22,56 +22,52 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
   val ttValidateVolume = Seq[TC](
     TC(
       // various combinations of INVALID external persistent volume parameters
-      Set[PersistentVolume](
-        PV("", PVI(None, Some("f"), Some("external"), Map(
-          "external/driverNam" -> "bar", "external/volumetype" -> "io1")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
-          "external/driver" -> "bar", "external/volumetype" -> "io1 ")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
-          "external/driver" -> "bar", "external/newfstype" -> " xfs")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
-          "external/driver" -> "bar", "external/newfstype" -> "")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
-          "external/driver" -> "bar", "external/iops" -> "0")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
-          "external/driver" -> "bar", "external/iops" -> "b")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
-          "external/driver" -> "bar", "external/overwritefs" -> "b")), Mode.RO),
-        PV("", PVI(None, None, None, Map.empty[String, String]), Mode.RO),
-        PV("", PVI(None, Some("f"), None, Map("external/driver" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("qaz"), Map("external/driver" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map("external/driver" -> "")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map("driver" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some(""), Map("external/driver" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some(""), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
-        PV("", PVI(None, None, Some("external"), Map("external/driver" -> "bar")), Mode.RO),
-        PV("", PVI(None, None, None, Map("external/driver" -> "bar")), Mode.RO),
-        PV("", PVI(None, None, Some("external"), Map.empty[String, String]), Mode.RO),
-        PV("", PVI(None, Some("f"), None, Map.empty[String, String]), Mode.RO),
-        PV("", PVI(Some(1L), None, None, Map.empty[String, String]), Mode.RO)
+      Set[ExternalVolume](
+        EV("", EVI(None, "f", "external", Map(
+          "external/driverNam" -> "rexray", "external/volumetype" -> "io1")), Mode.RO),
+        EV("", EVI(None, "f", "external", Map(
+          "external/driver" -> "rexray", "external/volumetype" -> "io1 ")), Mode.RO),
+        EV("", EVI(None, "f", "external", Map(
+          "external/driver" -> "rexray", "external/newfstype" -> " xfs")), Mode.RO),
+        EV("", EVI(None, "f", "external", Map(
+          "external/driver" -> "rexray", "external/newfstype" -> "")), Mode.RO),
+        EV("", EVI(None, "f", "external", Map(
+          "external/driver" -> "rexray", "external/iops" -> "0")), Mode.RO),
+        EV("", EVI(None, "f", "external", Map(
+          "external/driver" -> "rexray", "external/iops" -> "b")), Mode.RO),
+        EV("", EVI(None, "f", "external", Map(
+          "external/driver" -> "rexray", "external/overwritefs" -> "b")), Mode.RO),
+
+        EV("", EVI(None, "f", "qaz", Map("external/driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "f", "external", Map("external/driver" -> "")), Mode.RO),
+        EV("", EVI(None, "f", "external", Map("driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "f", "", Map("external/driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "", "external", Map("external/driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "f", "", Map.empty[String, String]), Mode.RO),
+        EV("", EVI(Some(1L), "", "", Map.empty[String, String]), Mode.RO)
       ), false
     ),
     TC(
       // various combinations of VALID external persistent volume parameters
-      Set[PersistentVolume](
-        PV("", PVI(None, Some("f"), Some("external"), Map(
+      Set[ExternalVolume](
+        EV("", EVI(None, "f", "external", Map(
           "external/driver" -> "bar", "external/volumetype" -> "io1")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
+        EV("", EVI(None, "f", "external", Map(
           "external/driver" -> "bar", "external/newfstype" -> "xfs")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
+        EV("", EVI(None, "f", "external", Map(
           "external/driver" -> "bar", "external/iops" -> "1")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
+        EV("", EVI(None, "f", "external", Map(
           "external/driver" -> "bar", "external/overwritefs" -> "true")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map(
+        EV("", EVI(None, "f", "external", Map(
           "external/driver" -> "bar", "external/overwritefs" -> "false")), Mode.RO),
-        PV("", PVI(Some(1L), Some("f"), Some("external"), Map("external/driver" -> "bar", "a" -> "b")), Mode.RO),
-        PV("", PVI(Some(1L), Some("f"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
-        PV("", PVI(None, Some("f"), Some("external"), Map("external/driver" -> "bar")), Mode.RO)
+        EV("", EVI(Some(1L), "f", "external", Map("external/driver" -> "bar", "a" -> "b")), Mode.RO),
+        EV("", EVI(Some(1L), "f", "external", Map("external/driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "f", "external", Map("external/driver" -> "bar")), Mode.RO)
       ), true
     )
   )
   for ((tc, idx) <- ttValidateVolume.zipWithIndex; (v, vidx) <- tc.volumes.zipWithIndex) {
-    test(s"validPersistentVolume $idx,$vidx") {
+    test(s"validExternalVolume $idx,$vidx") {
       val result = validate(v)(DVDIProvider.volumeValidation)
       assert(result.isSuccess == tc.wantsValid,
         s"expected ${tc.wantsValid} instead of $result for volume $v")
@@ -79,17 +75,17 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
   }
 }
 
-//def volumeToEnv(v: PersistentVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable]
+//def volumeToEnv(v: ExternalVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable]
 class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHelpers {
   import org.apache.mesos.Protos.Environment
-  case class TC(pv: PersistentVolume, env: Seq[Environment.Variable], wantsEnv: Seq[Environment.Variable])
+  case class TC(pv: ExternalVolume, env: Seq[Environment.Variable], wantsEnv: Seq[Environment.Variable])
 
   def mkVar(name: String, value: String): Environment.Variable =
     Environment.Variable.newBuilder.setName(name).setValue(value).build
 
   val ttVolumeToEnv = Seq[TC](
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(None, "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
@@ -98,7 +94,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(Some(1L), Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(Some(1L), "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
@@ -108,7 +104,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(Some(1L), Some("foo"), Some("external"), Map(
+      EV("/path", EVI(Some(1L), "foo", "external", Map(
         "external/driver" -> "bar",
         "external/size" -> "2"
       )), Mode.RO),
@@ -121,7 +117,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("external"), Map(
+      EV("/path", EVI(None, "foo", "external", Map(
         "external/driver" -> "bar",
         "external/size" -> "abc"
       )), Mode.RO),
@@ -134,7 +130,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(None, "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH0", "/tmp"),
         mkVar("DVDI_VOLUME_NAME0", "qaz"),
@@ -147,7 +143,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(None, "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/tmp"),
         mkVar("DVDI_VOLUME_NAME", "qaz"),
@@ -160,7 +156,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      PV("/path", PVI(None, Some("foo"), Some("external"), Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(None, "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/tmp"),
         mkVar("DVDI_VOLUME_NAME", "qaz"),

@@ -123,7 +123,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
       val appId = PathId("/my-app")
       val pv = PersistentVolume(
         containerPath = containerPath,
-        persistent = PersistentVolumeInfo(size = Some(10)),
+        persistent = PersistentVolumeInfo(size = 10),
         mode = Mesos.Volume.Mode.RW)
       Task.LocalVolume(Task.LocalVolumeId(appId, pv), pv)
     }

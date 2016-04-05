@@ -249,7 +249,7 @@ class ResidentTaskIntegrationTest
 
       val persistentVolume: Volume = PersistentVolume(
         containerPath = containerPath,
-        persistent = PersistentVolumeInfo(size = Some(persistentVolumeSize)),
+        persistent = PersistentVolumeInfo(size = persistentVolumeSize),
         mode = Mesos.Volume.Mode.RW
       )
 
