@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ PortDefinitionSerializer, ContainerSerializer }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.volume.{ VolumesModule, CommandContext, ContainerContext }
+import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ PersistentVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
 import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
@@ -124,13 +124,11 @@ class TaskBuilder(app: AppDefinition,
     val containerProto = computeContainerInfo(resourceMatch.hostPorts)
     val envPrefix: Option[String] = config.envVarsPrefix.get
 
-    def decorateCommandInfo(initialCi: CommandInfo.Builder): CommandInfo.Builder = {
-      containerProto.fold(initialCi){ ctp =>
-        // apply changes from volume providers
-        app.container.fold(initialCi){ container =>
-          import VolumesModule._
-          val pvs: Iterable[PersistentVolume] = container.volumes.collect { case pv: PersistentVolume => pv }
-          inject(CommandContext(ctp.getType, initialCi), pvs).command
+    def decorateCommandInfo(builder: CommandInfo.Builder) = containerProto.foreach { cp =>
+      app.container.foreach { container =>
+        container.volumes.foreach {
+          case pv: PersistentVolume => VolumesModule.build(cp.getType, builder, pv)
+          case _ =>
         }
       }
     }
@@ -139,7 +137,7 @@ class TaskBuilder(app: AppDefinition,
       case CommandExecutor() =>
         containerProto.foreach(builder.setContainer)
         var command = TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
-        command = decorateCommandInfo(command)
+        decorateCommandInfo(command)
         builder.setCommand(command.build)
 
       case PathExecutor(path) =>
@@ -155,7 +153,7 @@ class TaskBuilder(app: AppDefinition,
 
         var command =
           TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix).setValue(shell)
-        command = decorateCommandInfo(command)
+        decorateCommandInfo(command)
         info.setCommand(command.build)
         builder.setExecutor(info)
 
@@ -273,8 +271,7 @@ class TaskBuilder(app: AppDefinition,
 
       // apply changes from volume providers (must do this after we're sure there's a container type)
       app.container.foreach{ container =>
-        import VolumesModule._
-        inject(ContainerContext(builder), container.volumes)
+        container.volumes.foreach(VolumesModule.build(builder, _))
       }
 
       Some(builder.build)

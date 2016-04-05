@@ -2,6 +2,7 @@ package mesosphere.marathon.api.v2
 
 import java.util
 import java.util.concurrent.atomic.AtomicInteger
+import javax.ws.rs.core.Response
 
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
@@ -218,19 +219,36 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getEntity.toString should include("must not be empty")
   }
 
-  test("Creating an app with broken volume definition fails with readable error message") {
-    Given("An app update with an invalid volume (wrong field name)")
+  def createAppWithVolumes(`type`: String, volumes: String): Response = {
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
     val group = Group(PathId("/"), Set(app))
     val plan = DeploymentPlan(group, group)
+    val docker = if (`type` == "DOCKER") """"docker": {"image": "fop"},""" else ""
     val body =
+      s"""
+         |{
+         |  "id": "external1",
+         |  "cmd": "sleep 100",
+         |  "instances": 1,
+         |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
+         |  "container": {
+         |    "type": "${`type`}",
+         |    $docker
+         |    $volumes
+         |  }
+         |}
+      """.stripMargin
+
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The request is processed")
+    appsResource.create(body.getBytes("UTF-8"), false, auth.request)
+  }
+
+  test("Creating an app with broken volume definition fails with readable error message") {
+    Given("An app update with an invalid volume (wrong field name)")
+    val response = createAppWithVolumes("MESOS",
       """
-        |{
-        |  "id": "resident1",
-        |  "cmd": "sleep 100",
-        |  "instances": 0,
-        |  "container": {
-        |    "type": "MESOS",
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "persistent_WRONG_FIELD_NAME": {
@@ -238,13 +256,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      },
         |      "mode": "RW"
         |    }]
-        |  }
-        |}
-      """.stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-
-    When("The request is processed")
-    val response = appsResource.create(body, false, auth.request)
+      """.stripMargin)
 
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
@@ -254,17 +266,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume for an illegal provider should fail") {
     Given("An app invalid volume (illegal volume provider)")
-    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
-    val body =
+    val response = createAppWithVolumes("MESOS",
       """
-        |{
-        |  "id": "resident1",
-        |  "cmd": "sleep 100",
-        |  "instances": 0,
-        |  "container": {
-        |    "type": "MESOS",
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "hostPath": "/var",
@@ -274,13 +277,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      },
         |      "mode": "RW"
         |    }]
-        |  }
-        |}
-      """.stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-
-    When("The request is processed")
-    val response = appsResource.create(body, false, auth.request)
+      """.stripMargin
+    )
 
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
@@ -288,19 +286,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getEntity.toString should include("is no persistent volume provider name")
   }
 
-  test("Creating an app with an external volume with no provider name specified should pass provider validation") {
+  test("Creating an app with an external volume with no provider name specified should not pass provider validation") {
     Given("An app with an unnamed volume provider")
-    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
-    val body =
+    val response = createAppWithVolumes("MESOS",
       """
-        |{
-        |  "id": "resident1",
-        |  "cmd": "sleep 100",
-        |  "instances": 0,
-        |  "container": {
-        |    "type": "MESOS",
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "hostPath": "/var",
@@ -309,35 +298,19 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      },
         |      "mode": "RW"
         |    }]
-        |  }
-        |}
-      """.stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-
-    When("The request is processed")
-    val response = appsResource.create(body, false, auth.request)
+      """.stripMargin
+    )
 
     Then("The return code indicates create error")
     response.getStatus should be(422)
-    response.getEntity.toString should include("/upgradeStrategy")
-    response.getEntity.toString should include("/isResident")
+    response.getEntity.toString should include("You have to supply mesos_authentication_principal")
     response.getEntity.toString should not include ("/container/volumes(0)/persistent.provider")
   }
 
   test("Creating an app with an external volume and MESOS containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
-    val body =
+    val response = createAppWithVolumes("MESOS",
       """
-        |{
-        |  "id": "external1",
-        |  "cmd": "sleep 100",
-        |  "instances": 1,
-        |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
-        |  "container": {
-        |    "type": "MESOS",
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "persistent": {
@@ -348,13 +321,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      },
         |      "mode": "RW"
         |    }]
-        |  }
-        |}
-      """.stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-
-    When("The request is processed")
-    val response = appsResource.create(body, false, auth.request)
+      """.stripMargin
+    )
 
     Then("The return code indicates create success")
     response.getStatus should be(201)
@@ -362,19 +330,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume and DOCKER containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
-    val body =
+    val response = createAppWithVolumes("DOCKER",
       """
-        |{
-        |  "id": "external1",
-        |  "cmd": "sleep 100",
-        |  "instances": 1,
-        |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
-        |  "container": {
-        |    "type": "DOCKER",
-        |    "docker": {"image": "fop"},
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "persistent": {
@@ -384,13 +341,27 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      },
         |      "mode": "RW"
         |    }]
-        |  }
-        |}
-      """.stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+      """.stripMargin
+    )
 
-    When("The request is processed")
-    val response = appsResource.create(body, false, auth.request)
+    Then("The return code indicates create success")
+    response.getStatus should be(201)
+  }
+
+  test("Creating an app with an external volume without options and DOCKER containerizer should pass validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("DOCKER",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "persistent": {
+        |        "provider": "external",
+        |        "name": "namedfoo"
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
 
     Then("The return code indicates create success")
     response.getStatus should be(201)
@@ -398,19 +369,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume, and docker volume and DOCKER containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider and a docker host volume")
-    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
-    val body =
+    val response = createAppWithVolumes("DOCKER",
       """
-        |{
-        |  "id": "external1",
-        |  "cmd": "sleep 100",
-        |  "instances": 1,
-        |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
-        |  "container": {
-        |    "type": "DOCKER",
-        |    "docker": {"image": "fop"},
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "persistent": {
@@ -424,13 +384,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      "containerPath": "/ert",
         |      "mode": "RW"
         |    }]
-        |  }
-        |}
-      """.stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-
-    When("The request is processed")
-    val response = appsResource.create(body, false, auth.request)
+      """.stripMargin
+    )
 
     Then("The return code indicates create success")
     response.getStatus should be(201)
@@ -440,19 +395,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     // we'll need to mitigate this with documentation: probably deprecating support for using
     // volume names with non-persistent volumes.
     Given("An app with DOCKER containerizer and multiple references to the same named volume")
-    val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
-    val body =
+    val response = createAppWithVolumes("DOCKER",
       """
-        |{
-        |  "id": "external1",
-        |  "cmd": "sleep 100",
-        |  "instances": 1,
-        |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
-        |  "container": {
-        |    "type": "DOCKER",
-        |    "docker": {"image": "fop"},
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "persistent": {
@@ -466,13 +410,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      "containerPath": "/ert",
         |      "mode": "RW"
         |    }]
-        |  }
-        |}
-      """.stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-
-    When("The request is processed")
-    val response = appsResource.create(body, false, auth.request)
+      """.stripMargin
+    )
 
     Then("The return code indicates create success")
     response.getStatus should be(201)

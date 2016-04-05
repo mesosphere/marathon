@@ -3,6 +3,7 @@ package mesosphere.marathon.core.volume
 import com.wix.accord._
 import mesosphere.marathon.core.volume.providers._
 import mesosphere.marathon.state._
+import org.apache.mesos.Protos.{ContainerInfo, CommandInfo}
 
 /**
   * VolumeProvider is an interface implemented by storage volume providers
@@ -13,10 +14,11 @@ trait VolumeProvider[+T <: Volume] {
   /** groupValidation implements a provider's group validation rules */
   val groupValidation: Validator[Group]
 
-  /** apply scrapes volumes from an application definition that are supported by this volume provider */
+  /** collect scrapes volumes from an application definition that are supported by this volume provider */
   def collect(container: Container): Iterable[T]
 
-  val containerInjector: ContainerInjector[Volume]
+  /** build adds v to the given builder **/
+  def build(builder: ContainerInfo.Builder, v: Volume): Unit
 }
 
 trait PersistentVolumeProvider[+T <: PersistentVolume] extends VolumeProvider[T] {
@@ -29,7 +31,8 @@ trait PersistentVolumeProvider[+T <: PersistentVolume] extends VolumeProvider[T]
     */
   val volumeValidation: Validator[PersistentVolume]
 
-  val commandInjector: CommandInjector[PersistentVolume]
+  /** build adds v to the given builder **/
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: PersistentVolume): Unit
 }
 
 trait VolumeProviderRegistry {
@@ -52,16 +55,13 @@ trait PersistentVolumeProviderRegistry extends VolumeProviderRegistry {
 object VolumesModule {
   lazy val localVolumes: VolumeProvider[PersistentVolume] = ResidentVolumeProvider
   lazy val providers: PersistentVolumeProviderRegistry = StaticRegistry
-  lazy val inject: VolumeInjection = VolumeInjection
 
-  implicit val commandInjector: CommandInjector[PersistentVolume] = new CommandInjector[PersistentVolume] {
-    override def inject(ctx: CommandContext, pv: PersistentVolume): CommandContext =
-      providers(pv.persistent.providerName).fold(ctx){ p => p.commandInjector.inject(ctx, pv) }
+  def build(builder: ContainerInfo.Builder, v: Volume): Unit = {
+    providers(v).foreach { _.build(builder, v) }
   }
 
-  implicit val containerInjector: ContainerInjector[Volume] = new ContainerInjector[Volume] {
-    override def inject(ctx: ContainerContext, v: Volume): ContainerContext =
-      providers(v).fold(ctx){ p => p.containerInjector.inject(ctx, v) }
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: PersistentVolume): Unit = {
+    providers(pv.persistent.providerName).foreach { _.build(containerType, builder, pv) }
   }
 
   /** @return a validator that checks the validity of a container given the related volume providers */

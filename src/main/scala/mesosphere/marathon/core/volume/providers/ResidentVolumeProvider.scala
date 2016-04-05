@@ -3,8 +3,8 @@ package mesosphere.marathon.core.volume.providers
 import com.wix.accord.Validator
 import com.wix.accord.combinators.NilValidator
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
+import org.apache.mesos.Protos.{CommandInfo, ContainerInfo}
 
 /**
   * ResidentVolumeProvider handles persistent volumes allocated from agent resources.
@@ -35,6 +35,6 @@ protected[volume] case object ResidentVolumeProvider
     volume.persistent.providerName.getOrElse(name) == name
   }
 
-  val containerInjector = new ContainerInjector[Volume] {}
-  val commandInjector = new CommandInjector[PersistentVolume] {}
+  def build(builder: ContainerInfo.Builder, v: Volume): Unit = {}
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: PersistentVolume): Unit = {}
 }

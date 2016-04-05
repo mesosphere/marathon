@@ -2,9 +2,8 @@ package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord.{ Validator, _ }
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{ ContainerInfo, Environment, Volume => MesosVolume }
+import org.apache.mesos.Protos.{Volume => MesosVolume, CommandInfo, ContainerInfo, Environment}
 
 import scala.collection.JavaConverters._
 
@@ -22,33 +21,25 @@ protected[volume] case object DVDIProvider
   import org.apache.mesos.Protos.Volume.Mode
   import OptionSupport._
 
-  abstract class ProviderOption(
-    name: String,
-    required: Boolean = false,
-    validValue: Validator[String] = labelValidator) extends NamedOption(
-    DVDIProvider.this.name, name, required, validValue)
-
-  case object OptionDriverName extends ProviderOption("driver", true)
-  case object OptionVolumeType extends ProviderOption("volumetype")
-  case object OptionNewFSType extends ProviderOption("newfstype")
-  case object OptionIOPS extends ProviderOption("iops", validValue = naturalNumberValidator)
-  case object OptionOverwriteFS extends ProviderOption("overwritefs", validValue = booleanValidator)
-
-  val validOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opt =>
-    opt is OptionDriverName.validOption
-    opt is OptionVolumeType.validOption
-    opt is OptionNewFSType.validOption
-    opt is OptionIOPS.validOption
-    opt is OptionOverwriteFS.validOption
+  val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
+    opts.get("external/volumetype") is validIfDefined(labelValidator)
+    opts.get("external/newfstype") is validIfDefined(labelValidator)
+    opts.get("external/iops") is validIfDefined(naturalNumberValidator)
+    opts.get("external/overwritefs") is validIfDefined(booleanValidator)
   }
+
+  val driverOption = "external/driver"
 
   val volumeValidation = validator[PersistentVolume] { v =>
     v.persistent.name is notEmpty
     v.persistent.name.each is notEmpty
+
     v.persistent.providerName is notEmpty
-    v.persistent.providerName.each is notEmpty
-    v.persistent.providerName.each is equalTo(name) // sanity check
-    v.persistent.options is valid(validOptions)
+    v.persistent.providerName.each is equalTo(name)
+
+    v.persistent.options.get(driverOption) is definedAnd(labelValidator)
+    (v.persistent.options.get(driverOption) is definedAnd(notEqualTo("rexray"))) or
+      (v.persistent.options is valid(validRexRayOptions))
   }
 
   private def nameOf(vol: PersistentVolumeInfo): Option[String] = {
@@ -90,7 +81,7 @@ protected[volume] case object DVDIProvider
   }
 
   def driversInUse(ct: Container): Set[String] =
-    collect(ct).flatMap(_.persistent.options.get(OptionDriverName.fullName)).toSet
+    collect(ct).flatMap(_.persistent.options.get(driverOption)).toSet
 
   /** @return a count of volume references-by-name within an app spec */
   def volumeNameCounts(app: AppDefinition): Map[String, Int] =
@@ -161,39 +152,27 @@ protected[volume] case object DVDIProvider
       .setMode(volume.mode)
       .build
 
-  override val containerInjector = new ContainerInjector[Volume] {
-    override def inject(ctx: ContainerContext, v: Volume): ContainerContext =
-      v match {
-        case pv: PersistentVolume => {
-          // special behavior for docker vs. mesos containers
-          // - docker containerizer: serialize volumes into mesos proto
-          // - docker containerizer: specify "volumeDriver" for the container
-          val container = ctx.container // TODO(jdef) clone?
-          if (container.getType == ContainerInfo.Type.DOCKER && container.hasDocker) {
-            val driverName = pv.persistent.options(OptionDriverName.fullName)
-            if (container.getDocker.getVolumeDriver != driverName) {
-              container.setDocker(container.getDocker.toBuilder.setVolumeDriver(driverName).build)
-            }
-            ContainerContext(container.addVolumes(toMesosVolume(pv)))
-          }
-          else ctx
-        }
-        case _ => ctx
+  def build(builder: ContainerInfo.Builder, v: Volume): Unit = v match {
+    case pv: PersistentVolume =>
+      // special behavior for docker vs. mesos containers
+      // - docker containerizer: serialize volumes into mesos proto
+      // - docker containerizer: specify "volumeDriver" for the container
+      if (builder.getType == ContainerInfo.Type.DOCKER && builder.hasDocker) {
+        val driverName = pv.persistent.options(driverOption)
+        builder.setDocker(builder.getDocker.toBuilder.setVolumeDriver(driverName).build)
+        builder.addVolumes(toMesosVolume(pv))
       }
+    case _ =>
   }
 
-  override val commandInjector = new CommandInjector[PersistentVolume] {
-    override def inject(ctx: CommandContext, pv: PersistentVolume): CommandContext = {
-      // special behavior for docker vs. mesos containers
-      // - mesos containerizer: serialize volumes into envvar sets
-      val (containerType, command) = (ctx.containerType, ctx.command) // TODO(jdef) clone command?
-      if (containerType == ContainerInfo.Type.MESOS) {
-        val env = if (command.hasEnvironment) command.getEnvironment.toBuilder else Environment.newBuilder
-        val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
-        env.addAllVariables(toAdd.asJava)
-        CommandContext(containerType, command.setEnvironment(env.build))
-      }
-      else ctx
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: PersistentVolume): Unit = {
+    // special behavior for docker vs. mesos containers
+    // - mesos containerizer: serialize volumes into envvar sets
+    if (containerType == ContainerInfo.Type.MESOS) {
+      val env = if (builder.hasEnvironment) builder.getEnvironment.toBuilder else Environment.newBuilder
+      val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
+      env.addAllVariables(toAdd.asJava)
+      builder.setEnvironment(env.build)
     }
   }
 
@@ -220,13 +199,13 @@ protected[volume] case object DVDIProvider
     val vars = Seq[Environment.Variable](
       mkVar(dvdiVolumeContainerPath + suffix, vol.containerPath),
       mkVar(dvdiVolumeName + suffix, vol.persistent.name.get),
-      mkVar(dvdiVolumeDriver + suffix, vol.persistent.options(OptionDriverName.fullName))
+      mkVar(dvdiVolumeDriver + suffix, vol.persistent.options(driverOption))
     )
 
     val optsVar = {
       val prefix: String = name + OptionNamespaceSeparator
       // don't let the user override these
-      val ignore = Set(OptionDriverName.fullName.toLowerCase)
+      val ignore = Set(driverOption)
       // persistent.size trumps any user-specified dvdi/size option
       val opts = vol.persistent.options ++ Map[String, String](
         vol.persistent.size.map(prefix + "size" -> _.toString).toList: _*
