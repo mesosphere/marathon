@@ -270,7 +270,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       """
         |    "volumes": [{
         |      "containerPath": "/var",
-        |      "hostPath": "/var",
         |      "external": {
         |        "size": 10,
         |        "name": "foo",

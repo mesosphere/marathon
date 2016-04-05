@@ -7,7 +7,6 @@ import mesosphere.marathon.api.v2.Validation.oneOf
 import mesosphere.marathon.core.volume.VolumesModule
 import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.{ Protos => Mesos }
-
 import scala.collection.JavaConverters._
 
 sealed trait Volume {
@@ -27,6 +26,12 @@ object Volume {
     external: Option[ExternalVolumeInfo]): Volume = {
 
     if (persistent.isDefined) {
+      if (hostPath.isDefined) {
+        throw new IllegalArgumentException("hostPath may not be set with persistent")
+      }
+      if (external.isDefined) {
+        throw new IllegalArgumentException("external may not be set with persistent")
+      }
       PersistentVolume(
         containerPath = containerPath,
         persistent = persistent.get,
@@ -34,6 +39,9 @@ object Volume {
       )
     }
     else if (external.isDefined) {
+      if (hostPath.isDefined) {
+        throw new IllegalArgumentException("hostPath may not be set with persistent")
+      }
       ExternalVolume(
         containerPath = containerPath,
         external = external.get,
