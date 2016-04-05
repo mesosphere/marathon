@@ -16,19 +16,19 @@ import scala.collection.JavaConverters._
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
 protected[volume] case object DVDIProvider
-    extends AbstractExternalVolumeProvider("external") {
+    extends AbstractExternalVolumeProvider("dvdi") {
 
   import org.apache.mesos.Protos.Volume.Mode
   import OptionSupport._
 
   val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
-    opts.get("external/volumetype") is validIfDefined(labelValidator)
-    opts.get("external/newfstype") is validIfDefined(labelValidator)
-    opts.get("external/iops") is validIfDefined(naturalNumberValidator)
-    opts.get("external/overwritefs") is validIfDefined(booleanValidator)
+    opts.get("dvdi/volumetype") is validIfDefined(labelValidator)
+    opts.get("dvdi/newfstype") is validIfDefined(labelValidator)
+    opts.get("dvdi/iops") is validIfDefined(naturalNumberValidator)
+    opts.get("dvdi/overwritefs") is validIfDefined(booleanValidator)
   }
 
-  val driverOption = "external/driver"
+  val driverOption = "dvdi/driver"
 
   val volumeValidation = validator[ExternalVolume] { v =>
     v.external.name is notEmpty

@@ -23,26 +23,26 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
     TC(
       // various combinations of INVALID external persistent volume parameters
       Set[ExternalVolume](
-        EV("", EVI(None, "f", "external", Map(
-          "external/driverNam" -> "rexray", "external/volumetype" -> "io1")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "rexray", "external/volumetype" -> "io1 ")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "rexray", "external/newfstype" -> " xfs")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "rexray", "external/newfstype" -> "")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "rexray", "external/iops" -> "0")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "rexray", "external/iops" -> "b")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "rexray", "external/overwritefs" -> "b")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driverNam" -> "rexray", "dvdi/volumetype" -> "io1")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "rexray", "dvdi/volumetype" -> "io1 ")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "rexray", "dvdi/newfstype" -> " xfs")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "rexray", "dvdi/newfstype" -> "")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "rexray", "dvdi/iops" -> "0")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "rexray", "dvdi/iops" -> "b")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "rexray", "dvdi/overwritefs" -> "b")), Mode.RO),
 
-        EV("", EVI(None, "f", "qaz", Map("external/driver" -> "bar")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map("external/driver" -> "")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map("driver" -> "bar")), Mode.RO),
-        EV("", EVI(None, "f", "", Map("external/driver" -> "bar")), Mode.RO),
-        EV("", EVI(None, "", "external", Map("external/driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "f", "qaz", Map("dvdi/driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map("dvdi/driver" -> "")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map("driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "f", "", Map("dvdi/driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "", "dvdi", Map("dvdi/driver" -> "bar")), Mode.RO),
         EV("", EVI(None, "f", "", Map.empty[String, String]), Mode.RO),
         EV("", EVI(Some(1L), "", "", Map.empty[String, String]), Mode.RO)
       ), false
@@ -50,19 +50,19 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
     TC(
       // various combinations of VALID external persistent volume parameters
       Set[ExternalVolume](
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "bar", "external/volumetype" -> "io1")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "bar", "external/newfstype" -> "xfs")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "bar", "external/iops" -> "1")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "bar", "external/overwritefs" -> "true")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map(
-          "external/driver" -> "bar", "external/overwritefs" -> "false")), Mode.RO),
-        EV("", EVI(Some(1L), "f", "external", Map("external/driver" -> "bar", "a" -> "b")), Mode.RO),
-        EV("", EVI(Some(1L), "f", "external", Map("external/driver" -> "bar")), Mode.RO),
-        EV("", EVI(None, "f", "external", Map("external/driver" -> "bar")), Mode.RO)
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "bar", "dvdi/volumetype" -> "io1")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "bar", "dvdi/newfstype" -> "xfs")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "bar", "dvdi/iops" -> "1")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "bar", "dvdi/overwritefs" -> "true")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map(
+          "dvdi/driver" -> "bar", "dvdi/overwritefs" -> "false")), Mode.RO),
+        EV("", EVI(Some(1L), "f", "dvdi", Map("dvdi/driver" -> "bar", "a" -> "b")), Mode.RO),
+        EV("", EVI(Some(1L), "f", "dvdi", Map("dvdi/driver" -> "bar")), Mode.RO),
+        EV("", EVI(None, "f", "dvdi", Map("dvdi/driver" -> "bar")), Mode.RO)
       ), true
     )
   )
@@ -85,7 +85,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
 
   val ttVolumeToEnv = Seq[TC](
     TC(
-      EV("/path", EVI(None, "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(None, "foo", "dvdi", Map("dvdi/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
@@ -94,7 +94,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      EV("/path", EVI(Some(1L), "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(Some(1L), "foo", "dvdi", Map("dvdi/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/path"),
@@ -104,9 +104,9 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      EV("/path", EVI(Some(1L), "foo", "external", Map(
-        "external/driver" -> "bar",
-        "external/size" -> "2"
+      EV("/path", EVI(Some(1L), "foo", "dvdi", Map(
+        "dvdi/driver" -> "bar",
+        "dvdi/size" -> "2"
       )), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
@@ -117,9 +117,9 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      EV("/path", EVI(None, "foo", "external", Map(
-        "external/driver" -> "bar",
-        "external/size" -> "abc"
+      EV("/path", EVI(None, "foo", "dvdi", Map(
+        "dvdi/driver" -> "bar",
+        "dvdi/size" -> "abc"
       )), Mode.RO),
       Seq[Environment.Variable](),
       Seq[Environment.Variable](
@@ -130,7 +130,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      EV("/path", EVI(None, "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(None, "foo", "dvdi", Map("dvdi/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH0", "/tmp"),
         mkVar("DVDI_VOLUME_NAME0", "qaz"),
@@ -143,7 +143,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      EV("/path", EVI(None, "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(None, "foo", "dvdi", Map("dvdi/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/tmp"),
         mkVar("DVDI_VOLUME_NAME", "qaz"),
@@ -156,7 +156,7 @@ class DVDIProvider_VolumeToEnvTest extends MarathonSpec with Matchers with TCHel
       )
     ),
     TC(
-      EV("/path", EVI(None, "foo", "external", Map("external/driver" -> "bar")), Mode.RO),
+      EV("/path", EVI(None, "foo", "dvdi", Map("dvdi/driver" -> "bar")), Mode.RO),
       Seq[Environment.Variable](
         mkVar("DVDI_VOLUME_CONTAINERPATH", "/tmp"),
         mkVar("DVDI_VOLUME_NAME", "qaz"),

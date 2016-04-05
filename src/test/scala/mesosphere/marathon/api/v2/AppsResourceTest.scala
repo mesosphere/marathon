@@ -319,9 +319,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      "containerPath": "/var",
         |      "external": {
         |        "size": 10,
-        |        "provider": "external",
+        |        "provider": "dvdi",
         |        "name": "namedfoo",
-        |        "options": {"external/driver": "bar"}
+        |        "options": {"dvdi/driver": "bar"}
         |      },
         |      "mode": "RW"
         |    }]
@@ -339,9 +339,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "external": {
-        |        "provider": "external",
+        |        "provider": "dvdi",
         |        "name": "namedfoo",
-        |        "options": {"external/driver": "bar"}
+        |        "options": {"dvdi/driver": "bar"}
         |      },
         |      "mode": "RW"
         |    }]
@@ -359,7 +359,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "external": {
-        |        "provider": "external",
+        |        "provider": "dvdi",
         |        "name": "namedfoo"
         |      },
         |      "mode": "RW"
@@ -378,9 +378,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "external": {
-        |        "provider": "external",
+        |        "provider": "dvdi",
         |        "name": "namedfoo",
-        |        "options": {"external/driver": "bar"}
+        |        "options": {"dvdi/driver": "bar"}
         |      },
         |      "mode": "RW"
         |    },{
@@ -404,9 +404,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "external": {
-        |        "provider": "external",
+        |        "provider": "dvdi",
         |        "name": "namedfoo",
-        |        "options": {"external/driver": "bar"}
+        |        "options": {"dvdi/driver": "bar"}
         |      },
         |      "mode": "RW"
         |    },{
