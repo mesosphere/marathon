@@ -90,6 +90,7 @@ private[jobs] object OverdueTasksActor {
 
     private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Iterable[Task]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, tasks).map { task =>
+        log.warn("Scheduling ReservationTimeout for {}", task.taskId)
         reservationTimeoutHandler.timeout(TaskStateOp.ReservationTimeout(task.taskId))
       }
       Future.sequence(taskTimeoutResults).map(_ => ())
