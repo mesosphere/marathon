@@ -44,8 +44,8 @@ class OfferOperationFactory(
   def reserve(frameworkId: FrameworkId, taskId: Task.Id, resources: Iterable[Mesos.Resource]): Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
     val reservedResources = resources.map { resource =>
-      Mesos.Resource.newBuilder(resource)
-        .setRole(role)
+      resource
+        .toBuilder
         .setReservation(
           ReservationInfo.newBuilder()
             .setPrincipal(principal)
