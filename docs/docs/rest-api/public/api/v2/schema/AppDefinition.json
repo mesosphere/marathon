@@ -192,12 +192,23 @@
                     "type": "integer",
                     "description": "The size of the persistent volume in MiB",
                     "minimum": 0
+                  }
+                },
+                "type": "object"
+              },
+              "external": {
+                "additionalProperties": false,
+                "properties": {
+                  "size": {
+                    "type": "integer",
+                    "description": "The size of the external volume in MiB",
+                    "minimum": 0
                   },
                   "name": {
                     "type": "string",
                     "description": "The name of the volume"
                   },
-                  "providerName": {
+                  "provider": {
                     "type": "string",
                     "description": "The name of the volume provider"
                   },
