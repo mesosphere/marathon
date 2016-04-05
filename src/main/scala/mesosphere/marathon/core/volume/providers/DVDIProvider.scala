@@ -38,7 +38,7 @@ protected[volume] case object DVDIProvider
     v.persistent.providerName.each is equalTo(name)
 
     v.persistent.options.get(driverOption) is definedAnd(labelValidator)
-    (v.persistent.options.get(driverOption) is definedAnd(notEqualTo("rex-ray"))) or
+    (v.persistent.options.get(driverOption) is definedAnd(notEqualTo("rexray"))) or
       (v.persistent.options is valid(validRexRayOptions))
   }
 
