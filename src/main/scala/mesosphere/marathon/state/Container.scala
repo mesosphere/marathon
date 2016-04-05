@@ -56,23 +56,25 @@ object Container {
           protocols.size == protocols.toSet.size
         }
 
-      val portMappingValidator = validator[PortMapping] { portMapping =>
+      implicit val portMappingValidator = validator[PortMapping] { portMapping =>
         portMapping.protocol.split(',').toIterable is uniqueProtocols and every(oneOf(TCP, UDP))
         portMapping.containerPort should be >= 0
         portMapping.hostPort should be >= 0
         portMapping.servicePort should be >= 0
+        portMapping.name is optional(matchRegexFully(PortAssignment.PortNamePattern))
       }
     }
 
-    val uniquePortNames: Validator[Seq[PortMapping]] =
-      isTrue[Seq[PortMapping]]("Port names must be unique.") { portMappings =>
-        val portNames = portMappings.flatMap(_.name)
-        portNames.size == portNames.distinct.size
+    object PortMappings {
+      implicit val portMappingsValidator: Validator[Seq[PortMapping]] = validator[Seq[PortMapping]] { portMappings =>
+        portMappings is every(valid)
+        portMappings is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
       }
+    }
 
     implicit val dockerValidator = validator[Docker] { docker =>
       docker.image is notEmpty
-      docker.portMappings is optional(every(PortMapping.portMappingValidator)) and optional(uniquePortNames)
+      docker.portMappings is optional(valid(PortMappings.portMappingsValidator))
     }
   }
 

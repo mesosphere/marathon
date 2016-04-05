@@ -15,6 +15,7 @@ object PortDefinition {
   implicit val portDefinitionValidator = validator[PortDefinition] { portDefinition =>
     portDefinition.protocol is oneOf(DiscoveryInfo.Port.AllowedProtocols)
     portDefinition.port should be >= 0
+    portDefinition.name is optional(matchRegexFully(PortAssignment.PortNamePattern))
   }
 }
 
