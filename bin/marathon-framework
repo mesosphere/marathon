@@ -77,11 +77,11 @@ function load_options_and_log {
   fi
   echo "${cmd[@]}"
 
-  if [[ "${cmd[@]} $@" == *'--no-logger'* ]]
+  if [[ "${cmd[@]} $@" =~ .*--no[_-]logger.* ]]
   then
     local clean_cmd=()
     for i in "${cmd[@]}" "$@"; do
-      if [[ "${i}" != "--no-logger" ]]; then
+      if [[ "${i}" != "--no-logger" ]] && [[ "${i}" != "--no_logger" ]]; then
         clean_cmd+=( "${i}" )
       fi
     done
