@@ -1,5 +1,6 @@
 package mesosphere.marathon.integration
 
+import mesosphere.marathon.Protos
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.integration.facades.MesosFacade.{ ITResources, ITMesosState }
 import mesosphere.marathon.integration.facades.{ ITEnrichedTask, MarathonFacade }
@@ -42,6 +43,30 @@ class ResidentTaskIntegrationTest
     waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
     waitForEvent(Event.DEPLOYMENT_SUCCESS)
     waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
+  }
+
+  test("resident task can be deployed along with constraints") { f =>
+    // background: Reserved tasks may not be considered while making sure constraints are met, because they
+    // would prevent launching a task because there `is` already a task (although not launched)
+    Given("A resident app that uses a hostname:UNIQUE constraints")
+    val containerPath = "persistent-volume"
+    val unique = Protos.Constraint.newBuilder
+      .setField("hostname")
+      .setOperator(Protos.Constraint.Operator.UNIQUE)
+      .setValue("")
+      .build
+
+    val app = f.residentApp(
+      containerPath = containerPath,
+      cmd = s"""sleep 1""",
+      constraints = Set(unique))
+
+    When("A task is launched")
+    f.createAsynchronously(app)
+
+    Then("It it successfully launched")
+    waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
+    waitForEvent(Event.DEPLOYMENT_SUCCESS)
   }
 
   test("persistent volume will be re-attached and keep state") { f =>
@@ -250,7 +275,8 @@ class ResidentTaskIntegrationTest
       cmd: String = "sleep 1000",
       instances: Int = 1,
       backoffDuration: FiniteDuration = 1.hour,
-      portDefinitions: Seq[PortDefinition] = PortDefinitions(0)): AppDefinition = {
+      portDefinitions: Seq[PortDefinition] = PortDefinitions(0),
+      constraints: Set[Protos.Constraint] = Set.empty[Protos.Constraint]): AppDefinition = {
 
       val appId: PathId = PathId(s"/$testBasePath/app-${IdGenerator.generate()}")
 
@@ -267,6 +293,7 @@ class ResidentTaskIntegrationTest
           Residency.defaultRelaunchEscalationTimeoutSeconds,
           Residency.defaultTaskLostBehaviour
         )),
+        constraints = constraints,
         container = Some(Container(
           `type` = Mesos.ContainerInfo.Type.MESOS,
           volumes = Seq(persistentVolume)
