@@ -26,22 +26,4 @@ protected[volume] object StaticRegistry extends PersistentVolumeProviderRegistry
     }
 
   def apply(name: Option[String]): Option[PersistentVolumeProvider[PersistentVolume]] = providerForName(name)
-
-  val commandInjector = new CommandInjector[PersistentVolume] {
-    override def inject(c: CommandContext, pv: PersistentVolume): CommandContext = {
-      registry.get(pv.persistent.providerName.getOrElse(ResidentVolumeProvider.name)).
-        fold(c)(p => p.commandInjector.inject(c, pv))
-    }
-  }
-
-  val containerInjector = new ContainerInjector[Volume] {
-    override def inject(c: ContainerContext, v: Volume): ContainerContext = {
-      v match {
-        case dv: DockerVolume => DockerHostVolumeProvider.containerInjector.inject(c, dv)
-        case pv: PersistentVolume =>
-          registry.get(pv.persistent.providerName.getOrElse(ResidentVolumeProvider.name)).
-            fold(c)(p => p.containerInjector.inject(c, pv))
-      }
-    }
-  }
 }

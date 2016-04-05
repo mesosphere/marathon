@@ -2,9 +2,8 @@ package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord.{ Validator, _ }
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.volume._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{ ContainerInfo, Environment, Volume => MesosVolume }
+import org.apache.mesos.Protos.{Volume => MesosVolume, CommandInfo, ContainerInfo, Environment}
 
 import scala.collection.JavaConverters._
 
@@ -153,39 +152,27 @@ protected[volume] case object DVDIProvider
       .setMode(volume.mode)
       .build
 
-  override val containerInjector = new ContainerInjector[Volume] {
-    override def inject(ctx: ContainerContext, v: Volume): ContainerContext =
-      v match {
-        case pv: PersistentVolume => {
-          // special behavior for docker vs. mesos containers
-          // - docker containerizer: serialize volumes into mesos proto
-          // - docker containerizer: specify "volumeDriver" for the container
-          val container = ctx.container // TODO(jdef) clone?
-          if (container.getType == ContainerInfo.Type.DOCKER && container.hasDocker) {
-            val driverName = pv.persistent.options(driverOption)
-            if (container.getDocker.getVolumeDriver != driverName) {
-              container.setDocker(container.getDocker.toBuilder.setVolumeDriver(driverName).build)
-            }
-            ContainerContext(container.addVolumes(toMesosVolume(pv)))
-          }
-          else ctx
-        }
-        case _ => ctx
+  def build(builder: ContainerInfo.Builder, v: Volume): Unit = v match {
+    case pv: PersistentVolume =>
+      // special behavior for docker vs. mesos containers
+      // - docker containerizer: serialize volumes into mesos proto
+      // - docker containerizer: specify "volumeDriver" for the container
+      if (builder.getType == ContainerInfo.Type.DOCKER && builder.hasDocker) {
+        val driverName = pv.persistent.options(driverOption)
+        builder.setDocker(builder.getDocker.toBuilder.setVolumeDriver(driverName).build)
+        builder.addVolumes(toMesosVolume(pv))
       }
+    case _ =>
   }
 
-  override val commandInjector = new CommandInjector[PersistentVolume] {
-    override def inject(ctx: CommandContext, pv: PersistentVolume): CommandContext = {
-      // special behavior for docker vs. mesos containers
-      // - mesos containerizer: serialize volumes into envvar sets
-      val (containerType, command) = (ctx.containerType, ctx.command) // TODO(jdef) clone command?
-      if (containerType == ContainerInfo.Type.MESOS) {
-        val env = if (command.hasEnvironment) command.getEnvironment.toBuilder else Environment.newBuilder
-        val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
-        env.addAllVariables(toAdd.asJava)
-        CommandContext(containerType, command.setEnvironment(env.build))
-      }
-      else ctx
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: PersistentVolume): Unit = {
+    // special behavior for docker vs. mesos containers
+    // - mesos containerizer: serialize volumes into envvar sets
+    if (containerType == ContainerInfo.Type.MESOS) {
+      val env = if (builder.hasEnvironment) builder.getEnvironment.toBuilder else Environment.newBuilder
+      val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
+      env.addAllVariables(toAdd.asJava)
+      builder.setEnvironment(env.build)
     }
   }
 

@@ -218,12 +218,12 @@ object Group {
       group is noAppsAndGroupsWithSameName
       (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
       group is validPorts
-      group is VolumesModule.validGroup
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
     }
 
   implicit val validRootGroup: Validator[Group] = new Validator[Group] {
     override def apply(group: Group): Result = {
+      group is VolumesModule.validGroup
       validate(group)(validator =
         validNestedGroup(PathId.empty))
     }
