@@ -23,21 +23,17 @@ protected[volume] abstract class AbstractPersistentVolumeProvider(
 protected[providers] object OptionSupport {
   import OptionLabelPatterns._
 
-  /** NamedOption represents a (named) configurable item type that provides validation rules */
-  abstract class NamedOption(
-      val namespace: String,
-      val name: String,
-      val required: Boolean,
-      val validValue: Validator[String]) {
+  def validIfDefined[T](implicit validator: Validator[T]): Validator[Option[T]] = new Validator[Option[T]] {
+    override def apply(opt: Option[T]): Result = opt match {
+      case None => Success
+      case Some(t) => validator(t)
+    }
+  }
 
-    def fullName: String = namespace + OptionNamespaceSeparator + name
-    def from(m: Map[String, String]): Option[String] = m.get(fullName)
-
-    def validOption: Validator[Map[String, String]] = new Validator[Map[String, String]] {
-      override def apply(m: Map[String, String]): Result = from(m).map(validValue).getOrElse(
-        if (required) Failure(Set(RuleViolation(fullName, "is a required option, but is not present", None)))
-        else Success
-      )
+  def definedAnd[T](implicit validator: Validator[T]): Validator[Option[T]] = new Validator[Option[T]] {
+    override def apply(opt: Option[T]): Result = opt match {
+      case None => Failure(Set(RuleViolation(None, "not defined", None)))
+      case Some(t) => validator(t)
     }
   }
 
