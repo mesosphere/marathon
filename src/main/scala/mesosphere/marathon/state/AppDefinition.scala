@@ -325,7 +325,9 @@ case class AppDefinition(
         upgradeStrategy != to.upgradeStrategy ||
         labels != to.labels ||
         acceptedResourceRoles != to.acceptedResourceRoles ||
-        ipAddress != to.ipAddress
+        ipAddress != to.ipAddress ||
+        readinessChecks != to.readinessChecks ||
+        residency != to.residency
     }
   }
 
