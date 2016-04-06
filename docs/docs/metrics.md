@@ -57,9 +57,6 @@ currently staged. Tasks enter staging state after they are launched. A consisten
  <span class="label label-default">v0.15</span>
  `service.mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publishFuture` (timer) - This metric calculates how long it takes Marathon to process status updates.
 
-<span class="label label-default">v0.15</span>
-`service.mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publishFuture` (timer) - This metric calculates how long it takes Marathon to process status updates.
-
 ### Configuration update processing
 
 <span class="label label-default">v0.15</span>
