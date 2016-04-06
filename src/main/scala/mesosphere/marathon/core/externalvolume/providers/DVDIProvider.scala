@@ -2,7 +2,7 @@ package mesosphere.marathon.core.externalvolume.providers
 
 import com.wix.accord.{ Validator, _ }
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.externalvolume.providers.DVDIProvider._
+import mesosphere.marathon.core.externalvolume.{ ExternalVolumeValidations, ExternalVolumeProvider }
 import mesosphere.marathon.core.externalvolume.providers.OptionSupport._
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.Volume.Mode
@@ -18,19 +18,19 @@ import scala.collection.JavaConverters._
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected[externalvolume] case object DVDIProvider
-    extends AbstractExternalVolumeProvider("dvdi") with DVDIProviderValidations {
+protected[externalvolume] case object DVDIProvider extends ExternalVolumeProvider {
+  override val name: String = "dvdi"
 
-  val driverOption = "dvdi/driver"
+  override def validations: ExternalVolumeValidations = DVDIProviderValidations
 
-  def toMesosVolume(volume: ExternalVolume): MesosVolume =
-    MesosVolume.newBuilder
-      .setContainerPath(volume.containerPath)
-      .setHostPath(volume.external.name)
-      .setMode(volume.mode)
-      .build
+  override def build(builder: ContainerInfo.Builder, ev: ExternalVolume): Unit = {
+    def toMesosVolume(volume: ExternalVolume): MesosVolume =
+      MesosVolume.newBuilder
+        .setContainerPath(volume.containerPath)
+        .setHostPath(volume.external.name)
+        .setMode(volume.mode)
+        .build
 
-  def build(builder: ContainerInfo.Builder, ev: ExternalVolume): Unit = {
     // special behavior for docker vs. mesos containers
     // - docker containerizer: serialize volumes into mesos proto
     // - docker containerizer: specify "volumeDriver" for the container
@@ -41,7 +41,7 @@ protected[externalvolume] case object DVDIProvider
     }
   }
 
-  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit = {
+  override def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit = {
     // special behavior for docker vs. mesos containers
     // - mesos containerizer: serialize volumes into envvar sets
     if (containerType == ContainerInfo.Type.MESOS) {
@@ -52,12 +52,16 @@ protected[externalvolume] case object DVDIProvider
     }
   }
 
+  val driverOption = "dvdi/driver"
   val dvdiVolumeContainerPath = "DVDI_VOLUME_CONTAINERPATH"
   val dvdiVolumeName = "DVDI_VOLUME_NAME"
   val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
   val dvdiVolumeOpts = "DVDI_VOLUME_OPTS"
 
-  def volumeToEnv(vol: ExternalVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable] = {
+  private[providers] def volumeToEnv(
+    vol: ExternalVolume,
+    i: Iterable[Environment.Variable]): Iterable[Environment.Variable] = {
+
     import OptionLabelPatterns._
 
     val suffix = {
@@ -101,132 +105,20 @@ protected[externalvolume] case object DVDIProvider
   }
 }
 
-protected[externalvolume] trait DVDIProviderValidations {
+private[externalvolume] object DVDIProviderValidations extends ExternalVolumeValidations {
   import mesosphere.marathon.api.v2.Validation._
-
-  private val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
-    opts.get("dvdi/volumetype") is optional(validLabel)
-    opts.get("dvdi/newfstype") is optional(validLabel)
-    opts.get("dvdi/iops") is optional(validNaturalNumber)
-    opts.get("dvdi/overwritefs") is optional(validBoolean)
-  }
-
-  private def nameOf(vol: ExternalVolumeInfo): Option[String] = {
-    Some(vol.providerName + "::" + vol.name)
-  }
-
-  val volumeValidation = validator[ExternalVolume] { v =>
-    v.external.name is notEmpty
-    v.external.providerName is equalTo(name)
-
-    v.external.options.get(driverOption) as s"external/options($driverOption)" is definedAnd(validLabel)
-
-    v.external.options is conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions)
-  }
-
-  private val haveOnlyOneReplica = new Validator[AppDefinition] {
-    override def apply(app: AppDefinition): Result =
-      if (volumesForApp(app).nonEmpty && app.instances > 1)
-        Failure(Set(RuleViolation(app.id,
-          s"Number of instances is limited to 1 when declaring DVDI volumes in app ${app.id}", None
-        )))
-      else Success
-  }
-
-  private val haveUniqueExternalVolumeNames = new Validator[AppDefinition] {
-    override def apply(app: AppDefinition): Result = {
-      val conflicts = volumeNameCounts(app).filter(_._2 > 1).keys
-      if (conflicts.isEmpty) Success
-      else Failure(conflicts.toSet[String].map { e =>
-        RuleViolation(app.id, s"Requested DVDI volume ${e} is declared more than once within app ${app.id}", None)
-      })
-    }
-  }
-
-  private def volumesForApp(app: AppDefinition): Iterable[ExternalVolume] =
-    app.container.toSet[Container].flatMap(collect)
-
-  // for now this matches the validation for resident tasks, but probably won't be as
-  // restrictive in the future.
-  private val validUpgradeStrategy = validator[UpgradeStrategy] { strategy =>
-    strategy.minimumHealthCapacity should be <= 0.5
-    strategy.maximumOverCapacity should equalTo(0.0)
-  }
-
-  /** @return a count of volume references-by-name within an app spec */
-  private def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-    volumesForApp(app).flatMap{ v => nameOf(v.external) }.groupBy(identity).mapValues(_.size)
-
-  protected[providers] def modes(ct: Container): Set[Mode] =
-    collect(ct).map(_.mode).toSet
-
-  private val validMesosVolume = validator[ExternalVolume] { v =>
-    v.mode is equalTo(Mode.RW)
-  }
-
-  private val validMesosContainer = validator[Container] { ct =>
-    ct.volumes.each is ifDVDIVolume(validMesosVolume)
-  }
-
-  private val haveOnlyOneDriver = new Validator[Container] {
-    override def apply(ct: Container): Result = {
-      val n = collect(ct).flatMap(_.external.options.get(driverOption)).toSet.size
-      if (n <= 1) Success
-      else Failure(Set(RuleViolation(n, "one external volume driver per app", None)))
-    }
-  }
-
-  private val haveOnlyDriverOption = new Validator[ExternalVolume] {
-    override def apply(v: ExternalVolume): Result =
-      if (v.external.options.filterKeys(_ != driverOption).isEmpty) Success
-      else Failure(Set(RuleViolation(v.external.options, "only contains driver", Some("external.options"))))
-  }
-
-  private val haveNoSize = new Validator[ExternalVolume] {
-    override def apply(v: ExternalVolume): Result =
-      if (v.external.size.isEmpty) Success
-      else Failure(Set(RuleViolation(v.external.size, "must be undefined", Some("external/size"))))
-  }
-
-  private def ifDVDIVolume(vtor: Validator[ExternalVolume]) = new Validator[Volume] {
-    override def apply(v: Volume): Result = v match {
-      case ev: ExternalVolume if accepts(ev) => vtor(ev)
-      case _                                 => Success
-    }
-  }
-
-  private val validDockerContainer = validator[Container] { ct =>
-    ct should haveOnlyOneDriver
-    ct.volumes.each should ifDVDIVolume(haveOnlyDriverOption)
-    ct.volumes.each should ifDVDIVolume(haveNoSize)
-  }
-
-  private val validContainer = new Validator[Container] {
-    override def apply(ct: Container): Result = ct.`type` match {
-      case ContainerInfo.Type.MESOS  => validMesosContainer(ct)
-      case ContainerInfo.Type.DOCKER => validDockerContainer(ct)
-    }
-  }
-
-  val appValidation = validator[AppDefinition] { app =>
-    app should haveUniqueExternalVolumeNames
-    app should haveOnlyOneReplica
-    app.container is optional(validContainer)
-    app.upgradeStrategy is validUpgradeStrategy
-  }
+  import DVDIProvider._
 
   // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
   // task instance across the entire cluster.
-  val groupValidation = new Validator[Group] {
+  override lazy val rootGroup = new Validator[Group] {
     override def apply(g: Group): Result = {
-      val transitiveApps = g.transitiveApps.toList
-
-      val appsByVolume = g.apps.flatMap { app =>
-        volumesForApp(app).flatMap{ vol => nameOf(vol.external).map(_ -> app.id) }
+      val appsByVolume = g.transitiveApps.flatMap { app =>
+        app.externalVolumes.flatMap{ vol => nameOf(vol.external).map(_ -> app.id) }
       }.groupBy[String](_._1).mapValues(_.map(_._2))
 
       val groupViolations = g.apps.flatMap { app =>
-        val ruleViolations = volumesForApp(app).flatMap{ vol => nameOf(vol.external) }.flatMap{ name =>
+        val ruleViolations = app.externalVolumes.flatMap{ vol => nameOf(vol.external) }.flatMap{ name =>
           for {
             otherApp <- appsByVolume(name)
             if otherApp != app.id // do not compare to self
@@ -238,6 +130,117 @@ protected[externalvolume] trait DVDIProviderValidations {
       }
       if (groupViolations.isEmpty) Success
       else Failure(groupViolations.toSet)
+    }
+  }
+
+  override lazy val app = validator[AppDefinition] { app =>
+    app should haveOnlyOneDriver
+    app should haveUniqueExternalVolumeNames
+    app should haveOnlyOneReplica
+    app.container is optional(validContainer)
+    app.upgradeStrategy is validUpgradeStrategy
+  }
+
+  override lazy val volume = validator[ExternalVolume] { v =>
+    v.external.name is notEmpty
+    v.external.provider is equalTo(name)
+    v.external.options.get(driverOption) as s"external/options($driverOption)" is definedAnd(validLabel)
+    v.external.options is conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions)
+  }
+
+  /**
+    * @return true if volume has a provider name that matches ours exactly
+    */
+  private[this] def accepts(volume: ExternalVolume): Boolean = {
+    volume.external.provider == name
+  }
+
+  private[this] lazy val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
+    opts.get("dvdi/volumetype") is optional(validLabel)
+    opts.get("dvdi/newfstype") is optional(validLabel)
+    opts.get("dvdi/iops") is optional(validNaturalNumber)
+    opts.get("dvdi/overwritefs") is optional(validBoolean)
+  }
+
+  private[this] def nameOf(vol: ExternalVolumeInfo): Option[String] = {
+    Some(vol.provider + "::" + vol.name)
+  }
+
+  private[this] case object haveOnlyOneReplica extends Validator[AppDefinition] {
+    override def apply(app: AppDefinition): Result =
+      if (app.externalVolumes.nonEmpty && app.instances > 1)
+        Failure(Set(RuleViolation(app.id,
+          s"Number of instances is limited to 1 when declaring DVDI volumes in app ${app.id}", None
+        )))
+      else Success
+  }
+
+  private[this] case object haveUniqueExternalVolumeNames extends Validator[AppDefinition] {
+    override def apply(app: AppDefinition): Result = {
+      val conflicts = volumeNameCounts(app).filter(_._2 > 1).keys
+      if (conflicts.isEmpty) Success
+      else Failure(conflicts.toSet[String].map { e =>
+        RuleViolation(app.id, s"Requested DVDI volume '$e' is declared more than once within app ${app.id}", None)
+      })
+    }
+  }
+
+  // for now this matches the validation for resident tasks, but probably won't be as
+  // restrictive in the future.
+  private[this] lazy val validUpgradeStrategy = validator[UpgradeStrategy] { strategy =>
+    strategy.minimumHealthCapacity should be <= 0.5
+    strategy.maximumOverCapacity should equalTo(0.0)
+  }
+
+  /** @return a count of volume references-by-name within an app spec */
+  private[this] def volumeNameCounts(app: AppDefinition): Map[String, Int] =
+    app.externalVolumes.flatMap{ v => nameOf(v.external) }.groupBy(identity).mapValues(_.size)
+
+  private[this] lazy val validMesosVolume = validator[ExternalVolume] { v =>
+    v.mode is equalTo(Mode.RW)
+  }
+
+  private[this] lazy val validMesosContainer = validator[Container] { ct =>
+    ct.volumes.each is ifDVDIVolume(validMesosVolume)
+  }
+
+  private[this] case object haveOnlyOneDriver extends Validator[AppDefinition] {
+    override def apply(app: AppDefinition): Result = {
+      val uniqueProviderNames = app.externalVolumes.iterator.map(_.external.provider).toSet
+      val n = uniqueProviderNames.size
+      if (n <= 1) Success
+      else Failure(Set(RuleViolation(n, "one external volume driver per app", None)))
+    }
+  }
+
+  private[this] case object haveOnlyDriverOption extends Validator[ExternalVolume] {
+    override def apply(v: ExternalVolume): Result =
+      if (v.external.options.filterKeys(_ != driverOption).isEmpty) Success
+      else Failure(Set(RuleViolation(v.external.options, "only contains driver", Some("external.options"))))
+  }
+
+  private[this] case object haveNoSize extends Validator[ExternalVolume] {
+    override def apply(v: ExternalVolume): Result =
+      if (v.external.size.isEmpty) Success
+      else Failure(Set(RuleViolation(v.external.size, "must be undefined", Some("external/size"))))
+  }
+
+  private[this] def ifDVDIVolume(vtor: Validator[ExternalVolume]): Validator[Volume] = new Validator[Volume] {
+    override def apply(v: Volume): Result = v match {
+      case ev: ExternalVolume if accepts(ev) => vtor(ev)
+      case _                                 => Success
+    }
+  }
+
+  private[this] lazy val validDockerContainer = validator[Container] { ct =>
+    ct.volumes.each should ifDVDIVolume(haveOnlyDriverOption)
+    ct.volumes.each should ifDVDIVolume(haveNoSize)
+  }
+
+  private[this] case object validContainer extends Validator[Container] {
+    override def apply(ct: Container): Result = ct.`type` match {
+      case ContainerInfo.Type.MESOS  => validMesosContainer(ct)
+      case ContainerInfo.Type.DOCKER => validDockerContainer(ct)
     }
   }
 }

@@ -68,7 +68,7 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
   )
   for ((tc, idx) <- ttValidateVolume.zipWithIndex; (v, vidx) <- tc.volumes.zipWithIndex) {
     test(s"validExternalVolume $idx,$vidx") {
-      val result = validate(v)(DVDIProvider.volumeValidation)
+      val result = validate(v)(DVDIProvider.validations.volume)
       assert(result.isSuccess == tc.wantsValid,
         s"test case $idx/$vidx expected ${tc.wantsValid} instead of $result for volume $v")
     }

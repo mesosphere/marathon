@@ -223,7 +223,7 @@ object Group {
 
   implicit val validRootGroup: Validator[Group] = new Validator[Group] {
     override def apply(group: Group): Result = {
-      group is VolumesModule.validGroup
+      group is VolumesModule.validRootGroup
       validate(group)(validator =
         validNestedGroup(PathId.empty))
     }

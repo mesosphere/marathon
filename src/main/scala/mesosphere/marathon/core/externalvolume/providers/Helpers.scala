@@ -2,25 +2,9 @@ package mesosphere.marathon.core.externalvolume.providers
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.externalvolume._
 import mesosphere.marathon.state._
 
 import scala.util.Try
-
-protected[externalvolume] abstract class AbstractExternalVolumeProvider(
-    val name: String) extends ExternalVolumeProvider {
-  /**
-    * @return true if volume has a provider name that matches ours exactly
-    */
-  def accepts(volume: ExternalVolume): Boolean = {
-    volume.external.providerName == name
-  }
-
-  def collect(container: Container): Iterable[ExternalVolume] =
-    container.volumes.collect{
-      case vol: ExternalVolume if accepts(vol) => vol
-    }
-}
 
 protected[providers] object OptionSupport {
   import OptionLabelPatterns._

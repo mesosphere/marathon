@@ -171,13 +171,13 @@ object PersistentVolume {
   *
   * @param size absolute size of the volume (MB)
   * @param name identifies the volume within the context of the storage provider.
-  * @param providerName identifies the storage provider responsible for volume lifecycle operations.
+  * @param provider identifies the storage provider responsible for volume lifecycle operations.
   * @param options contains storage provider-specific configuration configuration
   */
 case class ExternalVolumeInfo(
   size: Option[Long] = None,
   name: String,
-  providerName: String,
+  provider: String,
   options: Map[String, String] = Map.empty[String, String])
 
 object OptionLabelPatterns {
@@ -198,7 +198,7 @@ object ExternalVolumeInfo {
   implicit val validExternalVolumeInfo = validator[ExternalVolumeInfo] { info =>
     info.size.each should be > 0L
     info.name should matchRegex(LabelRegex)
-    info.providerName should matchRegex(LabelRegex)
+    info.provider should matchRegex(LabelRegex)
     info.options is valid(validOptions)
   }
 
