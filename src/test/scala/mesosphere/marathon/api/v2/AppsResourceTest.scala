@@ -22,7 +22,7 @@ import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.scalatest.{ GivenWhenThen, Matchers }
-import play.api.libs.json.{ JsNumber, JsObject, Json }
+import play.api.libs.json.{ JsResultException, JsNumber, JsObject, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -282,33 +282,32 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
-    response.getEntity.toString should include("/container/volumes(0)/external.providerName")
-    response.getEntity.toString should include("is not a external volume provider name")
+    response.getEntity.toString should include("/container/volumes(0)/external/providerName")
+    response.getEntity.toString should include("is unknown provider")
   }
 
-  /* TODO(jdef) this test contains JSON that's not even parsable, so JsResultException is thrown
-  test("Creating an app with an external volume with no provider name specified should not pass provider validation") {
+  test("Creating an app with an external volume with no name provider name specified should FAIL provider validation") {
     Given("An app with an unnamed volume provider")
-    val response = createAppWithVolumes("MESOS",
-      """
-        |    "volumes": [{
-        |      "containerPath": "/var",
-        |      "hostPath": "/var",
-        |      "external": {
-        |        "size": 10
-        |      },
-        |      "mode": "RW"
-        |    }]
-      """.stripMargin
-    )
+    val e = intercept[JsResultException]{
+      createAppWithVolumes("MESOS",
+        """
+          |    "volumes": [{
+          |      "containerPath": "/var",
+          |      "hostPath": "/var",
+          |      "external": {
+          |        "size": 10
+          |      },
+          |      "mode": "RW"
+          |    }]
+        """.stripMargin
+      )
+    }
 
-    Then("The return code indicates parse error")
-    response.getStatus should be(500)
-    response.getEntity.toString should include("/container/volumes(0)/external/provider")
-    response.getEntity.toString should include("/container/volumes(0)/external/name")
-    response.getEntity.toString should not include ("/container/volumes(0)/external.providerName")
+    Then("The it should fail with a JsResultException")
+    e.getMessage should include("/container/volumes(0)/external/provider")
+    e.getMessage should include("/container/volumes(0)/external/name")
+    e.getMessage should not include ("/container/volumes(0)/external/providerName")
   }
-  */
 
   test("Creating an app with an external volume and MESOS containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider")
@@ -351,7 +350,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getStatus should be(201)
   }
 
-  test("Creating an app with an external volume without options and DOCKER containerizer should NOT pass validation") {
+  test("Creating a DOCKER app with an external volume without driver option should NOT pass validation") {
     Given("An app with a named, non-'agent' volume provider")
     val response = createAppWithVolumes("DOCKER",
       """
@@ -359,7 +358,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      "containerPath": "/var",
         |      "external": {
         |        "provider": "dvdi",
-        |        "name": "namedfoo"
+        |        "name": "namedfoo",
+        |        "options": {}
         |      },
         |      "mode": "RW"
         |    }]
@@ -368,6 +368,35 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates create failure")
     response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/external/options(dvdi/driver")
+    response.getEntity.toString should include("not defined")
+  }
+
+  test("Creating a Docker app with an external volume with size should fail validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("DOCKER",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "external": {
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "size": 42,
+        |        "options": {
+        |           "external/driver": "rexray"
+        |        }
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    println(response.getEntity.toString)
+
+    Then("The return code indicates a validation error")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/external/options(dvdi/driver)")
+    response.getEntity.toString should include("not defined")
   }
 
   test("Creating an app with an external volume, and docker volume and DOCKER containerizer should pass validation") {

@@ -3,7 +3,6 @@ package mesosphere.marathon.state
 import com.wix.accord.dsl._
 import com.wix.accord._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.core.volume.VolumesModule
 import org.apache.mesos.{ Protos => Mesos }
 import scala.collection.immutable.Seq
 

@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.serialization
 
 import mesosphere.marathon.Protos
+import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
@@ -13,7 +14,7 @@ object ContainerSerializer {
   def toProto(container: Container): Protos.ExtendedContainerInfo = {
     val builder = Protos.ExtendedContainerInfo.newBuilder
       .setType(container.`type`)
-      .addAllVolumes(container.volumes.map(_.toProto).asJava)
+      .addAllVolumes(container.volumes.map(VolumeSerializer.toProto).asJava)
     container.docker.foreach { d => builder.setDocker(DockerSerializer.toProto(d)) }
     builder.build
   }
@@ -22,14 +23,76 @@ object ContainerSerializer {
     val maybeDocker = if (proto.hasDocker) Some(DockerSerializer.fromProto(proto.getDocker)) else None
     Container(
       `type` = proto.getType,
-      volumes = proto.getVolumesList.asScala.map(Volume.fromProto(_)).to[Seq],
+      volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
       docker = maybeDocker
     )
   }
 
   def toMesos(container: Container): mesos.Protos.ContainerInfo = {
     val builder = mesos.Protos.ContainerInfo.newBuilder.setType(container.`type`)
+
+    container.volumes.foreach {
+      case pv: PersistentVolume => // PersistentVolumes are handled differently
+      case ev: ExternalVolume   => VolumesModule.build(builder, ev) // this also adds the volume
+      case dv: DockerVolume     => builder.addVolumes(VolumeSerializer.toMesos(dv))
+    }
+
     container.docker.foreach { d => builder.setDocker(DockerSerializer.toMesos(d)) }
+    builder.build
+  }
+}
+
+object VolumeSerializer {
+  def toProto(volume: Volume): Protos.Volume = volume match {
+    case p: PersistentVolume =>
+      Protos.Volume.newBuilder()
+        .setContainerPath(p.containerPath)
+        .setPersistent(PersistentVolumeInfoSerializer.toProto(p.persistent))
+        .setMode(p.mode)
+        .build()
+
+    case e: ExternalVolume =>
+      Protos.Volume.newBuilder()
+        .setContainerPath(e.containerPath)
+        .setExternal(ExternalVolumeInfoSerializer.toProto(e.external))
+        .setMode(e.mode)
+        .build()
+
+    case d: DockerVolume =>
+      Protos.Volume.newBuilder()
+        .setContainerPath(d.containerPath)
+        .setHostPath(d.hostPath)
+        .setMode(d.mode)
+        .build()
+  }
+
+  /** Only DockerVolumes can be serialized into a Mesos Protobuf */
+  def toMesos(volume: DockerVolume): mesos.Protos.Volume =
+    mesos.Protos.Volume.newBuilder
+      .setContainerPath(volume.containerPath)
+      .setHostPath(volume.hostPath)
+      .setMode(volume.mode)
+      .build
+}
+
+object PersistentVolumeInfoSerializer {
+  def toProto(info: PersistentVolumeInfo): Protos.Volume.PersistentVolumeInfo =
+    Protos.Volume.PersistentVolumeInfo.newBuilder()
+      .setSize(info.size)
+      .build()
+}
+
+object ExternalVolumeInfoSerializer {
+  def toProto(info: ExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
+    val builder = Protos.Volume.ExternalVolumeInfo.newBuilder()
+      .setName(info.name)
+      .setProviderName(info.providerName)
+
+    info.size.foreach(builder.setSize)
+    info.options.map{
+      case (key, value) => mesos.Protos.Label.newBuilder().setKey(key).setValue(value).build
+    }.foreach(builder.addOptions)
+
     builder.build
   }
 }

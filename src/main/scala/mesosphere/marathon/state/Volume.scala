@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.v2.Validation.oneOf
 import mesosphere.marathon.core.volume.VolumesModule
@@ -12,9 +13,6 @@ import scala.collection.JavaConverters._
 sealed trait Volume {
   def containerPath: String
   def mode: Mesos.Volume.Mode
-  def toProto: Protos.Volume
-
-  val validVolume: Validator[Volume]
 }
 
 object Volume {
@@ -25,39 +23,35 @@ object Volume {
     persistent: Option[PersistentVolumeInfo],
     external: Option[ExternalVolumeInfo]): Volume = {
 
-    if (persistent.isDefined) {
-      if (hostPath.isDefined) {
-        throw new IllegalArgumentException("hostPath may not be set with persistent")
-      }
-      if (external.isDefined) {
-        throw new IllegalArgumentException("external may not be set with persistent")
-      }
-      PersistentVolume(
-        containerPath = containerPath,
-        persistent = persistent.get,
-        mode = mode
-      )
-    }
-    else if (external.isDefined) {
-      if (hostPath.isDefined) {
-        throw new IllegalArgumentException("hostPath may not be set with persistent")
-      }
-      ExternalVolume(
-        containerPath = containerPath,
-        external = external.get,
-        mode = mode
-      )
-    }
-    else {
-      DockerVolume(
-        containerPath = containerPath,
-        hostPath = hostPath.getOrElse(""),
-        mode = mode
-      )
+    persistent match {
+      case Some(persistentVolumeInfo) =>
+        if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
+        if (external.isDefined) throw new IllegalArgumentException("external may not be set with persistent")
+        PersistentVolume(
+          containerPath = containerPath,
+          persistent = persistentVolumeInfo,
+          mode = mode
+        )
+      case None =>
+        external match {
+          case Some(externalVolumeInfo) =>
+            if (hostPath.isDefined) throw new IllegalArgumentException("hostPath may not be set with persistent")
+            ExternalVolume(
+              containerPath = containerPath,
+              external = external.get,
+              mode = mode
+            )
+          case None =>
+            DockerVolume(
+              containerPath = containerPath,
+              hostPath = hostPath.getOrElse(""),
+              mode = mode
+            )
+        }
     }
   }
 
-  def fromProto(proto: Protos.Volume): Volume = {
+  def apply(proto: Protos.Volume): Volume = {
     if (proto.hasPersistent)
       PersistentVolume(
         containerPath = proto.getContainerPath,
@@ -90,7 +84,11 @@ object Volume {
     }
 
   implicit val validVolume: Validator[Volume] = new Validator[Volume] {
-    override def apply(v: Volume): Result = v.validVolume(v)
+    override def apply(volume: Volume): Result = volume match {
+      case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
+      case dv: DockerVolume     => validate(dv)(DockerVolume.validDockerVolume)
+      case ev: ExternalVolume   => validate(ev)(ExternalVolume.validExternalVolume)
+    }
   }
 }
 
@@ -103,73 +101,41 @@ case class DockerVolume(
   containerPath: String,
   hostPath: String,
   mode: Mesos.Volume.Mode)
-    extends Volume {
-  override def toProto: Protos.Volume =
-    Protos.Volume.newBuilder()
-      .setContainerPath(containerPath)
-      .setHostPath(hostPath)
-      .setMode(mode)
-      .build()
+    extends Volume
 
-  val validDockerVolume = validator[DockerVolume] { dv =>
-    dv.containerPath is notEmpty
-    dv.hostPath is notEmpty
-    dv.mode is oneOf(Mode.RW, Mode.RO)
-  }
-
-  override val validVolume = new Validator[Volume] {
-    override def apply(v: Volume): Result = v match {
-      case dv: DockerVolume => validDockerVolume(dv)
-      case v: Any           => Failure(Set[Violation](RuleViolation(v, "no docker volume", None)))
-    }
+object DockerVolume {
+  implicit val validDockerVolume = validator[DockerVolume] { vol =>
+    vol.containerPath is notEmpty
+    vol.hostPath is notEmpty
+    vol.mode is oneOf(Mode.RW, Mode.RO)
   }
 }
 
-/**
-  * PersistentVolumeInfo captures the specification for a volume that survives task restarts.
-  */
-case class PersistentVolumeInfo(size: Long) {
-  def toProto: Protos.Volume.PersistentVolumeInfo =
-    Protos.Volume.PersistentVolumeInfo.newBuilder().setSize(size).build
-}
+case class PersistentVolumeInfo(size: Long)
 
 object PersistentVolumeInfo {
+  def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
+    new PersistentVolumeInfo(pvi.getSize)
+
   implicit val validPersistentVolumeInfo = validator[PersistentVolumeInfo] { info =>
     info.size should be > 0L
   }
-
-  def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
-    PersistentVolumeInfo(pvi.getSize)
 }
 
 case class PersistentVolume(
   containerPath: String,
   persistent: PersistentVolumeInfo,
   mode: Mesos.Volume.Mode)
-    extends Volume {
+    extends Volume
 
-  import mesosphere.marathon.api.v2.Validation._
-
-  override def toProto: Protos.Volume =
-    Protos.Volume.newBuilder()
-      .setContainerPath(containerPath)
-      .setPersistent(persistent.toProto)
-      .setMode(mode)
-      .build()
-
-  val validPersistentVolume = validator[PersistentVolume] { pv =>
-    pv.containerPath is notEmpty
-    pv.mode is equalTo(Mode.RW)
+object PersistentVolume {
+  import org.apache.mesos.Protos.Volume.Mode
+  implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
+    vol.containerPath is notEmpty
+    vol.persistent is valid
+    vol.mode is equalTo(Mode.RW)
     //persistent volumes require those CLI parameters provided
-    pv is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
-    pv.persistent is valid
-  }
-
-  override val validVolume = new Validator[Volume] {
-    override def apply(v: Volume): Result = v match {
-      case pv: PersistentVolume => validPersistentVolume(pv)
-      case v: Any               => Failure(Set[Violation](RuleViolation(v, "no persistent volume", None)))
-    }
+    vol is configValueSet("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
   }
 }
 
@@ -204,24 +170,15 @@ case class PersistentVolume(
   * @param options contains storage provider-specific configuration configuration
   */
 case class ExternalVolumeInfo(
-    size: Option[Long] = None,
-    name: String,
-    providerName: String,
-    options: Map[String, String] = Map.empty[String, String]) {
-  def toProto: Protos.Volume.ExternalVolumeInfo = {
-    val builder = Protos.Volume.ExternalVolumeInfo.newBuilder().setName(name).setProviderName(providerName)
-    size.foreach(builder.setSize)
-    options.map{ case (key, value) => Mesos.Label.newBuilder().setKey(key).setValue(value).build }
-      .foreach(builder.addOptions)
-    builder.build
-  }
-}
+  size: Option[Long] = None,
+  name: String,
+  providerName: String,
+  options: Map[String, String] = Map.empty[String, String])
 
 object OptionLabelPatterns {
   val OptionNamespaceSeparator = "/"
   val OptionNamePattern = "[A-Za-z0-9](?:[-A-Za-z0-9\\._:]*[A-Za-z0-9])?"
   val LabelPattern = "[a-z0-9](?:[-a-z0-9]*[a-z0-9])?"
-
   val LabelRegex = "^" + LabelPattern + "$"
   val OptionKeyRegex = "^" + LabelPattern + OptionNamespaceSeparator + OptionNamePattern + "$"
 }
@@ -250,32 +207,13 @@ object ExternalVolumeInfo {
 }
 
 case class ExternalVolume(
-    containerPath: String,
-    external: ExternalVolumeInfo,
-    mode: Mesos.Volume.Mode) extends Volume {
+  containerPath: String,
+  external: ExternalVolumeInfo,
+  mode: Mesos.Volume.Mode) extends Volume
 
-  override def toProto: Protos.Volume =
-    Protos.Volume.newBuilder()
-      .setContainerPath(containerPath)
-      .setExternal(external.toProto)
-      .setMode(mode)
-      .build()
-
+object ExternalVolume {
   val validExternalVolume = validator[ExternalVolume] { ev =>
     ev.containerPath is notEmpty
-    ev.external is valid
-  }
-
-  override val validVolume = new Validator[Volume] {
-    override def apply(v: Volume): Result = v match {
-      case ev: ExternalVolume =>
-        VolumesModule.providers(ev.external.providerName) match {
-          case Some(prov) => (validExternalVolume and prov.volumeValidation)(ev)
-          case None => Failure(Set[Violation](RuleViolation(v,
-            s"is not a external volume provider name", Some("external.providerName")
-          )))
-        }
-      case v: Any => Failure(Set[Violation](RuleViolation(v, "not an external volume", None)))
-    }
-  }
+    ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
+  } and VolumesModule.validExternalVolume
 }

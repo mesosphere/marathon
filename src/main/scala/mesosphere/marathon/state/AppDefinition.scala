@@ -101,9 +101,11 @@ case class AppDefinition(
 
   def isResident: Boolean = residency.isDefined
 
-  def residentVolumes: Iterable[PersistentVolume] = {
-    container.toSet[Container].flatMap(_.volumes.collect { case pv: PersistentVolume => pv })
+  def persistentVolumes: Iterable[PersistentVolume] = {
+    container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
   }
+
+  def diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
@@ -518,7 +520,7 @@ object AppDefinition {
 
   private val definesCorrectResidencyCombination: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
-      !(app.residency.isDefined ^ app.residentVolumes.nonEmpty)
+      !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
     }
 
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =
@@ -539,11 +541,11 @@ object AppDefinition {
 
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
     val changeNoVolumes =
-      isTrue[AppDefinition]("Resident volumes can not be changed!") { to =>
-        val fromVolumes = from.residentVolumes
-        val toVolumes = to.residentVolumes
+      isTrue[AppDefinition]("Persistent volumes can not be changed!") { to =>
+        val fromVolumes = from.persistentVolumes
+        val toVolumes = to.persistentVolumes
         def sameSize = fromVolumes.size == toVolumes.size
-        def noChange = from.residentVolumes.forall { fromVolume =>
+        def noChange = from.persistentVolumes.forall { fromVolume =>
           toVolumes.find(_.containerPath == fromVolume.containerPath).contains(fromVolume)
         }
         sameSize && noChange
