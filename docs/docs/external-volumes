@@ -1,6 +1,6 @@
---------------------------------------------------------------
+---
 title: Stateful Applications Using External Persistent Volumes
---------------------------------------------------------------
+---
 
 # Stateful Applications Using External Persistent Volumes
 
@@ -39,17 +39,17 @@ You specify an external volume in the app definition of your Marathon app. [Lear
   "instances": 1,
   "cpus": 0.1,
   "mem": 32,
-  "cmd": "while [ true ] ; do touch /tmp/test-rexray-volume/hello ; sleep 5 ; done",
+  "cmd": "/usr/bin/tail -f /dev/null",
   "container": {
     "type": "MESOS",
     "volumes": [
       {
         "containerPath": "/tmp/test-rexray-volume",
-        "persistent": {
+        "external": {
           "size": 100,
-          "name": "jdef-test-vol",
-          "provider": "external",
-          "options": { "external/driver": "rexray" }
+          "name": "my-test-vol",
+          "provider": "dvdi",
+          "options": { "dvdi/driver": "rexray" }
           },
         "mode": "RW"
       }
@@ -62,15 +62,21 @@ You specify an external volume in the app definition of your Marathon app. [Lear
 }
 ```
 
-In the `volumes` section of app definition above:
+In the app definition above:
 
-- `containerPath` specifies the root path inside the volume for storing data. This path is configurable, but defaults to `data/`. See [the REX-Ray documentation on root paths](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#volume-root-path-031) for more information.
+- `containerPath` specifies where the volume is mounted inside the container. This path is configurable, but defaults to `data/`. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
 
-- The `external/driver` options specifies which Docker volume driver we want to use for storage. If you are running Marathon on DCOS, this value should always be `rexray`. [Learn more about REX-ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
+- The `external.driver["dvdi/driver"]` option specifies which Docker volume driver to use for storage. If you are running Marathon on DCOS, this value should always be `rexray`. [Learn more about REX-Ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
 
-- `name` is the name by which your Docker volume driver looks up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used.
+- You can specify additional options with `container.volumes[x].external.options[optionName]`.
 
-- Volumes will always be available under `$REXRAY_HOME/var/lib/rexray/volumes/$DVDI_VOLUME_NAME`. **Note:** This applies only to non-Docker apps; Docker apps can specify the mount point inside the app definition. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
+- `name` is the name by which your volume driver looks up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used. **Note:** Implicit volume creation only works when using volumes with a Mesos container.
+
+- Create multiple volumes by adding additional items in the `container.volumes` array.
+
+- Volume parameters cannot be changed after you create the application.
+
+- **Note:** Marathon will not launch apps with external volumes if  `upgradeStrategy.minimusHealthCapacity` is less than 0.5, or if `upgradeStrategy.maximumOverCapacity` does not equal 0.
 
 ### Using a Docker Container
 
@@ -93,11 +99,11 @@ Below is a sample app definition that uses a Docker container and specifies an e
     "volumes": [
       {
         "containerPath": "/data/test-rexray-volume",
-        "persistent": {
+        "external": {
           "size": 100,
-          "name": "test",
-          "provider": "external",
-          "options": { "external/driver": "rexray" } 
+          "name": "my-test-vol",
+          "provider": "dvdi",
+          "options": { "dvdi/driver": "rexray" }
         },
         "mode": "RW"
       }
@@ -114,9 +120,9 @@ For more information, refer to the [REX-Ray documentation](https://rexray.readth
 
 ## Potential Pitfalls
 
-- Your storage provider may have particular limitations. For instance, on Amazon's EBS, you can only assign one task per volume.
+- You can only assign one task per volume. Your storage provider may other particular limitations.
 
-- The volumes you create are not automatically cleaned up. If you you delete your cluster, go to your storage provider and delete the volumes you no longer need. Find them by searching by `DVDI_VOLUME_NAME`.
+- The volumes you create are not automatically cleaned up. If you you delete your cluster, go to your storage provider and delete the volumes you no longer need. If you using EBS, find them by searching by the `container.volume.external.name` that you set in your Marathon app definition. This name corresponds to an EBS volume `Name` tag.
 
 - Volumes are not isolated from other clusters. Choose a unique volume name to avoid conflicts.
 
