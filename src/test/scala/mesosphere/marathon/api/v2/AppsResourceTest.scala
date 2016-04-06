@@ -282,7 +282,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
-    response.getEntity.toString should include("/container/volumes(0)/external/providerName")
+    response.getEntity.toString should include("/container/volumes(0)/external/provider")
     response.getEntity.toString should include("is unknown provider")
   }
 
@@ -306,7 +306,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     Then("The it should fail with a JsResultException")
     e.getMessage should include("/container/volumes(0)/external/provider")
     e.getMessage should include("/container/volumes(0)/external/name")
-    e.getMessage should not include ("/container/volumes(0)/external/providerName")
   }
 
   test("Creating an app with an external volume and MESOS containerizer should pass validation") {

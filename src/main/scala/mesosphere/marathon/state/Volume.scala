@@ -157,9 +157,9 @@ object PersistentVolume {
   *  <li> A fully-qualified volume name is expected to be unique across the cluster and may formed, for example,
   *       by concatenating the volume provider name with the volume name. E.g “dvdi.volume123”
   *
-  * `providerName` is optional; if specified it indicates which storage provider will implement volume
+  * `provider` is optional; if specified it indicates which storage provider will implement volume
   * lifecycle management operations for the external volume. if unspecified, “agent” is assumed.
-  * the provider names “dcos”, “agent”, and "docker" are currently reserved. The contents of providerName
+  * the provider names “dcos”, “agent”, and "docker" are currently reserved. The contents of provider
   * values are restricted to the alpha-numeric character range [a-z0-9].
   *
   * `options` contains provider-specific volume options. some items may be required in order for a volume
@@ -206,7 +206,7 @@ object ExternalVolumeInfo {
     ExternalVolumeInfo(
       if (evi.hasSize) Some(evi.getSize) else None,
       evi.getName,
-      evi.getProviderName,
+      evi.getProvider,
       evi.getOptionsList.asScala.map { p => p.getKey -> p.getValue }.toMap
     )
 }

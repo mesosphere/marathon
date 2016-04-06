@@ -21461,20 +21461,20 @@ public final class Protos {
       com.google.protobuf.ByteString
           getNameBytes();
 
-      // required string providerName = 3;
+      // required string provider = 3;
       /**
-       * <code>required string providerName = 3;</code>
+       * <code>required string provider = 3;</code>
        */
-      boolean hasProviderName();
+      boolean hasProvider();
       /**
-       * <code>required string providerName = 3;</code>
+       * <code>required string provider = 3;</code>
        */
-      java.lang.String getProviderName();
+      java.lang.String getProvider();
       /**
-       * <code>required string providerName = 3;</code>
+       * <code>required string provider = 3;</code>
        */
       com.google.protobuf.ByteString
-          getProviderNameBytes();
+          getProviderBytes();
 
       // repeated .mesos.Label options = 4;
       /**
@@ -21568,7 +21568,7 @@ public final class Protos {
               }
               case 26: {
                 bitField0_ |= 0x00000004;
-                providerName_ = input.readBytes();
+                provider_ = input.readBytes();
                 break;
               }
               case 34: {
@@ -21681,20 +21681,20 @@ public final class Protos {
         }
       }
 
-      // required string providerName = 3;
-      public static final int PROVIDERNAME_FIELD_NUMBER = 3;
-      private java.lang.Object providerName_;
+      // required string provider = 3;
+      public static final int PROVIDER_FIELD_NUMBER = 3;
+      private java.lang.Object provider_;
       /**
-       * <code>required string providerName = 3;</code>
+       * <code>required string provider = 3;</code>
        */
-      public boolean hasProviderName() {
+      public boolean hasProvider() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>required string providerName = 3;</code>
+       * <code>required string provider = 3;</code>
        */
-      public java.lang.String getProviderName() {
-        java.lang.Object ref = providerName_;
+      public java.lang.String getProvider() {
+        java.lang.Object ref = provider_;
         if (ref instanceof java.lang.String) {
           return (java.lang.String) ref;
         } else {
@@ -21702,22 +21702,22 @@ public final class Protos {
               (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           if (bs.isValidUtf8()) {
-            providerName_ = s;
+            provider_ = s;
           }
           return s;
         }
       }
       /**
-       * <code>required string providerName = 3;</code>
+       * <code>required string provider = 3;</code>
        */
       public com.google.protobuf.ByteString
-          getProviderNameBytes() {
-        java.lang.Object ref = providerName_;
+          getProviderBytes() {
+        java.lang.Object ref = provider_;
         if (ref instanceof java.lang.String) {
           com.google.protobuf.ByteString b = 
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
-          providerName_ = b;
+          provider_ = b;
           return b;
         } else {
           return (com.google.protobuf.ByteString) ref;
@@ -21763,7 +21763,7 @@ public final class Protos {
       private void initFields() {
         size_ = 0L;
         name_ = "";
-        providerName_ = "";
+        provider_ = "";
         options_ = java.util.Collections.emptyList();
       }
       private byte memoizedIsInitialized = -1;
@@ -21775,7 +21775,7 @@ public final class Protos {
           memoizedIsInitialized = 0;
           return false;
         }
-        if (!hasProviderName()) {
+        if (!hasProvider()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -21799,7 +21799,7 @@ public final class Protos {
           output.writeBytes(2, getNameBytes());
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
-          output.writeBytes(3, getProviderNameBytes());
+          output.writeBytes(3, getProviderBytes());
         }
         for (int i = 0; i < options_.size(); i++) {
           output.writeMessage(4, options_.get(i));
@@ -21823,7 +21823,7 @@ public final class Protos {
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(3, getProviderNameBytes());
+            .computeBytesSize(3, getProviderBytes());
         }
         for (int i = 0; i < options_.size(); i++) {
           size += com.google.protobuf.CodedOutputStream
@@ -21954,7 +21954,7 @@ public final class Protos {
           bitField0_ = (bitField0_ & ~0x00000001);
           name_ = "";
           bitField0_ = (bitField0_ & ~0x00000002);
-          providerName_ = "";
+          provider_ = "";
           bitField0_ = (bitField0_ & ~0x00000004);
           if (optionsBuilder_ == null) {
             options_ = java.util.Collections.emptyList();
@@ -22001,7 +22001,7 @@ public final class Protos {
           if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
             to_bitField0_ |= 0x00000004;
           }
-          result.providerName_ = providerName_;
+          result.provider_ = provider_;
           if (optionsBuilder_ == null) {
             if (((bitField0_ & 0x00000008) == 0x00000008)) {
               options_ = java.util.Collections.unmodifiableList(options_);
@@ -22035,9 +22035,9 @@ public final class Protos {
             name_ = other.name_;
             onChanged();
           }
-          if (other.hasProviderName()) {
+          if (other.hasProvider()) {
             bitField0_ |= 0x00000004;
-            providerName_ = other.providerName_;
+            provider_ = other.provider_;
             onChanged();
           }
           if (optionsBuilder_ == null) {
@@ -22075,7 +22075,7 @@ public final class Protos {
             
             return false;
           }
-          if (!hasProviderName()) {
+          if (!hasProvider()) {
             
             return false;
           }
@@ -22214,76 +22214,76 @@ public final class Protos {
           return this;
         }
 
-        // required string providerName = 3;
-        private java.lang.Object providerName_ = "";
+        // required string provider = 3;
+        private java.lang.Object provider_ = "";
         /**
-         * <code>required string providerName = 3;</code>
+         * <code>required string provider = 3;</code>
          */
-        public boolean hasProviderName() {
+        public boolean hasProvider() {
           return ((bitField0_ & 0x00000004) == 0x00000004);
         }
         /**
-         * <code>required string providerName = 3;</code>
+         * <code>required string provider = 3;</code>
          */
-        public java.lang.String getProviderName() {
-          java.lang.Object ref = providerName_;
+        public java.lang.String getProvider() {
+          java.lang.Object ref = provider_;
           if (!(ref instanceof java.lang.String)) {
             java.lang.String s = ((com.google.protobuf.ByteString) ref)
                 .toStringUtf8();
-            providerName_ = s;
+            provider_ = s;
             return s;
           } else {
             return (java.lang.String) ref;
           }
         }
         /**
-         * <code>required string providerName = 3;</code>
+         * <code>required string provider = 3;</code>
          */
         public com.google.protobuf.ByteString
-            getProviderNameBytes() {
-          java.lang.Object ref = providerName_;
+            getProviderBytes() {
+          java.lang.Object ref = provider_;
           if (ref instanceof String) {
             com.google.protobuf.ByteString b = 
                 com.google.protobuf.ByteString.copyFromUtf8(
                     (java.lang.String) ref);
-            providerName_ = b;
+            provider_ = b;
             return b;
           } else {
             return (com.google.protobuf.ByteString) ref;
           }
         }
         /**
-         * <code>required string providerName = 3;</code>
+         * <code>required string provider = 3;</code>
          */
-        public Builder setProviderName(
+        public Builder setProvider(
             java.lang.String value) {
           if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000004;
-          providerName_ = value;
+          provider_ = value;
           onChanged();
           return this;
         }
         /**
-         * <code>required string providerName = 3;</code>
+         * <code>required string provider = 3;</code>
          */
-        public Builder clearProviderName() {
+        public Builder clearProvider() {
           bitField0_ = (bitField0_ & ~0x00000004);
-          providerName_ = getDefaultInstance().getProviderName();
+          provider_ = getDefaultInstance().getProvider();
           onChanged();
           return this;
         }
         /**
-         * <code>required string providerName = 3;</code>
+         * <code>required string provider = 3;</code>
          */
-        public Builder setProviderNameBytes(
+        public Builder setProviderBytes(
             com.google.protobuf.ByteString value) {
           if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000004;
-          providerName_ = value;
+          provider_ = value;
           onChanged();
           return this;
         }
@@ -31347,44 +31347,44 @@ public final class Protos {
       "\010\032\217\001\n\013PortMapping\022\021\n\thost_port\030\001 \002(\r\022\026\n\016" +
       "container_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\014" +
       "\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.Lab" +
-      "el\022\027\n\014service_port\030d \001(\r:\0010\"\207\003\n\006Volume\022 " +
+      "el\022\027\n\014service_port\030d \001(\r:\0010\"\203\003\n\006Volume\022 " +
       "\n\004mode\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016cont" +
       "ainer_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033\n\005i",
       "mage\030\004 \001(\0132\014.mesos.Image\022D\n\npersistent\030\005" +
       " \001(\01320.mesosphere.marathon.Volume.Persis" +
       "tentVolumeInfo\022@\n\010external\030\006 \001(\0132..mesos" +
       "phere.marathon.Volume.ExternalVolumeInfo" +
-      "\032$\n\024PersistentVolumeInfo\022\014\n\004size\030\001 \002(\004\032e" +
+      "\032$\n\024PersistentVolumeInfo\022\014\n\004size\030\001 \002(\004\032a" +
       "\n\022ExternalVolumeInfo\022\014\n\004size\030\001 \001(\004\022\014\n\004na" +
-      "me\030\002 \002(\t\022\024\n\014providerName\030\003 \002(\t\022\035\n\007option" +
-      "s\030\004 \003(\0132\014.mesos.Label\")\n\020EventSubscriber" +
-      "s\022\025\n\rcallback_urls\030\001 \003(\t\"=\n\016StorageVersi" +
-      "on\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patc",
-      "h\030\003 \002(\r\"Z\n\031UpgradeStrategyDefinition\022\035\n\025" +
-      "minimumHealthCapacity\030\001 \002(\001\022\036\n\023maximumOv" +
-      "erCapacity\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition\022" +
-      "\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003" +
-      "(\0132&.mesosphere.marathon.ServiceDefiniti" +
-      "on\0224\n\006groups\030\004 \003(\0132$.mesosphere.marathon" +
-      ".GroupDefinition\022\024\n\014dependencies\030\005 \003(\t\"\245" +
-      "\001\n\030DeploymentPlanDefinition\022\n\n\002id\030\001 \002(\t\022" +
-      "\017\n\007version\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mes" +
-      "osphere.marathon.GroupDefinition\0224\n\006targ",
-      "et\030\005 \002(\0132$.mesosphere.marathon.GroupDefi" +
-      "nition\"\306\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036" +
-      "\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030" +
-      "\003 \002(\0162\020.mesos.TaskState\022\021\n\007message\030\004 \001(\t" +
-      ":\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\tt" +
-      "imestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos." +
-      "SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n" +
-      "\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed" +
-      "\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefinition\022(\n" +
-      " relaunchEscalationTimeoutSeconds\030\001 \001(\003\022",
-      "S\n\020taskLostBehavior\030\002 \001(\01629.mesosphere.m" +
-      "arathon.ResidencyDefinition.TaskLostBeha" +
-      "vior\"@\n\020TaskLostBehavior\022\032\n\026RELAUNCH_AFT" +
-      "ER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001B\035\n\023mesosp" +
-      "here.marathonB\006Protos"
+      "me\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007options\030\004 " +
+      "\003(\0132\014.mesos.Label\")\n\020EventSubscribers\022\025\n" +
+      "\rcallback_urls\030\001 \003(\t\"=\n\016StorageVersion\022\r" +
+      "\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 ",
+      "\002(\r\"Z\n\031UpgradeStrategyDefinition\022\035\n\025mini" +
+      "mumHealthCapacity\030\001 \002(\001\022\036\n\023maximumOverCa" +
+      "pacity\030\002 \001(\001:\0011\"\260\001\n\017GroupDefinition\022\n\n\002i" +
+      "d\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&" +
+      ".mesosphere.marathon.ServiceDefinition\0224" +
+      "\n\006groups\030\004 \003(\0132$.mesosphere.marathon.Gro" +
+      "upDefinition\022\024\n\014dependencies\030\005 \003(\t\"\245\001\n\030D" +
+      "eploymentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007v" +
+      "ersion\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosph" +
+      "ere.marathon.GroupDefinition\0224\n\006target\030\005",
+      " \002(\0132$.mesosphere.marathon.GroupDefiniti" +
+      "on\"\306\001\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007ta" +
+      "sk_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(" +
+      "\0162\020.mesos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016" +
+      "\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimes" +
+      "tamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.Slav" +
+      "eID\"T\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uui" +
+      "d\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001" +
+      "(\010:\005false\"\326\001\n\023ResidencyDefinition\022(\n rel" +
+      "aunchEscalationTimeoutSeconds\030\001 \001(\003\022S\n\020t",
+      "askLostBehavior\030\002 \001(\01629.mesosphere.marat" +
+      "hon.ResidencyDefinition.TaskLostBehavior" +
+      "\"@\n\020TaskLostBehavior\022\032\n\026RELAUNCH_AFTER_T" +
+      "IMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001B\035\n\023mesosphere" +
+      ".marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -31498,7 +31498,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_descriptor,
-              new java.lang.String[] { "Size", "Name", "ProviderName", "Options", });
+              new java.lang.String[] { "Size", "Name", "Provider", "Options", });
           internal_static_mesosphere_marathon_EventSubscribers_descriptor =
             getDescriptor().getMessageTypes().get(11);
           internal_static_mesosphere_marathon_EventSubscribers_fieldAccessorTable = new
