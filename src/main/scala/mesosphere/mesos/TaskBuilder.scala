@@ -3,7 +3,7 @@ package mesosphere.mesos
 import com.google.protobuf.{ ByteString, TextFormat }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
-import mesosphere.marathon.api.serialization.{ PortDefinitionSerializer, ContainerSerializer }
+import mesosphere.marathon.api.serialization.{ PortMappingSerializer, PortDefinitionSerializer, ContainerSerializer }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ PersistentVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
@@ -175,19 +175,26 @@ class TaskBuilder(app: AppDefinition,
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
 
     val portProtos = app.ipAddress match {
-      case Some(IpAddress(_, _, DiscoveryInfo(ports))) if ports.nonEmpty =>
-        ports.map(_.toProto).asJava
+      case Some(IpAddress(_, _, DiscoveryInfo(ports))) if ports.nonEmpty => ports.map(_.toProto)
       case _ =>
-        // Serialize app.portDefinitions to protos. The port numbers are the service ports, we need to
-        // overwrite them the port numbers assigned to this particular task.
-        app.portDefinitions.zip(hostPorts).map {
-          case (portDefinition, hostPort) =>
-            PortDefinitionSerializer.toProto(portDefinition).toBuilder.setNumber(hostPort).build
-        }.asJava
+        app.portMappings match {
+          case Some(portMappings) =>
+            // The app uses bridge mode with portMappings, use them to create the Port messages
+            portMappings.zip(hostPorts).map {
+              case (portMapping, hostPort) => PortMappingSerializer.toMesosPort(portMapping, hostPort)
+            }
+          case None =>
+            // Serialize app.portDefinitions to protos. The port numbers are the service ports, we need to
+            // overwrite them the port numbers assigned to this particular task.
+            app.portDefinitions.zip(hostPorts).map {
+              case (portDefinition, hostPort) =>
+                PortDefinitionSerializer.toProto(portDefinition).toBuilder.setNumber(hostPort).build
+            }
+        }
     }
 
     val portsProto = org.apache.mesos.Protos.Ports.newBuilder
-    portsProto.addAllPorts(portProtos)
+    portsProto.addAllPorts(portProtos.asJava)
     discoveryInfoBuilder.setPorts(portsProto)
 
     discoveryInfoBuilder.build
