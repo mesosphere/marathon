@@ -104,11 +104,13 @@ protected[volume] case object DVDIProvider
 }
 
 protected[volume] trait DVDIProviderValidations {
+  import mesosphere.marathon.api.v2.Validation._
+
   private val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
-    opts.get("dvdi/volumetype") is ifDefined(validLabel)
-    opts.get("dvdi/newfstype") is ifDefined(validLabel)
-    opts.get("dvdi/iops") is ifDefined(validNaturalNumber)
-    opts.get("dvdi/overwritefs") is ifDefined(validBoolean)
+    opts.get("dvdi/volumetype") is optional(validLabel)
+    opts.get("dvdi/newfstype") is optional(validLabel)
+    opts.get("dvdi/iops") is optional(validNaturalNumber)
+    opts.get("dvdi/overwritefs") is optional(validBoolean)
   }
 
   private def nameOf(vol: ExternalVolumeInfo): Option[String] = {
@@ -121,7 +123,7 @@ protected[volume] trait DVDIProviderValidations {
 
     v.external.options.get(driverOption) as s"external/options($driverOption)" is definedAnd(validLabel)
 
-    v.external.options is validIf[Map[String, String]](_.get(driverOption) == "rexray")(validRexRayOptions)
+    v.external.options is conditional[Map[String, String]](_.get(driverOption) == "rexray")(validRexRayOptions)
   }
 
   private val haveOnlyOneReplica = new Validator[AppDefinition] {
@@ -211,7 +213,7 @@ protected[volume] trait DVDIProviderValidations {
   val appValidation = validator[AppDefinition] { app =>
     app should haveUniqueExternalVolumeNames
     app should haveOnlyOneReplica
-    app.container is ifDefined(validContainer)
+    app.container is optional(validContainer)
     app.upgradeStrategy is validUpgradeStrategy
   }
 

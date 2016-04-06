@@ -24,6 +24,18 @@ object Validation {
     }
   }
 
+  implicit def definedAnd[T](implicit validator: Validator[T]): Validator[Option[T]] = {
+    new Validator[Option[T]] {
+      override def apply(option: Option[T]): Result = option.map(validator).getOrElse(
+        Failure(Set(RuleViolation(None, "not defined", None)))
+      )
+    }
+  }
+
+  def conditional[T](b: T => Boolean)(implicit validator: Validator[T]): Validator[T] = new Validator[T] {
+    override def apply(t: T): Result = if (!b(t)) Success else validator(t)
+  }
+
   implicit def every[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
     new Validator[Iterable[T]] {
       override def apply(seq: Iterable[T]): Result = {
