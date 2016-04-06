@@ -6,28 +6,18 @@ import mesosphere.marathon.state._
 import org.apache.mesos.Protos.{ ContainerInfo, CommandInfo }
 
 /**
-  * VolumeProvider is an interface implemented by storage volume providers
+  * ExternalVolumeProvider is an interface implemented by external storage volume providers
   */
-trait VolumeProvider[+T <: Volume] {
-  /** appValidation implements a provider's app validation rules */
-  val appValidation: Validator[AppDefinition]
-  /** groupValidation implements a provider's group validation rules */
-  val groupValidation: Validator[Group]
-
-  /** collect scrapes volumes from an application definition that are supported by this volume provider */
-  def collect(container: Container): Iterable[T]
-
-  /** build adds v to the given builder **/
-  def build(builder: ContainerInfo.Builder, v: Volume): Unit
-}
-
-trait ExternalVolumeProvider extends VolumeProvider[ExternalVolume] {
+trait ExternalVolumeProvider {
   val name: String
 
-  /**
-    * see implicit validator in the ExternalVolume class for reference.
-    */
+  /** validations on different levels */
+  val appValidation: Validator[AppDefinition]
   val volumeValidation: Validator[ExternalVolume]
+  val groupValidation: Validator[Group]
+
+  /** build adds v to the given builder **/
+  def build(builder: ContainerInfo.Builder, v: ExternalVolume): Unit
 
   /** build adds ev to the given builder **/
   def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit
@@ -35,9 +25,7 @@ trait ExternalVolumeProvider extends VolumeProvider[ExternalVolume] {
 
 trait ExternalVolumeProviderRegistry {
   /**
-    * @return the ExternalVolumeProvider interface registered for the given name; if name is None then
-    * the default PersistenVolumeProvider implementation is returned. None is returned if Some name is given
-    * but no volume provider is registered for that name.
+    * @return the ExternalVolumeProvider interface registered for the given name
     */
   def apply(name: String): Option[ExternalVolumeProvider]
 }
