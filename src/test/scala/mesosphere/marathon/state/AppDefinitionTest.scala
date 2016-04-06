@@ -319,6 +319,23 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
   }
 
+  test("portAssignments with bridge network and no port mappings") {
+    val app = MarathonTestHelper.makeBasicApp().copy(
+      container = Some(Container(
+        docker = Some(Docker(
+          image = "mesosphere/marathon",
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+          portMappings = Some(Seq.empty))))
+      ),
+      portDefinitions = Seq.empty)
+
+    val task = MarathonTestHelper.mininimalTask(app.id).withHostPorts(Seq(1))
+
+    val maybePortAssignments = app.portAssignments(task)
+    assert(maybePortAssignments.isDefined)
+    assert(maybePortAssignments.head.isEmpty)
+  }
+
   test("portAssignments with port definitions") {
     import MarathonTestHelper.Implicits._
 
