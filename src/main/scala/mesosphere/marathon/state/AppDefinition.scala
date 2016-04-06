@@ -6,15 +6,14 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.{ Protos, plugin }
-import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
-import mesosphere.marathon.plugin
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.state.AppDefinition.VersionInfo
+import mesosphere.marathon.core.readiness.ReadinessCheck
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
+import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.state.Container.Docker.PortMapping
+import mesosphere.marathon.{ Protos, plugin }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
@@ -363,6 +362,38 @@ case class AppDefinition(
   def withCanonizedIds(base: PathId = PathId.empty): AppDefinition = {
     val baseId = id.canonicalPath(base)
     copy(id = baseId, dependencies = dependencies.map(_.canonicalPath(baseId)))
+  }
+
+  def portAssignments(task: Task): Option[Seq[PortAssignment]] = {
+    def fromIpAddress: Option[Seq[PortAssignment]] = ipAddress.flatMap {
+      case IpAddress(_, _, DiscoveryInfo(appPorts)) =>
+        for {
+          launched <- task.launched
+          effectiveIpAddress <- task.effectiveIpAddress(this)
+        } yield appPorts.zip(launched.hostPorts).zipWithIndex.map {
+          case ((appPort, hostPort), portIndex) =>
+            PortAssignment(Some(appPort.name), portIndex, effectiveIpAddress, hostPort)
+        }.toList
+    }
+
+    def fromPortMappings: Option[Seq[PortAssignment]] =
+      for {
+        pms <- portMappings
+        launched <- task.launched
+      } yield pms.zip(launched.hostPorts).zipWithIndex.map {
+        case ((portMapping, hostPort), portIndex) =>
+          PortAssignment(portMapping.name, portIndex, task.agentInfo.host, hostPort)
+      }.toList
+
+    def fromPortDefinitions: Option[Seq[PortAssignment]] = task.launched.map { launched =>
+      portDefinitions.zip(launched.hostPorts).zipWithIndex.map {
+        case ((portDefinition, hostPort), portIndex) =>
+          PortAssignment(portDefinition.name, portIndex, task.agentInfo.host, hostPort)
+      }
+    }
+
+    if (ipAddress.isDefined) fromIpAddress // If an IP-per-Task was requested, don't fall back
+    else fromPortMappings.orElse(fromPortDefinitions)
   }
 }
 

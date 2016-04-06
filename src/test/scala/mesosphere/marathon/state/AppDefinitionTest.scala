@@ -1,8 +1,10 @@
 package mesosphere.marathon.state
 
+import mesosphere.marathon.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.ServiceDefinition
+import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
 
@@ -223,6 +225,130 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     val result2 = AppDefinition().mergeFromProto(app2.toProto)
     assert(result2 == app2)
+  }
+
+  test("portAssignments with IP-per-task defining ports") {
+    val app = MarathonTestHelper.makeBasicApp()
+      .withNoPortDefinitions()
+      .withIpAddress(
+        IpAddress(discoveryInfo = DiscoveryInfo(Seq(DiscoveryInfo.Port(80, "http", "tcp"))))
+      )
+
+    val task = MarathonTestHelper.mininimalTask(app.id)
+      .withNetworkInfos(
+        Seq(MarathonTestHelper.networkInfoWithIPAddress(MarathonTestHelper.mesosIpAddress("192.168.0.1"))))
+      .withHostPorts(Seq(1))
+
+    val maybePortAssignments = app.portAssignments(task)
+    assert(maybePortAssignments.isDefined)
+
+    val portAssignment = maybePortAssignments.get.head
+    assert(portAssignment == PortAssignment(
+      portName = Some("http"),
+      portIndex = 0,
+      effectiveIpAddress = "192.168.0.1",
+      effectiveHostPort = 1)
+    )
+  }
+
+  test("portAssignments with IP-per-task defining ports, but a task which doesn't have an IP address yet") {
+    val app = MarathonTestHelper.makeBasicApp()
+      .withNoPortDefinitions()
+      .withIpAddress(
+        IpAddress(discoveryInfo = DiscoveryInfo(Seq(DiscoveryInfo.Port(80, "http", "tcp"))))
+      )
+
+    val task = MarathonTestHelper.mininimalTask(app.id)
+      .withNetworkInfos(Seq.empty)
+      .withHostPorts(Seq.empty)
+
+    val maybePortAssignments = app.portAssignments(task)
+    assert(maybePortAssignments.isEmpty)
+  }
+
+  test("portAssignments with IP-per-task without ports") {
+    val app = MarathonTestHelper.makeBasicApp()
+      .withNoPortDefinitions()
+      .withIpAddress(
+        IpAddress(discoveryInfo = DiscoveryInfo(Seq.empty))
+      )
+
+    val task = MarathonTestHelper.mininimalTask(app.id)
+      .withNetworkInfos(
+        Seq(MarathonTestHelper.networkInfoWithIPAddress(MarathonTestHelper.mesosIpAddress("192.168.0.1"))))
+      .withHostPorts(Seq.empty)
+
+    val maybePortAssignments = app.portAssignments(task)
+    assert(maybePortAssignments.isDefined)
+    assert(maybePortAssignments.get.isEmpty)
+  }
+
+  test("portAssignments with a reserved task") {
+    val app = MarathonTestHelper.makeBasicApp()
+    val task = MarathonTestHelper.minimalReservedTask(app.id, MarathonTestHelper.newReservation)
+
+    val maybePortAssignments = app.portAssignments(task)
+    assert(maybePortAssignments.isEmpty)
+  }
+
+  test("portAssignments with port mappings") {
+    val app = MarathonTestHelper.makeBasicApp().copy(
+      container = Some(Container(
+        docker = Some(Docker(
+          image = "mesosphere/marathon",
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+          portMappings = Some(Seq(
+            Docker.PortMapping(containerPort = 80, hostPort = 0, servicePort = 0, protocol = "tcp",
+              name = Some("http"))
+          ))
+        ))
+      )),
+      portDefinitions = Seq.empty)
+
+    val task = MarathonTestHelper.mininimalTask(app.id).withHostPorts(Seq(1))
+
+    val maybePortAssignments = app.portAssignments(task)
+    assert(maybePortAssignments.isDefined)
+
+    val portAssignment = maybePortAssignments.get.head
+    assert(portAssignment == PortAssignment(
+      portName = Some("http"),
+      portIndex = 0,
+      effectiveIpAddress = task.agentInfo.host,
+      effectiveHostPort = 1)
+    )
+  }
+
+  test("portAssignments with port definitions") {
+    import MarathonTestHelper.Implicits._
+
+    val app = MarathonTestHelper.makeBasicApp()
+      .withPortDefinitions(Seq(PortDefinition(port = 0, protocol = "tcp", name = Some("http"), labels = Map.empty)))
+
+    val task = MarathonTestHelper.mininimalTask(app.id).withHostPorts(Seq(1))
+
+    val maybePortAssignments = app.portAssignments(task)
+    assert(maybePortAssignments.isDefined)
+
+    val portAssignment = maybePortAssignments.get.head
+    assert(portAssignment == PortAssignment(
+      portName = Some("http"),
+      portIndex = 0,
+      effectiveIpAddress = task.agentInfo.host,
+      effectiveHostPort = 1)
+    )
+  }
+
+  test("portAssignments with absolutely no ports") {
+    import MarathonTestHelper.Implicits._
+
+    val app = MarathonTestHelper.makeBasicApp().withNoPortDefinitions()
+
+    val task = MarathonTestHelper.mininimalTask(app.id).withHostPorts(Seq(1))
+
+    val maybePortAssignments = app.portAssignments(task)
+    assert(maybePortAssignments.isDefined)
+    assert(maybePortAssignments.get.isEmpty)
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {

@@ -128,7 +128,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
     val taskRunning = MesosStatusUpdateEvent(slaveId = "", taskId = taskId, taskStatus = "TASK_RUNNING",
-      message = "", appId = appId, host = "", ipAddresses = None, ports = Nil, version = version.toString)
+      message = "", appId = appId, host = "", ipAddresses = None, ports = Seq.empty, version = version.toString)
     val taskIsHealthy = HealthStatusChanged(appId, taskId, version, alive = true)
 
     task.taskId returns taskId
