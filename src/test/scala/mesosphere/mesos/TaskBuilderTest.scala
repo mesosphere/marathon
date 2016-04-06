@@ -138,6 +138,67 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     discoveryInfo should equal(discoveryInfoProto)
   }
 
+  test("BuildIfMatches with port mapping with name, protocol and labels") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        executor = "//cmd",
+        container = Some(Container(
+          docker = Some(Docker(
+            network = Some(DockerInfo.Network.BRIDGE),
+            portMappings = Some(Seq(
+              PortMapping(
+                containerPort = 8080,
+                hostPort = 0,
+                servicePort = 9000,
+                protocol = "tcp",
+                name = Some("http"),
+                labels = Map("VIP" -> "127.0.0.1:8080")),
+              PortMapping(
+                containerPort = 8081,
+                hostPort = 0,
+                servicePort = 9001,
+                protocol = "udp",
+                name = Some("admin"),
+                labels = Map("VIP" -> "127.0.0.1:8081"))
+            ))
+          ))
+        )))
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+
+    val discoveryInfo = taskInfo.getDiscovery
+    val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
+      .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      .setName(taskInfo.getName)
+      .setPorts(
+        MesosProtos.Ports.newBuilder
+          .addPorts(
+            MesosProtos.Port.newBuilder.setName("http").setNumber(taskPorts(0)).setProtocol("tcp")
+              .setLabels(MesosProtos.Labels.newBuilder().addLabels(
+                MesosProtos.Label.newBuilder().setKey("VIP").setValue("127.0.0.1:8080")
+              ))
+          ).addPorts(
+              MesosProtos.Port.newBuilder.setName("admin").setNumber(taskPorts(1)).setProtocol("udp")
+                .setLabels(MesosProtos.Labels.newBuilder().addLabels(
+                  MesosProtos.Label.newBuilder().setKey("VIP").setValue("127.0.0.1:8081")
+                ))
+            )
+      ).build
+
+    TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
+    discoveryInfo should equal(discoveryInfoProto)
+  }
+
   test("BuildIfMatches works with duplicated resources") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
       .addResources(ScalarResource("cpus", 1))

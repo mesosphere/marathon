@@ -163,6 +163,33 @@ object PortMappingSerializer {
     mapping.protocol.split(',').map(mesosPort).toList
   }
 
+  /**
+    * Build the representation of the PortMapping as a Port proto.
+    *
+    * @param pm Docker Port Mapping
+    * @param effectiveHostPort the effective Mesos Agent port allocated for
+    *                          this port mapping.
+    * @return the representation of the PortMapping as a Port proto to be
+    *         included in the task's DiscoveryInfo
+    */
+  def toMesosPort(pm: PortMapping, effectiveHostPort: Int): mesos.Protos.Port = {
+    val builder = mesos.Protos.Port.newBuilder
+      .setNumber(effectiveHostPort)
+      .setProtocol(pm.protocol)
+
+    pm.name.foreach(builder.setName)
+
+    if (pm.labels.nonEmpty) {
+      val labelsBuilder = mesos.Protos.Labels.newBuilder
+      pm.labels
+        .map { case (key, value) => mesos.Protos.Label.newBuilder.setKey(key).setValue(value) }
+        .foreach(labelsBuilder.addLabels)
+      builder.setLabels(labelsBuilder)
+    }
+
+    builder.build
+  }
+
 }
 
 object ParameterSerializer {
