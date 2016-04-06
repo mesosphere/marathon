@@ -1,11 +1,11 @@
-package mesosphere.marathon.core.volume.providers
+package mesosphere.marathon.core.externalvolume.providers
 
-import mesosphere.marathon.core.volume._
+import mesosphere.marathon.core.externalvolume._
 
 /**
   * StaticExternalVolumeProviderRegistry is a fixed, precomputed storage provider registry
   */
-protected[volume] object StaticExternalVolumeProviderRegistry extends ExternalVolumeProviderRegistry {
+protected[externalvolume] object StaticExternalVolumeProviderRegistry extends ExternalVolumeProviderRegistry {
   def make(prov: ExternalVolumeProvider*): Map[String, ExternalVolumeProvider] =
     prov.map(p => p.name -> p).toMap
 

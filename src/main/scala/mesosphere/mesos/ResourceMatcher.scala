@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.launcher.impl.ResourceLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.volume.VolumesModule
+import mesosphere.marathon.core.externalvolume.VolumesModule
 import mesosphere.marathon.state.{ AppDefinition, Container }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
 import mesosphere.mesos.protos.{ ScalarResource, RangesResource, Resource }

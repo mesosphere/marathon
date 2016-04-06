@@ -1,13 +1,13 @@
-package mesosphere.marathon.core.volume.providers
+package mesosphere.marathon.core.externalvolume.providers
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.volume._
+import mesosphere.marathon.core.externalvolume._
 import mesosphere.marathon.state._
 
 import scala.util.Try
 
-protected[volume] abstract class AbstractExternalVolumeProvider(
+protected[externalvolume] abstract class AbstractExternalVolumeProvider(
     val name: String) extends ExternalVolumeProvider {
   /**
     * @return true if volume has a provider name that matches ours exactly

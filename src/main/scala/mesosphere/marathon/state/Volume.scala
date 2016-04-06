@@ -5,7 +5,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.Protos
 import mesosphere.marathon.api.v2.Validation.oneOf
-import mesosphere.marathon.core.volume.VolumesModule
+import mesosphere.marathon.core.externalvolume.VolumesModule
 import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.{ Protos => Mesos }
 import scala.collection.JavaConverters._

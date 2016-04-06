@@ -1,9 +1,9 @@
-package mesosphere.marathon.core.volume.providers
+package mesosphere.marathon.core.externalvolume.providers
 
 import com.wix.accord.{ Validator, _ }
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.volume.providers.DVDIProvider._
-import mesosphere.marathon.core.volume.providers.OptionSupport._
+import mesosphere.marathon.core.externalvolume.providers.DVDIProvider._
+import mesosphere.marathon.core.externalvolume.providers.OptionSupport._
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.Protos.{ Volume => MesosVolume, CommandInfo, ContainerInfo, Environment }
@@ -18,7 +18,7 @@ import scala.collection.JavaConverters._
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected[volume] case object DVDIProvider
+protected[externalvolume] case object DVDIProvider
     extends AbstractExternalVolumeProvider("dvdi") with DVDIProviderValidations {
 
   val driverOption = "dvdi/driver"
@@ -103,7 +103,7 @@ protected[volume] case object DVDIProvider
   }
 }
 
-protected[volume] trait DVDIProviderValidations {
+protected[externalvolume] trait DVDIProviderValidations {
   import mesosphere.marathon.api.v2.Validation._
 
   private val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>

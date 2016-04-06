@@ -7,7 +7,7 @@ import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.core.volume.VolumesModule
+import mesosphere.marathon.core.externalvolume.VolumesModule
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._

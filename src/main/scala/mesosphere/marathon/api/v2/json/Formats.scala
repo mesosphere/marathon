@@ -7,7 +7,7 @@ import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.volume.VolumesModule
+import mesosphere.marathon.core.externalvolume.VolumesModule
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }

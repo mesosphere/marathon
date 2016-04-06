@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ PortDefinitionSerializer, ContainerSerializer }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.volume.VolumesModule
+import mesosphere.marathon.core.externalvolume.VolumesModule
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ PersistentVolume, ExternalVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
 import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }

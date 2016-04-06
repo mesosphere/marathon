@@ -1,7 +1,7 @@
-package mesosphere.marathon.core.volume
+package mesosphere.marathon.core.externalvolume
 
 import com.wix.accord._
-import mesosphere.marathon.core.volume.providers._
+import mesosphere.marathon.core.externalvolume.providers._
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.{ ContainerInfo, CommandInfo }
 

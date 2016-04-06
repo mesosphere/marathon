@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.serialization
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.core.volume.VolumesModule
+import mesosphere.marathon.core.externalvolume.VolumesModule
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
