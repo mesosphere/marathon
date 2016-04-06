@@ -292,7 +292,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   // TODO(jdef) test both dockerhostvol and persistent extvol in the same docker container
 
-  test("build creates task for DOCKER container using persistent, external [DockerVolume] volumes") {
+  test("build creates task for DOCKER container using external [DockerVolume] volumes") {
     val offer = MarathonTestHelper.makeBasicOffer(
       cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
     ).build

@@ -127,7 +127,7 @@ class TaskBuilder(app: AppDefinition,
     def decorateForExternalVolumes(builder: CommandInfo.Builder) = containerProto.foreach { cp =>
       app.container.foreach { container =>
         container.volumes.foreach {
-          case pv: ExternalVolume => VolumesModule.build(cp.getType, builder, pv)
+          case ev: ExternalVolume => VolumesModule.build(cp.getType, builder, ev)
           case _                  => // only external volumes need CommandInfo changes
         }
       }
