@@ -39,12 +39,12 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     )
   }
 
-  test("readiness check specs for one task with fixed ports and one readiness check") {
+  test("readiness check specs for one task with a required port and one readiness check") {
     val f = new Fixture
 
     Given("an app with a readiness check and a fixed port assignment")
-    val app = f.appWithOneReadinessCheckWithFixedPort
-    And("a task with two host port")
+    val app = f.appWithOneReadinessCheckWithRequiredPorts
+    And("a task with two host ports")
     val task = f.taskWithPorts
 
     When("calculating the ReadinessCheckSpec")
@@ -54,11 +54,11 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     specs should have size 1
     val spec = specs.head
     And("it has the correct url")
-    spec.url should equal("http://host.some:8080/")
+    spec.url should equal("http://host.some:80/")
     And("the rest of the fields are correct, too")
     spec should equal(
       ReadinessCheckExecutor.ReadinessCheckSpec(
-        url = "http://host.some:8080/",
+        url = "http://host.some:80/",
         taskId = task.taskId,
         checkName = app.readinessChecks.head.name,
         interval = app.readinessChecks.head.interval,
@@ -108,14 +108,18 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
       )
     )
 
-    val appWithOneReadinessCheckWithFixedPort = AppDefinition(
+    val appWithOneReadinessCheckWithRequiredPorts = AppDefinition(
       id = appId,
       readinessChecks = Seq(ReadinessCheckTestHelper.defaultHttp),
       requirePorts = true,
       portDefinitions = Seq(
         PortDefinition(
-          port = 8080,
+          port = 80,
           name = Some(ReadinessCheckTestHelper.defaultHttp.portName)
+        ),
+        PortDefinition(
+          port = 81,
+          name = Some("foo")
         )
       )
     )

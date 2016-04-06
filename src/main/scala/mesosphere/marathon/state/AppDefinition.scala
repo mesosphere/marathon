@@ -276,12 +276,12 @@ case class AppDefinition(
 
   def portIndices: Range = containerHostPorts.getOrElse(portNumbers).indices
 
-  /** Returns true if and only if the host ports of all tasks are the same. */
-  def hasFixedHostPorts: Boolean = requirePorts || ipAddress.isDefined
-
   def servicePorts: Seq[Int] = containerServicePorts.getOrElse(portNumbers)
 
   def hasDynamicPort: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
+
+  def bridgeMode: Boolean =
+    container.flatMap(_.docker.map(_.network == Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE))).getOrElse(false)
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
@@ -392,8 +392,15 @@ case class AppDefinition(
       }
     }
 
-    val bridgeMode = container.flatMap(_.docker.map(_.network == Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
-      .getOrElse(false)
+    if (ipAddress.isDefined) fromIpAddress
+    else if (bridgeMode) fromPortMappings
+    else fromPortDefinitions
+  }
+
+  def portNames: Seq[String] = {
+    def fromIpAddress = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
+    def fromPortMappings = portMappings.getOrElse(Seq.empty).flatMap(_.name)
+    def fromPortDefinitions = portDefinitions.flatMap(_.name)
 
     if (ipAddress.isDefined) fromIpAddress
     else if (bridgeMode) fromPortMappings
@@ -613,7 +620,7 @@ object AppDefinition {
 
   private val complyWithReadinessCheckRules: Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.readinessChecks.size should be <= 1
-    app.readinessChecks is every(ReadinessCheck.readinessCheckValidator(app.portDefinitions))
+    app.readinessChecks is every(ReadinessCheck.readinessCheckValidator(app))
   }
 
   private val complyWithUpgradeStrategyRules: Validator[AppDefinition] = validator[AppDefinition] { appDef =>
