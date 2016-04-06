@@ -88,6 +88,14 @@ We have statistics about read and write requests for each repository. To access 
 
 `service.mesosphere.marathon.state.*.write-request-time.mean` - The [exponential weighted average](https://dropwizard.github.io/metrics/3.1.0/manual/core/#exponentially-decaying-reservoirs) of the write request times.
 
+`service.mesosphere.marathon.state.*.read-request-time.count` - The number of read requests.
+
+`service.mesosphere.marathon.state.*.read-request-time.mean` - The exponential weighted average of the read request times.
+
+`service.mesosphere.marathon.state.*.write-request-time.count` - The number of write requests.
+
+`service.mesosphere.marathon.state.*.write-request-time.mean` - The [exponential weighted average](https://dropwizard.github.io/metrics/3.1.0/manual/core/#exponentially-decaying-reservoirs) of the write request times.
+
 **Note:** Many of the repository metrics were not measured correctly prior to <span class="label label-default">v0.15</span>.
 
 ### Requests
