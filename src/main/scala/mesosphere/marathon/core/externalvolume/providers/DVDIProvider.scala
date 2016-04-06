@@ -30,25 +30,23 @@ protected[externalvolume] case object DVDIProvider
       .setMode(volume.mode)
       .build
 
-  def build(builder: ContainerInfo.Builder, v: Volume): Unit = v match {
-    case pv: ExternalVolume =>
-      // special behavior for docker vs. mesos containers
-      // - docker containerizer: serialize volumes into mesos proto
-      // - docker containerizer: specify "volumeDriver" for the container
-      if (builder.getType == ContainerInfo.Type.DOCKER && builder.hasDocker) {
-        val driverName = pv.external.options(driverOption)
-        builder.setDocker(builder.getDocker.toBuilder.setVolumeDriver(driverName).build)
-        builder.addVolumes(toMesosVolume(pv))
-      }
-    case _ =>
+  def build(builder: ContainerInfo.Builder, ev: ExternalVolume): Unit = {
+    // special behavior for docker vs. mesos containers
+    // - docker containerizer: serialize volumes into mesos proto
+    // - docker containerizer: specify "volumeDriver" for the container
+    if (builder.getType == ContainerInfo.Type.DOCKER && builder.hasDocker) {
+      val driverName = ev.external.options(driverOption)
+      builder.setDocker(builder.getDocker.toBuilder.setVolumeDriver(driverName).build)
+      builder.addVolumes(toMesosVolume(ev))
+    }
   }
 
-  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: ExternalVolume): Unit = {
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit = {
     // special behavior for docker vs. mesos containers
     // - mesos containerizer: serialize volumes into envvar sets
     if (containerType == ContainerInfo.Type.MESOS) {
       val env = if (builder.hasEnvironment) builder.getEnvironment.toBuilder else Environment.newBuilder
-      val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
+      val toAdd = volumeToEnv(ev, env.getVariablesList.asScala)
       env.addAllVariables(toAdd.asJava)
       builder.setEnvironment(env.build)
     }
