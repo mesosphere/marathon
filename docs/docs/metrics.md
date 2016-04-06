@@ -32,7 +32,6 @@ All metric names have to prefixed by a prefix that you specify and are subject t
 
 `service.mesosphere.marathon.leaderDuration` (gauge) - The duration since the last leader election happened
 in milliseconds. This is helpful to diagnose stability problems and how often leader election happens.
-=======
 
 ### App, group, and task counts
 
