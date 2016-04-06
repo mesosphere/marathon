@@ -101,9 +101,9 @@ case class AppDefinition(
 
   def isResident: Boolean = residency.isDefined
 
-  def persistentVolumes: Iterable[PersistentVolume] = {
-    container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
-  }
+  def volumes: Iterable[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
+  def persistentVolumes: Iterable[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
+  def externalVolumes: Iterable[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
 
   def diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 

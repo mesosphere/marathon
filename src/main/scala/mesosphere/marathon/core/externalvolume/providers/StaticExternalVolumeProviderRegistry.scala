@@ -14,5 +14,7 @@ protected[externalvolume] object StaticExternalVolumeProviderRegistry extends Ex
     DVDIProvider
   )
 
-  def apply(name: String): Option[ExternalVolumeProvider] = registry.get(name)
+  override def get(name: String): Option[ExternalVolumeProvider] = registry.get(name)
+
+  override def all: Iterable[ExternalVolumeProvider] = registry.values
 }
