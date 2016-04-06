@@ -1,8 +1,17 @@
+<<<<<<< HEAD
 ---
 title: Install Marathon
 ---
 
 ## Install Marathon
+=======
+-----------------------
+title: Install Marathon
+-----------------------
+
+## Install Marathon
+
+>>>>>>> 9129a04c72d939ae36fac06879e6777a5f515b36
 
 ### Requirements
 
