@@ -22,7 +22,7 @@ import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.scalatest.{ GivenWhenThen, Matchers }
-import play.api.libs.json.{JsResultException, JsNumber, JsObject, Json}
+import play.api.libs.json.{ JsResultException, JsNumber, JsObject, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -283,7 +283,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
     response.getEntity.toString should include("/container/volumes(0)/external/providerName")
-    response.getEntity.toString should include("is not a external volume provider name")
+    response.getEntity.toString should include("is unknown provider")
   }
 
   test("Creating an app with an external volume with no name provider name specified should FAIL provider validation") {

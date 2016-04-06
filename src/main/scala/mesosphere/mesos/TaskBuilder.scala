@@ -7,7 +7,7 @@ import mesosphere.marathon.api.serialization.{ PortDefinitionSerializer, Contain
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.volume.VolumesModule
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ ExternalVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
+import mesosphere.marathon.state.{ PersistentVolume, ExternalVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
 import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
@@ -124,11 +124,11 @@ class TaskBuilder(app: AppDefinition,
     val containerProto = computeContainerInfo(resourceMatch.hostPorts)
     val envPrefix: Option[String] = config.envVarsPrefix.get
 
-    def decorateCommandInfo(builder: CommandInfo.Builder) = containerProto.foreach { cp =>
+    def decorateForExternalVolumes(builder: CommandInfo.Builder) = containerProto.foreach { cp =>
       app.container.foreach { container =>
         container.volumes.foreach {
           case pv: ExternalVolume => VolumesModule.build(cp.getType, builder, pv)
-          case _                  =>
+          case _                  => // only external volumes need CommandInfo changes
         }
       }
     }
@@ -136,8 +136,8 @@ class TaskBuilder(app: AppDefinition,
     executor match {
       case CommandExecutor() =>
         containerProto.foreach(builder.setContainer)
-        var command = TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
-        decorateCommandInfo(command)
+        val command = TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
+        decorateForExternalVolumes(command)
         builder.setCommand(command.build)
 
       case PathExecutor(path) =>
@@ -151,9 +151,9 @@ class TaskBuilder(app: AppDefinition,
 
         containerProto.foreach(info.setContainer)
 
-        var command =
+        val command =
           TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix).setValue(shell)
-        decorateCommandInfo(command)
+        decorateForExternalVolumes(command)
         info.setCommand(command.build)
         builder.setExecutor(info)
 
@@ -212,7 +212,7 @@ class TaskBuilder(app: AppDefinition,
   protected def computeContainerInfo(ports: Seq[Int]): Option[ContainerInfo] = {
     if (app.container.isEmpty && app.ipAddress.isEmpty) None
     else {
-      var builder = ContainerInfo.newBuilder
+      val builder = ContainerInfo.newBuilder
 
       // Fill in Docker container details if necessary
       app.container.foreach { c =>
@@ -263,17 +263,13 @@ class TaskBuilder(app: AppDefinition,
       }
 
       // Set container type to MESOS by default (this is a required field)
-      if (!builder.hasType) builder.setType(ContainerInfo.Type.MESOS)
+      if (!builder.hasType)
+        builder.setType(ContainerInfo.Type.MESOS)
 
       if (builder.getType.equals(ContainerInfo.Type.MESOS)) {
-        builder.setMesos(ContainerInfo.MesosInfo.newBuilder().build())
+        builder.setMesos(ContainerInfo.MesosInfo.newBuilder()
+          .build())
       }
-
-      // apply changes from volume providers (must do this after we're sure there's a container type)
-      app.container.foreach{ container =>
-        container.volumes.foreach(VolumesModule.build(builder, _))
-      }
-
       Some(builder.build)
     }
   }

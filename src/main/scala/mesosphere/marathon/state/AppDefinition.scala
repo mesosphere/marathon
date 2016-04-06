@@ -105,6 +105,8 @@ case class AppDefinition(
     container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
   }
 
+  def diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
+
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(

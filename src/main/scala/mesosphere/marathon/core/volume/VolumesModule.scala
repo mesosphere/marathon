@@ -33,12 +33,7 @@ trait ExternalVolumeProvider extends VolumeProvider[ExternalVolume] {
   def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit
 }
 
-trait VolumeProviderRegistry {
-  /** @return the VolumeProvider interface registered for the given volume */
-  def apply[T <: Volume](v: T): Option[VolumeProvider[T]]
-}
-
-trait ExternalVolumeProviderRegistry extends VolumeProviderRegistry {
+trait ExternalVolumeProviderRegistry {
   /**
     * @return the ExternalVolumeProvider interface registered for the given name; if name is None then
     * the default PersistenVolumeProvider implementation is returned. None is returned if Some name is given
@@ -51,14 +46,21 @@ trait ExternalVolumeProviderRegistry extends VolumeProviderRegistry {
   * API facade for callers interested in storage volumes
   */
 object VolumesModule {
-  lazy val providers: ExternalVolumeProviderRegistry = StaticRegistry
+  lazy val providers: ExternalVolumeProviderRegistry = StaticExternalVolumeProviderRegistry
 
-  def build(builder: ContainerInfo.Builder, v: Volume): Unit = {
-    providers(v).foreach { _.build(builder, v) }
+  def build(builder: ContainerInfo.Builder, v: ExternalVolume): Unit = {
+    providers(v.external.providerName).foreach { _.build(builder, v) }
   }
 
-  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit = {
-    providers(ev.external.providerName).foreach { _.build(containerType, builder, ev) }
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, v: ExternalVolume): Unit = {
+    providers(v.external.providerName).foreach { _.build(containerType, builder, v) }
+  }
+
+  def validExternalVolume: Validator[ExternalVolume] = new Validator[ExternalVolume] {
+    def apply(ev: ExternalVolume) = providers(ev.external.providerName) match {
+      case Some(p) => p.volumeValidation(ev)
+      case None    => Failure(Set(RuleViolation(None, "is unknown provider", Some("external/providerName"))))
+    }
   }
 
   /** @return a validator that checks the validity of a container given the related volume providers */
@@ -70,7 +72,10 @@ object VolumesModule {
 
       // grab all related volume providers and apply their appValidation
       case _ => app.container.toSet[Container].flatMap{ ct =>
-        ct.volumes.map(providers(_))
+        ct.volumes.map({
+          case ev: ExternalVolume => providers(ev.external.providerName)
+          case _                  => None
+        })
       }.flatten.map(_.appValidation).map(validate(app)(_)).fold(Success)(_ and _)
     }
   }
@@ -84,7 +89,10 @@ object VolumesModule {
 
       // grab all related volume providers and apply their groupValidation
       case _ => grp.transitiveApps.flatMap{ app => app.container }.flatMap{ ct =>
-        ct.volumes.map(providers(_))
+        ct.volumes.map({
+          case ev: ExternalVolume => providers(ev.external.providerName)
+          case _                  => None
+        })
       }.flatten.map{ p => validate(grp)(p.groupValidation) }.fold(Success)(_ and _)
     }
   }

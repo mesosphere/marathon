@@ -20,10 +20,9 @@ import scala.collection.JavaConverters._
   */
 protected[volume] case object DVDIProvider
     extends AbstractExternalVolumeProvider("dvdi") with DVDIProviderValidations {
-  
+
   val driverOption = "dvdi/driver"
 
-  /** non-agent-local ExternalVolumes can be serialized into a Mesos Protobuf */
   def toMesosVolume(volume: ExternalVolume): MesosVolume =
     MesosVolume.newBuilder
       .setContainerPath(volume.containerPath)
@@ -192,7 +191,7 @@ protected[volume] trait DVDIProviderValidations {
   private def ifDVDIVolume(vtor: Validator[ExternalVolume]) = new Validator[Volume] {
     override def apply(v: Volume): Result = v match {
       case ev: ExternalVolume if accepts(ev) => vtor(ev)
-      case _ => Success
+      case _                                 => Success
     }
   }
 
@@ -204,7 +203,7 @@ protected[volume] trait DVDIProviderValidations {
 
   private val validContainer = new Validator[Container] {
     override def apply(ct: Container): Result = ct.`type` match {
-      case ContainerInfo.Type.MESOS => validMesosContainer(ct)
+      case ContainerInfo.Type.MESOS  => validMesosContainer(ct)
       case ContainerInfo.Type.DOCKER => validDockerContainer(ct)
     }
   }
