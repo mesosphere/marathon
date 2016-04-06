@@ -121,7 +121,7 @@ protected[externalvolume] trait DVDIProviderValidations {
 
     v.external.options.get(driverOption) as s"external/options($driverOption)" is definedAnd(validLabel)
 
-    v.external.options is conditional[Map[String, String]](_.get(driverOption) == "rexray")(validRexRayOptions)
+    v.external.options is conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions)
   }
 
   private val haveOnlyOneReplica = new Validator[AppDefinition] {
