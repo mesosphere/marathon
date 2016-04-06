@@ -551,6 +551,7 @@ object AppDefinition {
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
+    (appDef.isResident is false) or (appDef.acceptedResourceRoles is empty)
   } and ExternalVolumes.validApp
 
   /**

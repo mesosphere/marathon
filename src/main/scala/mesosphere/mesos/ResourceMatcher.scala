@@ -73,8 +73,9 @@ object ResourceMatcher {
   }
 
   object ResourceSelector {
-    /** Match unreserved resources of role '*' (the default role) */
-    def wildcard: ResourceSelector = ResourceSelector(Set("*"), reserved = false)
+    val NoRole = Set("*")
+    /** Match unreserved resources for which role == '*' applies (default) */
+    def wildcard: ResourceSelector = ResourceSelector(NoRole, reserved = false)
   }
 
   /**

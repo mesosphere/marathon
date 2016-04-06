@@ -540,6 +540,23 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     AppDefinition.validAppDefinition(app).isFailure shouldBe true
   }
 
+  test("Resident app may not define acceptedResourceRoles") {
+    Given("A resident app definition")
+    val f = new Fixture
+    val from = f.validResident
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+
+    When("validating with acceptedResourceRoles")
+    val to1 = from.copy(acceptedResourceRoles = Some(Set("foo")))
+    Then("Should be invalid")
+    AppDefinition.validAppDefinition(to1).isSuccess shouldBe false
+
+    When("validating without acceptedResourceRoles")
+    val to2 = from.copy(acceptedResourceRoles = None)
+    Then("Should be valid")
+    AppDefinition.validAppDefinition(to2).isSuccess shouldBe true
+  }
+
   class Fixture {
     def validDockerContainer: Container = Container(
       `type` = mesos.ContainerInfo.Type.DOCKER,
