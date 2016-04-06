@@ -68,7 +68,11 @@ object VolumesModule {
 
   /** @return a validator that checks the validity of a group given the related volume providers */
   def validRootGroup(): Validator[Group] = new Validator[Group] {
-    def apply(grp: Group) =
-      providers.all.map(_.validations.rootGroup).map(validate(grp)(_)).fold(Success)(_ and _)
+    def apply(grp: Group) = {
+      val groupProvider = grp.transitiveApps.flatMap(_.externalVolumes).flatMap {
+        case ev: ExternalVolume => providers.get(ev.external.provider)
+      }
+      groupProvider.map(_.validations.rootGroup).map(validate(grp)(_)).fold(Success)(_ and _)
+    }
   }
 }
