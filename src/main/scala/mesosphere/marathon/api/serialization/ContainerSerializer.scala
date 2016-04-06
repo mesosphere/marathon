@@ -31,13 +31,16 @@ object ContainerSerializer {
   def toMesos(container: Container): mesos.Protos.ContainerInfo = {
     val builder = mesos.Protos.ContainerInfo.newBuilder.setType(container.`type`)
 
+    // first set container.docker because the external volume provider might depend on it
+    // to set further values.
+    container.docker.foreach { d => builder.setDocker(DockerSerializer.toMesos(d)) }
+
     container.volumes.foreach {
       case pv: PersistentVolume => // PersistentVolumes are handled differently
       case ev: ExternalVolume   => VolumesModule.build(builder, ev) // this also adds the volume
       case dv: DockerVolume     => builder.addVolumes(VolumeSerializer.toMesos(dv))
     }
 
-    container.docker.foreach { d => builder.setDocker(DockerSerializer.toMesos(d)) }
     builder.build
   }
 }
