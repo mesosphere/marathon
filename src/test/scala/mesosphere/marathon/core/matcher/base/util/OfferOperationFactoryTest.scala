@@ -24,21 +24,6 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
     operation.getLaunch.getTaskInfos(0) shouldEqual taskInfo
   }
 
-  test("Reserve operation fails when principal is not set") {
-    val f = new Fixture
-
-    Given("a factory without principal")
-    val factory = new OfferOperationFactory(None, Some("role"))
-
-    When("We create a reserve operation")
-    val error = intercept[WrongConfigurationException] {
-      factory.reserve(f.frameworkId, Task.Id.forApp(PathId("/test")), Seq(Mesos.Resource.getDefaultInstance))
-    }
-
-    Then("A meaningful exception is thrown")
-    error.getMessage should startWith ("No principal set")
-  }
-
   test("Reserve operation fails when role is not set") {
     val f = new Fixture
 
