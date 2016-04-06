@@ -100,7 +100,7 @@ object ResourceMatcher {
     // Local volumes only need to be matched if we are making a reservation for resident tasks --
     // that means if the resources that are matched are still unreserved.
     val diskMatch = {
-      val sz = app.residentVolumes.map(_.persistent.size).sum.toDouble
+      val sz = app.persistentVolumes.map(_.persistent.size).sum.toDouble
       if (!selector.reserved && sz > 0) {
         scalarResourceMatch(Resource.DISK, app.disk + sz, ScalarMatchResult.Scope.IncludingLocalVolumes)
       }

@@ -27,7 +27,7 @@ class TaskBuilder(app: AppDefinition,
   def build(
     offer: Offer,
     resourceMatchOpt: Option[ResourceMatcher.ResourceMatch],
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeResourceMatch] = None): Option[(TaskInfo, Seq[Int])] = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch] = None): Option[(TaskInfo, Seq[Int])] = {
 
     def logInsufficientResources(): Unit = {
       val appHostPorts = if (app.requirePorts) app.portNumbers else app.portNumbers.map(_ => 0)
@@ -90,7 +90,7 @@ class TaskBuilder(app: AppDefinition,
   private[this] def build(
     offer: Offer,
     resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeResourceMatch]): Some[(TaskInfo, Seq[Int])] = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): Some[(TaskInfo, Seq[Int])] = {
 
     val executor: Executor = if (app.executor == "") {
       config.executor
