@@ -24,7 +24,7 @@ object Validation {
     }
   }
 
-  implicit def definedAnd[T](implicit validator: Validator[T]): Validator[Option[T]] = {
+  def definedAnd[T](implicit validator: Validator[T]): Validator[Option[T]] = {
     new Validator[Option[T]] {
       override def apply(option: Option[T]): Result = option.map(validator).getOrElse(
         Failure(Set(RuleViolation(None, "not defined", None)))
