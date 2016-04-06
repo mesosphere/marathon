@@ -6,19 +6,24 @@ import mesosphere.marathon.state._
 import org.apache.mesos.Protos.{ ContainerInfo, CommandInfo }
 
 /**
+  * Validations for external volumes on different levels.
+  */
+trait ExternalVolumeValidations {
+  def rootGroup: Validator[Group]
+  def app: Validator[AppDefinition]
+  def volume: Validator[ExternalVolume]
+}
+
+/**
   * ExternalVolumeProvider is an interface implemented by external storage volume providers
   */
 trait ExternalVolumeProvider {
-  val name: String
+  def name: String
 
-  /** validations on different levels */
-  val appValidation: Validator[AppDefinition]
-  val volumeValidation: Validator[ExternalVolume]
-  val groupValidation: Validator[Group]
+  def validations: ExternalVolumeValidations
 
   /** build adds v to the given builder **/
   def build(builder: ContainerInfo.Builder, v: ExternalVolume): Unit
-
   /** build adds ev to the given builder **/
   def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit
 }
@@ -36,30 +41,34 @@ trait ExternalVolumeProviderRegistry {
   * API facade for callers interested in storage volumes
   */
 object VolumesModule {
-  lazy val providers: ExternalVolumeProviderRegistry = StaticExternalVolumeProviderRegistry
+  private[this] lazy val providers: ExternalVolumeProviderRegistry = StaticExternalVolumeProviderRegistry
 
   def build(builder: ContainerInfo.Builder, v: ExternalVolume): Unit = {
-    providers.get(v.external.providerName).foreach { _.build(builder, v) }
+    providers.get(v.external.provider).foreach { _.build(builder, v) }
   }
 
   def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, v: ExternalVolume): Unit = {
-    providers.get(v.external.providerName).foreach { _.build(containerType, builder, v) }
+    providers.get(v.external.provider).foreach { _.build(containerType, builder, v) }
   }
 
   def validExternalVolume: Validator[ExternalVolume] = new Validator[ExternalVolume] {
-    def apply(ev: ExternalVolume) = providers.get(ev.external.providerName) match {
-      case Some(p) => p.volumeValidation(ev)
+    def apply(ev: ExternalVolume) = providers.get(ev.external.provider) match {
+      case Some(p) => p.validations.volume(ev)
       case None    => Failure(Set(RuleViolation(None, "is unknown provider", Some("external/providerName"))))
     }
   }
 
   /** @return a validator that checks the validity of a container given the related volume providers */
   def validApp(): Validator[AppDefinition] = new Validator[AppDefinition] {
-    def apply(app: AppDefinition) = providers.all.map(_.appValidation).map(validate(app)(_)).fold(Success)(_ and _)
+    def apply(app: AppDefinition) = {
+      val appProviders = app.externalVolumes.iterator.flatMap(ev => providers.get(ev.external.provider)).toSet
+      appProviders.map(_.validations.app).map(validate(app)(_)).fold(Success)(_ and _)
+    }
   }
 
   /** @return a validator that checks the validity of a group given the related volume providers */
-  def validGroup(): Validator[Group] = new Validator[Group] {
-    def apply(grp: Group) = providers.all.map(_.groupValidation).map(validate(grp)(_)).fold(Success)(_ and _)
+  def validRootGroup(): Validator[Group] = new Validator[Group] {
+    def apply(grp: Group) =
+      providers.all.map(_.validations.rootGroup).map(validate(grp)(_)).fold(Success)(_ and _)
   }
 }
