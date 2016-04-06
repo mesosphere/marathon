@@ -2,7 +2,10 @@ package mesosphere.marathon.core.volume.providers
 
 import com.wix.accord.{ Validator, _ }
 import com.wix.accord.dsl._
+import mesosphere.marathon.core.volume.providers.DVDIProvider._
+import mesosphere.marathon.core.volume.providers.OptionSupport._
 import mesosphere.marathon.state._
+import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.Protos.{ Volume => MesosVolume, CommandInfo, ContainerInfo, Environment }
 
 import scala.collection.JavaConverters._
@@ -16,19 +19,102 @@ import scala.collection.JavaConverters._
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
 protected[volume] case object DVDIProvider
-    extends AbstractExternalVolumeProvider("dvdi") {
+    extends AbstractExternalVolumeProvider("dvdi") with DVDIProviderValidations {
+  
+  val driverOption = "dvdi/driver"
 
-  import org.apache.mesos.Protos.Volume.Mode
-  import OptionSupport._
+  /** non-agent-local ExternalVolumes can be serialized into a Mesos Protobuf */
+  def toMesosVolume(volume: ExternalVolume): MesosVolume =
+    MesosVolume.newBuilder
+      .setContainerPath(volume.containerPath)
+      .setHostPath(volume.external.name)
+      .setMode(volume.mode)
+      .build
 
-  val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
+  def build(builder: ContainerInfo.Builder, v: Volume): Unit = v match {
+    case pv: ExternalVolume =>
+      // special behavior for docker vs. mesos containers
+      // - docker containerizer: serialize volumes into mesos proto
+      // - docker containerizer: specify "volumeDriver" for the container
+      if (builder.getType == ContainerInfo.Type.DOCKER && builder.hasDocker) {
+        val driverName = pv.external.options(driverOption)
+        builder.setDocker(builder.getDocker.toBuilder.setVolumeDriver(driverName).build)
+        builder.addVolumes(toMesosVolume(pv))
+      }
+    case _ =>
+  }
+
+  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: ExternalVolume): Unit = {
+    // special behavior for docker vs. mesos containers
+    // - mesos containerizer: serialize volumes into envvar sets
+    if (containerType == ContainerInfo.Type.MESOS) {
+      val env = if (builder.hasEnvironment) builder.getEnvironment.toBuilder else Environment.newBuilder
+      val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
+      env.addAllVariables(toAdd.asJava)
+      builder.setEnvironment(env.build)
+    }
+  }
+
+  val dvdiVolumeContainerPath = "DVDI_VOLUME_CONTAINERPATH"
+  val dvdiVolumeName = "DVDI_VOLUME_NAME"
+  val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
+  val dvdiVolumeOpts = "DVDI_VOLUME_OPTS"
+
+  def volumeToEnv(vol: ExternalVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable] = {
+    import OptionLabelPatterns._
+
+    val suffix = {
+      val offset = i.filter(_.getName.startsWith(dvdiVolumeName)).map{ s =>
+        val ss = s.getName.substring(dvdiVolumeName.length)
+        if (ss.length > 0) ss.toInt else 0
+      }.foldLeft(-1)((z, i) => if (i > z) i else z)
+
+      if (offset >= 0) (offset + 1).toString else ""
+    }
+
+    def mkVar(name: String, value: String): Environment.Variable =
+      Environment.Variable.newBuilder.setName(name).setValue(value).build
+
+    val vars = Seq[Environment.Variable](
+      mkVar(dvdiVolumeContainerPath + suffix, vol.containerPath),
+      mkVar(dvdiVolumeName + suffix, vol.external.name),
+      mkVar(dvdiVolumeDriver + suffix, vol.external.options(driverOption))
+    )
+
+    val optsVar = {
+      val prefix: String = name + OptionNamespaceSeparator
+      // don't let the user override these
+      val ignore = Set(driverOption)
+      // external.size trumps any user-specified dvdi/size option
+      val opts = vol.external.options ++ Map[String, String](
+        vol.external.size.map(prefix + "size" -> _.toString).toList: _*
+      )
+
+      // forward all dvdi/* options to the dvdcli driver, stripping the dvdi/ prefix
+      // and trimming the values
+      opts.filterKeys{ k =>
+        k.startsWith(prefix) && !ignore.contains(k.toLowerCase)
+      }.map{
+        case (k, v) => k.substring(prefix.length) + "=" + v.trim()
+      }.mkString(",")
+    }
+
+    if (optsVar.isEmpty) vars
+    else { vars :+ mkVar(dvdiVolumeOpts + suffix, optsVar) }
+  }
+}
+
+protected[volume] trait DVDIProviderValidations {
+  private val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
     opts.get("dvdi/volumetype") is ifDefined(validLabel)
     opts.get("dvdi/newfstype") is ifDefined(validLabel)
     opts.get("dvdi/iops") is ifDefined(validNaturalNumber)
     opts.get("dvdi/overwritefs") is ifDefined(validBoolean)
   }
 
-  val driverOption = "dvdi/driver"
+  private def nameOf(vol: ExternalVolumeInfo): Option[String] = {
+    Some(vol.providerName + "::" + vol.name)
+  }
 
   val volumeValidation = validator[ExternalVolume] { v =>
     v.external.name is notEmpty
@@ -39,17 +125,13 @@ protected[volume] case object DVDIProvider
     v.external.options is validIf[Map[String, String]](_.get(driverOption) == "rexray")(validRexRayOptions)
   }
 
-  private def nameOf(vol: ExternalVolumeInfo): Option[String] = {
-    Some(vol.providerName + "::" + vol.name)
-  }
-
   private val haveOnlyOneReplica = new Validator[AppDefinition] {
     override def apply(app: AppDefinition): Result =
       if (volumesForApp(app).nonEmpty && app.instances > 1)
         Failure(Set(RuleViolation(app.id,
           s"Number of instances is limited to 1 when declaring DVDI volumes in app ${app.id}", None
         )))
-    else Success
+      else Success
   }
 
   private val haveUniqueExternalVolumeNames = new Validator[AppDefinition] {
@@ -158,85 +240,5 @@ protected[volume] case object DVDIProvider
       if (groupViolations.isEmpty) Success
       else Failure(groupViolations.toSet)
     }
-  }
-
-  /** non-agent-local ExternalVolumes can be serialized into a Mesos Protobuf */
-  def toMesosVolume(volume: ExternalVolume): MesosVolume =
-    MesosVolume.newBuilder
-      .setContainerPath(volume.containerPath)
-      .setHostPath(volume.external.name)
-      .setMode(volume.mode)
-      .build
-
-  def build(builder: ContainerInfo.Builder, v: Volume): Unit = v match {
-    case pv: ExternalVolume =>
-      // special behavior for docker vs. mesos containers
-      // - docker containerizer: serialize volumes into mesos proto
-      // - docker containerizer: specify "volumeDriver" for the container
-      if (builder.getType == ContainerInfo.Type.DOCKER && builder.hasDocker) {
-        val driverName = pv.external.options(driverOption)
-        builder.setDocker(builder.getDocker.toBuilder.setVolumeDriver(driverName).build)
-        builder.addVolumes(toMesosVolume(pv))
-      }
-    case _ =>
-  }
-
-  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, pv: ExternalVolume): Unit = {
-    // special behavior for docker vs. mesos containers
-    // - mesos containerizer: serialize volumes into envvar sets
-    if (containerType == ContainerInfo.Type.MESOS) {
-      val env = if (builder.hasEnvironment) builder.getEnvironment.toBuilder else Environment.newBuilder
-      val toAdd = volumeToEnv(pv, env.getVariablesList.asScala)
-      env.addAllVariables(toAdd.asJava)
-      builder.setEnvironment(env.build)
-    }
-  }
-
-  val dvdiVolumeContainerPath = "DVDI_VOLUME_CONTAINERPATH"
-  val dvdiVolumeName = "DVDI_VOLUME_NAME"
-  val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
-  val dvdiVolumeOpts = "DVDI_VOLUME_OPTS"
-
-  def volumeToEnv(vol: ExternalVolume, i: Iterable[Environment.Variable]): Iterable[Environment.Variable] = {
-    import OptionLabelPatterns._
-
-    val suffix = {
-      val offset = i.filter(_.getName.startsWith(dvdiVolumeName)).map{ s =>
-        val ss = s.getName.substring(dvdiVolumeName.length)
-        if (ss.length > 0) ss.toInt else 0
-      }.foldLeft(-1)((z, i) => if (i > z) i else z)
-
-      if (offset >= 0) (offset + 1).toString else ""
-    }
-
-    def mkVar(name: String, value: String): Environment.Variable =
-      Environment.Variable.newBuilder.setName(name).setValue(value).build
-
-    val vars = Seq[Environment.Variable](
-      mkVar(dvdiVolumeContainerPath + suffix, vol.containerPath),
-      mkVar(dvdiVolumeName + suffix, vol.external.name),
-      mkVar(dvdiVolumeDriver + suffix, vol.external.options(driverOption))
-    )
-
-    val optsVar = {
-      val prefix: String = name + OptionNamespaceSeparator
-      // don't let the user override these
-      val ignore = Set(driverOption)
-      // external.size trumps any user-specified dvdi/size option
-      val opts = vol.external.options ++ Map[String, String](
-        vol.external.size.map(prefix + "size" -> _.toString).toList: _*
-      )
-
-      // forward all dvdi/* options to the dvdcli driver, stripping the dvdi/ prefix
-      // and trimming the values
-      opts.filterKeys{ k =>
-        k.startsWith(prefix) && !ignore.contains(k.toLowerCase)
-      }.map{
-        case (k, v) => k.substring(prefix.length) + "=" + v.trim()
-      }.mkString(",")
-    }
-
-    if (optsVar.isEmpty) vars
-    else { vars :+ mkVar(dvdiVolumeOpts + suffix, optsVar) }
   }
 }
