@@ -29,6 +29,7 @@ All metric names have to prefixed by a prefix that you specify and are subject t
 `service.mesosphere.marathon.uptime` (gauge) - The uptime of the reporting Marathon process in milliseconds. This is helpful to diagnose stability problems that cause Marathon to restart.
 
 ### App, group, and task counts
+
 `service.mesosphere.marathon.leaderDuration` (gauge) - The duration since the last leader election happened
 in milliseconds. This is helpful to diagnose stability problems and how often leader election happens.
 
@@ -104,6 +105,7 @@ We have statistics about read and write requests for each repository. To access 
 number of HTTP requests received by Marathon is available under `.count`.
 There are more metrics around HTTP requests under the
 `org.eclipse.jetty.servlet.ServletContextHandler` prefix.
+
 For more information, consult [the code](https://github.com/dropwizard/metrics/blob/796663609f310888240cc8afb58f75396f8391d2/metrics-jetty9/src/main/java/io/dropwizard/metrics/jetty9/InstrumentedHandler.java#L41-L42).
 
 ### JVM
