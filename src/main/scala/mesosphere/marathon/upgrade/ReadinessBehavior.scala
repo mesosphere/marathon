@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentManager.ReadinessCheckUpdate
-import mesosphere.marathon.upgrade.ReadinessBehavior.ScheduleReadinessCheckFor
+import mesosphere.marathon.upgrade.ReadinessBehavior.{ ReadinessCheckSubscriptionKey, ScheduleReadinessCheckFor }
 import rx.lang.scala.Subscription
 
 /**
@@ -35,15 +35,35 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   val versionString: String = version.toString
 
   //state managed by this behavior
-  var healthy = Set.empty[Task.Id]
-  var ready = Set.empty[Task.Id]
-  var subscriptions = Map.empty[String, Subscription]
+  private[this] var healthy = Set.empty[Task.Id]
+  private[this] var ready = Set.empty[Task.Id]
+  private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Subscription]
 
   /**
     * Hook method which is called, whenever a task becomes ready according to the given app definition.
+    *
     * @param taskId the id of the task that has become ready.
     */
   def taskIsReady(taskId: Task.Id): Unit
+
+  /**
+    * Actors extending this trait should call this method when they detect that a task is terminated
+    * The task will be removed from subsequent sets and all subscriptions will get canceled.
+    *
+    * @param taskId the id of the task that has been terminated.
+    */
+  def taskTerminated(taskId: Task.Id): Unit = {
+    healthy -= taskId
+    ready -= taskId
+    subscriptions.keys.filter(_.taskId == taskId).foreach { key =>
+      subscriptions(key).unsubscribe()
+      subscriptions -= key
+    }
+  }
+
+  def healthyTasks: Set[Task.Id] = healthy
+  def readyTasks: Set[Task.Id] = ready
+  def subscriptionKeys: Set[ReadinessCheckSubscriptionKey] = subscriptions.keySet
 
   override def postStop(): Unit = {
     subscriptions.values.foreach(_.unsubscribe())
@@ -88,13 +108,11 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
       }
     }
 
-    def subscriptionKey(id: Task.Id, name: String) = s"${id.toString}:$name"
-
     def readinessCheckBehavior: Receive = {
       case ScheduleReadinessCheckFor(task, launched) =>
         log.debug(s"Schedule readiness check for task: ${task.taskId}")
         ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task, launched).foreach { spec =>
-          val subscriptionName = subscriptionKey(task.taskId, spec.checkName)
+          val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
           val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
           subscriptions += subscriptionName -> subscription
         }
@@ -105,7 +123,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         //TODO(MV): this code assumes only one readiness check per app (validation rules enforce this)
         if (result.ready) {
           ready += result.taskId
-          val subscriptionName = subscriptionKey(result.taskId, result.name)
+          val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
           subscriptions.get(subscriptionName).foreach(_.unsubscribe())
           subscriptions -= subscriptionName
           taskIsReady(result.taskId)
@@ -120,5 +138,6 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
 }
 
 object ReadinessBehavior {
+  case class ReadinessCheckSubscriptionKey(taskId: Task.Id, readinessCheck: String)
   case class ScheduleReadinessCheckFor(task: Task, launched: Task.Launched)
 }

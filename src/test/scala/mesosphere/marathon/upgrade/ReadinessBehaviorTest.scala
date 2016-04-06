@@ -90,6 +90,28 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     actor.stop()
   }
 
+  test("A task that dies is removed from the actor") {
+    Given ("An app with one instance")
+    val f = new Fixture
+    var taskIsReady = false
+    val appWithReadyCheck = AppDefinition(f.appId,
+      portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
+      versionInfo = VersionInfo.OnlyVersion(f.version),
+      readinessChecks = Seq(ReadinessCheck("test")))
+    val actor = f.readinessActor(appWithReadyCheck, f.checkIsNotReady, _ => taskIsReady = true)
+    system.eventStream.publish(f.taskRunning)
+    eventually(actor.underlyingActor.healthyTasks should have size 1)
+
+    When("The task is killed")
+    actor.underlyingActor.taskTerminated(f.taskId)
+
+    Then("Task should be removed from healthy, ready and subscriptions.")
+    actor.underlyingActor.healthyTasks should be (empty)
+    actor.underlyingActor.readyTasks should be (empty)
+    actor.underlyingActor.subscriptionKeys should be (empty)
+    actor.stop()
+  }
+
   class Fixture {
 
     val deploymentManagerProbe = TestProbe()
