@@ -272,7 +272,7 @@ case class ExternalVolume(
         VolumesModule.providers(ev.external.providerName) match {
           case Some(prov) => (validExternalVolume and prov.volumeValidation)(ev)
           case None => Failure(Set[Violation](RuleViolation(v,
-            s"is not a external volume provider name", Some("external.providerName")
+            s"is not a external volume provider name", Some("external/providerName")
           )))
         }
       case v: Any => Failure(Set[Violation](RuleViolation(v, "not an external volume", None)))
