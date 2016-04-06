@@ -22,7 +22,7 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
   val ttValidateVolume = Seq[TC](
     TC(
       // various combinations of INVALID external persistent volume parameters
-      Set[ExternalVolume](
+      Seq[ExternalVolume](
         EV("", EVI(None, "f", "dvdi", Map(
           "dvdi/driverNam" -> "rexray", "dvdi/volumetype" -> "io1")), Mode.RO),
         EV("", EVI(None, "f", "dvdi", Map(
@@ -49,7 +49,7 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
     ),
     TC(
       // various combinations of VALID external persistent volume parameters
-      Set[ExternalVolume](
+      Seq[ExternalVolume](
         EV("", EVI(None, "f", "dvdi", Map(
           "dvdi/driver" -> "bar", "dvdi/volumetype" -> "io1")), Mode.RO),
         EV("", EVI(None, "f", "dvdi", Map(
@@ -70,7 +70,7 @@ class DVDIProvider_VolumeValidationTest extends MarathonSpec with Matchers with 
     test(s"validExternalVolume $idx,$vidx") {
       val result = validate(v)(DVDIProvider.volumeValidation)
       assert(result.isSuccess == tc.wantsValid,
-        s"expected ${tc.wantsValid} instead of $result for volume $v")
+        s"test case $idx/$vidx expected ${tc.wantsValid} instead of $result for volume $v")
     }
   }
 }
