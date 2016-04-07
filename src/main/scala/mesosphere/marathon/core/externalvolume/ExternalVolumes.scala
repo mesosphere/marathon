@@ -6,38 +6,6 @@ import mesosphere.marathon.state._
 import org.apache.mesos.Protos.{ ContainerInfo, CommandInfo }
 
 /**
-  * Validations for external volumes on different levels.
-  */
-trait ExternalVolumeValidations {
-  def rootGroup: Validator[Group]
-  def app: Validator[AppDefinition]
-  def volume: Validator[ExternalVolume]
-}
-
-/**
-  * ExternalVolumeProvider is an interface implemented by external storage volume providers
-  */
-trait ExternalVolumeProvider {
-  def name: String
-
-  def validations: ExternalVolumeValidations
-
-  /** build adds v to the given builder **/
-  def build(builder: ContainerInfo.Builder, v: ExternalVolume): Unit
-  /** build adds ev to the given builder **/
-  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, ev: ExternalVolume): Unit
-}
-
-trait ExternalVolumeProviderRegistry {
-  /**
-    * @return the ExternalVolumeProvider interface registered for the given name
-    */
-  def get(name: String): Option[ExternalVolumeProvider]
-
-  def all: Iterable[ExternalVolumeProvider]
-}
-
-/**
   * API facade for callers interested in storage volumes
   */
 object ExternalVolumes {

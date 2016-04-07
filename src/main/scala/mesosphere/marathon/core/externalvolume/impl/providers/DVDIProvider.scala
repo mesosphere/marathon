@@ -2,7 +2,7 @@ package mesosphere.marathon.core.externalvolume.impl.providers
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.externalvolume.{ ExternalVolumeValidations, ExternalVolumeProvider }
+import mesosphere.marathon.core.externalvolume.impl.{ExternalVolumeValidations, ExternalVolumeProvider}
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.Protos.{ Volume => MesosVolume, CommandInfo, ContainerInfo, Environment }
@@ -18,7 +18,7 @@ import scala.collection.JavaConverters._
   *   - docker containerizer requires that referenced volumes be created prior to application launch
   *   - mesos containerizer only supports volumes mounted in RW mode
   */
-protected[externalvolume] case object DVDIProvider extends ExternalVolumeProvider {
+private[impl] case object DVDIProvider extends ExternalVolumeProvider {
   override val name: String = "dvdi"
 
   override def validations: ExternalVolumeValidations = DVDIProviderValidations
@@ -105,7 +105,7 @@ protected[externalvolume] case object DVDIProvider extends ExternalVolumeProvide
   }
 }
 
-private[externalvolume] object DVDIProviderValidations extends ExternalVolumeValidations {
+private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   import mesosphere.marathon.api.v2.Validation._
   import DVDIProvider._
   import ViolationBuilder._
