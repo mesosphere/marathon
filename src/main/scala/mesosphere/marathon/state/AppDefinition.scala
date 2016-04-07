@@ -392,8 +392,12 @@ case class AppDefinition(
       }
     }
 
-    if (ipAddress.isDefined) fromIpAddress // If an IP-per-Task was requested, don't fall back
-    else fromPortMappings.orElse(fromPortDefinitions)
+    val bridgeMode = container.flatMap(_.docker.map(_.network == Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
+      .getOrElse(false)
+
+    if (ipAddress.isDefined) fromIpAddress
+    else if (bridgeMode) fromPortMappings
+    else fromPortDefinitions
   }
 }
 
