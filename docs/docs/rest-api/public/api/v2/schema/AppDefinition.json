@@ -197,6 +197,29 @@
                 },
                 "type": "object"
               },
+              "external": {
+                "additionalProperties": false,
+                "properties": {
+                  "size": {
+                    "type": "integer",
+                    "description": "The size of the external volume in MiB",
+                    "minimum": 0
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The name of the volume"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "description": "The name of the volume provider"
+                  },
+                  "options": {
+                    "type": "object",
+                    "description": "Provider-specific volume configuration options"
+                  }
+                },
+                "type": "object"
+              },
               "mode": {
                 "type": "string",
                 "description": "Possible values are RO for ReadOnly and RW for Read/Write",

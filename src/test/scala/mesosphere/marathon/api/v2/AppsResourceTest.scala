@@ -2,6 +2,7 @@ package mesosphere.marathon.api.v2
 
 import java.util
 import java.util.concurrent.atomic.AtomicInteger
+import javax.ws.rs.core.Response
 
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
@@ -21,7 +22,7 @@ import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.scalatest.{ GivenWhenThen, Matchers }
-import play.api.libs.json.{ JsNumber, JsObject, Json }
+import play.api.libs.json.{ JsResultException, JsNumber, JsObject, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -218,19 +219,36 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getEntity.toString should include("must not be empty")
   }
 
-  test("Creating an app with broken volume definition fails with readable error message") {
-    Given("An app update with an invalid volume (wrong field name)")
+  def createAppWithVolumes(`type`: String, volumes: String): Response = {
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
     val group = Group(PathId("/"), Set(app))
     val plan = DeploymentPlan(group, group)
+    val docker = if (`type` == "DOCKER") """"docker": {"image": "fop"},""" else ""
     val body =
+      s"""
+         |{
+         |  "id": "external1",
+         |  "cmd": "sleep 100",
+         |  "instances": 1,
+         |  "upgradeStrategy": { "minimumHealthCapacity": 0, "maximumOverCapacity": 0 },
+         |  "container": {
+         |    "type": "${`type`}",
+         |    $docker
+         |    $volumes
+         |  }
+         |}
+      """.stripMargin
+
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+
+    When("The request is processed")
+    appsResource.create(body.getBytes("UTF-8"), false, auth.request)
+  }
+
+  test("Creating an app with broken volume definition fails with readable error message") {
+    Given("An app update with an invalid volume (wrong field name)")
+    val response = createAppWithVolumes("MESOS",
       """
-        |{
-        |  "id": "resident1",
-        |  "cmd": "sleep 100",
-        |  "instances": 0,
-        |  "container": {
-        |    "type": "MESOS",
         |    "volumes": [{
         |      "containerPath": "/var",
         |      "persistent_WRONG_FIELD_NAME": {
@@ -238,18 +256,217 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |      },
         |      "mode": "RW"
         |    }]
-        |  }
-        |}
-      """.stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-
-    When("The request is processed")
-    val response = appsResource.create(body, false, auth.request)
+      """.stripMargin)
 
     Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
     response.getStatus should be(422)
     response.getEntity.toString should include("/container/volumes(0)/hostPath")
     response.getEntity.toString should include("must not be empty")
+  }
+
+  test("Creating an app with an external volume for an illegal provider should fail") {
+    Given("An app invalid volume (illegal volume provider)")
+    val response = createAppWithVolumes("MESOS",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "external": {
+        |        "size": 10,
+        |        "name": "foo",
+        |        "provider": "acme"
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/external/provider")
+    response.getEntity.toString should include("is unknown provider")
+  }
+
+  test("Creating an app with an external volume with no name provider name specified should FAIL provider validation") {
+    Given("An app with an unnamed volume provider")
+    val e = intercept[JsResultException]{
+      createAppWithVolumes("MESOS",
+        """
+          |    "volumes": [{
+          |      "containerPath": "/var",
+          |      "external": {
+          |        "size": 10
+          |      },
+          |      "mode": "RW"
+          |    }]
+        """.stripMargin
+      )
+    }
+
+    Then("The it should fail with a JsResultException")
+    e.getMessage should include("/container/volumes(0)/external/provider")
+    e.getMessage should include("/container/volumes(0)/external/name")
+  }
+
+  test("Creating an app with an external volume and MESOS containerizer should pass validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("MESOS",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "external": {
+        |        "size": 10,
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "options": {"dvdi/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates create success")
+    response.getStatus should be(201)
+  }
+
+  test("Creating an app with an external volume using an invalid rexray option should fail") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("MESOS",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "external": {
+        |        "size": 10,
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "options": {"dvdi/driver": "rexray", "dvdi/iops": "0"}
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates validation error")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/external.options/dvdi/iops")
+  }
+
+  test("Creating an app with an external volume and DOCKER containerizer should pass validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("DOCKER",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "external": {
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "options": {"dvdi/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates create success")
+    response.getStatus should be(201)
+  }
+
+  test("Creating a DOCKER app with an external volume without driver option should NOT pass validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("DOCKER",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "external": {
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "options": {}
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates create failure")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/external/options(dvdi/driver")
+    response.getEntity.toString should include("not defined")
+  }
+
+  test("Creating a Docker app with an external volume with size should fail validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("DOCKER",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "external": {
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "size": 42,
+        |        "options": {
+        |           "dvdi/driver": "rexray"
+        |        }
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    println(response.getEntity.toString)
+
+    Then("The return code indicates a validation error")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/external/size")
+    response.getEntity.toString should include("must be undefined")
+  }
+
+  test("Creating an app with an external volume, and docker volume and DOCKER containerizer should pass validation") {
+    Given("An app with a named, non-'agent' volume provider and a docker host volume")
+    val response = createAppWithVolumes("DOCKER",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "external": {
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "options": {"dvdi/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    },{
+        |      "hostPath": "/ert",
+        |      "containerPath": "/ert",
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates create success")
+    response.getStatus should be(201)
+  }
+
+  test("Creating an app with a duplicate external volume name (unfortunately) passes validation") {
+    // we'll need to mitigate this with documentation: probably deprecating support for using
+    // volume names with non-persistent volumes.
+    Given("An app with DOCKER containerizer and multiple references to the same named volume")
+    val response = createAppWithVolumes("DOCKER",
+      """
+        |    "volumes": [{
+        |      "containerPath": "/var",
+        |      "external": {
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "options": {"dvdi/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    },{
+        |      "hostPath": "namedfoo",
+        |      "containerPath": "/ert",
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates create success")
+    response.getStatus should be(201)
   }
 
   test("Replace an existing application fails due to mesos container validation") {

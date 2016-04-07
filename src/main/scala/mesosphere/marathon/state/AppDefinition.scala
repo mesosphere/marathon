@@ -10,6 +10,9 @@ import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.{ Protos, plugin }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
+import mesosphere.marathon.plugin
+import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.mesos.TaskBuilder
@@ -102,15 +105,11 @@ case class AppDefinition(
   def isResident: Boolean = residency.isDefined
 
   def isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
+  def volumes: Iterable[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
+  def persistentVolumes: Iterable[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
+  def externalVolumes: Iterable[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
 
-  def persistentVolumes: Iterable[PersistentVolume] = {
-    container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
-  }
-
-  /**
-    * @return the disk resources required for volumes
-    */
-  def diskForVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
+  def diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
@@ -517,7 +516,7 @@ object AppDefinition {
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
-  }
+  } and ExternalVolumes.validApp
 
   /**
     * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.
