@@ -13,7 +13,7 @@ import rx.lang.scala.Subscription
 /**
   * ReadinessBehavior makes sure all tasks are healthy and ready depending on the app definition.
   * Listens for TaskStatusUpdate events, HealthCheck events and ReadinessCheck events.
-  * If a task becomes ready, the taskIsReady hook is called.
+  * If a task becomes ready, the taskTargetCountReached hook is called.
   *
   * Assumptions:
   *  - the actor is attached to the event stream for HealthStatusChanged and MesosStatusUpdateEvent
@@ -40,11 +40,14 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   private[this] var subscriptions = Map.empty[ReadinessCheckSubscriptionKey, Subscription]
 
   /**
-    * Hook method which is called, whenever a task becomes ready according to the given app definition.
-    *
-    * @param taskId the id of the task that has become ready.
+    * Hook method which is called, whenever a task becomes healthy or ready.
     */
-  def taskIsReady(taskId: Task.Id): Unit
+  def taskStatusChanged(taskId: Task.Id): Unit
+
+  /**
+    * Indicates, if a given target count has been reached.
+    */
+  def taskTargetCountReached(count: Int): Boolean = healthy.size == count && ready.size == count
 
   /**
     * Actors extending this trait should call this method when they detect that a task is terminated
@@ -79,26 +82,44 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
     * The #taskIsReady function is called, when the task is ready according to the app definition.
     */
   //scalastyle:off cyclomatic.complexity
-  def readinessBehavior: Receive = {
-    def taskIsRunning(taskFn: Task.Id => Unit): Receive = {
-      case MesosStatusUpdateEvent(slaveId, taskId, "TASK_RUNNING", _, `appId`, _, _, _, `versionString`, _, _) =>
-        taskFn(taskId)
+  val readinessBehavior: Receive = {
+
+    def taskRunBehavior: Receive = {
+      def markAsHealthyAndReady(taskId: Task.Id): Unit = {
+        log.debug(s"Started task is ready: $taskId")
+        healthy += taskId
+        ready += taskId
+        taskStatusChanged(taskId)
+      }
+      def markAsHealthyAndInitiateReadinessCheck(taskId: Task.Id): Unit = {
+        healthy += taskId
+        initiateReadinessCheck(taskId)
+      }
+      def taskIsRunning(taskFn: Task.Id => Unit): Receive = {
+        case MesosStatusUpdateEvent(slaveId, taskId, "TASK_RUNNING", _, `appId`, _, _, _, `versionString`, _, _) =>
+          taskFn(taskId)
+      }
+      taskIsRunning(if (app.readinessChecks.isEmpty) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
     }
 
-    def taskIsHealthy(taskFn: Task.Id => Unit): Receive = {
-      case HealthStatusChanged(`appId`, taskId, `version`, true, _, _) if !healthy(taskId) => taskFn(taskId)
-    }
-
-    def startedTaskIsReady(taskId: Task.Id): Unit = {
-      log.debug(s"Started task is ready: $taskId")
-      healthy += taskId
-      ready += taskId
-      taskIsReady(taskId)
+    def taskHealthBehavior: Receive = {
+      def initiateReadinessOnRun: Receive = {
+        case MesosStatusUpdateEvent(_, taskId, "TASK_RUNNING", _, `appId`, _, _, _, `versionString`, _, _) =>
+          initiateReadinessCheck(taskId)
+      }
+      def handleTaskHealthy: Receive = {
+        case HealthStatusChanged(`appId`, taskId, `version`, true, _, _) if !healthy(taskId) =>
+          log.info(s"Task $taskId now healthy for app ${app.id.toString}")
+          healthy += taskId
+          if (app.readinessChecks.isEmpty) ready += taskId
+          taskStatusChanged(taskId)
+      }
+      val handleTaskRunning = if (app.readinessChecks.nonEmpty) initiateReadinessOnRun else Actor.emptyBehavior
+      handleTaskRunning orElse handleTaskHealthy
     }
 
     def initiateReadinessCheck(taskId: Task.Id): Unit = {
       log.debug(s"Initiate readiness check for task: $taskId")
-      healthy += taskId
       val me = self
       taskTracker.task(taskId).map { taskOption =>
         for {
@@ -122,16 +143,16 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         deploymentManager ! ReadinessCheckUpdate(status.plan.id, result)
         //TODO(MV): this code assumes only one readiness check per app (validation rules enforce this)
         if (result.ready) {
+          log.info(s"Task ${result.taskId} now ready for app ${app.id.toString}")
           ready += result.taskId
           val subscriptionName = ReadinessCheckSubscriptionKey(result.taskId, result.name)
           subscriptions.get(subscriptionName).foreach(_.unsubscribe())
           subscriptions -= subscriptionName
-          taskIsReady(result.taskId)
+          taskStatusChanged(result.taskId)
         }
     }
 
-    val readyFn: Task.Id => Unit = if (app.readinessChecks.isEmpty) startedTaskIsReady else initiateReadinessCheck
-    val startBehavior = if (app.healthChecks.nonEmpty) taskIsHealthy(readyFn) else taskIsRunning(readyFn)
+    val startBehavior = if (app.healthChecks.nonEmpty) taskHealthBehavior else taskRunBehavior
     val readinessBehavior = if (app.readinessChecks.nonEmpty) readinessCheckBehavior else Actor.emptyBehavior
     startBehavior orElse readinessBehavior
   }
