@@ -64,13 +64,13 @@ You specify an external volume in the app definition of your Marathon app. [Lear
 
 In the app definition above:
 
-- `containerPath` specifies where the volume is mounted inside the container. This path is configurable, but defaults to `data/`. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
+- `containerPath` specifies where the volume is mounted inside the container. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
 
-- The `external.driver["dvdi/driver"]` option specifies which Docker volume driver to use for storage. If you are running Marathon on DCOS, this value should always be `rexray`. [Learn more about REX-Ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
+- The `external.driver["dvdi/driver"]` option specifies which Docker volume driver to use for storage. If you are running Marathon on DCOS, this value should likely be `rexray`. [Learn more about REX-Ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
 
 - You can specify additional options with `container.volumes[x].external.options[optionName]`. The dvdi provider for Mesos containers uses `dvdcli`, which offers the options [documented here[(https://github.com/emccode/dvdcli#extra-options). The availability of any given option depends on your volume driver, however.
 
-- `name` is the name by which your volume driver looks up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used. **Note:** Implicit volume creation only works when using volumes with a Mesos container.
+- `name` is the name by which your volume driver looks up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used. **Note:** Implicit volume creation only works when using volumes with a Mesos container and requires that you set `volumes[x].external.size`.
 
 - Create multiple volumes by adding additional items in the `container.volumes` array.
 
@@ -100,7 +100,6 @@ Below is a sample app definition that uses a Docker container and specifies an e
       {
         "containerPath": "/data/test-rexray-volume",
         "external": {
-          "size": 100,
           "name": "my-test-vol",
           "provider": "dvdi",
           "options": { "dvdi/driver": "rexray" }
@@ -122,10 +121,15 @@ For more information, refer to the [REX-Ray documentation](https://rexray.readth
 
 - You can only assign one task per volume. Your storage provider may other particular limitations.
 
-- The volumes you create are not automatically cleaned up. If you you delete your cluster, go to your storage provider and delete the volumes you no longer need. If you using EBS, find them by searching by the `container.volume.external.name` that you set in your Marathon app definition. This name corresponds to an EBS volume `Name` tag.
+- The volumes you create are not automatically cleaned up. If you you delete your cluster, go to your storage provider and delete the volumes you no longer need. If you using EBS, find them by searching by the `container.volumes.external.name` that you set in your Marathon app definition. This name corresponds to an EBS volume `Name` tag.
 
 - Volumes are not isolated from other clusters. Choose a unique volume name to avoid conflicts.
 
 - Docker apps do not support external volumes on DCOS installations running Docker older than 1.8. Currently, this means that DCOS Community Edition users cannot create Docker apps with external volumes.
+
+- If you are using Amazon's EBS, it is possible that clusters can be created in different availability zones (AZs). This means that if you create a cluster with an external volume in one AZ and destroy it, a new cluster may not have access to that external volume because it could be in a different AZ.
+
+- Launch time may increase for applications that create volumes implicitly. The amount of the increase depends on several factors
+(including, but not limited to) the size and type of the volume. Your storage provider's method of handling volumes can also influence launch time for implicitly created volumes.
 
 For more information, see the [Apache Mesos documentation on persistent volumes](http://mesos.apache.org/documentation/latest/persistent-volume/).
