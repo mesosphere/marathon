@@ -7,6 +7,7 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
+import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.upgrade.UpgradeConfig
 import org.rogach.scallop.ScallopConf
 import scala.sys.SystemProperties
@@ -129,8 +130,8 @@ trait MarathonConf
     default = None)
 
   def expectedResourceRoles: Set[String] = mesosRole.get match {
-    case Some(role) => Set(role, "*")
-    case None       => Set("*")
+    case Some(role) => Set(role, ResourceRole.Unreserved)
+    case None       => Set(ResourceRole.Unreserved)
   }
 
   lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.get.getOrElse(expectedResourceRoles)

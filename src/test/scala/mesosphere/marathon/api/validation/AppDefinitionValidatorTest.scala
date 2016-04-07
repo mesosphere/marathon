@@ -160,7 +160,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"),
-      acceptedResourceRoles = Some(Set("*")))
+      acceptedResourceRoles = Some(Set(ResourceRole.Unreserved)))
     assert(validate(app).isSuccess)
     MarathonTestHelper.validateJsonSchema(app)
   }
@@ -169,7 +169,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"),
-      acceptedResourceRoles = Some(Set("*", "production")))
+      acceptedResourceRoles = Some(Set(ResourceRole.Unreserved, "production")))
     assert(validate(app).isSuccess)
     MarathonTestHelper.validateJsonSchema(app)
   }

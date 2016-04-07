@@ -252,7 +252,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(resource("disk") == ScalarResource("disk", 1))
     val portsResource: Resource = resource("ports")
     assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
-    assert(portsResource.getRole == "*")
+    assert(portsResource.getRole == ResourceRole.Unreserved)
   }
 
   // #1583 Do not pass zero disk resource shares to Mesos
@@ -292,7 +292,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         portDefinitions = PortDefinitions(8080, 8081)
       ),
       mesosRole = Some("marathon"),
-      acceptedResourceRoles = Some(Set("*", "marathon"))
+      acceptedResourceRoles = Some(Set(ResourceRole.Unreserved, "marathon"))
     )
 
     val Some((taskInfo, _)) = task
@@ -547,7 +547,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(cmd.getArgumentsList.asScala == Seq("a", "b", "c"))
 
     for (r <- taskInfo.getResourcesList.asScala) {
-      assert("*" == r.getRole)
+      assert(ResourceRole.Unreserved == r.getRole)
     }
 
     // TODO test for resources etc.
@@ -787,9 +787,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("BuildIfMatchesWithRole") {
     val offer = MarathonTestHelper.makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = "marathon")
-      .addResources(ScalarResource("cpus", 1, "*"))
-      .addResources(ScalarResource("mem", 128, "*"))
-      .addResources(ScalarResource("disk", 1000, "*"))
+      .addResources(ScalarResource("cpus", 1, ResourceRole.Unreserved))
+      .addResources(ScalarResource("mem", 128, ResourceRole.Unreserved))
+      .addResources(ScalarResource("disk", 1000, ResourceRole.Unreserved))
       .addResources(ScalarResource("cpus", 2, "marathon"))
       .addResources(ScalarResource("mem", 256, "marathon"))
       .addResources(ScalarResource("disk", 2000, "marathon"))
@@ -827,10 +827,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("BuildIfMatchesWithRole2") {
-    val offer = MarathonTestHelper.makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = "*")
-      .addResources(ScalarResource("cpus", 1, "*"))
-      .addResources(ScalarResource("mem", 128, "*"))
-      .addResources(ScalarResource("disk", 1000, "*"))
+    val offer = MarathonTestHelper.makeBasicOfferWithRole(cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 32000, role = ResourceRole.Unreserved)
+      .addResources(ScalarResource("cpus", 1, ResourceRole.Unreserved))
+      .addResources(ScalarResource("mem", 128, ResourceRole.Unreserved))
+      .addResources(ScalarResource("disk", 1000, ResourceRole.Unreserved))
       .addResources(ScalarResource("cpus", 2, "marathon"))
       .addResources(ScalarResource("mem", 256, "marathon"))
       .addResources(ScalarResource("disk", 2000, "marathon"))
@@ -860,7 +860,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     // In this case, the first roles are sufficient so we'll use those first.
     for (r <- taskInfo.getResourcesList.asScala) {
-      assert("*" == r.getRole)
+      assert(ResourceRole.Unreserved == r.getRole)
     }
 
     // TODO test for resources etc.
@@ -868,7 +868,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("PortMappingsWithZeroContainerPort") {
     val offer = MarathonTestHelper.makeBasicOfferWithRole(
-      cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31000, role = "*"
+      cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31000, role = ResourceRole.Unreserved
     )
       .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
       .build
@@ -1445,7 +1445,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(exposesSecondPort)
 
     for (r <- taskInfo.getResourcesList.asScala) {
-      assert("*" == r.getRole)
+      assert(ResourceRole.Unreserved == r.getRole)
     }
 
     assert(taskInfo.hasDiscovery)

@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.launcher.impl.ResourceLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ AppDefinition, Container }
+import mesosphere.marathon.state.{ AppDefinition, Container, ResourceRole }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
 import mesosphere.mesos.protos.{ ScalarResource, RangesResource, Resource }
 import org.apache.mesos.Protos
@@ -73,7 +73,7 @@ object ResourceMatcher {
   }
 
   object ResourceSelector {
-    val NoRole = Set("*")
+    val NoRole = Set(ResourceRole.Unreserved)
     /** Match unreserved resources for which role == '*' applies (default) */
     def wildcard: ResourceSelector = ResourceSelector(NoRole, reserved = false)
   }

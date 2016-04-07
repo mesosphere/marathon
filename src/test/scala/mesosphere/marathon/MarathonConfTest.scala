@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.state.ResourceRole
 import org.scalatest.Matchers
 
 import scala.util.{ Failure, Try }
@@ -88,7 +89,7 @@ class MarathonConfTest extends MarathonSpec with Matchers {
       "--default_accepted_resource_roles", "*,marathon"
     )
 
-    assert(conf.defaultAcceptedResourceRolesSet == Set("*", "marathon"))
+    assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved, "marathon"))
   }
 
   test("--default_accepted_resource_roles *") {
@@ -96,14 +97,14 @@ class MarathonConfTest extends MarathonSpec with Matchers {
       "--master", "127.0.0.1:5050",
       "--default_accepted_resource_roles", "*"
     )
-    assert(conf.defaultAcceptedResourceRolesSet == Set("*"))
+    assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved))
   }
 
   test("--default_accepted_resource_roles default without --mesos_role") {
     val conf = MarathonTestHelper.makeConfig(
       "--master", "127.0.0.1:5050"
     )
-    assert(conf.defaultAcceptedResourceRolesSet == Set("*"))
+    assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved))
   }
 
   test("--default_accepted_resource_roles default with --mesos_role") {
@@ -111,7 +112,7 @@ class MarathonConfTest extends MarathonSpec with Matchers {
       "--master", "127.0.0.1:5050",
       "--mesos_role", "marathon"
     )
-    assert(conf.defaultAcceptedResourceRolesSet == Set("*", "marathon"))
+    assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved, "marathon"))
   }
 
   test("Features should be empty by default") {

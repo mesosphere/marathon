@@ -3,7 +3,7 @@ package mesosphere.marathon.tasks
 import java.util
 
 import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions }
+import mesosphere.marathon.state.{ ResourceRole, AppDefinition, Container, PortDefinitions }
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -26,7 +26,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
 
     assert(matcher.portsMatch.isDefined)
     assert(2 == matcher.portsMatch.get.hostPorts.size)
-    assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq("*"))
+    assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq(ResourceRole.Unreserved))
   }
 
   test("get ports from multiple ranges") {
@@ -46,7 +46,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
 
     assert(matcher.portsMatch.isDefined)
     assert(5 == matcher.portsMatch.get.hostPorts.size)
-    assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq("*"))
+    assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq(ResourceRole.Unreserved))
   }
 
   test("get ports from multiple ranges, requirePorts") {
@@ -66,7 +66,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
 
     assert(matcher.portsMatch.isDefined)
     assert(matcher.portsMatch.get.hostPorts == Seq(80, 81, 82, 83, 100))
-    assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq("*"))
+    assert(matcher.portsMatch.get.resources.map(_.getRole) == Seq(ResourceRole.Unreserved))
   }
 
   // #2865 Multiple explicit ports are mixed up in task json
@@ -98,11 +98,11 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
       .addResources(portsResource)
       .addResources(portsResource2)
       .build
-    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set("*", "marathon"), reserved = false))
+    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set(ResourceRole.Unreserved, "marathon"), reserved = false))
 
     assert(matcher.portsMatch.isDefined)
     assert(5 == matcher.portsMatch.get.hostPorts.size)
-    assert(matcher.portsMatch.get.resources.map(_.getRole).to[Set] == Set("*", "marathon"))
+    assert(matcher.portsMatch.get.resources.map(_.getRole).to[Set] == Set(ResourceRole.Unreserved, "marathon"))
   }
 
   test("get ports from multiple ranges, ignore ranges with unwanted roles") {
@@ -315,12 +315,12 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
     )
 
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31000).addResources(portsResource).build
-    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set("*", "marathon"), reserved = false))
+    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set(ResourceRole.Unreserved, "marathon"), reserved = false))
 
     assert(matcher.portsMatch.isDefined)
     assert(matcher.portsMatch.get.hostPorts.toSet == Set(31000, 31001))
     assert(matcher.portsMatch.get.hostPortsWithRole.toSet == Set(
-      PortWithRole("*", 31000), PortWithRole("marathon", 31001)
+      PortWithRole(ResourceRole.Unreserved, 31000), PortWithRole("marathon", 31001)
     ))
   }
 }
