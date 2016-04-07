@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.externalvolume.impl
 
-import mesosphere.marathon.core.externalvolume._
 import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProvider
 
 /**

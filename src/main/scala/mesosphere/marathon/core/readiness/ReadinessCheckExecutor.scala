@@ -44,10 +44,6 @@ object ReadinessCheckExecutor {
       require(task.effectiveIpAddress(app).isDefined,
         "Task is unreachable: an IP address was requested but not yet assigned")
 
-      val portIndexByName = app.portDefinitions.iterator.zipWithIndex.flatMap {
-        case (portDef, idx) => portDef.name.map(_ -> idx)
-      }.toMap
-
       app.readinessChecks.map { checkDef =>
 
         // determining the URL is difficult, everything else is just copying configuration
@@ -56,18 +52,18 @@ object ReadinessCheckExecutor {
             case ReadinessCheck.Protocol.HTTP  => "http"
             case ReadinessCheck.Protocol.HTTPS => "https"
           }
-          val host = task.effectiveIpAddress(app).get
-          val port = {
-            // Launched.ports and and app.portDefinitions have the same number
-            // of entries and correspond to each one-on-one.
-            val portIndex = portIndexByName.getOrElse(
-              checkDef.portName,
-              throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found")
-            )
 
-            if (app.hasFixedHostPorts) app.portDefinitions(portIndex).port
-            else launched.hostPorts(portIndex)
-          }
+          val portAssignmentsByName = app.portAssignments(task).getOrElse(
+            throw new IllegalStateException(s"no ports assignments for AppDefinition: [$app] - Task: [$task]")
+          ).map(portAssignment => portAssignment.portName -> portAssignment).toMap
+
+          val effectivePortAssignment = portAssignmentsByName.getOrElse(
+            Some(checkDef.portName),
+            throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found")
+          )
+
+          val host = effectivePortAssignment.effectiveIpAddress
+          val port = effectivePortAssignment.effectivePort
 
           s"$schema://$host:$port${checkDef.path}"
         }

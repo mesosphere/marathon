@@ -298,4 +298,62 @@ class AppUpdateTest extends MarathonSpec {
 
     assert(updated.readinessChecks == update.readinessChecks.get)
   }
+
+  test("empty app updateStrategy") {
+    val json =
+      """
+      {
+        "cmd": "sleep 1000",
+        "container": {
+          "type": "MESOS",
+          "volumes": [
+            {
+              "containerPath": "home",
+              "mode": "RW",
+              "persistent": {
+                "size": 100
+                }
+              }]
+        },
+        "residency": {
+          "relaunchEscalationTimeoutSeconds": 10,
+          "taskLostBehavior": "WAIT_FOREVER"
+        }
+      }
+      """
+
+    val update = fromJsonString(json)
+    val strategy = update.empty("foo".toPath).upgradeStrategy
+    assert(strategy.minimumHealthCapacity == 0.5
+      && strategy.maximumOverCapacity == 0)
+  }
+
+  test("empty app residency") {
+    val json =
+      """
+      {
+        "cmd": "sleep 1000",
+        "container": {
+          "type": "MESOS",
+          "volumes": [
+            {
+              "containerPath": "home",
+              "mode": "RW",
+              "persistent": {
+                "size": 100
+                }
+              }]
+        },
+        "upgradeStrategy": {
+          "minimumHealthCapacity": 0.2,
+          "maximumOverCapacity": 0
+        }
+      }
+      """
+
+    val update = fromJsonString(json)
+    val residency = update.empty("foo".toPath).residency
+    assert(residency.isDefined)
+    assert(residency.forall(_ == Residency.defaultResidency))
+  }
 }

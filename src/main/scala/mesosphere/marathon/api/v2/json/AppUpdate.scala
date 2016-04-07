@@ -75,6 +75,19 @@ case class AppUpdate(
     case _           => true
   }
 
+  def isResident: Boolean = residency.isDefined
+
+  def persistentVolumes: Iterable[PersistentVolume] = {
+    container.fold(Seq.empty[Volume])(_.volumes).collect{ case vol: PersistentVolume => vol }
+  }
+
+  def empty(appId: PathId): AppDefinition = {
+    val residency = if (persistentVolumes.nonEmpty) Some(Residency.defaultResidency) else None
+    val upgradeStrategy = if (residency.isDefined || isResident) UpgradeStrategy.forResidentTasks
+    else UpgradeStrategy.empty
+    apply(AppDefinition(appId, residency = residency, upgradeStrategy = upgradeStrategy))
+  }
+
   /**
     * Returns the supplied [[mesosphere.marathon.state.AppDefinition]]
     * after updating its members with respect to this update request.

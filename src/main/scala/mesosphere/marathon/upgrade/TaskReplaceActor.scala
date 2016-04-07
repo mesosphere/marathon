@@ -89,7 +89,7 @@ class TaskReplaceActor(
     case x: Any => log.debug(s"Received $x")
   }
 
-  override def taskIsReady(taskId: Id): Unit = {
+  override def taskStatusChanged(taskId: Id): Unit = {
     killNextOldTask(Some(taskId))
     checkFinished()
   }
@@ -122,7 +122,7 @@ class TaskReplaceActor(
   }
 
   def checkFinished(): Unit = {
-    if (readyTasks.size == app.instances && oldTaskIds.isEmpty) {
+    if (taskTargetCountReached(app.instances) && oldTaskIds.isEmpty) {
       log.info(s"App All new tasks for $appId are ready and all old tasks have been killed")
       promise.success(())
       context.stop(self)

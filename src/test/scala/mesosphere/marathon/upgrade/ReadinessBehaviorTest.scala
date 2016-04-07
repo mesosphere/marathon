@@ -49,6 +49,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes healthy")
+    system.eventStream.publish(f.taskRunning)
     system.eventStream.publish(f.taskIsHealthy)
 
     Then("Task should become ready")
@@ -90,6 +91,36 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     actor.stop()
   }
 
+  test("Readiness checks right after the task is running") {
+    Given ("An app with one instance")
+    val f = new Fixture
+    var taskIsReady = false
+    val appWithReadyCheck = AppDefinition(f.appId,
+      portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
+      versionInfo = VersionInfo.OnlyVersion(f.version),
+      healthChecks = Set(HealthCheck()),
+      readinessChecks = Seq(ReadinessCheck("test")))
+    val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
+
+    When("The task becomes running")
+    system.eventStream.publish(f.taskRunning)
+
+    Then("Task readiness checks are perfomed")
+    eventually(taskIsReady should be (false))
+    actor.underlyingActor.taskTargetCountReached(1) should be (false)
+    eventually(actor.underlyingActor.readyTasks should have size 1)
+    actor.underlyingActor.healthyTasks should have size 0
+
+    When("The task becomes healthy")
+    system.eventStream.publish(f.taskIsHealthy)
+
+    Then("The target count should be reached")
+    eventually(taskIsReady should be (true))
+    eventually(actor.underlyingActor.readyTasks should have size 1)
+    eventually(actor.underlyingActor.healthyTasks should have size 1)
+    actor.stop()
+  }
+
   test("A task that dies is removed from the actor") {
     Given ("An app with one instance")
     val f = new Fixture
@@ -121,6 +152,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val tracker = mock[TaskTracker]
     val task = mock[Task]
     val launched = mock[Task.Launched]
+    val agentInfo = mock[Task.AgentInfo]
 
     val appId = PathId("/test")
     val taskId = Task.Id("app.task")
@@ -131,10 +163,12 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       message = "", appId = appId, host = "", ipAddresses = None, ports = Seq.empty, version = version.toString)
     val taskIsHealthy = HealthStatusChanged(appId, taskId, version, alive = true)
 
+    agentInfo.host returns "some.host"
     task.taskId returns taskId
     task.launched returns Some(launched)
     task.appId returns appId
     task.effectiveIpAddress(any) returns Some("some.host")
+    task.agentInfo returns agentInfo
     launched.hostPorts returns Seq(1, 2, 3)
     tracker.task(any)(any) returns Future.successful(Some(task))
 
@@ -157,7 +191,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }
-        override def taskIsReady(taskId: Task.Id): Unit = taskReadyFn(taskId)
+        override def taskStatusChanged(taskId: Task.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
       }
       )
     }
