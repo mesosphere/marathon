@@ -546,12 +546,12 @@ object AppDefinition {
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
     appDef.disk should be >= 0.0
+    appDef must complyWithResourceRoleRules
     appDef must complyWithResidencyRules
     appDef must complyWithMigrationAPI
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
-    (appDef.isResident is false) or (appDef.acceptedResourceRoles is empty)
   } and ExternalVolumes.validApp
 
   /**
@@ -580,6 +580,12 @@ object AppDefinition {
   private val complyWithResidencyRules: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
       !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
+    }
+
+  private val complyWithResourceRoleRules: Validator[AppDefinition] =
+    isTrue("""Resident apps may not define acceptedResourceRoles other than "*" (unreserved resources)""") { app =>
+      def hasResidencyCompatibleRoles = app.acceptedResourceRoles.fold(true)(_ == Set(ResourceRole.Unreserved))
+      !app.isResident || hasResidencyCompatibleRoles
     }
 
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =

@@ -5,7 +5,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ ResourceRole, AppDefinition }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
@@ -109,8 +109,13 @@ class TaskOpFactoryImpl @Inject() (
     else None
 
     def maybeReserveAndCreateVolumes = if (needToReserve) {
+      val configuredRoles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      if (configuredRoles != Set(ResourceRole.Unreserved)) {
+        log.warn("Ignoring acceptedResourcesRoles for {}. Only unreserved resources can be reserved", app.id)
+      }
+
       // We can only reserve resources that are unreserved, which means they are applicable only for role(*)
-      val rolesToConsider = ResourceSelector.NoRole
+      val rolesToConsider = Set(ResourceRole.Unreserved)
       val matchingResourcesForReservation =
         ResourceMatcher.matchResources(
           offer, app, tasks.values,
