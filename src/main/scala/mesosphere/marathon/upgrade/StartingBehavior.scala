@@ -27,7 +27,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
 
   final override def preStart(): Unit = {
     if (app.healthChecks.nonEmpty) eventBus.subscribe(self, classOf[MarathonHealthCheckEvent])
-    else eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
+    eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
 
     initializeStart()
     checkFinished()
@@ -53,14 +53,14 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
-  override def taskIsReady(taskId: Id): Unit = {
-    log.info(s"New task $taskId now ready during app ${app.id.toString} scaling, " +
-      s"${nrToStart - readyTasks.size} more to go")
+  override def taskStatusChanged(taskId: Id): Unit = {
+    log.info(s"New task $taskId changed during app ${app.id.toString} scaling, " +
+      s"${readyTasks.size} ready ${healthyTasks.size} healthy need $nrToStart")
     checkFinished()
   }
 
   def checkFinished(): Unit = {
-    if (readyTasks.size == nrToStart) success()
+    if (taskTargetCountReached(nrToStart)) success()
   }
 
   def success(): Unit

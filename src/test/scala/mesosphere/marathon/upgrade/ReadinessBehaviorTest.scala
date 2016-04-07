@@ -49,6 +49,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes healthy")
+    system.eventStream.publish(f.taskRunning)
     system.eventStream.publish(f.taskIsHealthy)
 
     Then("Task should become ready")
@@ -86,6 +87,32 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     system.eventStream.publish(f.taskRunning)
 
     Then("Task should become ready")
+    eventually(taskIsReady should be (true))
+    actor.stop()
+  }
+
+  test("Readiness checks right after the task is running") {
+    Given ("An app with one instance")
+    val f = new Fixture
+    var taskIsReady = false
+    val appWithReadyCheck = AppDefinition(f.appId,
+      portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
+      versionInfo = VersionInfo.OnlyVersion(f.version),
+      healthChecks = Set(HealthCheck()),
+      readinessChecks = Seq(ReadinessCheck("test")))
+    val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
+
+    When("The task becomes running")
+    system.eventStream.publish(f.taskRunning)
+
+    Then("Task readiness checks are perfomed")
+    eventually(taskIsReady should be (false))
+    actor.underlyingActor.taskTargetCountReached(1) should be (false)
+
+    When("The task becomes healthy")
+    system.eventStream.publish(f.taskIsHealthy)
+
+    Then("The target count should be reached")
     eventually(taskIsReady should be (true))
     actor.stop()
   }
@@ -157,7 +184,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }
-        override def taskIsReady(taskId: Task.Id): Unit = taskReadyFn(taskId)
+        override def taskStatusChanged(taskId: Task.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
       }
       )
     }
