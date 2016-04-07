@@ -347,7 +347,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates validation error")
     response.getStatus should be(422)
-    response.getEntity.toString should include("/container/volumes(0)/external.options/dvdi/iops")
+    response.getEntity.toString should include("/container/volumes(0)/external/options(\\\"dvdi/iops\\\")")
   }
 
   test("Creating an app with an external volume and DOCKER containerizer should pass validation") {
@@ -388,7 +388,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates create failure")
     response.getStatus should be(422)
-    response.getEntity.toString should include("/container/volumes(0)/external/options(dvdi/driver")
+    response.getEntity.toString should include("/container/volumes(0)/external/options(\\\"dvdi/driver\\\")")
     response.getEntity.toString should include("not defined")
   }
 
