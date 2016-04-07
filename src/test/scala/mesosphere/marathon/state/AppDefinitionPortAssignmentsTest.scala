@@ -35,7 +35,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
             portName = Some("http"),
             portIndex = 0,
             effectiveIpAddress = "192.168.0.1",
-            effectiveHostPort = 1)
+            effectivePort = 1)
         )))
   }
 
@@ -112,7 +112,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
             portName = Some("http"),
             portIndex = 0,
             effectiveIpAddress = task.agentInfo.host,
-            effectiveHostPort = 1)
+            effectivePort = 1)
         )))
   }
 
@@ -151,7 +151,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
             portName = Some("http"),
             portIndex = 0,
             effectiveIpAddress = task.agentInfo.host,
-            effectiveHostPort = 1)
+            effectivePort = 1)
         )))
   }
 
