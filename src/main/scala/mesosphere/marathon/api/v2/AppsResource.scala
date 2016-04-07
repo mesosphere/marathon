@@ -216,7 +216,7 @@ class AppsResource @Inject() (
                              appUpdate: AppUpdate,
                              newVersion: Timestamp)(implicit identity: Identity): AppDefinition = {
     def createApp(): AppDefinition = {
-      val app = validateOrThrow(appUpdate(AppDefinition(appId)))
+      val app = validateOrThrow(appUpdate.empty(appId))
       checkAuthorization(CreateApp, app)
     }
 
