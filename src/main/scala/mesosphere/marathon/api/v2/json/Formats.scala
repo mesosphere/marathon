@@ -293,8 +293,9 @@ trait IpAddressFormats {
   implicit lazy val PortFormat: Format[DiscoveryInfo.Port] = (
     (__ \ "number").format[Int] ~
     (__ \ "name").format[String](ValidPortName) ~
-    (__ \ "protocol").format[String](ValidPortProtocol)
-  )(DiscoveryInfo.Port(_, _, _), unlift(DiscoveryInfo.Port.unapply))
+    (__ \ "protocol").format[String](ValidPortProtocol) ~
+    (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
+  )(DiscoveryInfo.Port(_, _, _, _), unlift(DiscoveryInfo.Port.unapply))
 
   implicit lazy val DiscoveryInfoFormat: Format[DiscoveryInfo] = Format(
     (__ \ "ports").read[Seq[DiscoveryInfo.Port]](ValidPorts).map(DiscoveryInfo(_)),

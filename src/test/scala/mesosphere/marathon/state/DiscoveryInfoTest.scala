@@ -15,7 +15,7 @@ class DiscoveryInfoTest extends MarathonSpec with Matchers {
     lazy val emptyDiscoveryInfo = DiscoveryInfo()
 
     lazy val discoveryInfoWithPort = DiscoveryInfo(
-      ports = Seq(Port(name = "http", number = 80, protocol = "tcp"))
+      ports = Seq(Port(name = "http", number = 80, protocol = "tcp", labels = Map("VIP_0" -> "192.168.0.1:80")))
     )
     lazy val discoveryInfoWithTwoPorts = DiscoveryInfo(
       ports = Seq(
@@ -49,6 +49,11 @@ class DiscoveryInfoTest extends MarathonSpec with Matchers {
         .setName("http")
         .setNumber(80)
         .setProtocol("tcp")
+        .setLabels(
+          MesosProtos.Labels.newBuilder.addLabels(
+            MesosProtos.Label.newBuilder
+              .setKey("VIP_0")
+              .setValue("192.168.0.1:80")))
         .build()
 
     proto.getPortsList.asScala.head should equal(portProto)
@@ -70,6 +75,11 @@ class DiscoveryInfoTest extends MarathonSpec with Matchers {
         .setName("http")
         .setNumber(80)
         .setProtocol("tcp")
+        .setLabels(
+          MesosProtos.Labels.newBuilder.addLabels(
+            MesosProtos.Label.newBuilder
+              .setKey("VIP_0")
+              .setValue("192.168.0.1:80")))
         .build()
 
     val protoWithPort = Protos.DiscoveryInfo.newBuilder
@@ -113,7 +123,7 @@ class DiscoveryInfoTest extends MarathonSpec with Matchers {
       """
       {
         "ports": [
-          { "name": "http", "number": 80, "protocol": "tcp" }
+          { "name": "http", "number": 80, "protocol": "tcp", "labels": { "VIP_0": "192.168.0.1:80" } }
         ]
       }
       """
