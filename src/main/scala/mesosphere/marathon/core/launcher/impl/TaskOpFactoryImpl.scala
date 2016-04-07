@@ -110,12 +110,12 @@ class TaskOpFactoryImpl @Inject() (
 
     def maybeReserveAndCreateVolumes = if (needToReserve) {
       val configuredRoles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
-      if (configuredRoles != Set(ResourceRole.Unreserved)) {
-        log.warn("Ignoring acceptedResourcesRoles for {}. Only unreserved resources can be reserved", app.id)
+      // We can only reserve unreserved resources
+      val rolesToConsider = Set(ResourceRole.Unreserved).intersect(configuredRoles)
+      if (configuredRoles.isEmpty) {
+        log.warn(s"Will never match for ${app.id} as the app is configured to only accept $configuredRoles")
       }
 
-      // We can only reserve resources that are unreserved, which means they are applicable only for role(*)
-      val rolesToConsider = Set(ResourceRole.Unreserved)
       val matchingResourcesForReservation =
         ResourceMatcher.matchResources(
           offer, app, tasks.values,
