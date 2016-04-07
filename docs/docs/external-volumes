@@ -11,7 +11,7 @@ title: Stateful Applications Using External Persistent Volumes
 
 Marathon applications normally lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can use an external storage service, such as Amazon's Elastic Block Store (EBS), to create a persistent volume that follows your application instance.
 
-Using an external storage service allows your apps to be more fault-tolerant. If a host fails, Marathon reschedules it on another host, along with its associated data, without user intervention.
+Using an external storage service allows your apps to be more fault-tolerant. If a host fails, Marathon reschedules your app on another host, along with its associated data, without user intervention.
 
 # Specifying an External Volume
 
@@ -68,7 +68,7 @@ In the app definition above:
 
 - The `external.driver["dvdi/driver"]` option specifies which Docker volume driver to use for storage. If you are running Marathon on DCOS, this value should always be `rexray`. [Learn more about REX-Ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
 
-- You can specify additional options with `container.volumes[x].external.options[optionName]`.
+- You can specify additional options with `container.volumes[x].external.options[optionName]`. The dvdi provider for Mesos containers uses `dvdcli`, which offers the options [documented here[(https://github.com/emccode/dvdcli#extra-options). The availability of any given option depends on your volume driver, however.
 
 - `name` is the name by which your volume driver looks up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used. **Note:** Implicit volume creation only works when using volumes with a Mesos container.
 
