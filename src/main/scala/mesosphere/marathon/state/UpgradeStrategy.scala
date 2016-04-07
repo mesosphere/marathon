@@ -30,4 +30,9 @@ object UpgradeStrategy {
     strategy.minimumHealthCapacity should be <= 0.5
     strategy.maximumOverCapacity should be == 0.0
   }
+
+  lazy val validForSingleInstanceApps: Validator[UpgradeStrategy] = validator[UpgradeStrategy] { strategy =>
+    strategy.minimumHealthCapacity should be == 0.0
+    strategy.maximumOverCapacity should be == 0.0
+  }
 }

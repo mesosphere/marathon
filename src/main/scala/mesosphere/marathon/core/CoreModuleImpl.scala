@@ -14,6 +14,7 @@ import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatche
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
 import mesosphere.marathon.core.matcher.reconcile.OfferMatcherReconciliationModule
 import mesosphere.marathon.core.plugin.PluginModule
+import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
@@ -60,6 +61,9 @@ class CoreModuleImpl @Inject() (
   override lazy val taskTrackerModule =
     new TaskTrackerModule(clock, metrics, marathonConf, leadershipModule, taskRepository, taskStatusUpdateSteps)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
+
+  // READINESS CHECKS
+  lazy val readinessModule = new ReadinessModule(actorSystem)
 
   // OFFER MATCHING AND LAUNCHING TASKS
 

@@ -49,6 +49,8 @@ get:
 
         - <code>apps.deployments</code> embed all deployment identifier, if the related app currently is in deployment.
 
+        - <code>apps.readiness</code> embed all readiness check results
+
         - <code>apps.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.
 
         - <code>apps.failures</code> Shorthand for apps.lastTaskFailure, apps.tasks, apps.counts and apps.deployments.<br/>
@@ -199,6 +201,8 @@ post:
           Please define all embeds explicitly.
 
           - <code>app.deployments</code>. embed all deployment identifier, if the related app currently is in deployment.
+
+          - <code>app.readiness</code> embed all readiness check results
 
           - <code>app.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.
 

@@ -3,6 +3,8 @@ package mesosphere.marathon.api.v2.json
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.appinfo.{ AppInfo, TaskCounts }
+import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, Timestamp, TaskFailure, Identifiable, PathId }
 import org.scalatest.GivenWhenThen
 import play.api.libs.json.{ Writes, JsObject, Json }
@@ -19,6 +21,10 @@ class AppDefinitionAppInfoTest extends MarathonSpec with GivenWhenThen {
     tasksRunning = 5,
     tasksHealthy = 4,
     tasksUnhealthy = 1
+  )
+
+  val readinessCheckResults = Seq(
+    ReadinessCheckResult("foo", Task.Id("foo"), false, Some(HttpResponse(503, "text/plain", "n/a")))
   )
 
   val deployments = Seq(
@@ -46,6 +52,26 @@ class AppDefinitionAppInfoTest extends MarathonSpec with GivenWhenThen {
     Then("the result contains all fields of the app plus the deployments")
     val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
       "deployments" -> Seq(Json.obj("id" -> "deployment1"))
+    )
+    JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
+  }
+
+  test("app with readiness results") {
+    Given("an app with deployments")
+    val extended = AppInfo(app, maybeReadinessCheckResults = Some(readinessCheckResults))
+
+    Then("the result contains all fields of the app plus the deployments")
+    val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
+      "readinessCheckResults" -> Seq(Json.obj(
+        "name" -> "foo",
+        "taskId" -> "foo",
+        "ready" -> false,
+        "lastResponse" -> Json.obj(
+          "status" -> 503,
+          "contentType" -> "text/plain",
+          "body" -> "n/a"
+        )
+      ))
     )
     JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
   }
