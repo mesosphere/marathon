@@ -132,4 +132,6 @@ For more information, refer to the [REX-Ray documentation](https://rexray.readth
 - Launch time may increase for applications that create volumes implicitly. The amount of the increase depends on several factors
 (including, but not limited to) the size and type of the volume. Your storage provider's method of handling volumes can also influence launch time for implicitly created volumes.
 
+- If tasks using external volumes are not working, or not working the way you expect, consult the agent or system logs to troubleshoot. If you are using REX-Ray, you can also consult the system journal.
+
 For more information, see the [Apache Mesos documentation on persistent volumes](http://mesos.apache.org/documentation/latest/persistent-volume/).
