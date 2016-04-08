@@ -116,7 +116,13 @@ private[impl] class LaunchQueueActor(
 
   private[this] def receiveTaskUpdateToSuspendedActor: Receive = {
     case taskChanged: TaskChanged if suspendedLauncherPathIds(taskChanged.appId) =>
-      deferMessageToSuspendedActor(taskChanged, taskChanged.appId)
+      // Do not defer. If an AppTaskLauncherActor restarts, it retrieves a new task list.
+      // If we defer this, there is a potential deadlock (resolved by timeout):
+      //   * AppTaskLauncher waits for in-flight tasks
+      //   * TaskOp gets processed and one of the update steps calls this here
+      //   * ... blocked until timeout ...
+      //   * The task launch notification (that the AppTaskLauncherActor waits for) gets sent to the actor
+      sender() ! None
   }
 
   private[this] def receiveMessagesToSuspendedActor: Receive = {
