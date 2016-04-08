@@ -21,24 +21,26 @@ Marathon currently allows one readiness check per application. The readiness che
 
 - `name` (Optional. Default: `"readinessCheck"`): The name used to identify this readiness check.
 - `protocol` (Optional. Default: `"HTTP"`): Protocol of the requests to be performed. Either HTTP or HTTPS.
-- `path` (Optional. Default: `"/"`): Path to the endpoint the task exposes to provide readiness status. Example: `/path/to/health`.
+- `path` (Optional. Default: `"/"`): Path to the endpoint the task exposes to provide readiness status. Example: `/path/to/readiness`.
 - `portName` (Optional. Default: `"http-api"`): Name of the port to query as described in the portDefinitions. Example: `http-api`.
 - `intervalSeconds` (Optional. Default: `30 seconds`): Number of seconds to wait between readiness checks.
-- `timeoutSeconds` (Optional. Default: `10 seconds`): Number of seconds after which a health check is considered a failure, regardless of the response. This value must be smaller than `intervalSeconds`.
+- `timeoutSeconds` (Optional. Default: `10 seconds`): Number of seconds after which a readiness check times out, regardless of the response. This value must be smaller than `intervalSeconds`.
 - `httpStatusCodesForReady` (Optional. Default: `[200]`): The HTTP/HTTPS status code to treat as _ready_.
 - `preserveLastResponse` (Optional. Default: `false`): If true, the last readiness check response will be preserved and exposed in the API as part of a deployment.
 
 ### Example Usage
 
 ```json
-{
-  "name": "readinessCheck",
-  "protocol": "HTTP",
-  "path": "/",
-  "portName": "http-api",
-  "intervalSeconds": 30,
-  "timeoutSeconds": 10,
-  "httpStatusCodesForReady": [ 200 ],
-  "preserveLastResponse": false
-}
+"readinessChecks": [
+  {
+    "name": "readinessCheck",
+    "protocol": "HTTP",
+    "path": "/",
+    "portName": "http-api",
+    "intervalSeconds": 30,
+    "timeoutSeconds": 10,
+    "httpStatusCodesForReady": [ 200 ],
+    "preserveLastResponse": false
+  }
+]
 ```
