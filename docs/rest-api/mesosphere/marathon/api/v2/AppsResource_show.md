@@ -107,6 +107,26 @@ The objects in the list only contain the id of the deployment, e.g.:
 }
 ```
 
+##### readiness (Array of Objects)
+
+A list of readiness check results.
+Only available during a deployment in the start phase.
+ 
+The object in the list contains a readiness check in the format of:
+ 
+ ```javascript
+ {
+     "name": "myReadyCheck",
+     "taskId": "foo.c3c80be4-f780-11e5-8d32-e24449f9e499",
+     "ready": false,
+     "lastResponse": {
+       "status": 500,
+       "contentType": "application/json",
+       "body": "{}"
+     }
+   }
+ ```
+
 ##### lastTaskFailure (Object)
 
 Information about the last task failure for debugging purposes.

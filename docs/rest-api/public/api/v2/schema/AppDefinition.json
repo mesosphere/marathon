@@ -140,7 +140,8 @@
                   },
                   "name": {
                     "type": "string",
-                    "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings."
+                    "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings.",
+                    "pattern": "^[a-z][a-z0-9-]*$"
                   },
                   "protocol": {
                     "type": "string",
@@ -192,6 +193,29 @@
                     "type": "integer",
                     "description": "The size of the persistent volume in MiB",
                     "minimum": 0
+                  }
+                },
+                "type": "object"
+              },
+              "external": {
+                "additionalProperties": false,
+                "properties": {
+                  "size": {
+                    "type": "integer",
+                    "description": "The size of the external volume in MiB",
+                    "minimum": 0
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The name of the volume"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "description": "The name of the volume provider"
+                  },
+                  "options": {
+                    "type": "object",
+                    "description": "Provider-specific volume configuration options"
                   }
                 },
                 "type": "object"
@@ -439,7 +463,8 @@
           },
           "name": {
             "type": "string",
-            "description": "Name of the service hosted on this port. If provided, it must be unique over all port definitions."
+            "description": "Name of the service hosted on this port. If provided, it must be unique over all port definitions.",
+            "pattern": "^[a-z][a-z0-9-]*$"
           },
           "protocol": {
             "type": "string",
@@ -448,6 +473,56 @@
           }
         }
       }
+    },
+    "readinessChecks": {
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Query these readiness checks to determine if a task is ready to serve requests.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name used to identify this readiness check."
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS.",
+            "enum": ["HTTP", "HTTPS"]
+          },
+          "path": {
+            "type": "string",
+            "description": "Path to endpoint exposed by the task that will provide readiness status. Example: /path/to/health."
+          },
+          "portName": {
+            "type": "string",
+            "description": "Name of the port to query as described in the portDefinitions. Example: http-api."
+          },
+          "intervalSeconds": {
+            "type": "integer",
+            "description": "Number of seconds to wait between readiness checks. Defaults to 30 seconds",
+            "minimum": 0
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "description": "Number of seconds after which a health check is considered a failure regardless of the response. Must be smaller than intervalSeconds. Defaults to 10 seconds.",
+            "minimum": 0
+          },
+          "httpStatusCodesForReady": {
+            "items": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 999
+            },
+            "description": "The HTTP(s) status code to treat as 'ready'.",
+            "type": "array"
+          },
+          "preserveLastResponse": {
+            "type": "boolean",
+            "description": "If and only if true, preserve the last readiness check responses and expose them in the API as part of a deployment.."
+          }
+        }
+      },
+      "type": "array"
     },
     "residency": {
       "type": "object",
