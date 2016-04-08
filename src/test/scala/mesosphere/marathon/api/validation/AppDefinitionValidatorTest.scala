@@ -160,7 +160,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"),
-      acceptedResourceRoles = Some(Set("*")))
+      acceptedResourceRoles = Some(Set(ResourceRole.Unreserved)))
     assert(validate(app).isSuccess)
     MarathonTestHelper.validateJsonSchema(app)
   }
@@ -169,7 +169,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val app = AppDefinition(
       id = PathId("/test"),
       cmd = Some("true"),
-      acceptedResourceRoles = Some(Set("*", "production")))
+      acceptedResourceRoles = Some(Set(ResourceRole.Unreserved, "production")))
     assert(validate(app).isSuccess)
     MarathonTestHelper.validateJsonSchema(app)
   }
@@ -345,7 +345,6 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val container = f.validDockerContainer.copy(
       volumes = Seq(f.validPersistentVolume.copy(containerPath = ".hidden"))
     )
-    val foo = validate(container)
     assert(validate(container).isSuccess)
   }
 
@@ -538,6 +537,28 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
 
     Then("validation fails")
     AppDefinition.validAppDefinition(app).isFailure shouldBe true
+  }
+
+  test("Resident app may only define unreserved acceptedResourceRoles or None") {
+    Given("A resident app definition")
+    val f = new Fixture
+    val from = f.validResident
+    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
+
+    When("validating with role for static reservation")
+    val to1 = from.copy(acceptedResourceRoles = Some(Set("foo")))
+    Then("Should be invalid")
+    AppDefinition.validAppDefinition(to1).isSuccess shouldBe false
+
+    When("validating with only unreserved roles")
+    val to2 = from.copy(acceptedResourceRoles = Some(Set(ResourceRole.Unreserved)))
+    Then("Should be valid")
+    AppDefinition.validAppDefinition(to2).isSuccess shouldBe true
+
+    When("validating without acceptedResourceRoles")
+    val to3 = from.copy(acceptedResourceRoles = None)
+    Then("Should be valid")
+    AppDefinition.validAppDefinition(to3).isSuccess shouldBe true
   }
 
   class Fixture {

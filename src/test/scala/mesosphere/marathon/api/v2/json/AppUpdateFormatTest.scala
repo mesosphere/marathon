@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.state.ResourceRole
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsResultException, Json }
 
@@ -28,13 +29,13 @@ class AppUpdateFormatTest extends MarathonSpec with Matchers {
   test("""FromJSON should parse "acceptedResourceRoles": ["production", "*"] """) {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["production", "*"] }""")
     val appUpdate = json.as[AppUpdate]
-    appUpdate.acceptedResourceRoles should equal(Some(Set("production", "*")))
+    appUpdate.acceptedResourceRoles should equal(Some(Set("production", ResourceRole.Unreserved)))
   }
 
   test("""FromJSON should parse "acceptedResourceRoles": ["*"] """) {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["*"] }""")
     val appUpdate = json.as[AppUpdate]
-    appUpdate.acceptedResourceRoles should equal(Some(Set("*")))
+    appUpdate.acceptedResourceRoles should equal(Some(Set(ResourceRole.Unreserved)))
   }
 
   test("FromJSON should fail when 'acceptedResourceRoles' is defined but empty") {

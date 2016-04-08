@@ -167,13 +167,13 @@ class AppDefinitionFormatsTest
   test("""FromJSON should parse "acceptedResourceRoles": ["production", "*"] """) {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["production", "*"] }""")
     val appDef = json.as[AppDefinition]
-    appDef.acceptedResourceRoles should equal(Some(Set("production", "*")))
+    appDef.acceptedResourceRoles should equal(Some(Set("production", ResourceRole.Unreserved)))
   }
 
   test("""FromJSON should parse "acceptedResourceRoles": ["*"] """) {
     val json = Json.parse(""" { "id": "test", "acceptedResourceRoles": ["*"] }""")
     val appDef = json.as[AppDefinition]
-    appDef.acceptedResourceRoles should equal(Some(Set("*")))
+    appDef.acceptedResourceRoles should equal(Some(Set(ResourceRole.Unreserved)))
   }
 
   test("FromJSON should fail when 'acceptedResourceRoles' is defined but empty") {

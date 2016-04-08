@@ -70,10 +70,10 @@ object MarathonTestHelper {
   val frameworkId: FrameworkId = FrameworkId("").mergeFromProto(frameworkID)
 
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
-                     beginPort: Int = 31000, endPort: Int = 32000, role: String = "*",
+                     beginPort: Int = 31000, endPort: Int = 32000, role: String = ResourceRole.Unreserved,
                      reservation: Option[ResourceLabels] = None): Offer.Builder = {
 
-    require(role != "*" || reservation.isEmpty, "reserved resources cannot have role *")
+    require(role != ResourceRole.Unreserved || reservation.isEmpty, "reserved resources cannot have role *")
 
     def heedReserved(resource: Mesos.Resource): Mesos.Resource = {
       reservation match {
@@ -117,7 +117,7 @@ object MarathonTestHelper {
   }
 
   def scalarResource(
-    name: String, d: Double, role: String = "*",
+    name: String, d: Double, role: String = ResourceRole.Unreserved,
     reservation: Option[ReservationInfo] = None, disk: Option[DiskInfo] = None): Mesos.Resource = {
 
     val builder = Mesos.Resource
@@ -134,7 +134,7 @@ object MarathonTestHelper {
   }
 
   def portsResource(
-    begin: Long, end: Long, role: String = "*",
+    begin: Long, end: Long, role: String = ResourceRole.Unreserved,
     reservation: Option[ReservationInfo] = None): Mesos.Resource = {
 
     val ranges = Mesos.Value.Ranges.newBuilder()
@@ -165,7 +165,7 @@ object MarathonTestHelper {
       .build()
   }
 
-  def reservedDisk(id: String, size: Double = 4096, role: String = "*",
+  def reservedDisk(id: String, size: Double = 4096, role: String = ResourceRole.Unreserved,
                    principal: String = "test", containerPath: String = "/container"): Mesos.Resource.Builder = {
     import Mesos.Resource.{ DiskInfo, ReservationInfo }
     Mesos.Resource.newBuilder()
@@ -188,7 +188,7 @@ object MarathonTestHelper {
     * @return
     */
   def makeBasicOfferWithManyPortRanges(ranges: Int): Offer.Builder = {
-    val role = "*"
+    val role = ResourceRole.Unreserved
     val cpusResource = ScalarResource(Resource.CPUS, 4.0, role = role)
     val memResource = ScalarResource(Resource.MEM, 16000, role = role)
     val diskResource = ScalarResource(Resource.DISK, 1.0, role = role)
@@ -238,7 +238,7 @@ object MarathonTestHelper {
       .setTaskId(TaskID.newBuilder().setValue(taskId).build())
       .setSlaveId(SlaveID("slave1"))
       .setCommand(CommandInfo.newBuilder().setShell(true).addArguments("true"))
-      .addResources(ScalarResource(Resource.CPUS, 1.0, "*"))
+      .addResources(ScalarResource(Resource.CPUS, 1.0, ResourceRole.Unreserved))
   }
 
   def makeTaskFromTaskInfo(taskInfo: TaskInfo,

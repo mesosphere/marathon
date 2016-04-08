@@ -1,6 +1,6 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.state.{ AppDefinition, Container }
+import mesosphere.marathon.state.{ ResourceRole, AppDefinition, Container }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -30,7 +30,7 @@ case class PortsMatch(hostPortsWithRole: Seq[PortWithRole]) {
 class PortsMatcher(
   app: AppDefinition,
   offer: MesosProtos.Offer,
-  resourceSelector: ResourceSelector = ResourceSelector(Set("*"), reserved = false),
+  resourceSelector: ResourceSelector = ResourceSelector(Set(ResourceRole.Unreserved), reserved = false),
   random: Random = Random)
     extends Logging {
 

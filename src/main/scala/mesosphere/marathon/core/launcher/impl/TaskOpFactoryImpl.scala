@@ -5,7 +5,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ ResourceRole, AppDefinition }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
@@ -68,12 +68,6 @@ class TaskOpFactoryImpl @Inject() (
     val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
     val needToReserve = request.numberOfWaitingReservations < additionalLaunches
 
-    val acceptedResourceRoles: Set[String] = {
-      val roles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
-      if (log.isDebugEnabled) log.debug(s"inferForResidents, acceptedResourceRoles $roles")
-      roles
-    }
-
     /* *
      * If an offer HAS reservations/volumes that match our app, handling these has precedence
      * If an offer NAS NO reservations/volumes that match our app, we can reserve if needed
@@ -96,11 +90,13 @@ class TaskOpFactoryImpl @Inject() (
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
         // by the Reserved task that we actually want to launch
         val tasksToConsiderForConstraints = tasks - volumeMatch.task.taskId
+        // resources are reserved for this role, so we only consider those resources
+        val rolesToConsider = config.mesosRole.get.toSet
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
             offer, app, tasksToConsiderForConstraints.values,
             ResourceSelector(
-              config.mesosRole.get.toSet, reserved = true,
+              rolesToConsider, reserved = true,
               requiredLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task)
             )
           )
@@ -113,10 +109,17 @@ class TaskOpFactoryImpl @Inject() (
     else None
 
     def maybeReserveAndCreateVolumes = if (needToReserve) {
+      val configuredRoles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      // We can only reserve unreserved resources
+      val rolesToConsider = Set(ResourceRole.Unreserved).intersect(configuredRoles)
+      if (configuredRoles.isEmpty) {
+        log.warn(s"Will never match for ${app.id} as the app is configured to only accept $configuredRoles")
+      }
+
       val matchingResourcesForReservation =
         ResourceMatcher.matchResources(
           offer, app, tasks.values,
-          ResourceSelector(acceptedResourceRoles, reserved = false)
+          ResourceSelector(rolesToConsider, reserved = false)
         )
       matchingResourcesForReservation.map { resourceMatch =>
         reserveAndCreateVolumes(request.frameworkId, app, offer, resourceMatch)
