@@ -217,8 +217,7 @@
   "cpus": 0.3,
   "instances": 2,
   "mem": 9
-}]
-</code></pre></div><div class="tab-pane" id="v2_apps_put_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+}]</code></pre></div><div class="tab-pane" id="v2_apps_put_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -379,13 +378,12 @@
                   },
                   "name": {
                     "type": "string",
-                    "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings.",
-                    "pattern": "^[a-z][a-z0-9-]*$"
+                    "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings."
                   },
                   "protocol": {
                     "type": "string",
-                    "enum": ["tcp", "udp", "udp,tcp"],
-                    "description": "Protocol of the port (one of [&#39;tcp&#39;, &#39;udp&#39;] or &#39;udp,tcp&#39; for both). Defaults to &#39;tcp&#39;."
+                    "enum": ["tcp", "udp"],
+                    "description": "Protocol of the port (one of [&#39;tcp&#39;, &#39;udp&#39;]). Defaults to &#39;tcp&#39;."
                   },
                   "servicePort": {
                     "type": "integer",
@@ -432,29 +430,6 @@
                     "type": "integer",
                     "description": "The size of the persistent volume in MiB",
                     "minimum": 0
-                  }
-                },
-                "type": "object"
-              },
-              "external": {
-                "additionalProperties": false,
-                "properties": {
-                  "size": {
-                    "type": "integer",
-                    "description": "The size of the external volume in MiB",
-                    "minimum": 0
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "The name of the volume"
-                  },
-                  "provider": {
-                    "type": "string",
-                    "description": "The name of the volume provider"
-                  },
-                  "options": {
-                    "type": "object",
-                    "description": "Provider-specific volume configuration options"
                   }
                 },
                 "type": "object"
@@ -702,8 +677,7 @@
           },
           "name": {
             "type": "string",
-            "description": "Name of the service hosted on this port. If provided, it must be unique over all port definitions.",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "description": "Name of the service hosted on this port. If provided, it must be unique over all port definitions."
           },
           "protocol": {
             "type": "string",
@@ -712,56 +686,6 @@
           }
         }
       }
-    },
-    "readinessChecks": {
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Query these readiness checks to determine if a task is ready to serve requests.",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "The name used to identify this readiness check."
-          },
-          "protocol": {
-            "type": "string",
-            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS.",
-            "enum": ["HTTP", "HTTPS"]
-          },
-          "path": {
-            "type": "string",
-            "description": "Path to endpoint exposed by the task that will provide readiness status. Example: /path/to/health."
-          },
-          "portName": {
-            "type": "string",
-            "description": "Name of the port to query as described in the portDefinitions. Example: http-api."
-          },
-          "intervalSeconds": {
-            "type": "integer",
-            "description": "Number of seconds to wait between readiness checks. Defaults to 30 seconds",
-            "minimum": 0
-          },
-          "timeoutSeconds": {
-            "type": "integer",
-            "description": "Number of seconds after which a health check is considered a failure regardless of the response. Must be smaller than intervalSeconds. Defaults to 10 seconds.",
-            "minimum": 0
-          },
-          "httpStatusCodesForReady": {
-            "items": {
-              "type": "integer",
-              "minimum": 100,
-              "maximum": 999
-            },
-            "description": "The HTTP(s) status code to treat as &#39;ready&#39;.",
-            "type": "array"
-          },
-          "preserveLastResponse": {
-            "type": "boolean",
-            "description": "If and only if true, preserve the last readiness check responses and expose them in the API as part of a deployment.."
-          }
-        }
-      },
-      "type": "array"
     },
     "residency": {
       "type": "object",
@@ -928,18 +852,6 @@
       "timeoutSeconds": 20
     }
   ],
-  "readinessChecks": [
-    {
-      "name": "myReadyCheck",
-      "protocol": "HTTP",
-      "path": "/v1/plan"
-      "portName": "http"
-      "interval": 10000,
-      "timeout": 10000,
-      "httpStatusCodesForReady": [ 200 ],
-      "preserveLastResponse": false
-    }
-  ],
   "labels": {
     "owner": "zeus",
     "note": "Away from olympus"
@@ -967,7 +879,7 @@
   ],
   "portDefinitions": [
     {
-      "port": 0,
+      "port": 0
       "protocol": "tcp",
       "name": "http",
       "labels": { "vip": "192.168.0.1:80" }
@@ -1059,18 +971,6 @@
       "timeoutSeconds": 20
     }
   ],
-  "readinessChecks": [
-    {
-      "name": "myReadyCheck",
-      "protocol": "HTTP",
-      "path": "/v1/plan"
-      "portName": "http"
-      "interval": 10000,
-      "timeout": 10000,
-      "httpStatusCodesForReady": [ 200 ],
-      "preserveLastResponse": false
-    }
-  ],
   "labels": {
     "owner": "zeus",
     "note": "Away from olympus"
@@ -1098,7 +998,7 @@
   ],
   "portDefinitions": [
     {
-      "port": 0,
+      "port": 0
       "protocol": "tcp",
       "name": "http",
       "labels": { "vip": "192.168.0.1:80" }
@@ -1130,7 +1030,7 @@
     }
   ]
 }
-</code></pre></div></div></div></div></div></div></div><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_apps__app_id_"><span class="parent">/v2/apps</span>/{app_id}</a> <span class="methods"><a href="#v2_apps__app_id__get"><span class="badge badge_get">get</span></a> <a href="#v2_apps__app_id__put"><span class="badge badge_put">put</span></a> <a href="#v2_apps__app_id__delete"><span class="badge badge_delete">delete</span></a></span></h4></div><div id="panel_v2_apps__app_id_" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_apps__app_id__get'" class="list-group-item"><span class="badge badge_get">get</span><div class="method_description"><p>Get the application with id <code>app_id</code>. The response includes some status information besides the current configuration of the app. You can specify optional embed arguments, to get more embedded information.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_apps__app_id__put'" class="list-group-item"><span class="badge badge_put">put</span><div class="method_description"><p>Replaces parameters of a running application. If no application with the given id exists, it will be created. If there is an application with this id, all running instances get upgraded to the new definition.</p><p>Note&#58; This operation will create a deployment. The operation finishes, if the deployment succeeds. You can query the deployments endoint to see the status of the deployment.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_apps__app_id__delete'" class="list-group-item"><span class="badge badge_delete">delete</span><div class="method_description"><p>Destroy an application. All data about that application will be deleted. Note&#58; This operation will create a deployment. The operation finishes, if the deployment succeeds. You can query the deployments endoint to see the status of the deployment.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_apps__app_id__get"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_get">get</span> <span class="parent">/v2/apps</span>/{app_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Get the application with id <code>app_id</code>. The response includes some status information besides the current configuration of the app. You can specify optional embed arguments, to get more embedded information.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_apps__app_id__get_request" data-toggle="tab">Request</a></li><li><a href="#v2_apps__app_id__get_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_apps__app_id__get_request"><h3>URI Parameters</h3><ul><li><strong>app_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>embed</strong>: <em>(one of app.tasks, app.count, app.deployments, app.lastTaskFailure, app.failures, app.taskStats - repeat: true)</em><p>Embeds nested resources that match the supplied path. You can specify this parameter multiple times with different values.<br></p><ul><li><code>app.tasks</code>. embed tasks Note&#58; if this embed is definded, it automatically sets <code>apps.deployments</code> but this will change in a future release. Please define all embeds explicitly.</li><li><code>app.counts</code>. embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy)<br>Note&#58; currently embedded by default but this will change in a future release. Please define all embeds explicitly.</li><li><code>app.deployments</code>. embed all deployment identifier, if the related app currently is in deployment.</li><li><code>app.readiness</code> embed all readiness check results</li><li><code>app.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.</li><li><code>app.failures</code> Shorthand for apps.lastTaskFailure, apps.tasks, apps.counts and apps.deployments.<br>Note&#58; deprecated and will be removed in future versions Please define all embeds explicitly.</li><li><code>app.taskStats</code> exposes task statatistics in the JSON.</li></ul><p><strong>Example</strong>:</p><pre>embed=app.deployments&amp;embed=app.lastTaskFailure</pre></li></ul></div><div class="tab-pane" id="v2_apps__app_id__get_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+</code></pre></div></div></div></div></div></div></div><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_apps__app_id_"><span class="parent">/v2/apps</span>/{app_id}</a> <span class="methods"><a href="#v2_apps__app_id__get"><span class="badge badge_get">get</span></a> <a href="#v2_apps__app_id__put"><span class="badge badge_put">put</span></a> <a href="#v2_apps__app_id__delete"><span class="badge badge_delete">delete</span></a></span></h4></div><div id="panel_v2_apps__app_id_" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_apps__app_id__get'" class="list-group-item"><span class="badge badge_get">get</span><div class="method_description"><p>Get the application with id <code>app_id</code>. The response includes some status information besides the current configuration of the app. You can specify optional embed arguments, to get more embedded information.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_apps__app_id__put'" class="list-group-item"><span class="badge badge_put">put</span><div class="method_description"><p>Replaces parameters of a running application. If no application with the given id exists, it will be created. If there is an application with this id, all running instances get upgraded to the new definition.</p><p>Note&#58; This operation will create a deployment. The operation finishes, if the deployment succeeds. You can query the deployments endoint to see the status of the deployment.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_apps__app_id__delete'" class="list-group-item"><span class="badge badge_delete">delete</span><div class="method_description"><p>Destroy an application. All data about that application will be deleted. Note&#58; This operation will create a deployment. The operation finishes, if the deployment succeeds. You can query the deployments endoint to see the status of the deployment.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_apps__app_id__get"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_get">get</span> <span class="parent">/v2/apps</span>/{app_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Get the application with id <code>app_id</code>. The response includes some status information besides the current configuration of the app. You can specify optional embed arguments, to get more embedded information.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_apps__app_id__get_request" data-toggle="tab">Request</a></li><li><a href="#v2_apps__app_id__get_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_apps__app_id__get_request"><h3>URI Parameters</h3><ul><li><strong>app_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>embed</strong>: <em>(one of app.tasks, app.count, app.deployments, app.lastTaskFailure, app.failures, app.taskStats - repeat: true)</em><p>Embeds nested resources that match the supplied path. You can specify this parameter multiple times with different values.<br></p><ul><li><code>app.tasks</code>. embed tasks Note&#58; if this embed is definded, it automatically sets <code>apps.deployments</code> but this will change in a future release. Please define all embeds explicitly.</li><li><code>app.counts</code>. embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy)<br>Note&#58; currently embedded by default but this will change in a future release. Please define all embeds explicitly.</li><li><code>app.deployments</code>. embed all deployment identifier, if the related app currently is in deployment.</li><li><code>app.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.</li><li><code>app.failures</code> Shorthand for apps.lastTaskFailure, apps.tasks, apps.counts and apps.deployments.<br>Note&#58; deprecated and will be removed in future versions Please define all embeds explicitly.</li><li><code>app.taskStats</code> exposes task statatistics in the JSON.</li></ul><p><strong>Example</strong>:</p><pre>embed=app.deployments&amp;embed=app.lastTaskFailure</pre></li></ul></div><div class="tab-pane" id="v2_apps__app_id__get_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "apps": [
     {
       "id": "/myapp",
@@ -1335,13 +1235,12 @@
                   },
                   "name": {
                     "type": "string",
-                    "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings.",
-                    "pattern": "^[a-z][a-z0-9-]*$"
+                    "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings."
                   },
                   "protocol": {
                     "type": "string",
-                    "enum": ["tcp", "udp", "udp,tcp"],
-                    "description": "Protocol of the port (one of [&#39;tcp&#39;, &#39;udp&#39;] or &#39;udp,tcp&#39; for both). Defaults to &#39;tcp&#39;."
+                    "enum": ["tcp", "udp"],
+                    "description": "Protocol of the port (one of [&#39;tcp&#39;, &#39;udp&#39;]). Defaults to &#39;tcp&#39;."
                   },
                   "servicePort": {
                     "type": "integer",
@@ -1388,29 +1287,6 @@
                     "type": "integer",
                     "description": "The size of the persistent volume in MiB",
                     "minimum": 0
-                  }
-                },
-                "type": "object"
-              },
-              "external": {
-                "additionalProperties": false,
-                "properties": {
-                  "size": {
-                    "type": "integer",
-                    "description": "The size of the external volume in MiB",
-                    "minimum": 0
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "The name of the volume"
-                  },
-                  "provider": {
-                    "type": "string",
-                    "description": "The name of the volume provider"
-                  },
-                  "options": {
-                    "type": "object",
-                    "description": "Provider-specific volume configuration options"
                   }
                 },
                 "type": "object"
@@ -1658,8 +1534,7 @@
           },
           "name": {
             "type": "string",
-            "description": "Name of the service hosted on this port. If provided, it must be unique over all port definitions.",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "description": "Name of the service hosted on this port. If provided, it must be unique over all port definitions."
           },
           "protocol": {
             "type": "string",
@@ -1668,56 +1543,6 @@
           }
         }
       }
-    },
-    "readinessChecks": {
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Query these readiness checks to determine if a task is ready to serve requests.",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "The name used to identify this readiness check."
-          },
-          "protocol": {
-            "type": "string",
-            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS.",
-            "enum": ["HTTP", "HTTPS"]
-          },
-          "path": {
-            "type": "string",
-            "description": "Path to endpoint exposed by the task that will provide readiness status. Example: /path/to/health."
-          },
-          "portName": {
-            "type": "string",
-            "description": "Name of the port to query as described in the portDefinitions. Example: http-api."
-          },
-          "intervalSeconds": {
-            "type": "integer",
-            "description": "Number of seconds to wait between readiness checks. Defaults to 30 seconds",
-            "minimum": 0
-          },
-          "timeoutSeconds": {
-            "type": "integer",
-            "description": "Number of seconds after which a health check is considered a failure regardless of the response. Must be smaller than intervalSeconds. Defaults to 10 seconds.",
-            "minimum": 0
-          },
-          "httpStatusCodesForReady": {
-            "items": {
-              "type": "integer",
-              "minimum": 100,
-              "maximum": 999
-            },
-            "description": "The HTTP(s) status code to treat as &#39;ready&#39;.",
-            "type": "array"
-          },
-          "preserveLastResponse": {
-            "type": "boolean",
-            "description": "If and only if true, preserve the last readiness check responses and expose them in the API as part of a deployment.."
-          }
-        }
-      },
-      "type": "array"
     },
     "residency": {
       "type": "object",
@@ -1884,18 +1709,6 @@
       "timeoutSeconds": 20
     }
   ],
-  "readinessChecks": [
-    {
-      "name": "myReadyCheck",
-      "protocol": "HTTP",
-      "path": "/v1/plan"
-      "portName": "http"
-      "interval": 10000,
-      "timeout": 10000,
-      "httpStatusCodesForReady": [ 200 ],
-      "preserveLastResponse": false
-    }
-  ],
   "labels": {
     "owner": "zeus",
     "note": "Away from olympus"
@@ -1923,7 +1736,7 @@
   ],
   "portDefinitions": [
     {
-      "port": 0,
+      "port": 0
       "protocol": "tcp",
       "name": "http",
       "labels": { "vip": "192.168.0.1:80" }
@@ -1940,7 +1753,7 @@
   ],
   "user": "root"
 }
-</code></pre></div><div class="tab-pane" id="v2_apps__app_id__put_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+</code></pre></div><div class="tab-pane" id="v2_apps__app_id__put_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -1963,7 +1776,7 @@
     }
   ]
 }
-</code></pre></div></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_apps__app_id__delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent">/v2/apps</span>/{app_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Destroy an application. All data about that application will be deleted. Note&#58; This operation will create a deployment. The operation finishes, if the deployment succeeds. You can query the deployments endoint to see the status of the deployment.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_apps__app_id__delete_request" data-toggle="tab">Request</a></li><li><a href="#v2_apps__app_id__delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_apps__app_id__delete_request"><h3>URI Parameters</h3><ul><li><strong>app_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul></div><div class="tab-pane" id="v2_apps__app_id__delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+</code></pre></div></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_apps__app_id__delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent">/v2/apps</span>/{app_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Destroy an application. All data about that application will be deleted. Note&#58; This operation will create a deployment. The operation finishes, if the deployment succeeds. You can query the deployments endoint to see the status of the deployment.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_apps__app_id__delete_request" data-toggle="tab">Request</a></li><li><a href="#v2_apps__app_id__delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_apps__app_id__delete_request"><h3>URI Parameters</h3><ul><li><strong>app_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul></div><div class="tab-pane" id="v2_apps__app_id__delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -1974,7 +1787,7 @@
  "message":"App is locked by one or more deployments. Override with the option &#39;?force=true&#39;. View details at &#39;/v2/deployments/&lt;DEPLOYMENT_ID&gt;&#39;.",
  "deployments":[{"id":"97c136bf-5a28-4821-9d94-480d9fbb01c8"}]
 }
-</code></pre></div></div></div></div></div></div></div><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_apps__app_id__restart"><span class="parent">/v2/apps/{app_id}</span>/restart</a> <span class="methods"><a href="#v2_apps__app_id__restart_post"><span class="badge badge_post">post</span></a></span></h4></div><div id="panel_v2_apps__app_id__restart" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_apps__app_id__restart_post'" class="list-group-item"><span class="badge badge_post">post</span><div class="method_description"><p>Restart all tasks of this application.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_apps__app_id__restart_post"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_post">post</span> <span class="parent">/v2/apps/{app_id}</span>/restart</h4></div><div class="modal-body"><div class="alert alert-info"><p>Restart all tasks of this application.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_apps__app_id__restart_post_request" data-toggle="tab">Request</a></li><li><a href="#v2_apps__app_id__restart_post_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_apps__app_id__restart_post_request"><h3>URI Parameters</h3><ul><li><strong>app_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul></div><div class="tab-pane" id="v2_apps__app_id__restart_post_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+</code></pre></div></div></div></div></div></div></div><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_apps__app_id__restart"><span class="parent">/v2/apps/{app_id}</span>/restart</a> <span class="methods"><a href="#v2_apps__app_id__restart_post"><span class="badge badge_post">post</span></a></span></h4></div><div id="panel_v2_apps__app_id__restart" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_apps__app_id__restart_post'" class="list-group-item"><span class="badge badge_post">post</span><div class="method_description"><p>Restart all tasks of this application.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_apps__app_id__restart_post"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_post">post</span> <span class="parent">/v2/apps/{app_id}</span>/restart</h4></div><div class="modal-body"><div class="alert alert-info"><p>Restart all tasks of this application.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_apps__app_id__restart_post_request" data-toggle="tab">Request</a></li><li><a href="#v2_apps__app_id__restart_post_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_apps__app_id__restart_post_request"><h3>URI Parameters</h3><ul><li><strong>app_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul></div><div class="tab-pane" id="v2_apps__app_id__restart_post_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -2000,8 +1813,7 @@
       "version": "2015-04-17T04:00:14.171Z"
     }
   ]
-}
-</code></pre><p><strong>Type: text/plain</strong></p><p><strong>Example</strong>:</p><pre><code>minecraft_survival-world	10013	srv7.hw.ca1.mesosphere.com:31756
+}</code></pre><p><strong>Type: text/plain</strong></p><p><strong>Example</strong>:</p><pre><code>minecraft_survival-world	10013	srv7.hw.ca1.mesosphere.com:31756
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/404" target="_blank">404</a></h2><p>No task found with this <code>app_id</code>.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "App &#39;/not_existent&#39; does not exist" }
@@ -2020,8 +1832,7 @@
       "version": "2015-04-17T04:00:14.171Z"
     }
   ]
-}
-</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
+}</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/404" target="_blank">404</a></h2><p>No task found with this <code>app_id</code>.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "App &#39;/not_existent&#39; does not exist" }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/409" target="_blank">409</a></h2><p>There is an already running deployment, that affects this application. To override this deployment, use the force=true flag</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
@@ -2043,8 +1854,7 @@
       "version": "2015-04-17T04:00:14.171Z"
     }
   ]
-}
-</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
+}</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/404" target="_blank">404</a></h2><p>No task found with this task_id.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{"message":"Task &#39;not-existing&#39; does not exist"}
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/409" target="_blank">409</a></h2><p>There is an already running deployment, that affects this application. To override this deployment, use the force=true flag</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
@@ -2130,18 +1940,6 @@
       "timeoutSeconds": 20
     }
   ],
-  "readinessChecks": [
-    {
-      "name": "myReadyCheck",
-      "protocol": "HTTP",
-      "path": "/v1/plan"
-      "portName": "http"
-      "interval": 10000,
-      "timeout": 10000,
-      "httpStatusCodesForReady": [ 200 ],
-      "preserveLastResponse": false
-    }
-  ],
   "labels": {
     "owner": "zeus",
     "note": "Away from olympus"
@@ -2169,7 +1967,7 @@
   ],
   "portDefinitions": [
     {
-      "port": 0,
+      "port": 0
       "protocol": "tcp",
       "name": "http",
       "labels": { "vip": "192.168.0.1:80" }
@@ -2213,35 +2011,22 @@
     "currentActions": [
       {
         "action": "ScaleApplication",
-        "app": "/foo",
-        "readinessChecks": [
-          {
-            "lastResponse": {
-              "body": "{}",
-              "contentType": "application/json",
-              "status": 500
-            },
-            "name": "myReadyCheck",
-            "ready": false,
-            "taskId": "foo.c9de6033"
-          }
-        ]
+        "app": "/foo"
       }
     ],
     "currentStep": 2,
     "totalSteps": 2
   }
-]
-</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
+]</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
-</code></pre></div></div></div></div></div></div></div><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_deployments__deployment_id_"><span class="parent">/v2/deployments</span>/{deployment_id}</a> <span class="methods"><a href="#v2_deployments__deployment_id__delete"><span class="badge badge_delete">delete</span></a></span></h4></div><div id="panel_v2_deployments__deployment_id_" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_deployments__deployment_id__delete'" class="list-group-item"><span class="badge badge_delete">delete</span><div class="method_description"><p>Revert the deployment with <code>deployment_id</code> by creating a new deployment which reverses all changes.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_deployments__deployment_id__delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent">/v2/deployments</span>/{deployment_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Revert the deployment with <code>deployment_id</code> by creating a new deployment which reverses all changes.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_deployments__deployment_id__delete_request" data-toggle="tab">Request</a></li><li><a href="#v2_deployments__deployment_id__delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_deployments__deployment_id__delete_request"><h3>URI Parameters</h3><ul><li><strong>deployment_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>If set to <code>false</code> (the default) then the deployment is canceled and a new deployment is created to revert the changes of this deployment. Without concurrent deployments, this restores the configuration before this deployment. If set to <code>true</code>, then the deployment is still canceled but no rollback deployment is created.</p></li></ul></div><div class="tab-pane" id="v2_deployments__deployment_id__delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+</code></pre></div></div></div></div></div></div></div><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_deployments__deployment_id_"><span class="parent">/v2/deployments</span>/{deployment_id}</a> <span class="methods"><a href="#v2_deployments__deployment_id__delete"><span class="badge badge_delete">delete</span></a></span></h4></div><div id="panel_v2_deployments__deployment_id_" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_deployments__deployment_id__delete'" class="list-group-item"><span class="badge badge_delete">delete</span><div class="method_description"><p>Revert the deployment with <code>deployment_id</code> by creating a new deployment which reverses all changes.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_deployments__deployment_id__delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent">/v2/deployments</span>/{deployment_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Revert the deployment with <code>deployment_id</code> by creating a new deployment which reverses all changes.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_deployments__deployment_id__delete_request" data-toggle="tab">Request</a></li><li><a href="#v2_deployments__deployment_id__delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_deployments__deployment_id__delete_request"><h3>URI Parameters</h3><ul><li><strong>deployment_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>If set to <code>false</code> (the default) then the deployment is canceled and a new deployment is created to revert the changes of this deployment. Without concurrent deployments, this restores the configuration before this deployment. If set to <code>true</code>, then the deployment is still canceled but no rollback deployment is created.</p></li></ul></div><div class="tab-pane" id="v2_deployments__deployment_id__delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/202" target="_blank">202</a></h2><p>If the force flag is set to true, the deployment is canceled and no new deployment is triggered. In this case no body is returned.</p><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/404" target="_blank">404</a></h2><p>The deployment plan with the given id can not be found.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "DeploymentPlan unknown_deployment does not exist" }
-</code></pre></div></div></div></div></div></div></div></div></div></div><div class="panel panel-default"><div class="panel-heading"><h3 id="v2_groups" class="panel-title">/v2/groups</h3></div><div class="panel-body"><div class="panel-group"><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_groups"><span class="parent"></span>/v2/groups</a> <span class="methods"><a href="#v2_groups_get"><span class="badge badge_get">get</span></a> <a href="#v2_groups_put"><span class="badge badge_put">put</span></a> <a href="#v2_groups_post"><span class="badge badge_post">post</span></a> <a href="#v2_groups_delete"><span class="badge badge_delete">delete</span></a></span></h4></div><div id="panel_v2_groups" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_groups_get'" class="list-group-item"><span class="badge badge_get">get</span><div class="method_description"><p>Get the group with all applications and all transitive child groups.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups_put'" class="list-group-item"><span class="badge badge_put">put</span><div class="method_description"><p>Change parameters of a deployed application group. The new group parameters get applied.</p><ul><li>Changes to application parameters will result in a restart of this application.</li><li>A new application added to the group will be started.</li><li>An existing application removed from the group will be stopped.</li></ul><p>If there are no changes to the application definition, no restart is triggered. During restart marathon keeps track, that the configured amount of minimal running instances are <em>always</em> available. This method allows 2 special modes for the update operation&gt;</p><ul><li>Provide only the <code>version</code> field in the group definition. This will rollback the group to that given version</li><li>Provide only the <code>scaleBy</code> field will scale all transitive applications instance counts by the given factor.</li></ul><p>When one of version or scaleBy are set, nothing else than a version change or transitive instance count scaling will be applied. If both version and scaleBy are set, only a version rollback will be performed – the scaleBy value will not be applied. A deployment can run forever. This is the case, when the new application has a problem and does not become healthy. In this case, human interaction is needed with 2 possible choices</p><ul><li>Rollback to an existing older version</li><li>Update with a newer version of the group which does not have the problems of the old one.</li></ul><p>Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version. The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with the given version.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups_post'" class="list-group-item"><span class="badge badge_post">post</span><div class="method_description"><p>Create and start a new application group. Application groups can contain other application groups.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups_delete'" class="list-group-item"><span class="badge badge_delete">delete</span><div class="method_description"><p>Destroy a group. All data about that group and all associated applications will be deleted. The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with the given version.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups_get"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_get">get</span> <span class="parent"></span>/v2/groups</h4></div><div class="modal-body"><div class="alert alert-info"><p>Get the group with all applications and all transitive child groups.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups_get_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups_get_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups_get_request"><h3>Query Parameters</h3><ul><li><strong>embed</strong>: <em>(one of group.groups, group.apps, group.apps.tasks, group.apps.count, group.apps.deployments, group.apps.lastTaskFailure, group.apps.failures, group.apps.taskStats - repeat: true)</em><p>Embeds nested resources that match the supplied path. You can specify this parameter multiple times with different values. Unknown embed parameters are ignored. If you omit this parameter, it defaults to <code>group.groups</code>, <code>group.apps</code></p><ul><li><code>group.groups</code> embed all child groups of each group<br></li><li><code>group.apps</code> embed all apps of each group<br></li><li><code>group.apps.tasks</code> embed all tasks of each application<br></li><li><code>group.apps.counts</code> embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy)<br></li><li><code>group.apps.deployments</code> embed all deployment identifier, if the related app currently is in deployment.</li><li><code>group.apps.readiness</code> embed all readiness check results</li><li><code>group.apps.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.</li><li><code>group.apps.taskStats</code> exposes task statistics in the JSON.</li></ul><p><strong>Example</strong>:</p><pre>group.apps</pre></li></ul></div><div class="tab-pane" id="v2_groups_get_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>The group with all transitive dependencies.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Schema</strong>:</p><pre><code>{
+</code></pre></div></div></div></div></div></div></div></div></div></div><div class="panel panel-default"><div class="panel-heading"><h3 id="v2_groups" class="panel-title">/v2/groups</h3></div><div class="panel-body"><div class="panel-group"><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_groups"><span class="parent"></span>/v2/groups</a> <span class="methods"><a href="#v2_groups_get"><span class="badge badge_get">get</span></a> <a href="#v2_groups_put"><span class="badge badge_put">put</span></a> <a href="#v2_groups_post"><span class="badge badge_post">post</span></a> <a href="#v2_groups_delete"><span class="badge badge_delete">delete</span></a></span></h4></div><div id="panel_v2_groups" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_groups_get'" class="list-group-item"><span class="badge badge_get">get</span><div class="method_description"><p>Get the group with all applications and all transitive child groups.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups_put'" class="list-group-item"><span class="badge badge_put">put</span><div class="method_description"><p>Change parameters of a deployed application group. The new group parameters get applied.</p><ul><li>Changes to application parameters will result in a restart of this application.</li><li>A new application added to the group will be started.</li><li>An existing application removed from the group will be stopped.</li></ul><p>If there are no changes to the application definition, no restart is triggered. During restart marathon keeps track, that the configured amount of minimal running instances are <em>always</em> available. This method allows 2 special modes for the update operation&gt;</p><ul><li>Provide only the <code>version</code> field in the group definition. This will rollback the group to that given version</li><li>Provide only the <code>scaleBy</code> field will scale all transitive applications instance counts by the given factor.</li></ul><p>When one of version or scaleBy are set, nothing else than a version change or transitive instance count scaling will be applied. If both version and scaleBy are set, only a version rollback will be performed – the scaleBy value will not be applied. A deployment can run forever. This is the case, when the new application has a problem and does not become healthy. In this case, human interaction is needed with 2 possible choices</p><ul><li>Rollback to an existing older version</li><li>Update with a newer version of the group which does not have the problems of the old one.</li></ul><p>Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version. The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with the given version.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups_post'" class="list-group-item"><span class="badge badge_post">post</span><div class="method_description"><p>Create and start a new application group. Application groups can contain other application groups.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups_delete'" class="list-group-item"><span class="badge badge_delete">delete</span><div class="method_description"><p>Destroy a group. All data about that group and all associated applications will be deleted. The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with the given version.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups_get"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_get">get</span> <span class="parent"></span>/v2/groups</h4></div><div class="modal-body"><div class="alert alert-info"><p>Get the group with all applications and all transitive child groups.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups_get_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups_get_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups_get_request"><h3>Query Parameters</h3><ul><li><strong>embed</strong>: <em>(one of group.groups, group.apps, group.apps.tasks, group.apps.count, group.apps.deployments, group.apps.lastTaskFailure, group.apps.failures, group.apps.taskStats - repeat: true)</em><p>Embeds nested resources that match the supplied path. You can specify this parameter multiple times with different values. Unknown embed parameters are ignored. If you omit this parameter, it defaults to <code>group.groups</code>, <code>group.apps</code></p><ul><li><code>group.groups</code> embed all child groups of each group<br></li><li><code>group.apps</code> embed all apps of each group<br></li><li><code>group.apps.tasks</code> embed all tasks of each application<br></li><li><code>group.apps.counts</code> embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy)<br></li><li><code>group.apps.deployments</code> embed all deployment identifier, if the related app currently is in deployment.</li><li><code>group.apps.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.</li><li><code>group.apps.taskStats</code> exposes task statistics in the JSON.</li></ul><p><strong>Example</strong>:</p><pre>group.apps</pre></li></ul></div><div class="tab-pane" id="v2_groups_get_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>The group with all transitive dependencies.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Schema</strong>:</p><pre><code>{
   "$schema": "http://json-schema.org/schema#",
   "id": "https://raw.githubusercontent.com/mesosphere/marathon/master/docs/docs/rest-api/public/api/v2/schema/Group.json",
   "additionalProperties": false,
@@ -2289,8 +2074,7 @@
   "required": [
     "id"
   ]
-}
-</code></pre><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre><p><strong>Example</strong>:</p><pre><code>{
   "id": "/",
   "apps": [],
   "groups": [
@@ -2491,8 +2275,7 @@
   ],
   "dependencies": [],
   "version": "2015-09-17T10:38:20.875Z"
-}
-</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
+}</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre></div></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups_put"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_put">put</span> <span class="parent"></span>/v2/groups</h4></div><div class="modal-body"><div class="alert alert-info"><p>Change parameters of a deployed application group. The new group parameters get applied.</p><ul><li>Changes to application parameters will result in a restart of this application.</li><li>A new application added to the group will be started.</li><li>An existing application removed from the group will be stopped.</li></ul><p>If there are no changes to the application definition, no restart is triggered. During restart marathon keeps track, that the configured amount of minimal running instances are <em>always</em> available. This method allows 2 special modes for the update operation&gt;</p><ul><li>Provide only the <code>version</code> field in the group definition. This will rollback the group to that given version</li><li>Provide only the <code>scaleBy</code> field will scale all transitive applications instance counts by the given factor.</li></ul><p>When one of version or scaleBy are set, nothing else than a version change or transitive instance count scaling will be applied. If both version and scaleBy are set, only a version rollback will be performed – the scaleBy value will not be applied. A deployment can run forever. This is the case, when the new application has a problem and does not become healthy. In this case, human interaction is needed with 2 possible choices</p><ul><li>Rollback to an existing older version</li><li>Update with a newer version of the group which does not have the problems of the old one.</li></ul><p>Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version. The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with the given version.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups_put_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups_put_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups_put_request"><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Schema</strong>:</p><pre><code>{
   "$schema": "http://json-schema.org/schema#",
@@ -2542,8 +2325,7 @@
   "required": [
     "id"
   ]
-}
-</code></pre><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre><p><strong>Example</strong>:</p><pre><code>{
   "id": "/",
   "apps": [],
   "groups": [
@@ -2744,8 +2526,7 @@
   ],
   "dependencies": [],
   "version": "2015-09-17T10:38:20.875Z"
-}
-</code></pre></div><div class="tab-pane" id="v2_groups_put_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre></div><div class="tab-pane" id="v2_groups_put_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -2815,8 +2596,7 @@
   "required": [
     "id"
   ]
-}
-</code></pre><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre><p><strong>Example</strong>:</p><pre><code>{
   "id": "/",
   "apps": [],
   "groups": [
@@ -3017,8 +2797,7 @@
   ],
   "dependencies": [],
   "version": "2015-09-17T10:38:20.875Z"
-}
-</code></pre></div><div class="tab-pane" id="v2_groups_post_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre></div><div class="tab-pane" id="v2_groups_post_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -3037,7 +2816,7 @@
     }
   ]
 }
-</code></pre></div></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups_delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent"></span>/v2/groups</h4></div><div class="modal-body"><div class="alert alert-info"><p>Destroy a group. All data about that group and all associated applications will be deleted. The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with the given version.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups_delete_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups_delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups_delete_request"><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul></div><div class="tab-pane" id="v2_groups_delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+</code></pre></div></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups_delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent"></span>/v2/groups</h4></div><div class="modal-body"><div class="alert alert-info"><p>Destroy a group. All data about that group and all associated applications will be deleted. The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with the given version.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups_delete_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups_delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups_delete_request"><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul></div><div class="tab-pane" id="v2_groups_delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -3050,7 +2829,7 @@
 </code></pre></div></div></div></div></div></div></div><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_groups_versions"><span class="parent">/v2/groups</span>/versions</a> <span class="methods"><a href="#v2_groups_versions_get"><span class="badge badge_get">get</span></a></span></h4></div><div id="panel_v2_groups_versions" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_groups_versions_get'" class="list-group-item"><span class="badge badge_get">get</span><div class="method_description"><p>List all versions the group with the specified path.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups_versions_get"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_get">get</span> <span class="parent">/v2/groups</span>/versions</h4></div><div class="modal-body"><div class="alert alert-info"><p>List all versions the group with the specified path.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups_versions_get_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups_versions_get_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>List all available versions of that group.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>[ "2015-09-25T15:13:48.343Z", "2015-09-11T11:11:22.692Z", "2015-09-11T10:47:21.241Z" ]
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
-</code></pre></div></div></div></div></div></div></div></div></div></div><div class="panel panel-default"><div class="panel-heading"><h3 id="v2_groups__group_id_" class="panel-title">/v2/groups/{group_id}</h3></div><div class="panel-body"><div class="panel-group"><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_groups__group_id_"><span class="parent"></span>/v2/groups/{group_id}</a> <span class="methods"><a href="#v2_groups__group_id__get"><span class="badge badge_get">get</span></a> <a href="#v2_groups__group_id__put"><span class="badge badge_put">put</span></a> <a href="#v2_groups__group_id__post"><span class="badge badge_post">post</span></a> <a href="#v2_groups__group_id__delete"><span class="badge badge_delete">delete</span></a></span></h4></div><div id="panel_v2_groups__group_id_" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_groups__group_id__get'" class="list-group-item"><span class="badge badge_get">get</span><div class="method_description"><p>Get the group with all applications and all transitive child groups.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups__group_id__put'" class="list-group-item"><span class="badge badge_put">put</span><div class="method_description"><p>Change parameters of a deployed application group. The new group parameters get applied.</p><ul><li>Changes to application parameters will result in a restart of this application.</li><li>A new application added to the group will be started.</li><li>An existing application removed from the group will be stopped.</li></ul><p>If there are no changes to the application definition, no restart is triggered. During restart marathon keeps track, that the configured amount of minimal running instances are <em>always</em> available. This method allows 2 special modes for the update operation&gt;</p><ul><li>Provide only the <code>version</code> field in the group definition. This will rollback the group to that given version</li><li>Provide only the <code>scaleBy</code> field will scale all transitive applications instance counts by the given factor.</li></ul><p>When one of version or scaleBy are set, nothing else than a version change or transitive instance count scaling will be applied. If both version and scaleBy are set, only a version rollback will be performed – the scaleBy value will not be applied. A deployment can run forever. This is the case, when the new application has a problem and does not become healthy. In this case, human interaction is needed with 2 possible choices</p><ul><li>Rollback to an existing older version</li><li>Update with a newer version of the group which does not have the problems of the old one.</li></ul><p>Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version. The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with the given version.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups__group_id__post'" class="list-group-item"><span class="badge badge_post">post</span><div class="method_description"><p>Create and start a new application group. Application groups can contain other application groups.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups__group_id__delete'" class="list-group-item"><span class="badge badge_delete">delete</span><div class="method_description"><p>Destroy a group. All data about that group and all associated applications will be deleted. The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with the given version.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups__group_id__get"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_get">get</span> <span class="parent"></span>/v2/groups/{group_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Get the group with all applications and all transitive child groups.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups__group_id__get_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups__group_id__get_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups__group_id__get_request"><h3>URI Parameters</h3><ul><li><strong>group_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>embed</strong>: <em>(one of group.groups, group.apps, group.apps.tasks, group.apps.count, group.apps.deployments, group.apps.lastTaskFailure, group.apps.failures, group.apps.taskStats - repeat: true)</em><p>Embeds nested resources that match the supplied path. You can specify this parameter multiple times with different values. Unknown embed parameters are ignored. If you omit this parameter, it defaults to <code>group.groups</code>, <code>group.apps</code></p><ul><li><code>group.groups</code> embed all child groups of each group<br></li><li><code>group.apps</code> embed all apps of each group<br></li><li><code>group.apps.tasks</code> embed all tasks of each application<br></li><li><code>group.apps.counts</code> embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy)<br></li><li><code>group.apps.deployments</code> embed all deployment identifier, if the related app currently is in deployment.</li><li><code>group.apps.readiness</code> embed all readiness check results</li><li><code>group.apps.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.</li><li><code>group.apps.taskStats</code> exposes task statistics in the JSON.</li></ul><p><strong>Example</strong>:</p><pre>group.apps</pre></li></ul></div><div class="tab-pane" id="v2_groups__group_id__get_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>The group with all transitive dependencies.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Schema</strong>:</p><pre><code>{
+</code></pre></div></div></div></div></div></div></div></div></div></div><div class="panel panel-default"><div class="panel-heading"><h3 id="v2_groups__group_id_" class="panel-title">/v2/groups/{group_id}</h3></div><div class="panel-body"><div class="panel-group"><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_groups__group_id_"><span class="parent"></span>/v2/groups/{group_id}</a> <span class="methods"><a href="#v2_groups__group_id__get"><span class="badge badge_get">get</span></a> <a href="#v2_groups__group_id__put"><span class="badge badge_put">put</span></a> <a href="#v2_groups__group_id__post"><span class="badge badge_post">post</span></a> <a href="#v2_groups__group_id__delete"><span class="badge badge_delete">delete</span></a></span></h4></div><div id="panel_v2_groups__group_id_" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_groups__group_id__get'" class="list-group-item"><span class="badge badge_get">get</span><div class="method_description"><p>Get the group with all applications and all transitive child groups.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups__group_id__put'" class="list-group-item"><span class="badge badge_put">put</span><div class="method_description"><p>Change parameters of a deployed application group. The new group parameters get applied.</p><ul><li>Changes to application parameters will result in a restart of this application.</li><li>A new application added to the group will be started.</li><li>An existing application removed from the group will be stopped.</li></ul><p>If there are no changes to the application definition, no restart is triggered. During restart marathon keeps track, that the configured amount of minimal running instances are <em>always</em> available. This method allows 2 special modes for the update operation&gt;</p><ul><li>Provide only the <code>version</code> field in the group definition. This will rollback the group to that given version</li><li>Provide only the <code>scaleBy</code> field will scale all transitive applications instance counts by the given factor.</li></ul><p>When one of version or scaleBy are set, nothing else than a version change or transitive instance count scaling will be applied. If both version and scaleBy are set, only a version rollback will be performed – the scaleBy value will not be applied. A deployment can run forever. This is the case, when the new application has a problem and does not become healthy. In this case, human interaction is needed with 2 possible choices</p><ul><li>Rollback to an existing older version</li><li>Update with a newer version of the group which does not have the problems of the old one.</li></ul><p>Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version. The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with the given version.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups__group_id__post'" class="list-group-item"><span class="badge badge_post">post</span><div class="method_description"><p>Create and start a new application group. Application groups can contain other application groups.</p></div><div class="clearfix"></div></div><div onclick="window.location.href = '#v2_groups__group_id__delete'" class="list-group-item"><span class="badge badge_delete">delete</span><div class="method_description"><p>Destroy a group. All data about that group and all associated applications will be deleted. The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with the given version.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups__group_id__get"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_get">get</span> <span class="parent"></span>/v2/groups/{group_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Get the group with all applications and all transitive child groups.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups__group_id__get_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups__group_id__get_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups__group_id__get_request"><h3>URI Parameters</h3><ul><li><strong>group_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>embed</strong>: <em>(one of group.groups, group.apps, group.apps.tasks, group.apps.count, group.apps.deployments, group.apps.lastTaskFailure, group.apps.failures, group.apps.taskStats - repeat: true)</em><p>Embeds nested resources that match the supplied path. You can specify this parameter multiple times with different values. Unknown embed parameters are ignored. If you omit this parameter, it defaults to <code>group.groups</code>, <code>group.apps</code></p><ul><li><code>group.groups</code> embed all child groups of each group<br></li><li><code>group.apps</code> embed all apps of each group<br></li><li><code>group.apps.tasks</code> embed all tasks of each application<br></li><li><code>group.apps.counts</code> embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy)<br></li><li><code>group.apps.deployments</code> embed all deployment identifier, if the related app currently is in deployment.</li><li><code>group.apps.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.</li><li><code>group.apps.taskStats</code> exposes task statistics in the JSON.</li></ul><p><strong>Example</strong>:</p><pre>group.apps</pre></li></ul></div><div class="tab-pane" id="v2_groups__group_id__get_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>The group with all transitive dependencies.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Schema</strong>:</p><pre><code>{
   "$schema": "http://json-schema.org/schema#",
   "id": "https://raw.githubusercontent.com/mesosphere/marathon/master/docs/docs/rest-api/public/api/v2/schema/Group.json",
   "additionalProperties": false,
@@ -3098,8 +2877,7 @@
   "required": [
     "id"
   ]
-}
-</code></pre><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre><p><strong>Example</strong>:</p><pre><code>{
   "id": "/",
   "apps": [],
   "groups": [
@@ -3300,8 +3078,7 @@
   ],
   "dependencies": [],
   "version": "2015-09-17T10:38:20.875Z"
-}
-</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
+}</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre></div></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups__group_id__put"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_put">put</span> <span class="parent"></span>/v2/groups/{group_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Change parameters of a deployed application group. The new group parameters get applied.</p><ul><li>Changes to application parameters will result in a restart of this application.</li><li>A new application added to the group will be started.</li><li>An existing application removed from the group will be stopped.</li></ul><p>If there are no changes to the application definition, no restart is triggered. During restart marathon keeps track, that the configured amount of minimal running instances are <em>always</em> available. This method allows 2 special modes for the update operation&gt;</p><ul><li>Provide only the <code>version</code> field in the group definition. This will rollback the group to that given version</li><li>Provide only the <code>scaleBy</code> field will scale all transitive applications instance counts by the given factor.</li></ul><p>When one of version or scaleBy are set, nothing else than a version change or transitive instance count scaling will be applied. If both version and scaleBy are set, only a version rollback will be performed – the scaleBy value will not be applied. A deployment can run forever. This is the case, when the new application has a problem and does not become healthy. In this case, human interaction is needed with 2 possible choices</p><ul><li>Rollback to an existing older version</li><li>Update with a newer version of the group which does not have the problems of the old one.</li></ul><p>Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version. The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with the given version.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups__group_id__put_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups__group_id__put_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups__group_id__put_request"><h3>URI Parameters</h3><ul><li><strong>group_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Schema</strong>:</p><pre><code>{
   "$schema": "http://json-schema.org/schema#",
@@ -3351,8 +3128,7 @@
   "required": [
     "id"
   ]
-}
-</code></pre><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre><p><strong>Example</strong>:</p><pre><code>{
   "id": "/",
   "apps": [],
   "groups": [
@@ -3553,8 +3329,7 @@
   ],
   "dependencies": [],
   "version": "2015-09-17T10:38:20.875Z"
-}
-</code></pre></div><div class="tab-pane" id="v2_groups__group_id__put_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre></div><div class="tab-pane" id="v2_groups__group_id__put_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -3624,8 +3399,7 @@
   "required": [
     "id"
   ]
-}
-</code></pre><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre><p><strong>Example</strong>:</p><pre><code>{
   "id": "/",
   "apps": [],
   "groups": [
@@ -3826,8 +3600,7 @@
   ],
   "dependencies": [],
   "version": "2015-09-17T10:38:20.875Z"
-}
-</code></pre></div><div class="tab-pane" id="v2_groups__group_id__post_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+}</code></pre></div><div class="tab-pane" id="v2_groups__group_id__post_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -3846,7 +3619,7 @@
     }
   ]
 }
-</code></pre></div></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups__group_id__delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent"></span>/v2/groups/{group_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Destroy a group. All data about that group and all associated applications will be deleted. The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with the given version.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups__group_id__delete_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups__group_id__delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups__group_id__delete_request"><h3>URI Parameters</h3><ul><li><strong>group_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul></div><div class="tab-pane" id="v2_groups__group_id__delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, it means that it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
+</code></pre></div></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_groups__group_id__delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent"></span>/v2/groups/{group_id}</h4></div><div class="modal-body"><div class="alert alert-info"><p>Destroy a group. All data about that group and all associated applications will be deleted. The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with the given version.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_groups__group_id__delete_request" data-toggle="tab">Request</a></li><li><a href="#v2_groups__group_id__delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_groups__group_id__delete_request"><h3>URI Parameters</h3><ul><li><strong>group_id</strong>: <em>required (string)</em></li></ul><h3>Query Parameters</h3><ul><li><strong>force</strong>: <em>(boolean)</em><p>Only one deployment can be applied to one application at the same time. If the existing deployment should be canceled by this change, you can set force=true. Caution&#58; setting force=true will cancel the current deployment. This paramter should be used only, if the current deployment is unsuccessful!</p></li></ul></div><div class="tab-pane" id="v2_groups__group_id__delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>A deployment is started which has a unique deployment identifier. The related deployment can be fetched from the /v2/deployments endpoint. If the deployement is gone from the list of deployments, than this means it is finished. As long as the deployment runs, the effect of that change operation is visible only partially.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "deploymentId": "5ed4c0c5-9ff8-4a6f-a0cd-f57f59a34b43",
   "version": "2015-09-29T15:59:51.164Z"
 }
@@ -4166,8 +3939,7 @@ data: {"slaveId":"20150707-153709-201330860-5050-12052-S0","taskId":"test-app.5d
       }
     }
   ]
-}
-</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
+}</code></pre><h2>HTTP status code <a href="http://httpstatus.es/401" target="_blank">401</a></h2><p>Unauthorized. Authentication is enabled and you did not provide enough or wrong information to authenticate that request.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Invalid username or password." }
 </code></pre><h2>HTTP status code <a href="http://httpstatus.es/403" target="_blank">403</a></h2><p>Forbidden. Authorization is granted but the identity provided does not have sufficient access rights to do that action.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{ "message": "Not Authorized to perform this action!" }
 </code></pre></div></div></div></div></div></div></div><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_v2_queue__app_id__delay"><span class="parent">/v2/queue</span>/{app_id}/delay</a> <span class="methods"><a href="#v2_queue__app_id__delay_delete"><span class="badge badge_delete">delete</span></a></span></h4></div><div id="panel_v2_queue__app_id__delay" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#v2_queue__app_id__delay_delete'" class="list-group-item"><span class="badge badge_delete">delete</span><div class="method_description"><p>If an application fails too often in a specified amount of time (according to the application definition), the task launch will be delayed. This delay can be removed by calling this endpoint. The effect is, that the tasks of this application will be launched immediately.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="v2_queue__app_id__delay_delete"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_delete">delete</span> <span class="parent">/v2/queue</span>/{app_id}/delay</h4></div><div class="modal-body"><div class="alert alert-info"><p>If an application fails too often in a specified amount of time (according to the application definition), the task launch will be delayed. This delay can be removed by calling this endpoint. The effect is, that the tasks of this application will be launched immediately.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#v2_queue__app_id__delay_delete_request" data-toggle="tab">Request</a></li><li><a href="#v2_queue__app_id__delay_delete_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="v2_queue__app_id__delay_delete_request"><h3>URI Parameters</h3><ul><li><strong>app_id</strong>: <em>required (string)</em></li></ul></div><div class="tab-pane" id="v2_queue__app_id__delay_delete_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>the delay is reset and no body is returned</p><h2>HTTP status code <a href="http://httpstatus.es/404" target="_blank">404</a></h2><p>there is no delay for the given application with id <code>app_id</code></p></div></div></div></div></div></div></div></div></div></div><div class="panel panel-default"><div class="panel-heading"><h3 id="ping" class="panel-title">/ping</h3></div><div class="panel-body"><div class="panel-group"><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_ping"><span class="parent"></span>/ping</a> <span class="methods"><a href="#ping_get"><span class="badge badge_get">get</span></a></span></h4></div><div id="panel_ping" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#ping_get'" class="list-group-item"><span class="badge badge_get">get</span><div class="method_description"><p>Ping this Marathon instance.</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="ping_get"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_get">get</span> <span class="parent"></span>/ping</h4></div><div class="modal-body"><div class="alert alert-info"><p>Ping this Marathon instance.</p></div><ul class="nav nav-tabs"><li class="active"><a href="#ping_get_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="ping_get_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>Every ping is answered with a pong.</p><h3>Body</h3><p><strong>Type: text/plain</strong></p><p><strong>Example</strong>:</p><pre><code>pong</code></pre></div></div></div></div></div></div></div></div></div></div><div class="panel panel-default"><div class="panel-heading"><h3 id="metrics" class="panel-title">/metrics</h3></div><div class="panel-body"><div class="panel-group"><div class="panel panel-white"><div class="panel-heading"><h4 class="panel-title"><a class="collapsed" data-toggle="collapse" href="#panel_metrics"><span class="parent"></span>/metrics</a> <span class="methods"><a href="#metrics_get"><span class="badge badge_get">get</span></a></span></h4></div><div id="panel_metrics" class="panel-collapse collapse"><div class="panel-body"><div class="list-group"><div onclick="window.location.href = '#metrics_get'" class="list-group-item"><span class="badge badge_get">get</span><div class="method_description"><p>Get metrics data from this Marathon instance</p></div><div class="clearfix"></div></div></div></div></div><div class="modal fade" tabindex="0" id="metrics_get"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="myModalLabel"><span class="badge badge_get">get</span> <span class="parent"></span>/metrics</h4></div><div class="modal-body"><div class="alert alert-info"><p>Get metrics data from this Marathon instance</p></div><ul class="nav nav-tabs"><li class="active"><a href="#metrics_get_response" data-toggle="tab">Response</a></li></ul><div class="tab-content"><div class="tab-pane active" id="metrics_get_response"><h2>HTTP status code <a href="http://httpstatus.es/200" target="_blank">200</a></h2><p>All aggregated runtime metrics for this Marathon instance.</p><h3>Body</h3><p><strong>Type: application/json</strong></p><p><strong>Example</strong>:</p><pre><code>{
   "counters": {
