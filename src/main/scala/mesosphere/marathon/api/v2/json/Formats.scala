@@ -656,7 +656,9 @@ trait AppAndGroupFormats {
             readinessChecks: Seq[ReadinessCheck]) {
           def upgradeStrategyOrDefault: UpgradeStrategy = {
             import UpgradeStrategy.{ forResidentTasks, empty }
-            upgradeStrategy.getOrElse(if (residency.isDefined) forResidentTasks else empty)
+            upgradeStrategy.getOrElse {
+              if (residency.isDefined || app.externalVolumes.nonEmpty) forResidentTasks else empty
+            }
           }
           def residencyOrDefault: Option[Residency] = {
             residency.orElse(if (app.persistentVolumes.nonEmpty) Some(Residency.defaultResidency) else None)
