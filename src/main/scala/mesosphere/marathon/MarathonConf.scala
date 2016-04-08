@@ -172,7 +172,7 @@ trait MarathonConf
   lazy val taskReservationTimeout = opt[Long]("task_reservation_timeout",
     descr = "Time, in milliseconds, to wait for a new reservation to be acknowledged " +
       "via a received offer before deleting it.",
-    default = Some(10000L)) // 10 seconds
+    default = Some(20000L)) // 20 seconds
 
   lazy val reconciliationInitialDelay = opt[Long]("reconciliation_initial_delay",
     descr = "This is the length of time, in milliseconds, before Marathon " +

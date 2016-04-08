@@ -165,7 +165,7 @@ class TaskOpFactoryImpl @Inject() (
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
       initiated = now,
-      deadline = now + config.taskLaunchTimeout().millis,
+      deadline = now + config.taskReservationTimeout().millis,
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
     val task = Task.Reserved(
