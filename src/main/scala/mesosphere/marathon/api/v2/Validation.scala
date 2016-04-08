@@ -50,6 +50,18 @@ object Validation {
     }
   }
 
+  def mapDescription[T](change: String => String)(wrapped: Validator[T]): Validator[T] = new Validator[T] {
+    override def apply(value: T): Result = {
+      wrapped(value) match {
+        case Success => Success
+        case f: Failure =>
+          Failure(
+            f.violations.map(v => v.description.fold(v)(oldDescription => v.withDescription(change(oldDescription))))
+          )
+      }
+    }
+  }
+
   implicit lazy val failureWrites: Writes[Failure] = Writes { f =>
     Json.obj(
       "message" -> "Object is not valid",
@@ -80,9 +92,13 @@ object Validation {
           p =>
             r.description.map {
               // Error is on object level, having a parent description. Omit 'value', prepend '/' as root.
-              case "value"   => r.withDescription("/" + p)
+              case "value" => r.withDescription("/" + p)
               // Error is on property level, having a parent description. Prepend '/' as root.
-              case s: String => r.withDescription(concatPath("/" + p, r.description, prependSlash))
+              case s: String =>
+                // This was necessary if you validate a sub field, e.g. volume.external.size is valid(...)
+                // generates a description containing "external.size".
+                val slashPath: Some[String] = Some(s.replace('.', '/'))
+                r.withDescription(concatPath("/" + p, slashPath, prependSlash))
               // Error is on unknown level, having a parent description. Prepend '/' as root.
             } getOrElse r.withDescription("/" + p)
         } getOrElse {
@@ -225,12 +241,16 @@ object Validation {
       config.forall(AllConf.suppliedOptionNames)
     }
 
-  def isTrue[T](constraint: String)(test: T => Boolean): Validator[T] = new Validator[T] {
+  def isTrue[T](constraint: String)(test: T => Boolean): Validator[T] = isTrue[T]((_: T) => constraint)(test)
+
+  def isTrue[T](constraint: T => String)(test: T => Boolean): Validator[T] = new Validator[T] {
     import ViolationBuilder._
     override def apply(value: T): Result = {
-      if (test(value)) Success else RuleViolation(value, constraint, None)
+      if (test(value)) Success else RuleViolation(value, constraint(value), None)
     }
   }
+
+  def group(violations: Iterable[Violation]): Result = if (violations.nonEmpty) Failure(violations.to[Set]) else Success
 
   /**
     * For debugging purposes only.

@@ -2,13 +2,14 @@ package mesosphere.marathon.core.externalvolume.impl.providers
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.core.externalvolume.impl.{ExternalVolumeValidations, ExternalVolumeProvider}
+import mesosphere.marathon.core.externalvolume.impl.{ ExternalVolumeValidations, ExternalVolumeProvider }
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.Volume.Mode
 import org.apache.mesos.Protos.{ Volume => MesosVolume, CommandInfo, ContainerInfo, Environment }
 
 import OptionSupport._
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Set
 
 /**
   * DVDIProvider (Docker Volume Driver Interface provider) handles external volumes allocated
@@ -53,6 +54,7 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
   }
 
   val driverOption = "dvdi/driver"
+  val quotedDriverOption = '"' + driverOption + '"'
   val dvdiVolumeContainerPath = "DVDI_VOLUME_CONTAINERPATH"
   val dvdiVolumeName = "DVDI_VOLUME_NAME"
   val dvdiVolumeDriver = "DVDI_VOLUME_DRIVER"
@@ -108,157 +110,114 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
 private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   import mesosphere.marathon.api.v2.Validation._
   import DVDIProvider._
-  import ViolationBuilder._
 
   // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
   // task instance across the entire cluster.
   override lazy val rootGroup = new Validator[Group] {
     override def apply(g: Group): Result = {
-      val appsByVolume = g.transitiveApps.flatMap { app =>
-        app.externalVolumes.flatMap{ vol => nameOf(vol.external).map(_ -> app.id) }
-      }.groupBy[String](_._1).mapValues(_.map(_._2))
+      val appsByVolume =
+        g.transitiveApps
+          .flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }
+          .groupBy { case (volumeName, _) => volumeName }
+          .mapValues(_.map { case (volumeName, appId) => appId })
 
       val groupViolations = g.apps.flatMap { app =>
-        val ruleViolations = app.externalVolumes.flatMap{ vol => nameOf(vol.external) }.flatMap{ name =>
+        val ruleViolations = namesOfMatchingVolumes(app).flatMap { name =>
           for {
             otherApp <- appsByVolume(name)
             if otherApp != app.id // do not compare to self
-          } yield RuleViolation(app.id,
-            s"Requested volume $name conflicts with a volume in app $otherApp", None)
+          } yield RuleViolation(app.id, s"Requested volume $name conflicts with a volume in app $otherApp", None)
         }
         if (ruleViolations.isEmpty) None
         else Some(GroupViolation(app, "app contains conflicting volumes", None, ruleViolations.toSet))
       }
-      if (groupViolations.isEmpty) Success
-      else Failure(groupViolations.toSet)
+      group(groupViolations)
     }
   }
 
-  override lazy val app = validator[AppDefinition] { app =>
-    //app should haveOnlyOneProvider // TODO(jdef) see comments on validator decl below
-    app should haveUniqueExternalVolumeNames
-    app should haveOnlyOneReplica
-    app.container is valid(optional(validContainer))
-    app.upgradeStrategy is valid(validUpgradeStrategy)
+  override lazy val app = {
+    val haveOnlyOneInstance: Validator[AppDefinition] =
+      isTrue[AppDefinition](
+        (app: AppDefinition) => s"Number of instances is limited to 1 when declaring DVDI volumes in app [$app.id]"
+      ) {
+          _.instances <= 1
+        }
+
+    case object haveUniqueExternalVolumeNames extends Validator[AppDefinition] {
+      override def apply(app: AppDefinition): Result = {
+        val conflicts = volumeNameCounts(app).filter { case (volumeName, number) => number > 1 }.keys
+        group(
+          conflicts.toSet[String].map { e =>
+            RuleViolation(app.id, s"Requested DVDI volume '$e' is declared more than once within app ${app.id}", None)
+          }
+        )
+      }
+
+      /** @return a count of volume references-by-name within an app spec */
+      def volumeNameCounts(app: AppDefinition): Map[String, Int] =
+        namesOfMatchingVolumes(app).groupBy(identity).mapValues(_.size)
+    }
+
+    val validContainer = {
+      val validMesosVolume = validator[ExternalVolume] { volume => volume.mode is equalTo(Mode.RW) }
+
+      val validDockerVolume = validator[ExternalVolume] { volume =>
+        volume.external.options is isTrue(s"must only contain $driverOption")(_.filterKeys(_ != driverOption).isEmpty)
+        volume.external.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
+      }
+
+      def ifDVDIVolume(vtor: Validator[ExternalVolume]): Validator[ExternalVolume] = conditional(matchesProvider)(vtor)
+
+      def volumeValidator(`type`: ContainerInfo.Type) = `type` match {
+        case ContainerInfo.Type.MESOS  => validMesosVolume
+        case ContainerInfo.Type.DOCKER => validDockerVolume
+      }
+
+      validator[Container] { ct =>
+        ct.volumes.collect { case ev: ExternalVolume => ev } as "volumes" is
+          every(ifDVDIVolume(volumeValidator(ct.`type`)))
+      }
+    }
+
+    validator[AppDefinition] { app =>
+      app should haveUniqueExternalVolumeNames
+      app should haveOnlyOneInstance
+      app.container is valid(optional(validContainer))
+      app.upgradeStrategy is valid(UpgradeStrategy.validForResidentTasks)
+    }
   }
 
-  override lazy val volume = validator[ExternalVolume] { v =>
-    v.external.name is notEmpty
-    v.external.provider is equalTo(name)
-    v.external.options.get(driverOption) as s"external/options($driverOption)" is definedAnd(validLabel)
-    v.external.options is valid(
-      conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions))
+  override lazy val volume = {
+    def optionalOption(options: Map[String, String], optionValidator: Validator[String]): Validator[String] =
+      validator[String] { optionName => options.get(optionName) is optional(optionValidator) }
+
+    val validRexRayOptions: Validator[Map[String, String]] = {
+      mapDescription(description => s"($description)") {
+        validator[Map[String, String]] { opts =>
+          "dvdi/volumetype" is optionalOption(opts, validLabel)
+          "dvdi/newfstype" is optionalOption(opts, validLabel)
+          "dvdi/iops" is optionalOption(opts, validNaturalNumber)
+          "dvdi/overwritefs" is optionalOption(opts, validBoolean)
+        }
+      }
+    }
+
+    validator[ExternalVolume] { v =>
+      v.external.name is notEmpty
+      v.external.provider is equalTo(name)
+
+      v.external.options.get(driverOption) as s"external/options($quotedDriverOption)" is definedAnd(validLabel)
+      v.external.options as "external/options" is
+        valid(conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions))
+    }
   }
 
   /**
     * @return true if volume has a provider name that matches ours exactly
     */
-  private[this] def accepts(volume: ExternalVolume): Boolean = {
-    volume.external.provider == name
-  }
+  private[this] def matchesProvider(volume: ExternalVolume): Boolean = volume.external.provider == name
 
-  private[this] def optionalOption(opts: Map[String, String], v: Validator[String]): Validator[String] =
-    new Validator[String] {
-      override def apply(optionName: String): Result = {
-        validate(opts.get(optionName))(optional(v)) match {
-          case Success     => Success
-          // we do this to get sane error messages
-          case Failure(vs) => Failure(vs.map(_.withDescription(optionName)))
-        }
-      }
-    }
+  private[this] def namesOfMatchingVolumes(app: AppDefinition): Iterable[String] =
+    app.externalVolumes.filter(matchesProvider).map(_.external.name)
 
-  private[this] lazy val validRexRayOptions: Validator[Map[String, String]] = validator[Map[String, String]] { opts =>
-    // there's probaby a better way to do this; this worked and didn't require me to duplicate option keys
-    "dvdi/volumetype" as "" is valid(optionalOption(opts, validLabel))
-    "dvdi/newfstype" as "" is valid(optionalOption(opts, validLabel))
-    "dvdi/iops" as "" is valid(optionalOption(opts, validNaturalNumber))
-    "dvdi/overwritefs" as "" is valid(optionalOption(opts, validBoolean))
-  }
-
-  private[this] def nameOf(vol: ExternalVolumeInfo): Option[String] = {
-    Some(vol.provider + "::" + vol.name)
-  }
-
-  private[this] case object haveOnlyOneReplica extends Validator[AppDefinition] {
-    override def apply(app: AppDefinition): Result =
-      if (app.externalVolumes.nonEmpty && app.instances > 1)
-        Failure(Set(RuleViolation(app.id,
-          s"Number of instances is limited to 1 when declaring DVDI volumes in app ${app.id}", None
-        )))
-      else Success
-  }
-
-  private[this] case object haveUniqueExternalVolumeNames extends Validator[AppDefinition] {
-    override def apply(app: AppDefinition): Result = {
-      val conflicts = volumeNameCounts(app).filter(_._2 > 1).keys
-      if (conflicts.isEmpty) Success
-      else Failure(conflicts.toSet[String].map { e =>
-        RuleViolation(app.id, s"Requested DVDI volume '$e' is declared more than once within app ${app.id}", None)
-      })
-    }
-  }
-
-  // for now this matches the validation for resident tasks, but probably won't be as
-  // restrictive in the future.
-  private[this] lazy val validUpgradeStrategy = validator[UpgradeStrategy] { strategy =>
-    strategy.minimumHealthCapacity should be <= 0.5
-    strategy.maximumOverCapacity should equalTo(0.0)
-  }
-
-  /** @return a count of volume references-by-name within an app spec */
-  private[this] def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-    app.externalVolumes.flatMap{ v => nameOf(v.external) }.groupBy(identity).mapValues(_.size)
-
-  private[this] lazy val validMesosVolume = validator[ExternalVolume] { v =>
-    v.mode is equalTo(Mode.RW)
-  }
-
-  private[this] lazy val validMesosContainer = validator[Container] { ct =>
-    ct.volumes is every(valid(ifDVDIVolume(validMesosVolume)))
-  }
-
-  /*
-  // TODO(jdef) Unclear where this requirement came from. Seems super-useful to mix and match
-  // volumes from different providers within the same app (we only have 1 right now anyway, but
-  // the limitation imposed by this validator doesn't make sense to me).
-  private[this] case object haveOnlyOneProvider extends Validator[AppDefinition] {
-    override def apply(app: AppDefinition): Result = {
-      val uniqueProviderNames = app.externalVolumes.iterator.map(_.external.provider).toSet
-      val n = uniqueProviderNames.size
-      if (n <= 1) Success
-      else Failure(Set(RuleViolation(n, "one external volume provider per app", None)))
-    }
-  }
-  */
-
-  private[this] case object haveOnlyDriverOption extends Validator[ExternalVolume] {
-    override def apply(v: ExternalVolume): Result =
-      if (v.external.options.filterKeys(_ != driverOption).isEmpty) Success
-      else Failure(Set(RuleViolation(v.external.options, "only contains driver", Some("external.options"))))
-  }
-
-  private[this] lazy val haveNoSize: Validator[ExternalVolume] = new NullSafeValidator(
-    test = _.external.size.isEmpty,
-    failure = v => RuleViolation(v.external.size, "must be undefined for DOCKER container", Some("external/size"))
-  )
-
-  private[this] def ifDVDIVolume(vtor: Validator[ExternalVolume]): Validator[Volume] = new Validator[Volume] {
-    override def apply(v: Volume): Result = v match {
-      case ev: ExternalVolume if accepts(ev) => validate(ev)(vtor)
-      case _                                 => Success
-    }
-  }
-
-  private[this] lazy val validDockerContainer = validator[Container] { ct =>
-    ct.volumes is every(valid(ifDVDIVolume(haveOnlyDriverOption)))
-    ct.volumes is every(valid(ifDVDIVolume(haveNoSize)))
-  }
-
-  private[this] case object validContainer extends Validator[Container] {
-    override def apply(ct: Container): Result = ct.`type` match {
-      case ContainerInfo.Type.MESOS  => validate(ct)(validMesosContainer)
-      case ContainerInfo.Type.DOCKER => validate(ct)(validDockerContainer)
-    }
-  }
 }

@@ -2,6 +2,7 @@ package mesosphere.marathon.core.externalvolume.impl.providers
 
 import com.wix.accord._
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.Volume.Mode
 import org.scalatest.Matchers
