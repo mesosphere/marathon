@@ -15,6 +15,42 @@ import scala.collection.immutable.Seq
 //scalastyle:off number.of.types
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
+  *
+  * <pre>
+          +-----------------------+ +---------------------------------------+
+          +EPHEMERAL              + +               RESIDENT                |
+          +-----------------------+ +---------------------------------------+
+                                     _  _
+            | match offer      ___ (~ )( ~)                  | match
+            | & launch        /   \_\ \/ /                   | offer
+            |                |   D_ ]\ \/                    | & reserve
+            |            +-> |   D _]/\ \   <-+              |
+            |   terminal |    \___/ / /\ \    | confirmed(?) |
+            |     status |         (_ )( _)   | unreserve /  |
+            v     update |       DELETED      | expunge      v
+                         |                    |
+          +--------------+--------+ +---------+---------------+
+          | LaunchedEphemeral     | | Reserved                |
+          |                       | |                         |
+          |  Started / Staged     | |  New / Launched         |
+          |  Running              | |  Suspended / Garbage    |
+          |                       | |  Unknown                | <-+
+          +-----------------------+ +-------------------------+   |
+                                    |                             |
+                                    |   +---------------------+   |
+                        match offer |   |LaunchedOnReservation|   | terminal
+                        & launch    |   |                     |   | status
+                                    |   | Started / Staged    |   | update
+                                    |   | Running             |   |
+                                    +-> |                     +---+
+                                        +---------------------+
+
+  * </pre>
+  *
+  * Note on wiping reserved tasks: It is not fully implemented right now so that
+  * LaunchedOnReservation tasks might get immediately expunged right now.
+  * Marathon will notice spurious tasks in the offer and create the appropriate
+  * unreserve operations. See https://github.com/mesosphere/marathon/issues/3223
   */
 sealed trait Task {
   def taskId: Task.Id
