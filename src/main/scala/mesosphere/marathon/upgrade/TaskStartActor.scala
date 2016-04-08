@@ -17,7 +17,7 @@ class TaskStartActor(
     val status: DeploymentStatus,
     val driver: SchedulerDriver,
     val scheduler: SchedulerActions,
-    val taskQueue: LaunchQueue,
+    val launchQueue: LaunchQueue,
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
@@ -26,11 +26,11 @@ class TaskStartActor(
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
   val nrToStart: Int =
-    scaleTo - taskQueue.get(app.id).map(_.finalTaskCount).getOrElse(taskTracker.countLaunchedAppTasksSync(app.id))
+    scaleTo - launchQueue.get(app.id).map(_.finalTaskCount).getOrElse(taskTracker.countLaunchedAppTasksSync(app.id))
 
   override def initializeStart(): Unit = {
     if (nrToStart > 0)
-      taskQueue.add(app, nrToStart)
+      launchQueue.add(app, nrToStart)
   }
 
   override def postStop(): Unit = {
@@ -56,14 +56,14 @@ object TaskStartActor {
     status: DeploymentStatus,
     driver: SchedulerDriver,
     scheduler: SchedulerActions,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     taskTracker: TaskTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: AppDefinition,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
-    Props(new TaskStartActor(deploymentManager, status, driver, scheduler, taskQueue, taskTracker,
+    Props(new TaskStartActor(deploymentManager, status, driver, scheduler, launchQueue, taskTracker,
       eventBus, readinessCheckExecutor, app, scaleTo, promise)
     )
   }

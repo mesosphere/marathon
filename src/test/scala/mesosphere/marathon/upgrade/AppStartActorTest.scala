@@ -117,7 +117,7 @@ class AppStartActorTest
 
     val driver: SchedulerDriver = mock[SchedulerDriver]
     val scheduler: SchedulerActions = mock[SchedulerActions]
-    val taskQueue: LaunchQueue = mock[LaunchQueue]
+    val launchQueue: LaunchQueue = mock[LaunchQueue]
     val taskTracker: TaskTracker = MarathonTestHelper.createTaskTracker(AlwaysElectedLeadershipModule.forActorSystem(system))
     val deploymentManager: TestProbe = TestProbe()
     val deploymentStatus: DeploymentStatus = mock[DeploymentStatus]
@@ -125,7 +125,7 @@ class AppStartActorTest
 
     def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[AppStartActor] =
       TestActorRef(AppStartActor.props(deploymentManager.ref, deploymentStatus, driver, scheduler,
-        taskQueue, taskTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, promise)
+        launchQueue, taskTracker, system.eventStream, readinessCheckExecutor, app, scaleTo, promise)
       )
   }
 }

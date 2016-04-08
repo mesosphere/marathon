@@ -13,7 +13,7 @@ class TaskQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIn
     marathon.listDeploymentsForBaseGroup().value should have size 0
 
     Then("the task queue should be empty")
-    val response = marathon.taskQueue()
+    val response = marathon.launchQueue()
     response.code should be (200)
 
     val queue = response.value.queue
@@ -29,8 +29,8 @@ class TaskQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIn
     create.code should be (201) // Created
 
     Then("the app shows up in the task queue")
-    WaitTestSupport.waitUntil("Deployment is put in the deployment queue", 30.seconds) { marathon.taskQueue().value.queue.size == 1 }
-    val response = marathon.taskQueue()
+    WaitTestSupport.waitUntil("Deployment is put in the deployment queue", 30.seconds) { marathon.launchQueue().value.queue.size == 1 }
+    val response = marathon.launchQueue()
     response.code should be (200)
 
     val queue = response.value.queue

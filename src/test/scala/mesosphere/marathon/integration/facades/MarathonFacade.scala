@@ -51,7 +51,7 @@ case class ITListDeployments(deployments: Seq[ITDeployment])
 
 case class ITQueueDelay(timeLeftSeconds: Int, overdue: Boolean)
 case class ITQueueItem(app: AppDefinition, count: Int, delay: ITQueueDelay)
-case class ITTaskQueue(queue: List[ITQueueItem])
+case class ITLaunchQueue(queue: List[ITQueueItem])
 
 case class ITDeployment(id: String, affectedApps: Seq[String])
 
@@ -85,7 +85,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   implicit lazy val itListDeploymentsFormat = Json.format[ITListDeployments]
   implicit lazy val itQueueDelayFormat = Json.format[ITQueueDelay]
   implicit lazy val itQueueItemFormat = Json.format[ITQueueItem]
-  implicit lazy val itTaskQueueFormat = Json.format[ITTaskQueue]
+  implicit lazy val itTaskQueueFormat = Json.format[ITLaunchQueue]
 
   implicit lazy val itEnrichedTaskFormat: Format[ITEnrichedTask] = (
     (__ \ "appId").format[String] ~
@@ -314,9 +314,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     result(pipeline(Get(s"$url/v2/info")), waitTime)
   }
 
-  //task queue ------------------------------------------
-  def taskQueue(): RestResult[ITTaskQueue] = {
-    val pipeline = marathonSendReceive ~> read[ITTaskQueue]
+  //launch queue ------------------------------------------
+  def launchQueue(): RestResult[ITLaunchQueue] = {
+    val pipeline = marathonSendReceive ~> read[ITLaunchQueue]
     result(pipeline(Get(s"$url/v2/queue")), waitTime)
   }
 
