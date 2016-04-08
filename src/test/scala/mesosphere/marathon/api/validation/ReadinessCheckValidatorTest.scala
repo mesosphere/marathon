@@ -1,14 +1,16 @@
 package mesosphere.marathon.api.validation
 
 import com.wix.accord.validate
-import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state.PortDefinition
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
+import scala.collection.immutable._
 import scala.concurrent.duration._
 
 class ReadinessCheckValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
+  import mesosphere.marathon.MarathonTestHelper.Implicits._
 
   test("default is valid") {
     Given("a default readiness check instance")
@@ -114,5 +116,10 @@ class ReadinessCheckValidatorTest extends MarathonSpec with Matchers with GivenW
     validate(rc).isFailure shouldBe true
   }
 
-  implicit val readinessCheckValidator = ReadinessCheck.readinessCheckValidator(portDefinitions = Seq(PortDefinition(port = 123, name = Some(ReadinessCheck.DefaultPortName))))
+  val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(
+    Seq(
+      PortDefinition(
+        port = 123,
+        name = Some(ReadinessCheck.DefaultPortName))))
+  implicit val readinessCheckValidator = ReadinessCheck.readinessCheckValidator(app)
 }
