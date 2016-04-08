@@ -13,7 +13,7 @@ When you define a readiness check for an application:
 - Marathon checks a task's readiness once the task has started running.
 - A task is considered _ready_ as soon as Marathon receives a status code from the configured endpoint from the `httpStatusCodesForReady` list.
 - A deployment will only finish when all new tasks are ready.
-- Depending on the application's UpgradeStrategy, old tasks will only be killed if a new task has become ready.
+- Depending on the application's [upgradeStrategy]({{ site.baseurl }}/docs/rest-api.html), old tasks will only be killed if a new task has become ready.
 
 Marathon currently allows one readiness check per application. The readiness check defines an endpoint to be polled for readiness information, as well as which HTTP status codes should be interpreted as _ready_.
 
