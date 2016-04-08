@@ -127,7 +127,8 @@ private[impl] class LaunchQueueActor(
 
   private[this] def receiveMessagesToSuspendedActor: Receive = {
     case msg @ Count(appId) if suspendedLauncherPathIds(appId) =>
-      deferMessageToSuspendedActor(msg, appId)
+      // Deferring this would also block List.
+      sender() ! None
 
     case msg @ Add(app, count) if suspendedLauncherPathIds(app.id) =>
       deferMessageToSuspendedActor(msg, app.id)

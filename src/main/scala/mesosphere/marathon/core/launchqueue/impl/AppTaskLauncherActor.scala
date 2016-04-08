@@ -176,6 +176,7 @@ private class AppTaskLauncherActor(
       if (inFlightTaskOperations.nonEmpty) {
         // try to stop gracefully but also schedule timeout
         import context.dispatcher
+        log.info("schedule timeout for stopping in " + config.taskOpNotificationTimeout().milliseconds)
         context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, PoisonPill)
       }
       waitForInFlightIfNecessary()

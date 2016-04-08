@@ -6,28 +6,30 @@ import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskBusModule
+import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.{ AppRepository, PathId }
 import mesosphere.marathon.test.{ MarathonShutdownHookSupport, Mockito }
 import org.mockito.Matchers
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatchers }
 
-import scala.concurrent.Await
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 
 class LaunchQueueModuleTest
     extends MarathonSpec
     with BeforeAndAfter with GivenWhenThen with MarathonShutdownHookSupport with ScalaTestMatchers
-    with Mockito {
+    with Mockito with ScalaFutures {
 
   test("empty queue returns no results") {
     val f = new Fixture
     import f._
     When("querying queue")
-    val apps = taskQueue.list
+    val apps = launchQueue.list
 
     Then("no apps are returned")
     apps should be(empty)
@@ -41,10 +43,10 @@ class LaunchQueueModuleTest
     import f._
     Given("a task queue with one item")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
-    taskQueue.add(app)
+    launchQueue.add(app)
 
     When("querying its contents")
-    val list = taskQueue.list
+    val list = launchQueue.list
 
     Then("we get back the added app")
     list should have size 1
@@ -64,10 +66,10 @@ class LaunchQueueModuleTest
     import f._
     Given("a task queue with one item")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
-    taskQueue.add(app)
+    launchQueue.add(app)
 
     When("querying its count")
-    val count = taskQueue.count(app.id)
+    val count = launchQueue.count(app.id)
 
     Then("we get a count == 1")
     count should be(1)
@@ -82,11 +84,11 @@ class LaunchQueueModuleTest
     import f._
     Given("a task queue with one item which is purged")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
-    taskQueue.add(app)
-    taskQueue.purge(app.id)
+    launchQueue.add(app)
+    launchQueue.purge(app.id)
 
     When("querying its count")
-    val count = taskQueue.count(app.id)
+    val count = launchQueue.count(app.id)
 
     Then("we get a count == 0")
     count should be (0)
@@ -101,12 +103,12 @@ class LaunchQueueModuleTest
     import f._
     Given("a task queue with one item which is purged")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
-    taskQueue.add(app)
-    taskQueue.purge(app.id)
-    taskQueue.add(app)
+    launchQueue.add(app)
+    launchQueue.purge(app.id)
+    launchQueue.add(app)
 
     When("querying its count")
-    val count = taskQueue.count(app.id)
+    val count = launchQueue.count(app.id)
 
     Then("we get a count == 1")
     count should be(1)
@@ -122,8 +124,8 @@ class LaunchQueueModuleTest
     Given("An empty task tracker")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
 
-    When("Adding an app to the taskQueue")
-    taskQueue.add(app)
+    When("Adding an app to the launchQueue")
+    launchQueue.add(app)
 
     Then("A new offer matcher gets registered")
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
@@ -140,10 +142,10 @@ class LaunchQueueModuleTest
     import f._
     Given("An app in the queue")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
-    taskQueue.add(app)
+    launchQueue.add(app)
 
     When("The app is purged")
-    taskQueue.purge(app.id)
+    launchQueue.purge(app.id)
 
     Then("No offer matchers remain registered")
     offerMatcherManager.offerMatchers should be(empty)
@@ -156,11 +158,10 @@ class LaunchQueueModuleTest
   test("an offer gets unsuccessfully matched against an item in the queue") {
     val f = new Fixture
     import f._
-    val offer = MarathonTestHelper.makeBasicOffer().build()
 
     Given("An app in the queue")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
-    taskQueue.add(app)
+    launchQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
     }
@@ -168,7 +169,7 @@ class LaunchQueueModuleTest
     When("we ask for matching an offer")
     taskOpFactory.buildTaskOp(Matchers.any()) returns None
     val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
-    val matchedTasks = Await.result(matchFuture, 3.seconds)
+    val matchedTasks = matchFuture.futureValue
 
     Then("the offer gets passed to the task factory and respects the answer")
     val request = TaskOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
@@ -185,23 +186,17 @@ class LaunchQueueModuleTest
   test("an offer gets successfully matched against an item in the queue") {
     val f = new Fixture
     import f._
-    val offer = MarathonTestHelper.makeBasicOffer().build()
-    val taskId = Task.Id.forApp(PathId("/test"))
-    val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
-    val marathonTask = MarathonTestHelper.mininimalTask(taskId)
-    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
-
     Given("An app in the queue")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
     taskOpFactory.buildTaskOp(Matchers.any()) returns Some(launch)
-    taskQueue.add(app)
+    launchQueue.add(app)
     WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
       offerMatcherManager.offerMatchers.size == 1
     }
 
     When("we ask for matching an offer")
     val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
-    val matchedTasks = Await.result(matchFuture, 3.seconds)
+    val matchedTasks = matchFuture.futureValue
 
     Then("the offer gets passed to the task factory and respects the answer")
     val request = TaskOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
@@ -215,8 +210,51 @@ class LaunchQueueModuleTest
     f.verifyNoMoreInteractions()
   }
 
+  test("TaskChanged updates are answered immediately for suspended queue entries") {
+    // otherwise we get a deadlock in some cases, see comment in LaunchQueueActor
+    val f = new Fixture
+    import f._
+    Given("An app in the queue")
+    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
+    launchQueue.add(app, 3)
+    WaitTestSupport.waitUntil("registered as offer matcher", 1.second) {
+      offerMatcherManager.offerMatchers.size == 1
+    }
+
+    And("a task gets launched but not confirmed")
+    taskOpFactory.buildTaskOp(Matchers.any()) returns Some(launch)
+    val matchFuture = offerMatcherManager.offerMatchers.head.matchOffer(clock.now() + 3.seconds, offer)
+    matchFuture.futureValue
+
+    And("test app gets purged (but not stopped yet because of in-flight tasks)")
+    Future { launchQueue.purge(app.id) } (ExecutionContext.Implicits.global)
+    WaitTestSupport.waitUntil("purge gets executed", 1.second) {
+      !launchQueue.list.exists(_.app.id == app.id)
+    }
+    reset(taskTracker, taskOpFactory)
+
+    When("we send a related task change")
+    val notificationAck = launchQueue.notifyOfTaskUpdate(taskChanged)
+
+    Then("it returns immediately")
+    notificationAck.futureValue
+
+    And("there should be no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
   class Fixture {
     val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
+
+    val offer = MarathonTestHelper.makeBasicOffer().build()
+    val taskId = Task.Id.forApp(PathId("/test"))
+    val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
+    val marathonTask = MarathonTestHelper.runningTask(taskId.idString)
+    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
+    val taskChanged = TaskChanged(
+      stateOp = TaskStateOp.LaunchEphemeral(marathonTask),
+      stateChange = TaskStateChange.Update(newState = marathonTask, oldState = None)
+    )
 
     lazy val clock: Clock = Clock()
     lazy val taskBusModule: TaskBusModule = new TaskBusModule()
@@ -236,7 +274,7 @@ class LaunchQueueModuleTest
       taskOpFactory
     )
 
-    def taskQueue = module.taskQueue
+    def launchQueue = module.launchQueue
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(appRepository)
