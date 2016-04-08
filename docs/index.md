@@ -35,8 +35,8 @@ Marathon packages are available from Mesosphere's [repositories](http://mesosphe
 Download and unpack the latest Marathon release.
 
 ``` bash
-$ curl -O http://downloads.mesosphere.com/marathon/v1.0.0-RC1/marathon-1.0.0-RC1.tgz
-$ tar xzf marathon-1.0.0-RC1.tgz
+$ curl -O http://downloads.mesosphere.com/marathon/v1.1.0-RC1/marathon-1.1.0-RC1.tgz
+$ tar xzf marathon-1.1.0-RC1.tgz
 ```
 
 SHA-256 checksums are available by appending `.sha256` to the URLs.
