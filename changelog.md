@@ -1,3 +1,60 @@
+## Changes from 1.0.0 to 1.1.0
+
+### Recommended Mesos version is 0.28.0
+
+### Overview
+
+#### Readiness Checks for applications
+
+Marathon already has the concept of health checks, which periodically monitor the health of an application. 
+During deployments and runtime configuration updates, however, you might want a temporary monitor that waits for your application to be _ready_. 
+A temporary monitor can be useful for cache-warming, JIT warming, or a migration. Marathon offers a readiness check for these situations.
+
+Readiness checks are performed only during deployment time after a task has been launched.
+The deployment will wait for the readiness check to succeed, before the deployment continues.
+For easy integration with other tools, the result of the readiness checks is available via the deployments endpoint or the app/group listing.
+We are keen to know what you think about this feature.
+
+#### Support for external volumes (experimental)
+
+Marathon applications normally lose their state when they terminate and are relaunched. 
+In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. 
+You can use an external storage service, such as Amazon's Elastic Block Store (EBS), to create a persistent volume that follows your application instance.
+Using an external storage service allows your apps to be more fault-tolerant. 
+If a host fails, Marathon reschedules your app on another host, along with its associated data, without user intervention.
+
+Please Note that you have to setup your Mesos cluster correctly in order to use this feature.
+
+#### Local Volumes
+
+In prior versions Marathon had to authenticate with Mesos in order to use local volumes.
+While this is still possible, we removed this prerequisite.
+Using this version it is enough to set a framework principal without providing credentials.
+
+### Fixed issues
+
+- #3092 - Delayed applications can appear to be running
+- #3369 - Constraint validation message
+- #3477 - Improve ForceExpunge and restart logic
+- #3519 - The default Docker network should be host
+- #3552 - Editing an App: Switching between JSON and normal Editor produces a broken UX
+- #3564 - Add link to Docker section for Ports
+- #3574 - ResidentTasks: ResourceMatching and Constraints by not considering the volumeMatch's Reserved task when inspecting constraints
+- #3579 - Resident Tasks: Flaky test: restart
+- #3587 - Not specifying "network" config causes mesos to thrash
+- #3597 - Upgrading applications with persistent storage
+- #3612 - Marathon should validate that port names contain only letters and numbers
+- #3614 - Don't allow persistent container paths containing slashes
+- #3624 - Constraints are not working for updating. Respect constraints for same version.
+- #3646 - Liquid Exception in docs 
+- #3652 - Error paths are mapped incorrectly
+- #3654 - PortMapping labels are not being set
+- #3655 - Apps with no volumes reported as stateful
+- #3659 - JSON editor help button does not work in IE11
+- #3663 - Apps created from inside a group have a double forward-slash in their ID
+- #3671 - Scrolling issue with create modal
+
+
 ## Changes from 0.15.3 to 1.0.0
 
 ### Recommended Mesos version is 0.28.0
