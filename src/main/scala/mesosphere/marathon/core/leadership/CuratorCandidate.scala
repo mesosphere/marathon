@@ -23,7 +23,7 @@ class BackwardsCompatibleCuratorCandidate(
     compatiblityGroup: Group,
     id: String) extends Candidate {
 
-  private val log = LoggerFactory.getLogger(getClass.getName)
+  private lazy val log = LoggerFactory.getLogger(getClass.getName)
   private val v2Prefix = "v2-"
   private var candidate: Either[Candidate, Candidate] = Left(
     new CandidateImpl(compatiblityGroup, new Supplier[Array[Byte]] {
@@ -61,7 +61,8 @@ class BackwardsCompatibleCuratorCandidate(
             catch {
               case e: Exception =>
                 log.error("Failed to switch to leader election protocol v2")
-                return leader.onElected(abdicate) //scalastyle:off return
+                leader.onElected(abdicate)
+                return //scalastyle:off return
             }
             abdicate.execute()
           }
