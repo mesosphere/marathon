@@ -18,7 +18,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   def eventBus: EventStream
   def scaleTo: Int
   def nrToStart: Int
-  def taskQueue: LaunchQueue
+  def launchQueue: LaunchQueue
   def driver: SchedulerDriver
   def scheduler: SchedulerActions
   def taskTracker: TaskTracker
@@ -41,14 +41,14 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
     case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, `appId`, _, _, _, `versionString`, _, _) => // scalastyle:off line.size.limit
       log.warning(s"New task [$taskId] failed during app ${app.id.toString} scaling, queueing another task")
       taskTerminated(taskId)
-      taskQueue.add(app)
+      launchQueue.add(app)
 
     case Sync =>
-      val actualSize = taskQueue.get(app.id).map(_.finalTaskCount).getOrElse(taskTracker.countLaunchedAppTasksSync(app.id))
+      val actualSize = launchQueue.get(app.id).map(_.finalTaskCount).getOrElse(taskTracker.countLaunchedAppTasksSync(app.id))
       val tasksToStartNow = Math.max(scaleTo - actualSize, 0)
       if (tasksToStartNow > 0) {
         log.info(s"Reconciling tasks during app ${app.id.toString} scaling: queuing $tasksToStartNow new tasks")
-        taskQueue.add(app, tasksToStartNow)
+        launchQueue.add(app, tasksToStartNow)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }

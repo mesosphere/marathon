@@ -27,7 +27,7 @@ private class DeploymentActor(
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
     taskTracker: TaskTracker,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
@@ -104,7 +104,7 @@ private class DeploymentActor(
   def startApp(app: AppDefinition, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(
-      AppStartActor.props(deploymentManager, status, driver, scheduler, taskQueue, taskTracker,
+      AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker,
         eventBus, readinessCheckExecutor, app, scaleTo, promise)
     )
     promise.future
@@ -127,7 +127,7 @@ private class DeploymentActor(
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
       val promise = Promise[Unit]()
       context.actorOf(
-        TaskStartActor.props(deploymentManager, status, driver, scheduler, taskQueue, taskTracker, eventBus,
+        TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
           readinessCheckExecutor, app, scaleTo, promise)
       )
       promise.future
@@ -156,7 +156,7 @@ private class DeploymentActor(
     }
     else {
       val promise = Promise[Unit]()
-      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, taskQueue, taskTracker,
+      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, launchQueue, taskTracker,
         eventBus, readinessCheckExecutor, app, promise))
       promise.future
     }
@@ -184,7 +184,7 @@ object DeploymentActor {
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
     taskTracker: TaskTracker,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
@@ -199,7 +199,7 @@ object DeploymentActor {
       scheduler,
       plan,
       taskTracker,
-      taskQueue,
+      launchQueue,
       storage,
       healthCheckManager,
       eventBus,

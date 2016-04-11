@@ -39,7 +39,7 @@ class MarathonSchedulerActor private (
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leaderInfo: LeaderInfo,
     eventBus: EventStream,
@@ -317,7 +317,7 @@ class MarathonSchedulerActor private (
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
     log.error(reason, s"Deployment of ${plan.target.id} failed")
-    plan.affectedApplicationIds.foreach(appId => taskQueue.purge(appId))
+    plan.affectedApplicationIds.foreach(appId => launchQueue.purge(appId))
     eventBus.publish(DeploymentFailed(plan.id, plan))
     if (reason.isInstanceOf[DeploymentCanceledException])
       deploymentRepository.expunge(plan.id)
@@ -333,7 +333,7 @@ object MarathonSchedulerActor {
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     leaderInfo: LeaderInfo,
     eventBus: EventStream,
@@ -347,7 +347,7 @@ object MarathonSchedulerActor {
       deploymentRepository,
       healthCheckManager,
       taskTracker,
-      taskQueue,
+      launchQueue,
       marathonSchedulerDriverHolder,
       leaderInfo,
       eventBus,
@@ -418,7 +418,7 @@ class SchedulerActions(
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
     config: MarathonConf)(implicit ec: ExecutionContext) {
@@ -442,8 +442,8 @@ class SchedulerActions(
         log.info(s"Killing task [${taskId.getValue}]")
         driver.killTask(taskId)
       }
-      taskQueue.purge(app.id)
-      taskQueue.resetDelay(app)
+      launchQueue.purge(app.id)
+      launchQueue.resetDelay(app)
       // TODO after all tasks have been killed we should remove the app from taskTracker
 
       eventBus.publish(AppTerminatedEvent(app.id))
@@ -523,12 +523,12 @@ class SchedulerActions(
     if (targetCount > launchedCount) {
       log.info(s"Need to scale ${app.id} from $launchedCount up to $targetCount instances")
 
-      val queuedOrRunning = taskQueue.get(app.id).map(_.finalTaskCount).getOrElse(launchedCount)
+      val queuedOrRunning = launchQueue.get(app.id).map(_.finalTaskCount).getOrElse(launchedCount)
       val toQueue = targetCount - queuedOrRunning
 
       if (toQueue > 0) {
         log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedOrRunning queued or running)")
-        taskQueue.add(app, toQueue)
+        launchQueue.add(app, toQueue)
       }
       else {
         log.info(s"Already queued or started $queuedOrRunning tasks for ${app.id}. Not scaling.")
@@ -536,7 +536,7 @@ class SchedulerActions(
     }
     else if (targetCount < launchedCount) {
       log.info(s"Scaling ${app.id} from $launchedCount down to $targetCount instances")
-      taskQueue.purge(app.id)
+      launchQueue.purge(app.id)
 
       val toKill = taskTracker.appTasksLaunchedSync(app.id).take(launchedCount - targetCount)
       val taskIds: Iterable[TaskID] = toKill.flatMap(_.launchedMesosId)

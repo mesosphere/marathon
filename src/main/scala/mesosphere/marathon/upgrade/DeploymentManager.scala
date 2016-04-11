@@ -23,7 +23,7 @@ import scala.util.control.NonFatal
 class DeploymentManager(
     appRepository: AppRepository,
     taskTracker: TaskTracker,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
@@ -96,7 +96,7 @@ class DeploymentManager(
           scheduler,
           plan,
           taskTracker,
-          taskQueue,
+          launchQueue,
           storage,
           healthCheckManager,
           eventBus,
@@ -156,14 +156,14 @@ object DeploymentManager {
   def props(
     appRepository: AppRepository,
     taskTracker: TaskTracker,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     config: UpgradeConfig): Props = {
-    Props(new DeploymentManager(appRepository, taskTracker, taskQueue,
+    Props(new DeploymentManager(appRepository, taskTracker, launchQueue,
       scheduler, storage, healthCheckManager, eventBus, readinessCheckExecutor, config))
   }
 

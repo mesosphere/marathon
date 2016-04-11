@@ -73,7 +73,7 @@ class CoreGuiceModule extends AbstractModule {
   def taskJobsModule(coreModule: CoreModule): TaskJobsModule = coreModule.taskJobsModule
 
   @Provides @Singleton
-  final def taskQueue(coreModule: CoreModule): LaunchQueue = coreModule.appOfferMatcherModule.taskQueue
+  final def launchQueue(coreModule: CoreModule): LaunchQueue = coreModule.appOfferMatcherModule.launchQueue
 
   @Provides @Singleton
   final def appInfoService(appInfoModule: AppInfoModule): AppInfoService = appInfoModule.appInfoService

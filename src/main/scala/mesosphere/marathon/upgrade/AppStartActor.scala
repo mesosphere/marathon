@@ -18,7 +18,7 @@ class AppStartActor(
     val status: DeploymentStatus,
     val driver: SchedulerDriver,
     val scheduler: SchedulerActions,
-    val taskQueue: LaunchQueue,
+    val launchQueue: LaunchQueue,
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
@@ -58,14 +58,14 @@ object AppStartActor {
     status: DeploymentStatus,
     driver: SchedulerDriver,
     scheduler: SchedulerActions,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     taskTracker: TaskTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: AppDefinition,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
-    Props(new AppStartActor(deploymentManager, status, driver, scheduler, taskQueue, taskTracker, eventBus,
+    Props(new AppStartActor(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
       readinessCheckExecutor, app, scaleTo, promise))
   }
 }

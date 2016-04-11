@@ -45,7 +45,7 @@ class DeploymentManagerTest
     val newGroup = Group("/".toRootPath, Set(app))
     val plan = DeploymentPlan(oldGroup, newGroup)
 
-    f.taskQueue.get(app.id) returns None
+    f.launchQueue.get(app.id) returns None
     manager ! PerformDeployment(f.driver, plan)
 
     awaitCond(
@@ -95,7 +95,7 @@ class DeploymentManagerTest
 
     val driver: SchedulerDriver = mock[SchedulerDriver]
     val eventBus: EventStream = mock[EventStream]
-    val taskQueue: LaunchQueue = mock[LaunchQueue]
+    val launchQueue: LaunchQueue = mock[LaunchQueue]
     val config: MarathonConf = new ScallopConf(Seq("--master", "foo")) with MarathonConf
     config.afterInit()
     val metrics: Metrics = new Metrics(new MetricRegistry)
@@ -113,7 +113,7 @@ class DeploymentManagerTest
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     def deploymentManager(): TestActorRef[DeploymentManager] = TestActorRef (
-      DeploymentManager.props(appRepo, taskTracker, taskQueue, scheduler, storage, hcManager, eventBus, readinessCheckExecutor, config)
+      DeploymentManager.props(appRepo, taskTracker, launchQueue, scheduler, storage, hcManager, eventBus, readinessCheckExecutor, config)
     )
 
   }

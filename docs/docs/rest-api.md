@@ -1482,7 +1482,7 @@ Transfer-Encoding: chunked
 
 #### GET `/v2/queue`
 
-Show content of the task queue.
+Show content of the launch queue.
 
 ##### Example
 
