@@ -48,6 +48,7 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
     def error[T](t: T)(implicit writes: Writes[T]): Unit = status(t, 503)
 
     def handleRequest(): Unit = (request.getMethod, request.getPathInfo) match {
+      case ("GET", "/ping") => if (plan.errors.isEmpty) ok("pong") else error("error")
       case ("GET", "/v1/plan") =>
         if (plan.isDone) ok(plan) else error(plan)
       case ("POST", "/v1/plan/continue") =>
@@ -81,6 +82,9 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
         ok(Json.obj("Result" -> plan.status))
       case ("POST", "/admin/error") =>
         plan.errors ::= s"Got an error at ${new Date}"
+        ok(plan.errors)
+      case ("DELETE", "/admin/error") =>
+        plan.errors = List.empty
         ok(plan.errors)
     }
 
