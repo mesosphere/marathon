@@ -183,7 +183,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
-      validate(changed) should be (Success)
+      validate(changed)(Group.validRootGroup(maxApps = None)) should be (Success)
     }
 
     it("cannot replace a group with apps by an app definition") {
@@ -213,7 +213,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested", "/some/nested/path2/app"))
 
       Then("the conflict will be detected by our V2 API model validation")
-      val result = validate(changed)
+      val result = validate(changed)(Group.validRootGroup(maxApps = None))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstrains(result).head
         .message should be ("Groups and Applications may not have the same identifier.")
@@ -408,7 +408,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ))
 
       When("group is validated")
-      val result = validate(group)
+      val result = validate(group)(Group.validRootGroup(maxApps = None))
 
       Then("result should be a success")
       result.isSuccess should be(true)
@@ -423,7 +423,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ))
 
       When("group is validated")
-      val invalidResult = validate(invalid)
+      val invalidResult = validate(invalid)(Group.validRootGroup(maxApps = None))
 
       Then("validation is not successful")
       invalidResult.isSuccess should be(false)
@@ -438,7 +438,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ))
 
       When("group is validated")
-      val invalidResult = validate(invalid)
+      val invalidResult = validate(invalid)(Group.validRootGroup(maxApps = None))
 
       Then("validation is not successful")
       invalidResult.isSuccess should be(false)
@@ -453,7 +453,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       ))
 
       When("group is validated")
-      val validResult = validate(valid)
+      val validResult = validate(valid)(Group.validRootGroup(maxApps = None))
 
       Then("validation is successful")
       validResult.isSuccess should be(true)

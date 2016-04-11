@@ -211,8 +211,18 @@ object Group {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  private def validNestedGroup(base: PathId): Validator[Group] =
-    validator[Group] { group =>
+  def validRootGroup(maxApps: Option[Int]): Validator[Group] = {
+    case object doesNotExceedMaxApps extends Validator[Group] {
+      override def apply(group: Group): Result = {
+        maxApps.filter(group.transitiveApps.size > _).map { num =>
+          Failure(Set(RuleViolation(group,
+            s"""This Marathon instance may only handle up to $num Apps!
+                |(Override with command line option --max_apps)""".stripMargin, None)))
+        } getOrElse Success
+      }
+    }
+
+    def validNestedGroup(base: PathId): Validator[Group] = validator[Group] { group =>
       group.id is validPathWithBase(base)
       group.apps is every(AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base)))
       group is noAppsAndGroupsWithSameName
@@ -221,24 +231,11 @@ object Group {
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
     }
 
-  implicit val validRootGroup: Validator[Group] = new Validator[Group] {
-    override def apply(group: Group): Result = {
-      group is ExternalVolumes.validRootGroup
-      validate(group)(validator =
-        validNestedGroup(PathId.empty))
-    }
-  }
-
-  def validGroupWithConfig(maxApps: Option[Int])(implicit validator: Validator[Group]): Validator[Group] = {
-    new Validator[Group] {
-      override def apply(group: Group): Result = {
-        maxApps.filter(group.transitiveApps.size > _).map { num =>
-          Failure(Set(RuleViolation(group,
-            s"""This Marathon instance may only handle up to $num Apps!
-                |(Override with command line option --max_apps)""".stripMargin, None)))
-        } getOrElse Success
-      } and validator(group)
-    }
+    // We do not want a "/value" prefix, therefore we do not create nested validators with validator[Group]
+    // but chain the validators directly.
+    valid(doesNotExceedMaxApps) and
+      validNestedGroup(PathId.empty) and
+      ExternalVolumes.validRootGroup()
   }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
