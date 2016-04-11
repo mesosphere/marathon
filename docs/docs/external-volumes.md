@@ -23,7 +23,7 @@ If you are running Marathon on DCOS, add the following to the `genconf/config.ym
 
 ## Scaling your App
 
-Apps that use external volumes should only be scaled to a single instance.
+Apps that use external volumes should only be scaled to a single instance because a volume can only attach to a single task at a time. This will likely change in a future release.
 
 If you scale your app down to 0 instances, the volume is detached from the agent where it was mounted, but it is not deleted. If you scale your app up again, the data that had been associated with it will still be available.
 
@@ -132,6 +132,6 @@ For more information, refer to the [REX-Ray documentation](https://rexray.readth
 - Launch time may increase for applications that create volumes implicitly. The amount of the increase depends on several factors
 (including, but not limited to) the size and type of the volume. Your storage provider's method of handling volumes can also influence launch time for implicitly created volumes.
 
-- If tasks using external volumes are not working, or not working the way you expect, consult the agent or system logs to troubleshoot. If you are using REX-Ray on DCOS, you can also consult the system journal.
+- If tasks using external volumes are not working, or not working the way you expect, consult the agent or system logs to troubleshoot. If you are using REX-Ray on DCOS, you can also consult the systemd journal.
 
 For more information, see the [Apache Mesos documentation on persistent volumes](http://mesos.apache.org/documentation/latest/persistent-volume/).
