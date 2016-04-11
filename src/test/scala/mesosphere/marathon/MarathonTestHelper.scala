@@ -431,7 +431,7 @@ object MarathonTestHelper {
     taskId: String,
     appVersion: Timestamp = Timestamp(1),
     stagedAt: Long = 2,
-    startedAt: Long = 3): Task =
+    startedAt: Long = 3): Task.LaunchedEphemeral =
     TaskSerializer.fromProto(
       runningTaskProto(
         taskId,
@@ -439,7 +439,7 @@ object MarathonTestHelper {
         stagedAt = stagedAt,
         startedAt = startedAt
       )
-    )
+    ).asInstanceOf[Task.LaunchedEphemeral]
 
   def runningTaskProto(appId: PathId): Protos.MarathonTask = runningTaskProto(Task.Id.forApp(appId).idString)
   def runningTaskProto(

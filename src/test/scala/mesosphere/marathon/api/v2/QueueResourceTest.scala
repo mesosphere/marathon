@@ -65,7 +65,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     (jsonApp1 \ "delay" \ "timeLeftSeconds").as[Int] should be(0)
   }
 
-  test("unknown application backoff can not be removed from the taskqueue") {
+  test("unknown application backoff can not be removed from the launch queue") {
     //given
     queue.list returns Seq.empty
 
@@ -76,7 +76,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     response.getStatus should be(404)
   }
 
-  test("application backoff can be removed from the taskqueue") {
+  test("application backoff can be removed from the launch queue") {
     //given
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(

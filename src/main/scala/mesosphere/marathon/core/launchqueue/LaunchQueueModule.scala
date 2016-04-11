@@ -41,7 +41,7 @@ class LaunchQueueModule(
     leadershipModule.startWhenLeader(props, "rateLimiter")
   }
 
-  val taskQueue: LaunchQueue = new LaunchQueueDelegate(config, launchQueueActorRef, rateLimiterActor)
+  val launchQueue: LaunchQueue = new LaunchQueueDelegate(config, launchQueueActorRef, rateLimiterActor)
 
   private[this] def appActorProps(app: AppDefinition, count: Int): Props =
     AppTaskLauncherActor.props(

@@ -23,7 +23,7 @@ class TaskReplaceActor(
     val deploymentManager: ActorRef,
     val status: DeploymentStatus,
     val driver: SchedulerDriver,
-    val taskQueue: LaunchQueue,
+    val launchQueue: LaunchQueue,
     val taskTracker: TaskTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
@@ -54,7 +54,7 @@ class TaskReplaceActor(
     reconcileNewTasks()
 
     log.info("Resetting the backoff delay before restarting the app")
-    taskQueue.resetDelay(app)
+    launchQueue.resetDelay(app)
   }
 
   override def postStop(): Unit = {
@@ -74,7 +74,7 @@ class TaskReplaceActor(
     case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       log.error(s"New task $taskId failed on slave $slaveId during app $appId restart")
       taskTerminated(taskId)
-      taskQueue.add(app)
+      launchQueue.add(app)
 
     // Old task successfully killed
     case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
@@ -100,7 +100,7 @@ class TaskReplaceActor(
     val tasksToStartNow = math.min(tasksNotStartedYet, leftCapacity)
     if (tasksToStartNow > 0) {
       log.info(s"Reconciling tasks during app $appId restart: queuing $tasksToStartNow new tasks")
-      taskQueue.add(app, tasksToStartNow)
+      launchQueue.add(app, tasksToStartNow)
       newTasksStarted += tasksToStartNow
     }
   }
@@ -160,13 +160,13 @@ object TaskReplaceActor {
     deploymentManager: ActorRef,
     status: DeploymentStatus,
     driver: SchedulerDriver,
-    taskQueue: LaunchQueue,
+    launchQueue: LaunchQueue,
     taskTracker: TaskTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: AppDefinition,
     promise: Promise[Unit]): Props = Props(
-    new TaskReplaceActor(deploymentManager, status, driver, taskQueue, taskTracker, eventBus,
+    new TaskReplaceActor(deploymentManager, status, driver, launchQueue, taskTracker, eventBus,
       readinessCheckExecutor, app, promise)
   )
 

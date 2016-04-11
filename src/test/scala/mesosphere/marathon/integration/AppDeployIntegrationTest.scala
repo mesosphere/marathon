@@ -86,7 +86,7 @@ class AppDeployIntegrationTest
     deployment2.code should be (200) //Created
 
     And("BUT our app still has a backoff delay")
-    val queueAfterScaling: List[ITQueueItem] = marathon.taskQueue().value.queue
+    val queueAfterScaling: List[ITQueueItem] = marathon.launchQueue().value.queue
     queueAfterScaling should have size 1
     queueAfterScaling.map(_.delay.overdue) should contain(false)
   }
@@ -132,7 +132,7 @@ class AppDeployIntegrationTest
     And("our app gets a backoff delay")
     WaitTestSupport.waitUntil("queue item", 10.seconds) {
       try {
-        val queue: List[ITQueueItem] = marathon.taskQueue().value.queue
+        val queue: List[ITQueueItem] = marathon.launchQueue().value.queue
         queue should have size 1
         queue.map(_.delay.overdue) should contain(false)
         true

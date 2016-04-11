@@ -46,12 +46,15 @@ private[launchqueue] class LaunchQueueDelegate(
     method: String,
     timeout: FiniteDuration = config.launchQueueRequestTimeout().milliseconds)(message: T): Any = {
 
-    val answerFuture: Future[Any] = askQueueActorFuture(method)(message)
+    val answerFuture: Future[Any] = askQueueActorFuture(method, timeout)(message)
     Await.result(answerFuture, timeout)
   }
 
-  private[this] def askQueueActorFuture[T](method: String)(message: T): Future[Any] = {
-    implicit val timeout: Timeout = 1.second
+  private[this] def askQueueActorFuture[T](
+    method: String,
+    timeout: FiniteDuration = config.launchQueueRequestTimeout().milliseconds)(message: T): Future[Any] = {
+
+    implicit val timeoutImplicit: Timeout = timeout
     val answerFuture = actorRef ? message
     import scala.concurrent.ExecutionContext.Implicits.global
     answerFuture.recover {
