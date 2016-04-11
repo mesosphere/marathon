@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -69,6 +70,8 @@ public class CandidateImpl implements Candidate {
     private final Group group;
     private final Function<Iterable<String>, String> judge;
     private final Supplier<byte[]> dataSupplier;
+    private final AtomicReference<Group.GroupChangeListener> groupChangeListener;
+    private Command cancelWatch;
 
     /**
      * Equivalent to {@link #CandidateImpl(Group, com.google.common.base.Function, Supplier)} using a
@@ -105,6 +108,8 @@ public class CandidateImpl implements Candidate {
         this.group = Preconditions.checkNotNull(group);
         this.judge = Preconditions.checkNotNull(judge);
         this.dataSupplier = Preconditions.checkNotNull(dataSupplier);
+        this.groupChangeListener = new AtomicReference<Group.GroupChangeListener>(null);
+        this.cancelWatch = null;
     }
 
     @Override
@@ -118,20 +123,41 @@ public class CandidateImpl implements Candidate {
     }
 
     @Override
-    public Supplier<Boolean> offerLeadership(final Leader leader)
+    public Supplier<Boolean> offerLeadership(final Candidate.Leader leader)
             throws Group.JoinException, Group.WatchException, InterruptedException {
 
-        final Group.Membership membership = group.join(dataSupplier, new Command() {
-            @Override public void execute() {
-                leader.onDefeated();
-            }
-        });
+        // start a group watch, but only once in the life time of the the CandidateImpl.
+        if (this.cancelWatch == null) {
+            this.cancelWatch = this.group.watch(new Group.GroupChangeListener() {
+                @Override
+                public void onGroupChange(Iterable<String> memberIds) {
+                    Group.GroupChangeListener listener = groupChangeListener.get();
+                    if (listener != null) {
+                        listener.onGroupChange(memberIds);
+                    }
+                }
+            });
+        }
 
+        // listen for group member changes
         final AtomicBoolean elected = new AtomicBoolean(false);
         final AtomicBoolean abdicated = new AtomicBoolean(false);
-        group.watch(new Group.GroupChangeListener() {
-            @Override public void onGroupChange(Iterable<String> memberIds) {
+        final AtomicReference<Group.Membership> membershipRef = new AtomicReference<Group.Membership>(null);
+        final AtomicReference<Iterable<String>> pendingChange = new AtomicReference<Iterable<String>>(null);
+        this.groupChangeListener.set(new Group.GroupChangeListener() {
+            @Override
+            public void onGroupChange(Iterable<String> memberIds) {
                 boolean noCandidates = Iterables.isEmpty(memberIds);
+                Group.Membership membership;
+                synchronized (CandidateImpl.this) {
+                    membership = membershipRef.get();
+                    if (membership == null) {
+                        pendingChange.set(memberIds);
+                        return;
+                    } else {
+                        pendingChange.set(null);
+                    }
+                }
                 String memberId = membership.getMemberId();
 
                 if (noCandidates) {
@@ -149,8 +175,12 @@ public class CandidateImpl implements Candidate {
                                 membership.getMemberPath(), memberIds));
 
                         leader.onElected(new ExceptionalCommand<Group.JoinException>() {
-                            @Override public void execute() throws Group.JoinException {
-                                membership.cancel();
+                            @Override
+                            public void execute() throws Group.JoinException {
+                                Group.Membership membership = membershipRef.get();
+                                if (membership != null) {
+                                    membership.cancel();
+                                }
                                 abdicated.set(true);
                             }
                         });
@@ -165,6 +195,23 @@ public class CandidateImpl implements Candidate {
                 }
             }
         });
+
+        // join the group
+        membershipRef.set(group.join(dataSupplier, new Command() {
+            @Override public void execute() {
+                membershipRef.set(null);
+                leader.onDefeated();
+            }
+        }));
+
+        // possibly the upper membershipRef.set is not finished yet when the groupChangeListener
+        // fires above. Then one onGroupChange call is pending which is executed here:
+        synchronized (this) {
+            Iterable<String> memberIds = pendingChange.getAndSet(null);
+            if (memberIds != null) {
+                this.groupChangeListener.get().onGroupChange(memberIds);
+            }
+        }
 
         return new Supplier<Boolean>() {
             @Override public Boolean get() {
