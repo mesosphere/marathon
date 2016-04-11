@@ -55,12 +55,12 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
         RuleViolation(
           value = app1.externalVolumes.head,
           constraint = "Volume name 'vol' in /nested/app1 conflicts with volume(s) of same name in app(s): /nested/app2",
-          description = Some("/groups(0)/apps(0)/externalVolumes(0)")
+          description = Some("/groups(nested)/apps(app1)/externalVolumes(0)")
         ),
         RuleViolation(
           value = app2.externalVolumes.head,
           constraint = "Volume name 'vol' in /nested/app2 conflicts with volume(s) of same name in app(s): /nested/app1",
-          description = Some("/groups(0)/apps(1)/externalVolumes(0)")
+          description = Some("/groups(nested)/apps(app2)/externalVolumes(0)")
         )
       )
     )

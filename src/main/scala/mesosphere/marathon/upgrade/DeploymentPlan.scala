@@ -306,6 +306,6 @@ object DeploymentPlan {
   }
 
   implicit lazy val deploymentPlanIsValid: Validator[DeploymentPlan] = validator[DeploymentPlan] { plan =>
-    plan.createdOrUpdatedApps as "app" is every(valid(AppDefinition.updateIsValid(plan.original)))
+    plan.createdOrUpdatedApps as "app" is everyById(valid(AppDefinition.updateIsValid(plan.original)))
   }
 }

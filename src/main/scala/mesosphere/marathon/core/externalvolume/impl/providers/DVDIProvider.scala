@@ -139,8 +139,8 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       }
 
       def groupValid: Validator[Group] = validator[Group] { group =>
-        group.apps is every(appValid)
-        group.groups is every(groupValid)
+        group.apps is everyById(appValid)
+        group.groups is everyById(groupValid)
       }
 
       // We need to call the validators recursively such that the "description" of the rule violations
