@@ -7,12 +7,12 @@ import mesosphere.marathon.state.AppDefinition
 import org.scalatest.{ GivenWhenThen, Matchers }
 import scala.concurrent.duration._
 
-class TaskQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with GivenWhenThen with Matchers {
+class LaunchQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with GivenWhenThen with Matchers {
   test("GET /v2/queue with an empty queue") {
     Given("no pending deployments")
     marathon.listDeploymentsForBaseGroup().value should have size 0
 
-    Then("the task queue should be empty")
+    Then("the launch queue should be empty")
     val response = marathon.launchQueue()
     response.code should be (200)
 
@@ -28,7 +28,7 @@ class TaskQueueIntegrationTest extends IntegrationFunSuite with SingleMarathonIn
     val create = marathon.createAppV2(app)
     create.code should be (201) // Created
 
-    Then("the app shows up in the task queue")
+    Then("the app shows up in the launch queue")
     WaitTestSupport.waitUntil("Deployment is put in the deployment queue", 30.seconds) { marathon.launchQueue().value.queue.size == 1 }
     val response = marathon.launchQueue()
     response.code should be (200)

@@ -90,7 +90,7 @@ class TaskStartActorTest
     }
   }
 
-  test("Start success with existing task in task queue") {
+  test("Start success with existing task in launch queue") {
     val f = new Fixture
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)

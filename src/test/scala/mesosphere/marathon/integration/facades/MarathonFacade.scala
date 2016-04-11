@@ -85,7 +85,7 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   implicit lazy val itListDeploymentsFormat = Json.format[ITListDeployments]
   implicit lazy val itQueueDelayFormat = Json.format[ITQueueDelay]
   implicit lazy val itQueueItemFormat = Json.format[ITQueueItem]
-  implicit lazy val itTaskQueueFormat = Json.format[ITLaunchQueue]
+  implicit lazy val itLaunchQueueFormat = Json.format[ITLaunchQueue]
 
   implicit lazy val itEnrichedTaskFormat: Format[ITEnrichedTask] = (
     (__ \ "appId").format[String] ~

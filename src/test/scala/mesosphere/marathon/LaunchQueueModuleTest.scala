@@ -41,7 +41,7 @@ class LaunchQueueModuleTest
   test("An added queue item is returned in list") {
     val f = new Fixture
     import f._
-    Given("a task queue with one item")
+    Given("a launch queue with one item")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
     launchQueue.add(app)
 
@@ -64,7 +64,7 @@ class LaunchQueueModuleTest
   test("An added queue item is reflected via count") {
     val f = new Fixture
     import f._
-    Given("a task queue with one item")
+    Given("a launch queue with one item")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
     launchQueue.add(app)
 
@@ -82,7 +82,7 @@ class LaunchQueueModuleTest
   test("A purged queue item has a count of 0") {
     val f = new Fixture
     import f._
-    Given("a task queue with one item which is purged")
+    Given("a launch queue with one item which is purged")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
     launchQueue.add(app)
     launchQueue.purge(app.id)
@@ -101,7 +101,7 @@ class LaunchQueueModuleTest
   test("A re-added queue item has a count of 1") {
     val f = new Fixture
     import f._
-    Given("a task queue with one item which is purged")
+    Given("a launch queue with one item which is purged")
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
     launchQueue.add(app)
     launchQueue.purge(app.id)
