@@ -4,13 +4,14 @@ import java.net._
 
 import com.wix.accord._
 import mesosphere.marathon.{ AllConf, ValidationFailedException }
-import mesosphere.marathon.state.FetchUri
+import mesosphere.marathon.state.{ ToIdentity, FetchUri }
 import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
 import scala.collection.GenTraversableOnce
 import scala.reflect.ClassTag
 import scala.util.Try
+import scala.language.implicitConversions
 
 object Validation {
   def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
@@ -36,12 +37,27 @@ object Validation {
     override def apply(t: T): Result = if (!b(t)) Success else validator(t)
   }
 
-  implicit def every[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
+  implicit def everyByIndex[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
     new Validator[Iterable[T]] {
       override def apply(seq: Iterable[T]): Result = {
 
         val violations = seq.map(item => (item, validator(item))).zipWithIndex.collect {
           case ((item, f: Failure), pos: Int) => GroupViolation(item, "not valid", Some(s"($pos)"), f.violations)
+        }
+
+        if (violations.isEmpty) Success
+        else Failure(Set(GroupViolation(seq, "Seq contains elements, which are not valid.", None, violations.toSet)))
+      }
+    }
+  }
+
+  implicit def everyById[T](validator: Validator[T])(implicit toPath: ToIdentity[T]): Validator[Iterable[T]] = {
+    new Validator[Iterable[T]] {
+      override def apply(seq: Iterable[T]): Result = {
+
+        val violations = seq.map(item => (item, validator(item))).collect {
+          case (item, f: Failure) =>
+            GroupViolation(item, "not valid", Some(s"(${toPath(item)})"), f.violations)
         }
 
         if (violations.isEmpty) Success
