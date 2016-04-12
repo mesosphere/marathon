@@ -3,11 +3,11 @@ package mesosphere.marathon.integration.setup
 import akka.actor.ActorSystem
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import org.slf4j.LoggerFactory
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{ JsValue, Json }
 import spray.client.pipelining._
 import spray.http.HttpResponse
 
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration.{ Duration, _ }
 
 class ServiceMockFacade(task: ITEnrichedTask, waitTime: Duration = 30.seconds)(implicit system: ActorSystem) {
   import scala.concurrent.ExecutionContext.Implicits.global
