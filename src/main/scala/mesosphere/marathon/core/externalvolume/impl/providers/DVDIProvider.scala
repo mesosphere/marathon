@@ -115,24 +115,39 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   // task instance across the entire cluster.
   override lazy val rootGroup = new Validator[Group] {
     override def apply(g: Group): Result = {
-      val appsByVolume =
+      val appsByVolume: Map[String, Set[PathId]] =
         g.transitiveApps
           .flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }
           .groupBy { case (volumeName, _) => volumeName }
           .mapValues(_.map { case (volumeName, appId) => appId })
 
-      val groupViolations = g.apps.flatMap { app =>
-        val ruleViolations = namesOfMatchingVolumes(app).flatMap { name =>
-          for {
-            otherApp <- appsByVolume(name)
-            if otherApp != app.id // do not compare to self
-          } yield RuleViolation(app.id, s"Requested volume $name conflicts with a volume in app $otherApp", None)
+      val appValid: Validator[AppDefinition] = {
+        def volumeNameUnique(appId: PathId): Validator[ExternalVolume] = {
+          def conflictingApps(vol: ExternalVolume): Set[PathId] =
+            appsByVolume.getOrElse(vol.external.name, Set.empty).filter(_ != appId)
+
+          isTrue { (vol: ExternalVolume) =>
+            val conflictingAppIds = conflictingApps(vol).mkString(", ")
+            s"Volume name '${vol.external.name}' in $appId conflicts with volume(s) of same name in app(s): " +
+              s"$conflictingAppIds"
+          }{ vol => conflictingApps(vol).isEmpty }
         }
-        if (ruleViolations.isEmpty) None
-        else Some(GroupViolation(app, "app contains conflicting volumes", None, ruleViolations.toSet))
+
+        validator[AppDefinition] { app =>
+          app.externalVolumes is every(volumeNameUnique(app.id))
+        }
       }
-      group(groupViolations)
+
+      def groupValid: Validator[Group] = validator[Group] { group =>
+        group.apps is every(appValid)
+        group.groups is every(groupValid)
+      }
+
+      // We need to call the validators recursively such that the "description" of the rule violations
+      // is correctly calculated.
+      groupValid(g)
     }
+
   }
 
   override lazy val app = {

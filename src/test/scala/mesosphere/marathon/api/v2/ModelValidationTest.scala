@@ -35,12 +35,12 @@ class ModelValidationTest
       createServicePortApp("/c".toPath, 0)
     ))
 
-    val failedResult = Group.validGroupWithConfig(Some(2)).apply(group)
+    val failedResult = Group.validRootGroup(maxApps = Some(2)).apply(group)
     failedResult.isFailure should be(true)
     ValidationHelper.getAllRuleConstrains(failedResult)
       .find(v => v.message.contains("This Marathon instance may only handle up to 2 Apps!")) should be ('defined)
 
-    val successfulResult = Group.validGroupWithConfig(Some(10)).apply(group)
+    val successfulResult = Group.validRootGroup(maxApps = Some(10)).apply(group)
     successfulResult.isSuccess should be(true)
   }
 
@@ -49,7 +49,7 @@ class ModelValidationTest
     val conflictingApp = createServicePortApp("/app2".toPath, 3200)
 
     val group = Group(id = PathId.empty, apps = Set(existingApp, conflictingApp))
-    val result = validate(group)
+    val result = validate(group)(Group.validRootGroup(maxApps = None))
 
     ValidationHelper.getAllRuleConstrains(result).exists(v =>
       v.message == "Requested service port 3200 conflicts with a service port in app /app2") should be(true)
@@ -61,7 +61,7 @@ class ModelValidationTest
     val conflictingApp = createServicePortApp("/app2".toPath, 3201)
 
     val group = Group(id = PathId.empty, apps = Set(existingApp, conflictingApp))
-    val result = validate(group)
+    val result = validate(group)(Group.validRootGroup(maxApps = None))
 
     result.isSuccess should be(true)
   }
@@ -71,7 +71,7 @@ class ModelValidationTest
     val conflictingApp = existingApp.copy(id = "/app2".toPath)
 
     val group = Group(id = PathId.empty, apps = Set(existingApp, conflictingApp))
-    val result = validate(group)
+    val result = validate(group)(Group.validRootGroup(maxApps = None))
 
     ValidationHelper.getAllRuleConstrains(result).exists(v =>
       v.message == "Requested service port 3200 conflicts with a service port in app /app2") should be(true)
@@ -98,7 +98,7 @@ class ModelValidationTest
       ),
       Group("/test/group2".toPath)))
 
-    validate(group) match {
+    validate(group)(Group.validRootGroup(maxApps = None)) match {
       case Success => fail()
       case f: Failure =>
         val errors = (Json.toJson(f) \ "details").as[Seq[JsObject]]
