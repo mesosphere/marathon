@@ -117,24 +117,26 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     override def apply(g: Group): Result = {
       val appsByVolume: Map[String, Set[PathId]] =
         g.transitiveApps
+          .filter { app => app.instances > 0 }
           .flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }
           .groupBy { case (volumeName, _) => volumeName }
           .mapValues(_.map { case (volumeName, appId) => appId })
 
       val appValid: Validator[AppDefinition] = {
-        def volumeNameUnique(appId: PathId): Validator[ExternalVolume] = {
+        def volumeNameUnique(app: AppDefinition): Validator[ExternalVolume] = {
           def conflictingApps(vol: ExternalVolume): Set[PathId] =
-            appsByVolume.getOrElse(vol.external.name, Set.empty).filter(_ != appId)
+            if (app.instances == 0) Set.empty
+            else appsByVolume.getOrElse(vol.external.name, Set.empty).filter(_ != app.id)
 
           isTrue { (vol: ExternalVolume) =>
             val conflictingAppIds = conflictingApps(vol).mkString(", ")
-            s"Volume name '${vol.external.name}' in $appId conflicts with volume(s) of same name in app(s): " +
+            s"Volume name '${vol.external.name}' in ${app.id} conflicts with volume(s) of same name in app(s): " +
               s"$conflictingAppIds"
           }{ vol => conflictingApps(vol).isEmpty }
         }
 
         validator[AppDefinition] { app =>
-          app.externalVolumes is every(volumeNameUnique(app.id))
+          app.externalVolumes is every(volumeNameUnique(app))
         }
       }
 
