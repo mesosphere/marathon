@@ -1,6 +1,6 @@
 ---
 title: An App Does Not Leave "Waiting"
---------------------------------------
+---
 
 # An app Does Not Leave "Waiting"
  

@@ -26,7 +26,7 @@ layout: default
             </li>
         </ul>
 
-        <h5>Application Deployment</h5>
+        <h5>Using Marathon</h5>
         <ul class="list-unstyled">
             <li>
                 <a href="{{ site.baseurl }}/docs/application-basics.html">
@@ -39,23 +39,18 @@ layout: default
                 </a>
             </li>
             <li>
-                <a href="{{ site.baseurl }}/docs/command-line-flags.html">
-                    Command Line Flags
-                </a>
-            </li>
-            <li>
-                <a href="{{ site.baseurl }}/docs/developing-vm.html">
-                    Run a Local Version of Marathon
-                </a>
-            </li>
-            <li>
-                <a href="{{ site.baseurl }}/docs/native-docker-private-registry.html">
-                    Using a Private Docker Registry
+                <a href="{{ site.baseurl }}/docs/application-groups.html">
+                    Application Groups
                 </a>
             </li>
             <li>
                 <a href="{{ site.baseurl }}/docs/artifact-store.html">
                     Artifact Store
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
                 </a>
             </li>
             <li>
@@ -79,18 +74,23 @@ layout: default
                 </a>
             </li>
             <li>
-                <a href="{{ site.baseurl }}/docs/task-environment-vars.html">
-                    Task Environment Variables
-                </a>
-            </li>
-            <li>
-                <a href="{{ site.baseurl }}/docs/">
-                    Service Discovery and Load Balancing
+                <a href="{{ site.baseurl }}/docs/marathon-ui.html">
+                    Marathon Web Interface
                 </a>
             </li>
             <li>
                 <a href="{{ site.baseurl }}/docs/ports.html">
                     Ports
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/native-docker.html">
+                    Running Docker Containers
                 </a>
             </li>
             <li>
@@ -104,37 +104,17 @@ layout: default
                 </a>
             </li>
             <li>
-                <a href="{{ site.baseurl }}/docs/recipes.html">
-                    Recipes
+                <a href="{{ site.baseurl }}/docs/task-environment-vars.html">
+                    Task Environment Variables
                 </a>
             </li>
         </ul>
 
-        <h5>Management</h5>
+        <h5>Administration</h5>
         <ul class="list-unstyled">
             <li>
-                <a href="{{ site.baseurl }}/docs/marathon-ui.html">
-                    Marathon Web Interface
-                </a>
-            </li>
-            <li>
-                <a href="{{ site.baseurl }}/docs/application-groups.html">
-                    Application Groups
-                </a>
-            </li>
-            <li>
-                <a href="{{ site.baseurl }}/docs/blue-green-deploy.html">
-                    Blue-Green Deployment
-                </a>
-            </li>
-            <li>
-                <a href="{{ site.baseurl }}/docs/native-docker.html">
-                    Running Docker Containers on Marathon
-                </a>
-            </li>
-            <li>
-                <a href="{{ site.baseurl }}/docs/ssl-basic-access-authentication.html">
-                    SSL and Basic Authentication
+                <a href="{{ site.baseurl }}/docs/command-line-flags.html">
+                    Command Line Flags
                 </a>
             </li>
             <li>
@@ -148,18 +128,18 @@ layout: default
                 </a>
             </li>
             <li>
+                <a href="{{ site.baseurl }}/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
                 <a href="{{ site.baseurl }}/docs/service-discovery-load-balancing.html">
                     Service Discovery and Load Balancing
                 </a>
             </li>
             <li>
-                <a href="{{ site.baseurl }}/docs/plugin.html">
-                    Plugins
-                </a>
-            </li>
-            <li>
-                <a href="{{ site.baseurl }}/docs/metrics.html">
-                    Metrics
+                <a href="{{ site.baseurl }}/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
                 </a>
             </li>
             <li>
@@ -170,6 +150,11 @@ layout: default
             <li>
                 <a href="{{ site.baseurl }}/docs/upgrade/06xto070.html">
                     Upgrading from 0.6.x
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
                 </a>
             </li>
             <li>
@@ -206,13 +191,23 @@ layout: default
         <h5>Development</h5>
         <ul class="list-unstyled">
             <li>
+                <a href="{{ site.baseurl }}/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
                 <a href="{{ site.baseurl }}/docs/core-architecture.html">
                     Current Marathon Development
                 </a>
             </li>
             <li>
-                <a href="{{ site.baseurl }}/docs/contributing.html">
-                    Contributor Guidelines
+                <a href="{{ site.baseurl }}/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="{{ site.baseurl }}/docs/developing-vm.html">
+                    Run a Local Version of Marathon
                 </a>
             </li>
         </ul>
@@ -221,7 +216,6 @@ layout: default
     <a href="{{ site.baseurl }}/docs/generated/api.html"><h5>REST API Reference</h5></a>
 
     <a href="{{ site.baseurl }}/docs/rest-api.html"><h5>REST API Reference (deprecated)</h5></a>
-
 
     <div class="col-sm-9">
         {{ content }}

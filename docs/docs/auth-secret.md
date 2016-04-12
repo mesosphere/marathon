@@ -1,6 +1,6 @@
 ---
 title: Error Reading Authentication Secret
--------------------------------------------
+---
 
 # Error Reading Authentication Secret from a File
 

@@ -1,8 +1,8 @@
------------------------
+---
 title: Install Marathon
------------------------
+---
 
-## Install Marathon
+# Install Marathon
 
 
 ### Requirements
