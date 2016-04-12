@@ -19,23 +19,23 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
   //clean up state before running the test case
   before(cleanUp())
 
-  test("A deployment of an application with readiness checks (no health) does end until the readiness checks say ready") {
+  test("A deployment of an application with readiness checks (no health) does finish when the plan is ready") {
     deploy(serviceProxy("/readynohealth".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false), continue = true)
   }
 
-  test("A deployment of an application with readiness checks and health does end until the readiness checks say and health state say ready") {
+  test("A deployment of an application with readiness checks and health does finish when health checks succeed and plan is ready") {
     deploy(serviceProxy("/readyhealth".toTestPath, "phase(block1!,block2!,block3!)", withHealth = true), continue = true)
   }
 
-  test("A deployment of an application without readiness checks and health does end until the health checks say ready") {
+  test("A deployment of an application without readiness checks and health does finish when health checks succeed") {
     deploy(serviceProxy("/noreadyhealth".toTestPath, "phase()", withHealth = true), continue = false)
   }
 
-  test("A deployment of an application without readiness checks and without health does succeeds") {
+  test("A deployment of an application without readiness checks and without health does finish") {
     deploy(serviceProxy("/noreadynohealth".toTestPath, "phase()", withHealth = false), continue = false)
   }
 
-  test("An upgrade of an application wait for the readiness checks") {
+  test("An upgrade of an application will wait for the readiness checks") {
     val serviceDef = serviceProxy("/upgrade".toTestPath, "phase(block1!,block2!,block3!)", withHealth = false)
     deploy(serviceDef, continue = true)
 
