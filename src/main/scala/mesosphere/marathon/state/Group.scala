@@ -233,7 +233,7 @@ object Group {
 
     // We do not want a "/value" prefix, therefore we do not create nested validators with validator[Group]
     // but chain the validators directly.
-    valid(doesNotExceedMaxApps) and
+    doesNotExceedMaxApps and
       validNestedGroup(PathId.empty) and
       ExternalVolumes.validRootGroup()
   }
