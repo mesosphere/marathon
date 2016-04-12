@@ -53,6 +53,7 @@ trait ZookeeperConf extends ScallopConf {
 
   def zooKeeperStatePath: String = "%s/state".format(zkPath)
   def zooKeeperLeaderPath: String = "%s/leader".format(zkPath)
+  def zooKeeperCuratorLeaderPath: String = "%s/leader-v2".format(zkPath)
   def zooKeeperServerSetPath: String = "%s/apps".format(zkPath)
 
   def zooKeeperHostAddresses: Seq[InetSocketAddress] =
