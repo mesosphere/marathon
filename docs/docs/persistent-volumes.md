@@ -1,6 +1,6 @@
 ---
 title: Stateful Applications Using Local Persistent Volumes
------------------------------------------------------------
+---
 
 # Stateful Applications Using Local Persistent Volumes
 
@@ -44,10 +44,10 @@ Configure a persistent volume with the following options:
 ```
 
 - `containerPath`: The path where your application will read and write data. This can currently be only relative and non-nested (`"data"`, but not `"/data"`, `"/var/data"` or `"var/data"`).
-- `mode`: The mode of the volume. Currently, `"RW"` is the only possible value.
+- `mode`: The access mode of the volume. Currently, `"RW"` is the only possible value and will let your application read from and write to the volume.
 - `persistent.size`: The size of the persistent volume in MiBs.
 
-You also need to set the `residency` parameter in order to tell Marathon to setup a stateful application. Currently, the only valid option for this is:
+You also need to set the `residency` node in order to tell Marathon to setup a stateful application. Currently, the only valid option for this is:
 ```
 "residency": {
   "taskLostBehavior": "WAIT_FOREVER"
@@ -65,7 +65,7 @@ Since all the resources your application needs are still reserved when a volume 
 
 ### Upgrading/restarting stateful applications
 
-The default `UpgradeStrategy` for a stateful application is a `minimumHealthCapacity` of `0.5` and a `maximumOverCapacity` of `0`. If you override this default, your definition must stay below these values in order to pass validation. The `UpgradeStrategy` must stay below these values because Marathon needs to kill old tasks before starting new ones so that the new versions can take over reservations and volumes and Marathon cannot create additional tasks (as a `maximumOverCapacity > 0` would induce) in order to prevent additional volume creation.
+The default `UpgradeStrategy` for a stateful application is a `minimumHealthCapacity` of `0.5` and a `maximumOverCapacity` of `0`. If you override this default, your definition must stay below these values in order to pass validation. The `UpgradeStrategy` must stay below these values because Marathon needs to be able to kill old tasks before starting new ones so that the new versions can take over reservations and volumes and Marathon cannot create additional tasks (as a `maximumOverCapacity > 0` would induce) in order to prevent additional volume creation.
 
 **Note:** For a stateful application, Marathon will never start more instances than specified in the `UpgradeStrategy`, and will kill old instances rather than create new ones during an upgrade or restart.
 
@@ -100,7 +100,7 @@ Currently, the resource requirements of a stateful application **cannot** be cha
 
 ### Replication and Backups
 
-Because persistent volumes are pinned to nodes, they are no longer reachable if the node is disconnected from the cluster, e.g. due to a network partition or a crashed agent. If the stateful service does not take care of data replication on its own, you need to manually replicate your data (to guard against data loss from a network partition) and create backups (to guard against data loss from a crashed agent).
+Because persistent volumes are pinned to nodes, they are no longer reachable if the node is disconnected from the cluster, e.g. due to a network partition or a crashed agent. If the stateful service does not take care of data replication on its own, you need to manually setup a replication or backup strategy to guard against data loss from a network partition or from a crashed agent.
 
 If an agent re-registers with the cluster and offers its resources, Marathon is eventually able to relaunch a task there. If a node does not re-register with the cluster, Marathon will wait forever to receive expected offers, as it's goal is to re-use the existing data. If the agent is not expected to come back, you can manually delete the relevant tasks by adding a `wipe=true` flag and Marathon will eventually launch a new task with a new volume on another agent.
 
@@ -113,7 +113,7 @@ As of Mesos 0.28, destroying a persistent volume will not cleanup or destroy dat
 
 Both static and dynamic reservations in Mesos are bound to roles, not to frameworks or framework instances. Marathon will add labels to claim that resources have been reserved for a combination of `frameworkId` and `taskId`, as noted above. However, these labels do not protect from misuse by other frameworks or old Marathon instances (prior to 1.0). Every Mesos framework that registers for a given role will eventually receive offers containing resources that have been reserved for that role.
 
-However, if a framework does not respect the presence of labels and the semantics as intended, Marathon is unable to reclaim the resources reserved for the role. We recommend never using the same role for different frameworks if one of them uses dynamic reservations. Marathon instances in HA mode do not need to have unique roles, though, because they use the same role by design.
+However, if another framework does not respect the presence of labels and the semantics as intended and uses them, Marathon is unable to reclaim these resources for the initial purpose. We recommend never using the same role for different frameworks if one of them uses dynamic reservations. Marathon instances in HA mode do not need to have unique roles, though, because they use the same role by design.
 
 ### The Mesos Sandbox
 
@@ -133,7 +133,7 @@ The temporary Mesos sandbox is still the target for the `stdout` and `stderr` lo
 
 ### Running stateful PostgreSQL on Marathon
 
-An model app definition for PostgreSQL on Marathon would look like this. Note that we set the postgres data folder to `pgdata` and is relative to the Mesos sandbox as specified in the `$MESOS_SANDBOX` variable). This enables us to set up a persistent volume with a containerPath of `pgdata`. This path is is not nested and relative to the sandbox as required:
+A model app definition for PostgreSQL on Marathon would look like this. Note that we set the postgres data folder to `pgdata` which is relative to the Mesos sandbox (as contained in the `$MESOS_SANDBOX` variable). This enables us to set up a persistent volume with a containerPath of `pgdata`. This path is is not nested and relative to the sandbox as required:
 
 ```
 {
@@ -261,7 +261,7 @@ In order to destroy and clean up persistent volumes and free the reserved resour
 1. Locate the agent containing the persistent volume and remove the data inside it.
 1. Send an HTTP DELETE request to Marathon that includes the `wipe=true` flag.
 
-To locate the agent, inspect the Marathon UI and check out the detached volumes on the _Volumes_ tab. Or, query the `/v2/apps` endpoint, which provides information about the `host` and Mesos `slaveId`
+To locate the agent, inspect the Marathon UI and check out the detached volumes on the _Volumes_ tab. Or, query the `/v2/apps` endpoint, which provides information about the `host` and Mesos `slaveId`.
 
 ```
 $ http GET http://dcos/service/marathon-jar/v2/apps/postgres/tasks
@@ -300,4 +300,4 @@ After you have created your Marathon application, click the _Volumes_ tab of the
 
 The Status column tells you if your app instance is attached to the volume or not. The app instance will read as “detached” if you have scaled down your application. Currently the only Operation Type available is read/write (RW).
 
-Click the individual volume to view the Volume Detail Page, where you can see information about the individual volume.
+Click a volume to view the Volume Detail Page, where you can see information about the individual volume.
