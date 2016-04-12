@@ -335,7 +335,7 @@ filling up the hard disk on Mesos slaves. The backoff period is multiplied by
 the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
 This applies also to tasks that are killed due to failing too many health checks.
 
-##### upgradeStrategy
+##### <a name="upgrade-strategy"></a> upgradeStrategy
 
 During an upgrade all instances of an application get replaced by a new version.
 The upgradeStrategy controls how Marathon stops old versions and launches
