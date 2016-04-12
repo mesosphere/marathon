@@ -246,7 +246,6 @@ object Dependencies {
     sprayHttpx % "compile",
     chaos % "compile",
     mesosUtils % "compile",
-    jacksonCaseClass % "compile",
     twitterCommons % "compile",
     jodaTime % "compile",
     jodaConvert % "compile",
@@ -282,7 +281,6 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.8.4"
     val Guava = "18.0"
-    val JacksonCCM = "0.1.2"
     val MesosUtils = "0.28.0"
     val Akka = "2.3.9"
     val Spray = "1.3.2"
@@ -323,7 +321,6 @@ object Dependency {
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
   val guava = "com.google.guava" % "guava" % V.Guava
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
-  val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
