@@ -142,9 +142,9 @@ object AppUpdate {
     appUp.id is valid
     appUp.dependencies is valid
     appUp.upgradeStrategy is valid
-    appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
+    appUp.storeUrls is optional(everyByIndex(urlCanBeResolvedValidator))
     appUp.portDefinitions is optional(PortDefinitions.portDefinitionsValidator)
-    appUp.fetch is optional(every(fetchUriIsValid))
+    appUp.fetch is optional(everyByIndex(fetchUriIsValid))
     appUp.container.each is valid
     appUp.residency is valid
     appUp.mem should optional(be >= 0.0)

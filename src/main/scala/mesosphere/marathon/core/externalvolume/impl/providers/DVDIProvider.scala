@@ -134,7 +134,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         }
 
         validator[AppDefinition] { app =>
-          app.externalVolumes is every(volumeNameUnique(app.id))
+          app.externalVolumes is everyByIndex(volumeNameUnique(app.id))
         }
       }
 
@@ -190,7 +190,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       validator[Container] { ct =>
         ct.volumes.collect { case ev: ExternalVolume => ev } as "volumes" is
-          every(ifDVDIVolume(volumeValidator(ct.`type`)))
+          everyByIndex(ifDVDIVolume(volumeValidator(ct.`type`)))
       }
     }
 

@@ -71,8 +71,8 @@ object GroupUpdate {
     group.scaleBy is theOnlyDefinedOptionIn(group)
 
     group.id is valid
-    group.apps is optional(every(AppDefinition.validNestedAppDefinition(group.id.fold(base)(_.canonicalPath(base)))))
-    group.groups is optional(every(validNestedGroupUpdateWithBase(group.id.fold(base)(_.canonicalPath(base)))))
+    group.apps is optional(everyByIndex(AppDefinition.validNestedAppDefinition(group.id.fold(base)(_.canonicalPath(base))))) //scalastyle:ignore
+    group.groups is optional(everyByIndex(validNestedGroupUpdateWithBase(group.id.fold(base)(_.canonicalPath(base)))))
   }
 
   implicit lazy val groupUpdateValid: Validator[GroupUpdate] = validNestedGroupUpdateWithBase(PathId.empty)

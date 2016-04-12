@@ -542,13 +542,13 @@ object AppDefinition {
   private val validBasicAppDefinition = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
     appDef.container.each is valid
-    appDef.storeUrls is every(urlCanBeResolvedValidator)
+    appDef.storeUrls is everyByIndex(urlCanBeResolvedValidator)
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer
-    appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
+    appDef.healthChecks is everyByIndex(portIndexIsValid(appDef.portIndices))
     appDef.instances should be >= 0
-    appDef.fetch is every(fetchUriIsValid)
+    appDef.fetch is everyByIndex(fetchUriIsValid)
     appDef.mem should be >= 0.0
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
@@ -571,7 +571,7 @@ object AppDefinition {
   implicit val validAppDefinition: Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.id is valid
     app.id is PathId.absolutePathValidator
-    app.dependencies is every(PathId.validPathWithBase(app.id.parent))
+    app.dependencies is everyByIndex(PathId.validPathWithBase(app.id.parent))
   } and validBasicAppDefinition
 
   /**
@@ -627,7 +627,7 @@ object AppDefinition {
 
   private val complyWithReadinessCheckRules: Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.readinessChecks.size should be <= 1
-    app.readinessChecks is every(ReadinessCheck.readinessCheckValidator(app))
+    app.readinessChecks is everyByIndex(ReadinessCheck.readinessCheckValidator(app))
   }
 
   private val complyWithUpgradeStrategyRules: Validator[AppDefinition] = validator[AppDefinition] { appDef =>

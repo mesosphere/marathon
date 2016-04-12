@@ -57,7 +57,7 @@ object Container {
         }
 
       implicit val portMappingValidator = validator[PortMapping] { portMapping =>
-        portMapping.protocol.split(',').toIterable is uniqueProtocols and every(oneOf(TCP, UDP))
+        portMapping.protocol.split(',').toIterable is uniqueProtocols and everyByIndex(oneOf(TCP, UDP))
         portMapping.containerPort should be >= 0
         portMapping.hostPort should be >= 0
         portMapping.servicePort should be >= 0
@@ -67,7 +67,7 @@ object Container {
 
     object PortMappings {
       implicit val portMappingsValidator: Validator[Seq[PortMapping]] = validator[Seq[PortMapping]] { portMappings =>
-        portMappings is every(valid)
+        portMappings is everyByIndex(valid)
         portMappings is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
       }
     }
@@ -82,7 +82,7 @@ object Container {
   // delegates validation to the matching validator
   implicit val validContainer: Validator[Container] = {
     val validGeneralContainer = validator[Container] { container =>
-      container.volumes is every(valid)
+      container.volumes is everyByIndex(valid)
     }
 
     val validDockerContainer: Validator[Container] = validator[Container] { container =>

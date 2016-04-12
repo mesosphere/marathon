@@ -37,7 +37,7 @@ object Validation {
     override def apply(t: T): Result = if (!b(t)) Success else validator(t)
   }
 
-  implicit def every[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
+  implicit def everyByIndex[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
     new Validator[Iterable[T]] {
       override def apply(seq: Iterable[T]): Result = {
 
