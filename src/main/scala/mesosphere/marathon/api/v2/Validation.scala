@@ -4,7 +4,7 @@ import java.net._
 
 import com.wix.accord._
 import mesosphere.marathon.{ AllConf, ValidationFailedException }
-import mesosphere.marathon.state.{ ToPathId, FetchUri }
+import mesosphere.marathon.state.{ ToIdentity, FetchUri }
 import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
@@ -51,13 +51,13 @@ object Validation {
     }
   }
 
-  implicit def everyById[T](validator: Validator[T])(implicit toPath: ToPathId[T]): Validator[Iterable[T]] = {
+  implicit def everyById[T](validator: Validator[T])(implicit toPath: ToIdentity[T]): Validator[Iterable[T]] = {
     new Validator[Iterable[T]] {
       override def apply(seq: Iterable[T]): Result = {
 
         val violations = seq.map(item => (item, validator(item))).collect {
           case (item, f: Failure) =>
-            GroupViolation(item, "not valid", Some(s"(${toPath(item).relativePath})"), f.violations)
+            GroupViolation(item, "not valid", Some(s"(${toPath(item)})"), f.violations)
         }
 
         if (violations.isEmpty) Success
