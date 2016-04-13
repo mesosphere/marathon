@@ -6,11 +6,11 @@ import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.matcher.reconcile.impl.{ OffersWantedForReconciliationActor, OfferMatcherReconciler }
+import mesosphere.marathon.core.matcher.reconcile.impl.{ OfferMatcherReconciler, OffersWantedForReconciliationActor }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.GroupRepository
+import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{ Observable, Observer, Subject }
-import rx.lang.scala.subjects.PublishSubject
 
 class OfferMatcherReconciliationModule(
     reviveOffersConfig: ReviveOffersConfig,
@@ -28,7 +28,7 @@ class OfferMatcherReconciliationModule(
   /** Starts underlying actors etc. */
   def start(): Unit = offersWantedForReconciliationActor
 
-  private[this] lazy val offersWantedSubject: Subject[Boolean] = PublishSubject()
+  private[this] lazy val offersWantedSubject: Subject[Boolean] = BehaviorSubject(false)
   private[this] def offersWantedObserver: Observer[Boolean] = offersWantedSubject
 
   private[this] lazy val offersWantedForReconciliationActor = leadershipModule.startWhenLeader(
