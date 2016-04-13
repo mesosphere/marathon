@@ -390,7 +390,6 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
   test("Deployment plan allows valid updates for resident tasks") {
     Given("All options are supplied and we have a valid group change")
-    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     val f = new Fixture()
 
     When("We create a scale deployment")
@@ -404,7 +403,6 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
   test("Deployment plan validation fails for invalid changes in resident tasks") {
     Given("All options are supplied and we have a valid group change")
-    AllConf.SuppliedOptionNames = Set("mesos_authentication_principal", "mesos_role", "mesos_authentication_secret_file")
     val f = new Fixture()
 
     When("We update the upgrade strategy to the default strategy")

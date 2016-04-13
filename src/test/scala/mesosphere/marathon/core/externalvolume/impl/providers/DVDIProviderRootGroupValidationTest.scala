@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.externalvolume.impl.providers
 
 import com.wix.accord.{ RuleViolation, Success, Failure, Result }
+import mesosphere.marathon.AllConf
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state._
@@ -67,6 +68,10 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
   }
 
   class Fixture {
+
+    //enable feature external volumes
+    AllConf.withTestConfig(Seq("--enable_features", "external_volumes"))
+
     def appWithDVDIVolume(appId: PathId, volumeName: String, provider: String = DVDIProvider.name): AppDefinition = {
       AppDefinition(
         id = appId,

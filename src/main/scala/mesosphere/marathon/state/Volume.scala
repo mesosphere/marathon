@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.Protos
+import mesosphere.marathon.{ Features, Protos }
 import mesosphere.marathon.api.v2.Validation.oneOf
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import org.apache.mesos.Protos.Volume.Mode
@@ -216,6 +216,7 @@ case class ExternalVolume(
 
 object ExternalVolume {
   val validExternalVolume = validator[ExternalVolume] { ev =>
+    ev is featureEnabled(Features.EXTERNAL_VOLUMES)
     ev.containerPath is notEmpty
     ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
   } and ExternalVolumes.validExternalVolume

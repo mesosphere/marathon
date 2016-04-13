@@ -46,7 +46,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Enable the selected features. Options to use:
     - "vips" can be used to enable the networking VIP integration UI.
     - "task_killing" can be used to enable the TASK_KILLING state in Mesos (0.28 or later)
-    Example: `--enable_features vips,task_killing`
+    - "external_volumes" can be used if the cluster is configured to use external volumes.
+    Example: `--enable_features vips,task_killing,external_volumes`
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
 * `--failover_timeout` (Optional. Default: 604800 seconds (1 week)): The
