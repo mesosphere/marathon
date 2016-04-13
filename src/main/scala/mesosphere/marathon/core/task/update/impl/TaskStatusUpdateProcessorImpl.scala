@@ -57,9 +57,10 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
       case _ =>
         killUnknownTaskTimer {
+          // If we kill a unknown task, we will get another TASK_LOST notification which leads to an endless
+          // stream of kills and TASK_LOST updates.
           if (status.getState != MesosProtos.TaskState.TASK_LOST) {
-            // If we kill a unknown task, we will get another TASK_LOST notification which leads to an endless
-            // stream of kills and TASK_LOST updates.
+            log.warn(s"Kill unknown $taskId")
             killTask(taskId.mesosTaskId)
           }
           acknowledge(status)
