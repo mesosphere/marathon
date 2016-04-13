@@ -62,6 +62,12 @@ object Validation {
     }
   }
 
+  def featureEnabled[T](feature: String): Validator[T] = {
+    isTrue(s"Feature $feature is not enabled. Enable with --enable_features $feature)") { _ =>
+      AllConf.isFeatureSet(feature)
+    }
+  }
+
   implicit lazy val failureWrites: Writes[Failure] = Writes { f =>
     Json.obj(
       "message" -> "Object is not valid",
@@ -235,11 +241,6 @@ object Validation {
       failure = _ -> s"is not one of (${options.mkString(",")})"
     )
   }
-
-  def configValueSet[T <: AnyRef](config: String*): Validator[T] =
-    isTrue(s"""You have to supply ${config.mkString(", ")} on the command line.""") { _ =>
-      config.forall(AllConf.suppliedOptionNames)
-    }
 
   def isTrue[T](constraint: String)(test: T => Boolean): Validator[T] = isTrue[T]((_: T) => constraint)(test)
 

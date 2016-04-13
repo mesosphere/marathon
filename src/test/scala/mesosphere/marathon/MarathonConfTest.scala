@@ -129,7 +129,7 @@ class MarathonConfTest extends MarathonSpec with Matchers {
       "--enable_features", "vips"
     )
 
-    conf.features() should be(Set("vips"))
+    conf.availableFeatures should be(Set("vips"))
   }
 
   test("Features should not allow unknown features") {

@@ -38,7 +38,9 @@ trait MarathonConf
     default = None,
     noshort = true,
     validate = validateFeatures
-  ).map(parseFeatures)
+  )
+
+  lazy val availableFeatures: Set[String] = features.get.map(parseFeatures).getOrElse(Set.empty)
 
   private[this] def parseFeatures(str: String): Set[String] =
     str.split(',').map(_.trim).filter(_.nonEmpty).toSet
@@ -55,7 +57,7 @@ trait MarathonConf
     true
   }
 
-  def isFeatureSet(name: String): Boolean = features.get.exists(_.contains(name))
+  def isFeatureSet(name: String): Boolean = availableFeatures.contains(name)
 
   lazy val mesosFailoverTimeout = opt[Long]("failover_timeout",
     descr = "(Default: 1 week) The failover_timeout for mesos in seconds.",

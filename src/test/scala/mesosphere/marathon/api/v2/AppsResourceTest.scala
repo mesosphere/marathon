@@ -713,6 +713,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   var groupRepository: GroupRepository = _
 
   before {
+    //enable feature external volumes
+    AllConf.withTestConfig(Seq("--enable_features", "external_volumes"))
     clock = ConstantClock()
     auth = new TestAuthFixture
     eventBus = mock[EventStream]
