@@ -68,7 +68,7 @@ In the app definition above:
 
 - `name` is the name by which your volume driver looks up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used. **Note:** Implicit volume creation only works when using volumes with a Mesos container and requires that you set `volumes[x].external.size`.
 
-- The `external.driver["dvdi/driver"]` option specifies which Docker volume driver to use for storage. If you are running Marathon on DCOS, this value should likely be `rexray`. [Learn more about REX-Ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
+- The `external.options["dvdi/driver"]` option specifies which Docker volume driver to use for storage. If you are running Marathon on DCOS, this value should likely be `rexray`. [Learn more about REX-Ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
 
 - You can specify additional options with `container.volumes[x].external.options[optionName]`. The dvdi provider for Mesos containers uses `dvdcli`, which offers the options [documented here](https://github.com/emccode/dvdcli#extra-options). The availability of any given option depends on your volume driver, however.
 
