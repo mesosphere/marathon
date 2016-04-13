@@ -1,8 +1,8 @@
 ---
-title: Marathon UI
+title: Marathon Web Interface
 ---
 
-# Marathon UI
+# Marathon Web Interface
 
 The **Marathon UI** source code repository lives at [https://github.com/mesosphere/marathon-ui](https://github.com/mesosphere/marathon-ui).
 For issues and feature requests related to the web UI, please refer to the [Support]({{ site.baseurl }}/support.html) page.
