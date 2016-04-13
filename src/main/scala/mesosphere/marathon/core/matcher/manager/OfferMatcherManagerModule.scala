@@ -11,7 +11,7 @@ import mesosphere.marathon.core.matcher.manager.impl.{
   OfferMatcherManagerDelegate
 }
 import mesosphere.marathon.metrics.Metrics
-import rx.lang.scala.subjects.PublishSubject
+import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{ Observable, Subject }
 
 import scala.util.Random
@@ -25,7 +25,7 @@ class OfferMatcherManagerModule(
     offerMatcherConfig: OfferMatcherManagerConfig,
     leadershipModule: LeadershipModule) {
 
-  private[this] lazy val offersWanted: Subject[Boolean] = PublishSubject[Boolean]()
+  private[this] lazy val offersWanted: Subject[Boolean] = BehaviorSubject[Boolean](false)
 
   private[this] lazy val offerMatcherManagerMetrics = new OfferMatcherManagerActorMetrics(metrics)
 
