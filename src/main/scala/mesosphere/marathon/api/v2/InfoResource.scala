@@ -44,7 +44,7 @@ class InfoResource @Inject() (
     "mesos_user" -> config.mesosUser.get,
     "leader_proxy_connection_timeout_ms" -> config.leaderProxyConnectionTimeout.get,
     "leader_proxy_read_timeout_ms" -> config.leaderProxyReadTimeout.get,
-    "features" -> config.features.get
+    "features" -> config.availableFeatures
   )
 
   // ZooKeeper congiurations

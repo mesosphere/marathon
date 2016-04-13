@@ -82,7 +82,6 @@ class MarathonApp extends App {
 
   override def initConf(): Unit = {
     super.initConf()
-    AllConf.SuppliedOptionNames = conf.builder.getAllSuppliedOptionNames.toSet
   }
 
   def runDefault(): Unit = {
