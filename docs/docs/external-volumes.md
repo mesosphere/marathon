@@ -7,6 +7,7 @@ title: Stateful Applications Using External Persistent Volumes
 <div class="alert alert-danger" role="alert">
   <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 1.0 <br/>
   External persistent storage functionality is considered beta, so use this feature at your own risk. We might add, change, or delete any functionality described in this document.
+  This functionality is **disabled by default** but may be turned on by including `external_volumes` in the value of the `--enable_features` command-line flag.
 </div>
 
 Marathon applications normally lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can use an external storage service, such as Amazon's Elastic Block Store (EBS), to create a persistent volume that follows your application instance.
