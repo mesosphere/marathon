@@ -16,11 +16,11 @@ Port configuration for applications in Marathon can be confusing and there is [a
 
 *HOST networking*: `HOST` networking is used by non-Docker Marathon applications and Docker applications that use `HOST` mode networking. In this mode, applications bind directly to one or more ports on the host machine.
 
-*portMapping*: A _port mapping_ is used to define ports that should be considered as part of a resource offer. It is necessary for Docker applications that use `BRIDGE` mode networking and is a tuple containing a host port, container port, service port and protocol. Multiple _port mappings_ may be specified for a Marathon application.
+*portMapping*: In Docker `BRIDGE` mode, a port mapping is necessary for every port that should be reachable from outside of your container. A port mapping is a tuple containing a host port, container port, service port and protocol. Multiple _port mappings_ may be specified for a Marathon application.
 
-*ports*: The _ports_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. Only one of _ports_ and _portDefinitions_ should be defined at the same time.
+*ports*: The _ports_ array is used to define ports that should be considered as part of a resource offer in `HOST` mode. It is necessary only if no port mappings are specified. Only one of _ports_ and _portDefinitions_ should be defined for an application.
 
-*portDefinitions*: The _portDefinitionss_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. This array is meant to replace the _ports_ array, and makes it possible to specify a port name, protocol and labels. Only one of _ports_ and _portDefinitions_ should be defined at the same time.
+*portDefinitions*: The _portDefinitions_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. This array is meant to replace the _ports_ array, and makes it possible to specify a port name, protocol and labels. Only one of _ports_ and _portDefinitions_ should be defined for an application.
 
 *protocol*: _Protocol_ specifies the internet protocol to use for a port (e.g. `tcp`, `udp` or `udp,tcp` for both). This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
 
