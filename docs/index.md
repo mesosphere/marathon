@@ -1,9 +1,8 @@
 ---
-title: Setting Up and Running Marathon
+title: Install Marathon
 ---
 
-
-## Installing Marathon
+# Install Marathon
 
 
 ### Requirements
@@ -40,17 +39,6 @@ $ tar xzf marathon-1.1.0-RC1.tgz
 ```
 
 SHA-256 checksums are available by appending `.sha256` to the URLs.
-
-### Versioning
-
-As of version 0.9.0, Marathon adheres to [semantic versioning](http://semver.org).
-That means our documented REST API remains compatible across releases unless we change the MAJOR version
-(the first number in the version tuple). If you depend on undocumented features, please tell us about them by [raising a GitHub issue](https://github.com/mesosphere/marathon/issues/new). Portions of the API marked as EXPERIMENTAL are exempt from this rule. We do not introduce new features in PATCH version increments (the last number in the version tuple).
-
-In rare cases, we may change the Marathon command line flags in a MINOR version upgrade. The release notes document these instances.
-
-We provide release candidates for all new MAJOR/MINOR versions and invite our users to test them and
-give us feedback, particularly on violations of the versioning policy.
 
 ### Upgrading to a Newer Version
 

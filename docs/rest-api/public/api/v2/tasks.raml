@@ -27,7 +27,11 @@ get:
     queryParameters:
       scale:
         type: boolean
-        description: If `scale=true` is specified, then the related application is scaled down by the number of killed tasks.
+        description: If `scale=true` is specified, then the related application is scaled down by the number of killed tasks. Only possible if `wipe=false` or not specified.
+        default: false
+      wipe:
+        type: boolean
+        description: If `wipe=true` is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if `scale=false` or not specified.
         default: false
     body:
       application/json:
