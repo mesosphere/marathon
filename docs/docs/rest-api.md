@@ -476,6 +476,12 @@ Kill tasks that belong to the application `appId`.
         by the number of tasks killed) after killing the specified tasks.
         Default: <code>false</code>.</td>
     </tr>
+    <tr>
+      <td><code>wipe</code></td>
+      <td><code>boolean</code></td>
+      <td>If <code>wipe=true</code> is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if <code>scale=false</code> or not specified.
+        Default: <code>false</code>.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -526,6 +532,13 @@ Kill the task with ID `taskId` that belongs to the application `appId`.
       <td><code>boolean</code></td>
       <td>Scale the app down (i.e. decrement its <code>instances</code> setting
         by the number of tasks killed) after killing the specified task.
+        Only possible if <code>wipe=false</false> or not specified.
+        Default: <code>false</code>.</td>
+    </tr>
+    <tr>
+      <td><code>wipe</code></td>
+      <td><code>boolean</code></td>
+      <td>If <code>wipe=true</code> is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if <code>scale=false</code> or not specified.
         Default: <code>false</code>.</td>
     </tr>
   </tbody>
@@ -1245,7 +1258,13 @@ Kill the given list of tasks and scale apps if requested.
       <td><code>scale</code></td>
       <td><code>boolean</code></td>
       <td>Scale the app down (i.e. decrement its <code>instances</code> setting
-        by the number of tasks killed) after killing the specified tasks.
+        by the number of tasks killed) after killing the specified tasks. Only possible if <code>wipe=false</code> or not specified.
+        Default: <code>false</code>.</td>
+    </tr>
+    <tr>
+      <td><code>wipe</code></td>
+      <td><code>boolean</code></td>
+      <td>If <code>wipe=true</code> is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if <code>scale=false</code> or not specified.
         Default: <code>false</code>.</td>
     </tr>
   </tbody>
