@@ -147,7 +147,9 @@ private[tracker] class TaskOpProcessorImpl(
 
     case NonFatal(cause) =>
       def ack(actualTaskState: Option[MarathonTask], change: TaskStateChange): TaskTrackerActor.Ack = {
-        val msg = if (expectedState.map(_.marathonTask) == actualTaskState) change else TaskStateChange.Failure(cause)
+        val msg =
+          if (expectedState.map(TaskSerializer.toProto) == actualTaskState) change
+          else TaskStateChange.Failure(cause)
         TaskTrackerActor.Ack(op.sender, msg)
       }
 

@@ -63,12 +63,6 @@ sealed trait Task {
 
   def appId: PathId = taskId.appId
 
-  /**
-    * Legacy conversion to MarathonTask. Cache result to speed up repeated uses.
-    * Should be removed before releasing 0.16.
-    */
-  lazy val marathonTask: MarathonTask = TaskSerializer.toProto(this)
-
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task
     taskId.mesosTaskId

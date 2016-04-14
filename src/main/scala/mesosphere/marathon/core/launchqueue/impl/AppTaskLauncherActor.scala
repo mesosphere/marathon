@@ -103,7 +103,7 @@ private class AppTaskLauncherActor(
     log.info("Started appTaskLaunchActor for {} version {} with initial count {}",
       app.id, app.version, tasksToLaunch)
 
-    tasksMap = taskTracker.tasksByAppSync.appTasksMap(app.id).taskStateMap
+    tasksMap = taskTracker.tasksByAppSync.appTasksMap(app.id).taskMap
 
     rateLimiterActor ! RateLimiterActor.GetDelay(app)
   }

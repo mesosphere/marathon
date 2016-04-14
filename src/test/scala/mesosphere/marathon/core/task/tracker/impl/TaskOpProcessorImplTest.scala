@@ -40,7 +40,7 @@ class TaskOpProcessorImplTest
 
     Given("a taskRepository")
     val taskState = MarathonTestHelper.mininimalTask(appId)
-    val task = taskState.marathonTask
+    val task = TaskSerializer.toProto(taskState)
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.runningHealthy)
     val mesosStatus = stateOp.status.mesosStatus.get
     val expectedChange = TaskStateChange.Update(taskState, Some(taskState))
@@ -79,7 +79,7 @@ class TaskOpProcessorImplTest
 
     Given("a taskRepository and existing task")
     val taskState = MarathonTestHelper.stagedTaskForApp(appId)
-    val task = taskState.marathonTask
+    val task = TaskSerializer.toProto(taskState)
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.running)
     val expectedChange = TaskStateChange.Update(taskState, Some(taskState))
     val taskChanged = TaskChanged(stateOp, expectedChange)
@@ -126,7 +126,7 @@ class TaskOpProcessorImplTest
 
     Given("a taskRepository and no task")
     val taskState = MarathonTestHelper.mininimalTask(appId)
-    val task = taskState.marathonTask
+    val task = TaskSerializer.toProto(taskState)
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.running)
     val resolvedStateChange = TaskStateChange.Update(taskState, Some(taskState))
     val storeException: RuntimeException = new scala.RuntimeException("fail")
@@ -296,7 +296,7 @@ class TaskOpProcessorImplTest
 
     Given("a taskRepository")
     val taskState = MarathonTestHelper.mininimalTask(appId)
-    val task = taskState.marathonTask
+    val task = TaskSerializer.toProto(taskState)
     val taskId = task.getId
     val expungeException: RuntimeException = new scala.RuntimeException("expunge fails")
     val stateOp = f.stateOpExpunge(taskState)
@@ -336,7 +336,7 @@ class TaskOpProcessorImplTest
 
     Given("a statusUpdateResolver and an update")
     val taskState = MarathonTestHelper.mininimalTask(appId)
-    val task = taskState.marathonTask
+    val task = TaskSerializer.toProto(taskState)
     val stateOp = f.stateOpUpdate(taskState, MarathonTaskStatusTestHelper.running)
     val expectedChange = TaskStateChange.NoChange(taskState.taskId)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
@@ -366,7 +366,7 @@ class TaskOpProcessorImplTest
 
     Given("a statusUpdateResolver and an update")
     val taskState = MarathonTestHelper.mininimalTask(appId)
-    val task = taskState.marathonTask
+    val task = TaskSerializer.toProto(taskState)
     val stateOp = f.stateOpReservationTimeout(taskState)
     val exception = TaskStateChangeException("ReservationTimeout on LaunchedEphemeral is unexpected")
     val expectedChange = TaskStateChange.Failure(exception)

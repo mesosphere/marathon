@@ -111,13 +111,13 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting task counts only retrieves tasks from taskTracker and health stats") {
     val f = new Fixture
     Given("one staged and two running tasks in the taskTracker")
-    val staged = MarathonTestHelper.stagedTaskProto("task1")
-    val running = MarathonTestHelper.runningTaskProto("task2")
-    val running2 = running.toBuilder.setId("task3").buildPartial()
+    val staged = MarathonTestHelper.stagedTask("task1")
+    val running = MarathonTestHelper.runningTask("task2")
+    val running2 = MarathonTestHelper.runningTask("task3")
 
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks(app.id, Iterable(staged, running, running2))))
+      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Iterable(staged, running, running2))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(

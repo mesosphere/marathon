@@ -61,11 +61,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
   test("ReconcileTasks") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    val tasks = Iterable(MarathonTestHelper.runningTaskProto("task_a"))
+    val tasks = Iterable(MarathonTestHelper.runningTask("task_a"))
 
     when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
     when(taskTracker.tasksByApp()(any[ExecutionContext])).thenReturn(
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks("nope".toPath, tasks)))
+      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks("nope".toPath, tasks)))
     )
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
 
@@ -140,9 +140,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA))
-    when(taskTracker.marathonTaskSync(taskA.taskId))
-      .thenReturn(Some(taskA.marathonTask))
-      .thenReturn(None)
 
     when(repo.currentVersion(app.id))
       .thenReturn(Future.successful(Some(app)))
@@ -195,9 +192,6 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
     when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
     when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable[Task](taskA))
-    when(taskTracker.marathonTaskSync(taskA.taskId))
-      .thenReturn(Some(taskA.marathonTask))
-      .thenReturn(None)
 
     when(repo.currentVersion(app.id))
       .thenReturn(Future.successful(Some(app)))

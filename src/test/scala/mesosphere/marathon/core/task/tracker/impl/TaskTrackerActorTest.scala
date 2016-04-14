@@ -55,8 +55,8 @@ class TaskTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val task = MarathonTestHelper.dummyTaskProto(appId)
-    val appDataMap = TaskTracker.TasksByApp.of(TaskTracker.AppTasks(appId, Iterable(task)))
+    val task = MarathonTestHelper.mininimalTask(appId)
+    val appDataMap = TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(appId, Iterable(task)))
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
     When("the task tracker actor gets a List query")
@@ -71,11 +71,11 @@ class TaskTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTaskProto("staged")
-    val runningTask1 = MarathonTestHelper.runningTaskProto("running1")
-    val runningTask2 = MarathonTestHelper.runningTaskProto("running2")
+    val stagedTask = MarathonTestHelper.stagedTask("staged")
+    val runningTask1 = MarathonTestHelper.runningTask("running1")
+    val runningTask2 = MarathonTestHelper.runningTask("running2")
     val appDataMap = TaskTracker.TasksByApp.of(
-      TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
+      TaskTracker.AppTasks.forTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
@@ -93,29 +93,27 @@ class TaskTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTask = MarathonTestHelper.stagedTaskProto(appId)
-    val stagedTaskState = TaskSerializer.fromProto(stagedTask)
-    val runningTask1 = MarathonTestHelper.runningTaskProto(appId)
-    val runningTask1State = TaskSerializer.fromProto(runningTask1)
-    val runningTask2 = MarathonTestHelper.runningTaskProto(appId)
+    val stagedTask = MarathonTestHelper.stagedTaskForApp(appId)
+    val runningTask1 = MarathonTestHelper.runningTaskForApp(appId)
+    val runningTask2 = MarathonTestHelper.runningTaskForApp(appId)
     val appDataMap = TaskTracker.TasksByApp.of(
-      TaskTracker.AppTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
+      TaskTracker.AppTasks.forTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
     When("staged task gets deleted")
     val probe = TestProbe()
-    val stagedUpdate = TaskStatusUpdateTestHelper.lost(stagedTaskState).wrapped
+    val stagedUpdate = TaskStatusUpdateTestHelper.lost(stagedTask).wrapped
     val stagedAck = TaskTrackerActor.Ack(probe.ref, stagedUpdate.stateChange)
     probe.send(f.taskTrackerActor, TaskTrackerActor.StateChanged(stagedUpdate, stagedAck))
-    probe.expectMsg(TaskStateChange.Expunge(stagedTaskState))
+    probe.expectMsg(TaskStateChange.Expunge(stagedTask))
 
     Then("it will have set the correct metric counts")
     f.actorMetrics.runningCount.getValue should be(2)
     f.actorMetrics.stagedCount.getValue should be(0)
 
     When("running task gets deleted")
-    val runningUpdate = TaskStatusUpdateTestHelper.lost(runningTask1State).wrapped
+    val runningUpdate = TaskStatusUpdateTestHelper.lost(runningTask1).wrapped
     val runningAck = TaskTrackerActor.Ack(probe.ref, stagedUpdate.stateChange)
     probe.send(f.taskTrackerActor, TaskTrackerActor.StateChanged(runningUpdate, runningAck))
     probe.expectMsg(())
@@ -132,19 +130,17 @@ class TaskTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTaskProto = MarathonTestHelper.stagedTaskProto(appId)
-    val runningTaskProto1 = MarathonTestHelper.runningTaskProto(appId)
-    val runningTaskProto2 = MarathonTestHelper.runningTaskProto(appId)
+    val stagedTask = MarathonTestHelper.stagedTaskForApp(appId)
+    val runningTask1 = MarathonTestHelper.runningTaskForApp(appId)
+    val runningTask2 = MarathonTestHelper.runningTaskForApp(appId)
     val appDataMap = TaskTracker.TasksByApp.of(
-      TaskTracker.AppTasks(appId, Iterable(stagedTaskProto, runningTaskProto1, runningTaskProto2))
+      TaskTracker.AppTasks.forTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 
     When("staged task transitions to running")
     val probe = TestProbe()
-    val stagedTaskNowRunningProto = MarathonTestHelper.runningTaskProto(stagedTaskProto.getId)
-    val stagedTaskNowRunning = TaskSerializer.fromProto(stagedTaskNowRunningProto)
-    val stagedTask = TaskSerializer.fromProto(stagedTaskProto)
+    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.taskId.idString)
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedTask,
       MarathonTaskStatus(stagedTaskNowRunning.mesosStatus.get)).wrapped
@@ -164,11 +160,11 @@ class TaskTrackerActorTest
     val f = new Fixture
     Given("an empty task loader result")
     val appId: PathId = PathId("/app")
-    val stagedTaskProto = MarathonTestHelper.stagedTaskProto(appId)
-    val runningTaskProto1 = MarathonTestHelper.runningTaskProto(appId)
-    val runningTaskProto2 = MarathonTestHelper.runningTaskProto(appId)
+    val stagedTask = MarathonTestHelper.stagedTaskForApp(appId)
+    val runningTask1 = MarathonTestHelper.runningTaskForApp(appId)
+    val runningTask2 = MarathonTestHelper.runningTaskForApp(appId)
     val appDataMap = TaskTracker.TasksByApp.of(
-      TaskTracker.AppTasks(appId, Iterable(stagedTaskProto, runningTaskProto1, runningTaskProto2))
+      TaskTracker.AppTasks.forTasks(appId, Iterable(stagedTask, runningTask1, runningTask2))
     )
     f.taskLoader.loadTasks() returns Future.successful(appDataMap)
 

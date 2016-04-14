@@ -18,15 +18,15 @@ object EndpointsHelper {
 
     val sb = new StringBuilder
     for (app <- apps if app.ipAddress.isEmpty) {
-      val tasks = tasksMap.marathonAppTasks(app.id)
+      val tasks = tasksMap.appTasks(app.id)
       val cleanId = app.id.safePath
 
       val servicePorts = app.servicePorts
 
       if (servicePorts.isEmpty) {
         sb.append(cleanId).append(delimiter).append(' ').append(delimiter)
-        for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
-          sb.append(task.getHost).append(' ')
+        for (task <- tasks if task.mesosStatus.exists(_.getState == TaskState.TASK_RUNNING)) {
+          sb.append(task.agentInfo.host).append(' ')
         }
         sb.append('\n')
       }
@@ -34,9 +34,9 @@ object EndpointsHelper {
         for ((port, i) <- servicePorts.zipWithIndex) {
           sb.append(cleanId).append(delimiter).append(port).append(delimiter)
 
-          for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
-            val taskPort = Option(task.getPortsList.get(i)).getOrElse(Integer.valueOf(0))
-            sb.append(task.getHost).append(':').append(taskPort).append(delimiter)
+          for (task <- tasks if task.mesosStatus.exists(_.getState == TaskState.TASK_RUNNING)) {
+            val taskPort = task.launched.flatMap(_.hostPorts.drop(i).headOption).getOrElse(0)
+            sb.append(task.agentInfo.host).append(':').append(taskPort).append(delimiter)
           }
           sb.append('\n')
         }
