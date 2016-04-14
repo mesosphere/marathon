@@ -7,12 +7,10 @@ import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskCreationHandler, TaskTracker }
 import mesosphere.marathon.metrics.Metrics

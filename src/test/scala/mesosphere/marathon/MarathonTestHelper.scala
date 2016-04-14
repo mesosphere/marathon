@@ -13,7 +13,6 @@ import mesosphere.marathon.core.launcher.impl.{ ResourceLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._

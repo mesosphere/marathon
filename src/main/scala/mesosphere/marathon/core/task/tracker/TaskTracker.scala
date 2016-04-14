@@ -52,8 +52,8 @@ object TaskTracker {
 
     def task(taskId: Task.Id): Option[Task] = for {
       app <- appTasksMap.get(taskId.appId)
-      taskState <- app.taskMap.get(taskId)
-    } yield taskState
+      task <- app.taskMap.get(taskId)
+    } yield task
 
     def allTasks: Iterable[Task] = appTasksMap.values.view.flatMap(_.tasks)
 
@@ -104,6 +104,6 @@ object TaskTracker {
 
   object AppTasks {
     def forTasks(appId: PathId, tasks: Iterable[Task]): AppTasks =
-      AppTasks(appId, tasks.map(taskState => taskState.taskId -> taskState).toMap)
+      AppTasks(appId, tasks.map(task => task.taskId -> task).toMap)
   }
 }

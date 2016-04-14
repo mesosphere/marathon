@@ -156,10 +156,10 @@ private[tracker] class TaskOpProcessorImpl(
       log.warn(s"${op.taskId} of app [${op.taskId.appId}]: try to recover from failed ${op.stateOp}", cause)
 
       repo.task(op.taskId.idString).map {
-        case Some(task) =>
-          val taskState = TaskSerializer.fromProto(task)
-          val stateChange = TaskStateChange.Update(taskState, oldState)
-          ack(Some(task), stateChange)
+        case Some(taskProto) =>
+          val task = TaskSerializer.fromProto(taskProto)
+          val stateChange = TaskStateChange.Update(task, oldState)
+          ack(Some(taskProto), stateChange)
         case None =>
           val stateChange = oldState match {
             case Some(oldTask) => TaskStateChange.Expunge(oldTask)

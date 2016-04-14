@@ -5,9 +5,7 @@ import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.metrics.Metrics

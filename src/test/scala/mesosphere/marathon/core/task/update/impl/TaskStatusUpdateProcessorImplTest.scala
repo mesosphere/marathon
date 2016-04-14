@@ -5,7 +5,6 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
