@@ -51,28 +51,10 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
 
-    val deserializedTask = taskTracker.marathonTaskSync(sampleTask.taskId)
+    val deserializedTask = taskTracker.task(sampleTask.taskId).futureValue
 
     deserializedTask should not be empty
-    deserializedTask should equal(Some(sampleTask.marathonTask))
-  }
-
-  test("CreatedAndGetTask") {
-    testCreatedAndGetTask(_.marathonTaskSync(_))
-  }
-
-  test("CreatedAndGetTask Async") {
-    testCreatedAndGetTask(_.marathonTask(_).futureValue)
-  }
-
-  private[this] def testCreatedAndGetTask(call: (TaskTracker, Task.Id) => Option[MarathonTask]): Unit = {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
-
-    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
-
-    val fetchedTask = call(taskTracker, sampleTask.taskId)
-
-    assert(fetchedTask.get.equals(sampleTask.marathonTask), "Tasks are not properly stored")
+    deserializedTask should equal(Some(sampleTask))
   }
 
   test("List") {
