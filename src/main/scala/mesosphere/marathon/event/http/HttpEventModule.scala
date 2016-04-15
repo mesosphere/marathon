@@ -8,6 +8,7 @@ import akka.util.Timeout
 import com.google.inject.name.Named
 import com.google.inject.{ AbstractModule, Provides, Scopes }
 import mesosphere.marathon.ModuleNames.STORE_EVENT_SUBSCRIBERS
+import mesosphere.marathon.api.v2.Validation.urlIsValid
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe }
 import mesosphere.marathon.state.EntityStore
@@ -24,6 +25,7 @@ trait HttpEventConfiguration extends ScallopConf {
     descr = "The URLs of the event endpoints added to the current list of subscribers on startup. " +
       "You can manage this list during runtime by using the /v2/eventSubscriptions API endpoint.",
     required = false,
+    validate = { parseHttpEventEndpoints(_).forall(urlIsValid(_).isSuccess) },
     noshort = true).map(parseHttpEventEndpoints)
 
   lazy val httpEventCallbackSlowConsumerTimeout = opt[Long]("http_event_callback_slow_consumer_timeout",
@@ -96,4 +98,3 @@ object HttpEventModule {
   final val StatusUpdateActor = "EventsActor"
   final val SubscribersKeeperActor = "SubscriberKeeperActor"
 }
-

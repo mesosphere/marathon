@@ -26,6 +26,14 @@ class EventSubscribersIntegrationTest
     marathon.unsubscribe("http://localhost:1337")
   }
 
+  test("adding an invalid event subscriber") {
+    When("an invalid event subscriber is added")
+    marathon.subscribe("invalid%20URL").code should be(422)
+
+    Then("the subscriber should not show up in the list of subscribers")
+    marathon.listSubscribers.value.urls should not contain ("invalid URL")
+  }
+
   test("removing an event subscriber") {
     When("an event subscriber is removed")
     marathon.subscribe("http://localhost:1337").code should be(200)

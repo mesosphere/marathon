@@ -17,7 +17,7 @@ import spray.httpx.PlayJsonSupport
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{ Failure, Success, Try }
 
 /**
   * This actor subscribes to the event bus and distributes every event to all http callback listener.
@@ -96,7 +96,13 @@ class HttpEventActor(conf: HttpEventConfiguration,
     //remove all unsubscribed callback listener
     limiter = limiter.filterKeys(subscribers.urls).iterator.toMap.withDefaultValue(NoLimit)
     metrics.skippedCallbacks.mark(limited.size)
-    active.foreach(post(_, event, self))
+    active.foreach(url => Try(post(url, event, self)) match {
+      case Success(res) =>
+      case Failure(ex) =>
+        log.warning(s"Failed to post $event to $url because ${ex.getClass.getSimpleName}: ${ex.getMessage}")
+        metrics.failedCallbacks.mark()
+        self ! NotificationFailed(url)
+    })
   }
 
   def post(url: String, event: MarathonEvent, eventActor: ActorRef): Unit = {

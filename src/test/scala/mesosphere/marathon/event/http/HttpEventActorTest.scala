@@ -21,14 +21,14 @@ import scala.concurrent.duration._
 
 class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers {
 
-  test("A message is broadcast to all subscribers") {
+  test("A message is broadcast to all subscribers with valid URI") {
     Given("A HttpEventActor with 2 subscribers")
-    val aut = TestActorRef(new NoHttpEventActor(Set("host1", "host2")))
+    val aut = TestActorRef(new NoHttpEventActor(Set("host1", "invalid uri", "host2")))
 
     When("An event is send to the actor")
     aut ! EventStreamAttached("remote")
 
-    Then("The message is broadcast to both subscribers")
+    Then("The message is broadcast to both valid subscribers")
     waitUntil("Wait for 2 subscribers to get notified", 1.second) {
       aut.underlyingActor.requests.size == 2
     }

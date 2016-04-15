@@ -6,8 +6,10 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import com.codahale.metrics.annotation.Timed
 import com.google.inject.Inject
+import com.wix.accord.dsl._
 
 import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.v2.Validation.urlIsValid
 import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.event.http.HttpCallbackSubscriptionService
 import mesosphere.marathon.event.{ MarathonEvent, Subscribe, Unsubscribe }
@@ -35,8 +37,14 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf) extends Re
   @Timed
   def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response = {
     validateSubscriptionService()
-    val future: Future[MarathonEvent] = service.handleSubscriptionEvent(Subscribe(req.getRemoteAddr, callbackUrl))
-    ok(jsonString(eventToJson(result(future))))
+    implicit val httpCallbackValidator = validator[String] { callback =>
+      callback is urlIsValid
+    }
+    withValid(callbackUrl) { callback =>
+      val future: Future[MarathonEvent] = service.handleSubscriptionEvent(
+        Subscribe(req.getRemoteAddr, callback))
+      ok(jsonString(eventToJson(result(future))))
+    }
   }
 
   @DELETE
