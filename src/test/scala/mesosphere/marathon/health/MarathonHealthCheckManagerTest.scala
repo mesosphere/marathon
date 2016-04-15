@@ -109,12 +109,20 @@ class MarathonHealthCheckManagerTest
     }
   }
 
-  test("Add") {
+  test("Add for a known app") {
     val app: AppDefinition = AppDefinition(id = appId)
     appRepository.store(app).futureValue
 
     val healthCheck = HealthCheck()
-    hcManager.add(appId, app.version, healthCheck)
+    hcManager.add(app, healthCheck)
+    assert(hcManager.list(appId).size == 1)
+  }
+
+  test("Add for not-yet-known app") {
+    val app: AppDefinition = AppDefinition(id = appId)
+
+    val healthCheck = HealthCheck()
+    hcManager.add(app, healthCheck)
     assert(hcManager.list(appId).size == 1)
   }
 
@@ -133,7 +141,7 @@ class MarathonHealthCheckManagerTest
     taskCreationHandler.created(TaskStateOp.LaunchEphemeral(marathonTask)).futureValue
     stateOpProcessor.process(update).futureValue
 
-    hcManager.add(appId, app.version, healthCheck)
+    hcManager.add(app, healthCheck)
 
     val status1 = hcManager.status(appId, taskId).futureValue
     assert(status1 == Seq(Health(taskId)))
@@ -164,7 +172,7 @@ class MarathonHealthCheckManagerTest
     val version = app.version
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
-    hcManager.add(appId, version, healthCheck)
+    hcManager.add(app, healthCheck)
 
     val task1 = makeRunningTask(appId, version)
     val task2 = makeRunningTask(appId, version)

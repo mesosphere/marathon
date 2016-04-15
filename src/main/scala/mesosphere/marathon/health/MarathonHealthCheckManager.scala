@@ -54,35 +54,31 @@ class MarathonHealthCheckManager @Inject() (
       ahcs(appId)(appVersion)
     }
 
-  override def add(appId: PathId, appVersion: Timestamp, healthCheck: HealthCheck): Unit =
+  override def add(app: AppDefinition, healthCheck: HealthCheck): Unit =
     appHealthChecks.writeLock { ahcs =>
-      val healthChecksForApp = listActive(appId, appVersion)
+      val healthChecksForApp = listActive(app.id, app.version)
 
       if (healthChecksForApp.exists(_.healthCheck == healthCheck))
-        log.debug(s"Not adding duplicate health check for app [$appId] and version [$appVersion]: [$healthCheck]")
+        log.debug(s"Not adding duplicate health check for app [$app.id] and version [${app.version}]: [$healthCheck]")
 
       else {
-        log.info(s"Adding health check for app [$appId] and version [$appVersion]: [$healthCheck]")
-        Await.result(appRepository.app(appId, appVersion), zkConf.zkTimeoutDuration) match {
-          case Some(app: AppDefinition) =>
-            val ref = system.actorOf(
-              HealthCheckActor.props(app, driverHolder, healthCheck, taskTracker, eventBus))
-            val newHealthChecksForApp =
-              healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
+        log.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
-            val appMap = ahcs(appId) + (appVersion -> newHealthChecksForApp)
-            ahcs += appId -> appMap
+        val ref = system.actorOf(
+          HealthCheckActor.props(app, driverHolder, healthCheck, taskTracker, eventBus))
+        val newHealthChecksForApp =
+          healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 
-            eventBus.publish(AddHealthCheck(appId, appVersion, healthCheck))
-          case None =>
-            log.warn(s"Couldn't add health check for app [$appId] and version [$appVersion] - app definition not found")
-        }
+        val appMap = ahcs(app.id) + (app.version -> newHealthChecksForApp)
+        ahcs += app.id -> appMap
+
+        eventBus.publish(AddHealthCheck(app.id, app.version, healthCheck))
       }
     }
 
   override def addAllFor(app: AppDefinition): Unit =
     appHealthChecks.writeLock { _ => // atomically add all checks
-      app.healthChecks.foreach(add(app.id, app.version, _))
+      app.healthChecks.foreach(add(app, _))
     }
 
   override def remove(appId: PathId, appVersion: Timestamp, healthCheck: HealthCheck): Unit =

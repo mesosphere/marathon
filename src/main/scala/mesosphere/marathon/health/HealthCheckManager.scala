@@ -19,9 +19,9 @@ trait HealthCheckManager {
   def list(appId: PathId): Set[HealthCheck]
 
   /**
-    * Adds a health check for the app with the supplied id.
+    * Adds a health check of the supplied app.
     */
-  def add(appId: PathId, version: Timestamp, healthCheck: HealthCheck): Unit
+  def add(appDefinition: AppDefinition, healthCheck: HealthCheck): Unit
 
   /**
     * Adds all health checks for the supplied app.
