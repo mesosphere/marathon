@@ -264,7 +264,7 @@ In order to destroy and clean up persistent volumes and free the reserved resour
 To locate the agent, inspect the Marathon UI and check out the detached volumes on the _Volumes_ tab. Or, query the `/v2/apps` endpoint, which provides information about the `host` and Mesos `slaveId`.
 
 ```
-$ http GET http://dcos/service/marathon-jar/v2/apps/postgres/tasks
+$ http GET http://dcos/service/marathon/v2/apps/postgres/tasks
 
 response:
 
