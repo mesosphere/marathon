@@ -62,7 +62,7 @@ class HttpEventActor(conf: HttpEventConfiguration,
                      clock: Clock)
     extends Actor with ActorLogging with PlayJsonSupport {
 
-  implicit val timeout = HttpEventModule.timeout
+  implicit val timeout = conf.slowConsumerTimeout
   def pipeline(implicit ec: ExecutionContext): HttpRequest => Future[HttpResponse] = {
     addHeader("Accept", "application/json") ~> sendReceive
   }
@@ -116,7 +116,7 @@ class HttpEventActor(conf: HttpEventConfiguration,
     }
     response.onComplete {
       case Success(res) if res.status.isSuccess =>
-        val inTime = start.until(clock.now()) < conf.slowConsumerTimeout
+        val inTime = start.until(clock.now()) < conf.slowConsumerDuration
         eventActor ! (if (inTime) NotificationSuccess(url) else NotificationFailed(url))
       case Success(res) =>
         log.warning(s"No success response for post $event to $url")

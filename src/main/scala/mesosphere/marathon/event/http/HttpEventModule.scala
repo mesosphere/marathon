@@ -36,7 +36,8 @@ trait HttpEventConfiguration extends ScallopConf {
   private[this] def parseHttpEventEndpoints(str: String): List[String] =
     str.split(',').map(_.trim).toList
 
-  def slowConsumerTimeout: FiniteDuration = httpEventCallbackSlowConsumerTimeout().millis
+  def slowConsumerDuration: FiniteDuration = httpEventCallbackSlowConsumerTimeout().millis
+  def slowConsumerTimeout: Timeout = Timeout(slowConsumerDuration)
 }
 
 class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends AbstractModule {
@@ -64,7 +65,7 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
   def provideSubscribersKeeperActor(conf: HttpEventConfiguration,
                                     system: ActorSystem,
                                     @Named(STORE_EVENT_SUBSCRIBERS) store: EntityStore[EventSubscribers]): ActorRef = {
-    implicit val timeout = HttpEventModule.timeout
+    implicit val timeout = conf.slowConsumerTimeout
     val local_ip = java.net.InetAddress.getLocalHost.getHostAddress
 
     val actor = system.actorOf(Props(new SubscribersKeeperActor(store)))
@@ -86,8 +87,5 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
 object HttpEventModule {
   final val StatusUpdateActor = "EventsActor"
   final val SubscribersKeeperActor = "SubscriberKeeperActor"
-
-  //TODO(everpeace) this should be configurable option?
-  val timeout = Timeout(10 seconds)
 }
 
