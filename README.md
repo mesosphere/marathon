@@ -1,7 +1,7 @@
 [![Stories in Ready](https://badge.waffle.io/mesosphere/marathon.png?label=ready&title=Ready)](https://waffle.io/mesosphere/marathon)
 # [Marathon](https://mesosphere.github.io/marathon/) [![Build Status](https://travis-ci.org/mesosphere/marathon.png?branch=master)](https://travis-ci.org/mesosphere/marathon) [![Coverage Status](https://coveralls.io/repos/mesosphere/marathon/badge.svg?branch=master)](https://coveralls.io/r/mesosphere/marathon?branch=master)
 
-Marathon is an [Apache Mesos][Mesos] framework for container orchestration.
+Marathon is a production-proven [Apache Mesos][Mesos] framework for container orchestration. [DC/OS](https://dcos.io/get-started/#marathon) is the easiest way to start using Marathon.
 
 Marathon provides a
 [REST API](https://mesosphere.github.io/marathon/docs/rest-api.html) for
@@ -53,6 +53,9 @@ For run-time, Marathon has the following dependencies:
 * Apache Zookeeper - You can have a spearate Zookeeper installation specifically for Marathon, or you can use the same Zookeeper used by Mesos.
 
 ### Installation
+
+#### Getting started with [DC/OS](https://dcos.io/get-started/#marathon)
+The by far easiest way to get Marathon running is to use [DC/OS](https://dcos.io/get-started/#marathon). Marathon is pre-bundled into [DC/OS](https://dcos.io/get-started/#marathon).
 
 #### Install Mesos
 Marathon requires libmesos, a shared object library, that contains JNI bindings for Marathon to talk to the Mesos master. *libmesos* comes as part of the Apache Mesos installation. There are two options for installing Apache Mesos.
