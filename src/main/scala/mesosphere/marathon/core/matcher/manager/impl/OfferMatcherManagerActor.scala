@@ -261,7 +261,7 @@ private[impl] class OfferMatcherManagerActor private (
     //scalastyle:off magic.number
     val maxRanges = if (log.isDebugEnabled) 1000 else 10
     //scalastyle:on magic.number
-    log.info(s"Finished processing ${data.offer.getId.getValue}. " +
+    log.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
       s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
       s"${ResourceUtil.displayResources(data.offer.getResourcesList.asScala, maxRanges)} left.")
   }

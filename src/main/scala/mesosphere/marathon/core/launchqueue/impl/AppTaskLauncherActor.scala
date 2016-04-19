@@ -232,7 +232,8 @@ private class AppTaskLauncherActor(
     case TaskOpSourceDelegate.TaskOpRejected(op, reason) if inFlight(op) =>
       removeTask(op.taskId)
       tasksToLaunch += 1
-      log.info("Task launch for '{}' was REJECTED, reason '{}', rescheduling. {}", op.taskId, reason, status)
+      log.info("Task op '{}' for {} was REJECTED, reason '{}', rescheduling. {}",
+        op.getClass.getSimpleName, op.taskId, reason, status)
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
     case TaskOpSourceDelegate.TaskOpRejected(op, AppTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON) =>
@@ -243,11 +244,11 @@ private class AppTaskLauncherActor(
       log.debug("Unnecessary timeout message. Ignoring task launch rejected for task id '{}'.", op.taskId)
 
     case TaskOpSourceDelegate.TaskOpRejected(op, reason) =>
-      log.warning("Unexpected task launch rejected for taskId '{}'.", op.taskId)
+      log.warning("Unexpected task op '{}' rejected for {}.", op.getClass.getSimpleName, op.taskId)
 
     case TaskOpSourceDelegate.TaskOpAccepted(op) =>
       inFlightTaskOperations -= op.taskId
-      log.info("Task launch for '{}' was accepted. {}", op.taskId, status)
+      log.info("Task op '{}' for {} was accepted. {}", op.getClass.getSimpleName, op.taskId, status)
   }
 
   private[this] def receiveTaskUpdate: Receive = {
