@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.TaskRepository
 import org.slf4j.LoggerFactory
@@ -22,9 +21,10 @@ private[tracker] class TaskLoaderImpl(repo: TaskRepository) extends TaskLoader {
       tasks <- Future.sequence(names.map(repo.task(_))).map(_.flatten)
     } yield {
       log.info(s"Loaded ${tasks.size} tasks")
-      val tasksByApp = tasks.groupBy(task => Task.Id(task.getId).appId)
+      val deserializedTasks = tasks.map(TaskSerializer.fromProto)
+      val tasksByApp = deserializedTasks.groupBy(_.taskId.appId)
       val map = tasksByApp.iterator.map {
-        case (appId, appTasks) => appId -> TaskTracker.AppTasks(appId, appTasks)
+        case (appId, appTasks) => appId -> TaskTracker.AppTasks.forTasks(appId, appTasks)
       }.toMap
       TaskTracker.TasksByApp.of(map)
     }

@@ -19,46 +19,46 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
   test("minimal marathonTask => Task") {
     Given("a minimal MarathonTask")
     val now = MarathonTestHelper.clock.now()
-    val marathonTask = MarathonTask.newBuilder()
+    val taskProto = MarathonTask.newBuilder()
       .setId("task")
       .setVersion(now.toString)
       .setStagedAt(now.toDateTime.getMillis)
       .setHost(f.sampleHost).build()
 
     When("we convert it to task")
-    val taskState = TaskSerializer.fromProto(marathonTask)
+    val task = TaskSerializer.fromProto(taskProto)
 
     Then("we get a minimal task State")
     val expectedState = MarathonTestHelper.mininimalTask(f.taskId.idString, now)
 
-    taskState should be(expectedState)
+    task should be(expectedState)
 
     When("we serialize it again")
-    val marathonTask2 = TaskSerializer.toProto(taskState)
+    val marathonTask2 = TaskSerializer.toProto(task)
 
     Then("we get the original state back")
-    marathonTask2 should equal(marathonTask)
+    marathonTask2 should equal(taskProto)
   }
 
   test("full marathonTask with no networking => Task") {
     val f = new Fixture
 
     Given("a MarathonTask with all fields and host ports")
-    val marathonTask = f.completeTask
+    val taskProto = f.completeTask
 
     When("we convert it to task")
-    val taskState = TaskSerializer.fromProto(marathonTask)
+    val task = TaskSerializer.fromProto(taskProto)
 
     Then("we get the expected task state")
     val expectedState = f.fullSampleTaskStateWithoutNetworking
 
-    taskState should be(expectedState)
+    task should be(expectedState)
 
     When("we serialize it again")
-    val marathonTask2 = TaskSerializer.toProto(taskState)
+    val marathonTask2 = TaskSerializer.toProto(task)
 
     Then("we get the original state back")
-    marathonTask2 should equal(marathonTask)
+    marathonTask2 should equal(taskProto)
   }
 
   test("full marathonTask with host ports => Task") {
@@ -66,31 +66,31 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
     Given("a MarathonTask with all fields and host ports")
     val samplePorts = Seq(80, 81)
-    val marathonTask =
+    val taskProto =
       f.completeTask.toBuilder
         .addAllPorts(samplePorts.map(Integer.valueOf(_)).asJava)
         .build()
 
     When("we convert it to task")
-    val taskState = TaskSerializer.fromProto(marathonTask)
+    val task = TaskSerializer.fromProto(taskProto)
 
     Then("we get the expected task state")
     val expectedState = f.fullSampleTaskStateWithoutNetworking.copy(hostPorts = samplePorts)
 
-    taskState should be(expectedState)
+    task should be(expectedState)
 
     When("we serialize it again")
-    val marathonTask2 = TaskSerializer.toProto(taskState)
+    val marathonTask2 = TaskSerializer.toProto(task)
 
     Then("we get the original state back")
-    marathonTask2 should equal(marathonTask)
+    marathonTask2 should equal(taskProto)
   }
 
   test("full marathonTask with NetworkInfoList in Status => Task") {
     val f = new Fixture
 
     Given("a MarathonTask with all fields and status with network infos")
-    val marathonTask =
+    val taskProto =
       f.completeTask.toBuilder
         .setStatus(
           TaskStatus.newBuilder()
@@ -101,20 +101,19 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .build()
 
     When("we convert it to task")
-    println(marathonTask)
-    val taskState = TaskSerializer.fromProto(marathonTask)
+    val task = TaskSerializer.fromProto(taskProto)
 
     Then("we get the expected task state")
     import MarathonTestHelper.Implicits._
     val expectedState = f.fullSampleTaskStateWithoutNetworking.withNetworkInfos(f.sampleNetworks)
 
-    taskState should be(expectedState)
+    task should be(expectedState)
 
     When("we serialize it again")
-    val marathonTask2 = TaskSerializer.toProto(taskState)
+    val marathonTask2 = TaskSerializer.toProto(task)
 
     Then("we get the original state back")
-    marathonTask2 should equal(marathonTask)
+    marathonTask2 should equal(taskProto)
   }
 
   test("Reserved <=> Proto") {
@@ -124,13 +123,13 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val proto = f.Resident.reservedProto
 
     When("We convert it to a task")
-    val taskState = TaskSerializer.fromProto(proto)
+    val taskProto = TaskSerializer.fromProto(proto)
 
     Then("We get a correct representation")
-    taskState should equal (f.Resident.reservedState)
+    taskProto should equal (f.Resident.reservedState)
 
     When("We serialize it again")
-    val serialized = TaskSerializer.toProto(taskState)
+    val serialized = TaskSerializer.toProto(taskProto)
 
     Then("We get the original state back")
     serialized should equal(proto)
@@ -143,13 +142,13 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val proto = f.Resident.launchedOnReservationProto
 
     When("We convert it to a task")
-    val taskState = TaskSerializer.fromProto(proto)
+    val task = TaskSerializer.fromProto(proto)
 
     Then("We get a correct representation")
-    taskState should equal (f.Resident.launchedOnReservationState)
+    task should equal (f.Resident.launchedOnReservationState)
 
     When("We serialize it again")
-    val serialized = TaskSerializer.toProto(taskState)
+    val serialized = TaskSerializer.toProto(task)
 
     Then("We get the original state back")
     serialized should equal(proto)

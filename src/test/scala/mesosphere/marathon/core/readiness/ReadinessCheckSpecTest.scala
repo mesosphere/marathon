@@ -24,11 +24,11 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     specs should have size 1
     val spec = specs.head
     And("it has the correct url")
-    spec.url should equal("http://host.some:80/")
+    spec.url should equal("http://some.host:80/")
     And("the rest of the fields are correct, too")
     spec should equal(
       ReadinessCheckExecutor.ReadinessCheckSpec(
-        url = "http://host.some:80/",
+        url = "http://some.host:80/",
         taskId = task.taskId,
         checkName = app.readinessChecks.head.name,
         interval = app.readinessChecks.head.interval,
@@ -54,11 +54,11 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     specs should have size 1
     val spec = specs.head
     And("it has the correct url")
-    spec.url should equal("http://host.some:80/")
+    spec.url should equal("http://some.host:80/")
     And("the rest of the fields are correct, too")
     spec should equal(
       ReadinessCheckExecutor.ReadinessCheckSpec(
-        url = "http://host.some:80/",
+        url = "http://some.host:80/",
         taskId = task.taskId,
         checkName = app.readinessChecks.head.name,
         interval = app.readinessChecks.head.interval,
@@ -88,10 +88,10 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     specAlternative.checkName should equal(app.readinessChecks(1).name)
 
     And("the default http spec has the right url")
-    specDefaultHttp.url should equal("http://host.some:81/")
+    specDefaultHttp.url should equal("http://some.host:81/")
 
     And("the alternative https spec has the right url")
-    specAlternative.url should equal("https://host.some:80/v1/plan")
+    specAlternative.url should equal("https://some.host:80/v1/plan")
   }
 
   class Fixture {

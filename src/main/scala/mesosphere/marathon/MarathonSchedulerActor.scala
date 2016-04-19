@@ -422,7 +422,6 @@ class SchedulerActions(
     eventBus: EventStream,
     val schedulerActor: ActorRef,
     config: MarathonConf)(implicit ec: ExecutionContext) {
-  import mesosphere.mesos.protos.Implicits._
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -477,9 +476,9 @@ class SchedulerActions(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          for (orphanTask <- tasksByApp.marathonAppTasks(unknownAppId)) {
-            log.info(s"Killing task ${orphanTask.getId}")
-            driver.killTask(protos.TaskID(orphanTask.getId))
+          for (orphanTask <- tasksByApp.appTasks(unknownAppId)) {
+            log.info(s"Killing ${orphanTask.taskId}")
+            driver.killTask(orphanTask.taskId.mesosTaskId)
           }
         }
 

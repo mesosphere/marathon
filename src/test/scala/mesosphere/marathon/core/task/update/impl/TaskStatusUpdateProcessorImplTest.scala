@@ -106,7 +106,6 @@ class TaskStatusUpdateProcessorImplTest
   lazy val version = Timestamp.now()
   lazy val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forApp(appId).mesosTaskId.getValue).build()
   lazy val taskState = MarathonTestHelper.stagedTask(task.getTaskId.getValue, appVersion = version)
-  lazy val marathonTask = taskState.marathonTask
 
   after {
     fOpt.foreach(_.shutdown())

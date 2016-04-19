@@ -77,8 +77,8 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
   test("some overdue tasks") {
     Given("one overdue task")
-    val mockTask = MarathonTestHelper.stagedTaskProto("someId")
-    val app = TaskTracker.AppTasks(PathId("/some"), Iterable(mockTask))
+    val mockTask = MarathonTestHelper.stagedTask("someId")
+    val app = TaskTracker.AppTasks.forTasks(PathId("/some"), Iterable(mockTask))
     taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.of(app))
 
     When("the check is initiated")
@@ -99,39 +99,36 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val now = clock.now()
     val config = MarathonTestHelper.defaultConfig()
 
-    def statusBuilder(id: String, state: TaskState) =
-      TaskStatus.newBuilder().setTaskId(MesosProtos.TaskID.newBuilder().setValue(id)).setState(state)
-
-    val overdueUnstagedTask = MarathonTestHelper.startingTaskProto("unstaged")
-    assert(overdueUnstagedTask.getStartedAt == 0, "The startedAt property of an unstaged task has a value of 0")
+    val overdueUnstagedTask = MarathonTestHelper.startingTask("unstaged")
+    assert(overdueUnstagedTask.launched.exists(_.status.startedAt.isEmpty))
 
     val unconfirmedNotOverdueTask =
-      MarathonTestHelper.startingTaskProto("unconfirmed", stagedAt = now - config.taskLaunchConfirmTimeout().millis)
+      MarathonTestHelper.startingTask("unconfirmed", stagedAt = now - config.taskLaunchConfirmTimeout().millis)
 
     val unconfirmedOverdueTask =
-      MarathonTestHelper.startingTaskProto(
+      MarathonTestHelper.startingTask(
         "unconfirmedOverdue",
         stagedAt = now - config.taskLaunchConfirmTimeout().millis - 1.millis
       )
 
     val overdueStagedTask =
-      MarathonTestHelper.stagedTaskProto(
+      MarathonTestHelper.stagedTask(
         "overdueStagedTask",
         stagedAt = now - 10.days
       )
 
     val stagedTask =
-      MarathonTestHelper.stagedTaskProto(
+      MarathonTestHelper.stagedTask(
         "staged",
         stagedAt = now - 10.seconds
       )
 
     val runningTask =
-      MarathonTestHelper.runningTaskProto("running", stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
+      MarathonTestHelper.runningTask("running", stagedAt = now - 5.seconds, startedAt = now - 2.seconds)
 
     Given("Several somehow overdue tasks plus some not overdue tasks")
     val appId = PathId("/ignored")
-    val app = TaskTracker.AppTasks(
+    val app = TaskTracker.AppTasks.forTasks(
       appId,
       Iterable(
         unconfirmedOverdueTask,
@@ -153,9 +150,9 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     verify(taskTracker).tasksByApp()(any[ExecutionContext])
 
     And("All somehow overdue tasks are killed")
-    verify(driver).killTask(MesosProtos.TaskID.newBuilder().setValue(unconfirmedOverdueTask.getId).build())
-    verify(driver).killTask(MesosProtos.TaskID.newBuilder().setValue(overdueUnstagedTask.getId).build())
-    verify(driver).killTask(MesosProtos.TaskID.newBuilder().setValue(overdueStagedTask.getId).build())
+    verify(driver).killTask(unconfirmedOverdueTask.taskId.mesosTaskId)
+    verify(driver).killTask(overdueUnstagedTask.taskId.mesosTaskId)
+    verify(driver).killTask(overdueStagedTask.taskId.mesosTaskId)
 
     And("but not more")
     verifyNoMoreInteractions(driver)

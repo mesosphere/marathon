@@ -1,11 +1,9 @@
 package mesosphere.marathon.core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.state.{ AppDefinition, PathId, PersistentVolume, Timestamp }
-import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
+import org.apache.mesos.Protos.{ TaskState }
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
@@ -62,12 +60,6 @@ sealed trait Task {
   def update(update: TaskStateOp): TaskStateChange
 
   def appId: PathId = taskId.appId
-
-  /**
-    * Legacy conversion to MarathonTask. Cache result to speed up repeated uses.
-    * Should be removed before releasing 0.16.
-    */
-  lazy val marathonTask: MarathonTask = TaskSerializer.toProto(this)
 
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task

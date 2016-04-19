@@ -7,7 +7,6 @@ import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
@@ -223,10 +222,10 @@ class MarathonHealthCheckManagerTest
   }
 
   test("reconcileWith") {
-    def taskStatus(task: MarathonTask, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
+    def taskStatus(task: Task, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
       mesos.TaskStatus.newBuilder
         .setTaskId(mesos.TaskID.newBuilder()
-          .setValue(task.getId)
+          .setValue(task.taskId.idString)
           .build)
         .setState(state)
         .setHealthy(false)
@@ -245,7 +244,7 @@ class MarathonHealthCheckManagerTest
         healthChecks = healthChecks
       )).futureValue
       taskCreationHandler.created(TaskStateOp.LaunchEphemeral(task)).futureValue
-      val update = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(taskStatus(task.marathonTask)), clock.now())
+      val update = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(taskStatus(task)), clock.now())
       stateOpProcessor.process(update).futureValue
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))

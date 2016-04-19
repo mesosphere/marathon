@@ -5,9 +5,7 @@ import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.metrics.Metrics
@@ -51,28 +49,10 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
 
-    val deserializedTask = taskTracker.marathonTaskSync(sampleTask.taskId)
+    val deserializedTask = taskTracker.task(sampleTask.taskId).futureValue
 
     deserializedTask should not be empty
-    deserializedTask should equal(Some(sampleTask.marathonTask))
-  }
-
-  test("CreatedAndGetTask") {
-    testCreatedAndGetTask(_.marathonTaskSync(_))
-  }
-
-  test("CreatedAndGetTask Async") {
-    testCreatedAndGetTask(_.marathonTask(_).futureValue)
-  }
-
-  private[this] def testCreatedAndGetTask(call: (TaskTracker, Task.Id) => Option[MarathonTask]): Unit = {
-    val sampleTask = makeSampleTask(TEST_APP_NAME)
-
-    stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
-
-    val fetchedTask = call(taskTracker, sampleTask.taskId)
-
-    assert(fetchedTask.get.equals(sampleTask.marathonTask), "Tasks are not properly stored")
+    deserializedTask should equal(Some(sampleTask))
   }
 
   test("List") {
@@ -98,8 +78,8 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
 
     testAppTasks.appTasksMap(TEST_APP_NAME / "a").appId should equal(TEST_APP_NAME / "a")
     testAppTasks.appTasksMap(TEST_APP_NAME / "b").appId should equal(TEST_APP_NAME / "b")
-    testAppTasks.appTasksMap(TEST_APP_NAME / "a").marathonTasks should have size 1
-    testAppTasks.appTasksMap(TEST_APP_NAME / "b").marathonTasks should have size 2
+    testAppTasks.appTasksMap(TEST_APP_NAME / "a").tasks should have size 1
+    testAppTasks.appTasksMap(TEST_APP_NAME / "b").tasks should have size 2
     testAppTasks.appTasksMap(TEST_APP_NAME / "a").taskMap.keySet should equal(Set(task1.taskId))
     testAppTasks.appTasksMap(TEST_APP_NAME / "b").taskMap.keySet should equal(Set(task2.taskId, task3.taskId))
   }
@@ -121,7 +101,7 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task2)).futureValue
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task3)).futureValue
 
-    val testAppTasks = call(taskTracker).map(_.marathonTask).map(TaskSerializer.fromProto(_))
+    val testAppTasks = call(taskTracker)
 
     shouldContainTask(testAppTasks.toSet, task1)
     shouldContainTask(testAppTasks.toSet, task2)

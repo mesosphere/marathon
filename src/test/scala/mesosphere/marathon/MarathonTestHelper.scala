@@ -12,8 +12,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ResourceLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
@@ -323,17 +322,6 @@ object MarathonTestHelper {
     createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
   }
 
-  def dummyTaskBuilder(appId: PathId) = MarathonTask.newBuilder()
-    .setId(Task.Id.forApp(appId).idString)
-    .setStagedAt(0)
-    .setHost("host.some")
-
-  def dummyTaskProto(appId: PathId) = dummyTaskBuilder(appId).build()
-  def dummyTaskProto(taskId: String) = MarathonTask.newBuilder()
-    .setId(taskId)
-    .setHost("host.some")
-    .build()
-
   def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forApp(appId).idString)
   def mininimalTask(taskId: Task.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
   def mininimalTask(taskId: String, now: Timestamp = clock.now()): Task.LaunchedEphemeral = {
@@ -370,28 +358,27 @@ object MarathonTestHelper {
     TaskStateOp.LaunchOnReservation(taskId = taskId, appVersion = now, status = Task.Status(now), hostPorts = Seq.empty)
   }
 
-  def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
+  def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     startingTask(
       Task.Id.forApp(appId).idString,
       appVersion = appVersion,
       stagedAt = stagedAt
     )
-  def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
-    TaskSerializer.fromProto(
-      startingTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt)
+  def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
+    Task.LaunchedEphemeral(
+      taskId = Task.Id(taskId),
+      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      appVersion = appVersion,
+      status = Task.Status(
+        stagedAt = Timestamp(stagedAt),
+        startedAt = None,
+        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STARTING))
+      ),
+      hostPorts = Seq.empty
     )
 
-  def startingTaskProto(appId: PathId): Protos.MarathonTask = startingTaskProto(Task.Id.forApp(appId).idString)
-  def startingTaskProto(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
-    dummyTaskProto(taskId).toBuilder
-      .setVersion(appVersion.toString)
-      .setStagedAt(stagedAt)
-      .setStatus(statusForState(taskId, Mesos.TaskState.TASK_STARTING))
-      .build()
-  }
-
   def stagedTaskForApp(
-    appId: PathId = PathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task =
+    appId: PathId = PathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     stagedTask(Task.Id.forApp(appId).idString, appVersion = appVersion, stagedAt = stagedAt)
   def stagedTask(
     taskId: String,
@@ -410,17 +397,10 @@ object MarathonTestHelper {
       hostPorts = Seq.empty
     )
 
-  def stagedTaskProto(appId: PathId): Protos.MarathonTask = stagedTaskProto(Task.Id.forApp(appId).idString)
-  def stagedTaskProto(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Protos.MarathonTask = {
-    startingTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt).toBuilder
-      .setStatus(statusForState(taskId, Mesos.TaskState.TASK_STAGING))
-      .build()
-  }
-
   def runningTaskForApp(appId: PathId = PathId("/test"),
                         appVersion: Timestamp = Timestamp(1),
                         stagedAt: Long = 2,
-                        startedAt: Long = 3): Task =
+                        startedAt: Long = 3): Task.LaunchedEphemeral =
     runningTask(
       Task.Id.forApp(appId).idString,
       appVersion = appVersion,
@@ -431,48 +411,33 @@ object MarathonTestHelper {
     taskId: String,
     appVersion: Timestamp = Timestamp(1),
     stagedAt: Long = 2,
-    startedAt: Long = 3): Task.LaunchedEphemeral =
-    TaskSerializer.fromProto(
-      runningTaskProto(
-        taskId,
-        appVersion = appVersion,
-        stagedAt = stagedAt,
-        startedAt = startedAt
+    startedAt: Long = 3): Task.LaunchedEphemeral = {
+    import Implicits._
+
+    startingTask(taskId, appVersion, stagedAt)
+      .withStatus((status: Task.Status) =>
+        status.copy(
+          startedAt = Some(Timestamp(startedAt)),
+          mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_RUNNING))
+        )
       )
-    ).asInstanceOf[Task.LaunchedEphemeral]
 
-  def runningTaskProto(appId: PathId): Protos.MarathonTask = runningTaskProto(Task.Id.forApp(appId).idString)
-  def runningTaskProto(
-    taskId: String,
-    appVersion: Timestamp = Timestamp(1),
-    stagedAt: Long = 2,
-    startedAt: Long = 3): Protos.MarathonTask = {
-    stagedTaskProto(taskId, appVersion = appVersion, stagedAt = stagedAt).toBuilder
-      .setStartedAt(startedAt)
-      .setStatus(statusForState(taskId, Mesos.TaskState.TASK_RUNNING))
-      .build()
   }
 
-  def healthyTask(appId: PathId): Task = healthyTask(Task.Id.forApp(appId).idString)
-  def healthyTask(taskId: String): Task = TaskSerializer.fromProto(healthyTaskProto(taskId))
-
-  def healthyTaskProto(appId: PathId): Protos.MarathonTask = healthyTaskProto(Task.Id.forApp(appId).idString)
-  def healthyTaskProto(taskId: String): Protos.MarathonTask = {
-    val task: MarathonTask = runningTaskProto(taskId)
-    task.toBuilder
-      .setStatus(task.getStatus.toBuilder.setHealthy(true))
-      .buildPartial()
+  def healthyTask(appId: PathId): Task.LaunchedEphemeral = healthyTask(Task.Id.forApp(appId).idString)
+  def healthyTask(taskId: String): Task.LaunchedEphemeral = {
+    import Implicits._
+    runningTask(taskId).withStatus { status =>
+      status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(true).build()))
+    }
   }
 
-  def unhealthyTask(appId: PathId): Task = unhealthyTask(Task.Id.forApp(appId).idString)
-  def unhealthyTask(taskId: String): Task = TaskSerializer.fromProto(unhealthyTaskProto(taskId))
-
-  def unhealthyTaskProto(appId: PathId): Protos.MarathonTask = unhealthyTaskProto(Task.Id.forApp(appId).idString)
-  def unhealthyTaskProto(taskId: String): Protos.MarathonTask = {
-    val task: MarathonTask = runningTaskProto(taskId)
-    task.toBuilder
-      .setStatus(task.getStatus.toBuilder.setHealthy(false))
-      .buildPartial()
+  def unhealthyTask(appId: PathId): Task.LaunchedEphemeral = unhealthyTask(Task.Id.forApp(appId).idString)
+  def unhealthyTask(taskId: String): Task.LaunchedEphemeral = {
+    import Implicits._
+    runningTask(taskId).withStatus { status =>
+      status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(false).build()))
+    }
   }
 
   def statusForState(taskId: String, state: Mesos.TaskState): Mesos.TaskStatus = {
@@ -620,12 +585,12 @@ object MarathonTestHelper {
         }
       }
 
-      def withStatus(update: Task.Status => Task.Status): Task = task match {
+      def withStatus[T <: Task](update: Task.Status => Task.Status): T = task match {
         case launchedEphemeral: Task.LaunchedEphemeral =>
-          launchedEphemeral.copy(status = update(launchedEphemeral.status))
+          launchedEphemeral.copy(status = update(launchedEphemeral.status)).asInstanceOf[T]
 
         case launchedOnReservation: Task.LaunchedOnReservation =>
-          launchedOnReservation.copy(status = update(launchedOnReservation.status))
+          launchedOnReservation.copy(status = update(launchedOnReservation.status)).asInstanceOf[T]
 
         case reserved: Task.Reserved =>
           throw new scala.RuntimeException("Reserved task cannot have a status")
