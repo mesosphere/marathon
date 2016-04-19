@@ -1,6 +1,6 @@
 package mesosphere.marathon.event.http
 
-import java.util.concurrent.Executors
+import java.util.concurrent.{ TimeUnit, Executors }
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.pattern.ask
@@ -33,10 +33,19 @@ trait HttpEventConfiguration extends ScallopConf {
     default = Some(10.seconds.toMillis)
   )
 
+  lazy val httpEventRequestTimeout = opt[Long]("http_event_request_timeout",
+    descr = "A http event request timeout (ms)",
+    required = false,
+    noshort = true,
+    default = Some(10.seconds.toMillis)
+  )
+
   private[this] def parseHttpEventEndpoints(str: String): List[String] =
     str.split(',').map(_.trim).toList
 
-  def slowConsumerTimeout: FiniteDuration = httpEventCallbackSlowConsumerTimeout().millis
+  def slowConsumerDuration: FiniteDuration = httpEventCallbackSlowConsumerTimeout().millis
+
+  def eventRequestTimeout: Timeout = Timeout(httpEventRequestTimeout(), TimeUnit.MILLISECONDS)
 }
 
 class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends AbstractModule {
@@ -64,7 +73,7 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
   def provideSubscribersKeeperActor(conf: HttpEventConfiguration,
                                     system: ActorSystem,
                                     @Named(STORE_EVENT_SUBSCRIBERS) store: EntityStore[EventSubscribers]): ActorRef = {
-    implicit val timeout = HttpEventModule.timeout
+    implicit val timeout = conf.eventRequestTimeout
     val local_ip = java.net.InetAddress.getLocalHost.getHostAddress
 
     val actor = system.actorOf(Props(new SubscribersKeeperActor(store)))
@@ -86,8 +95,5 @@ class HttpEventModule(httpEventConfiguration: HttpEventConfiguration) extends Ab
 object HttpEventModule {
   final val StatusUpdateActor = "EventsActor"
   final val SubscribersKeeperActor = "SubscriberKeeperActor"
-
-  //TODO(everpeace) this should be configurable option?
-  val timeout = Timeout(10 seconds)
 }
 
