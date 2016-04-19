@@ -26,13 +26,14 @@ FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
 FPM_OPTS_DEB := -t deb \
 	-d 'java8-runtime-headless' \
 	-d 'lsb-release' \
+	-d 'unzip' \
 	--after-install marathon.postinst \
 	--after-remove marathon.postrm
 FPM_OPTS_DEB_INIT := --deb-init marathon.init
 FPM_OPTS_RPM_RHEL6 := -t rpm \
-	-d coreutils -d 'java >= 1.8.0'
+	-d coreutils -d unzip -d 'java >= 1.8.0'
 FPM_OPTS_RPM := -t rpm \
-	-d coreutils -d 'java >= 1:1.8.0'
+	-d coreutils -d unzip -d 'java >= 1:1.8.0'
 FPM_OPTS_OSX := -t osxpkg --osxpkg-identifier-prefix io.mesosphere
 
 .PHONY: help
