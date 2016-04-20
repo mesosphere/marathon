@@ -18,6 +18,12 @@ class OfferOperationFactory(
       "No role set. Set --mesos_role to enable using local volumes in Marathon.")
   }
 
+  private[this] lazy val principal: String = principalOpt match {
+    case Some(value) => value
+    case _ => throw new WrongConfigurationException(
+      "No principal set. Set --mesos_authentication_principal to enable using local volumes in Marathon.")
+  }
+
   /** Create a launch operation for the given taskInfo. */
   def launch(taskInfo: Mesos.TaskInfo): Mesos.Offer.Operation = {
     val launch = Mesos.Offer.Operation.Launch.newBuilder()
@@ -36,7 +42,7 @@ class OfferOperationFactory(
 
       val reservation = ReservationInfo.newBuilder()
         .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
-      principalOpt.foreach(reservation.setPrincipal)
+        .setPrincipal(principal)
 
       Mesos.Resource.newBuilder(resource)
         .setRole(role)
