@@ -37,12 +37,11 @@ object MarathonTestHelper {
   lazy val clock = Clock()
 
   def makeConfig(args: String*): AllConf = {
-    val opts = new AllConf(args) {
+    new AllConf(args) {
       // scallop will trigger sys exit
       override protected def onError(e: Throwable): Unit = throw e
+      verify()
     }
-    opts.afterInit()
-    opts
   }
 
   def defaultConfig(

@@ -304,13 +304,12 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
 
   class Fixture(val repetitions: Int = 1) {
     lazy val conf: ReviveOffersConfig = {
-      val conf = new ReviveOffersConfig {
+      new ReviveOffersConfig {
         override lazy val reviveOffersRepetitions = opt[Int]("revive_offers_repetitions",
           descr = "Repeat every reviveOffer request this many times, delayed by the --min_revive_offers_interval.",
           default = Some(repetitions))
+        verify()
       }
-      conf.afterInit()
-      conf
     }
     lazy val clock: ConstantClock = ConstantClock()
     lazy val offersWanted: Subject[Boolean] = PublishSubject()

@@ -67,8 +67,9 @@ class OfferMatcherManagerActorTest extends MarathonActorSupport with FunSuiteLik
     val random = new Random(new util.Random())
     val clock = ConstantClock()
     val observer = Observer.apply[Boolean]((a: Boolean) => ())
-    object Config extends ScallopConf with OfferMatcherManagerConfig
-    Config.afterInit()
+    object Config extends ScallopConf with OfferMatcherManagerConfig {
+      verify()
+    }
     val offerMatcherManager = TestActorRef[OfferMatcherManagerActor](OfferMatcherManagerActor.props(metrics, random, clock, Config, observer))
 
     def matcher(precedence: Option[PathId] = None): OfferMatcher = {

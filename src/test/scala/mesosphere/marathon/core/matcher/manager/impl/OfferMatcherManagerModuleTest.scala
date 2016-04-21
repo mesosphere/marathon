@@ -146,8 +146,9 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     clock = Clock()
     val random = Random
     val actorSystem = AlwaysElectedLeadershipModule(shutdownHooks)
-    val config = new OfferMatcherManagerConfig {}
-    config.afterInit()
+    val config = new OfferMatcherManagerConfig {
+      verify()
+    }
     module = new OfferMatcherManagerModule(clock, random, new Metrics(new MetricRegistry), config, actorSystem)
   }
 

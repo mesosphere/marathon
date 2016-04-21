@@ -71,7 +71,6 @@ class InfoResource @Inject() (
   }
 
   private[this] lazy val httpConfigValues = Json.obj(
-    "assets_path" -> config.assetsFileSystemPath.get,
     "http_port" -> config.httpPort.get,
     "https_port" -> config.httpsPort.get
   )

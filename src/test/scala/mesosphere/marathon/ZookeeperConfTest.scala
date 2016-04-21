@@ -27,11 +27,10 @@ class ZookeeperConfTest extends MarathonSpec {
   }
 
   def conf(args: String*) = {
-    val opts = new ScallopConf(args) with ZookeeperConf {
+    new ScallopConf(args) with ZookeeperConf {
       //scallop will trigger sys exit
       override protected def onError(e: Throwable): Unit = throw e
+      verify()
     }
-    opts.afterInit()
-    opts
   }
 }
