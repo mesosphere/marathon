@@ -52,8 +52,9 @@ class MarathonHealthCheckManagerTest
     )
     leadershipModule = AlwaysElectedLeadershipModule(shutdownHooks)
 
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
     taskTracker = taskTrackerModule.taskTracker

@@ -96,8 +96,9 @@ class DeploymentManagerTest
     val driver: SchedulerDriver = mock[SchedulerDriver]
     val eventBus: EventStream = mock[EventStream]
     val launchQueue: LaunchQueue = mock[LaunchQueue]
-    val config: MarathonConf = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config: MarathonConf = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
     val metrics: Metrics = new Metrics(new MetricRegistry)
     val taskTracker: TaskTracker = MarathonTestHelper.createTaskTracker (
       AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore, config, metrics

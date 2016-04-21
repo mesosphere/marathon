@@ -54,8 +54,9 @@ class OfferMatcherLaunchTokensActorTest extends MarathonSpec {
 
   before {
     actorSystem = ActorSystem()
-    conf = new LaunchTokenConfig {}
-    conf.afterInit()
+    conf = new LaunchTokenConfig {
+      verify()
+    }
     allObservable = PublishSubject[TaskChangeObservables.TaskChanged]()
     taskStatusObservables = mock[TaskChangeObservables]
     Mockito.when(taskStatusObservables.forAll).thenReturn(allObservable)

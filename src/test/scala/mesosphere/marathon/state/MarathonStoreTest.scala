@@ -31,8 +31,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val now = Timestamp.now()
     val appDef = AppDefinition(id = "testApp".toPath, args = Some(Seq("arg")),
       versionInfo = AppDefinition.VersionInfo.forNewConfig(now))
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     when(variable.bytes).thenReturn(appDef.toProtoByteArray)
     when(state.load("app:testApp")).thenReturn(Future.successful(Some(variable)))
@@ -48,8 +49,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
     when(state.load("app:testApp")).thenReturn(Future.failed(new StoreCommandFailedException("failed")))
 
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(), "app:")
     val res = store.fetch("testApp")
 
@@ -69,8 +71,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
     val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[PersistentEntity]
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     when(newVariable.bytes).thenReturn(newAppDef.toProtoByteArray)
     when(variable.bytes).thenReturn(appDef.toProtoByteArray)
@@ -95,8 +98,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
     val newAppDef = appDef.copy(id = "newTestApp".toPath)
     val newVariable = mock[PersistentEntity]
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     when(newVariable.bytes).thenReturn(newAppDef.toProtoByteArray)
     when(variable.bytes).thenReturn(appDef.toProtoByteArray)
@@ -116,8 +120,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("Expunge") {
     val state = mock[PersistentStore]
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     when(state.delete("app:testApp")).thenReturn(Future.successful(true))
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(), "app:")
@@ -129,8 +134,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("ExpungeFail") {
     val state = mock[PersistentStore]
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     when(state.delete("app:testApp")).thenReturn(Future.failed(new StoreCommandFailedException("failed")))
 
@@ -145,8 +151,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("Names") {
     val state = new InMemoryStore
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     def populate(key: String, value: Array[Byte]) = {
       state.load(key).futureValue match {
@@ -167,8 +174,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("NamesFail") {
     val state = mock[PersistentStore]
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     when(state.allIds()).thenReturn(Future.failed(new StoreCommandFailedException("failed")))
 
@@ -180,8 +188,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("ConcurrentModifications") {
     val state = new InMemoryStore
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(), "app:")
 
@@ -216,8 +225,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
         Seq.empty
       }
     }
-    val config = new ScallopConf(Seq("--master", "foo", "--marathon_store_timeout", "1")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo", "--marathon_store_timeout", "1")) with MarathonConf {
+      verify()
+    }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(), "app:")
 
@@ -231,8 +241,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val state = new InMemoryStore() {
       override def allIds(): Future[scala.Seq[ID]] = super.allIds()
     }
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(), "app:")
 
@@ -248,8 +259,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val state = new InMemoryStore() {
       override def allIds(): Future[scala.Seq[ID]] = super.allIds()
     }
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(), "app:")
 
@@ -262,8 +274,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val state = new InMemoryStore() {
       override def allIds(): Future[scala.Seq[ID]] = super.allIds()
     }
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(), "app:")
 
@@ -276,8 +289,9 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     val state = new InMemoryStore() {
       override def allIds(): Future[scala.Seq[ID]] = super.allIds()
     }
-    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-    config.afterInit()
+    val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+      verify()
+    }
 
     val store = new MarathonStore[AppDefinition](state, metrics, () => AppDefinition(), "app:")
 

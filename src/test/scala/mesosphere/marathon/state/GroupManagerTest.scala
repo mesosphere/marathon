@@ -32,9 +32,9 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     lazy val eventBus = mock[EventStream]
     lazy val provider = mock[StorageProvider]
     lazy val config = {
-      val conf = new ScallopConf(Seq("--master", "foo")) with MarathonConf
-      conf.afterInit()
-      conf
+      new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+        verify()
+      }
     }
 
     lazy val metricRegistry = new MetricRegistry()
@@ -246,10 +246,11 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     val f = new Fixture {
       override lazy val config = new ScallopConf(Seq(
         "--master", "foo",
-        "--local_port_min", minServicePort.toString, "--local_port_max", maxServicePort.toString)) with MarathonConf
+        "--local_port_min", minServicePort.toString, "--local_port_max", maxServicePort.toString)) with MarathonConf {
+        verify()
+      }
     }
 
-    f.config.afterInit()
     f.manager
   }
 }

@@ -11,14 +11,16 @@ import org.rogach.scallop.ScallopConf
 import scala.reflect.runtime.universe._
 
 class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
-  with MetricsReporterConf
-  with HttpConf
-  with MarathonConf
-  with AppConfiguration
-  with EventConfiguration
-  with HttpEventConfiguration
-  with DebugConf
-  with PluginManagerConfiguration
+    with MetricsReporterConf
+    with HttpConf
+    with MarathonConf
+    with AppConfiguration
+    with EventConfiguration
+    with HttpEventConfiguration
+    with DebugConf
+    with PluginManagerConfiguration {
+  verify()
+}
 
 object AllConf {
 
@@ -41,7 +43,6 @@ object AllConf {
   def withTestConfig(args: Seq[String], withDefault: Boolean = true): Unit = {
     val result = if (withDefault) Seq("--master", "local") ++ args else args
     val conf = new AllConf(result)
-    conf.afterInit()
     testConfig = Some(conf)
   }
 }

@@ -399,8 +399,9 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   before {
     actorSystem = ActorSystem()
     offerMatcherManager = mock[OfferMatcherManager]
-    launchQueueConfig = new LaunchQueueConfig {}
-    launchQueueConfig.afterInit()
+    launchQueueConfig = new LaunchQueueConfig {
+      verify()
+    }
     clock = ConstantClock()
     taskOpFactory = mock[TaskOpFactory]
     taskTracker = mock[TaskTracker]
