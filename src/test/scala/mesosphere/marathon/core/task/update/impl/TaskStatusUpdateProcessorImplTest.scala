@@ -3,11 +3,11 @@ package mesosphere.marathon.core.task.update.impl
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
@@ -85,7 +85,7 @@ class TaskStatusUpdateProcessorImplTest
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.task(taskId)(global) returns Future.successful(None)
 
-    When("we process the updated")
+    When("we process the update")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
@@ -98,14 +98,67 @@ class TaskStatusUpdateProcessorImplTest
     f.verifyNoMoreInteractions()
   }
 
+  test("update for unknown task (TASK_KILLING) will get only acknowledged") {
+    fOpt = Some(new Fixture)
+
+    val taskId = Task.Id.forApp(appId)
+    val task = MarathonTestHelper.runningTask(taskId.idString)
+    val origUpdate = TaskStatusUpdateTestHelper.killing(task)
+    val status = origUpdate.status
+    val update = origUpdate
+
+    Given("an unknown task")
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.taskTracker.task(taskId)(global) returns Future.successful(None)
+
+    When("we process the update")
+    f.updateProcessor.publish(status).futureValue
+
+    Then("we expect that the appropriate taskTracker methods have been called")
+    verify(f.taskTracker).task(taskId)(global)
+
+    And("the update has been acknowledged")
+    verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
+
+    And("that's it")
+    f.verifyNoMoreInteractions()
+  }
+
+  test("TASK_KILLING is processed like a normal StatusUpdate") {
+    fOpt = Some(new Fixture)
+
+    val taskId = Task.Id.forApp(appId)
+    val task = MarathonTestHelper.runningTask(taskId.idString)
+    val origUpdate = TaskStatusUpdateTestHelper.killing(task)
+    val status = origUpdate.status
+    val expectedTaskStateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(status), f.clock.now())
+
+    Given("a task")
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.taskTracker.task(taskId)(global) returns Future.successful(Some(task))
+    f.stateOpProcessor.process(expectedTaskStateOp) returns Future.successful(TaskStateChange.Update(task, Some(task)))
+
+    When("receive a TASK_KILLING update")
+    f.updateProcessor.publish(status).futureValue
+
+    Then("the task is loaded from the taskTracker")
+    verify(f.taskTracker).task(taskId)(global)
+
+    And("a MesosStatusUpdateEvent is passed to the stateOpProcessor")
+    verify(f.stateOpProcessor).process(expectedTaskStateOp)
+
+    And("the update has been acknowledged")
+    verify(f.schedulerDriver).acknowledgeStatusUpdate(status)
+
+    And("that's it")
+    f.verifyNoMoreInteractions()
+
+  }
+
   var fOpt: Option[Fixture] = None
   def f = fOpt.get
 
   lazy val appId = PathId("/app")
-  lazy val app = AppDefinition(appId)
-  lazy val version = Timestamp.now()
-  lazy val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forApp(appId).mesosTaskId.getValue).build()
-  lazy val taskState = MarathonTestHelper.stagedTask(task.getTaskId.getValue, appVersion = version)
 
   after {
     fOpt.foreach(_.shutdown())

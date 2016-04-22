@@ -16,10 +16,6 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 
-object TaskStatusUpdateProcessorImpl {
-  lazy val name = Names.named(getClass.getSimpleName)
-}
-
 /**
   * Executes the given TaskStatusUpdateSteps for every update.
   */
@@ -42,29 +38,28 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   log.info("Started status update processor")
 
   override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishFutureTimer.timeFuture {
+    import TaskStatusUpdateProcessorImpl._
+
     val now = clock.now()
     val taskId = Task.Id(status.getTaskId)
 
     taskTracker.task(taskId).flatMap {
-      case _ if status.getState == MesosProtos.TaskState.TASK_KILLING =>
-        // introduced in Mesos 0.28.0, not yet processed
-        log.info("Ignoring TASK_KILLING update for {}", taskId)
-        acknowledge(status)
-
       case Some(task) if task.launched.isDefined =>
         val taskStateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(status), now)
         stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
-      case _ =>
+      case maybeTask: Option[Task] if killWhenUnknownOrNotLaunched(status) =>
         killUnknownTaskTimer {
-          // If we kill a unknown task, we will get another TASK_LOST notification which leads to an endless
-          // stream of kills and TASK_LOST updates.
-          if (status.getState != MesosProtos.TaskState.TASK_LOST) {
-            log.warn(s"Kill unknown $taskId")
-            killTask(taskId.mesosTaskId)
-          }
+          val taskStr = taskKnownOrNotStr(maybeTask)
+          log.warn(s"Kill $taskStr $taskId")
+          killTask(taskId.mesosTaskId)
           acknowledge(status)
         }
+
+      case maybeTask: Option[Task] =>
+        val taskStr = taskKnownOrNotStr(maybeTask)
+        log.info(s"Ignoring ${status.getState} update for $taskStr $taskId")
+        acknowledge(status)
     }
   }
 
@@ -76,4 +71,18 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   private[this] def killTask(taskId: MesosProtos.TaskID): Unit = {
     driverHolder.driver.foreach(_.killTask(taskId))
   }
+}
+
+object TaskStatusUpdateProcessorImpl {
+  lazy val name = Names.named(getClass.getSimpleName)
+
+  private[this] val ignoreWhenUnknown = Set(MesosProtos.TaskState.TASK_KILLING, MesosProtos.TaskState.TASK_LOST)
+  // If we kill an unknown task, we will get another TASK_LOST notification which leads to an endless
+  // stream of kills and TASK_LOST updates.
+  // In addition, we won't kill unknown tasks when they're in state TASK_KILLING
+  private def killWhenUnknownOrNotLaunched(status: MesosProtos.TaskStatus): Boolean = {
+    !ignoreWhenUnknown.contains(status.getState)
+  }
+
+  private def taskKnownOrNotStr(maybeTask: Option[Task]): String = if (maybeTask.isDefined) "known" else "unknown"
 }
