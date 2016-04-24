@@ -45,8 +45,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * <span class="label label-default">v0.16.0</span> `--enable_features` (Optional. Default: None):
     Enable the selected features. Options to use:
     - "vips" can be used to enable the networking VIP integration UI.
-    - "task_killing" can be used to enable the TASK_KILLING state in Mesos (0.28 or later)
-    - "external_volumes" can be used if the cluster is configured to use external volumes.
+    - "task\_killing" can be used to enable the TASK\_KILLING state in Mesos (0.28 or later)
+    - "external\_volumes" can be used if the cluster is configured to use external volumes.
     Example: `--enable_features vips,task_killing,external_volumes`
 * `--executor` (Optional. Default: "//cmd"): Executor to use when none is
     specified.
