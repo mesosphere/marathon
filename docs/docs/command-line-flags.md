@@ -42,7 +42,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     Requires checkpointing enabled on slaves. Allows tasks to continue running
     during mesos-slave restarts and Marathon scheduler failover.  See the
     description of `--failover_timeout`.
-* <span class="label label-default">v0.16.0</span> `--enable_features` (Optional. Default: None):
+* <span class="label label-default">v1.0.0</span> `--enable_features` (Optional. Default: None):
     Enable the selected features. Options to use:
     - "vips" can be used to enable the networking VIP integration UI.
     - "task_killing" can be used to enable the TASK_KILLING state in Mesos (0.28 or later)
