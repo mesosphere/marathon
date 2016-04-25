@@ -45,13 +45,6 @@ OR
 
 OR
 
-*Note:* Command health checks in combination with dockerized tasks were
-broken in Mesos v0.23.0 and v0.24.0. This issue has been fixed in
-v0.23.1 and v0.24.1.
-
-See [MESOS-3136](https://issues.apache.org/jira/browse/MESOS-3136) for
-more details.
-
 ```json
 {
   "protocol": "COMMAND",
@@ -60,6 +53,22 @@ more details.
   "intervalSeconds": 60,
   "timeoutSeconds": 20,
   "maxConsecutiveFailures": 3
+}
+```
+
+*Note:* Command health checks in combination with dockerized tasks were
+broken in Mesos v0.23.0 and v0.24.0. This issue has been fixed in
+v0.23.1 and v0.24.1. See [MESOS-3136](https://issues.apache.org/jira/browse/MESOS-3136) for
+more details.
+
+*Note:* If you are using double quotes inside your commands please ensure to escape them.
+This is required as Mesos runs the healthcheck command inside via `/bin/sh -c ""`.
+See example below and [MESOS-4812](https://issues.apache.org/jira/browse/MESOS-4812) for details 
+
+```json
+{
+  "protocol": "COMMAND",
+  "command": { "value": "/bin/bash -c \\\"</dev/tcp/$HOST/$PORT0\\\"" }
 }
 ```
 
@@ -82,8 +91,9 @@ Options applicable to every protocol:
 * `intervalSeconds` (Optional. Default: 60): Number of seconds to wait between
   health checks.
 * `maxConsecutiveFailures`(Optional. Default: 3): Number of consecutive health
-  check failures after which the unhealthy task should be killed. If this value
-  is `0`, then tasks will not be killed due to failing this check.
+  check failures after which the unhealthy task should be killed.
+  HTTP & TCP health checks: If this value is `0`, then tasks will not be killed due to failing this check.
+  
 * `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
   health check is considered a failure regardless of the response.
 

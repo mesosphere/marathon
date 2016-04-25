@@ -62,9 +62,8 @@ Marathon is waiting for offers from Mesos. True whenever an app has
 #### Delayed
 An app is considered `delayed` whenever too many tasks of the application failed
  in a short amount of time. Marathon will pause this deployment and retry later.
-True if the `queue` endpoint returns the
-following JSON conditions:
-`queueEntry.delay.overdue === false && queueEntry.delay.timeLeftSeconds > 0`
+True if the `queue` endpoint returns the following JSON condition: 
+`queueEntry.delay.overdue === false`
 
 ## Application Health Reference
 It is possible to specify health checks to be run against an application's
