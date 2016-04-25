@@ -3,7 +3,7 @@ package mesosphere.marathon.core.externalvolume
 import com.wix.accord._
 import mesosphere.marathon.core.externalvolume.impl._
 import mesosphere.marathon.state._
-import org.apache.mesos.Protos.{ ContainerInfo, CommandInfo }
+import org.apache.mesos.Protos.ContainerInfo
 
 /**
   * API facade for callers interested in storage volumes
@@ -13,10 +13,6 @@ object ExternalVolumes {
 
   def build(builder: ContainerInfo.Builder, v: ExternalVolume): Unit = {
     providers.get(v.external.provider).foreach { _.build(builder, v) }
-  }
-
-  def build(containerType: ContainerInfo.Type, builder: CommandInfo.Builder, v: ExternalVolume): Unit = {
-    providers.get(v.external.provider).foreach { _.build(containerType, builder, v) }
   }
 
   def validExternalVolume: Validator[ExternalVolume] = new Validator[ExternalVolume] {
