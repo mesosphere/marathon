@@ -5,9 +5,8 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ PortMappingSerializer, PortDefinitionSerializer, ContainerSerializer }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ PersistentVolume, ExternalVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
+import mesosphere.marathon.state.{ PersistentVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
 import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
@@ -124,17 +123,10 @@ class TaskBuilder(app: AppDefinition,
     val containerProto = computeContainerInfo(resourceMatch.hostPorts)
     val envPrefix: Option[String] = config.envVarsPrefix.get
 
-    def decorateForExternalVolumes(builder: CommandInfo.Builder) = containerProto.foreach { cp =>
-      app.externalVolumes.foreach {
-        ExternalVolumes.build(cp.getType, builder, _)
-      }
-    }
-
     executor match {
       case CommandExecutor() =>
         containerProto.foreach(builder.setContainer)
         val command = TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
-        decorateForExternalVolumes(command)
         builder.setCommand(command.build)
 
       case PathExecutor(path) =>
@@ -150,7 +142,6 @@ class TaskBuilder(app: AppDefinition,
 
         val command =
           TaskBuilder.commandInfo(app, Some(taskId), host, resourceMatch.hostPorts, envPrefix).setValue(shell)
-        decorateForExternalVolumes(command)
         info.setCommand(command.build)
         builder.setExecutor(info)
 
