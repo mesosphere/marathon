@@ -35,11 +35,11 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     assert(steps.size == 2)
 
     val firstStep = (steps.head \ "actions").as[Seq[JsObject]].head
-    assert((firstStep \ "type").as[String] == "StartApplication")
+    assert((firstStep \ "action").as[String] == "StartApplication")
     assert((firstStep \ "app").as[String] == "/test/app")
 
     val secondStep = (steps.last \ "actions").as[Seq[JsObject]].head
-    assert((secondStep \ "type").as[String] == "ScaleApplication")
+    assert((secondStep \ "action").as[String] == "ScaleApplication")
     assert((secondStep \ "app").as[String] == "/test/app")
   }
 

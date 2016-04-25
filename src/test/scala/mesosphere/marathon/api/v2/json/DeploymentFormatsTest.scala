@@ -100,9 +100,13 @@ class DeploymentFormatsTest extends MarathonSpec {
       Seq(genStep),
       Timestamp.now()
     )
-    val json = Json.toJson(plan)
-    val fieldMap = json.as[JsObject].fields.toMap
+    val json = Json.toJson(plan).as[JsObject]
+    val fieldMap = json.fields.toMap
     fieldMap.keySet should be(Set("version", "id", "target", "original", "steps"))
+
+    val action = ((json \ "steps")(0) \ "actions")(0)
+    val actionFields = action.as[JsObject].fields.toMap.keySet
+    actionFields should be(Set("action", "app"))
   }
 
   // regression test for #1176
