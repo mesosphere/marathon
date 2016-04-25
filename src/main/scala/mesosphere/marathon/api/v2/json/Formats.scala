@@ -354,7 +354,7 @@ trait DeploymentFormats {
 
   implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
     Json.obj(
-      "type" -> action.getClass.getSimpleName,
+      "action" -> action.getClass.getSimpleName,
       "app" -> action.app.id
     )
   }
