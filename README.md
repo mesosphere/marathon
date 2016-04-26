@@ -184,6 +184,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [OpenTable](http://www.opentable.com/)
 * [Orbitz](http://www.orbitz.com/)
 * [Otto](https://www.otto.de/)
+* [OVH](https://ovh.com/)
 * [PayPal](https://www.paypal.com)
 * [Qubit](http://www.qubit.com/)
 * [RelateIQ](https://www.salesforceiq.com/)

@@ -115,9 +115,9 @@ object ForwarderService {
   }
 
   private[this] def createConf(args: String*): ForwarderConf = {
-    val conf = new ForwarderConf(Array[String]("--assets_path", "/tmp") ++ args.map(_.toString))
-    conf.afterInit()
-    conf
+    new ForwarderConf(Array[String]("--assets_path", "/tmp") ++ args.map(_.toString)) {
+      verify()
+    }
   }
 
   private def startImpl(conf: ForwarderConf, leaderModule: Module, assetPath: String = "/tmp"): Service = {

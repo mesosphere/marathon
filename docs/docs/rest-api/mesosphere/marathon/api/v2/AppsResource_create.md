@@ -142,7 +142,7 @@ The number of CPU`s this application needs per instance. This number does not ha
 The amount of memory in MB that is needed for the application per instance.
 
 ##### ports (Array of Integers)
-Since <span class="label label-default">v0.16.0</span>: __Deprecated__ . Use portDefinitions instead.
+Since <span class="label label-default">v1.0.0</span>: __Deprecated__ . Use portDefinitions instead.
 
 An array of required port resources on the host.
 
@@ -170,7 +170,7 @@ as well, see [Rethink ports API](https://github.com/mesosphere/marathon/issues/6
 
 ##### portsDefinitions (Array of Objects)
 
-Since <span class="label label-default">v0.16.0</span>:
+Since <span class="label label-default">v1.0.0</span>:
 
 An array of required port resources on the host.
 

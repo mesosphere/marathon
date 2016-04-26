@@ -2,6 +2,7 @@ package mesosphere.marathon.event.http
 
 import akka.actor.{ Actor, ActorSystem, Props }
 import akka.testkit.{ EventFilter, TestActorRef }
+import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.MarathonSpec
@@ -107,8 +108,10 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
       ConfigFactory.parseString("""akka.loggers = ["akka.testkit.TestEventListener"]""")
     )
     clock = ConstantClock()
+    val duration: FiniteDuration = 10.seconds
     conf = mock[HttpEventConfiguration]
-    conf.slowConsumerTimeout returns 10.seconds
+    conf.slowConsumerDuration returns duration
+    conf.eventRequestTimeout returns Timeout(duration)
     statusCode = mock[StatusCode]
     statusCode.isSuccess returns true
     response = mock[HttpResponse]

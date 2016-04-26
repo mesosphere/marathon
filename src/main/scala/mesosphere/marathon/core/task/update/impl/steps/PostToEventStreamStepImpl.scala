@@ -11,11 +11,9 @@ import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.event.{ EventModule, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.Protos.TaskState.TASK_RUNNING
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 /**
@@ -33,7 +31,9 @@ class PostToEventStreamStepImpl @Inject() (
         mesosStatus.getState match {
           case Terminated(_) =>
             postEvent(timestamp, mesosStatus, task)
-          case TASK_RUNNING if task.launched.exists(!_.hasStartedRunning) => // staged, not running
+          case TaskState.TASK_RUNNING if task.launched.exists(!_.hasStartedRunning) => // staged, not running
+            postEvent(timestamp, mesosStatus, task)
+          case TaskState.TASK_KILLING if task.launched.isDefined =>
             postEvent(timestamp, mesosStatus, task)
 
           case state: TaskState =>

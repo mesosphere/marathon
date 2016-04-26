@@ -257,7 +257,6 @@ object Dependencies {
     hadoopHdfs % "compile",
     hadoopCommon % "compile",
     beanUtils % "compile",
-    scallop % "compile",
     playJson % "compile",
     jsonSchemaValidator % "compile",
     twitterZk % "compile",
@@ -279,7 +278,7 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Chaos = "0.8.4"
+    val Chaos = "0.8.6"
     val Guava = "18.0"
     val MesosUtils = "0.28.0"
     val Akka = "2.3.9"
@@ -293,7 +292,6 @@ object Dependency {
     val UUIDGenerator = "3.1.3"
     val JGraphT = "0.9.1"
     val Hadoop = "2.4.1"
-    val Scallop = "0.9.5"
     val Diffson = "0.3"
     val PlayJson = "2.4.3"
     val JsonSchemaValidator = "2.2.6"
@@ -333,7 +331,6 @@ object Dependency {
   val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty,
     excludeJavaxServlet)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.2"
-  val scallop = "org.rogach" %% "scallop" % V.Scallop
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
   val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala

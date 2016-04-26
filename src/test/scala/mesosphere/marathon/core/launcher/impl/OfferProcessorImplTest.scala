@@ -275,8 +275,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] var conf: OfferProcessorConfig = _
 
   private[this] def createProcessor(): OfferProcessor = {
-    conf = new OfferProcessorConfig {}
-    conf.afterInit()
+    conf = new OfferProcessorConfig {
+      verify()
+    }
 
     clock = ConstantClock()
     offerMatcher = mock[OfferMatcher]

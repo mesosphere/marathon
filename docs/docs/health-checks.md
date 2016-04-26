@@ -91,8 +91,9 @@ Options applicable to every protocol:
 * `intervalSeconds` (Optional. Default: 60): Number of seconds to wait between
   health checks.
 * `maxConsecutiveFailures`(Optional. Default: 3): Number of consecutive health
-  check failures after which the unhealthy task should be killed. If this value
-  is `0`, then tasks will not be killed due to failing this check.
+  check failures after which the unhealthy task should be killed.
+  HTTP & TCP health checks: If this value is `0`, then tasks will not be killed due to failing this check.
+  
 * `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
   health check is considered a failure regardless of the response.
 

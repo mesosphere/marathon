@@ -88,7 +88,9 @@ class MarathonSchedulerActor private (
       self ! ReconcileHealthChecks
 
     case LocalLeadershipEvent.Standby =>
-    // ignore, FIXME: When we get this while recovering deployments, we become active
+    // ignored
+    // FIXME: When we get this while recovering deployments, we become active anyway
+    // and drop this message.
 
     case _                            => stash()
   }
@@ -443,7 +445,9 @@ class SchedulerActions(
       }
       launchQueue.purge(app.id)
       launchQueue.resetDelay(app)
-      // TODO after all tasks have been killed we should remove the app from taskTracker
+
+      // The tasks will be removed from the TaskTracker when their termination
+      // was confirmed by Mesos via a task update.
 
       eventBus.publish(AppTerminatedEvent(app.id))
     }

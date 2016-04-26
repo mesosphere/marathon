@@ -36,8 +36,9 @@ object ProcessKeeper {
   def startHttpService(port: Int, assetPath: String) = {
     startService {
       log.info(s"Start Http Service on port $port")
-      val conf = new ScallopConf(Array("--http_port", port.toString, "--assets_path", assetPath)) with HttpConf
-      conf.afterInit()
+      val conf = new ScallopConf(Array("--http_port", port.toString, "--assets_path", assetPath)) with HttpConf {
+        verify()
+      }
       val injector = Guice.createInjector(new MetricsModule, new HttpModule(conf), new HttpServiceTestModule)
       injector.getInstance(classOf[HttpService])
     }
