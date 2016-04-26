@@ -62,9 +62,8 @@ class TaskStartActorTest
 
   for (
     (counts, description) <- Seq(
-      Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 1)) -> "with one task left to launch",
-      Some(LaunchQueueTestHelper.zeroCounts.copy(taskLaunchesInFlight = 1)) -> "with one task in flight",
-      Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLaunched = 1)) -> "with one task already running"
+      Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 1, finalTaskCount = 5)) -> "with one task left to launch"
+    //      Some(LaunchQueueTestHelper.zeroCounts.copy(finalTaskCount = 3)) -> "with one task in flight"
     )
   ) {
     test(s"Start success $description") {

@@ -11,27 +11,13 @@ object LaunchQueue {
 
   /**
     * @param app the currently used app definition
-    * @param tasksLeftToLaunch the tasks that still have to be launched
-    * @param taskLaunchesInFlight the number of tasks which have been requested to be launched
-    *                        but are unconfirmed yet
-    * @param tasksLaunched the number of tasks which are running or at least have been confirmed to be launched
     */
   protected[marathon] case class QueuedTaskInfo(
-      app: AppDefinition,
-      tasksLeftToLaunch: Int,
-      taskLaunchesInFlight: Int, // FIXME (217): rename to taskOpsInFlight
-      tasksLaunched: Int,
-      backOffUntil: Timestamp) {
-    /**
-      * Indicates if the launch queue tries to launch tasks for this app.
-      */
-    def inProgress: Boolean = tasksLeftToLaunch != 0 || taskLaunchesInFlight != 0
-
-    /**
-      * This is the final number of tasks, the launch queue tries to reach for this app.
-      */
-    def finalTaskCount: Int = tasksLaunched + taskLaunchesInFlight + tasksLeftToLaunch
-  }
+    app: AppDefinition,
+    inProgress: Boolean,
+    tasksLeftToLaunch: Int,
+    finalTaskCount: Int,
+    backOffUntil: Timestamp)
 }
 
 /**
