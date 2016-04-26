@@ -10,11 +10,11 @@ import scala.concurrent.Future
 object LaunchQueue {
 
   /**
-    * @param app the currently used app definition
-    * @param tasksLeftToLaunch the tasks that still have to be launched
+    * @param app                  the currently used app definition
+    * @param tasksLeftToLaunch    the tasks that still have to be launched
     * @param taskLaunchesInFlight the number of tasks which have been requested to be launched
-    *                        but are unconfirmed yet
-    * @param tasksLaunched the number of tasks which are running or at least have been confirmed to be launched
+    *                             but are unconfirmed yet
+    * @param tasksLaunched        the number of tasks which are running or at least have been confirmed to be launched
     */
   protected[marathon] case class QueuedTaskInfo(
       app: AppDefinition,
@@ -32,6 +32,7 @@ object LaunchQueue {
       */
     def finalTaskCount: Int = tasksLaunched + taskLaunchesInFlight + tasksLeftToLaunch
   }
+
 }
 
 /**
@@ -41,6 +42,7 @@ trait LaunchQueue {
 
   /** Returns all entries of the queue. */
   def list: Seq[QueuedTaskInfo]
+
   /** Returns all apps for which queue entries exist. */
   def listApps: Seq[AppDefinition]
 

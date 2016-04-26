@@ -68,6 +68,7 @@ private class DeploymentActor(
 
     case Cancel(t) =>
       receiver ! DeploymentFailed(plan, t)
+      //  sender() ! Terminated
       context.stop(self)
 
     case Fail(t) =>
