@@ -60,7 +60,7 @@ class CuratorElectionService(
 
   private object Listener extends LeaderLatchListener {
     override def notLeader(): Unit = CuratorElectionService.this.synchronized {
-      log.info("Defeated (LeaderLatchListener Interface)")
+      log.info(s"Defeated (LeaderLatchListener Interface). New leader: ${leaderHostPort.getOrElse("-")}")
 
       // remove tombstone for twitter commons
       twitterCommonsTombstone.delete(onlyMyself = true)
