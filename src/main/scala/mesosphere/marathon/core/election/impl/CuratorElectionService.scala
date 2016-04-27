@@ -106,10 +106,24 @@ class CuratorElectionService(
     lazy val memberName = "member_-00000000"
     lazy val path = group.getMemberPath(memberName)
 
+    var fallbackCreated = false
+
     def create(): Unit = {
       try {
         delete(onlyMyself = false)
         ZooKeeperUtils.ensurePath(zk, acl, config.zooKeeperLeaderPath)
+
+        // Create a ephemeral node which is not removed when loosing leadership. This is necessary to avoid a
+        // race of old Marathon instances which think that they can become leader in the moment
+        // the new instances failover and no tombstone is existing (yet).
+        if (!fallbackCreated) {
+          zk.get.create(group.getMemberPath("member_-1"),
+            hostPort.getBytes("UTF-8"),
+            acl,
+            CreateMode.EPHEMERAL_SEQUENTIAL
+          )
+          fallbackCreated = true
+        }
 
         log.info("Creating tombstone for old twitter commons leader election")
         zk.get.create(path, hostPort.getBytes("UTF-8"), acl, CreateMode.EPHEMERAL)
