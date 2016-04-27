@@ -6,8 +6,10 @@ import com.codahale.metrics.MetricRegistry
 import com.twitter.common.zookeeper.ZooKeeperClient
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.Features
 import mesosphere.marathon.core.election.impl.{
   ExponentialBackoff,
+  CuratorElectionService,
   TwitterCommonsElectionService,
   PseudoElectionService
 }
@@ -24,17 +26,32 @@ class ElectionModule(
     electionCallbacks: Seq[ElectionCallback] = Seq.empty) {
   private lazy val backoff = new ExponentialBackoff(name = "offerLeadership")
   lazy val service: ElectionService = if (config.highlyAvailable()) {
-    new TwitterCommonsElectionService(
-      config,
-      system,
-      eventStream,
-      http,
-      metrics,
-      hostPort,
-      zk,
-      electionCallbacks,
-      backoff
-    )
+    if (config.isFeatureSet(Features.TWITTER_COMMONS)) {
+      new TwitterCommonsElectionService(
+        config,
+        system,
+        eventStream,
+        http,
+        metrics,
+        hostPort,
+        zk,
+        electionCallbacks,
+        backoff
+      )
+    }
+    else {
+      new CuratorElectionService(
+        config,
+        system,
+        eventStream,
+        http,
+        metrics,
+        hostPort,
+        zk,
+        electionCallbacks,
+        backoff
+      )
+    }
   }
   else {
     new PseudoElectionService(
