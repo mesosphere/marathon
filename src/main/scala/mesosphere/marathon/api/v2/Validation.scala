@@ -131,6 +131,20 @@ object Validation {
     }
   }
 
+  def urlIsValid: Validator[String] = {
+    new Validator[String] {
+      def apply(url: String) = {
+        try {
+          new URL(url)
+          Success
+        }
+        catch {
+          case e: MalformedURLException => Failure(Set(RuleViolation(url, e.getMessage, None)))
+        }
+      }
+    }
+  }
+
   def urlCanBeResolvedValidator: Validator[String] = {
     new Validator[String] {
       def apply(url: String) = {
