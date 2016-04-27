@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.{ MarathonSpec, MarathonConf }
 import mesosphere.marathon.core.election.{ ElectionCallback, ElectionCandidate, ElectionService }
@@ -61,6 +62,7 @@ class ElectionServiceBaseTest
   private[this] var candidate: ElectionCandidate = _
   private[this] var metrics: Metrics = _
   private[this] var backoff: Backoff = _
+  private[this] var shutdownHooks: ShutdownHooks = _
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -72,11 +74,12 @@ class ElectionServiceBaseTest
     candidate = mock[ElectionCandidate]
     metrics = new Metrics(new MetricRegistry)
     backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
+    shutdownHooks = mock[ShutdownHooks]
   }
 
   test("state is Idle initially") {
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, Seq.empty, backoff
+      config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ???
       override def leaderHostPort: Option[String] = ???
@@ -87,7 +90,7 @@ class ElectionServiceBaseTest
 
   test("state is eventually Offered after offerLeadership") {
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, Seq.empty, backoff
+      config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPort: Option[String] = ???
@@ -106,7 +109,7 @@ class ElectionServiceBaseTest
 
   test("state is Offering after offerLeadership first") {
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, Seq.empty, new ExponentialBackoff(initialValue = 5.seconds)
+      config, system, events, metrics, Seq.empty, new ExponentialBackoff(initialValue = 5.seconds), shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPort: Option[String] = ???
@@ -120,7 +123,7 @@ class ElectionServiceBaseTest
 
   test("state is Abdicating after abdicateLeadership") {
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, Seq.empty, backoff
+      config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPort: Option[String] = ???
@@ -156,7 +159,7 @@ class ElectionServiceBaseTest
 
   test("offerLeadership while abdicating") {
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, Seq.empty, backoff
+      config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPort: Option[String] = ???
@@ -177,7 +180,7 @@ class ElectionServiceBaseTest
     Mockito.when(cb.onElected).thenReturn(Future(()))
 
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, Seq(cb), backoff
+      config, system, events, metrics, Seq(cb), backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())
@@ -207,7 +210,7 @@ class ElectionServiceBaseTest
     events = mock[EventStream]
 
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, Seq.empty, backoff
+      config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())
@@ -235,7 +238,7 @@ class ElectionServiceBaseTest
 
   test("leadership can be re-offered") {
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, Seq.empty, backoff
+      config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = () // do not call startLeadership here
       override def leaderHostPort: Option[String] = ???
@@ -255,7 +258,7 @@ class ElectionServiceBaseTest
     val throwException = new AtomicBoolean(true)
 
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, Seq.empty, backoff
+      config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())

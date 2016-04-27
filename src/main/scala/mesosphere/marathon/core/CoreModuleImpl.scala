@@ -69,7 +69,8 @@ class CoreModuleImpl @Inject() (
     metrics,
     hostPort,
     zk,
-    electionCallbacks
+    electionCallbacks,
+    shutdownHookModule
   )
 
   // TASKS

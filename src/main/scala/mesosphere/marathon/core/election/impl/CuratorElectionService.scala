@@ -6,6 +6,7 @@ import com.codahale.metrics.MetricRegistry
 import com.twitter.common.zookeeper.{ ZooKeeperUtils, Group, ZooKeeperClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.ElectionCallback
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
@@ -23,8 +24,9 @@ class CuratorElectionService(
   hostPort: String,
   zk: ZooKeeperClient,
   electionCallbacks: Seq[ElectionCallback] = Seq.empty,
-  backoff: ExponentialBackoff) extends ElectionServiceBase(
-  config, system, eventStream, metrics, electionCallbacks, backoff
+  backoff: ExponentialBackoff,
+  shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
+  config, system, eventStream, metrics, electionCallbacks, backoff, shutdownHooks
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
 

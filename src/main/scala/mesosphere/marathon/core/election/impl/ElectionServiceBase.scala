@@ -5,6 +5,7 @@ import akka.event.EventStream
 import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
 import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.{ ElectionCallback, ElectionCandidate, ElectionService }
 import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.metrics.Metrics
@@ -18,7 +19,7 @@ private[impl] object ElectionServiceBase {
   protected type Abdicator = /* error: */ Boolean => Unit
 
   abstract class State {
-    def getCandidate(): Option[ElectionCandidate] = this match {
+    def getCandidate: Option[ElectionCandidate] = this match {
       case Idle(c)             => c
       case Leading(c, _)       => Some(c)
       case Abdicating(c, _, _) => Some(c)
@@ -40,7 +41,8 @@ abstract class ElectionServiceBase(
     eventStream: EventStream,
     metrics: Metrics = new Metrics(new MetricRegistry),
     electionCallbacks: Seq[ElectionCallback] = Seq.empty,
-    backoff: Backoff) extends ElectionService {
+    backoff: Backoff,
+    shutdownHooks: ShutdownHooks) extends ElectionService {
   import ElectionServiceBase._
 
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
@@ -104,26 +106,31 @@ abstract class ElectionServiceBase(
   }
 
   override def offerLeadership(candidate: ElectionCandidate): Unit = synchronized {
-    log.info(s"Will offer leadership after ${backoff.value()} backoff")
-    setOfferState({
-      // some offering attempt is running
-      log.info("Ignoring repeated leadership offer")
-    }, {
-      // backoff idle case
-      state = Offering(candidate)
-      after(backoff.value(), system.scheduler)(Future {
-        synchronized {
-          setOfferState({
-            // now after backoff actually set Offered state
-            state = Offered(candidate)
-            offerLeadershipImpl()
-          }, {
-            // state became Idle meanwhile
-            log.info("Canceling leadership offer attempt")
-          })
-        }
+    if (shutdownHooks.isShuttingDown) {
+      log.info("Ignoring leadership offer while shutting down")
+    }
+    else {
+      setOfferState({
+        // some offering attempt is running
+        log.info("Ignoring repeated leadership offer")
+      }, {
+        // backoff idle case
+        log.info(s"Will offer leadership after ${backoff.value()} backoff")
+        state = Offering(candidate)
+        after(backoff.value(), system.scheduler)(Future {
+          synchronized {
+            setOfferState({
+              // now after backoff actually set Offered state
+              state = Offered(candidate)
+              offerLeadershipImpl()
+            }, {
+              // state became Idle meanwhile
+              log.info("Canceling leadership offer attempt")
+            })
+          }
+        })
       })
-    })
+    }
   }
 
   protected def stopLeadership(): Unit = synchronized {
@@ -165,7 +172,7 @@ abstract class ElectionServiceBase(
         state = Abdicating(candidate, reoffer, shortcut = true)
         abdicate
       case _ =>
-        val candidate = state.getCandidate().get // Idle(None) is not possible
+        val candidate = state.getCandidate.get // Idle(None) is not possible
         state = Leading(candidate, backoffAbdicate)
         try {
           // Start the leader duration metric
