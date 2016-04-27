@@ -53,6 +53,26 @@ class LeaderIntegrationTest extends IntegrationFunSuite
     WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
   }
 
+  test("it survives a small burn-in reelection test") {
+    for (_ <- 1 to 10) {
+      Given("a leader")
+      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
+      val leader = marathon.leader().value
+
+      When("calling DELETE /v2/leader")
+      val result = marathon.abdicate()
+
+      Then("the request should be successful")
+      result.code should be (200)
+      (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
+
+      And("the leader must have changed")
+      WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
+
+      Thread.sleep(500L)
+    }
+  }
+
   ignore("commit suicide if the zk connection is dropped") {
     // FIXME (gkleiman): investigate why this test fails (https://github.com/mesosphere/marathon/issues/3566)
     Given("a leader")
