@@ -2,7 +2,7 @@ package mesosphere.marathon.integration
 
 import mesosphere.marathon.Features
 import mesosphere.marathon.integration.facades.{ ITLeaderResult, MarathonFacade }
-import mesosphere.marathon.integration.setup.{ ProcessKeeper, IntegrationFunSuite, MarathonClusterIntegrationTest, WaitTestSupport }
+import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId
 import org.apache.zookeeper.data.Stat
 import org.apache.zookeeper.{ ZooKeeper, WatchedEvent, Watcher }
@@ -72,7 +72,10 @@ class LeaderIntegrationTest extends IntegrationFunSuite
       (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
+      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+        val result = marathon.leader()
+        result.code == 200 && result.value != leader
+      }
 
       Thread.sleep(500L)
     }
@@ -137,7 +140,10 @@ class LeaderIntegrationTest extends IntegrationFunSuite
       leader.leader.split(":")(1).toInt should not be twitterCommonsInstancePort
 
       And("the twittercommons instance knows the real leader")
-      facade.leader().value should be (leader)
+      WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
+        val result = facade.leader()
+        result.code == 200 && result.value == leader
+      }
 
       When("calling DELETE /v2/leader")
       val result = marathon.abdicate()
@@ -147,7 +153,10 @@ class LeaderIntegrationTest extends IntegrationFunSuite
       (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
+      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+        val result = marathon.leader()
+        result.code == 200 && result.value != leader
+      }
 
       Thread.sleep(500L)
     }
