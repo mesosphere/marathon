@@ -11,6 +11,8 @@ import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.Timer
 import org.slf4j.LoggerFactory
 
+import scala.util.control.NonFatal
+
 class MarathonLeaderInfo @Inject() (
     electionService: ElectionService,
     @Named(EventModule.busName) eventStream: EventStream,
@@ -26,7 +28,9 @@ class MarathonLeaderInfo @Inject() (
       electionService.leaderHostPort
     }
     catch {
-      case e: java.lang.Exception => None
+      case NonFatal(e) =>
+        log.error("error while getting current leader", e)
+        None
     }
   }
 
