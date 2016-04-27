@@ -83,6 +83,7 @@ abstract class ElectionServiceBase(
         }
     }
   }
+  // scalastyle:on
 
   protected def offerLeadershipImpl(): Unit
 
