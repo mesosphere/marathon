@@ -107,6 +107,8 @@ options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm.html) on how to run Marathon locally inside a virtual machine.
 
+Local Debug parameter `./bin/start --master local --zk zk://localhost:2181/marathon --jvm-debug 9999`
+
 ### Running the development Docker
 
 Build tip:
