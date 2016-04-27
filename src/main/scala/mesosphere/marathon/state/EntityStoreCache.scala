@@ -1,6 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.LeadershipCallback
+import mesosphere.marathon.core.election.ElectionCallback
 import mesosphere.util.ThreadPoolContext
 import org.slf4j.LoggerFactory
 
@@ -21,7 +21,7 @@ import scala.concurrent.Future
   *    - clear everything
   */
 class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
-    extends EntityStore[T] with LeadershipCallback with VersionedEntry {
+    extends EntityStore[T] with ElectionCallback with VersionedEntry {
 
   @volatile
   private[state] var cacheOpt: Option[TrieMap[String, Option[T]]] = None

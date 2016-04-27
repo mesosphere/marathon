@@ -1,14 +1,18 @@
 package mesosphere.marathon.core
 
+import javax.inject.Named
+
 import akka.actor.ActorSystem
+import akka.event.EventStream
 import com.google.inject.Inject
 import com.twitter.common.zookeeper.ZooKeeperClient
-import mesosphere.marathon.api.LeaderInfo
+import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.launcher.{ TaskOpFactory, LauncherModule }
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
+import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
@@ -19,9 +23,10 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.TaskUpdateStep
+import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
-import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
 
 import scala.util.Random
 
@@ -34,8 +39,10 @@ import scala.util.Random
 class CoreModuleImpl @Inject() (
     // external dependencies still wired by guice
     zk: ZooKeeperClient,
-    leader: LeadershipAbdication,
     marathonConf: MarathonConf,
+    @Named(EventModule.busName) eventStream: EventStream,
+    httpConf: HttpConf,
+    @Named(ModuleNames.HOST_PORT) hostPort: String,
     metrics: Metrics,
     actorSystem: ActorSystem,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
@@ -43,7 +50,7 @@ class CoreModuleImpl @Inject() (
     groupRepository: GroupRepository,
     taskRepository: TaskRepository,
     taskOpFactory: TaskOpFactory,
-    leaderInfo: LeaderInfo,
+    electionCallbacks: Seq[ElectionCallback] = Seq.empty,
     clock: Clock,
     taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
 
@@ -53,7 +60,17 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val shutdownHookModule = ShutdownHooks()
   private[this] lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
-  override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory, zk, leader)
+  override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory, zk, electionModule.service)
+  override lazy val electionModule = new ElectionModule(
+    marathonConf,
+    actorSystem,
+    eventStream,
+    httpConf,
+    metrics,
+    hostPort,
+    zk,
+    electionCallbacks
+  )
 
   // TASKS
 

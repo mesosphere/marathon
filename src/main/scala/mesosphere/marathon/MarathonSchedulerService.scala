@@ -1,7 +1,6 @@
 package mesosphere.marathon
 
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
 
@@ -9,16 +8,12 @@ import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.{ after, ask }
 import akka.util.Timeout
-import com.codahale.metrics.Gauge
 import com.google.common.util.concurrent.AbstractExecutionThreadService
-import com.twitter.common.base.ExceptionalCommand
-import com.twitter.common.zookeeper.Candidate
-import com.twitter.common.zookeeper.Candidate.Leader
-import com.twitter.common.zookeeper.Group.JoinException
 import mesosphere.marathon.MarathonSchedulerActor._
+import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.event.{ EventModule, LocalLeadershipEvent }
+import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
@@ -34,31 +29,7 @@ import com.codahale.metrics.MetricRegistry
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, TimeoutException }
-import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
-
-/**
-  * Leadership callbacks.
-  */
-trait LeadershipCallback {
-
-  /**
-    * Will get called _before_ the scheduler driver is started.
-    */
-  def onElected: Future[Unit]
-
-  /**
-    * Will get called after leadership is abdicated.
-    */
-  def onDefeated: Future[Unit]
-}
-
-/**
-  * Minimal trait to abdicate leadership from external components (e.g. zk connection listener)
-  */
-trait LeadershipAbdication {
-  def abdicateLeadership(): Unit
-}
 
 /**
   * Wrapper class for the scheduler
@@ -66,19 +37,17 @@ trait LeadershipAbdication {
 class MarathonSchedulerService @Inject() (
   leadershipCoordinator: LeadershipCoordinator,
   healthCheckManager: HealthCheckManager,
-  @Named(ModuleNames.CANDIDATE) candidate: Option[Candidate],
   config: MarathonConf,
   frameworkIdUtil: FrameworkIdUtil,
-  @Named(ModuleNames.LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
+  electionService: ElectionService,
   appRepository: AppRepository,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
   migration: Migration,
   @Named("schedulerActor") schedulerActor: ActorRef,
   @Named(EventModule.busName) eventStream: EventStream,
-  leadershipCallbacks: Seq[LeadershipCallback] = Seq.empty,
   metrics: Metrics = new Metrics(new MetricRegistry))
-    extends AbstractExecutionThreadService with Leader with LeadershipAbdication {
+    extends AbstractExecutionThreadService with ElectionCandidate {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -164,10 +133,8 @@ class MarathonSchedulerService @Inject() (
   override def run(): Unit = {
     log.info("Beginning run")
 
-    // The first thing we do is offer our leadership. If using ZooKeeper for
-    // leadership election then we will wait to be elected. If we aren't (i.e.
-    // no HA) then we take over leadership run the driver immediately.
-    offerLeadership()
+    // The first thing we do is offer our leadership.
+    electionService.offerLeadership(this)
 
     // Block on the latch which will be countdown only when shutdown has been
     // triggered. This is to prevent run()
@@ -182,62 +149,16 @@ class MarathonSchedulerService @Inject() (
   override def triggerShutdown(): Unit = synchronized {
     log.info("Shutdown triggered")
 
-    leader.set(false)
-
     stopDriver()
 
     log.info("Cancelling timer")
     timer.cancel()
 
-    log.info("Removing the blocking of run()")
-
     // The countdown latch blocks run() from exiting. Counting down the latch removes the block.
+    log.info("Removing the blocking of run()")
     latch.countDown()
 
     super.triggerShutdown()
-  }
-
-  def runDriver(abdicateCmdOption: Option[ExceptionalCommand[JoinException]]): Unit = synchronized {
-
-    def executeAbdicationCommand() = abdicateCmdOption match {
-      case Some(cmd) => cmd.execute()
-      case _         => leader.set(false)
-    }
-
-    log.info("Running driver")
-
-    // The following block asynchronously runs the driver. Note that driver.run()
-    // blocks until the driver has been stopped (or aborted).
-    Future {
-      scala.concurrent.blocking {
-        driver.foreach(_.run())
-      }
-    } onComplete {
-      case Success(_) =>
-        log.info("Driver future completed. Executing optional abdication command.")
-
-        // If there is an abdication command we need to execute it so that our
-        // leadership is given up. Note that executing the abdication command
-        // does a few things: - It causes onDefeated() to be executed (which is
-        // part of the Leader interface).  - It removes us as a leadership
-        // candidate. We must offer out leadership candidacy if we ever want to
-        // become the leader again in the future.
-        //
-        // If we don't have a abdication command we simply mark ourselves as
-        // not the leader
-        executeAbdicationCommand()
-
-        // If we are shutting down then don't offer leadership. But if we
-        // aren't then the driver was stopped via external means. For example,
-        // our leadership could have been defeated or perhaps it was
-        // abdicated. Therefore, for these cases we offer our leadership again.
-        if (isRunning) {
-          offerLeadership()
-        }
-      case Failure(t) =>
-        log.error("Exception while running driver", t)
-        abdicateAfterFailure(() => executeAbdicationCommand(), runAbdicationCommand = true)
-    }
   }
 
   def stopDriver(): Unit = synchronized {
@@ -250,140 +171,72 @@ class MarathonSchedulerService @Inject() (
 
   //End Service interface
 
-  //Begin Leader interface, which is required for CandidateImpl.
-  override def onDefeated(): Unit = synchronized {
-    log.info("Defeated (Leader Interface)")
+  //Begin ElectionCandidate interface
 
-    log.info(s"Call onDefeated leadership callbacks on ${leadershipCallbacks.mkString(", ")}")
-    Await.result(Future.sequence(leadershipCallbacks.map(_.onDefeated)), zkTimeout)
-    log.info(s"Finished onDefeated leadership callbacks")
+  def startLeadership(): Unit = synchronized {
+    log.info("Elect leadership, running driver")
 
-    // Our leadership has been defeated and thus we call the defeatLeadership() method.
-    defeatLeadership()
-  }
+    // execute tasks, only the leader is allowed to
+    migration.migrate()
 
-  override def onElected(abdicateCmd: ExceptionalCommand[JoinException]): Unit = synchronized {
-    var driverHandlesAbdication = false
-    try {
-      log.info("Elected (Leader Interface)")
+    // start all leadership coordination actors
+    Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)
 
-      //execute tasks, only the leader is allowed to
-      migration.migrate()
+    // start timers
+    schedulePeriodicOperations()
 
-      //run all leadership callbacks
-      log.info(s"""Call onElected leadership callbacks on ${leadershipCallbacks.mkString(", ")}""")
-      Await.result(Future.sequence(leadershipCallbacks.map(_.onElected)), config.onElectedPrepareTimeout().millis)
-      log.info(s"Finished onElected leadership callbacks")
+    // create new driver
+    driver = Some(driverFactory.createDriver())
 
-      //start all leadership coordination actors
-      Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)
+    // The following block asynchronously runs the driver. Note that driver.run()
+    // blocks until the driver has been stopped (or aborted).
+    Future {
+      scala.concurrent.blocking {
+        driver.foreach(_.run())
+      }
+    } onComplete { result =>
+      synchronized {
+        driver = None
 
-      //create new driver
-      driver = Some(driverFactory.createDriver())
+        log.info(s"Driver future completed with result=$result.")
+        result match {
+          case Failure(t) => log.error("Exception while running driver", t)
+          case _          =>
+        }
 
-      // We have been elected. Thus, elect leadership with the abdication command.
-      electLeadership(Some(abdicateCmd))
-
-      // The driver is created and running - now he is responsible for abdication handling
-      driverHandlesAbdication = true
-
-      // We successfully took over leadership. Time to reset backoff
-      resetOfferLeadershipBackOff()
-
-      // Start the leader duration metric
-      startLeaderDurationMetric()
-    }
-    catch {
-      case NonFatal(e) => // catch Scala and Java exceptions
-        log.error("Failed to take over leadership", e)
-        abdicateAfterFailure(() => abdicateCmd.execute(), runAbdicationCommand = !driverHandlesAbdication)
+        // tell leader election that we step back, but want to be re-elected if isRunning is true.
+        electionService.abdicateLeadership(error = result.isFailure, reoffer = latch.getCount > 0)
+      }
     }
   }
-  //End Leader interface
 
-  private def defeatLeadership(): Unit = synchronized {
+  def stopLeadership(): Unit = synchronized {
     log.info("Defeat leadership")
 
-    eventStream.publish(LocalLeadershipEvent.Standby)
+    leadershipCoordinator.stop()
 
     val oldTimer = timer
     timer = newTimer()
     oldTimer.cancel()
 
-    // Our leadership has been defeated. Thus, update leadership and stop the driver.
-    // Note that abdication command will be ran upon driver shutdown.
-    leader.set(false)
-    stopDriver()
-    stopLeaderDurationMetric()
-  }
-
-  private def electLeadership(abdicateOption: Option[ExceptionalCommand[JoinException]]): Unit = synchronized {
-    log.info("Elect leadership")
-
-    // We have been elected as leader. Thus, update leadership and run the driver.
-    leader.set(true)
-    runDriver(abdicateOption)
-
-    eventStream.publish(LocalLeadershipEvent.ElectedAsLeader)
-
-    // Start the timer
-    schedulePeriodicOperations()
-  }
-
-  def abdicateLeadership(): Unit = synchronized {
-    if (leader.get()) {
-      log.info("Abdicating")
-
-      leadershipCoordinator.stop()
-
-      // To abdicate we defeat our leadership
-      defeatLeadership()
+    if (driver.isDefined) {
+      // Our leadership has been defeated. Thus, stop the driver.
+      // Note that abdication command will be ran upon driver shutdown which
+      // will then offer leadership again.
+      stopDriver()
+    }
+    else {
+      electionService.offerLeadership(this)
     }
   }
 
-  lazy val initialOfferLeadershipBackOff = 0.5.seconds
-
-  var offerLeadershipBackOff = initialOfferLeadershipBackOff
-  val maximumOfferLeadershipBackOff = initialOfferLeadershipBackOff * 32
-
-  private def increaseOfferLeadershipBackOff(): Unit = synchronized {
-    if (offerLeadershipBackOff <= maximumOfferLeadershipBackOff) {
-      offerLeadershipBackOff *= 2
-      log.info(s"Increasing offerLeadership backoff to $offerLeadershipBackOff")
-    }
-  }
-
-  private def resetOfferLeadershipBackOff(): Unit = synchronized {
-    log.info("Reset offerLeadership backoff")
-    offerLeadershipBackOff = initialOfferLeadershipBackOff
-  }
-
-  private def offerLeadership(): Unit = synchronized {
-    log.info(s"Will offer leadership after $offerLeadershipBackOff backoff")
-    after(offerLeadershipBackOff, system.scheduler)(Future {
-      candidate.synchronized {
-        candidate match {
-          case Some(c) =>
-            // In this case we care using ZooKeeper for leadership candidacy.
-            // Thus, offer our leadership.
-            log.info("Using HA and therefore offering leadership")
-            c.offerLeadership(this)
-          case _ =>
-            // In this case we aren't using ZooKeeper for leadership election.
-            // Thus, we simply elect ourselves as leader.
-            log.info("Not using HA and therefore electing as leader by default")
-            electLeadership(None)
-        }
-      }
-    })
-  }
+  //End ElectionDelegate interface
 
   private def schedulePeriodicOperations(): Unit = synchronized {
-
     timer.schedule(
       new TimerTask {
         def run() {
-          if (leader.get()) {
+          if (electionService.isLeader) {
             schedulerActor ! ScaleApps
           }
           else log.info("Not leader therefore not scaling apps")
@@ -396,7 +249,7 @@ class MarathonSchedulerService @Inject() (
     timer.schedule(
       new TimerTask {
         def run() {
-          if (leader.get()) {
+          if (electionService.isLeader) {
             schedulerActor ! ReconcileTasks
             schedulerActor ! ReconcileHealthChecks
           }
@@ -406,33 +259,5 @@ class MarathonSchedulerService @Inject() (
       reconciliationInitialDelay.toMillis,
       reconciliationInterval.toMillis
     )
-  }
-
-  private def abdicateAfterFailure(abdicationCommand: () => Unit, runAbdicationCommand: Boolean): Unit = synchronized {
-
-    increaseOfferLeadershipBackOff()
-
-    abdicateLeadership()
-
-    // here the driver is not running yet and therefore it cannot execute
-    // the abdication command and offer the leadership. So we do it here
-    if (runAbdicationCommand) {
-      abdicationCommand()
-      offerLeadership()
-    }
-  }
-
-  private def startLeaderDurationMetric() = {
-    metrics.gauge("service.mesosphere.marathon.leaderDuration", new Gauge[Long] {
-      val startedAt = System.currentTimeMillis()
-
-      override def getValue: Long =
-        {
-          System.currentTimeMillis() - startedAt
-        }
-    })
-  }
-  private def stopLeaderDurationMetric() = {
-    metrics.registry.remove("service.mesosphere.marathon.leaderDuration")
   }
 }

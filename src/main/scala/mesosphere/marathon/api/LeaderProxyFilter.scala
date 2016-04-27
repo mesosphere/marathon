@@ -101,6 +101,8 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
           //scalastyle:on
         }
 
+        // as long as we are not flagged as elected yet, the leadership transition is still
+        // taking place and we hold back any requests.
         if (retries >= 0) {
           log.info(s"Waiting for consistent leadership state. Are we leader?: $weAreLeader, leader: $currentLeaderData")
           sleep()

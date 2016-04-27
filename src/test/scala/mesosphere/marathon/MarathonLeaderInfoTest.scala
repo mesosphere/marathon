@@ -1,33 +1,29 @@
 package mesosphere.marathon
 
-import java.util.concurrent.atomic.AtomicBoolean
-
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import com.twitter.common.zookeeper.Candidate
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.metrics.Metrics
 import org.mockito.Mockito
 import org.scalatest.{ Matchers, GivenWhenThen }
 
 class MarathonLeaderInfoTest extends MarathonSpec with GivenWhenThen with Matchers {
   class Fixture {
-    lazy val candidate = mock[Candidate]
-    lazy val maybeCandidate = Some(candidate)
-    lazy val leader = new AtomicBoolean(false)
+    lazy val electionService = mock[ElectionService]
     lazy val eventStream = new EventStream()
     lazy val metrics = new MarathonLeaderInfoMetrics(new Metrics(new MetricRegistry))
-    lazy val leaderInfo = new MarathonLeaderInfo(maybeCandidate, leader, eventStream, metrics)
+    lazy val leaderInfo = new MarathonLeaderInfo(electionService, eventStream, metrics)
 
     def verifyNoMoreInteractions(): Unit = {
-      Mockito.verifyNoMoreInteractions(candidate)
+      Mockito.verifyNoMoreInteractions(electionService)
     }
   }
 
   test("currentLeaderHostPort handles exceptions and returns None") {
-    Given("a leaderInfo with a candidate which throws exceptions")
+    Given("a leaderInfo with an ElectionService which throws exceptions")
     val f = new Fixture
     Mockito
-      .when(f.candidate.getLeaderData)
+      .when(f.electionService.leaderHostPort)
       .thenThrow(new RuntimeException("test failure!"))
 
     When("querying for currentLeaderHostPort")

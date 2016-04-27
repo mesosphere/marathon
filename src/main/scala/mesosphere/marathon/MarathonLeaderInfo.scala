@@ -1,43 +1,32 @@
 package mesosphere.marathon
 
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.{ Named, Inject }
 
 import akka.actor.ActorRef
-import akka.event.{ EventStream, EventBus }
-import com.twitter.common.zookeeper.Candidate
+import akka.event.EventStream
 import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.event.{ LocalLeadershipEvent, EventModule }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.Timer
 import org.slf4j.LoggerFactory
 
-import scala.util.control.NonFatal
-
 class MarathonLeaderInfo @Inject() (
-    @Named(ModuleNames.CANDIDATE) candidate: Option[Candidate],
-    @Named(ModuleNames.LEADER_ATOMIC_BOOLEAN) leader: AtomicBoolean,
+    electionService: ElectionService,
     @Named(EventModule.busName) eventStream: EventStream,
     metrics: MarathonLeaderInfoMetrics) extends LeaderInfo {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   /** Query whether we are the current leader. This should be cheap. */
-  override def elected: Boolean = leader.get()
+  override def elected: Boolean = electionService.isLeader
 
   override def currentLeaderHostPort(): Option[String] = metrics.getLeaderDataTimer {
-    candidate.flatMap { c =>
-      val maybeLeaderData: Option[Array[Byte]] = try {
-        Option(c.getLeaderData.orNull())
-      }
-      catch {
-        case NonFatal(e) =>
-          log.error("error while getting current leader", e)
-          None
-      }
-      maybeLeaderData.map { data =>
-        new String(data, "UTF-8")
-      }
+    try {
+      electionService.leaderHostPort
+    }
+    catch {
+      case e: java.lang.Exception => None
     }
   }
 
