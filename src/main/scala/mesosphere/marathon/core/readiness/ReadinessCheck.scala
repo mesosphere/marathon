@@ -4,7 +4,7 @@ import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.state.{ AppDefinition, PortDefinition }
+import mesosphere.marathon.state.{ RunSpec, PortDefinition }
 import org.apache.http.HttpStatus
 
 import scala.collection.immutable.Seq
@@ -40,7 +40,7 @@ object ReadinessCheck {
     case object HTTPS extends Protocol
   }
 
-  def readinessCheckValidator(app: AppDefinition): Validator[ReadinessCheck] =
+  def readinessCheckValidator(app: RunSpec): Validator[ReadinessCheck] =
     validator[ReadinessCheck] { rc =>
       rc.name is notEmpty
       rc.path is notEmpty

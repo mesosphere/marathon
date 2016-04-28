@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.state.{ AppDefinition, PathId, PersistentVolume, Timestamp }
+import mesosphere.marathon.state.{ RunSpec, PathId, PersistentVolume, Timestamp }
 import org.apache.mesos.Protos.{ TaskState }
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -82,7 +82,7 @@ sealed trait Task {
     }
   }
 
-  def effectiveIpAddress(app: AppDefinition): Option[String] = {
+  def effectiveIpAddress(app: RunSpec): Option[String] = {
     if (app.ipAddress.isDefined)
       launched.flatMap(_.ipAddresses).flatMap(_.headOption).map(_.getIpAddress)
     else
