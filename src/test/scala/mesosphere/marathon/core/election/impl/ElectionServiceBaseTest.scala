@@ -244,7 +244,7 @@ class ElectionServiceBaseTest
       override def leaderHostPortImpl: Option[String] = ???
     }
 
-    Given("this instance is becoming leader and then abdicting with reoffer=true")
+    Given("this instance is becoming leader and then abdicating with reoffer=true")
     electionService.offerLeadership(candidate)
     awaitAssert(electionService.state.isInstanceOf[Leading])
     electionService.abdicateLeadership(reoffer = true)

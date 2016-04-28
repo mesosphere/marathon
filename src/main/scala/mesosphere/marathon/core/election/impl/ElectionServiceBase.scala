@@ -173,7 +173,7 @@ abstract class ElectionServiceBase(
       stopMetrics()
     }
 
-    // call abdiction continuations
+    // call abdication continuations
     if (reoffer) {
       offerLeadership(candidate)
     }

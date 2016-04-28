@@ -34,7 +34,7 @@ trait ElectionService {
     * call does nothing for reoffer=false. It will call offerLeadership for reoffer=true..
     *
     * @param error is true if the abdication is due to some error.
-    * @param reoffer is true if leadership should be offered again after abdiction
+    * @param reoffer is true if leadership should be offered again after abdication
     */
   def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit
 
