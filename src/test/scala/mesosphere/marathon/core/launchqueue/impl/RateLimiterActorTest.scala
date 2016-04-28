@@ -51,7 +51,6 @@ class RateLimiterActorTest extends MarathonSpec {
   private[this] var clock: ConstantClock = _
   private[this] var rateLimiter: RateLimiter = _
   private[this] var taskTracker: TaskTracker = _
-  private[this] var appRepository: AppRepository = _
   private[this] var updateReceiver: TestProbe = _
   private[this] var limiterRef: ActorRef = _
 
@@ -60,9 +59,8 @@ class RateLimiterActorTest extends MarathonSpec {
     clock = ConstantClock()
     rateLimiter = Mockito.spy(new RateLimiter(clock))
     taskTracker = mock[TaskTracker]
-    appRepository = mock[AppRepository]
     updateReceiver = TestProbe()
-    val props = RateLimiterActor.props(rateLimiter, appRepository, updateReceiver.ref)
+    val props = RateLimiterActor.props(rateLimiter, updateReceiver.ref)
     limiterRef = actorSystem.actorOf(props, "limiter")
   }
 

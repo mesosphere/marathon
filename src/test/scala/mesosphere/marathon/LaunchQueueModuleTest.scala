@@ -50,7 +50,7 @@ class LaunchQueueModuleTest
 
     Then("we get back the added app")
     list should have size 1
-    list.head.app should equal(app)
+    list.head.runSpec should equal(app)
     list.head.tasksLeftToLaunch should equal(1)
     list.head.tasksLaunched should equal(0)
     list.head.taskLaunchesInFlight should equal(0)
@@ -229,7 +229,7 @@ class LaunchQueueModuleTest
     And("test app gets purged (but not stopped yet because of in-flight tasks)")
     Future { launchQueue.purge(app.id) } (ExecutionContext.Implicits.global)
     WaitTestSupport.waitUntil("purge gets executed", 1.second) {
-      !launchQueue.list.exists(_.app.id == app.id)
+      !launchQueue.list.exists(_.runSpec.id == app.id)
     }
     reset(taskTracker, taskOpFactory)
 
@@ -247,7 +247,7 @@ class LaunchQueueModuleTest
     val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
-    val taskId = Task.Id.forApp(PathId("/test"))
+    val taskId = Task.Id.forRunSpec(PathId("/test"))
     val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
     val marathonTask = MarathonTestHelper.runningTask(taskId.idString)
     val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
@@ -259,7 +259,6 @@ class LaunchQueueModuleTest
     lazy val clock: Clock = Clock()
     lazy val taskBusModule: TaskBusModule = new TaskBusModule()
     lazy val offerMatcherManager: DummyOfferMatcherManager = new DummyOfferMatcherManager()
-    lazy val appRepository: AppRepository = mock[AppRepository]
     lazy val taskTracker: TaskTracker = mock[TaskTracker]
     lazy val taskOpFactory: TaskOpFactory = mock[TaskOpFactory]
     lazy val config = MarathonTestHelper.defaultConfig()
@@ -269,7 +268,6 @@ class LaunchQueueModuleTest
       clock,
       subOfferMatcherManager = offerMatcherManager,
       maybeOfferReviver = None,
-      appRepository,
       taskTracker,
       taskOpFactory
     )
@@ -277,7 +275,6 @@ class LaunchQueueModuleTest
     def launchQueue = module.launchQueue
 
     def verifyNoMoreInteractions(): Unit = {
-      noMoreInteractions(appRepository)
       noMoreInteractions(taskTracker)
       noMoreInteractions(taskOpFactory)
     }

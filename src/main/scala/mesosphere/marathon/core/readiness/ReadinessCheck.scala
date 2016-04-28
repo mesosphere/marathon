@@ -3,11 +3,9 @@ package mesosphere.marathon.core.readiness
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.state.{ RunSpec, PortDefinition }
+import mesosphere.marathon.state.RunSpec
 import org.apache.http.HttpStatus
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 case class ReadinessCheck(
@@ -40,12 +38,12 @@ object ReadinessCheck {
     case object HTTPS extends Protocol
   }
 
-  def readinessCheckValidator(app: RunSpec): Validator[ReadinessCheck] =
+  def readinessCheckValidator(runSpec: RunSpec): Validator[ReadinessCheck] =
     validator[ReadinessCheck] { rc =>
       rc.name is notEmpty
       rc.path is notEmpty
       rc.portName is notEmpty
-      rc.portName is oneOf(app.portNames: _*)
+      rc.portName is oneOf(runSpec.portNames: _*)
       rc.timeout.toSeconds should be < rc.interval.toSeconds
       rc.timeout.toSeconds should be > 0L
       rc.httpStatusCodesForReady is notEmpty

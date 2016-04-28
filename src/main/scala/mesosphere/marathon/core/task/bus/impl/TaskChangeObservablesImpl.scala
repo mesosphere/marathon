@@ -8,9 +8,9 @@ import rx.lang.scala.{ Observable, Subscription }
 private[bus] class TaskChangeObservablesImpl(eventStream: InternalTaskChangeEventStream)
     extends TaskChangeObservables {
 
-  override def forAll: Observable[TaskChanged] = forAppId(PathId.empty)
+  override def forAll: Observable[TaskChanged] = forRunSpecId(PathId.empty)
 
-  override def forAppId(appId: PathId): Observable[TaskChanged] = {
+  override def forRunSpecId(appId: PathId): Observable[TaskChanged] = {
     Observable.create { observer =>
       eventStream.subscribe(observer, appId)
       Subscription {

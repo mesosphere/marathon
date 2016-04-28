@@ -5,7 +5,7 @@ import mesosphere.marathon.state.{ PathId, Timestamp, AppDefinition }
 
 object LaunchQueueTestHelper {
   val zeroCounts = LaunchQueue.QueuedTaskInfo(
-    app = AppDefinition(PathId("/thisisignored")),
+    runSpec = AppDefinition(PathId("/thisisignored")),
     tasksLeftToLaunch = 0,
     taskLaunchesInFlight = 0,
     tasksLaunched = 0,

@@ -37,9 +37,9 @@ class ScaleAppUpdateStepImpl @Inject() (
     }
 
     terminalOrExpungedTask.foreach { task =>
-      log.info(s"initiating a scale check for app [${task.taskId.appId}] after ${task.taskId} terminated")
+      log.info(s"initiating a scale check for app [${task.taskId.runSpecId}] after ${task.taskId} terminated")
       log.info("schedulerActor: {}", schedulerActor)
-      schedulerActor ! ScaleApp(task.taskId.appId)
+      schedulerActor ! ScaleApp(task.taskId.runSpecId)
     }
 
     Future.successful(())

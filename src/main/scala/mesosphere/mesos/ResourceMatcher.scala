@@ -78,7 +78,7 @@ object ResourceMatcher {
   }
 
   /**
-    * Checks whether the given offer contains enough resources to launch a task of the given app
+    * Checks whether the given offer contains enough resources to launch a task of the given run spec
     * or to make a reservation for a task.
     *
     * If a task uses local volumes, this method is typically called twice for every launch. Once
@@ -89,7 +89,7 @@ object ResourceMatcher {
     * resources, the disk resources for the local volumes are included since they must become part of
     * the reservation.
     */
-  def matchResources(offer: Offer, app: RunSpec, runningTasks: => Iterable[Task],
+  def matchResources(offer: Offer, runSpec: RunSpec, runningTasks: => Iterable[Task],
                      selector: ResourceSelector): Option[ResourceMatch] = {
 
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
@@ -98,31 +98,32 @@ object ResourceMatcher {
 
     // Local volumes only need to be matched if we are making a reservation for resident tasks --
     // that means if the resources that are matched are still unreserved.
-    val diskMatch = if (!selector.reserved && app.diskForPersistentVolumes > 0)
-      scalarResourceMatch(Resource.DISK, app.disk + app.diskForPersistentVolumes,
+    val diskMatch = if (!selector.reserved && runSpec.diskForPersistentVolumes > 0)
+      scalarResourceMatch(Resource.DISK, runSpec.disk + runSpec.diskForPersistentVolumes,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     else
-      scalarResourceMatch(Resource.DISK, app.disk, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+      scalarResourceMatch(Resource.DISK, runSpec.disk, ScalarMatchResult.Scope.ExcludingLocalVolumes)
 
     val scalarMatchResults = Iterable(
-      scalarResourceMatch(Resource.CPUS, app.cpus, ScalarMatchResult.Scope.NoneDisk),
-      scalarResourceMatch(Resource.MEM, app.mem, ScalarMatchResult.Scope.NoneDisk),
+      scalarResourceMatch(Resource.CPUS, runSpec.cpus, ScalarMatchResult.Scope.NoneDisk),
+      scalarResourceMatch(Resource.MEM, runSpec.mem, ScalarMatchResult.Scope.NoneDisk),
       diskMatch
     ).filter(_.requiredValue != 0)
 
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
 
-    def portsMatchOpt: Option[PortsMatch] = new PortsMatcher(app, offer, selector).portsMatch
+    def portsMatchOpt: Option[PortsMatch] = new PortsMatcher(runSpec, offer, selector).portsMatch
 
     def meetsAllConstraints: Boolean = {
-      lazy val tasks = runningTasks.filter(_.launched.exists(_.appVersion >= app.versionInfo.lastConfigChangeVersion))
-      val badConstraints = app.constraints.filterNot { constraint =>
+      lazy val tasks =
+        runningTasks.filter(_.launched.exists(_.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion))
+      val badConstraints = runSpec.constraints.filterNot { constraint =>
         Constraints.meetsConstraint(tasks, offer, constraint)
       }
 
       if (badConstraints.nonEmpty && log.isInfoEnabled) {
         log.info(
-          s"Offer [${offer.getId.getValue}]. Constraints for app [${app.id}] not satisfied.\n" +
+          s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
             s"The conflicting constraints are: [${badConstraints.mkString(", ")}]"
         )
       }
