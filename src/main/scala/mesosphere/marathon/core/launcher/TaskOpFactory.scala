@@ -2,7 +2,7 @@ package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Reservation
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.RunSpec
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -25,7 +25,7 @@ object TaskOpFactory {
     *              needed to check constraints and handle resident tasks
     * @param additionalLaunches the number of additional launches that has been requested
     */
-  case class Request(app: AppDefinition, offer: Mesos.Offer, taskMap: Map[Task.Id, Task], additionalLaunches: Int) {
+  case class Request(app: RunSpec, offer: Mesos.Offer, taskMap: Map[Task.Id, Task], additionalLaunches: Int) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def tasks: Iterable[Task] = taskMap.values
     lazy val reserved: Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
@@ -35,7 +35,7 @@ object TaskOpFactory {
   }
 
   object Request {
-    def apply(app: AppDefinition, offer: Mesos.Offer, tasks: Iterable[Task], additionalLaunches: Int): Request = {
+    def apply(app: RunSpec, offer: Mesos.Offer, tasks: Iterable[Task], additionalLaunches: Int): Request = {
       new Request(app, offer, Task.tasksById(tasks), additionalLaunches)
     }
   }

@@ -5,7 +5,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.state.{ ResourceRole, AppDefinition }
+import mesosphere.marathon.state.{ ResourceRole, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
@@ -131,7 +131,7 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   private[this] def launchOnReservation(
-    app: AppDefinition,
+    app: RunSpec,
     offer: Mesos.Offer,
     task: Task.Reserved,
     resourceMatch: Option[ResourceMatcher.ResourceMatch],
@@ -154,7 +154,7 @@ class TaskOpFactoryImpl @Inject() (
 
   private[this] def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
-    app: AppDefinition,
+    app: RunSpec,
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 

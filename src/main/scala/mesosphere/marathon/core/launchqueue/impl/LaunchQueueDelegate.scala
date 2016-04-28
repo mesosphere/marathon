@@ -6,7 +6,7 @@ import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{ RunSpec, PathId }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -31,7 +31,7 @@ private[launchqueue] class LaunchQueueDelegate(
 
   override def count(appId: PathId): Int = get(appId).map(_.tasksLeftToLaunch).getOrElse(0)
 
-  override def listApps: Seq[AppDefinition] = list.map(_.app)
+  override def listApps: Seq[RunSpec] = list.map(_.app)
 
   override def purge(appId: PathId): Unit = {
     // When purging, we wait for the AppTaskLauncherActor to shut down. This actor will wait for
@@ -40,7 +40,7 @@ private[launchqueue] class LaunchQueueDelegate(
     askQueueActor("purge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(appId))
   }
 
-  override def add(app: AppDefinition, count: Int): Unit = askQueueActor("add")(LaunchQueueDelegate.Add(app, count))
+  override def add(app: RunSpec, count: Int): Unit = askQueueActor("add")(LaunchQueueDelegate.Add(app, count))
 
   private[this] def askQueueActor[T](
     method: String,
@@ -63,9 +63,9 @@ private[launchqueue] class LaunchQueueDelegate(
     answerFuture
   }
 
-  override def addDelay(app: AppDefinition): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(app)
+  override def addDelay(app: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(app)
 
-  override def resetDelay(app: AppDefinition): Unit = rateLimiterRef ! RateLimiterActor.ResetDelay(app)
+  override def resetDelay(app: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.ResetDelay(app)
 }
 
 private[impl] object LaunchQueueDelegate {
@@ -74,5 +74,5 @@ private[impl] object LaunchQueueDelegate {
   case class Count(appId: PathId) extends Request
   case class Purge(appId: PathId) extends Request
   case object ConfirmPurge extends Request
-  case class Add(app: AppDefinition, count: Int) extends Request
+  case class Add(app: RunSpec, count: Int) extends Request
 }

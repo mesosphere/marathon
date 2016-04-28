@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor.{
   ResetDelay,
   ResetDelayResponse
 }
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
+import mesosphere.marathon.state.{ RunSpec, AppRepository, Timestamp }
 
 import scala.concurrent.duration._
 
@@ -24,14 +24,14 @@ private[launchqueue] object RateLimiterActor {
       rateLimiter, appRepository, launchQueueRef
     ))
 
-  case class DelayUpdate(app: AppDefinition, delayUntil: Timestamp)
+  case class DelayUpdate(app: RunSpec, delayUntil: Timestamp)
 
-  case class ResetDelay(app: AppDefinition)
+  case class ResetDelay(app: RunSpec)
   case object ResetDelayResponse
 
-  case class GetDelay(appDefinition: AppDefinition)
-  private[impl] case class AddDelay(app: AppDefinition)
-  private[impl] case class DecreaseDelay(app: AppDefinition)
+  case class GetDelay(appDefinition: RunSpec)
+  private[impl] case class AddDelay(app: RunSpec)
+  private[impl] case class DecreaseDelay(app: RunSpec)
 
   private case object CleanupOverdueDelays
 }

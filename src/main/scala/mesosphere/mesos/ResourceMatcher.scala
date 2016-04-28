@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.launcher.impl.ResourceLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ AppDefinition, ResourceRole }
+import mesosphere.marathon.state.{ RunSpec, ResourceRole }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
@@ -89,7 +89,7 @@ object ResourceMatcher {
     * resources, the disk resources for the local volumes are included since they must become part of
     * the reservation.
     */
-  def matchResources(offer: Offer, app: AppDefinition, runningTasks: => Iterable[Task],
+  def matchResources(offer: Offer, app: RunSpec, runningTasks: => Iterable[Task],
                      selector: ResourceSelector): Option[ResourceMatch] = {
 
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
