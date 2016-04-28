@@ -2,7 +2,7 @@ package mesosphere.marathon.core.readiness
 
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.RunSpec
 import rx.lang.scala.Observable
 
 import scala.collection.immutable.Seq
@@ -35,11 +35,11 @@ object ReadinessCheckExecutor {
       * Returns the readiness checks for the given task.
       */
     def readinessCheckSpecsForTask(
-      app: AppDefinition,
+      app: RunSpec,
       task: Task,
       launched: Task.Launched): Seq[ReadinessCheckExecutor.ReadinessCheckSpec] = {
 
-      require(task.appId == app.id, s"Task appId and AppDefinition appId must match: ${task.appId} != ${app.id}")
+      require(task.appId == app.id, s"Task appId and RunSpec appId must match: ${task.appId} != ${app.id}")
       require(task.launched == Some(launched), "Launched info is not the one contained in the task")
       require(task.effectiveIpAddress(app).isDefined,
         "Task is unreachable: an IP address was requested but not yet assigned")

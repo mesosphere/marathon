@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.readiness.ReadinessCheck
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -83,7 +84,9 @@ trait RunSpec {
   def externalVolumes: Iterable[ExternalVolume]
   def diskForPersistentVolumes: Double
   def portNumbers: Seq[Int]
+  def portNames: Seq[String]
   def containerHostPorts: Option[Seq[Int]]
   def portMappings: Option[Seq[PortMapping]]
   def servicePorts: Seq[Int]
+  def portAssignments(task: Task): Option[Seq[PortAssignment]]
 }
