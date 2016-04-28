@@ -153,12 +153,12 @@ class TaskBuilder(runSpec: RunSpec,
         info.setCommand(command.build)
         builder.setExecutor(info)
 
-      //FIXME: why do we jsonify this?
-      //        import mesosphere.marathon.api.v2.json.Formats._
-      //        val appJson = Json.toJson(app)
-      //        val appJsonString = Json.stringify(appJson)
-      //        val appJsonByteString = ByteString.copyFromUtf8(appJsonString)
-      //        builder.setData(appJsonByteString)
+        //FIXME(MV): why do we jsonify this here?
+        import mesosphere.marathon.api.v2.json.Formats._
+        val runSpecJson = Json.toJson(runSpec)
+        val runSpecJsonString = Json.stringify(runSpecJson)
+        val runSpecJsonByteString = ByteString.copyFromUtf8(runSpecJsonString)
+        builder.setData(runSpecJsonByteString)
     }
 
     // Mesos supports at most one health check, and only COMMAND checks
