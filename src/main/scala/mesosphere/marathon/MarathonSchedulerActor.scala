@@ -523,7 +523,11 @@ class SchedulerActions(
     val launchedCount = taskTracker.countLaunchedAppTasksSync(app.id)
     val targetCount = app.instances
 
-    if (targetCount > launchedCount) {
+    if (PathId.isJob(app.id)) {
+      // FIXME (Jobs): remove this hack
+      log.info("Ignoring scale because {} seems to be a JobSpec", app.id)
+    }
+    else if (targetCount > launchedCount) {
       log.info(s"Need to scale ${app.id} from $launchedCount up to $targetCount instances")
 
       val queuedOrRunning = launchQueue.get(app.id).map(_.finalTaskCount).getOrElse(launchedCount)

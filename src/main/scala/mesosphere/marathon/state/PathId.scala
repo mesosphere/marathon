@@ -88,6 +88,9 @@ object PathId {
     PathId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").filter(_.nonEmpty).toList, in.startsWith("/"))
   def empty: PathId = PathId(Nil)
 
+  // FIXME (Jobs): remove this hack
+  def isJob(id: PathId): Boolean = id.path.headOption.contains("job")
+
   implicit class StringPathId(val stringPath: String) extends AnyVal {
     def toPath: PathId = PathId(stringPath)
     def toRootPath: PathId = PathId(stringPath).canonicalPath()

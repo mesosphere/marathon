@@ -1,6 +1,7 @@
 package mesosphere.marathon.core
 
 import mesosphere.marathon.core.auth.AuthModule
+import mesosphere.marathon.core.jobs.JobModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -23,6 +24,7 @@ trait CoreModule {
   def taskTrackerModule: TaskTrackerModule
   def launcherModule: LauncherModule
   def appOfferMatcherModule: LaunchQueueModule
+  def jobModule: JobModule
   def pluginModule: PluginModule
   def authModule: AuthModule
   def readinessModule: ReadinessModule

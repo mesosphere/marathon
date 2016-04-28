@@ -7,7 +7,8 @@ import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.flow.FlowModule
-import mesosphere.marathon.core.launcher.{ TaskOpFactory, LauncherModule }
+import mesosphere.marathon.core.jobs.JobModule
+import mesosphere.marathon.core.launcher.{ LauncherModule, TaskOpFactory }
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatcher
@@ -20,7 +21,7 @@ import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
+import mesosphere.marathon.state.{ AppRepository, GroupRepository, TaskRepository }
 import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
 
 import scala.util.Random
@@ -112,6 +113,8 @@ class CoreModuleImpl @Inject() (
     taskOpFactory
   )
 
+  override lazy val jobModule: JobModule = new JobModule(leadershipModule, appOfferMatcherModule, appRepository)
+
   // PLUGINS
 
   override lazy val pluginModule = new PluginModule(marathonConf)
@@ -155,5 +158,6 @@ class CoreModuleImpl @Inject() (
   maybeOfferReviver
   offerMatcherManagerModule
   launcherModule
+  jobModule
   offerMatcherReconcilerModule.start()
 }

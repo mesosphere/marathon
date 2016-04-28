@@ -139,7 +139,7 @@ private class RunSpecTaskLauncherActor(
       receiveStop,
       receiveDelayUpdate,
       receiveTaskLaunchNotification,
-      receiveTaskUpdate,
+      receiveTaskChanged,
       receiveGetCurrentCount,
       receiveAddCount,
       receiveProcessOffers,
@@ -251,15 +251,15 @@ private class RunSpecTaskLauncherActor(
       log.info("Task op '{}' for {} was accepted. {}", op.getClass.getSimpleName, op.taskId, status)
   }
 
-  private[this] def receiveTaskUpdate: Receive = {
+  private[this] def receiveTaskChanged: Receive = {
     case TaskChanged(stateOp, stateChange) =>
       stateChange match {
         case TaskStateChange.Update(newState, _) =>
-          log.info("receiveTaskUpdate: updating status of {}", newState.taskId)
+          log.info("receiveTaskChanged: updating status of {}", newState.taskId)
           tasksMap += newState.taskId -> newState
 
         case TaskStateChange.Expunge(task) =>
-          log.info("receiveTaskUpdate: {} finished", task.taskId)
+          log.info("receiveTaskChanged: {} finished", task.taskId)
           removeTask(task.taskId)
           // A) If the app has constraints, we need to reconsider offers that
           // we already rejected. E.g. when a host:unique constraint prevented
@@ -267,12 +267,13 @@ private class RunSpecTaskLauncherActor(
           // of that node after a task on that node has died.
           //
           // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
+          // FIXME (Jobs): In case of Jobs we shouldn't revive offers here
           if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchTasks)) {
             maybeOfferReviver.foreach(_.reviveOffers())
           }
 
         case _ =>
-          log.info("receiveTaskUpdate: ignoring stateChange {}", stateChange)
+          log.info("receiveTaskChanged: ignoring stateChange {}", stateChange)
       }
       replyWithQueuedTaskCount()
   }
