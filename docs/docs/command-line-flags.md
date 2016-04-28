@@ -279,6 +279,9 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * `--ssl_keystore_password` (Optional. Default: None): Password for the keystore
     supplied with the `ssl_keystore_path` option. Required if `ssl_keystore_path` is supplied.
     May also be specified with the `MESOSPHERE_KEYSTORE_PASS` environment variable.
+* `--leader_proxy_ssl_ignore_hostname` (Optional. Default: false): Do not
+    verify that the hostname of the Marathon leader matches the one in the SSL
+    certificate when proxying API requests to the current leader.
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of
     concurrent HTTP requests, that is allowed concurrently before requests get answered directly with a
     HTTP 503 Service Temporarily Unavailable.
