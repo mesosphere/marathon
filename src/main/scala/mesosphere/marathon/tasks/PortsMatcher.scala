@@ -1,6 +1,6 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.state.{ ResourceRole, AppDefinition, Container }
+import mesosphere.marathon.state.{ ResourceRole, RunSpec, Container }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -28,7 +28,7 @@ case class PortsMatch(hostPortsWithRole: Seq[PortWithRole]) {
   * Utility class for checking if the ports resource in an offer matches the requirements of an app.
   */
 class PortsMatcher(
-  app: AppDefinition,
+  app: RunSpec,
   offer: MesosProtos.Offer,
   resourceSelector: ResourceSelector = ResourceSelector(Set(ResourceRole.Unreserved), reserved = false),
   random: Random = Random)

@@ -7,9 +7,8 @@ import mesosphere.marathon.api.serialization.{ PortMappingSerializer, PortDefini
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ PersistentVolume, ExternalVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
+import mesosphere.marathon.state.{ AppDefinition, RunSpec, DiscoveryInfo, IpAddress, PathId }
 import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
-import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
 import org.slf4j.LoggerFactory
@@ -18,7 +17,7 @@ import play.api.libs.json.Json
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
-class TaskBuilder(app: AppDefinition,
+class TaskBuilder(app: RunSpec,
                   newTaskId: PathId => Task.Id,
                   config: MarathonConf) {
 
@@ -154,11 +153,12 @@ class TaskBuilder(app: AppDefinition,
         info.setCommand(command.build)
         builder.setExecutor(info)
 
-        import mesosphere.marathon.api.v2.json.Formats._
-        val appJson = Json.toJson(app)
-        val appJsonString = Json.stringify(appJson)
-        val appJsonByteString = ByteString.copyFromUtf8(appJsonString)
-        builder.setData(appJsonByteString)
+      //FIXME: why do we jsonify this?
+      //        import mesosphere.marathon.api.v2.json.Formats._
+      //        val appJson = Json.toJson(app)
+      //        val appJsonString = Json.stringify(appJson)
+      //        val appJsonByteString = ByteString.copyFromUtf8(appJsonString)
+      //        builder.setData(appJsonByteString)
     }
 
     // Mesos supports at most one health check, and only COMMAND checks
@@ -182,7 +182,7 @@ class TaskBuilder(app: AppDefinition,
     Some(builder.build -> resourceMatch.hostPorts)
   }
 
-  protected def computeDiscoveryInfo(app: AppDefinition, hostPorts: Seq[Int]): org.apache.mesos.Protos.DiscoveryInfo = {
+  protected def computeDiscoveryInfo(app: RunSpec, hostPorts: Seq[Int]): org.apache.mesos.Protos.DiscoveryInfo = {
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
     discoveryInfoBuilder.setName(app.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
@@ -286,7 +286,7 @@ object TaskBuilder {
   val labelEnvironmentKeyPrefix = "MARATHON_APP_LABEL_"
   val maxVariableLength = maxEnvironmentVarLength - labelEnvironmentKeyPrefix.length
 
-  def commandInfo(app: AppDefinition,
+  def commandInfo(app: RunSpec,
                   taskId: Option[Task.Id],
                   host: Option[String],
                   ports: Seq[Int],
@@ -368,7 +368,7 @@ object TaskBuilder {
     }
   }
 
-  def taskContextEnv(app: AppDefinition, taskId: Option[Task.Id]): Map[String, String] = {
+  def taskContextEnv(app: RunSpec, taskId: Option[Task.Id]): Map[String, String] = {
     if (taskId.isEmpty) {
       // This branch is taken during serialization. Do not add environment variables in this case.
       Map.empty

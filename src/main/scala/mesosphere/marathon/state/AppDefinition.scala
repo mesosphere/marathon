@@ -81,7 +81,7 @@ case class AppDefinition(
 
   residency: Option[Residency] = AppDefinition.DefaultResidency)
 
-    extends plugin.AppDefinition with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    extends RunSpec with plugin.AppDefinition with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -293,13 +293,13 @@ case class AppDefinition(
   /**
     * Returns whether this is a scaling change only.
     */
-  def isOnlyScaleChange(to: AppDefinition): Boolean = !isUpgrade(to) && (instances != to.instances)
+  def isOnlyScaleChange(to: RunSpec): Boolean = !isUpgrade(to) && (instances != to.instances)
 
   /**
     * True if the given app definition is a change to the current one in terms of runtime characteristics
     * of all deployed tasks of the current app, otherwise false.
     */
-  def isUpgrade(to: AppDefinition): Boolean = {
+  def isUpgrade(to: RunSpec): Boolean = {
     id == to.id && {
       cmd != to.cmd ||
         args != to.args ||
@@ -340,7 +340,7 @@ case class AppDefinition(
     * This can either be caused by changed configuration (e.g. a new cmd, a new docker image version)
     * or by a forced restart.
     */
-  def needsRestart(to: AppDefinition): Boolean = this.versionInfo != to.versionInfo || isUpgrade(to)
+  def needsRestart(to: RunSpec): Boolean = this.versionInfo != to.versionInfo || isUpgrade(to)
 
   /**
     * Identify other app definitions as the same, if id and version is the same.

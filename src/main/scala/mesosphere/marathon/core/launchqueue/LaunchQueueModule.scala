@@ -14,10 +14,10 @@ import mesosphere.marathon.core.launchqueue.impl.{
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.{ AppDefinition, AppRepository }
+import mesosphere.marathon.state.{ RunSpec, AppRepository }
 
 /**
-  * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given AppDefinition.
+  * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given RunSpec.
   */
 class LaunchQueueModule(
     config: LaunchQueueConfig,
@@ -43,7 +43,7 @@ class LaunchQueueModule(
 
   val launchQueue: LaunchQueue = new LaunchQueueDelegate(config, launchQueueActorRef, rateLimiterActor)
 
-  private[this] def appActorProps(app: AppDefinition, count: Int): Props =
+  private[this] def appActorProps(app: RunSpec, count: Int): Props =
     AppTaskLauncherActor.props(
       config,
       subOfferMatcherManager,

@@ -15,7 +15,7 @@ import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueue }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{ RunSpec, PathId }
 import LaunchQueue.QueuedTaskInfo
 
 import scala.concurrent.Future
@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 private[launchqueue] object LaunchQueueActor {
-  def props(config: LaunchQueueConfig, appActorProps: (AppDefinition, Int) => Props): Props = {
+  def props(config: LaunchQueueConfig, appActorProps: (RunSpec, Int) => Props): Props = {
     Props(new LaunchQueueActor(config, appActorProps))
   }
 
@@ -37,7 +37,7 @@ private[launchqueue] object LaunchQueueActor {
   */
 private[impl] class LaunchQueueActor(
     launchQueueConfig: LaunchQueueConfig,
-    appActorProps: (AppDefinition, Int) => Props) extends Actor with ActorLogging {
+    appActorProps: (RunSpec, Int) => Props) extends Actor with ActorLogging {
   import LaunchQueueDelegate._
 
   /** Currently active actors by pathId. */
@@ -195,7 +195,7 @@ private[impl] class LaunchQueueActor(
       launchers.get(app.id).foreach(_.forward(msg))
   }
 
-  private[this] def createAppTaskLauncher(app: AppDefinition, initialCount: Int): ActorRef = {
+  private[this] def createAppTaskLauncher(app: RunSpec, initialCount: Int): ActorRef = {
     val actorRef = context.actorOf(appActorProps(app, initialCount), s"$childSerial-${app.id.safePath}")
     childSerial += 1
     launchers += app.id -> actorRef

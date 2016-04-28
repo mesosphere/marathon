@@ -17,7 +17,7 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskStateChange }
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.duration._
@@ -32,7 +32,7 @@ private[launchqueue] object AppTaskLauncherActor {
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef)(
-      app: AppDefinition,
+      app: RunSpec,
       initialCount: Int): Props = {
     Props(new AppTaskLauncherActor(
       config,
@@ -50,7 +50,7 @@ private[launchqueue] object AppTaskLauncherActor {
     * Increase the task count of the receiver.
     * The actor responds with a [[QueuedTaskInfo]] message.
     */
-  case class AddTasks(app: AppDefinition, count: Int) extends Requests
+  case class AddTasks(app: RunSpec, count: Int) extends Requests
   /**
     * Get the current count.
     * The actor responds with a [[QueuedTaskInfo]] message.
@@ -82,7 +82,7 @@ private class AppTaskLauncherActor(
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef,
 
-    private[this] var app: AppDefinition,
+    private[this] var app: RunSpec,
     private[this] var tasksToLaunch: Int) extends Actor with ActorLogging with Stash {
   // scalastyle:on parameter.number
 
