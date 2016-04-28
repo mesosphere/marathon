@@ -32,7 +32,7 @@ private[appinfo] object TaskForStatistics {
           (nowTs - startedAt.toDateTime.getMillis) / 1000.0
         }
         new TaskForStatistics(
-          version = launched.appVersion,
+          version = launched.runSpecVersion,
           running = maybeTaskState.contains(TaskState.TASK_RUNNING),
           // Tasks that are staged do not have the taskState set at all, currently.
           // To make this a bit more robust, we also allow it to be set explicitly.

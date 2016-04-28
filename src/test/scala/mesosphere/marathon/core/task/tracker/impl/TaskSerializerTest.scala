@@ -193,7 +193,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       Task.LaunchedOnReservation(
         taskId,
         Task.AgentInfo(host = sampleHost, agentId = Some(sampleSlaveId.getValue), attributes = sampleAttributes),
-        appVersion = appVersion,
+        runSpecVersion = appVersion,
         status = Task.Status(
           stagedAt = Timestamp(stagedAtLong),
           startedAt = Some(Timestamp(startedAtLong)),

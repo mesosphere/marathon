@@ -38,7 +38,7 @@ class PostToEventStreamStepImpl @Inject() (
 
           case state: TaskState =>
             val taskId = task.taskId
-            log.debug(s"Do not post event $state for $taskId of app [${taskId.appId}].")
+            log.debug(s"Do not post event $state for $taskId of app [${taskId.runSpecId}].")
         }
 
       case _ =>
@@ -53,7 +53,7 @@ class PostToEventStreamStepImpl @Inject() (
     task.launched.foreach { launched =>
       log.info(
         "Sending event notification for {} of app [{}]: {}",
-        Array[Object](taskId, taskId.appId, status.getState): _*
+        Array[Object](taskId, taskId.runSpecId, status.getState): _*
       )
       eventBus.publish(
         MesosStatusUpdateEvent(
@@ -61,11 +61,11 @@ class PostToEventStreamStepImpl @Inject() (
           taskId = Task.Id(status.getTaskId),
           taskStatus = status.getState.name,
           message = if (status.hasMessage) status.getMessage else "",
-          appId = taskId.appId,
+          appId = taskId.runSpecId,
           host = task.agentInfo.host,
           ipAddresses = Task.MesosStatus.ipAddresses(status),
           ports = launched.hostPorts,
-          version = launched.appVersion.toString,
+          version = launched.runSpecVersion.toString,
           timestamp = timestamp.toString
         )
       )

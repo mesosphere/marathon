@@ -178,7 +178,7 @@ class Fixture {
   val taskWithoutState = Task.LaunchedEphemeral(
     taskId = Task.Id("task1"),
     agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
-    appVersion = Timestamp(0),
+    runSpecVersion = Timestamp(0),
     status = Task.Status(
       stagedAt = Timestamp(1),
       startedAt = None,

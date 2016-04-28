@@ -135,7 +135,7 @@ private[impl] class OfferMatcherManagerActor private (
     val appReservations = offer.getResourcesList.asScala
       .filter(r => r.hasDisk && r.getDisk.hasPersistence && r.getDisk.getPersistence.hasId)
       .map(_.getDisk.getPersistence.getId)
-      .collect { case LocalVolumeId(volumeId) => volumeId.appId }
+      .collect { case LocalVolumeId(volumeId) => volumeId.runSpecId }
       .toSet
     val (reserved, normal) = matchers.toSeq.partition(_.precedenceFor.exists(appReservations))
     //1 give the offer to the matcher waiting for a reservation

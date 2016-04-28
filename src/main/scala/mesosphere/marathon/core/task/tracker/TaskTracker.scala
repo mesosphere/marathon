@@ -51,7 +51,7 @@ object TaskTracker {
     }
 
     def task(taskId: Task.Id): Option[Task] = for {
-      app <- appTasksMap.get(taskId.appId)
+      app <- appTasksMap.get(taskId.runSpecId)
       task <- app.taskMap.get(taskId)
     } yield task
 
@@ -80,7 +80,7 @@ object TaskTracker {
     def of(apps: TaskTracker.AppTasks*): TasksByApp = of(Map(apps.map(app => app.appId -> app): _*))
 
     def forTasks(tasks: Task*): TasksByApp = of(
-      tasks.groupBy(_.appId).map { case (appId, appTasks) => appId -> AppTasks.forTasks(appId, appTasks) }
+      tasks.groupBy(_.runSpecId).map { case (appId, appTasks) => appId -> AppTasks.forTasks(appId, appTasks) }
     )
 
     def empty: TasksByApp = of(collection.immutable.Map.empty[PathId, TaskTracker.AppTasks])

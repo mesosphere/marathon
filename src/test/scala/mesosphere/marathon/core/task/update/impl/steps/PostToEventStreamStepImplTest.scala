@@ -116,7 +116,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
   private[this] val slaveId = SlaveID.newBuilder().setValue("slave1")
   private[this] val appId = PathId("/test")
-  private[this] val taskId = Task.Id.forApp(appId)
+  private[this] val taskId = Task.Id.forRunSpec(appId)
   private[this] val host = "some.host.local"
   private[this] val ipAddress = MarathonTestHelper.mesosIpAddress("127.0.0.1")
   private[this] val portsList = Seq(10, 11, 12)

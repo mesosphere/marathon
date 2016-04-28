@@ -113,7 +113,7 @@ case class AppDefinition(
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(
-      app = this,
+      runSpec = this,
       taskId = None,
       host = None,
       ports = Seq.empty,

@@ -21,7 +21,7 @@ class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManager: HealthChec
       case TaskStateOp.MesosUpdate(task, MarathonTaskStatus.WithMesosStatus(mesosStatus), _) =>
         // it only makes sense to handle health check results for launched tasks
         task.launched.foreach { launched =>
-          healthCheckManager.update(mesosStatus, launched.appVersion)
+          healthCheckManager.update(mesosStatus, launched.runSpecVersion)
         }
 
       case _ =>

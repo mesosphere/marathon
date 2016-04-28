@@ -85,7 +85,7 @@ private[health] class HealthCheckActor(
     log.debug("Dispatching health check jobs to workers")
     taskTracker.appTasksSync(app.id).foreach { task =>
       task.launched.foreach { launched =>
-        if (launched.appVersion == app.version && launched.hasStartedRunning) {
+        if (launched.runSpecVersion == app.version && launched.hasStartedRunning) {
           log.debug("Dispatching health check job for {}", task.taskId)
           val worker: ActorRef = context.actorOf(workerProps)
           worker ! HealthCheckJob(app, task, launched, healthCheck)
@@ -109,7 +109,7 @@ private[health] class HealthCheckActor(
         log.info(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
         eventBus.publish(
           UnhealthyTaskKillEvent(
-            appId = task.appId,
+            appId = task.runSpecId,
             taskId = task.taskId,
             version = app.version,
             reason = health.lastFailureCause.getOrElse("unknown"),

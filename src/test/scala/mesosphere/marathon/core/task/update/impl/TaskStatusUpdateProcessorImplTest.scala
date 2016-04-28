@@ -55,7 +55,7 @@ class TaskStatusUpdateProcessorImplTest
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.task(taskId)(global) returns Future.successful(
       Some(MarathonTestHelper.minimalReservedTask(
-        taskId.appId, Task.Reservation(Iterable.empty, MarathonTestHelper.taskReservationStateNew)))
+        taskId.runSpecId, Task.Reservation(Iterable.empty, MarathonTestHelper.taskReservationStateNew)))
     )
 
     When("we process the updated")
@@ -101,7 +101,7 @@ class TaskStatusUpdateProcessorImplTest
   test("update for unknown task (TASK_KILLING) will get only acknowledged") {
     fOpt = Some(new Fixture)
 
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val task = MarathonTestHelper.runningTask(taskId.idString)
     val origUpdate = TaskStatusUpdateTestHelper.killing(task)
     val status = origUpdate.status
@@ -127,7 +127,7 @@ class TaskStatusUpdateProcessorImplTest
   test("TASK_KILLING is processed like a normal StatusUpdate") {
     fOpt = Some(new Fixture)
 
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val task = MarathonTestHelper.runningTask(taskId.idString)
     val origUpdate = TaskStatusUpdateTestHelper.killing(task)
     val status = origUpdate.status

@@ -50,7 +50,7 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
     val op: ForwardTaskOp = TaskTrackerActor.ForwardTaskOp(deadline, taskId, taskStateOp)
     (taskTrackerRef ? op).mapTo[TaskStateChange].recover {
       case NonFatal(e) =>
-        throw new RuntimeException(s"while asking for $taskStateOp on app [${taskId.appId}] and $taskId", e)
+        throw new RuntimeException(s"while asking for $taskStateOp on app [${taskId.runSpecId}] and $taskId", e)
     }
   }
 }

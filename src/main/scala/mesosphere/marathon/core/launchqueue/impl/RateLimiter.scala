@@ -9,14 +9,14 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.duration._
 
 /**
-  * Manages the task launch delays for every app and config version.
+  * Manages the task launch delays for every run spec and config version.
   *
   * We do not keep the delays for every version because that would include scaling changes or manual restarts.
   */
 private[launchqueue] class RateLimiter(clock: Clock) {
   import RateLimiter._
 
-  /** The task launch delays per app and their last config change. */
+  /** The task launch delays per run spec and their last config change. */
   private[this] var taskLaunchDelays = Map[(PathId, Timestamp), Delay]()
 
   def cleanUpOverdueDelays(): Unit = {
@@ -25,19 +25,19 @@ private[launchqueue] class RateLimiter(clock: Clock) {
     }
   }
 
-  def getDelay(app: RunSpec): Timestamp =
-    taskLaunchDelays.get(app.id -> app.versionInfo.lastConfigChangeVersion).map(_.deadline) getOrElse clock.now()
+  def getDelay(spec: RunSpec): Timestamp =
+    taskLaunchDelays.get(spec.id -> spec.versionInfo.lastConfigChangeVersion).map(_.deadline) getOrElse clock.now()
 
-  def addDelay(app: RunSpec): Timestamp = {
-    setNewDelay(app, "Increasing delay") {
-      case Some(delay) => Some(delay.increased(clock, app))
-      case None        => Some(Delay(clock, app))
+  def addDelay(runSpec: RunSpec): Timestamp = {
+    setNewDelay(runSpec, "Increasing delay") {
+      case Some(delay) => Some(delay.increased(clock, runSpec))
+      case None        => Some(Delay(clock, runSpec))
     }
   }
 
-  private[this] def setNewDelay(app: RunSpec, message: String)(
+  private[this] def setNewDelay(unSpec: RunSpec, message: String)(
     calcDelay: Option[Delay] => Option[Delay]): Timestamp = {
-    val maybeDelay: Option[Delay] = taskLaunchDelays.get(app.id -> app.versionInfo.lastConfigChangeVersion)
+    val maybeDelay: Option[Delay] = taskLaunchDelays.get(unSpec.id -> unSpec.versionInfo.lastConfigChangeVersion)
     calcDelay(maybeDelay) match {
       case Some(newDelay) =>
         import mesosphere.util.DurationToHumanReadable
@@ -46,24 +46,24 @@ private[launchqueue] class RateLimiter(clock: Clock) {
         val timeLeft = (now until newDelay.deadline).toHumanReadable
 
         if (newDelay.deadline <= now) {
-          resetDelay(app)
+          resetDelay(unSpec)
         }
         else {
-          log.info(s"$message. Task launch delay for [${app.id}] changed from [$priorTimeLeft] to [$timeLeft].")
-          taskLaunchDelays += ((app.id, app.versionInfo.lastConfigChangeVersion) -> newDelay)
+          log.info(s"$message. Task launch delay for [${unSpec.id}] changed from [$priorTimeLeft] to [$timeLeft].")
+          taskLaunchDelays += ((unSpec.id, unSpec.versionInfo.lastConfigChangeVersion) -> newDelay)
         }
         newDelay.deadline
 
       case None =>
-        resetDelay(app)
+        resetDelay(unSpec)
         clock.now()
     }
   }
 
-  def resetDelay(app: RunSpec): Unit = {
-    if (taskLaunchDelays contains (app.id -> app.versionInfo.lastConfigChangeVersion)) {
-      log.info(s"Task launch delay for [${app.id} - ${app.versionInfo.lastConfigChangeVersion}}] reset to zero")
-      taskLaunchDelays -= (app.id -> app.versionInfo.lastConfigChangeVersion)
+  def resetDelay(runSpec: RunSpec): Unit = {
+    if (taskLaunchDelays contains (runSpec.id -> runSpec.versionInfo.lastConfigChangeVersion)) {
+      log.info(s"Task launch delay for [${runSpec.id} - ${runSpec.versionInfo.lastConfigChangeVersion}}] reset to zero")
+      taskLaunchDelays -= (runSpec.id -> runSpec.versionInfo.lastConfigChangeVersion)
     }
   }
 }
@@ -72,7 +72,7 @@ private object RateLimiter {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
   private object Delay {
-    def apply(clock: Clock, app: RunSpec): Delay = Delay(clock, app.backoff)
+    def apply(clock: Clock, runSpec: RunSpec): Delay = Delay(clock, runSpec.backoff)
     def apply(clock: Clock, delay: FiniteDuration): Delay = Delay(clock.now() + delay, delay)
   }
 
@@ -80,9 +80,9 @@ private object RateLimiter {
       deadline: Timestamp,
       delay: FiniteDuration) {
 
-    def increased(clock: Clock, app: RunSpec): Delay = {
+    def increased(clock: Clock, runSpec: RunSpec): Delay = {
       val newDelay: FiniteDuration =
-        app.maxLaunchDelay min FiniteDuration((delay.toNanos * app.backoffFactor).toLong, TimeUnit.NANOSECONDS)
+        runSpec.maxLaunchDelay min FiniteDuration((delay.toNanos * runSpec.backoffFactor).toLong, TimeUnit.NANOSECONDS)
       Delay(clock, newDelay)
     }
   }

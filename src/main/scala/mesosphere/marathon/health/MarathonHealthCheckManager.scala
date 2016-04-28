@@ -123,7 +123,8 @@ class MarathonHealthCheckManager @Inject() (
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
         val tasks: Iterable[Task] = taskTracker.appTasksSync(app.id)
-        val activeAppVersions: Set[Timestamp] = tasks.iterator.flatMap(_.launched.map(_.appVersion)).toSet + app.version
+        val activeAppVersions: Set[Timestamp] =
+          tasks.iterator.flatMap(_.launched.map(_.runSpecVersion)).toSet + app.version
 
         val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
           // remove health checks for which the app version is not current and no tasks remain
@@ -174,7 +175,7 @@ class MarathonHealthCheckManager @Inject() (
         }
 
       // compute the app ID for the incoming task status
-      val appId = Task.Id(taskStatus.getTaskId).appId
+      val appId = Task.Id(taskStatus.getTaskId).runSpecId
 
       // collect health check actors for the associated app's command checks.
       val healthCheckActors: Iterable[ActorRef] = listActive(appId, version).collect {
@@ -197,7 +198,7 @@ class MarathonHealthCheckManager @Inject() (
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
       maybeTaskState <- taskTracker.task(taskId)
-    } yield maybeTaskState.flatMap(_.launched).map(_.appVersion)
+    } yield maybeTaskState.flatMap(_.launched).map(_.runSpecVersion)
 
     futureAppVersion.flatMap {
       case None => Future.successful(Nil)

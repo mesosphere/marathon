@@ -48,7 +48,7 @@ class TaskStateOpResolverTest
     When("A LaunchOnReservation is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(TaskStateOp.LaunchOnReservation(
       taskId = f.notExistingTaskId,
-      appVersion = Timestamp(0),
+      runSpecVersion = Timestamp(0),
       status = Task.Status(Timestamp(0)),
       hostPorts = Seq.empty)).futureValue
 
@@ -159,7 +159,7 @@ class TaskStateOpResolverTest
     val appId = PathId("/app")
     val existingTask = MarathonTestHelper.mininimalTask(appId)
     val existingReservedTask = MarathonTestHelper.residentReservedTask(appId)
-    val notExistingTaskId = Task.Id.forApp(appId)
+    val notExistingTaskId = Task.Id.forRunSpec(appId)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(taskTracker)
