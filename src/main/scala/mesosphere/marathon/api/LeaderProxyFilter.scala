@@ -2,8 +2,9 @@ package mesosphere.marathon.api
 
 import java.io.{ IOException, InputStream, OutputStream }
 import java.net._
+import java.security.cert.X509Certificate
 import javax.inject.Named
-import javax.net.ssl.{ HttpsURLConnection, SSLContext }
+import javax.net.ssl._
 import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
@@ -186,6 +187,10 @@ class JavaUrlConnectionRequestForwarder @Inject() (
 
   private[this] val viaValue: String = s"1.1 $myHostPort"
 
+  private lazy val ignoreHostnameVerifier = new javax.net.ssl.HostnameVerifier {
+    override def verify(hostname: String, sslSession: SSLSession): Boolean = true
+  }
+
   override def forward(url: URL, request: HttpServletRequest, response: HttpServletResponse): Unit = {
 
     def hasProxyLoop: Boolean = {
@@ -197,6 +202,11 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       val connection = url.openConnection() match {
         case httpsConnection: HttpsURLConnection =>
           httpsConnection.setSSLSocketFactory(sslContext.getSocketFactory)
+
+          if (leaderProxyConf.leaderProxySSLIgnoreHostname()) {
+            httpsConnection.setHostnameVerifier(ignoreHostnameVerifier)
+          }
+
           httpsConnection
         case httpConnection: HttpURLConnection =>
           httpConnection
