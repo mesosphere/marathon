@@ -31,6 +31,8 @@ the `--https_port`
 $ curl https://localhost:8443/v2/apps
 ```
 
+Note that by default when a request is proxied to the leading Marathon instance, the hostname of the leader is checked against the certificate. If you don't provide proper CN values in the certificates, proxying will fail. In this case, you can skip the hostname check by passing `--leader_proxy_ssl_ignore_hostname` to Marathon.
+
 ### Generating a keystore with an SSL key and certificate
 
 If you do not already have a Java keystore, follow the steps below to create one.
