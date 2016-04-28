@@ -6,8 +6,8 @@ import akka.actor._
 import akka.event.{ EventStream, LoggingReceive }
 import akka.pattern.ask
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
-import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.api.v2.json.AppUpdate
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -41,7 +41,7 @@ class MarathonSchedulerActor private (
     taskTracker: TaskTracker,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    leaderInfo: LeaderInfo,
+    electionService: ElectionService,
     eventBus: EventStream,
     config: UpgradeConfig,
     cancellationTimeout: FiniteDuration = 1.minute) extends Actor with ActorLogging with Stash {
@@ -59,11 +59,11 @@ class MarathonSchedulerActor private (
     deploymentManager = context.actorOf(deploymentManagerProps(schedulerActions), "DeploymentManager")
     historyActor = context.actorOf(historyActorProps, "HistoryActor")
 
-    leaderInfo.subscribe(self)
+    electionService.subscribe(self)
   }
 
   override def postStop(): Unit = {
-    leaderInfo.unsubscribe(self)
+    electionService.unsubscribe(self)
   }
 
   def receive: Receive = suspended
@@ -337,7 +337,7 @@ object MarathonSchedulerActor {
     taskTracker: TaskTracker,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    leaderInfo: LeaderInfo,
+    electionService: ElectionService,
     eventBus: EventStream,
     config: UpgradeConfig,
     cancellationTimeout: FiniteDuration = 1.minute): Props = {
@@ -351,7 +351,7 @@ object MarathonSchedulerActor {
       taskTracker,
       launchQueue,
       marathonSchedulerDriverHolder,
-      leaderInfo,
+      electionService,
       eventBus,
       config,
       cancellationTimeout

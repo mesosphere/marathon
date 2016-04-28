@@ -1,5 +1,7 @@
 package mesosphere.marathon.core.election
 
+import akka.actor.ActorRef
+
 import scala.concurrent.Future
 
 /**
@@ -8,18 +10,21 @@ import scala.concurrent.Future
 trait ElectionService {
   /**
     * isLeader checks whether this instance is the leader
+    *
     * @return true if this instance is the leader
     */
   def isLeader: Boolean
 
   /**
     * leaderHostPort return a host:port pair of the leader, if it is elected.
+    *
     * @return Some(host:port) of the leader, or None if no leader exists or is known
     */
   def leaderHostPort: Option[String]
 
   /**
     * offerLeadership is called to candidate for leadership. offerLeadership is idem-potent.
+    *
     * @param candidate is called back once elected or defeated
     */
   def offerLeadership(candidate: ElectionCandidate): Unit
@@ -27,10 +32,22 @@ trait ElectionService {
   /**
     * abdicateLeadership is called to resign from leadership. If this instance is no leader, this
     * call does nothing for reoffer=false. It will call offerLeadership for reoffer=true..
+    *
     * @param error is true if the abdication is due to some error.
     * @param reoffer is true if leadership should be offered again after abdiction
     */
   def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit
+
+  /**
+    * Subscribe to leadership change events.
+    *
+    * The given actorRef will initally get the current state via the appropriate
+    * [[mesosphere.marathon.event.LocalLeadershipEvent]] message and will
+    * be informed of changes after that.
+    */
+  def subscribe(self: ActorRef)
+  /** Unsubscribe to any leadership change events to this actor ref. */
+  def unsubscribe(self: ActorRef)
 }
 
 /**

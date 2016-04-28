@@ -22,7 +22,7 @@ class PseudoElectionService(
 ) {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
-  def leaderHostPort: Option[String] = if (isLeader) Some(hostPort) else None
+  override def leaderHostPortImpl: Option[String] = if (isLeader) Some(hostPort) else None
 
   override def offerLeadershipImpl(): Unit = synchronized {
     log.info("Not using HA and therefore electing as leader by default")

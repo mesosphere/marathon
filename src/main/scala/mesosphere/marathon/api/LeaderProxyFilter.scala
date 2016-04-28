@@ -10,6 +10,7 @@ import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.{ LeaderProxyConf, ModuleNames }
 import org.apache.http.HttpStatus
@@ -25,7 +26,7 @@ import scala.util.control.NonFatal
   */
 trait LeaderInfo {
   /** Query whether we are elected as the current leader. This should be cheap. */
-  def elected: Boolean
+  def isLeader: Boolean
 
   /**
     * Subscribe to leadership change events.
@@ -45,14 +46,14 @@ trait LeaderInfo {
     * @return `Some(`<em>host</em>:</em>port</em>`)`, e.g. my.local.domain:8080 or `None` if
     *        the leader is currently unknown
     */
-  def currentLeaderHostPort(): Option[String]
+  def leaderHostPort(): Option[String]
 }
 
 /**
   * Servlet filter that proxies requests to the leader if we are not the leader.
   */
 class LeaderProxyFilter @Inject() (httpConf: HttpConf,
-                                   leaderInfo: LeaderInfo,
+                                   electionService: ElectionService,
                                    @Named(ModuleNames.HOST_PORT) myHostPort: String,
                                    forwarder: RequestForwarder) extends Filter {
   //scalastyle:off null
@@ -91,8 +92,8 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
       //scalastyle:on
 
       do {
-        val weAreLeader = leaderInfo.elected
-        val currentLeaderData = leaderInfo.currentLeaderHostPort()
+        val weAreLeader = electionService.isLeader
+        val currentLeaderData = electionService.leaderHostPort
 
         if (weAreLeader || currentLeaderData.exists(_ != myHostPort)) {
           log.info("Leadership info is consistent again!")
@@ -121,9 +122,9 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
 
     (rawRequest, rawResponse) match {
       case (request: HttpServletRequest, response: HttpServletResponse) =>
-        lazy val leaderDataOpt = leaderInfo.currentLeaderHostPort()
+        lazy val leaderDataOpt = electionService.leaderHostPort
 
-        if (leaderInfo.elected) {
+        if (electionService.isLeader) {
           response.addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, buildUrl(myHostPort).toString)
           chain.doFilter(request, response)
         }

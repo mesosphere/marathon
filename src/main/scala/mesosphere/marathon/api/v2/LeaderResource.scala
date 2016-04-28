@@ -5,13 +5,12 @@ import javax.ws.rs.{ GET, DELETE, Path, Produces }
 
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.{ MarathonMediaType, LeaderInfo, RestResource }
+import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.{ MarathonSchedulerService, MarathonConf }
 
 @Path("v2/leader")
 class LeaderResource @Inject() (
-  leaderInfo: LeaderInfo,
   schedulerService: MarathonSchedulerService,
   electionService: ElectionService,
   val config: MarathonConf with HttpConf)
@@ -20,7 +19,7 @@ class LeaderResource @Inject() (
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def index(): Response = {
-    leaderInfo.currentLeaderHostPort() match {
+    electionService.leaderHostPort match {
       case None => notFound("There is no leader")
       case Some(leader) =>
         ok(jsonObjString("leader" -> leader))
@@ -30,7 +29,7 @@ class LeaderResource @Inject() (
   @DELETE
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def delete(): Response = {
-    leaderInfo.elected match {
+    electionService.isLeader match {
       case false => notFound("There is no leader")
       case true =>
         electionService.abdicateLeadership()

@@ -16,8 +16,7 @@ import com.twitter.util.JavaTimer
 import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.api.LeaderInfo
-import mesosphere.marathon.core.election.ElectionCallback
+import mesosphere.marathon.core.election.{ ElectionService, ElectionCallback }
 import mesosphere.marathon.core.launcher.TaskOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -80,10 +79,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
     bind(classOf[MarathonSchedulerDriverHolder]).in(Scopes.SINGLETON)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
-    bind(classOf[MarathonLeaderInfoMetrics]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
-    bind(classOf[LeaderInfo]).to(classOf[MarathonLeaderInfo]).in(Scopes.SINGLETON)
     bind(classOf[TaskOpFactory]).to(classOf[TaskOpFactoryImpl]).in(Scopes.SINGLETON)
 
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
@@ -122,14 +119,14 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
   @Provides
   @Singleton
   def provideHttpEventStreamActor(system: ActorSystem,
-                                  leaderInfo: LeaderInfo,
+                                  electionService: ElectionService,
                                   @Named(EventModule.busName) eventBus: EventStream,
                                   metrics: HttpEventStreamActorMetrics): ActorRef = {
     val outstanding = conf.eventStreamMaxOutstandingMessages.get.getOrElse(50)
     def handleStreamProps(handle: HttpEventStreamHandle): Props =
       Props(new HttpEventStreamHandleActor(handle, eventBus, outstanding))
 
-    system.actorOf(Props(new HttpEventStreamActor(leaderInfo, metrics, handleStreamProps)), "HttpEventStream")
+    system.actorOf(Props(new HttpEventStreamActor(electionService, metrics, handleStreamProps)), "HttpEventStream")
   }
 
   @Provides
@@ -177,7 +174,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
     launchQueue: LaunchQueue,
     frameworkIdUtil: FrameworkIdUtil,
     driverHolder: MarathonSchedulerDriverHolder,
-    leaderInfo: LeaderInfo,
+    electionService: ElectionService,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
@@ -228,7 +225,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
         taskTracker,
         launchQueue,
         driverHolder,
-        leaderInfo,
+        electionService,
         eventBus,
         conf
       ).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),

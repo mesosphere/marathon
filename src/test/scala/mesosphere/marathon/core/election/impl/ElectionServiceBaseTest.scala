@@ -82,7 +82,7 @@ class ElectionServiceBaseTest
       config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ???
-      override def leaderHostPort: Option[String] = ???
+      override def leaderHostPortImpl: Option[String] = ???
     }
 
     awaitAssert(electionService.state should equal(Idle(candidate = None)))
@@ -93,7 +93,7 @@ class ElectionServiceBaseTest
       config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
-      override def leaderHostPort: Option[String] = ???
+      override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("leadership is offered")
@@ -112,7 +112,7 @@ class ElectionServiceBaseTest
       config, system, events, metrics, Seq.empty, new ExponentialBackoff(initialValue = 5.seconds), shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
-      override def leaderHostPort: Option[String] = ???
+      override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("leadership is offered")
@@ -126,7 +126,7 @@ class ElectionServiceBaseTest
       config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
-      override def leaderHostPort: Option[String] = ???
+      override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("leadership is abdicated while not being leader")
@@ -162,7 +162,7 @@ class ElectionServiceBaseTest
       config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
-      override def leaderHostPort: Option[String] = ???
+      override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("leadership is offered, immediately abdicated and then offered again")
@@ -185,7 +185,7 @@ class ElectionServiceBaseTest
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())
       }
-      override def leaderHostPort: Option[String] = ???
+      override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("this instance is becoming leader")
@@ -215,7 +215,7 @@ class ElectionServiceBaseTest
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())
       }
-      override def leaderHostPort: Option[String] = ???
+      override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("this instance is becoming leader")
@@ -241,7 +241,7 @@ class ElectionServiceBaseTest
       config, system, events, metrics, Seq.empty, backoff, shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = () // do not call startLeadership here
-      override def leaderHostPort: Option[String] = ???
+      override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("this instance is becoming leader and then abdicting with reoffer=true")
@@ -263,7 +263,7 @@ class ElectionServiceBaseTest
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())
       }
-      override def leaderHostPort: Option[String] = ???
+      override def leaderHostPortImpl: Option[String] = ???
     }
 
     Mockito.when(candidate.startLeadership()).thenAnswer(new Answer[Unit] {
@@ -285,5 +285,26 @@ class ElectionServiceBaseTest
 
     Then("the instance is elected")
     awaitAssert(electionService.state.isInstanceOf[Leading])
+  }
+
+  test("leaderHostPort handles exceptions and returns None") {
+    Given("an ElactionServiceBase descendent throws an exception in leaderHostPortImpl")
+
+    val electionService = new ElectionServiceBase(
+      config, system, events, metrics, Seq.empty, backoff, shutdownHooks
+    ) {
+      override protected def offerLeadershipImpl(): Unit = {
+        startLeadership(_ => stopLeadership())
+      }
+      override def leaderHostPortImpl: Option[String] = {
+        throw new Exception("leaderHostPortImpl exception")
+      }
+    }
+
+    When("querying for leaderHostPort")
+    val currentLeaderHostPort = electionService.leaderHostPort
+
+    Then("it should return none")
+    currentLeaderHostPort should be(None)
   }
 }

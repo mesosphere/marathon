@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.election.impl
 
-import akka.actor.ActorSystem
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
@@ -8,7 +8,8 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.{ ElectionCallback, ElectionCandidate, ElectionService }
 import mesosphere.marathon.event.LocalLeadershipEvent
-import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.metrics.Metrics.Timer
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -50,6 +51,24 @@ abstract class ElectionServiceBase(
   private[impl] var state: State = Idle(candidate = None)
 
   import scala.concurrent.ExecutionContext.Implicits.global
+
+  def leaderHostPortImpl: Option[String]
+
+  val getLeaderDataTimer: Timer =
+    metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "current-leader-host-port"))
+
+  final override def leaderHostPort: Option[String] = getLeaderDataTimer {
+    synchronized {
+      try {
+        leaderHostPortImpl
+      }
+      catch {
+        case NonFatal(e) =>
+          log.error("error while getting current leader", e)
+          None
+      }
+    }
+  }
 
   override def isLeader: Boolean = synchronized {
     state match {
@@ -105,7 +124,7 @@ abstract class ElectionServiceBase(
     }
   }
 
-  override def offerLeadership(candidate: ElectionCandidate): Unit = synchronized {
+  final override def offerLeadership(candidate: ElectionCandidate): Unit = synchronized {
     if (shutdownHooks.isShuttingDown) {
       log.info("Ignoring leadership offer while shutting down")
     }
@@ -199,6 +218,24 @@ abstract class ElectionServiceBase(
             abdicateLeadership(error = true)
         }
     }
+  }
+
+  /**
+    * Subscribe to leadership change events.
+    *
+    * The given actorRef will initally get the current state via the appropriate
+    * [[mesosphere.marathon.event.LocalLeadershipEvent]] message and will
+    * be informed of changes after that.
+    */
+  override def subscribe(self: ActorRef): Unit = {
+    eventStream.subscribe(self, classOf[LocalLeadershipEvent])
+    val currentState = if (isLeader) LocalLeadershipEvent.ElectedAsLeader else LocalLeadershipEvent.Standby
+    self ! currentState
+  }
+
+  /** Unsubscribe to any leadership change events to this actor ref. */
+  override def unsubscribe(self: ActorRef): Unit = {
+    eventStream.unsubscribe(self, classOf[LocalLeadershipEvent])
   }
 
   private def startMetrics(): Unit = {

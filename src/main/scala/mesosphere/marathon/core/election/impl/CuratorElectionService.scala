@@ -15,6 +15,8 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.{ ZooDefs, KeeperException, CreateMode }
 import org.slf4j.LoggerFactory
 
+import scala.util.control.NonFatal
+
 class CuratorElectionService(
   config: MarathonConf,
   system: ActorSystem,
@@ -36,12 +38,19 @@ class CuratorElectionService(
   private lazy val curatorFramework = provideCuratorClient(zk)
   private var latch: Option[LeaderLatch] = None
 
-  override def leaderHostPort: Option[String] = synchronized {
-    latch match {
-      case None => None
-      case Some(l) =>
-        val participant = l.getLeader
-        if (participant.isLeader) Some(participant.getId) else None
+  override def leaderHostPortImpl: Option[String] = synchronized {
+    try {
+      latch match {
+        case None => None
+        case Some(l) =>
+          val participant = l.getLeader
+          if (participant.isLeader) Some(participant.getId) else None
+      }
+    }
+    catch {
+      case NonFatal(e) =>
+        log.error("error while getting current leader", e)
+        None
     }
   }
 
