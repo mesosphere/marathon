@@ -57,13 +57,13 @@ trait ElectionService {
 trait ElectionCandidate {
   /**
     * stopLeadership is called when the candidate was leader, but was defeated. It is guaranteed
-    * that before startLeadership has been called.
+    * that calls to stopLeadership and startLeadership alternate and are synchronized.
     */
   def stopLeadership(): Unit
 
   /**
-    * startLeadership is called when the candidate has become leader. It is guaranteed that
-    * before stopLeadership has been called if the instance was leader.
+    * startLeadership is called when the candidate has become leader. It is guaranteed
+    * that calls to stopLeadership and startLeadership alternate and are synchronized.
     */
   def startLeadership(): Unit
 }

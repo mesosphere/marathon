@@ -19,7 +19,7 @@ import scala.util.control.NonFatal
 private[impl] object ElectionServiceBase {
   protected type Abdicator = /* error: */ Boolean => Unit
 
-  abstract class State {
+  sealed trait State {
     def getCandidate: Option[ElectionCandidate] = this match {
       case Idle(c)             => c
       case Leading(c, _)       => Some(c)
@@ -31,7 +31,11 @@ private[impl] object ElectionServiceBase {
 
   case class Idle(candidate: Option[ElectionCandidate]) extends State
   case class Leading(candidate: ElectionCandidate, abdicate: Abdicator) extends State
-  case class Abdicating(candidate: ElectionCandidate, reoffer: Boolean, shortcut: Boolean = false) extends State
+  case class Abdicating(
+      candidate: ElectionCandidate,
+      reoffer: Boolean,
+      candidateWasStarted: Boolean = false
+  ) extends State
   case class Offering(candidate: ElectionCandidate) extends State
   case class Offered(candidate: ElectionCandidate) extends State
 }
@@ -84,10 +88,10 @@ abstract class ElectionServiceBase(
         log.info(s"Abdicating leadership while leading (reoffer=$reoffer)")
         state = Abdicating(candidate, reoffer)
         abdicate(error)
-      case Abdicating(candidate, alreadyReoffering, shortcut) =>
+      case Abdicating(candidate, alreadyReoffering, candidateWasStarted) =>
         log.info("Abdicating leadership while already in process of abdicating" +
           s" (reoffer=${alreadyReoffering || reoffer})")
-        state = Abdicating(candidate, alreadyReoffering || reoffer, shortcut)
+        state = Abdicating(candidate, alreadyReoffering || reoffer, candidateWasStarted)
       case Offering(candidate) =>
         log.info(s"Canceling leadership offer waiting for backoff (reoffer=$reoffer)")
         state = Abdicating(candidate, reoffer)
@@ -110,9 +114,9 @@ abstract class ElectionServiceBase(
 
   private def setOfferState(offeringCase: => Unit, idleCase: => Unit): Unit = synchronized {
     state match {
-      case Abdicating(candidate, reoffer, shortcut) =>
+      case Abdicating(candidate, reoffer, candidateWasStarted) =>
         log.error("Will reoffer leadership after abdicating")
-        state = Abdicating(candidate, reoffer = true, shortcut)
+        state = Abdicating(candidate, reoffer = true, candidateWasStarted)
       case Leading(candidate, abdicate) =>
         log.info("Ignoring leadership offer while being leader")
       case Offering(candidate) =>
@@ -153,16 +157,16 @@ abstract class ElectionServiceBase(
   }
 
   protected def stopLeadership(): Unit = synchronized {
-    val (candidate, reoffer, shortcut) = state match {
+    val (candidate, reoffer, candidateWasStarted) = state match {
       case Leading(c, a)         => (c, false, false)
-      case Abdicating(c, ro, sc) => (c, ro, sc)
+      case Abdicating(c, ro, cws) => (c, ro, cws)
       case Offered(c)            => (c, false, false)
       case Offering(c)           => (c, false, false)
       case Idle(c)               => (c.get, false, false)
     }
     state = Idle(Some(candidate))
 
-    if (!shortcut) {
+    if (!candidateWasStarted) {
       log.info(s"Call onDefeated leadership callbacks on ${electionCallbacks.mkString(", ")}")
       Await.result(Future.sequence(electionCallbacks.map(_.onDefeated)), config.zkTimeoutDuration)
       log.info(s"Finished onDefeated leadership callbacks")
@@ -188,7 +192,7 @@ abstract class ElectionServiceBase(
     state match {
       case Abdicating(candidate, reoffer, _) =>
         log.info("Became leader and abdicating immediately")
-        state = Abdicating(candidate, reoffer, shortcut = true)
+        state = Abdicating(candidate, reoffer, candidateWasStarted = true)
         abdicate
       case _ =>
         val candidate = state.getCandidate.get // Idle(None) is not possible

@@ -174,7 +174,7 @@ class MarathonSchedulerService @Inject() (
   //Begin ElectionCandidate interface
 
   def startLeadership(): Unit = synchronized {
-    log.info("Elect leadership, running driver")
+    log.info("As new leader running the driver")
 
     // execute tasks, only the leader is allowed to
     migration.migrate()
@@ -211,7 +211,7 @@ class MarathonSchedulerService @Inject() (
   }
 
   def stopLeadership(): Unit = synchronized {
-    log.info("Defeat leadership")
+    log.info("Lost leadership")
 
     leadershipCoordinator.stop()
 
