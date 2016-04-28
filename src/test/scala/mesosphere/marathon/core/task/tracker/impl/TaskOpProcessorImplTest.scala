@@ -1,17 +1,18 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import akka.actor.{ Status, ActorRef }
+import akka.actor.{ ActorRef, Status }
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
 import mesosphere.marathon.core.CoreGuiceModule
+import mesosphere.marathon.core.jobs.JobScheduler
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, MarathonTaskStatusTestHelper, TaskStatusEmitter }
 import mesosphere.marathon.core.task.tracker.TaskUpdater
-import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
-import mesosphere.marathon.core.task.{ TaskStateChangeException, Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.update.impl.steps._
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateChangeException, TaskStateOp }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppRepository, PathId, TaskRepository, Timestamp }
@@ -420,6 +421,10 @@ class TaskOpProcessorImplTest
     lazy val launchQueueProvider: Provider[LaunchQueue] = new Provider[LaunchQueue] {
       override def get(): LaunchQueue = launchQueue
     }
+    lazy val jobScheduler = mock[JobScheduler]
+    lazy val jobSchedulerProvider: Provider[JobScheduler] = new Provider[JobScheduler] {
+      override def get(): JobScheduler = jobScheduler
+    }
     lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
     lazy val eventBus: EventStream = mock[EventStream]
     lazy val taskUpdater: TaskUpdater = mock[TaskUpdater]
@@ -433,6 +438,7 @@ class TaskOpProcessorImplTest
       notifyHealthCheckManager,
       notifyRateLimiter,
       notifyLaunchQueue,
+      notifyJobScheduler,
       emitUpdate,
       postToEventStream,
       scaleApp
@@ -443,6 +449,7 @@ class TaskOpProcessorImplTest
     lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueueProvider, appRepositoryProvider)
     lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus)
     lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueueProvider)
+    lazy val notifyJobScheduler = new NotifyJobSchedulerStepImpl(jobSchedulerProvider)
     lazy val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitterProvider)
     lazy val scaleApp = new ScaleAppUpdateStepImpl(schedulerActorProvider)
     lazy val processor = new TaskOpProcessorImpl(taskTrackerProbe.ref, taskRepository, stateOpResolver, config)

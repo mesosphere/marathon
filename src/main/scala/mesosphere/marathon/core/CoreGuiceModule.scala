@@ -8,18 +8,20 @@ import com.google.inject.{ AbstractModule, Provides, Scopes, Singleton }
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.jobs.JobScheduler
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskChangeObservables }
+import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.update.impl.steps.{
   ContinueOnErrorStep,
   NotifyHealthCheckManagerStepImpl,
   NotifyLaunchQueueStepImpl,
+  NotifyJobSchedulerStepImpl,
   NotifyRateLimiterStepImpl,
   PostToEventStreamStepImpl,
   ScaleAppUpdateStepImpl,
@@ -76,6 +78,9 @@ class CoreGuiceModule extends AbstractModule {
   final def launchQueue(coreModule: CoreModule): LaunchQueue = coreModule.appOfferMatcherModule.launchQueue
 
   @Provides @Singleton
+  final def jobScheduler(coreModule: CoreModule): JobScheduler = coreModule.jobModule.jobScheduler
+
+  @Provides @Singleton
   final def appInfoService(appInfoModule: AppInfoModule): AppInfoService = appInfoModule.appInfoService
 
   @Provides @Singleton
@@ -101,6 +106,7 @@ class CoreGuiceModule extends AbstractModule {
     notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
     notifyRateLimiterStepImpl: NotifyRateLimiterStepImpl,
     notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
+    notifyJobSchedulerStepImpl: NotifyJobSchedulerStepImpl,
     taskStatusEmitterPublishImpl: TaskStatusEmitterPublishStepImpl,
     postToEventStreamStepImpl: PostToEventStreamStepImpl,
     scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[TaskUpdateStep] = {
@@ -121,6 +127,7 @@ class CoreGuiceModule extends AbstractModule {
       ContinueOnErrorStep(notifyHealthCheckManagerStepImpl),
       ContinueOnErrorStep(notifyRateLimiterStepImpl),
       ContinueOnErrorStep(notifyLaunchQueueStepImpl),
+      ContinueOnErrorStep(notifyJobSchedulerStepImpl),
       ContinueOnErrorStep(taskStatusEmitterPublishImpl),
       ContinueOnErrorStep(postToEventStreamStepImpl),
       ContinueOnErrorStep(scaleAppUpdateStepImpl)
