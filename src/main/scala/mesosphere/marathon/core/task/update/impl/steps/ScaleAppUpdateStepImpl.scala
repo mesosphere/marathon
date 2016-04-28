@@ -9,6 +9,7 @@ import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
+import mesosphere.marathon.state.PathId
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -24,9 +25,12 @@ class ScaleAppUpdateStepImpl @Inject() (
   override def name: String = "scaleApp"
 
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
-
     val terminalOrExpungedTask: Option[Task] = {
       (taskChanged.stateOp, taskChanged.stateChange) match {
+        // FIXME (Jobs): remove this hack
+        case _ if PathId.isJob(taskChanged.runSpecId) =>
+          log.info("Ignoring taskChanged because it seems to be a job ...")
+          None
         // stateOp is a terminal MesosUpdate
         case (TaskStateOp.MesosUpdate(task, MarathonTaskStatus.Terminal(_), _), _) => Some(task)
         // stateChange is an expunge (probably because we expunged a timeout reservation)

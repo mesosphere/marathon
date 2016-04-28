@@ -64,7 +64,7 @@ private[impl] class LaunchQueueActor(
       receiveHandlePurging,
       receiveTaskUpdateToSuspendedActor,
       receiveMessagesToSuspendedActor,
-      receiveTaskUpdate,
+      receiveTaskChanged,
       receiveHandleNormalCommands
     ).reduce(_.orElse[Any, Unit](_))
   }
@@ -144,7 +144,7 @@ private[impl] class LaunchQueueActor(
     suspendedLaunchersMessages += actorRef -> deferredMessages
   }
 
-  private[this] def receiveTaskUpdate: Receive = {
+  private[this] def receiveTaskChanged: Receive = {
     case taskChanged: TaskChanged =>
       import context.dispatcher
       launchers.get(taskChanged.runSpecId) match {

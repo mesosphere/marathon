@@ -26,6 +26,7 @@ private[launchqueue] class LaunchQueueDelegate(
   override def get(runSpecId: PathId): Option[QueuedTaskInfo] =
     askQueueActor("get")(LaunchQueueDelegate.Count(runSpecId)).asInstanceOf[Option[QueuedTaskInfo]]
 
+  // FIXME (Jobs): This is only called from NotifyLaunchQueueStep - the launchQueue could respond with Unit
   override def notifyOfTaskUpdate(taskChanged: TaskChanged): Future[Option[QueuedTaskInfo]] =
     askQueueActorFuture("notifyOfTaskUpdate")(taskChanged).mapTo[Option[QueuedTaskInfo]]
 
