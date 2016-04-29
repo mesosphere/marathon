@@ -8,7 +8,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.{ RetrySleeper, RetryPolicy }
-import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
+import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory, AuthInfo }
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
 import org.apache.zookeeper.{ ZooDefs, KeeperException, CreateMode }
 import org.slf4j.LoggerFactory
@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 import scala.concurrent.duration._
+import scala.collection.JavaConversions._
 
 class CuratorElectionService(
   config: MarathonConf,
@@ -94,7 +95,7 @@ class CuratorElectionService(
 
   private def provideCuratorClient(): CuratorFramework = {
     log.info(s"Will do leader election through ${config.zkHosts}")
-    val client = CuratorFrameworkFactory.builder().
+    val builder = CuratorFrameworkFactory.builder().
       connectString(config.zkHosts).
       sessionTimeoutMs(config.zooKeeperSessionTimeout().toInt).
       retryPolicy(new RetryPolicy {
@@ -121,8 +122,18 @@ class CuratorElectionService(
 
           false
         }
-      }).
-      build()
+      })
+
+    // optionally authenticate
+    val client = (config.zkUsername, config.zkPassword) match {
+      case (Some(user), Some(pass)) =>
+        builder.authorization(List(
+          new AuthInfo("digest", (user + ":" + pass).getBytes("UTF-8"))
+        )).build()
+      case _ =>
+        builder.build()
+    }
+
     client.start()
     client.getZookeeperClient.blockUntilConnectedOrTimedOut()
     client

@@ -137,7 +137,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
       val authInfo = (conf.zkUsername, conf.zkPassword) match {
         case (Some(user), Some(pass)) => Some(AuthInfo.digest(user, pass))
-        case _ => None
+        case _                        => None
       }
 
       val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true), authInfo)

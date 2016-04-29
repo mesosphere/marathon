@@ -81,7 +81,7 @@ trait ZookeeperConf extends ScallopConf {
 
   lazy val zkDefaultCreationACL = (zkUsername, zkPassword) match {
     case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
-    case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
+    case _                  => ZooDefs.Ids.OPEN_ACL_UNSAFE
   }
 
   lazy val zkTimeoutDuration = Duration(zooKeeperTimeout(), MILLISECONDS)
