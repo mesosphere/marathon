@@ -8,8 +8,10 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
 import mesosphere.marathon._
+import mesosphere.marathon.api.v2.json.Formats
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 
@@ -548,6 +550,25 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     AppDefinition.validAppDefinition(to3).isSuccess shouldBe true
   }
 
+  test("cassandraWithoutResidency") {
+    import Formats._
+
+    val f = new Fixture
+    val app = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
+    val result = AppDefinition.validAppDefinition(app)
+    result.isSuccess shouldBe true
+  }
+
+  test("cassandraWithoutResidencyWithUpgradeStrategy") {
+    import Formats._
+
+    val f = new Fixture
+    val base = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
+    val app = base.copy(upgradeStrategy = UpgradeStrategy(0, 0))
+    val result = AppDefinition.validAppDefinition(app)
+    result.isSuccess shouldBe true
+  }
+
   class Fixture {
     def validDockerContainer: Container = Container(
       `type` = mesos.ContainerInfo.Type.DOCKER,
@@ -599,5 +620,74 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val vol2 = persistentVolume("bla")
     val vol3 = persistentVolume("test")
     val validResident = residentApp("/app1", Seq(vol1, vol2)).copy(upgradeStrategy = zero)
+
+    def cassandraWithoutResidency =
+      """
+        |{
+        |  "id": "/cassandra",
+        |  "cpus": 2,
+        |  "mem": 2048,
+        |  "instances": 1,
+        |  "constraints": [
+        |    [
+        |      "hostname",
+        |      "UNIQUE"
+        |    ]
+        |  ],
+        |  "container": {
+        |    "type": "DOCKER",
+        |    "docker": {
+        |      "image": "tobert/cassandra",
+        |      "network": "BRIDGE",
+        |      "forcePullImage": true,
+        |      "portMappings": [
+        |        {
+        |          "containerPort": 7000,
+        |          "hostPort": 7000,
+        |          "protocol": "tcp"
+        |        },
+        |        {
+        |          "containerPort": 7199,
+        |          "hostPort": 7199,
+        |          "protocol": "tcp"
+        |        },
+        |        {
+        |          "containerPort": 9042,
+        |          "hostPort": 9042,
+        |          "protocol": "tcp"
+        |        },
+        |        {
+        |          "containerPort": 9160,
+        |          "hostPort": 9160,
+        |          "protocol": "tcp"
+        |        }
+        |      ]
+        |    },
+        |    "volumes": [
+        |      {
+        |        "containerPath": "/data",
+        |        "hostPath": "cassandradata",
+        |        "mode": "RW"
+        |      },
+        |      {
+        |        "containerPath": "cassandradata",
+        |        "mode": "RW",
+        |        "persistent": {
+        |          "size": 1000
+        |        }
+        |      }
+        |    ]
+        |  },
+        |  "healthChecks": [
+        |    {
+        |      "protocol": "TCP",
+        |      "portIndex": 3,
+        |      "gracePeriodSeconds": 5,
+        |      "intervalSeconds": 20,
+        |      "maxConsecutiveFailures": 3
+        |    }
+        |  ]
+        |}
+      """.stripMargin
   }
 }
