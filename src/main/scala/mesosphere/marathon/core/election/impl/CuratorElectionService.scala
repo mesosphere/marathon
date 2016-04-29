@@ -95,8 +95,9 @@ class CuratorElectionService(
   }
 
   private def provideCuratorClient(): CuratorFramework = {
+    log.info(s"Will do leader election through ${config.zkHosts}")
     val client = CuratorFrameworkFactory.builder().
-      connectString(config.zooKeeperHostAddresses.map(_.toString).mkString(",")).
+      connectString(config.zkHosts).
       sessionTimeoutMs(config.zooKeeperSessionTimeout().toInt).
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
