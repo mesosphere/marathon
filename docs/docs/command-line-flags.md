@@ -108,7 +108,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--http_endpoints` (Optional. Default: None): Pre-configured http callback
     URLs. Valid only in conjunction with `--event_subscriber http_callback`.
     Additional callback URLs may also be set dynamically via the REST API.
-* `--zk` (Optional. Default: None): ZooKeeper URL for storing state.
+* `--zk` (Optional. Default: `zk://localhost:2181/marathon`): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
 * `--zk_max_versions` (Optional. Default: 25): Limit the number of versions stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
