@@ -657,7 +657,7 @@ trait AppAndGroupFormats {
           def upgradeStrategyOrDefault: UpgradeStrategy = {
             import UpgradeStrategy.{ forResidentTasks, empty }
             upgradeStrategy.getOrElse {
-              if (residency.isDefined || app.externalVolumes.nonEmpty) forResidentTasks else empty
+              if (residencyOrDefault.isDefined || app.externalVolumes.nonEmpty) forResidentTasks else empty
             }
           }
           def residencyOrDefault: Option[Residency] = {
