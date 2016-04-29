@@ -22,7 +22,6 @@ class ElectionModule(
     http: HttpConf,
     metrics: Metrics = new Metrics(new MetricRegistry),
     hostPort: String,
-    electionCallbacks: Seq[ElectionCallback] = Seq.empty,
     shutdownHooks: ShutdownHooks) {
   private lazy val backoff = new ExponentialBackoff(name = "offerLeadership")
   lazy val service: ElectionService = if (config.highlyAvailable()) {
@@ -34,7 +33,6 @@ class ElectionModule(
         http,
         metrics,
         hostPort,
-        electionCallbacks,
         backoff,
         shutdownHooks
       )
@@ -47,7 +45,6 @@ class ElectionModule(
         http,
         metrics,
         hostPort,
-        electionCallbacks,
         backoff,
         shutdownHooks
       )
@@ -60,7 +57,6 @@ class ElectionModule(
       eventStream,
       metrics,
       hostPort,
-      electionCallbacks,
       backoff,
       shutdownHooks
     )

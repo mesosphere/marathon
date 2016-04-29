@@ -13,7 +13,7 @@ import com.twitter.common.zookeeper.{ Candidate, Group, ZooKeeperClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
-import mesosphere.marathon.core.election.{ ElectionService, ElectionCallback }
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.metrics.Metrics
 import org.apache.zookeeper._
 import org.slf4j.LoggerFactory
@@ -30,10 +30,9 @@ class TwitterCommonsElectionService(
   http: HttpConf,
   metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
-  electionCallbacks: Seq[ElectionCallback] = Seq.empty,
   backoff: Backoff,
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
-  config, system, eventStream, metrics, electionCallbacks, backoff, shutdownHooks
+  config, system, eventStream, metrics, backoff, shutdownHooks
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
   private lazy val commonsCandidate = provideCandidate(zk)

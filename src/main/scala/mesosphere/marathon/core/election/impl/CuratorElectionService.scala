@@ -6,7 +6,6 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
-import mesosphere.marathon.core.election.ElectionCallback
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.{ RetrySleeper, RetryPolicy }
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
@@ -25,10 +24,9 @@ class CuratorElectionService(
   http: HttpConf,
   metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
-  electionCallbacks: Seq[ElectionCallback] = Seq.empty,
   backoff: ExponentialBackoff,
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
-  config, system, eventStream, metrics, electionCallbacks, backoff, shutdownHooks
+  config, system, eventStream, metrics, backoff, shutdownHooks
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
 

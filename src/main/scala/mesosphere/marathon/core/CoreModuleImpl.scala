@@ -48,7 +48,6 @@ class CoreModuleImpl @Inject() (
     groupRepository: GroupRepository,
     taskRepository: TaskRepository,
     taskOpFactory: TaskOpFactory,
-    electionCallbacks: Seq[ElectionCallback] = Seq.empty,
     clock: Clock,
     taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
 
@@ -66,7 +65,6 @@ class CoreModuleImpl @Inject() (
     httpConf,
     metrics,
     hostPort,
-    electionCallbacks,
     shutdownHookModule
   )
 

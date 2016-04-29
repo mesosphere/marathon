@@ -6,14 +6,13 @@ import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
-import mesosphere.marathon.core.election.{ ElectionCallback, ElectionCandidate, ElectionService }
+import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.metrics.Metrics.Timer
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 private[impl] object ElectionServiceBase {
@@ -44,7 +43,6 @@ abstract class ElectionServiceBase(
     system: ActorSystem,
     eventStream: EventStream,
     metrics: Metrics = new Metrics(new MetricRegistry),
-    electionCallbacks: Seq[ElectionCallback] = Seq.empty,
     backoff: Backoff,
     shutdownHooks: ShutdownHooks) extends ElectionService {
   import ElectionServiceBase._
@@ -166,10 +164,6 @@ abstract class ElectionServiceBase(
     state = Idle(Some(candidate))
 
     if (!candidateWasStarted) {
-      log.info(s"Call onDefeated leadership callbacks on ${electionCallbacks.mkString(", ")}")
-      Await.result(Future.sequence(electionCallbacks.map(_.onDefeated)), config.zkTimeoutDuration)
-      log.info(s"Finished onDefeated leadership callbacks")
-
       // Our leadership has been defeated. Tell the candidate and the world
       candidate.stopLeadership()
       eventStream.publish(LocalLeadershipEvent.Standby)
@@ -201,11 +195,6 @@ abstract class ElectionServiceBase(
           startMetrics()
 
           candidate.startLeadership()
-
-          // run all leadership callbacks
-          log.info(s"""Call onElected leadership callbacks on ${electionCallbacks.mkString(", ")}""")
-          Await.result(Future.sequence(electionCallbacks.map(_.onElected)), config.onElectedPrepareTimeout().millis)
-          log.info(s"Finished onElected leadership callbacks")
 
           // tell the world about us
           eventStream.publish(LocalLeadershipEvent.ElectedAsLeader)

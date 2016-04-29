@@ -1,7 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.core.election.ElectionCallback
-import mesosphere.util.ThreadPoolContext
+import mesosphere.marathon.{ PrePostDriverCallback, MarathonSchedulerService }
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
@@ -21,7 +20,7 @@ import scala.concurrent.Future
   *    - clear everything
   */
 class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
-    extends EntityStore[T] with ElectionCallback with VersionedEntry {
+    extends EntityStore[T] with PrePostDriverCallback with VersionedEntry {
 
   @volatile
   private[state] var cacheOpt: Option[TrieMap[String, Option[T]]] = None
@@ -73,7 +72,7 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
   /**
     * Preloads the cache. This assumes that there are no concurrent modifications.
     */
-  override def onElected: Future[Unit] = {
+  override def preDriverStarts: Future[Unit] = {
     val cache = new TrieMap[String, Option[T]]()
 
     def preloadEntry(nextName: String): Future[Unit] = {
@@ -103,7 +102,7 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
     store.names().flatMap(handleEntries).map(_ => cacheOpt = Some(cache))
   }
 
-  override def onDefeated: Future[Unit] = {
+  override def postDriverTerminates: Future[Unit] = {
     log.debug(s"$store Clear all cached entries")
     cacheOpt = None
     Future.successful(())

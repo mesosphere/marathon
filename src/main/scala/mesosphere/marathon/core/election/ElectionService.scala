@@ -2,8 +2,6 @@ package mesosphere.marathon.core.election
 
 import akka.actor.ActorRef
 
-import scala.concurrent.Future
-
 /**
   * ElectionService is implemented by leadership election mechanisms.
   */
@@ -68,18 +66,3 @@ trait ElectionCandidate {
   def startLeadership(): Unit
 }
 
-/**
-  * ElectionCallback is implemented by callback receivers which have to listen for leadership
-  * changes of the current instance.
-  */
-trait ElectionCallback {
-  /**
-    * Will get called _before_ the ElectionCandidate (usually the scheduler driver) starts leadership.
-    */
-  def onElected: Future[Unit]
-
-  /**
-    * Will get called after leadership is abdicated.
-    */
-  def onDefeated: Future[Unit]
-}

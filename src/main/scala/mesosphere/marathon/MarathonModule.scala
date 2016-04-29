@@ -15,7 +15,7 @@ import com.twitter.util.JavaTimer
 import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.election.{ ElectionService, ElectionCallback }
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.TaskOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launchqueue.LaunchQueue
@@ -66,7 +66,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   val log = LoggerFactory.getLogger(getClass.getName)
 
   def configure() {
-
     bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[HttpConf]).toInstance(http)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
@@ -80,6 +79,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[TaskOpFactory]).to(classOf[TaskOpFactoryImpl]).in(Scopes.SINGLETON)
+    bind(classOf[Seq[PrePostDriverCallback]]).in(Scopes.SINGLETON)
 
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
 
@@ -102,15 +102,17 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   @Provides
   @Singleton
-  def provideLeadershipCallbacks(
+  def provideLeadershipInitializers(
     @Named(ModuleNames.STORE_APP) app: EntityStore[AppDefinition],
     @Named(ModuleNames.STORE_GROUP) group: EntityStore[Group],
     @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) deployment: EntityStore[DeploymentPlan],
     @Named(ModuleNames.STORE_FRAMEWORK_ID) frameworkId: EntityStore[FrameworkId],
     @Named(ModuleNames.STORE_TASK_FAILURES) taskFailure: EntityStore[TaskFailure],
     @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) subscribers: EntityStore[EventSubscribers],
-    @Named(ModuleNames.STORE_TASK) task: EntityStore[MarathonTaskState]): Seq[ElectionCallback] = {
-    Seq(app, group, deployment, frameworkId, taskFailure, task, subscribers).collect { case l: ElectionCallback => l }
+    @Named(ModuleNames.STORE_TASK) task: EntityStore[MarathonTaskState]): Seq[PrePostDriverCallback] = {
+    Seq(app, group, deployment, frameworkId, taskFailure, task, subscribers).collect {
+      case l: PrePostDriverCallback => l
+    }
   }
 
   @Named(ModuleNames.HTTP_EVENT_STREAM)

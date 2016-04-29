@@ -68,6 +68,8 @@ class MarathonSchedulerServiceTest
     with Matchers {
   import MarathonSchedulerServiceTest._
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   private[this] var probe: TestProbe = _
   private[this] var leadershipCoordinator: LeadershipCoordinator = _
   private[this] var healthCheckManager: HealthCheckManager = _
@@ -81,6 +83,7 @@ class MarathonSchedulerServiceTest
   private[this] var migration: Migration = _
   private[this] var schedulerActor: ActorRef = _
   private[this] var events: EventStream = _
+  private[this] var prePostDriverCallbacks: scala.collection.immutable.Seq[PrePostDriverCallback] = _
 
   before {
     probe = TestProbe()
@@ -96,6 +99,7 @@ class MarathonSchedulerServiceTest
     migration = mock[Migration]
     schedulerActor = probe.ref
     events = new EventStream()
+    prePostDriverCallbacks = scala.collection.immutable.Seq.empty
   }
 
   def driverFactory[T](provide: => SchedulerDriver): SchedulerDriverFactory = {
@@ -115,6 +119,7 @@ class MarathonSchedulerServiceTest
       config,
       frameworkIdUtil,
       electionService,
+      prePostDriverCallbacks,
       appRepository,
       driverFactory(mock[SchedulerDriver]),
       system,
@@ -142,6 +147,7 @@ class MarathonSchedulerServiceTest
       config,
       frameworkIdUtil,
       electionService,
+      prePostDriverCallbacks,
       appRepository,
       driverFactory(mock[SchedulerDriver]),
       system,
@@ -171,6 +177,7 @@ class MarathonSchedulerServiceTest
       config,
       frameworkIdUtil,
       electionService,
+      prePostDriverCallbacks,
       appRepository,
       driverFactory(mock[SchedulerDriver]),
       system,
@@ -209,6 +216,7 @@ class MarathonSchedulerServiceTest
       config,
       frameworkIdUtil,
       electionService,
+      prePostDriverCallbacks,
       appRepository,
       driverFactory(mock[SchedulerDriver]),
       system,
@@ -237,6 +245,7 @@ class MarathonSchedulerServiceTest
       config,
       frameworkIdUtil,
       electionService,
+      prePostDriverCallbacks,
       appRepository,
       driverFactory(mock[SchedulerDriver]),
       system,
@@ -277,6 +286,7 @@ class MarathonSchedulerServiceTest
       config,
       frameworkIdUtil,
       electionService,
+      prePostDriverCallbacks,
       appRepository,
       driverFactory,
       system,
@@ -310,6 +320,7 @@ class MarathonSchedulerServiceTest
       config,
       frameworkIdUtil,
       electionService,
+      prePostDriverCallbacks,
       appRepository,
       driverFactory,
       system,
@@ -326,5 +337,57 @@ class MarathonSchedulerServiceTest
 
     schedulerService.startLeadership()
     verify(electionService, Mockito.timeout(1000)).abdicateLeadership(error = true, reoffer = true)
+  }
+
+  test("Pre/post driver callbacks are called") {
+    val cb = mock[PrePostDriverCallback]
+    Mockito.when(cb.postDriverTerminates).thenReturn(Future(()))
+    Mockito.when(cb.preDriverStarts).thenReturn(Future(()))
+
+    when(frameworkIdUtil.fetch()).thenReturn(None)
+    val driver = mock[SchedulerDriver]
+    val driverFactory = mock[SchedulerDriverFactory]
+
+    val schedulerService = new MarathonSchedulerService(
+      leadershipCoordinator,
+      healthCheckManager,
+      config,
+      frameworkIdUtil,
+      electionService,
+      scala.collection.immutable.Seq(cb),
+      appRepository,
+      driverFactory,
+      system,
+      migration,
+      schedulerActor,
+      events
+    ) {
+    }
+
+    when(leadershipCoordinator.prepareForStart()).thenReturn(Future.successful(()))
+    when(driverFactory.createDriver()).thenReturn(driver)
+
+    val driverCompleted = new java.util.concurrent.CountDownLatch(1)
+    when(driver.run()).thenAnswer(new Answer[mesos.Status] {
+      override def answer(invocation: InvocationOnMock): mesos.Status = {
+        driverCompleted.await()
+        mesos.Status.DRIVER_RUNNING
+      }
+    })
+
+    schedulerService.startLeadership()
+
+    val startOrder = Mockito.inOrder(migration, cb, driver)
+    awaitAssert(startOrder.verify(migration).migrate())
+    awaitAssert(startOrder.verify(cb).preDriverStarts)
+    awaitAssert(startOrder.verify(driver).run())
+
+    schedulerService.stopLeadership()
+    awaitAssert(verify(driver).stop(true))
+
+    driverCompleted.countDown()
+    awaitAssert(verify(cb).postDriverTerminates)
+
+    awaitAssert(verify(electionService).abdicateLeadership(error = false, reoffer = true))
   }
 }

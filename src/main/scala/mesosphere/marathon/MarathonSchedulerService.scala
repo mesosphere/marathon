@@ -32,6 +32,22 @@ import scala.concurrent.{ Await, Future, TimeoutException }
 import scala.util.{ Failure, Success }
 
 /**
+  * PrePostDriverCallback is implemented by callback receivers which have to listen for driver
+  * start/stop events
+  */
+trait PrePostDriverCallback {
+  /**
+    * Will get called _before_ the driver is running, but after migration.
+    */
+  def preDriverStarts: Future[Unit]
+
+  /**
+    * Will get called _after_ the driver terminated
+    */
+  def postDriverTerminates: Future[Unit]
+}
+
+/**
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
@@ -40,6 +56,7 @@ class MarathonSchedulerService @Inject() (
   config: MarathonConf,
   frameworkIdUtil: FrameworkIdUtil,
   electionService: ElectionService,
+  prePostDriverCallbacks: Seq[PrePostDriverCallback],
   appRepository: AppRepository,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
@@ -185,6 +202,14 @@ class MarathonSchedulerService @Inject() (
     // start timers
     schedulePeriodicOperations()
 
+    // run all pre-driver callbacks
+    log.info(s"""Call preDriverStarts callbacks on ${prePostDriverCallbacks.mkString(", ")}""")
+    Await.result(
+      Future.sequence(prePostDriverCallbacks.map(_.preDriverStarts)),
+      config.onElectedPrepareTimeout().millis
+    )
+    log.info(s"Finished preDriverStarts callbacks")
+
     // create new driver
     driver = Some(driverFactory.createDriver())
 
@@ -206,6 +231,10 @@ class MarathonSchedulerService @Inject() (
 
         // tell leader election that we step back, but want to be re-elected if isRunning is true.
         electionService.abdicateLeadership(error = result.isFailure, reoffer = latch.getCount > 0)
+
+        log.info(s"Call postDriverRuns callbacks on ${prePostDriverCallbacks.mkString(", ")}")
+        Await.result(Future.sequence(prePostDriverCallbacks.map(_.postDriverTerminates)), config.zkTimeoutDuration)
+        log.info(s"Finished postDriverRuns callbacks")
       }
     }
   }
