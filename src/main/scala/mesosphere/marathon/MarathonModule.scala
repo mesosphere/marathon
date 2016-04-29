@@ -11,7 +11,6 @@ import akka.routing.RoundRobinPool
 import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
-import com.twitter.common.zookeeper.ZooKeeperClient
 import com.twitter.util.JavaTimer
 import com.twitter.zk.{ NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
@@ -59,7 +58,7 @@ object ModuleNames {
   final val STORE_EVENT_SUBSCRIBERS = "EventSubscriberStore"
 }
 
-class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
+class MarathonModule(conf: MarathonConf, http: HttpConf)
     extends AbstractModule {
 
   //scalastyle:off magic.number
@@ -70,7 +69,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, zk: ZooKeeperClient)
 
     bind(classOf[MarathonConf]).toInstance(conf)
     bind(classOf[HttpConf]).toInstance(http)
-    bind(classOf[ZooKeeperClient]).toInstance(zk)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
     bind(classOf[ZookeeperConf]).toInstance(conf)
 

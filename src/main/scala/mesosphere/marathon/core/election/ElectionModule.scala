@@ -3,7 +3,6 @@ package mesosphere.marathon.core.election
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import com.twitter.common.zookeeper.ZooKeeperClient
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Features
@@ -23,7 +22,6 @@ class ElectionModule(
     http: HttpConf,
     metrics: Metrics = new Metrics(new MetricRegistry),
     hostPort: String,
-    zk: ZooKeeperClient,
     electionCallbacks: Seq[ElectionCallback] = Seq.empty,
     shutdownHooks: ShutdownHooks) {
   private lazy val backoff = new ExponentialBackoff(name = "offerLeadership")
@@ -36,7 +34,6 @@ class ElectionModule(
         http,
         metrics,
         hostPort,
-        zk,
         electionCallbacks,
         backoff,
         shutdownHooks
@@ -50,7 +47,6 @@ class ElectionModule(
         http,
         metrics,
         hostPort,
-        zk,
         electionCallbacks,
         backoff,
         shutdownHooks

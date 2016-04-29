@@ -1,21 +1,27 @@
 package mesosphere.marathon.core.election.impl
 
+import java.net.InetSocketAddress
+
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import com.twitter.common.base.{ ExceptionalCommand, Supplier }
+import com.twitter.common.quantity.{ Time, Amount }
 import com.twitter.common.zookeeper.Candidate.{ Leader => TwitterCommonsLeader }
-import com.twitter.common.zookeeper.Group.{ NodeScheme, JoinException }
+import com.twitter.common.zookeeper.Group.JoinException
 import com.twitter.common.zookeeper.{ Candidate, Group, ZooKeeperClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
-import mesosphere.marathon.core.election.ElectionCallback
+import mesosphere.marathon.core.election.{ ElectionService, ElectionCallback }
 import mesosphere.marathon.metrics.Metrics
-import org.apache.zookeeper.ZooDefs
+import org.apache.zookeeper._
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
+import scala.collection.JavaConverters._
 
 class TwitterCommonsElectionService(
   config: MarathonConf,
@@ -24,7 +30,6 @@ class TwitterCommonsElectionService(
   http: HttpConf,
   metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
-  zk: ZooKeeperClient,
   electionCallbacks: Seq[ElectionCallback] = Seq.empty,
   backoff: Backoff,
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
@@ -32,6 +37,7 @@ class TwitterCommonsElectionService(
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
   private lazy val commonsCandidate = provideCandidate(zk)
+  private lazy val abdicateOnConnectionLoss: AbdicateOnConnectionLoss = new AbdicateOnConnectionLoss(zk, this)
 
   override def leaderHostPortImpl: Option[String] = synchronized {
     val maybeLeaderData: Option[Array[Byte]] = try {
@@ -55,6 +61,7 @@ class TwitterCommonsElectionService(
   private object Leader extends TwitterCommonsLeader {
     override def onDefeated(): Unit = synchronized {
       log.info("Defeated (Leader Interface)")
+      abdicateOnConnectionLoss.stop()
       stopLeadership()
     }
 
@@ -64,6 +71,7 @@ class TwitterCommonsElectionService(
         abdicateCmd.execute()
         // stopLeadership() is called in onDefeated
       })
+      abdicateOnConnectionLoss.start()
     }
   }
 
@@ -77,5 +85,95 @@ class TwitterCommonsElectionService(
         }
       }
     )
+  }
+
+  lazy val zk: ZooKeeperClient = {
+    require(
+      config.zooKeeperSessionTimeout() < Integer.MAX_VALUE,
+      "ZooKeeper timeout too large!"
+    )
+
+    val client = new ZooKeeperLeaderElectionClient(
+      Amount.of(config.zooKeeperSessionTimeout().toInt, Time.MILLISECONDS),
+      config.zooKeeperHostAddresses.asJavaCollection
+    )
+
+    // Marathon can't do anything useful without a ZK connection
+    // so we wait to proceed until one is available
+    var connectedToZk = false
+
+    while (!connectedToZk) {
+      try {
+        log.info("Connecting to ZooKeeper...")
+        client.get
+        connectedToZk = true
+      }
+      catch {
+        case t: Throwable =>
+          log.warn("Unable to connect to ZooKeeper, retrying...")
+      }
+    }
+    client
+  }
+
+  class ZooKeeperLeaderElectionClient(sessionTimeout: Amount[Integer, Time],
+                                      zooKeeperServers: java.lang.Iterable[InetSocketAddress])
+      extends ZooKeeperClient(sessionTimeout, zooKeeperServers) {
+
+    override def shouldRetry(e: KeeperException): Boolean = {
+      log.error("Got ZooKeeper exception", e)
+      log.error("Committing suicide to avoid invalidating ZooKeeper state")
+
+      val f = Future {
+        // scalastyle:off magic.number
+        Runtime.getRuntime.exit(9)
+        // scalastyle:on
+      }(scala.concurrent.ExecutionContext.global)
+
+      try {
+        Await.result(f, 5.seconds)
+      }
+      catch {
+        case _: Throwable =>
+          log.error("Finalization failed, killing JVM.")
+          // scalastyle:off magic.number
+          Runtime.getRuntime.halt(1)
+        // scalastyle:on
+      }
+
+      false
+    }
+  }
+}
+
+class AbdicateOnConnectionLoss(
+    zk: ZooKeeperClient,
+    electionService: ElectionService) {
+  private lazy val log = LoggerFactory.getLogger(getClass.getName)
+
+  private val connectionDropped = Set(
+    Watcher.Event.KeeperState.Disconnected,
+    Watcher.Event.KeeperState.Expired
+  )
+
+  private[impl] val watcher = new Watcher {
+    override def process(event: WatchedEvent): Unit = {
+      if (connectionDropped.contains(event.getState)) {
+        log.info(s"ZooKeeper connection has been dropped. Abdicate Leadership: $event")
+        electionService.abdicateLeadership()
+      }
+    }
+  }
+
+  def start(): Unit = {
+    log.info("Register as ZK Listener")
+    zk.register(watcher)
+    //make sure, we are connected so we can act on subsequent events
+    if (zk.get().getState != ZooKeeper.States.CONNECTED) electionService.abdicateLeadership()
+  }
+
+  def stop(): Unit = {
+    log.info("Unregister as ZK Listener")
+    zk.unregister(watcher)
   }
 }

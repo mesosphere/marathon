@@ -5,7 +5,6 @@ import javax.inject.Named
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.google.inject.Inject
-import com.twitter.common.zookeeper.ZooKeeperClient
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
@@ -38,7 +37,6 @@ import scala.util.Random
   */
 class CoreModuleImpl @Inject() (
     // external dependencies still wired by guice
-    zk: ZooKeeperClient,
     marathonConf: MarathonConf,
     @Named(EventModule.busName) eventStream: EventStream,
     httpConf: HttpConf,
@@ -60,7 +58,7 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val shutdownHookModule = ShutdownHooks()
   private[this] lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
-  override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory, zk, electionModule.service)
+  override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory, electionModule.service)
   override lazy val electionModule = new ElectionModule(
     marathonConf,
     actorSystem,
@@ -68,7 +66,6 @@ class CoreModuleImpl @Inject() (
     httpConf,
     metrics,
     hostPort,
-    zk,
     electionCallbacks,
     shutdownHookModule
   )

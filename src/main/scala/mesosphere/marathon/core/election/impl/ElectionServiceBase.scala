@@ -32,10 +32,9 @@ private[impl] object ElectionServiceBase {
   case class Idle(candidate: Option[ElectionCandidate]) extends State
   case class Leading(candidate: ElectionCandidate, abdicate: Abdicator) extends State
   case class Abdicating(
-      candidate: ElectionCandidate,
-      reoffer: Boolean,
-      candidateWasStarted: Boolean = false
-  ) extends State
+    candidate: ElectionCandidate,
+    reoffer: Boolean,
+    candidateWasStarted: Boolean = false) extends State
   case class Offering(candidate: ElectionCandidate) extends State
   case class Offered(candidate: ElectionCandidate) extends State
 }
@@ -158,11 +157,11 @@ abstract class ElectionServiceBase(
 
   protected def stopLeadership(): Unit = synchronized {
     val (candidate, reoffer, candidateWasStarted) = state match {
-      case Leading(c, a)         => (c, false, false)
+      case Leading(c, a)          => (c, false, false)
       case Abdicating(c, ro, cws) => (c, ro, cws)
-      case Offered(c)            => (c, false, false)
-      case Offering(c)           => (c, false, false)
-      case Idle(c)               => (c.get, false, false)
+      case Offered(c)             => (c, false, false)
+      case Offering(c)            => (c, false, false)
+      case Idle(c)                => (c.get, false, false)
     }
     state = Idle(Some(candidate))
 

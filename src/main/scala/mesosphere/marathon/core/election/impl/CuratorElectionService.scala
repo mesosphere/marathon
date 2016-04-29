@@ -3,19 +3,20 @@ package mesosphere.marathon.core.election.impl
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import com.twitter.common.zookeeper.{ ZooKeeperUtils, Group, ZooKeeperClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.ElectionCallback
 import mesosphere.marathon.metrics.Metrics
+import org.apache.curator.{ RetrySleeper, RetryPolicy }
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
-import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.{ ZooDefs, KeeperException, CreateMode }
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 class CuratorElectionService(
   config: MarathonConf,
@@ -24,7 +25,6 @@ class CuratorElectionService(
   http: HttpConf,
   metrics: Metrics = new Metrics(new MetricRegistry),
   hostPort: String,
-  zk: ZooKeeperClient,
   electionCallbacks: Seq[ElectionCallback] = Seq.empty,
   backoff: ExponentialBackoff,
   shutdownHooks: ShutdownHooks) extends ElectionServiceBase(
@@ -32,10 +32,7 @@ class CuratorElectionService(
 ) {
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
 
-  private lazy val maxZookeeperBackoffTime = 1000 * 300
-  private lazy val minZookeeperBackoffTime = 500
-
-  private lazy val curatorFramework = provideCuratorClient(zk)
+  private lazy val client = provideCuratorClient()
   private var latch: Option[LeaderLatch] = None
 
   override def leaderHostPortImpl: Option[String] = synchronized {
@@ -63,7 +60,7 @@ class CuratorElectionService(
       case _ =>
     }
     latch = Some(new LeaderLatch(
-      curatorFramework, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER
+      client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER
     ))
     latch.get.addListener(Listener) // idem-potent
     latch.get.start()
@@ -99,9 +96,36 @@ class CuratorElectionService(
     }
   }
 
-  private def provideCuratorClient(zk: ZooKeeperClient): CuratorFramework = {
-    val client = CuratorFrameworkFactory.newClient(zk.getConnectString,
-      new ExponentialBackoffRetry(minZookeeperBackoffTime, maxZookeeperBackoffTime))
+  private def provideCuratorClient(): CuratorFramework = {
+    val client = CuratorFrameworkFactory.builder().
+      connectString(config.zooKeeperHostAddresses.map(_.toString).mkString(",")).
+      sessionTimeoutMs(config.zooKeeperSessionTimeout().toInt).
+      retryPolicy(new RetryPolicy {
+        override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
+          log.error("ZooKeeper access failed")
+          log.error("Committing suicide to avoid invalidating ZooKeeper state")
+
+          val f = Future {
+            // scalastyle:off magic.number
+            Runtime.getRuntime.exit(9)
+            // scalastyle:on
+          }(scala.concurrent.ExecutionContext.global)
+
+          try {
+            Await.result(f, 5.seconds)
+          }
+          catch {
+            case _: Throwable =>
+              log.error("Finalization failed, killing JVM.")
+              // scalastyle:off magic.number
+              Runtime.getRuntime.halt(1)
+            // scalastyle:on
+          }
+
+          false
+        }
+      }).
+      build()
     client.start()
     client.getZookeeperClient.blockUntilConnectedOrTimedOut()
     client
@@ -109,33 +133,41 @@ class CuratorElectionService(
 
   private object twitterCommonsTombstone {
     lazy val acl = ZooDefs.Ids.OPEN_ACL_UNSAFE
-    lazy val group = new Group(zk, acl, config.zooKeeperLeaderPath)
+
+    def memberPath(member: String): String = {
+      config.zooKeeperLeaderPath.stripSuffix("/") + "/" + member
+    }
 
     // - precedes 0-9 in ASCII and hence this instance overrules other candidates
     lazy val memberName = "member_-00000000"
-    lazy val path = group.getMemberPath(memberName)
+    lazy val path = memberPath(memberName)
 
     var fallbackCreated = false
 
     def create(): Unit = {
       try {
         delete(onlyMyself = false)
-        ZooKeeperUtils.ensurePath(zk, acl, config.zooKeeperLeaderPath)
+
+        client.createContainers(config.zooKeeperLeaderPath)
 
         // Create a ephemeral node which is not removed when loosing leadership. This is necessary to avoid a
         // race of old Marathon instances which think that they can become leader in the moment
         // the new instances failover and no tombstone is existing (yet).
         if (!fallbackCreated) {
-          zk.get.create(group.getMemberPath("member_-1"),
-            hostPort.getBytes("UTF-8"),
-            acl,
-            CreateMode.EPHEMERAL_SEQUENTIAL
-          )
+          client.create().
+            creatingParentsIfNeeded().
+            withMode(CreateMode.EPHEMERAL_SEQUENTIAL).
+            withACL(acl).
+            forPath(memberPath("member_-1"), hostPort.getBytes("UTF-8"))
           fallbackCreated = true
         }
 
         log.info("Creating tombstone for old twitter commons leader election")
-        zk.get.create(path, hostPort.getBytes("UTF-8"), acl, CreateMode.EPHEMERAL)
+        client.create().
+          creatingParentsIfNeeded().
+          withMode(CreateMode.EPHEMERAL).
+          withACL(acl).
+          forPath(path, hostPort.getBytes("UTF-8"))
       }
       catch {
         case e: Exception =>
@@ -145,13 +177,13 @@ class CuratorElectionService(
     }
 
     def delete(onlyMyself: Boolean = false): Unit = {
-      Option(zk.get.exists(path, false)) match {
+      Option(client.checkExists().forPath(path)) match {
         case None =>
         case Some(tombstone) =>
           try {
-            if (!onlyMyself || group.getMemberData(memberName).toString == hostPort) {
+            if (!onlyMyself || client.getData.forPath(memberPath(memberName)).toString == hostPort) {
               log.info("Deleting existing tombstone for old twitter commons leader election")
-              zk.get.delete(path, tombstone.getVersion)
+              client.delete().guaranteed().withVersion(tombstone.getVersion).forPath(path)
             }
           }
           catch {
