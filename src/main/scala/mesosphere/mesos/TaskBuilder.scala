@@ -80,7 +80,7 @@ class TaskBuilder(app: AppDefinition,
 
     val resourceMatch =
       ResourceMatcher.matchResources(
-        offer, app, runningTasks, ResourceSelector(acceptedResourceRoles, reserved = false))
+        offer, app, runningTasks, ResourceSelector(acceptedResourceRoles, reserved = true))
 
     build(offer, resourceMatch)
   }
