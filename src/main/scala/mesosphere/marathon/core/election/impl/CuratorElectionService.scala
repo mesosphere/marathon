@@ -101,7 +101,7 @@ class CuratorElectionService(
     log.info(s"Will do leader election through ${config.zkHosts}")
 
     // let the world read the leadership information as some setups depend on that to find Marathon
-    lazy val acl = new util.ArrayList[ACL]()
+    val acl = new util.ArrayList[ACL]()
     acl.addAll(config.zkDefaultCreationACL)
     acl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
 

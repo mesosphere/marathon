@@ -44,14 +44,24 @@ object ProcessKeeper {
     }
   }
 
-  def startZooKeeper(port: Int, workDir: String, wipeWorkDir: Boolean = true) {
-    val args = "-Dzookeeper.jmx.log4j.disable=true" :: "org.apache.zookeeper.server.ZooKeeperServerMain" :: port.toString :: workDir :: Nil
+  def startZooKeeper(port: Int, workDir: String, wipeWorkDir: Boolean = true, superCreds: Option[String] = None) {
+    val systemArgs: List[String] = "-Dzookeeper.jmx.log4j.disable=true" :: Nil
+    val sd: List[String] = superCreds match {
+      case None => Nil
+      case Some(userPassword) =>
+        val digest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(userPassword)
+        s"-Dzookeeper.DigestAuthenticationProvider.superDigest=$digest" :: Nil
+    }
+    val app = "org.apache.zookeeper.server.ZooKeeperServerMain" :: port.toString :: workDir :: Nil
+
     val workDirFile = new File(workDir)
     if (wipeWorkDir) {
       FileUtils.deleteDirectory(workDirFile)
       FileUtils.forceMkdir(workDirFile)
     }
-    startJavaProcess("zookeeper", heapInMegs = 256, args, new File("."), sys.env, _.contains("binding to port"))
+
+    startJavaProcess("zookeeper", heapInMegs = 256, systemArgs ++ sd ++ app, new File("."),
+      sys.env, _.contains("binding to port"))
   }
 
   def startMesosLocal(): Process = {
