@@ -77,6 +77,12 @@ class LeaderIntegrationTest extends IntegrationFunSuite
         result.code == 200 && result.value != leader
       }
 
+      And("all instances agree on the leader")
+      WaitTestSupport.waitUntil("all instances agree on the leader", 30.seconds) {
+        val results = marathonFacades.map(marathon => marathon.leader())
+        results.forall(_.code == 200) && results.map(_.value).distinct.size == 1
+      }
+
       Thread.sleep(500L)
     }
   }
