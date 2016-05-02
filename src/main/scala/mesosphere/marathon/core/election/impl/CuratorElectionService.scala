@@ -1,5 +1,7 @@
 package mesosphere.marathon.core.election.impl
 
+import java.util
+
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
@@ -7,9 +9,11 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.metrics.Metrics
+import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.{ RetrySleeper, RetryPolicy }
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory, AuthInfo }
 import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
+import org.apache.zookeeper.data.ACL
 import org.apache.zookeeper.{ ZooDefs, KeeperException, CreateMode }
 import org.slf4j.LoggerFactory
 
@@ -95,9 +99,19 @@ class CuratorElectionService(
 
   private def provideCuratorClient(): CuratorFramework = {
     log.info(s"Will do leader election through ${config.zkHosts}")
+
+    // let the world read the leadership information as some setups depend on that to find Marathon
+    lazy val acl = new util.ArrayList[ACL]()
+    acl.addAll(config.zkDefaultCreationACL)
+    acl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
+
     val builder = CuratorFrameworkFactory.builder().
       connectString(config.zkHosts).
       sessionTimeoutMs(config.zooKeeperSessionTimeout().toInt).
+      aclProvider(new ACLProvider {
+        override def getDefaultAcl: util.List[ACL] = acl
+        override def getAclForPath(path: String): util.List[ACL] = acl
+      }).
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
           log.error("ZooKeeper access failed")
@@ -140,8 +154,6 @@ class CuratorElectionService(
   }
 
   private object twitterCommonsTombstone {
-    lazy val acl = ZooDefs.Ids.OPEN_ACL_UNSAFE
-
     def memberPath(member: String): String = {
       config.zooKeeperLeaderPath.stripSuffix("/") + "/" + member
     }
@@ -165,7 +177,6 @@ class CuratorElectionService(
           client.create().
             creatingParentsIfNeeded().
             withMode(CreateMode.EPHEMERAL_SEQUENTIAL).
-            withACL(acl).
             forPath(memberPath("member_-1"), hostPort.getBytes("UTF-8"))
           fallbackCreated = true
         }
@@ -174,7 +185,6 @@ class CuratorElectionService(
         client.create().
           creatingParentsIfNeeded().
           withMode(CreateMode.EPHEMERAL).
-          withACL(acl).
           forPath(path, hostPort.getBytes("UTF-8"))
       }
       catch {

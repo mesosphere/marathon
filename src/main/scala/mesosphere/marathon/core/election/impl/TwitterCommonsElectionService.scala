@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.election.impl
 
 import java.net.InetSocketAddress
+import java.util
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
@@ -16,6 +17,7 @@ import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.metrics.Metrics
 import org.apache.zookeeper._
+import org.apache.zookeeper.data.ACL
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ Await, Future }
@@ -76,8 +78,14 @@ class TwitterCommonsElectionService(
 
   private def provideCandidate(zk: ZooKeeperClient): Candidate = {
     log.info("Registering in ZooKeeper with hostPort:" + hostPort)
+
+    // let the world read the leadership information as some setups depend on that to find Marathon
+    lazy val acl = new util.ArrayList[ACL]()
+    acl.addAll(config.zkDefaultCreationACL)
+    acl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
+
     new mesosphere.marathon.core.election.impl.CandidateImpl(
-      new Group(zk, ZooDefs.Ids.OPEN_ACL_UNSAFE, config.zooKeeperLeaderPath),
+      new Group(zk, acl, config.zooKeeperLeaderPath),
       new Supplier[Array[Byte]] {
         def get(): Array[Byte] = {
           hostPort.getBytes("UTF-8")
