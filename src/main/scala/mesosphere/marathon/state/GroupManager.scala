@@ -158,7 +158,7 @@ class GroupManager @Inject() (
       to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
       _ = validateOrThrow(to)(Group.validRootGroup(config.maxApps.get))
       plan = DeploymentPlan(from, to, resolve, version, toKill)
-      _ = validateOrThrow(plan)
+      _ = validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator(config))
       _ = log.info(s"Computed new deployment plan:\n$plan")
       _ <- scheduler.deploy(plan, force)
       _ <- storeUpdatedApps(plan)

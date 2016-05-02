@@ -5,10 +5,12 @@ import java.util.UUID
 
 import com.wix.accord.dsl._
 import com.wix.accord._
-import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.ZKStoreEntry
+import mesosphere.marathon.{ MarathonConf, Protos }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.util.state.zk.{ CompressionConf, ZKData }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -305,7 +307,22 @@ object DeploymentPlan {
     result
   }
 
-  implicit lazy val deploymentPlanIsValid: Validator[DeploymentPlan] = validator[DeploymentPlan] { plan =>
-    plan.createdOrUpdatedApps as "app" is every(valid(AppDefinition.updateIsValid(plan.original)))
+  def deploymentPlanValidator(conf: MarathonConf): Validator[DeploymentPlan] = {
+    val maxSize = conf.zooKeeperMaxNodeSize()
+    val maxSizeError = s"""The way we persist data in ZooKeeper would exceed the maximum ZK node size ($maxSize bytes).
+                         |You can adjust this value via --zk_max_node_size, but make sure this value is compatible with
+                         |your ZooKeeper ensemble!
+                         |See: http://zookeeper.apache.org/doc/r3.3.1/zookeeperAdmin.html#Unsafe+Options""".stripMargin
+    val notBeTooBig = isTrue[DeploymentPlan](maxSizeError) { plan =>
+      val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
+      val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id), plan.toProto.toByteArray)
+        .toProto(compressionConf)
+      zkDataProto.toByteArray.length < maxSize
+    }
+
+    validator[DeploymentPlan] { plan =>
+      plan.createdOrUpdatedApps as "app" is every(valid(AppDefinition.updateIsValid(plan.original)))
+      plan should notBeTooBig
+    }
   }
 }

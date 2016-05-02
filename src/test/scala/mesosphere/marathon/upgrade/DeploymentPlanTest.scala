@@ -1,5 +1,6 @@
 package mesosphere.marathon.upgrade
 
+import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.PathId._
@@ -398,7 +399,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val plan = DeploymentPlan(f.group, group)
 
     Then("The deployment is valid")
-    validate(plan).isSuccess should be(true)
+    validate(plan)(f.validator).isSuccess should be(true)
   }
 
   test("Deployment plan validation fails for invalid changes in resident tasks") {
@@ -411,7 +412,28 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val plan2 = DeploymentPlan(f.group, group2)
 
     Then("The deployment is not valid")
-    validate(plan2).isSuccess should be(false)
+    validate(plan2)(f.validator).isSuccess should be(false)
+  }
+
+  test("Deployment plan validation fails if the deployment plan is too big") {
+    Given("All options are supplied and we have a valid group change, but the deployment plan size limit is small")
+    val f = new Fixture()
+    val validator = DeploymentPlan.deploymentPlanValidator(MarathonTestHelper.defaultConfig(maxZkNodeSize = Some(1)))
+
+    When("We create a scale deployment")
+    val app = f.validResident.copy(instances = 123)
+    val group = f.group.copy(apps = Set(app))
+    val plan = DeploymentPlan(f.group, group)
+
+    Then("The deployment is valid")
+    val result = validate(plan)(validator)
+    val violations = ValidationHelper.getAllRuleConstrains(result)
+
+    result.isFailure should be(true)
+    ValidationHelper.getAllRuleConstrains(result).head.message should be (s"""The way we persist data in ZooKeeper would exceed the maximum ZK node size (1 bytes).
+                                                                             |You can adjust this value via --zk_max_node_size, but make sure this value is compatible with
+                                                                             |your ZooKeeper ensemble!
+                                                                             |See: http://zookeeper.apache.org/doc/r3.3.1/zookeeperAdmin.html#Unsafe+Options""".stripMargin)
   }
 
   class Fixture {
@@ -430,5 +452,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val vol3 = persistentVolume("test")
     val validResident = residentApp("/app1", Seq(vol1, vol2)).copy(upgradeStrategy = zero)
     val group = Group(PathId("/test"), apps = Set(validResident))
+    val marathonConf = MarathonTestHelper.defaultConfig()
+    val validator = DeploymentPlan.deploymentPlanValidator(marathonConf)
   }
 }
