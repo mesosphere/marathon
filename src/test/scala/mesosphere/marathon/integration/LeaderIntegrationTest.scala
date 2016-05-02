@@ -59,6 +59,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
   }
 
   test("it survives a small burn-in reelection test") {
+    val random = new scala.util.Random
     for (_ <- 1 to 10) {
       Given("a leader")
       WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
@@ -83,7 +84,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
         results.forall(_.code == 200) && results.map(_.value).distinct.size == 1
       }
 
-      Thread.sleep(500L)
+      Thread.sleep(random.nextInt(10) * 100L)
     }
   }
 
@@ -136,6 +137,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
     startMarathon(twitterCommonsInstancePort, parameters: _*)
 
     val facade = new MarathonFacade(s"http://${config.marathonHost}:$twitterCommonsInstancePort", PathId.empty)
+    val random = new scala.util.Random
 
     for (_ <- 1 to 10) {
       Given("a leader")
@@ -164,7 +166,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
         result.code == 200 && result.value != leader
       }
 
-      Thread.sleep(500L)
+      Thread.sleep(random.nextInt(10) * 100L)
     }
   }
 
