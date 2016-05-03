@@ -23,6 +23,13 @@
     ]
   },
   "properties": {
+    "secrets": {
+      "type": "object",
+      "description": "Optional. A dictionary of secrets.",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
     "acceptedResourceRoles": {
       "items": {
         "type": "string"
