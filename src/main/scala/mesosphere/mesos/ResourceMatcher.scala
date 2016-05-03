@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.core.launcher.impl.ResourceLabels
+import mesosphere.marathon.core.launcher.impl.{ ReservationSelector, TaskLabels }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, ResourceRole }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
@@ -38,17 +38,15 @@ object ResourceMatcher {
     * accident.
     *
     * @param acceptedRoles contains all Mesos resource roles that are accepted
-    * @param reserved if reserved is true, only resources with a ReservationInfo
-    *                 are considered. If reserved is false, only resources without
-    *                 a ReservationInfo are considered.
-    * @param requiredLabels only resources with the given keys/values are matched.
+    * @param reservation if given, only resources with a ReservationInfo are
+    *                    considered and will only match if their labels match
+    *                    the specified labels.
     */
-  case class ResourceSelector(
-      acceptedRoles: Set[String], reserved: Boolean, requiredLabels: ResourceLabels = ResourceLabels.empty) {
+  case class ResourceSelector(acceptedRoles: Set[String], reservation: Option[ReservationSelector] = None) {
     def apply(resource: Protos.Resource): Boolean = {
       // resources with disks are matched by the VolumeMatcher or not at all
       val noAssociatedDisk = !resource.hasDisk
-      def hasRequiredLabels: Boolean = {
+      def matchesReservationSelector: Boolean = {
         val labelMap: Map[String, String] =
           if (!resource.hasReservation || !resource.getReservation.hasLabels)
             Map.empty
@@ -58,23 +56,33 @@ object ResourceMatcher {
               label.getKey -> label.getValue
             }.toMap
           }
-        requiredLabels.labels.forall { case (k, v) => labelMap.get(k).contains(v) }
+
+        reservation match {
+          // only match if the reservation labels match the expectation
+          case Some(reservationWithLabels) =>
+            reservationWithLabels.labels.forall { case (k, v) => labelMap.get(k).contains(v) }
+
+          // allow dynamic reservations if no known reservation label is set
+          case None =>
+            labelMap.keys.toSet.intersect(TaskLabels.labelKeysForTaskReservations).isEmpty
+        }
       }
 
-      noAssociatedDisk && acceptedRoles(resource.getRole) && resource.hasReservation == reserved && hasRequiredLabels
+      noAssociatedDisk && acceptedRoles(resource.getRole) && matchesReservationSelector
     }
 
     override def toString: String = {
-      val reservedString = if (reserved) "RESERVED" else "unreserved"
+      val reservedString = if (reservation.nonEmpty) " RESERVED" else ""
       val rolesString = acceptedRoles.mkString(", ")
-      val labelStrings = if (requiredLabels.labels.nonEmpty) s" and labels $requiredLabels" else ""
-      s"Considering $reservedString resources with roles {$rolesString}$labelStrings"
+      val labelStrings = if (reservation.exists(_.labels.nonEmpty)) s" and labels $reservation" else ""
+
+      s"Considering$reservedString resources with roles {$rolesString}$labelStrings"
     }
   }
 
   object ResourceSelector {
     /** Match unreserved resources for which role == '*' applies (default) */
-    def wildcard: ResourceSelector = ResourceSelector(Set(ResourceRole.Unreserved), reserved = false)
+    def wildcard: ResourceSelector = ResourceSelector(Set(ResourceRole.Unreserved), reservation = None)
   }
 
   /**
@@ -98,7 +106,7 @@ object ResourceMatcher {
 
     // Local volumes only need to be matched if we are making a reservation for resident tasks --
     // that means if the resources that are matched are still unreserved.
-    val diskMatch = if (!selector.reserved && app.diskForPersistentVolumes > 0)
+    val diskMatch = if (selector.reservation.isEmpty && app.diskForPersistentVolumes > 0)
       scalarResourceMatch(Resource.DISK, app.disk + app.diskForPersistentVolumes,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     else

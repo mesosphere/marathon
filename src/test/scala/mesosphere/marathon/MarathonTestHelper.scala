@@ -9,7 +9,7 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.impl.{ ResourceLabels, TaskLabels }
+import mesosphere.marathon.core.launcher.impl.{ ReservationSelector, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
@@ -71,14 +71,14 @@ object MarathonTestHelper {
 
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
                      beginPort: Int = 31000, endPort: Int = 32000, role: String = ResourceRole.Unreserved,
-                     reservation: Option[ResourceLabels] = None): Offer.Builder = {
+                     reservation: Option[ReservationSelector] = None): Offer.Builder = {
 
     require(role != ResourceRole.Unreserved || reservation.isEmpty, "reserved resources cannot have role *")
 
     def heedReserved(resource: Mesos.Resource): Mesos.Resource = {
       reservation match {
-        case Some(reservationLabels) =>
-          val labels = reservationLabels.mesosLabels
+        case Some(reservationWithLabels) =>
+          val labels = reservationWithLabels.mesosLabels
           val reservation =
             Mesos.Resource.ReservationInfo.newBuilder()
               .setPrincipal("marathon")

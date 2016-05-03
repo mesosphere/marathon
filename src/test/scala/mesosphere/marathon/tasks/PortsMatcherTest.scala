@@ -98,7 +98,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
       .addResources(portsResource)
       .addResources(portsResource2)
       .build
-    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set(ResourceRole.Unreserved, "marathon"), reserved = false))
+    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set(ResourceRole.Unreserved, "marathon"), reservation = None))
 
     assert(matcher.portsMatch.isDefined)
     assert(5 == matcher.portsMatch.get.hostPorts.size)
@@ -315,7 +315,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
     )
 
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31000).addResources(portsResource).build
-    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set(ResourceRole.Unreserved, "marathon"), reserved = false))
+    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set(ResourceRole.Unreserved, "marathon"), reservation = None))
 
     assert(matcher.portsMatch.isDefined)
     assert(matcher.portsMatch.get.hostPorts.toSet == Set(31000, 31001))

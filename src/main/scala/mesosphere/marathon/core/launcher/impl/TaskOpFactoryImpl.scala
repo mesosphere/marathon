@@ -96,8 +96,8 @@ class TaskOpFactoryImpl @Inject() (
           ResourceMatcher.matchResources(
             offer, app, tasksToConsiderForConstraints.values,
             ResourceSelector(
-              rolesToConsider, reserved = true,
-              requiredLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task)
+              rolesToConsider,
+              reservation = Some(TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task))
             )
           )
 
@@ -119,7 +119,7 @@ class TaskOpFactoryImpl @Inject() (
       val matchingResourcesForReservation =
         ResourceMatcher.matchResources(
           offer, app, tasks.values,
-          ResourceSelector(rolesToConsider, reserved = false)
+          ResourceSelector(rolesToConsider, reservation = None)
         )
       matchingResourcesForReservation.map { resourceMatch =>
         reserveAndCreateVolumes(request.frameworkId, app, offer, resourceMatch)
