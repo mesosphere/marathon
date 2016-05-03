@@ -4,7 +4,12 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.serialization.{SecretsSerializer, ContainerSerializer, PortDefinitionSerializer, ResidencySerializer}
+import mesosphere.marathon.api.serialization.{
+  SecretsSerializer,
+  ContainerSerializer,
+  PortDefinitionSerializer,
+  ResidencySerializer
+}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -33,7 +38,7 @@ case class AppDefinition(
 
   user: Option[String] = AppDefinition.DefaultUser,
 
-  env: Map[String, String] = AppDefinition.DefaultEnv,
+  env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
 
   instances: Int = AppDefinition.DefaultInstances,
 
@@ -81,8 +86,7 @@ case class AppDefinition(
 
   residency: Option[Residency] = AppDefinition.DefaultResidency,
 
-  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets
-)
+  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets)
     extends plugin.AppDefinition with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
@@ -179,7 +183,7 @@ case class AppDefinition(
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
-    val envMap: Map[String, String] =
+    val envMap: Map[String, EnvVarValue] =
       proto.getCmd.getEnvironment.getVariablesList.asScala.map {
         v => v.getName -> v.getValue
       }.toMap
@@ -485,7 +489,7 @@ object AppDefinition {
 
   val DefaultUser: Option[String] = None
 
-  val DefaultEnv: Map[String, String] = Map.empty
+  val DefaultEnv: Map[String, EnvVarValue] = Map.empty
 
   val DefaultInstances: Int = 1
 

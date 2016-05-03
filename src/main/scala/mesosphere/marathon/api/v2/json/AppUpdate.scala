@@ -20,7 +20,7 @@ case class AppUpdate(
 
     user: Option[String] = None,
 
-    env: Option[Map[String, String]] = None,
+    env: Option[Map[String, EnvVarValue]] = None,
 
     instances: Option[Int] = None,
 

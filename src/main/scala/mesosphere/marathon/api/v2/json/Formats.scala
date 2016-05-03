@@ -613,6 +613,26 @@ trait AppAndGroupFormats {
     }
   )
 
+  implicit lazy val EnvVarSecretRefFormat: Format[EnvVarSecretRef] = Json.format[EnvVarSecretRef]
+  implicit lazy val EnvVarValueFormat: Format[EnvVarValue] = Format(
+    new Reads[EnvVarValue] {
+      override def reads(json: JsValue): JsResult[EnvVarValue] = {
+        json.asOpt[String] match {
+          case Some(stringValue) => JsSuccess(EnvVarString(stringValue))
+          case _                 => JsSuccess(json.as[EnvVarSecretRef])
+        }
+      }
+    },
+    new Writes[EnvVarValue] {
+      override def writes(envvar: EnvVarValue): JsValue = {
+        envvar match {
+          case s: EnvVarString      => JsString(s.value)
+          case ref: EnvVarSecretRef => EnvVarSecretRefFormat.writes(ref)
+        }
+      }
+    }
+  )
+
   implicit lazy val AppDefinitionReads: Reads[AppDefinition] = {
     val executorPattern = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r
     (
@@ -620,7 +640,7 @@ trait AppAndGroupFormats {
       (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
       (__ \ "args").readNullable[Seq[String]] ~
       (__ \ "user").readNullable[String] ~
-      (__ \ "env").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultEnv) ~
+      (__ \ "env").readNullable[Map[String, EnvVarValue]].withDefault(AppDefinition.DefaultEnv) ~
       (__ \ "instances").readNullable[Int].withDefault(AppDefinition.DefaultInstances) ~
       (__ \ "cpus").readNullable[Double].withDefault(AppDefinition.DefaultCpus) ~
       (__ \ "mem").readNullable[Double].withDefault(AppDefinition.DefaultMem) ~
@@ -684,8 +704,9 @@ trait AppAndGroupFormats {
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
             (__ \ "residency").readNullable[Residency] ~
             (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
-            (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]].withDefault(AppDefinition.DefaultReadinessChecks) ~
-            (__ \ "secrets").readNullable[Map[String, Secret]].withDefault(AppDefinition.DefaultSecrets)
+            (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]].withDefault(
+              AppDefinition.DefaultReadinessChecks) ~
+              (__ \ "secrets").readNullable[Map[String, Secret]].withDefault(AppDefinition.DefaultSecrets)
           )(ExtraFields)
             .filter(ValidationError("You cannot specify both uris and fetch fields")) { extra =>
               !(extra.uris.nonEmpty && extra.fetch.nonEmpty)
@@ -941,7 +962,7 @@ trait AppAndGroupFormats {
     (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
     (__ \ "args").readNullable[Seq[String]] ~
     (__ \ "user").readNullable[String] ~
-    (__ \ "env").readNullable[Map[String, String]] ~
+    (__ \ "env").readNullable[Map[String, EnvVarValue]] ~
     (__ \ "instances").readNullable[Int] ~
     (__ \ "cpus").readNullable[Double] ~
     (__ \ "mem").readNullable[Double] ~

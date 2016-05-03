@@ -7,7 +7,15 @@ import mesosphere.marathon.api.serialization.{ PortMappingSerializer, PortDefini
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ PersistentVolume, ExternalVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
+import mesosphere.marathon.state.{
+  PersistentVolume,
+  ExternalVolume,
+  AppDefinition,
+  DiscoveryInfo,
+  IpAddress,
+  PathId,
+  EnvVarString
+}
 import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
@@ -296,7 +304,7 @@ object TaskBuilder {
     val envMap: Map[String, String] =
       taskContextEnv(app, taskId) ++
         addPrefix(envPrefix, portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _).toMap) ++
-        app.env
+        app.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
 
     val builder = CommandInfo.newBuilder()
       .setEnvironment(environment(envMap))
