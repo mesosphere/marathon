@@ -796,4 +796,39 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     MarathonTestHelper.validateJsonSchema(app)
   }
+
+  test("SerializationRoundtrip preserves secret references in environment variables") {
+    import Formats._
+
+    val app3 = AppDefinition(
+      id = PathId("/prod/product/frontend/my-app"),
+      cmd = Some("sleep 30"),
+      env = Map[String, EnvVarValue](
+        "foo" -> "bar",
+        "qaz" -> EnvVarSecretRef("james")
+      )
+    )
+    JsonTestHelper.assertSerializationRoundtripWorks(app3)
+  }
+
+  test("environment variables with secrets should parse") {
+    val json =
+      """
+      {
+        "id": "app-with-network-isolation",
+        "cmd": "python3 -m http.server 8080",
+        "env": {
+          "qwe": "rty",
+          "ssh": { "secret": "psst" }
+        }
+      }
+      """
+
+    import Formats._
+    val result = Json.fromJson[AppDefinition](Json.parse(json))
+    assert(result.get.env.equals(Map[String, EnvVarValue](
+      "qwe" -> "rty",
+      "ssh" -> EnvVarSecretRef("psst")
+    )))
+  }
 }
