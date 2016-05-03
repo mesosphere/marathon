@@ -28,7 +28,7 @@ Note that `cmd` in the above example is the command that gets executed. Its valu
 </p>
 
 What happens here is that Marathon hands over execution to Mesos. Mesos executes each task in its own sandbox environment.
-The sandbox is a special directory on each slave that acts as the execution environment (from a storage perspective) and also contains relevant log files as well as `stderr` and `stdout` for the command being executed. See also the role of the sandbox in [debugging distributed apps](https://docs.mesosphere.com/tutorials/debugging-a-mesosphere-cluster/).
+The sandbox is a special directory on each slave that acts as the execution environment (from a storage perspective) and also contains relevant log files as well as `stderr` and `stdout` for the command being executed.
 
 
 ## Using Resources in Applications
