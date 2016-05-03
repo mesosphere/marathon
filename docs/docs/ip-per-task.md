@@ -14,16 +14,16 @@ title: IP-per-task
 
 
 In version 0.14, Marathon introduced experimental IP-per-task support. With the appropriate configuration,
-every task of an app gets its own network interface and IP address.
+each of an app's tasks gets its own network interface and IP address.
 
-This can drastically simplify service discovery, since you can use
-[mesos-dns](https://github.com/mesosphere/mesos-dns) to rely on DNS for service discovery. This enables your
+IP-per-task drastically simplifies service discovery, since you can use
+[Mesos-DNS](https://github.com/mesosphere/mesos-dns) to rely on DNS for service discovery. Mesos-DNS enables your
 applications to use address-only (A) DNS records in combination with known ports to connect to other
-services -- as you would do it in a traditional static cluster environment.
+services, as you would do it in a traditional static cluster environment.
 
-You can request an IP-per-task with default settings like this:
+Request an IP-per-task with default settings by adding the following to your application definition:
 
-```javascript
+```json
 {
   "id": "/i-have-my-own-ip",
   // ... more settings ...
@@ -31,12 +31,12 @@ You can request an IP-per-task with default settings like this:
 }
 ```
 
-Marathon passes down the request for the IP to Mesos. You have to make sure that you installed & configured
+Marathon passes down the request for the IP to Mesos. You have to make sure that you installed and configured
 the appropriate
-[Network Isolation Modules](https://docs.google.com/document/d/17mXtAmdAXcNBwp_JfrxmZcQrs7EO6ancSbejrqjLQ0g) &
-IP Access Manager (IPAM) modules in Mesos. The Marathon support for this feature requires Mesos v0.26.
+[Network Isolation Modules](https://docs.google.com/document/d/17mXtAmdAXcNBwp_JfrxmZcQrs7EO6ancSbejrqjLQ0g) and
+IP Access Manager (IPAM) modules in Mesos. Marathon support for this feature requires Mesos v0.26.
 
-If an application requires IP-per-task, then it cannot request ports to be allocated in the slave.
+If an application requires IP-per-task, it cannot request ports to be allocated in the agent node.
 
 Currently, this feature does not work in combination with Docker containers. We might still change some
 aspects of the API and we appreciate your feedback.
@@ -65,11 +65,10 @@ traffic.
 
 ## Service Discovery
 
-If your application requires IP-per-task, then it cannot request ports to be allocated in the slave. It is
-however still possible to describe the ports that the Application's tasks expose:
+While an application that requires IP-per-task cannot request that ports be allocated in the agent node, you can still specify the ports that the application's tasks expose:
 
 
-```javascript
+```json
 {
   "id": "/i-have-my-own-ip",
   // ... more settings ...
@@ -84,5 +83,4 @@ however still possible to describe the ports that the Application's tasks expose
 }
 ```
 
-Marathon will pass down this information to Mesos (inside the DiscoveryInfo message) when starting new tasks,
-[mesos-dns](https://github.com/mesosphere/mesos-dns) will then expose this information through IN SRV records.
+Marathon will pass this information to Mesos (inside the DiscoveryInfo message) when starting new tasks. [Mesos-DNS](https://github.com/mesosphere/mesos-dns) will then expose this information through IN SRV records.
