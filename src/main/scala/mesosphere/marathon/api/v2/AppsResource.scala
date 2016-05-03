@@ -15,6 +15,7 @@ import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfoService, AppSelector, TaskCounts }
 import mesosphere.marathon.core.appinfo.AppInfo
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
@@ -37,9 +38,11 @@ class AppsResource @Inject() (
     val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    groupManager: GroupManager) extends RestResource with AuthResource {
+    groupManager: GroupManager,
+    pluginManager: PluginManager) extends RestResource with AuthResource {
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
+  implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(pluginManager)
 
   @GET
   @Timed

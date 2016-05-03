@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.validation
 
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state._
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -8,6 +9,8 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 import scala.collection.immutable.Seq
 
 class AppDefinitionReadinessCheckValidationTest extends MarathonSpec with Matchers with GivenWhenThen {
+
+  lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
 
   test("app with 0 readinessChecks is valid") {
     val f = new Fixture
@@ -17,7 +20,7 @@ class AppDefinitionReadinessCheckValidationTest extends MarathonSpec with Matche
     )
 
     Then("the app is considered valid")
-    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+    validAppDefinition(app).isSuccess shouldBe true
   }
 
   test("app with 1 readinessCheck is valid") {
@@ -28,7 +31,7 @@ class AppDefinitionReadinessCheckValidationTest extends MarathonSpec with Matche
     )
 
     Then("the app is considered valid")
-    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+    validAppDefinition(app).isSuccess shouldBe true
   }
 
   test("app with more than 1 readinessChecks is invalid") {
@@ -37,7 +40,7 @@ class AppDefinitionReadinessCheckValidationTest extends MarathonSpec with Matche
     val app = f.app(readinessChecks = Seq(ReadinessCheck(), ReadinessCheck()))
 
     Then("validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("app with invalid readinessChecks is invalid") {
@@ -46,7 +49,7 @@ class AppDefinitionReadinessCheckValidationTest extends MarathonSpec with Matche
     val app = f.app(readinessChecks = Seq(ReadinessCheck(name = "")))
 
     Then("validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("readinessCheck NOT corresponding to port definitions are invalid") {
@@ -59,7 +62,7 @@ class AppDefinitionReadinessCheckValidationTest extends MarathonSpec with Matche
     )
 
     Then("validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("readinessCheck corresponding to port definitions are valid") {
@@ -72,7 +75,7 @@ class AppDefinitionReadinessCheckValidationTest extends MarathonSpec with Matche
     )
 
     Then("validation fails")
-    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+    validAppDefinition(app).isSuccess shouldBe true
   }
 
   class Fixture {

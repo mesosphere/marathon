@@ -6,7 +6,7 @@ import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{ UpgradeStrategy, PortDefinition, AppDefinition, PathId }
+import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils
 import org.scalatest.{ Matchers, BeforeAndAfter, GivenWhenThen }
 
@@ -41,7 +41,7 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
 
     When("The service is upgraded")
     val oldTask = marathon.tasks(serviceDef.id).value.head
-    marathon.updateApp(serviceDef.id, AppUpdate(env = Some(sys.env)))
+    marathon.updateApp(serviceDef.id, AppUpdate(env = Some(EnvVarValue(sys.env))))
     val newTask = WaitTestSupport.waitFor("Wait for new task", 30.seconds) {
       marathon.tasks(serviceDef.id).value.find(_.id != oldTask.id)
     }

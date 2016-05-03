@@ -2,22 +2,20 @@ package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Reservation
+import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 
 /** Infers which TaskOps to create for given app definitions and offers. */
 trait TaskOpFactory {
-
   /**
     * @return a TaskOp if and only if the offer matches the app.
     */
   def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp]
-
 }
 
 object TaskOpFactory {
-
   /**
     * @param app the related app definition
     * @param offer the offer to match against

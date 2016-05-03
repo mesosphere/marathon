@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import com.wix.accord.dsl._
+import mesosphere.marathon.Features
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -20,7 +21,7 @@ case class AppUpdate(
 
     user: Option[String] = None,
 
-    env: Option[Map[String, String]] = None,
+    env: Option[Map[String, EnvVarValue]] = None,
 
     instances: Option[Int] = None,
 
@@ -66,7 +67,9 @@ case class AppUpdate(
 
     ipAddress: Option[IpAddress] = None,
 
-    residency: Option[Residency] = None) {
+    residency: Option[Residency] = None,
+
+    secrets: Option[Map[String, Secret]] = None) {
 
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
@@ -128,7 +131,8 @@ case class AppUpdate(
     // For all other updates, the GroupVersioningUtil will determine a new version if the AppDefinition
     // has really changed.
     versionInfo = app.versionInfo,
-    residency = residency.orElse(app.residency)
+    residency = residency.orElse(app.residency),
+    secrets = secrets.getOrElse(app.secrets)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): AppUpdate = copy(
@@ -151,5 +155,8 @@ object AppUpdate {
     appUp.cpus should optional(be >= 0.0)
     appUp.instances should optional(be >= 0)
     appUp.disk should optional(be >= 0.0)
+    appUp.env is optional(valid(EnvVarValue.envValidator))
+    appUp.secrets is optional(valid(Secret.secretsValidator))
+    appUp.secrets is optional(empty) or featureEnabled(Features.SECRETS)
   }
 }

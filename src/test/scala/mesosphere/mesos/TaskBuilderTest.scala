@@ -1,6 +1,5 @@
 package mesosphere.mesos
 
-import com.google.common.collect.Lists
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.core.task.Task
@@ -1174,14 +1173,14 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         app = AppDefinition(
           id = "/test".toPath,
           portDefinitions = PortDefinitions(8080, 8081),
-          env = Map(
+          env = EnvVarValue(Map(
             "PORT" -> "1",
             "PORTS" -> "ports",
             "PORT0" -> "1",
             "PORT1" -> "2",
             "PORT_8080" -> "port8080",
             "PORT_8081" -> "port8081"
-          )
+          ))
         ),
         taskId = Some(Task.Id("task-123")),
         host = Some("host.mega.corp"),

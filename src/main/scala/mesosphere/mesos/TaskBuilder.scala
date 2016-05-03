@@ -7,7 +7,16 @@ import mesosphere.marathon.api.serialization.{ PortMappingSerializer, PortDefini
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.{ PersistentVolume, ExternalVolume, AppDefinition, DiscoveryInfo, IpAddress, PathId }
+import mesosphere.marathon.plugin.task.AppTaskProcessor
+import mesosphere.marathon.state.{
+  PersistentVolume,
+  ExternalVolume,
+  AppDefinition,
+  DiscoveryInfo,
+  IpAddress,
+  PathId,
+  EnvVarString
+}
 import mesosphere.mesos.ResourceMatcher.{ ResourceSelector, ResourceMatch }
 import mesosphere.mesos.protos.{ RangesResource, Resource, ScalarResource }
 import org.apache.mesos.Protos.Environment._
@@ -20,7 +29,8 @@ import scala.collection.immutable.Seq
 
 class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => Task.Id,
-                  config: MarathonConf) {
+                  config: MarathonConf,
+                  appTaskProc: Option[AppTaskProcessor] = None) {
 
   val log = LoggerFactory.getLogger(getClass)
 
@@ -62,8 +72,9 @@ class TaskBuilder(app: AppDefinition,
     }
 
     resourceMatchOpt match {
-      case Some(resourceMatch) =>
-        build(offer, resourceMatch, volumeMatchOpt)
+      case Some(resourceMatch) => {
+        build(offer, resourceMatch, volumeMatchOpt, appTaskProc)
+      }
       case _ =>
         if (log.isInfoEnabled) logInsufficientResources()
         None
@@ -90,7 +101,8 @@ class TaskBuilder(app: AppDefinition,
   private[this] def build(
     offer: Offer,
     resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): Some[(TaskInfo, Seq[Int])] = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
+    taskBuildOpt: Option[AppTaskProcessor]): Some[(TaskInfo, Seq[Int])] = {
 
     val executor: Executor = if (app.executor == "") {
       config.executor
@@ -178,6 +190,7 @@ class TaskBuilder(app: AppDefinition,
     }
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
+    taskBuildOpt.foreach(_(app, builder)) // invoke builder plugins
 
     Some(builder.build -> resourceMatch.hostPorts)
   }
@@ -296,7 +309,7 @@ object TaskBuilder {
     val envMap: Map[String, String] =
       taskContextEnv(app, taskId) ++
         addPrefix(envPrefix, portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _).toMap) ++
-        app.env
+        app.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
 
     val builder = CommandInfo.newBuilder()
       .setEnvironment(environment(envMap))

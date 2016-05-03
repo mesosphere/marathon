@@ -231,7 +231,9 @@ object Dependencies {
 
   val pluginInterface = Seq(
     playJson % "compile",
-    guava % "compile"
+    mesosUtils % "compile",
+    guava % "compile",
+    wixAccord % "compile"
   )
 
   val excludeSlf4jLog4j12 = ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")

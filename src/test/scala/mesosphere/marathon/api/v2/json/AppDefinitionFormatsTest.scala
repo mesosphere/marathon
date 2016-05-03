@@ -17,7 +17,8 @@ class AppDefinitionFormatsTest
     with AppAndGroupFormats
     with HealthCheckFormats
     with Matchers
-    with FetchUriFormats {
+    with FetchUriFormats
+    with SecretFormats {
 
   import Formats.PathIdFormat
 
@@ -72,6 +73,7 @@ class AppDefinitionFormatsTest
     (r1 \ "dependencies").as[Set[PathId]] should equal (DefaultDependencies)
     (r1 \ "upgradeStrategy").as[UpgradeStrategy] should equal (DefaultUpgradeStrategy)
     (r1 \ "residency").asOpt[String] should equal (None)
+    (r1 \ "secrets").as[Map[String, Secret]] should equal (DefaultSecrets)
   }
 
   test("ToJson should serialize full version info") {
@@ -119,6 +121,7 @@ class AppDefinitionFormatsTest
     r1.dependencies should equal (DefaultDependencies)
     r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
     r1.acceptedResourceRoles should not be ('defined)
+    r1.secrets should equal (DefaultSecrets)
   }
 
   test("FromJSON should ignore VersionInfo") {
@@ -241,5 +244,35 @@ class AppDefinitionFormatsTest
     val rereadApp = appJson.as[AppDefinition]
     rereadApp.readinessChecks should have size (1)
     rereadApp should equal(app)
+  }
+
+  test("FromJSON should parse secrets") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "secrets": {
+        |     "secret1": { "source": "/foo" },
+        |     "secret2": { "source": "/foo" },
+        |     "secret3": { "source": "/foo2" }
+        |  }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.secrets.keys.size should equal(3)
+    appDef.secrets("secret1").source should equal("/foo")
+    appDef.secrets("secret2").source should equal("/foo")
+    appDef.secrets("secret3").source should equal("/foo2")
+  }
+
+  test("ToJSON should serialize secrets") {
+    import Fixture._
+
+    val json = Json.toJson(a1.copy(secrets = Map(
+      "secret1" -> Secret("/foo"),
+      "secret2" -> Secret("/foo"),
+      "secret3" -> Secret("/foo2")
+    )))
+    (json \ "secrets" \ "secret1" \ "source").as[String] should equal("/foo")
+    (json \ "secrets" \ "secret2" \ "source").as[String] should equal("/foo")
+    (json \ "secrets" \ "secret3" \ "source").as[String] should equal("/foo2")
   }
 }

@@ -1,10 +1,13 @@
 package mesosphere.marathon.api.validation
 
+import com.wix.accord.{ Result, validate }
+import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.HealthCheckDefinition
 import mesosphere.marathon.api.v2.Validation._
-import com.wix.accord.validate
+import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.plugin.validation.AppDefinitionValidator
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
 import mesosphere.marathon._
@@ -14,8 +17,11 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
+import scala.reflect.ClassTag
 
 class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
+
+  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
 
   test("only cmd") {
     val app = AppDefinition(
@@ -425,21 +431,21 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     When("Check if only defining residency without persistent volumes is valid")
     val to1 = from.copy(container = None)
     Then("Should be invalid")
-    AppDefinition.validAppDefinition(to1).isSuccess should be(false)
+    validAppDefinition(to1).isSuccess should be(false)
 
     When("Check if only defining local volumes without residency is valid")
     val to2 = from.copy(residency = None)
     Then("Should be invalid")
-    AppDefinition.validAppDefinition(to2).isSuccess should be(false)
+    validAppDefinition(to2).isSuccess should be(false)
 
     When("Check if defining local volumes and residency is valid")
     Then("Should be valid")
-    AppDefinition.validAppDefinition(from).isSuccess should be(true)
+    validAppDefinition(from).isSuccess should be(true)
 
     When("Check if defining no local volumes and no residency is valid")
     val to3 = from.copy(residency = None, container = None)
     Then("Should be valid")
-    AppDefinition.validAppDefinition(to3).isSuccess should be(true)
+    validAppDefinition(to3).isSuccess should be(true)
   }
 
   test("A application with label MARATHON_SINGLE_INSTANCE_APP may not have an instance count > 1") {
@@ -453,17 +459,17 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation succeeds")
-    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+    validAppDefinition(app).isSuccess shouldBe true
 
     When("the instance count is set to 1")
     val appWith1Instance = app.copy(instances = 1)
     Then("the validation succeeds")
-    AppDefinition.validAppDefinition(appWith1Instance).isSuccess shouldBe true
+    validAppDefinition(appWith1Instance).isSuccess shouldBe true
 
     When("the instance count is set to 2")
     val appWith2Instances = app.copy(instances = 2)
     Then("the validation fails")
-    AppDefinition.validAppDefinition(appWith2Instances).isFailure shouldBe true
+    validAppDefinition(appWith2Instances).isFailure shouldBe true
   }
 
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,0) is invalid") {
@@ -476,7 +482,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,1) is invalid") {
@@ -489,7 +495,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,1) is invalid") {
@@ -502,7 +508,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,0) is valid") {
@@ -515,7 +521,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation fails")
-    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+    validAppDefinition(app).isSuccess shouldBe true
   }
 
   test("readinessChecks are invalid for normal apps") {
@@ -526,7 +532,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       readinessChecks = Seq(ReadinessCheck()))
 
     Then("validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("Resident app may only define unreserved acceptedResourceRoles or None") {
@@ -537,17 +543,17 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     When("validating with role for static reservation")
     val to1 = from.copy(acceptedResourceRoles = Some(Set("foo")))
     Then("Should be invalid")
-    AppDefinition.validAppDefinition(to1).isSuccess shouldBe false
+    validAppDefinition(to1).isSuccess shouldBe false
 
     When("validating with only unreserved roles")
     val to2 = from.copy(acceptedResourceRoles = Some(Set(ResourceRole.Unreserved)))
     Then("Should be valid")
-    AppDefinition.validAppDefinition(to2).isSuccess shouldBe true
+    validAppDefinition(to2).isSuccess shouldBe true
 
     When("validating without acceptedResourceRoles")
     val to3 = from.copy(acceptedResourceRoles = None)
     Then("Should be valid")
-    AppDefinition.validAppDefinition(to3).isSuccess shouldBe true
+    validAppDefinition(to3).isSuccess shouldBe true
   }
 
   test("cassandraWithoutResidency") {
@@ -555,7 +561,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
 
     val f = new Fixture
     val app = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
-    val result = AppDefinition.validAppDefinition(app)
+    val result = validAppDefinition(app)
     result.isSuccess shouldBe true
   }
 
@@ -565,8 +571,44 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val f = new Fixture
     val base = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
     val app = base.copy(upgradeStrategy = UpgradeStrategy(0, 0))
-    val result = AppDefinition.validAppDefinition(app)
+    val result = validAppDefinition(app)
     result.isSuccess shouldBe true
+  }
+
+  test("Validation plugins can invalidate apps") {
+    Given("An app with an invalid label")
+    val app = AppDefinition(
+      cmd = Some("sleep 1000"),
+      upgradeStrategy = UpgradeStrategy(0, 0),
+      env = Map[String, EnvVarValue]("SECURITY_USER" -> new EnvVarString("admin"))
+    )
+    Then("the validation fails")
+    val pm = new PluginManager() {
+      def plugins[T](implicit ct: ClassTag[T]): Seq[T] = {
+        ct.toString() match {
+          case "mesosphere.marathon.plugin.validation.AppDefinitionValidator" =>
+            List(
+              isTrue[mesosphere.marathon.plugin.AppDefinition]("SECURITY_* environment variables are not permitted") {
+                _.env.keys.count(_.startsWith("SECURITY_")) == 0
+              }.asInstanceOf[T]
+            )
+          case _ => List.empty
+        }
+      }
+      def definitions: PluginDefinitions = PluginDefinitions.None
+    }
+    AppDefinition.validAppDefinition(pm)(app).isFailure shouldBe true
+
+    Given("An app without an invalid label")
+    val app2 = AppDefinition(
+      cmd = Some("sleep 1000"),
+      upgradeStrategy = UpgradeStrategy(0, 0),
+      env = EnvVarValue(Map[String, String](
+        "APP_USER" -> "admin"
+      ))
+    )
+    Then("the validation succeeds")
+    AppDefinition.validAppDefinition(pm)(app2).isSuccess shouldBe true
   }
 
   class Fixture {
