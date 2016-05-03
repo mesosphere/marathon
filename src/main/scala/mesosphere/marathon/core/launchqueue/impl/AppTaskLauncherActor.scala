@@ -231,9 +231,15 @@ private class AppTaskLauncherActor(
   private[this] def receiveTaskLaunchNotification: Receive = {
     case TaskOpSourceDelegate.TaskOpRejected(op, reason) if inFlight(op) =>
       removeTask(op.taskId)
-      tasksToLaunch += 1
       log.info("Task op '{}' for {} was REJECTED, reason '{}', rescheduling. {}",
         op.getClass.getSimpleName, op.taskId, reason, status)
+
+      op match {
+        // only increment for launch ops, not for reservations:
+        case _: TaskOp.Launch => tasksToLaunch += 1
+        case _                => ()
+      }
+
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
     case TaskOpSourceDelegate.TaskOpRejected(op, AppTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON) =>
