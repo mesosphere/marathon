@@ -103,6 +103,7 @@ message ServiceDefinition {
   repeated mesos.Port portDefinitions = 27;
   repeated ReadinessCheckDefinition readinessCheckDefinition = 28;
   repeated Secret secrets = 29; // since 1.2
+  repeated EnvVarReference envVarReferences = 30;
 }
 
 message ResourceRoles {
@@ -316,4 +317,19 @@ message ResidencyDefinition {
 message Secret {
   required string id = 1;
   required string source = 2;
+}
+
+message EnvVarReference {
+  enum Type {
+    UNKNOWN = 0;
+    SECRET = 1;
+  }
+
+  required Type type = 1;
+  required string name = 2;
+  optional EnvVarSecretRef secretRef = 3;
+}
+
+message EnvVarSecretRef {
+  required string secretId = 1;
 }
