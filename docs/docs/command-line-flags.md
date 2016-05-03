@@ -115,6 +115,8 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     in milliseconds.
 *  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 1.800.000 (30 minutes)): Timeout for ZooKeeper
     sessions in milliseconds.
+* <span class="label label-default">v1.1.2</span> `--zk_max_node_size` (Optional. Default: 1 MiB):
+    Maximum allowed ZooKeeper node size (in bytes).
 * `--mesos_authentication_principal` (Optional.): The Mesos principal used for
     authentication
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret
@@ -142,6 +144,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     The timeout for preparing the Marathon instance when elected as leader.
 * <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
     A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
+
 ## Tuning Flags for Offer Matching/Launching Tasks
 
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the

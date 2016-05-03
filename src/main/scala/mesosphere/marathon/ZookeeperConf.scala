@@ -51,6 +51,13 @@ trait ZookeeperConf extends ScallopConf {
     default = Some(64 * 1024)
   )
 
+  lazy val zooKeeperMaxNodeSize = opt[Long]("zk_max_node_size",
+    descr = "(Default: 1 MiB) Maximum allowed ZooKeeper node size (in bytes).",
+    noshort = true,
+    validate = _ >= 0,
+    default = Some(1024 * 1000)
+  )
+
   def zooKeeperStatePath: String = "%s/state".format(zkPath)
   def zooKeeperLeaderPath: String = "%s/leader".format(zkPath)
   def zooKeeperServerSetPath: String = "%s/apps".format(zkPath)

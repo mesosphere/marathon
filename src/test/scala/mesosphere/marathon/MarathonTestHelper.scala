@@ -49,7 +49,8 @@ object MarathonTestHelper {
     mesosRole: Option[String] = None,
     acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None,
-    principal: Option[String] = None): AllConf = {
+    principal: Option[String] = None,
+    maxZkNodeSize: Option[Int] = None): AllConf = {
 
     var args = Seq(
       "--master", "127.0.0.1:5050",
@@ -60,6 +61,7 @@ object MarathonTestHelper {
 
     mesosRole.foreach(args ++= Seq("--mesos_role", _))
     acceptedResourceRoles.foreach(v => args ++= Seq("--default_accepted_resource_roles", v.mkString(",")))
+    maxZkNodeSize.foreach(size => args ++= Seq("--zk_max_node_size", size.toString))
     envVarsPrefix.foreach(args ++ Seq("--env_vars_prefix", _))
     makeConfig(args: _*)
   }
