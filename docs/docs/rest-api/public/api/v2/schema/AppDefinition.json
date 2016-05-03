@@ -23,13 +23,6 @@
     ]
   },
   "properties": {
-    "secrets": {
-      "type": "object",
-      "description": "Optional. A dictionary of secrets.",
-      "additionalProperties": {
-        "type": "object"
-      }
-    },
     "acceptedResourceRoles": {
       "items": {
         "type": "string"
@@ -553,6 +546,25 @@
     "requirePorts": {
       "type": "boolean",
       "description": "Normally, the host ports of your tasks are automatically assigned. This corresponds to the requirePorts value false which is the default. If you need more control and want to specify your host ports in advance, you can set requirePorts to true. This way the ports you have specified are used as host ports. That also means that Marathon can schedule the associated tasks only on hosts that have the specified ports available."
+    },
+    "secrets": {
+      "type": "object",
+      "description": "A map with named secret declarations. The key is used to reference the values from other places in the app definition.",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "description": "A secret declaration.",
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "The source of the secret's value. The format depends on the secret store used by Mesos.",
+              "minLength": 1,
+              "required" : true
+            }
+          },
+          "additionalProperties": false
+        }
+      }
     },
     "storeUrls": {
       "type": "array",
