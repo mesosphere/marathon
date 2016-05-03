@@ -4,19 +4,19 @@ title: Constraints
 
 # Constraints
 
-Constraints control where apps run to allow optimizing for fault tolerance or locality. They are made up of three parts: a field name, an operator, and an optional parameter. The field can be the slave hostname or any Mesos slave attribute.
+Constraints control where apps run to allow optimizing for either fault tolerance (by spreading a task out on multiple nodes) or locality (by running all of an applications tasks on the same node). Constraints have three parts: a field name, an operator, and an optional parameter. The field can be the slave hostname or any Mesos slave attribute.
 
 ## Fields
 
 ### Hostname field
 
-`hostname` field matches the slave hostnames, see `UNIQUE operator` for usage example.
+The `hostname` field matches the the agent node hostnames. See `UNIQUE operator`, below, for a usage example.
 
 `hostname` field supports all operators of Marathon.
 
 ### Attribute field
 
-If the field name is none of the above, it will be treated as a Mesos slave attribute. Mesos slave attribute is a way to tag a slave node, see `mesos-slave --help` to learn how to set the attributes.
+If the field name is not the agent node hostname, it will be treated as a Mesos agent node attribute. A Mesos agent node attribute allows you to tag an agent node. See `mesos-slave --help` to learn how to set the attributes.
 
 If the specified attribute is not defined on the slave, then most operators will refuse to run tasks on this slave. In fact, only the `UNLIKE` operator will (and always will) accept this offer for now, while other operators will always refuse it.
 
