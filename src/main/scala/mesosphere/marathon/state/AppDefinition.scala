@@ -571,13 +571,14 @@ object AppDefinition {
     appDef.disk should be >= 0.0
     appDef.secrets.values is valid
     appDef.secrets.keys is every(Secret.validSecretId)
+    appDef.env.values is every(valid)
     appDef must complyWithResourceRoleRules
     appDef must complyWithResidencyRules
     appDef must complyWithMigrationAPI
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
-  } and ExternalVolumes.validApp
+  } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   /**
     * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.
