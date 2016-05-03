@@ -24,21 +24,22 @@ class AppUpdateTest extends MarathonSpec {
   import Formats._
   import mesosphere.marathon.integration.setup.V2TestFormats._
 
+  def shouldViolate(update: AppUpdate, path: String, template: String): Unit = {
+    val violations = validate(update)
+    assert(violations.isFailure)
+    assert(ValidationHelper.getAllRuleConstrains(violations).exists(v =>
+      v.path.getOrElse(false) == path && v.message == template
+    ), s"expected path $path and message $template, but instead found" +
+      ValidationHelper.getAllRuleConstrains(violations))
+  }
+
+  def shouldNotViolate(update: AppUpdate, path: String, template: String): Unit = {
+    val violations = validate(update)
+    assert(!ValidationHelper.getAllRuleConstrains(violations).exists(v =>
+      v.path.getOrElse(false) == path && v.message == template))
+  }
+
   test("Validation") {
-    def shouldViolate(update: AppUpdate, path: String, template: String): Unit = {
-      val violations = validate(update)
-      assert(violations.isFailure)
-      assert(ValidationHelper.getAllRuleConstrains(violations).exists(v =>
-        v.path.getOrElse(false) == path && v.message == template
-      ))
-    }
-
-    def shouldNotViolate(update: AppUpdate, path: String, template: String): Unit = {
-      val violations = validate(update)
-      assert(!ValidationHelper.getAllRuleConstrains(violations).exists(v =>
-        v.path.getOrElse(false) == path && v.message == template))
-    }
-
     val update = AppUpdate()
 
     shouldViolate(
@@ -71,6 +72,18 @@ class AppUpdateTest extends MarathonSpec {
     shouldViolate(update.copy(instances = Some(-3)), "/instances", "got -3, expected 0 or more")
   }
 
+  test("Validate secrets") {
+    val update = AppUpdate()
+
+    shouldViolate(update.copy(secrets = Some(Map(
+      "a" -> Secret("")
+    ))), "/secrets(a)/source", "must not be empty")
+
+    shouldViolate(update.copy(secrets = Some(Map(
+      "" -> Secret("a/b/c")
+    ))), "/secrets()", "must not be empty")
+  }
+
   private[this] def fromJsonString(json: String): AppUpdate = {
     Json.fromJson[AppUpdate](Json.parse(json)).get
   }
@@ -85,7 +98,7 @@ class AppUpdateTest extends MarathonSpec {
       cmd = Some("sleep 60"),
       args = None,
       user = Some("nobody"),
-      env = Some(Map("LANG" -> "en-US")),
+      env = Some(EnvVarValue(Map("LANG" -> "en-US"))),
       instances = Some(16),
       cpus = Some(2.0),
       mem = Some(256.0),

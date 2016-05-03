@@ -18,7 +18,6 @@ import play.api.libs.json.Json
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.util.Try
-import scala.util.control.NonFatal
 
 // scalastyle:off magic.number
 object SingleMarathonIntegrationTest {

@@ -3,23 +3,32 @@ package mesosphere.marathon.state
 import java.util.regex.Pattern
 
 import com.wix.accord._
+import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.serialization.{ContainerSerializer, PortDefinitionSerializer, ResidencySerializer}
+import mesosphere.marathon.api.serialization.{
+  ContainerSerializer,
+  EnvVarRefSerializer,
+  PortDefinitionSerializer,
+  ResidencySerializer,
+  SecretsSerializer
+}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.AppDefinition.VersionInfo.{FullVersionInfo, OnlyVersion}
-import mesosphere.marathon.state.AppDefinition.{Labels, VersionInfo}
+import mesosphere.marathon.plugin.validation.AppDefinitionValidator
+import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
+import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.{Protos, plugin}
+import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
-import mesosphere.mesos.protos.{Resource, ScalarResource}
+import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
-import org.apache.mesos.{Protos => mesos}
+import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
@@ -36,7 +45,7 @@ case class AppDefinition(
 
   user: Option[String] = AppDefinition.DefaultUser,
 
-  env: Map[String, String] = AppDefinition.DefaultEnv,
+  env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
 
   instances: Int = AppDefinition.DefaultInstances,
 
@@ -82,8 +91,9 @@ case class AppDefinition(
 
   versionInfo: VersionInfo = VersionInfo.NoVersion,
 
-  residency: Option[Residency] = AppDefinition.DefaultResidency)
+  residency: Option[Residency] = AppDefinition.DefaultResidency,
 
+  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets)
     extends plugin.AppDefinition with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
@@ -152,6 +162,8 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
+      .addAllSecrets(secrets.toIterable.map(SecretsSerializer.toProto).asJava)
+      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
@@ -179,10 +191,13 @@ case class AppDefinition(
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
-    val envMap: Map[String, String] =
+    val envMap: Map[String, EnvVarValue] = EnvVarValue(
       proto.getCmd.getEnvironment.getVariablesList.asScala.map {
         v => v.getName -> v.getValue
-      }.toMap
+      }.toMap)
+
+    val envRefs: Map[String, EnvVarValue] =
+      proto.getEnvVarReferencesList.asScala.flatMap(EnvVarRefSerializer.fromProto).toMap
 
     val resourcesMap: Map[String, Double] =
       proto.getResourcesList.asScala.map {
@@ -245,7 +260,7 @@ case class AppDefinition(
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
-      env = envMap,
+      env = envMap ++ envRefs,
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
@@ -259,7 +274,8 @@ case class AppDefinition(
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
       ipAddress = ipAddressOption,
-      residency = residencyOption
+      residency = residencyOption,
+      secrets = proto.getSecretsList.asScala.map(SecretsSerializer.fromProto).toMap
     )
   }
 
@@ -328,7 +344,8 @@ case class AppDefinition(
         acceptedResourceRoles != to.acceptedResourceRoles ||
         ipAddress != to.ipAddress ||
         readinessChecks != to.readinessChecks ||
-        residency != to.residency
+        residency != to.residency ||
+        secrets != to.secrets
     }
   }
 
@@ -411,7 +428,7 @@ case class AppDefinition(
   }
 }
 
-object AppDefinition {
+object AppDefinition extends GeneralPurposeCombinators {
 
   sealed trait VersionInfo {
     def version: Timestamp
@@ -483,7 +500,7 @@ object AppDefinition {
 
   val DefaultUser: Option[String] = None
 
-  val DefaultEnv: Map[String, String] = Map.empty
+  val DefaultEnv: Map[String, EnvVarValue] = Map.empty
 
   val DefaultInstances: Int = 1
 
@@ -523,6 +540,8 @@ object AppDefinition {
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
+  val DefaultSecrets: Map[String, Secret] = Map.empty
+
   object Labels {
     val Default: Map[String, String] = Map.empty
 
@@ -556,6 +575,9 @@ object AppDefinition {
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
     appDef.disk should be >= 0.0
+    appDef.secrets is valid(Secret.secretsValidator)
+    appDef.secrets is empty or featureEnabled(Features.SECRETS)
+    appDef.env is valid(EnvVarValue.envValidator)
     appDef must complyWithResourceRoleRules
     appDef must complyWithResidencyRules
     appDef must complyWithMigrationAPI
@@ -563,7 +585,7 @@ object AppDefinition {
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
     appDef.constraints.each must complyWithConstraintRules
-  } and ExternalVolumes.validApp
+  } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   /**
     * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.
@@ -572,11 +594,12 @@ object AppDefinition {
     * Until the user changed all invalid apps, the user would get weird validation
     * errors for every deployment potentially unrelated to the deployed apps.
     */
-  implicit val validAppDefinition: Validator[AppDefinition] = validator[AppDefinition] { app =>
-    app.id is valid
-    app.id is PathId.absolutePathValidator
-    app.dependencies is every(PathId.validPathWithBase(app.id.parent))
-  } and validBasicAppDefinition
+  def validAppDefinition(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+    validator[AppDefinition] { app =>
+      app.id is valid
+      app.id is PathId.absolutePathValidator
+      app.dependencies is every(PathId.validPathWithBase(app.id.parent))
+    } and validBasicAppDefinition and pluginValidators
 
   /**
     * Validator for apps, which are being part of a group.
@@ -587,6 +610,14 @@ object AppDefinition {
   def validNestedAppDefinition(base: PathId): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.id is PathId.validPathWithBase(base)
   } and validBasicAppDefinition
+
+  private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+    new Validator[AppDefinition] {
+      override def apply(app: AppDefinition): Result = {
+        val plugins = pluginManager.plugins[AppDefinitionValidator]
+        new And(plugins: _*)(app)
+      }
+    }
 
   private val complyWithResidencyRules: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
@@ -644,24 +675,28 @@ object AppDefinition {
     override def apply(c: Constraint): Result = {
       if (!c.hasField || !c.hasOperator) {
         Failure(Set(RuleViolation(c, "Missing field and operator", None)))
-      } else {
+      }
+      else {
         c.getOperator match {
           case UNIQUE =>
             if (c.hasValue && c.getValue.nonEmpty) {
               Failure(Set(RuleViolation(c, "Value specified but not used", None)))
-            } else {
+            }
+            else {
               Success
             }
           case CLUSTER =>
             if (c.hasValue && c.getValue.nonEmpty) {
               Success
-            } else {
+            }
+            else {
               Failure(Set(RuleViolation(c, "Missing value", None)))
             }
           case GROUP_BY =>
             if (!c.hasValue || (c.hasValue && c.getValue.nonEmpty && Try(c.getValue.toInt).isSuccess)) {
               Success
-            } else {
+            }
+            else {
               Failure(Set(RuleViolation(c,
                 "Value was specified but is not a number",
                 Some("GROUP_BY may either have no value or an integer value"))))
@@ -676,7 +711,8 @@ object AppDefinition {
                     s"'${c.getValue}' is not a valid regular expression",
                     Some(s"${c.getValue}\n${e.getMessage}"))))
               }
-            } else {
+            }
+            else {
               Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
             }
           case _ =>

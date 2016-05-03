@@ -1,8 +1,9 @@
 package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.{ Protos, MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.{ AllConf, Protos, MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
@@ -11,6 +12,7 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
@@ -21,6 +23,11 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
+  before {
+    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+  }
+
+  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
 
   test("Validation") {
     def shouldViolate(app: AppDefinition, path: String, template: String): Unit = {
@@ -378,7 +385,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       id = PathId("/prod/product/frontend/my-app"),
       cmd = Some("sleep 30"),
       user = Some("nobody"),
-      env = Map("key1" -> "value1", "key2" -> "value2"),
+      env = EnvVarValue(Map("key1" -> "value1", "key2" -> "value2")),
       instances = 5,
       cpus = 5.0,
       mem = 55.0,
@@ -795,5 +802,40 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     MarathonTestHelper.validateJsonSchema(app)
+  }
+
+  test("SerializationRoundtrip preserves secret references in environment variables") {
+    import Formats._
+
+    val app3 = AppDefinition(
+      id = PathId("/prod/product/frontend/my-app"),
+      cmd = Some("sleep 30"),
+      env = Map[String, EnvVarValue](
+        "foo" -> "bar".toEnvVar,
+        "qaz" -> EnvVarSecretRef("james")
+      )
+    )
+    JsonTestHelper.assertSerializationRoundtripWorks(app3)
+  }
+
+  test("environment variables with secrets should parse") {
+    val json =
+      """
+      {
+        "id": "app-with-network-isolation",
+        "cmd": "python3 -m http.server 8080",
+        "env": {
+          "qwe": "rty",
+          "ssh": { "secret": "psst" }
+        }
+      }
+      """
+
+    import Formats._
+    val result = Json.fromJson[AppDefinition](Json.parse(json))
+    assert(result.get.env.equals(Map[String, EnvVarValue](
+      "qwe" -> "rty".toEnvVar,
+      "ssh" -> EnvVarSecretRef("psst")
+    )))
   }
 }

@@ -1,21 +1,25 @@
 package mesosphere.marathon.api.validation
 
+import com.wix.accord._
 import mesosphere.marathon.Protos.{ Constraint, HealthCheckDefinition }
+import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
-import com.wix.accord.validate
+import mesosphere.marathon.api.v2.json.Formats
+import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
-import mesosphere.marathon._
-import mesosphere.marathon.api.v2.json.Formats
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
+import scala.reflect.ClassTag
 
 class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
+
+  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
 
   test("only cmd") {
     val app = AppDefinition(
@@ -425,21 +429,21 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     When("Check if only defining residency without persistent volumes is valid")
     val to1 = from.copy(container = None)
     Then("Should be invalid")
-    AppDefinition.validAppDefinition(to1).isSuccess should be(false)
+    validAppDefinition(to1).isSuccess should be(false)
 
     When("Check if only defining local volumes without residency is valid")
     val to2 = from.copy(residency = None)
     Then("Should be invalid")
-    AppDefinition.validAppDefinition(to2).isSuccess should be(false)
+    validAppDefinition(to2).isSuccess should be(false)
 
     When("Check if defining local volumes and residency is valid")
     Then("Should be valid")
-    AppDefinition.validAppDefinition(from).isSuccess should be(true)
+    validAppDefinition(from).isSuccess should be(true)
 
     When("Check if defining no local volumes and no residency is valid")
     val to3 = from.copy(residency = None, container = None)
     Then("Should be valid")
-    AppDefinition.validAppDefinition(to3).isSuccess should be(true)
+    validAppDefinition(to3).isSuccess should be(true)
   }
 
   test("A application with label MARATHON_SINGLE_INSTANCE_APP may not have an instance count > 1") {
@@ -453,17 +457,17 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation succeeds")
-    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+    validAppDefinition(app).isSuccess shouldBe true
 
     When("the instance count is set to 1")
     val appWith1Instance = app.copy(instances = 1)
     Then("the validation succeeds")
-    AppDefinition.validAppDefinition(appWith1Instance).isSuccess shouldBe true
+    validAppDefinition(appWith1Instance).isSuccess shouldBe true
 
     When("the instance count is set to 2")
     val appWith2Instances = app.copy(instances = 2)
     Then("the validation fails")
-    AppDefinition.validAppDefinition(appWith2Instances).isFailure shouldBe true
+    validAppDefinition(appWith2Instances).isFailure shouldBe true
   }
 
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,0) is invalid") {
@@ -476,7 +480,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,1) is invalid") {
@@ -489,7 +493,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,1) is invalid") {
@@ -502,7 +506,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,0) is valid") {
@@ -515,7 +519,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("the validation fails")
-    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+    validAppDefinition(app).isSuccess shouldBe true
   }
 
   test("readinessChecks are invalid for normal apps") {
@@ -526,7 +530,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       readinessChecks = Seq(ReadinessCheck()))
 
     Then("validation fails")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("validation of constraints") {
@@ -544,58 +548,58 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       cmd = Some("true"),
       constraints = Set())
     Then("validation succeeds")
-    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+    validAppDefinition(app).isSuccess shouldBe true
 
     Given("A UNIQUE constraint without a value")
     val appUnique = app.copy(constraints = Set(unique.build()))
     Then("validation succeeds")
-    AppDefinition.validAppDefinition(appUnique).isSuccess shouldBe true
+    validAppDefinition(appUnique).isSuccess shouldBe true
 
     Given("A UNIQUE constraint with a value")
     val appUniqueValue = app.copy(constraints = Set(unique.setValue("a").build()))
     Then("validation fails")
-    AppDefinition.validAppDefinition(appUniqueValue).isFailure shouldBe true
+    validAppDefinition(appUniqueValue).isFailure shouldBe true
 
     Given("A CLUSTER constraint without a value")
     val appClusterNoValue = app.copy(constraints = Set(cluster.build()))
     Then("validation fails")
-    AppDefinition.validAppDefinition(appClusterNoValue).isFailure shouldBe true
+    validAppDefinition(appClusterNoValue).isFailure shouldBe true
 
     Given("A CLUSTER constraint with a value")
     val appCluster = app.copy(constraints = Set(cluster.setValue("abc").build()))
     Then("validation succeeds")
-    AppDefinition.validAppDefinition(appCluster).isSuccess shouldBe true
+    validAppDefinition(appCluster).isSuccess shouldBe true
 
     Given("A GROUP_BY without a value")
     val appGroupByNoValue = app.copy(constraints = Set(groupBy.build()))
     Then("validation succeeds")
-    AppDefinition.validAppDefinition(appGroupByNoValue).isSuccess shouldBe true
+    validAppDefinition(appGroupByNoValue).isSuccess shouldBe true
 
     Given("A GROUP_BY with a numeric value")
     val appGroupByNumericValue = app.copy(constraints = Set(groupBy.setValue("123").build()))
     Then("validation succeeds")
-    AppDefinition.validAppDefinition(appGroupByNumericValue).isSuccess shouldBe true
+    validAppDefinition(appGroupByNumericValue).isSuccess shouldBe true
 
     Given("A GROUP_BY with a non-numeric value")
     val appGroupByNonNumericValue = app.copy(constraints = Set(groupBy.setValue("AbcDZ").build()))
     Then("validation fails")
-    AppDefinition.validAppDefinition(appGroupByNonNumericValue).isFailure shouldBe true
+    validAppDefinition(appGroupByNonNumericValue).isFailure shouldBe true
 
     Seq(like, unlike).foreach { op =>
       Given(s"A ${op.getOperator} without a value")
       val appOpNoValue = app.copy(constraints = Set(op.build()))
       Then("validation fails")
-      AppDefinition.validAppDefinition(appOpNoValue).isFailure shouldBe true
+      validAppDefinition(appOpNoValue).isFailure shouldBe true
 
       Given(s"A ${op.getOperator} with a valid regex")
       val appOpRegex = app.copy(constraints = Set(op.setValue(".*").build()))
       Then("validation succeeds")
-      AppDefinition.validAppDefinition(appOpRegex).isSuccess shouldBe true
+      validAppDefinition(appOpRegex).isSuccess shouldBe true
 
       Given(s"A ${op.getOperator} with an invalid regex")
       val appOpBadRegex = app.copy(constraints = Set(op.setValue("*").build()))
       Then("validation fails")
-      AppDefinition.validAppDefinition(appOpBadRegex).isFailure shouldBe true
+      validAppDefinition(appOpBadRegex).isFailure shouldBe true
     }
   }
 
@@ -607,17 +611,17 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     When("validating with role for static reservation")
     val to1 = from.copy(acceptedResourceRoles = Some(Set("foo")))
     Then("Should be invalid")
-    AppDefinition.validAppDefinition(to1).isSuccess shouldBe false
+    validAppDefinition(to1).isSuccess shouldBe false
 
     When("validating with only unreserved roles")
     val to2 = from.copy(acceptedResourceRoles = Some(Set(ResourceRole.Unreserved)))
     Then("Should be valid")
-    AppDefinition.validAppDefinition(to2).isSuccess shouldBe true
+    validAppDefinition(to2).isSuccess shouldBe true
 
     When("validating without acceptedResourceRoles")
     val to3 = from.copy(acceptedResourceRoles = None)
     Then("Should be valid")
-    AppDefinition.validAppDefinition(to3).isSuccess shouldBe true
+    validAppDefinition(to3).isSuccess shouldBe true
   }
 
   test("health check validation should allow port specifications without port indices") {
@@ -642,7 +646,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
       )
     )
     Then("validation succeeds")
-    AppDefinition.validAppDefinition(app1).isSuccess shouldBe true
+    validAppDefinition(app1).isSuccess shouldBe true
   }
 
   test("cassandraWithoutResidency") {
@@ -650,7 +654,7 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
 
     val f = new Fixture
     val app = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
-    val result = AppDefinition.validAppDefinition(app)
+    val result = validAppDefinition(app)
     result.isSuccess shouldBe true
   }
 
@@ -660,8 +664,44 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val f = new Fixture
     val base = Json.parse(f.cassandraWithoutResidency).as[AppDefinition]
     val app = base.copy(upgradeStrategy = UpgradeStrategy(0, 0))
-    val result = AppDefinition.validAppDefinition(app)
+    val result = validAppDefinition(app)
     result.isSuccess shouldBe true
+  }
+
+  test("Validation plugins can invalidate apps") {
+    Given("An app with an invalid label")
+    val app = AppDefinition(
+      cmd = Some("sleep 1000"),
+      upgradeStrategy = UpgradeStrategy(0, 0),
+      env = Map[String, EnvVarValue]("SECURITY_USER" -> new EnvVarString("admin"))
+    )
+    Then("the validation fails")
+    val pm = new PluginManager() {
+      def plugins[T](implicit ct: ClassTag[T]): Seq[T] = {
+        ct.toString() match {
+          case "mesosphere.marathon.plugin.validation.AppDefinitionValidator" =>
+            List(
+              isTrue[mesosphere.marathon.plugin.AppDefinition]("SECURITY_* environment variables are not permitted") {
+                _.env.keys.count(_.startsWith("SECURITY_")) == 0
+              }.asInstanceOf[T]
+            )
+          case _ => List.empty
+        }
+      }
+      def definitions: PluginDefinitions = PluginDefinitions.None
+    }
+    AppDefinition.validAppDefinition(pm)(app).isFailure shouldBe true
+
+    Given("An app without an invalid label")
+    val app2 = AppDefinition(
+      cmd = Some("sleep 1000"),
+      upgradeStrategy = UpgradeStrategy(0, 0),
+      env = EnvVarValue(Map[String, String](
+        "APP_USER" -> "admin"
+      ))
+    )
+    Then("the validation succeeds")
+    AppDefinition.validAppDefinition(pm)(app2).isSuccess shouldBe true
   }
 
   class Fixture {
