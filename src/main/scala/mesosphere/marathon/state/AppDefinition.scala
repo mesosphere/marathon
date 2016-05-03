@@ -8,7 +8,8 @@ import mesosphere.marathon.api.serialization.{
   SecretsSerializer,
   ContainerSerializer,
   PortDefinitionSerializer,
-  ResidencySerializer
+  ResidencySerializer,
+  EnvVarRefSerializer
 }
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
@@ -156,6 +157,7 @@ case class AppDefinition(
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
       .addAllSecrets(secrets.toIterable.map(SecretsSerializer.toProto).asJava)
+      .addAllEnvVarReferences(env.map(EnvVarRefSerializer.toProto).asJava)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
@@ -187,6 +189,9 @@ case class AppDefinition(
       proto.getCmd.getEnvironment.getVariablesList.asScala.map {
         v => v.getName -> v.getValue
       }.toMap
+
+    val envRefs: Map[String, EnvVarValue] =
+      proto.getEnvVarReferencesList.asScala.flatMap(EnvVarRefSerializer.fromProto).toMap
 
     val resourcesMap: Map[String, Double] =
       proto.getResourcesList.asScala.map {
@@ -249,7 +254,7 @@ case class AppDefinition(
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
-      env = envMap,
+      env = envMap ++ envRefs,
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
