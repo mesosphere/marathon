@@ -6,9 +6,9 @@ title: Health Checks
 
 Health checks may be specified per application to be run against that application's tasks.
 
-- The default health check defers to Mesos' knowledge of the task state `TASK_RUNNING => healthy`
+- The default health check employs Mesos' knowledge of the task state `TASK_RUNNING => healthy`
 - Marathon provides a `health` member of the task resource
-  via the [REST API]({{ site.baseurl }}/docs/rest-api.html).
+  via the [REST API]({{ site.baseurl }}/docs/rest-api.html), so you can add a health check to your application definition.
 
 A health check is considered passing if (1) its HTTP response code is between
 200 and 399, inclusive, and (2) its response is received within the
@@ -92,7 +92,7 @@ Options applicable to every protocol:
   health checks.
 * `maxConsecutiveFailures`(Optional. Default: 3): Number of consecutive health
   check failures after which the unhealthy task should be killed.
-  HTTP & TCP health checks: If this value is `0`, then tasks will not be killed due to failing this check.
+  HTTP & TCP health checks: If this value is `0`, tasks will not be killed if they fail the health check.
   
 * `timeoutSeconds` (Optional. Default: 20): Number of seconds after which a
   health check is considered a failure regardless of the response.
