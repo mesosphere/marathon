@@ -226,6 +226,9 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     val app3 = AppDefinition(
       cmd = None,
+      secrets = Map[String, Secret](
+        "psst" -> Secret("/something/secret")
+      ),
       env = Map[String, EnvVarValue](
         "foo" -> "bar",
         "ssh" -> EnvVarSecretRef("psst")
