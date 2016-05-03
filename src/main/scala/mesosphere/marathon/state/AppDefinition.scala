@@ -157,7 +157,7 @@ case class AppDefinition(
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
       .addAllSecrets(secrets.toIterable.map(SecretsSerializer.toProto).asJava)
-      .addAllEnvVarReferences(env.map(EnvVarRefSerializer.toProto).asJava)
+      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }

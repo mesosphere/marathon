@@ -223,6 +223,17 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     val result2 = AppDefinition().mergeFromProto(app2.toProto)
     assert(result2 == app2)
+
+    val app3 = AppDefinition(
+      cmd = None,
+      env = Map[String, EnvVarValue](
+        "foo" -> "bar",
+        "ssh" -> EnvVarSecretRef("psst")
+      ),
+      versionInfo = fullVersion
+    )
+    val result3 = AppDefinition().mergeFromProto(app3.toProto)
+    assert(result3 == app3, s"expected $app3 instead of $result3")
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {

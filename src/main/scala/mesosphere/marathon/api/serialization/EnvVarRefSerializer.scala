@@ -4,12 +4,14 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.state.{ EnvVarValue, EnvVarSecretRef }
 
 object EnvVarRefSerializer {
-  def toProto(envvar: (String, EnvVarValue)): Protos.EnvVarReference = envvar match {
-    case (name: String, secretRef: EnvVarSecretRef) => Protos.EnvVarReference.newBuilder
-      .setName(name)
-      .setType(Protos.EnvVarReference.Type.SECRET)
-      .setSecretRef(Protos.EnvVarSecretRef.newBuilder.setSecretId(secretRef.secret))
-      .build
+  def toProto(envvar: (String, EnvVarValue)): Option[Protos.EnvVarReference] = envvar match {
+    case (name: String, secretRef: EnvVarSecretRef) => Some(
+      Protos.EnvVarReference.newBuilder
+        .setName(name)
+        .setType(Protos.EnvVarReference.Type.SECRET)
+        .setSecretRef(Protos.EnvVarSecretRef.newBuilder.setSecretId(secretRef.secret))
+        .build)
+    case _ => None
   }
 
   def fromProto(ref: Protos.EnvVarReference): Option[(String, EnvVarValue)] =
