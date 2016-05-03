@@ -4,8 +4,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 
 case class Secret(
-  source: String
-)
+  source: String)
 
 object Secret {
   implicit val validSecret: Validator[Secret] = new Validator[Secret] {
