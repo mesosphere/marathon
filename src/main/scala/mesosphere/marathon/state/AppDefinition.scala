@@ -4,7 +4,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
+import mesosphere.marathon.api.serialization.{SecretsSerializer, ContainerSerializer, PortDefinitionSerializer, ResidencySerializer}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -79,8 +79,10 @@ case class AppDefinition(
 
   versionInfo: VersionInfo = VersionInfo.NoVersion,
 
-  residency: Option[Residency] = AppDefinition.DefaultResidency)
+  residency: Option[Residency] = AppDefinition.DefaultResidency,
 
+  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets
+)
     extends plugin.AppDefinition with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
@@ -149,6 +151,7 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
+      .addAllSecrets(secrets.toIterable.map(SecretsSerializer.toProto).asJava)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
@@ -256,7 +259,8 @@ case class AppDefinition(
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
       ipAddress = ipAddressOption,
-      residency = residencyOption
+      residency = residencyOption,
+      secrets = proto.getSecretsList.asScala.map(SecretsSerializer.fromProto).toMap
     )
   }
 
@@ -325,7 +329,8 @@ case class AppDefinition(
         acceptedResourceRoles != to.acceptedResourceRoles ||
         ipAddress != to.ipAddress ||
         readinessChecks != to.readinessChecks ||
-        residency != to.residency
+        residency != to.residency ||
+        secrets != to.secrets
     }
   }
 
@@ -520,6 +525,8 @@ object AppDefinition {
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
+  val DefaultSecrets: Map[String, Secret] = Map.empty
+
   object Labels {
     val Default: Map[String, String] = Map.empty
 
@@ -553,6 +560,8 @@ object AppDefinition {
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
     appDef.disk should be >= 0.0
+    appDef.secrets.values is valid
+    appDef.secrets.keys is every(Secret.validSecretId)
     appDef must complyWithResourceRoleRules
     appDef must complyWithResidencyRules
     appDef must complyWithMigrationAPI

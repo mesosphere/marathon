@@ -59,7 +59,8 @@ trait Formats
     with EventFormats
     with EventSubscribersFormats
     with PluginFormats
-    with IpAddressFormats {
+    with IpAddressFormats
+    with SecretFormats {
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
     Json.obj(
@@ -565,6 +566,10 @@ trait FetchUriFormats {
   }
 }
 
+trait SecretFormats {
+  implicit lazy val SecretFormat = Json.format[Secret]
+}
+
 trait AppAndGroupFormats {
 
   import Formats._
@@ -653,7 +658,8 @@ trait AppAndGroupFormats {
             version: Timestamp,
             residency: Option[Residency],
             maybePortDefinitions: Option[Seq[PortDefinition]],
-            readinessChecks: Seq[ReadinessCheck]) {
+            readinessChecks: Seq[ReadinessCheck],
+            secrets: Map[String, Secret]) {
           def upgradeStrategyOrDefault: UpgradeStrategy = {
             import UpgradeStrategy.{ forResidentTasks, empty }
             upgradeStrategy.getOrElse {
@@ -678,7 +684,8 @@ trait AppAndGroupFormats {
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
             (__ \ "residency").readNullable[Residency] ~
             (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
-            (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]].withDefault(AppDefinition.DefaultReadinessChecks)
+            (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]].withDefault(AppDefinition.DefaultReadinessChecks) ~
+            (__ \ "secrets").readNullable[Map[String, Secret]].withDefault(AppDefinition.DefaultSecrets)
           )(ExtraFields)
             .filter(ValidationError("You cannot specify both uris and fetch fields")) { extra =>
               !(extra.uris.nonEmpty && extra.fetch.nonEmpty)
@@ -719,7 +726,8 @@ trait AppAndGroupFormats {
             ipAddress = extra.ipAddress,
             versionInfo = AppDefinition.VersionInfo.OnlyVersion(extra.version),
             residency = extra.residencyOrDefault,
-            readinessChecks = extra.readinessChecks
+            readinessChecks = extra.readinessChecks,
+            secrets = extra.secrets
           )
         }
       }
@@ -820,7 +828,8 @@ trait AppAndGroupFormats {
         "acceptedResourceRoles" -> app.acceptedResourceRoles,
         "ipAddress" -> app.ipAddress,
         "version" -> app.version,
-        "residency" -> app.residency
+        "residency" -> app.residency,
+        "secrets" -> app.secrets
       )
       Json.toJson(app.versionInfo) match {
         case JsNull     => appJson
@@ -968,7 +977,8 @@ trait AppAndGroupFormats {
         residency: Option[Residency],
         ports: Option[Seq[Int]],
         portDefinitions: Option[Seq[PortDefinition]],
-        readinessChecks: Option[Seq[ReadinessCheck]])
+        readinessChecks: Option[Seq[ReadinessCheck]],
+        secrets: Option[Map[String, Secret]])
 
       val extraReads: Reads[ExtraFields] =
         (
@@ -982,7 +992,8 @@ trait AppAndGroupFormats {
           (__ \ "residency").readNullable[Residency] ~
           (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
           (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
-          (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]]
+          (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]] ~
+          (__ \ "secrets").readNullable[Map[String, Secret]]
         )(ExtraFields)
 
       extraReads
@@ -1005,7 +1016,8 @@ trait AppAndGroupFormats {
             portDefinitions = extra.portDefinitions.orElse {
               extra.ports.map { ports => PortDefinitions.apply(ports: _*) }
             },
-            readinessChecks = extra.readinessChecks
+            readinessChecks = extra.readinessChecks,
+            secrets = extra.secrets
           )
         }
     }.map(addHealthCheckPortIndexIfNecessary)

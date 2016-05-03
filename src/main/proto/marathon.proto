@@ -102,6 +102,7 @@ message ServiceDefinition {
   optional ResidencyDefinition residency = 26;
   repeated mesos.Port portDefinitions = 27;
   repeated ReadinessCheckDefinition readinessCheckDefinition = 28;
+  repeated Secret secrets = 29; // since 1.2
 }
 
 message ResourceRoles {
@@ -310,4 +311,9 @@ message ResidencyDefinition {
 
   optional int64 relaunchEscalationTimeoutSeconds = 1;
   optional TaskLostBehavior taskLostBehavior = 2;
+}
+
+message Secret {
+  required string id = 1;
+  required string source = 2;
 }

@@ -66,7 +66,9 @@ case class AppUpdate(
 
     ipAddress: Option[IpAddress] = None,
 
-    residency: Option[Residency] = None) {
+    residency: Option[Residency] = None,
+
+    secrets: Option[Map[String, Secret]] = None) {
 
   require(version.isEmpty || onlyVersionOrIdSet, "The 'version' field may only be combined with the 'id' field.")
 
@@ -128,7 +130,8 @@ case class AppUpdate(
     // For all other updates, the GroupVersioningUtil will determine a new version if the AppDefinition
     // has really changed.
     versionInfo = app.versionInfo,
-    residency = residency.orElse(app.residency)
+    residency = residency.orElse(app.residency),
+    secrets = secrets.getOrElse(app.secrets)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): AppUpdate = copy(
@@ -151,5 +154,7 @@ object AppUpdate {
     appUp.cpus should optional(be >= 0.0)
     appUp.instances should optional(be >= 0)
     appUp.disk should optional(be >= 0.0)
+    appUp.secrets.getOrElse(Map.empty).values.each is valid
+    appUp.secrets.getOrElse(Map.empty).keys.each is Secret.validSecretId
   }
 }
