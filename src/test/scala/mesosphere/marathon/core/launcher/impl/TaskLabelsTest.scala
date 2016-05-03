@@ -45,7 +45,7 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
     import scala.collection.JavaConverters._
 
     val appId = PathId("/test")
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val frameworkId = MarathonTestHelper.frameworkId
     val otherFrameworkId = FrameworkId("very other different framework id")
 

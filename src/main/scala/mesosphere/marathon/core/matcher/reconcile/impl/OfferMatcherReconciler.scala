@@ -56,7 +56,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
       else {
         def createTaskOps(tasksByApp: TasksByApp, rootGroup: Group): MatchedTaskOps = {
           def spurious(taskId: Id): Boolean =
-            tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.appId).isEmpty
+            tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.runSpecId).isEmpty
 
           val taskOps = resourcesByTaskId.iterator.collect {
             case (taskId, spuriousResources) if spurious(taskId) =>

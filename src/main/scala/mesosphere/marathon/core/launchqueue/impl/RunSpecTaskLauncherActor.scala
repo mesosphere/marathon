@@ -7,7 +7,7 @@ import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
-import mesosphere.marathon.core.launchqueue.impl.AppTaskLauncherActor.RecheckIfBackOffUntilReached
+import mesosphere.marathon.core.launchqueue.impl.RunSpecTaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
@@ -17,12 +17,12 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskStateChange }
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.duration._
 
-private[launchqueue] object AppTaskLauncherActor {
+private[launchqueue] object RunSpecTaskLauncherActor {
   // scalastyle:off parameter.number
   def props(
     config: LaunchQueueConfig,
@@ -32,15 +32,15 @@ private[launchqueue] object AppTaskLauncherActor {
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef)(
-      app: AppDefinition,
+      runSpec: RunSpec,
       initialCount: Int): Props = {
-    Props(new AppTaskLauncherActor(
+    Props(new RunSpecTaskLauncherActor(
       config,
       offerMatcherManager,
       clock, taskOpFactory,
       maybeOfferReviver,
       taskTracker, rateLimiterActor,
-      app, initialCount))
+      runSpec, initialCount))
   }
   // scalastyle:on parameter.number
 
@@ -50,7 +50,7 @@ private[launchqueue] object AppTaskLauncherActor {
     * Increase the task count of the receiver.
     * The actor responds with a [[QueuedTaskInfo]] message.
     */
-  case class AddTasks(app: AppDefinition, count: Int) extends Requests
+  case class AddTasks(runSpec: RunSpec, count: Int) extends Requests
   /**
     * Get the current count.
     * The actor responds with a [[QueuedTaskInfo]] message.
@@ -73,7 +73,7 @@ private[launchqueue] object AppTaskLauncherActor {
   * Allows processing offers for starting tasks for the given app.
   */
 // scalastyle:off parameter.number
-private class AppTaskLauncherActor(
+private class RunSpecTaskLauncherActor(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
     clock: Clock,
@@ -82,7 +82,7 @@ private class AppTaskLauncherActor(
     taskTracker: TaskTracker,
     rateLimiterActor: ActorRef,
 
-    private[this] var app: AppDefinition,
+    private[this] var runSpec: RunSpec,
     private[this] var tasksToLaunch: Int) extends Actor with ActorLogging with Stash {
   // scalastyle:on parameter.number
 
@@ -101,11 +101,11 @@ private class AppTaskLauncherActor(
     super.preStart()
 
     log.info("Started appTaskLaunchActor for {} version {} with initial count {}",
-      app.id, app.version, tasksToLaunch)
+      runSpec.id, runSpec.version, tasksToLaunch)
 
-    tasksMap = taskTracker.tasksByAppSync.appTasksMap(app.id).taskMap
+    tasksMap = taskTracker.tasksByAppSync.appTasksMap(runSpec.id).taskMap
 
-    rateLimiterActor ! RateLimiterActor.GetDelay(app)
+    rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
   }
 
   override def postStop(): Unit = {
@@ -119,17 +119,17 @@ private class AppTaskLauncherActor(
 
     super.postStop()
 
-    log.info("Stopped appTaskLaunchActor for {} version {}", app.id, app.version)
+    log.info("Stopped appTaskLaunchActor for {} version {}", runSpec.id, runSpec.version)
   }
 
   override def receive: Receive = waitForInitialDelay
 
   private[this] def waitForInitialDelay: Receive = LoggingReceive.withLabel("waitingForInitialDelay") {
-    case RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp == app =>
+    case RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp == runSpec =>
       stash()
       unstashAll()
       context.become(active)
-    case msg @ RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp != app =>
+    case msg @ RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp != runSpec =>
       log.warning("Received delay update for other app: {}", msg)
     case message: Any => stash()
   }
@@ -160,9 +160,9 @@ private class AppTaskLauncherActor(
       receiveTaskLaunchNotification(notification)
       waitForInFlightIfNecessary()
 
-    case AppTaskLauncherActor.Stop => // ignore, already stopping
+    case RunSpecTaskLauncherActor.Stop => // ignore, already stopping
 
-    case "waitingForInFlight"      => sender() ! "waitingForInFlight" // for testing
+    case "waitingForInFlight"          => sender() ! "waitingForInFlight" // for testing
   }
 
   private[this] def receiveUnknown: Receive = {
@@ -172,7 +172,7 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def receiveStop: Receive = {
-    case AppTaskLauncherActor.Stop =>
+    case RunSpecTaskLauncherActor.Stop =>
       if (inFlightTaskOperations.nonEmpty) {
         // try to stop gracefully but also schedule timeout
         import context.dispatcher
@@ -200,7 +200,7 @@ private class AppTaskLauncherActor(
     * Receive rate limiter updates.
     */
   private[this] def receiveDelayUpdate: Receive = {
-    case RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp == app =>
+    case RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp == runSpec =>
 
       if (backOffUntil != Some(delayUntil)) {
 
@@ -222,7 +222,7 @@ private class AppTaskLauncherActor(
 
       log.debug("After delay update {}", status)
 
-    case msg @ RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp != app =>
+    case msg @ RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp != runSpec =>
       log.warning("Received delay update for other app: {}", msg)
 
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
@@ -236,7 +236,7 @@ private class AppTaskLauncherActor(
         op.getClass.getSimpleName, op.taskId, reason, status)
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
-    case TaskOpSourceDelegate.TaskOpRejected(op, AppTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON) =>
+    case TaskOpSourceDelegate.TaskOpRejected(op, RunSpecTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON) =>
       // This is a message that we scheduled in this actor.
       // When we receive a launch confirmation or rejection, we cancel this timer but
       // there is still a race and we might send ourselves the message nevertheless, so we just
@@ -267,7 +267,7 @@ private class AppTaskLauncherActor(
           // of that node after a task on that node has died.
           //
           // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
-          if (app.constraints.nonEmpty || (app.isResident && shouldLaunchTasks)) {
+          if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchTasks)) {
             maybeOfferReviver.foreach(_.reviveOffers())
           }
 
@@ -284,21 +284,21 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def receiveGetCurrentCount: Receive = {
-    case AppTaskLauncherActor.GetCount =>
+    case RunSpecTaskLauncherActor.GetCount =>
       replyWithQueuedTaskCount()
   }
 
   private[this] def receiveAddCount: Receive = {
-    case AppTaskLauncherActor.AddTasks(newApp, addCount) =>
-      val configChange = app.isUpgrade(newApp)
-      if (configChange || app.needsRestart(newApp) || app.isOnlyScaleChange(newApp)) {
-        app = newApp
+    case RunSpecTaskLauncherActor.AddTasks(newApp, addCount) =>
+      val configChange = runSpec.isUpgrade(newApp)
+      if (configChange || runSpec.needsRestart(newApp) || runSpec.isOnlyScaleChange(newApp)) {
+        runSpec = newApp
         tasksToLaunch = addCount
 
         if (configChange) {
           log.info(
             "getting new app definition config for '{}', version {} with {} initial tasks",
-            app.id, app.version, addCount
+            runSpec.id, runSpec.version, addCount
           )
 
           suspendMatchingUntilWeGetBackoffDelayUpdate()
@@ -307,7 +307,7 @@ private class AppTaskLauncherActor(
         else {
           log.info(
             "scaling change for '{}', version {} with {} initial tasks",
-            app.id, app.version, addCount
+            runSpec.id, runSpec.version, addCount
           )
         }
       }
@@ -327,13 +327,13 @@ private class AppTaskLauncherActor(
 
     // get new back off delay, don't do anything until we get that.
     backOffUntil = None
-    rateLimiterActor ! RateLimiterActor.GetDelay(app)
+    rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
     context.become(waitForInitialDelay)
   }
 
   private[this] def replyWithQueuedTaskCount(): Unit = {
     sender() ! QueuedTaskInfo(
-      app,
+      runSpec,
       tasksLeftToLaunch = tasksToLaunch,
       taskLaunchesInFlight = inFlightTaskOperations.size,
       // don't count tasks that are not launched in the tasksMap
@@ -349,7 +349,7 @@ private class AppTaskLauncherActor(
       sender ! MatchedTaskOps(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val matchRequest = TaskOpFactory.Request(app, offer, tasksMap, tasksToLaunch)
+      val matchRequest = TaskOpFactory.Request(runSpec, offer, tasksMap, tasksToLaunch)
       val taskOp: Option[TaskOp] = taskOpFactory.buildTaskOp(matchRequest)
       taskOp match {
         case Some(op) => handleTaskOp(op, offer)
@@ -378,7 +378,7 @@ private class AppTaskLauncherActor(
     }
 
     log.info("Request {} for task '{}', version '{}'. {}",
-      taskOp.getClass.getSimpleName, taskOp.taskId.idString, app.version, status)
+      taskOp.getClass.getSimpleName, taskOp.taskId.idString, runSpec.version, status)
 
     updateActorState()
     sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, taskOp)))
@@ -386,7 +386,7 @@ private class AppTaskLauncherActor(
 
   private[this] def scheduleTaskOpTimeout(taskOp: TaskOp): Unit = {
     val reject = TaskOpSourceDelegate.TaskOpRejected(
-      taskOp, AppTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON
+      taskOp, RunSpecTaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON
     )
     val cancellable = scheduleTaskOperationTimeout(context, reject)
     inFlightTaskOperations += taskOp.taskId -> cancellable
@@ -413,7 +413,7 @@ private class AppTaskLauncherActor(
 
     val inFlight = inFlightTaskOperations.size
     val tasksLaunchedOrRunning = tasksMap.values.count(_.launched.isDefined) - inFlight
-    val instanceCountDelta = tasksMap.size + tasksToLaunch - app.instances
+    val instanceCountDelta = tasksMap.size + tasksToLaunch - runSpec.instances
     val matchInstanceStr = if (instanceCountDelta == 0) "" else s"instance count delta $instanceCountDelta."
     s"$tasksToLaunch tasksToLaunch, $inFlight in flight, " +
       s"$tasksLaunchedOrRunning confirmed. $matchInstanceStr $backoffStr"
@@ -423,7 +423,7 @@ private class AppTaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
-      new ActorOfferMatcher(clock, self, app.residency.map(_ => app.id))
+      new ActorOfferMatcher(clock, self, runSpec.residency.map(_ => runSpec.id))
     }
     private[this] var registeredAsMatcher = false
 
@@ -432,16 +432,16 @@ private class AppTaskLauncherActor(
       val shouldBeRegistered = shouldLaunchTasks
 
       if (shouldBeRegistered && !registeredAsMatcher) {
-        log.debug("Registering for {}, {}.", app.id, app.version)
+        log.debug("Registering for {}, {}.", runSpec.id, runSpec.version)
         offerMatcherManager.addSubscription(myselfAsOfferMatcher)(context.dispatcher)
         registeredAsMatcher = true
       }
       else if (!shouldBeRegistered && registeredAsMatcher) {
         if (tasksToLaunch > 0) {
-          log.info("Backing off due to task failures. Stop receiving offers for {}, {}", app.id, app.version)
+          log.info("Backing off due to task failures. Stop receiving offers for {}, {}", runSpec.id, runSpec.version)
         }
         else {
-          log.info("No tasks left to launch. Stop receiving offers for {}, {}", app.id, app.version)
+          log.info("No tasks left to launch. Stop receiving offers for {}, {}", runSpec.id, runSpec.version)
         }
         offerMatcherManager.removeSubscription(myselfAsOfferMatcher)(context.dispatcher)
         registeredAsMatcher = false

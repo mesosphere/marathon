@@ -31,7 +31,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val f = new Fixture
     Given("an offer with volume")
     val appId = PathId("/test")
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
     val offer = MarathonTestHelper.offerWithVolumes(taskId.idString, localVolumeIdLaunched)
 
@@ -62,7 +62,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val f = new Fixture
     Given("an offer with volume")
     val appId = PathId("/test")
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
     val offer = MarathonTestHelper.offerWithVolumes(taskId.idString, localVolumeIdLaunched)
 
@@ -93,7 +93,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val f = new Fixture
     Given("an offer with volume")
     val appId = PathId("/test")
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
     val offer = MarathonTestHelper.offerWithVolumes(taskId.idString, localVolumeIdLaunched)
 
@@ -124,7 +124,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val f = new Fixture
     Given("an offer with volume")
     val appId = PathId("/test")
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
     val offer = MarathonTestHelper.offerWithVolumes(taskId.idString, localVolumeIdLaunched)
 

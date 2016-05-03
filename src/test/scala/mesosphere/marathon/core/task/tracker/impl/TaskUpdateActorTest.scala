@@ -24,7 +24,7 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val op = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that fails immediately")
@@ -50,7 +50,7 @@ class TaskUpdateActorTest
 
     Given("an op with an already reached deadline")
     val appId = PathId("/app")
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val op = TaskOpProcessor.Operation(f.clock.now(), f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that succeeds immediately")
@@ -85,7 +85,7 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val op = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that processes it immediately")
@@ -110,7 +110,7 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
     val op = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that does not return")
@@ -135,9 +135,9 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val task1Id = Task.Id.forApp(appId)
+    val task1Id = Task.Id.forRunSpec(appId)
     val op1 = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskStateOp.ForceExpunge(task1Id))
-    val task2Id = Task.Id.forApp(appId)
+    val task2Id = Task.Id.forRunSpec(appId)
     val op2 = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task2Id, TaskStateOp.ForceExpunge(task2Id))
 
     And("a processor that does not return")
@@ -179,7 +179,7 @@ class TaskUpdateActorTest
 
     Given("an op")
     val appId = PathId("/app")
-    val task1Id = Task.Id.forApp(appId)
+    val task1Id = Task.Id.forRunSpec(appId)
     val op1 = TaskOpProcessor.Operation(
       f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskStateOp.ForceExpunge(task1Id)
     )

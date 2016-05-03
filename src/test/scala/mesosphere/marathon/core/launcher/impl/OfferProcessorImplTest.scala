@@ -21,8 +21,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] val offer = MarathonTestHelper.makeBasicOffer().build()
   private[this] val offerId = offer.getId
   private val appId: PathId = PathId("/testapp")
-  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forApp(appId).idString).build()
-  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forApp(appId).idString).build()
+  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(appId).idString).build()
+  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(appId).idString).build()
   private[this] val tasks = Seq(taskInfo1, taskInfo2)
 
   test("match successful, launch tasks successful") {
@@ -111,7 +111,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       val dummyTask = MarathonTestHelper.residentReservedTask(appId)
       val taskStateOp = TaskStateOp.LaunchOnReservation(
         taskId = dummyTask.taskId,
-        appVersion = clock.now(),
+        runSpecVersion = clock.now(),
         status = Task.Status(clock.now()),
         hostPorts = Seq.empty)
       val launch = f.launchWithOldTask(

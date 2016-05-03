@@ -22,5 +22,5 @@ private[bus] class InternalTaskChangeEventStream
 
   override protected def publish(event: TaskChanged, subscriber: Observer[TaskChanged]): Unit =
     subscriber.onNext(event)
-  override protected def classify(event: TaskChanged): PathId = event.appId
+  override protected def classify(event: TaskChanged): PathId = event.runSpecId
 }

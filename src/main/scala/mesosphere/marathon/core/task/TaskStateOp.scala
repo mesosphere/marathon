@@ -36,7 +36,7 @@ object TaskStateOp {
 
   case class LaunchOnReservation(
     taskId: Task.Id,
-    appVersion: Timestamp,
+    runSpecVersion: Timestamp,
     status: Task.Status,
     hostPorts: Seq[Int]) extends TaskStateOp
 

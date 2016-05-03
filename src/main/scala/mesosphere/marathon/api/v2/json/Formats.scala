@@ -127,7 +127,7 @@ trait Formats
           "startedAt" -> launched.status.startedAt,
           "stagedAt" -> launched.status.stagedAt,
           "ports" -> launched.hostPorts,
-          "version" -> launched.appVersion
+          "version" -> launched.runSpecVersion
         )
       ){
           case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
@@ -780,12 +780,12 @@ trait AppAndGroupFormats {
     .withDefault(Residency.defaultTaskLostBehaviour)
   ) (Residency(_, _), unlift(Residency.unapply))
 
-  implicit lazy val AppDefinitionWrites: Writes[AppDefinition] = {
+  implicit lazy val AppDefinitionWrites: Writes[RunSpec] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
     }
 
-    Writes[AppDefinition] { app =>
+    Writes[RunSpec] { app =>
       val appJson: JsObject = Json.obj(
         "id" -> app.id.toString,
         "cmd" -> app.cmd,

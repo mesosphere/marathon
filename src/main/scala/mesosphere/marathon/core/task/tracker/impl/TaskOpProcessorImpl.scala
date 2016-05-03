@@ -47,7 +47,7 @@ private[tracker] object TaskOpProcessorImpl {
       implicit ec: ExecutionContext): Future[TaskStateChange] = {
       directTaskTracker.task(taskId).map {
         case Some(existingTask) =>
-          TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.appId}] already exists"))
+          TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.runSpecId}] already exists"))
 
         case None => TaskStateChange.Update(newState = updatedTask, oldState = None)
       }
@@ -60,7 +60,7 @@ private[tracker] object TaskOpProcessorImpl {
 
         case None =>
           val taskId = op.taskId
-          TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.appId}] does not exist"))
+          TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.runSpecId}] does not exist"))
       }
     }
 
@@ -153,7 +153,7 @@ private[tracker] class TaskOpProcessorImpl(
         TaskTrackerActor.Ack(op.sender, msg)
       }
 
-      log.warn(s"${op.taskId} of app [${op.taskId.appId}]: try to recover from failed ${op.stateOp}", cause)
+      log.warn(s"${op.taskId} of app [${op.taskId.runSpecId}]: try to recover from failed ${op.stateOp}", cause)
 
       repo.task(op.taskId.idString).map {
         case Some(taskProto) =>
@@ -168,7 +168,7 @@ private[tracker] class TaskOpProcessorImpl(
           ack(None, stateChange)
       }.recover {
         case NonFatal(loadingFailure) =>
-          log.warn(s"${op.taskId} of app [${op.taskId.appId}]: task reloading failed as well", loadingFailure)
+          log.warn(s"${op.taskId} of app [${op.taskId.runSpecId}]: task reloading failed as well", loadingFailure)
           throw cause
       }
   }

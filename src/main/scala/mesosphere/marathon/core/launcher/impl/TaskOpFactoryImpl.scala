@@ -5,7 +5,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.state.{ ResourceRole, AppDefinition }
+import mesosphere.marathon.state.{ ResourceRole, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
@@ -31,7 +31,7 @@ class TaskOpFactoryImpl @Inject() (
   override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     log.debug("buildTaskOp")
 
-    if (request.isForResidentApp) {
+    if (request.isForResidentRunSpec) {
       inferForResidents(request)
     }
     else {
@@ -40,9 +40,9 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
-    val TaskOpFactory.Request(app, offer, tasks, _) = request
+    val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(app, Task.Id.forApp, config).buildIfMatches(offer, tasks.values).map {
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config).buildIfMatches(offer, tasks.values).map {
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
@@ -51,7 +51,7 @@ class TaskOpFactoryImpl @Inject() (
             agentId = Some(offer.getSlaveId.getValue),
             attributes = offer.getAttributesList.asScala
           ),
-          appVersion = app.version,
+          runSpecVersion = runSpec.version,
           status = Task.Status(
             stagedAt = clock.now()
           ),
@@ -63,14 +63,14 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   private[this] def inferForResidents(request: TaskOpFactory.Request): Option[TaskOp] = {
-    val TaskOpFactory.Request(app, offer, tasks, additionalLaunches) = request
+    val TaskOpFactory.Request(runSpec, offer, tasks, additionalLaunches) = request
 
     val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
     val needToReserve = request.numberOfWaitingReservations < additionalLaunches
 
     /* *
-     * If an offer HAS reservations/volumes that match our app, handling these has precedence
-     * If an offer NAS NO reservations/volumes that match our app, we can reserve if needed
+     * If an offer HAS reservations/volumes that match our run spec, handling these has precedence
+     * If an offer NAS NO reservations/volumes that match our run spec, we can reserve if needed
      *
      * Scenario 1:
      *  We need to launch tasks and receive an offer that HAS matching reservations/volumes
@@ -84,7 +84,7 @@ class TaskOpFactoryImpl @Inject() (
      */
 
     def maybeLaunchOnReservation = if (needToLaunch) {
-      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, app, request.reserved)
+      val maybeVolumeMatch = PersistentVolumeMatcher.matchVolumes(offer, runSpec, request.reserved)
 
       maybeVolumeMatch.flatMap { volumeMatch =>
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
@@ -94,7 +94,7 @@ class TaskOpFactoryImpl @Inject() (
         val rolesToConsider = config.mesosRole.get.toSet
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
-            offer, app, tasksToConsiderForConstraints.values,
+            offer, runSpec, tasksToConsiderForConstraints.values,
             ResourceSelector(
               rolesToConsider, reserved = true,
               requiredLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task)
@@ -102,27 +102,28 @@ class TaskOpFactoryImpl @Inject() (
           )
 
         matchingReservedResourcesWithoutVolumes.flatMap { otherResourcesMatch =>
-          launchOnReservation(app, offer, volumeMatch.task, matchingReservedResourcesWithoutVolumes, maybeVolumeMatch)
+          launchOnReservation(runSpec, offer, volumeMatch.task,
+            matchingReservedResourcesWithoutVolumes, maybeVolumeMatch)
         }
       }
     }
     else None
 
     def maybeReserveAndCreateVolumes = if (needToReserve) {
-      val configuredRoles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      val configuredRoles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
       // We can only reserve unreserved resources
       val rolesToConsider = Set(ResourceRole.Unreserved).intersect(configuredRoles)
       if (configuredRoles.isEmpty) {
-        log.warn(s"Will never match for ${app.id} as the app is configured to only accept $configuredRoles")
+        log.warn(s"Will never match for ${runSpec.id} as the run spec is configured to only accept $configuredRoles")
       }
 
       val matchingResourcesForReservation =
         ResourceMatcher.matchResources(
-          offer, app, tasks.values,
+          offer, runSpec, tasks.values,
           ResourceSelector(rolesToConsider, reserved = false)
         )
       matchingResourcesForReservation.map { resourceMatch =>
-        reserveAndCreateVolumes(request.frameworkId, app, offer, resourceMatch)
+        reserveAndCreateVolumes(request.frameworkId, runSpec, offer, resourceMatch)
       }
     }
     else None
@@ -131,18 +132,18 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   private[this] def launchOnReservation(
-    app: AppDefinition,
+    runSpec: RunSpec,
     offer: Mesos.Offer,
     task: Task.Reserved,
     resourceMatch: Option[ResourceMatcher.ResourceMatch],
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(app, (_) => task.taskId, config).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(runSpec, (_) => task.taskId, config).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val taskStateOp = TaskStateOp.LaunchOnReservation(
           task.taskId,
-          appVersion = app.version,
+          runSpecVersion = runSpec.version,
           status = Task.Status(
             stagedAt = clock.now()
           ),
@@ -154,12 +155,12 @@ class TaskOpFactoryImpl @Inject() (
 
   private[this] def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
-    app: AppDefinition,
+    RunSpec: RunSpec,
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val localVolumes: Iterable[Task.LocalVolume] = app.persistentVolumes.map { volume =>
-      Task.LocalVolume(Task.LocalVolumeId(app.id, volume), volume)
+    val localVolumes: Iterable[Task.LocalVolume] = RunSpec.persistentVolumes.map { volume =>
+      Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume)
     }
     val persistentVolumeIds = localVolumes.map(_.id)
     val now = clock.now()
@@ -169,7 +170,7 @@ class TaskOpFactoryImpl @Inject() (
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
     val task = Task.Reserved(
-      taskId = Task.Id.forApp(app.id),
+      taskId = Task.Id.forRunSpec(RunSpec.id),
       agentInfo = Task.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),

@@ -1042,22 +1042,22 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("TaskContextEnv empty when no taskId given") {
     val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
-    val app = AppDefinition(
+    val runSpec = AppDefinition(
       id = PathId("/app"),
       versionInfo = version
     )
-    val env = TaskBuilder.taskContextEnv(app = app, taskId = None)
+    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = None)
 
     assert(env == Map.empty)
   }
 
   test("TaskContextEnv minimal") {
     val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
-    val app = AppDefinition(
+    val runSpec = AppDefinition(
       id = PathId("/app"),
       versionInfo = version
     )
-    val env = TaskBuilder.taskContextEnv(app = app, taskId = Some(Task.Id("taskId")))
+    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = Some(Task.Id("taskId")))
 
     assert(
       env == Map(
@@ -1075,7 +1075,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("TaskContextEnv all fields") {
     val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
     val taskId = TaskID("taskId")
-    val app = AppDefinition(
+    val runSpec = AppDefinition(
       id = PathId("/app"),
       versionInfo = version,
       container = Some(Container(
@@ -1091,7 +1091,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         "LABEL2" -> "VALUE2"
       )
     )
-    val env = TaskBuilder.taskContextEnv(app = app, Some(Task.Id(taskId)))
+    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.Id(taskId)))
 
     assert(
       env == Map(
@@ -1115,7 +1115,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val longLabel = "longlabel" * TaskBuilder.maxVariableLength
     var longValue = "longvalue" * TaskBuilder.maxEnvironmentVarLength
 
-    val app = AppDefinition(
+    val runSpec = AppDefinition(
       labels = Map(
         "label" -> "VALUE1",
         "label-with-invalid-chars" -> "VALUE2",
@@ -1125,7 +1125,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       )
     )
 
-    val env = TaskBuilder.taskContextEnv(app = app, Some(Task.Id("taskId")))
+    val env = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.Id("taskId")))
       .filterKeys(_.startsWith("MARATHON_APP_LABEL"))
 
     assert(
@@ -1141,7 +1141,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("AppContextEnvironment") {
     val command =
       TaskBuilder.commandInfo(
-        app = AppDefinition(
+        runSpec = AppDefinition(
           id = "/test".toPath,
           portDefinitions = PortDefinitions(8080, 8081),
           container = Some(Container(
@@ -1171,7 +1171,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val command =
       TaskBuilder.commandInfo(
-        app = AppDefinition(
+        runSpec = AppDefinition(
           id = "/test".toPath,
           portDefinitions = PortDefinitions(8080, 8081),
           env = Map(
@@ -1202,7 +1202,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("PortsEnvWithOnlyPorts") {
     val command =
       TaskBuilder.commandInfo(
-        app = AppDefinition(
+        runSpec = AppDefinition(
           portDefinitions = PortDefinitions(8080, 8081)
         ),
         taskId = Some(Task.Id("task-123")),
@@ -1272,7 +1272,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("PortsEnvWithOnlyMappings") {
     val command =
       TaskBuilder.commandInfo(
-        app = AppDefinition(
+        runSpec = AppDefinition(
           container = Some(Container(
             docker = Some(Docker(
               network = Some(DockerInfo.Network.BRIDGE),
@@ -1298,7 +1298,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("PortsEnvWithBothPortsAndMappings") {
     val command =
       TaskBuilder.commandInfo(
-        app = AppDefinition(
+        runSpec = AppDefinition(
           portDefinitions = PortDefinitions(22, 23),
           container = Some(Container(
             docker = Some(Docker(
@@ -1327,7 +1327,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("TaskWillCopyFetchIntoCommand") {
     val command = TaskBuilder.commandInfo(
-      app = AppDefinition(
+      runSpec = AppDefinition(
         fetch = Seq(
           FetchUri(uri = "http://www.example.com", extract = false, cache = true, executable = false),
           FetchUri(uri = "http://www.example2.com", extract = true, cache = true, executable = true)

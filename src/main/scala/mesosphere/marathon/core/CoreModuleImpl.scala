@@ -108,7 +108,6 @@ class CoreModuleImpl @Inject() (
     maybeOfferReviver,
 
     // external guice dependencies
-    appRepository,
     taskTrackerModule.taskTracker,
     taskOpFactory
   )

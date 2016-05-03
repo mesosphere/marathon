@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.launcher.TaskOpFactory
 import mesosphere.marathon.core.launchqueue.impl.{
-  AppTaskLauncherActor,
+  RunSpecTaskLauncherActor,
   LaunchQueueActor,
   LaunchQueueDelegate,
   RateLimiter,
@@ -14,10 +14,10 @@ import mesosphere.marathon.core.launchqueue.impl.{
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.{ AppDefinition, AppRepository }
+import mesosphere.marathon.state.RunSpec
 
 /**
-  * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given AppDefinition.
+  * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given RunSpec.
   */
 class LaunchQueueModule(
     config: LaunchQueueConfig,
@@ -25,31 +25,30 @@ class LaunchQueueModule(
     clock: Clock,
     subOfferMatcherManager: OfferMatcherManager,
     maybeOfferReviver: Option[OfferReviver],
-    appRepository: AppRepository,
     taskTracker: TaskTracker,
     taskOpFactory: TaskOpFactory) {
 
   private[this] val launchQueueActorRef: ActorRef = {
-    val props = LaunchQueueActor.props(config, appActorProps)
+    val props = LaunchQueueActor.props(config, runSpecActorProps)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }
   private[this] val rateLimiter: RateLimiter = new RateLimiter(clock)
 
   private[this] val rateLimiterActor: ActorRef = {
     val props = RateLimiterActor.props(
-      rateLimiter, appRepository, launchQueueActorRef)
+      rateLimiter, launchQueueActorRef)
     leadershipModule.startWhenLeader(props, "rateLimiter")
   }
 
   val launchQueue: LaunchQueue = new LaunchQueueDelegate(config, launchQueueActorRef, rateLimiterActor)
 
-  private[this] def appActorProps(app: AppDefinition, count: Int): Props =
-    AppTaskLauncherActor.props(
+  private[this] def runSpecActorProps(runSpec: RunSpec, count: Int): Props =
+    RunSpecTaskLauncherActor.props(
       config,
       subOfferMatcherManager,
       clock,
       taskOpFactory,
       maybeOfferReviver,
       taskTracker,
-      rateLimiterActor)(app, count)
+      rateLimiterActor)(runSpec, count)
 }

@@ -166,7 +166,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     agentInfo.host returns "some.host"
     task.taskId returns taskId
     task.launched returns Some(launched)
-    task.appId returns appId
+    task.runSpecId returns appId
     task.effectiveIpAddress(any) returns Some("some.host")
     task.agentInfo returns agentInfo
     launched.hostPorts returns Seq(1, 2, 3)
