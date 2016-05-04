@@ -108,7 +108,7 @@ A typical pattern in the development and deployment cycle is to have your automa
 
 With Marathon it is straightforward to run applications that use Docker images. See also [Running Docker Containers on Marathon]({{ site.baseurl }}/docs/native-docker.html) for further details and advanced options.
 
-In the following example application definition, we will focus on a simple Docker app: a Python-based web server using the image [python:3](https://registry.hub.docker.com/_/python/). Inside the container, the web server runs on port `8080` (the value of `containerPort`). Outside of the container, `hostPort` is set to `0` so that Marathon assigns a random port.
+In the following example application definition, we will focus on a simple Docker app: a Python-based web server using the image [python:3](https://registry.hub.docker.com/_/python/). Inside the container, the web server runs on port `8080` (the value of `containerPort`). `hostPort` is set to `0` so that Marathon assigns a random port on the Mesos agent, which is mapped to port 8080 inside the container.
 
 ```json
 {
