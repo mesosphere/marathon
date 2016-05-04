@@ -7,7 +7,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.event.LocalLeadershipEvent
-import mesosphere.marathon.{ MarathonSpec, MarathonConf }
+import mesosphere.marathon.{MarathonTestHelper, MarathonSpec, MarathonConf}
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
@@ -29,10 +29,12 @@ class ElectionServiceBaseTest
   import ElectionServiceBase._
 
   class Fixture {
-    val MaxActorStartupTime = 5000L
-    val OnElectedPrepareTimeout = 3 * 60 * 1000L
-
-    val config: MarathonConf = mockConfig
+    val config: MarathonConf = MarathonTestHelper.makeConfig(
+      "--master", "127.0.0.1:5050",
+      "--max_actor_startup_time", "5000",
+      "--on_elected_prepare_timeout", s"${3 * 60 * 1000L}",
+      "--zk_timeout", "1000"
+    )
     val httpConfig: HttpConf = mock[HttpConf]
     val electionService: ElectionService = mock[ElectionService]
     val events: EventStream = new EventStream()
@@ -40,23 +42,6 @@ class ElectionServiceBaseTest
     val metrics: Metrics = new Metrics(new MetricRegistry)
     val backoff: Backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
     val shutdownHooks: ShutdownHooks = mock[ShutdownHooks]
-
-    def mockConfig: MarathonConf = {
-      val config = mock[MarathonConf]
-
-      Mockito.when(config.maxActorStartupTime).thenReturn(scallopOption(Some(MaxActorStartupTime)))
-      Mockito.when(config.onElectedPrepareTimeout).thenReturn(scallopOption(Some(OnElectedPrepareTimeout)))
-      Mockito.when(config.zkTimeoutDuration).thenReturn(1.second)
-
-      config
-    }
-
-    def scallopOption[A](a: Option[A]): ScallopOption[A] = {
-      new ScallopOption[A]("") {
-        override def get = a
-        override def apply() = a.get
-      }
-    }
   }
 
   test("state is Idle initially") {
