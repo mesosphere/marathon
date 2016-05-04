@@ -36,8 +36,8 @@ class CuratorElectionService(
   override def leaderHostPortImpl: Option[String] = synchronized {
     try {
       latch.flatMap { l =>
-          val participant = l.getLeader
-          if (participant.isLeader) Some(participant.getId) else None
+        val participant = l.getLeader
+        if (participant.isLeader) Some(participant.getId) else None
       }
     }
     catch {
