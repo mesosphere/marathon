@@ -19,30 +19,6 @@ import org.scalatest.{ GivenWhenThen, BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.duration._
 
-object ElectionServiceBaseTest {
-  import Mockito.mock
-
-  val MaxActorStartupTime = 5000L
-  val OnElectedPrepareTimeout = 3 * 60 * 1000L
-
-  def mockConfig: MarathonConf = {
-    val config = mock(classOf[MarathonConf])
-
-    Mockito.when(config.maxActorStartupTime).thenReturn(scallopOption(Some(MaxActorStartupTime)))
-    Mockito.when(config.onElectedPrepareTimeout).thenReturn(scallopOption(Some(OnElectedPrepareTimeout)))
-    Mockito.when(config.zkTimeoutDuration).thenReturn(1.second)
-
-    config
-  }
-
-  def scallopOption[A](a: Option[A]): ScallopOption[A] = {
-    new ScallopOption[A]("") {
-      override def get = a
-      override def apply() = a.get
-    }
-  }
-}
-
 class ElectionServiceBaseTest
     extends MarathonActorSupport
     with MarathonSpec
@@ -50,76 +26,91 @@ class ElectionServiceBaseTest
     with BeforeAndAfterAll
     with Matchers {
 
-  import ElectionServiceBaseTest._
   import ElectionServiceBase._
 
-  private[this] var config: MarathonConf = _
-  private[this] var httpConfig: HttpConf = _
-  private[this] var electionService: ElectionService = _
-  private[this] var events: EventStream = _
-  private[this] var candidate: ElectionCandidate = _
-  private[this] var metrics: Metrics = _
-  private[this] var backoff: Backoff = _
-  private[this] var shutdownHooks: ShutdownHooks = _
+  class Fixture {
+    val MaxActorStartupTime = 5000L
+    val OnElectedPrepareTimeout = 3 * 60 * 1000L
 
-  before {
-    config = mockConfig
-    httpConfig = mock[HttpConf]
-    electionService = mock[ElectionService]
-    events = new EventStream()
-    candidate = mock[ElectionCandidate]
-    metrics = new Metrics(new MetricRegistry)
-    backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
-    shutdownHooks = mock[ShutdownHooks]
+    val config: MarathonConf = mockConfig
+    val httpConfig: HttpConf = mock[HttpConf]
+    val electionService: ElectionService = mock[ElectionService]
+    val events: EventStream = new EventStream()
+    val candidate: ElectionCandidate = mock[ElectionCandidate]
+    val metrics: Metrics = new Metrics(new MetricRegistry)
+    val backoff: Backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
+    val shutdownHooks: ShutdownHooks = mock[ShutdownHooks]
+
+    def mockConfig: MarathonConf = {
+      val config = mock[MarathonConf]
+
+      Mockito.when(config.maxActorStartupTime).thenReturn(scallopOption(Some(MaxActorStartupTime)))
+      Mockito.when(config.onElectedPrepareTimeout).thenReturn(scallopOption(Some(OnElectedPrepareTimeout)))
+      Mockito.when(config.zkTimeoutDuration).thenReturn(1.second)
+
+      config
+    }
+
+    def scallopOption[A](a: Option[A]): ScallopOption[A] = {
+      new ScallopOption[A]("") {
+        override def get = a
+        override def apply() = a.get
+      }
+    }
   }
 
   test("state is Idle initially") {
+    val f = new Fixture
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, backoff, shutdownHooks
+      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ???
       override def leaderHostPortImpl: Option[String] = ???
     }
 
-    awaitAssert(electionService.state should equal(Idle(candidate = None)))
+    electionService.state should equal(Idle(candidate = None))
   }
 
   test("state is eventually Offered after offerLeadership") {
+    val f = new Fixture
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, backoff, shutdownHooks
+      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("leadership is offered")
-    electionService.offerLeadership(candidate)
+    electionService.offerLeadership(f.candidate)
     Then("state becomes Offered")
-    awaitAssert(electionService.state should equal(Offered(candidate)))
+    awaitAssert(electionService.state should equal(Offered(f.candidate)))
 
     Given("leadership is offered again")
-    electionService.offerLeadership(candidate)
+    electionService.offerLeadership(f.candidate)
     Then("state is still Offered")
-    awaitAssert(electionService.state should equal(Offered(candidate)))
+    awaitAssert(electionService.state should equal(Offered(f.candidate)))
   }
 
   test("state is Offering after offerLeadership first") {
+    val f = new Fixture
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, new ExponentialBackoff(initialValue = 5.seconds), shutdownHooks
+      f.config, system, f.events, f.metrics,
+      new ExponentialBackoff(initialValue = 5.seconds), f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("leadership is offered")
-    electionService.offerLeadership(candidate)
+    electionService.offerLeadership(f.candidate)
     Then("state becomes Offering")
-    awaitAssert(electionService.state should equal(Offering(candidate)))
+    awaitAssert(electionService.state should equal(Offering(f.candidate)))
   }
 
   test("state is Abdicating after abdicateLeadership") {
+    val f = new Fixture
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, backoff, shutdownHooks
+      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPortImpl: Option[String] = ???
@@ -131,50 +122,52 @@ class ElectionServiceBaseTest
     awaitAssert(electionService.state should equal(Idle(None)))
 
     Given("leadership is offered and then abdicated")
-    electionService.offerLeadership(candidate)
-    awaitAssert(electionService.state should equal(Offered(candidate)))
+    electionService.offerLeadership(f.candidate)
+    awaitAssert(electionService.state should equal(Offered(f.candidate)))
     electionService.abdicateLeadership()
     Then("state is Abdicating with reoffer=false")
-    awaitAssert(electionService.state should equal(Abdicating(candidate, reoffer = false)))
+    awaitAssert(electionService.state should equal(Abdicating(f.candidate, reoffer = false)))
 
     Given("leadership is abdicated again")
     electionService.abdicateLeadership()
     Then("state is still Abdicating with reoffer=false")
-    awaitAssert(electionService.state should equal(Abdicating(candidate, reoffer = false)))
+    awaitAssert(electionService.state should equal(Abdicating(f.candidate, reoffer = false)))
 
     Given("leadership is abdicated again with reoffer=true")
     electionService.abdicateLeadership(reoffer = true)
     Then("state is still Abdicating with reoffer=true")
-    awaitAssert(electionService.state should equal(Abdicating(candidate, reoffer = true)))
+    awaitAssert(electionService.state should equal(Abdicating(f.candidate, reoffer = true)))
 
     Given("leadership is abdicated already with reoffer=true and the new reoffer is false")
     electionService.abdicateLeadership(reoffer = false)
     Then("state stays Abdicting with reoffer=true")
-    awaitAssert(electionService.state should equal(Abdicating(candidate, reoffer = true)))
+    awaitAssert(electionService.state should equal(Abdicating(f.candidate, reoffer = true)))
   }
 
   test("offerLeadership while abdicating") {
+    val f = new Fixture
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, backoff, shutdownHooks
+      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = ()
       override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("leadership is offered, immediately abdicated and then offered again")
-    electionService.offerLeadership(candidate)
+    electionService.offerLeadership(f.candidate)
     electionService.abdicateLeadership()
-    awaitAssert(electionService.state should equal(Abdicating(candidate, reoffer = false)))
+    awaitAssert(electionService.state should equal(Abdicating(f.candidate, reoffer = false)))
     Then("state is still Abdicating, but with reoffer=true")
-    electionService.offerLeadership(candidate)
-    awaitAssert(electionService.state should equal(Abdicating(candidate, reoffer = true)))
+    electionService.offerLeadership(f.candidate)
+    awaitAssert(electionService.state should equal(Abdicating(f.candidate, reoffer = true)))
   }
 
   test("events are sent") {
-    events = mock[EventStream]
+    val f = new Fixture
+    val events = mock[EventStream]
 
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, backoff, shutdownHooks
+      f.config, system, events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())
@@ -183,12 +176,12 @@ class ElectionServiceBaseTest
     }
 
     Given("this instance is becoming leader")
-    electionService.offerLeadership(candidate)
+    electionService.offerLeadership(f.candidate)
     awaitAssert(electionService.state.isInstanceOf[Leading])
 
     Then("the candidate is called, then an event is published")
-    val order = Mockito.inOrder(events, candidate)
-    awaitAssert(order.verify(candidate).startLeadership())
+    val order = Mockito.inOrder(events, f.candidate)
+    awaitAssert(order.verify(f.candidate).startLeadership())
     awaitAssert(order.verify(events).publish(LocalLeadershipEvent.ElectedAsLeader))
 
     Given("this instance is abdicating")
@@ -196,20 +189,21 @@ class ElectionServiceBaseTest
     awaitAssert(electionService.state.isInstanceOf[Idle])
 
     Then("the candidate is called, then an event is published")
-    awaitAssert(order.verify(candidate).stopLeadership())
+    awaitAssert(order.verify(f.candidate).stopLeadership())
     awaitAssert(order.verify(events).publish(LocalLeadershipEvent.Standby))
   }
 
   test("leadership can be re-offered") {
+    val f = new Fixture
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, backoff, shutdownHooks
+      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = () // do not call startLeadership here
       override def leaderHostPortImpl: Option[String] = ???
     }
 
     Given("this instance is becoming leader and then abdicating with reoffer=true")
-    electionService.offerLeadership(candidate)
+    electionService.offerLeadership(f.candidate)
     awaitAssert(electionService.state.isInstanceOf[Leading])
     electionService.abdicateLeadership(reoffer = true)
 
@@ -218,11 +212,12 @@ class ElectionServiceBaseTest
   }
 
   test("leadership can be re-offered after an exception in candidate's startLeadership") {
-    backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
+    val f = new Fixture
+    val backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)
     val throwException = new AtomicBoolean(true)
 
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, backoff, shutdownHooks
+      f.config, system, f.events, f.metrics, backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())
@@ -230,7 +225,7 @@ class ElectionServiceBaseTest
       override def leaderHostPortImpl: Option[String] = ???
     }
 
-    Mockito.when(candidate.startLeadership()).thenAnswer(new Answer[Unit] {
+    Mockito.when(f.candidate.startLeadership()).thenAnswer(new Answer[Unit] {
       override def answer(invocation: InvocationOnMock): Unit = {
         if (throwException.get()) {
           throw new Exception("candidate.startLeadership exception")
@@ -239,7 +234,7 @@ class ElectionServiceBaseTest
     })
 
     Given("this instance is offering leadership with reoffer=true and candidate.startLeadershop throws an exception")
-    electionService.offerLeadership(candidate)
+    electionService.offerLeadership(f.candidate)
 
     Then("leadership is re-offered again and again, and the backoff timeout increases")
     awaitAssert(backoff.value() >= 0.09.seconds)
@@ -253,9 +248,9 @@ class ElectionServiceBaseTest
 
   test("leaderHostPort handles exceptions and returns None") {
     Given("an ElactionServiceBase descendent throws an exception in leaderHostPortImpl")
-
+    val f = new Fixture
     val electionService = new ElectionServiceBase(
-      config, system, events, metrics, backoff, shutdownHooks
+      f.config, system, f.events, f.metrics, f.backoff, f.shutdownHooks
     ) {
       override protected def offerLeadershipImpl(): Unit = {
         startLeadership(_ => stopLeadership())

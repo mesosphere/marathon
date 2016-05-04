@@ -7,7 +7,6 @@ import javax.net.ssl.{ HttpsURLConnection, SSLContext }
 import javax.servlet._
 import javax.servlet.http.{ HttpServletRequest, HttpServletResponse }
 
-import akka.actor.ActorRef
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
@@ -20,34 +19,6 @@ import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.util.control.NonFatal
-
-/**
-  * Info about leadership.
-  */
-trait LeaderInfo {
-  /** Query whether we are elected as the current leader. This should be cheap. */
-  def isLeader: Boolean
-
-  /**
-    * Subscribe to leadership change events.
-    *
-    * The given actorRef will initally get the current state via the appropriate
-    * [[mesosphere.marathon.event.LocalLeadershipEvent]] message and will
-    * be informed of changes after that.
-    */
-  def subscribe(self: ActorRef)
-  /** Unsubscribe to any leadership change events to this actor ref. */
-  def unsubscribe(self: ActorRef)
-
-  /**
-    * Query the host/port of the current leader if any. This might involve network round trips
-    * and should be called sparingly.
-    *
-    * @return `Some(`<em>host</em>:</em>port</em>`)`, e.g. my.local.domain:8080 or `None` if
-    *        the leader is currently unknown
-    */
-  def leaderHostPort(): Option[String]
-}
 
 /**
   * Servlet filter that proxies requests to the leader if we are not the leader.

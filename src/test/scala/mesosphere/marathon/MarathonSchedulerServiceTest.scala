@@ -82,7 +82,6 @@ class MarathonSchedulerServiceTest
   private[this] var scheduler: MarathonScheduler = _
   private[this] var migration: Migration = _
   private[this] var schedulerActor: ActorRef = _
-  private[this] var events: EventStream = _
   private[this] var prePostDriverCallbacks: scala.collection.immutable.Seq[PrePostDriverCallback] = _
 
   before {
@@ -98,7 +97,6 @@ class MarathonSchedulerServiceTest
     scheduler = mock[MarathonScheduler]
     migration = mock[Migration]
     schedulerActor = probe.ref
-    events = new EventStream()
     prePostDriverCallbacks = scala.collection.immutable.Seq.empty
   }
 
@@ -124,8 +122,7 @@ class MarathonSchedulerServiceTest
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
-      schedulerActor,
-      events
+      schedulerActor
     )
 
     schedulerService.timer = mockTimer
@@ -152,8 +149,7 @@ class MarathonSchedulerServiceTest
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
-      schedulerActor,
-      events
+      schedulerActor
     ) {
       override def startLeadership(): Unit = ()
     }
@@ -183,7 +179,6 @@ class MarathonSchedulerServiceTest
       system,
       migration,
       schedulerActor,
-      events,
       metrics = new Metrics(new MetricRegistry)
     ) {
       override def newTimer() = mockTimer
@@ -221,8 +216,7 @@ class MarathonSchedulerServiceTest
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
-      schedulerActor,
-      events
+      schedulerActor
     ) {
       override def startLeadership(): Unit = ()
       override def newTimer() = mockTimer
@@ -250,8 +244,7 @@ class MarathonSchedulerServiceTest
       driverFactory(mock[SchedulerDriver]),
       system,
       migration,
-      schedulerActor,
-      events
+      schedulerActor
     ) {
     }
 
@@ -291,8 +284,7 @@ class MarathonSchedulerServiceTest
       driverFactory,
       system,
       migration,
-      schedulerActor,
-      events
+      schedulerActor
     ) {
     }
 
@@ -325,8 +317,7 @@ class MarathonSchedulerServiceTest
       driverFactory,
       system,
       migration,
-      schedulerActor,
-      events
+      schedulerActor
     ) {
     }
 
@@ -359,8 +350,7 @@ class MarathonSchedulerServiceTest
       driverFactory,
       system,
       migration,
-      schedulerActor,
-      events
+      schedulerActor
     ) {
     }
 

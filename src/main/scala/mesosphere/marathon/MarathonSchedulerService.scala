@@ -62,7 +62,6 @@ class MarathonSchedulerService @Inject() (
   system: ActorSystem,
   migration: Migration,
   @Named("schedulerActor") schedulerActor: ActorRef,
-  @Named(EventModule.busName) eventStream: EventStream,
   metrics: Metrics = new Metrics(new MetricRegistry))
     extends AbstractExecutionThreadService with ElectionCandidate {
 
@@ -70,7 +69,7 @@ class MarathonSchedulerService @Inject() (
 
   implicit val zkTimeout = config.zkTimeoutDuration
 
-  val latch = new CountDownLatch(1)
+  val isRunningLatch = new CountDownLatch(1)
 
   // Time to wait before trying to reconcile app tasks after driver starts
   val reconciliationInitialDelay =
@@ -157,7 +156,7 @@ class MarathonSchedulerService @Inject() (
     // triggered. This is to prevent run()
     // from exiting.
     scala.concurrent.blocking {
-      latch.await()
+      isRunningLatch.await()
     }
 
     log.info("Completed run")
@@ -173,7 +172,7 @@ class MarathonSchedulerService @Inject() (
 
     // The countdown latch blocks run() from exiting. Counting down the latch removes the block.
     log.info("Removing the blocking of run()")
-    latch.countDown()
+    isRunningLatch.countDown()
 
     super.triggerShutdown()
   }
@@ -196,12 +195,6 @@ class MarathonSchedulerService @Inject() (
     // execute tasks, only the leader is allowed to
     migration.migrate()
 
-    // start all leadership coordination actors
-    Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)
-
-    // start timers
-    schedulePeriodicOperations()
-
     // run all pre-driver callbacks
     log.info(s"""Call preDriverStarts callbacks on ${prePostDriverCallbacks.mkString(", ")}""")
     Await.result(
@@ -210,8 +203,14 @@ class MarathonSchedulerService @Inject() (
     )
     log.info(s"Finished preDriverStarts callbacks")
 
+    // start all leadership coordination actors
+    Await.result(leadershipCoordinator.prepareForStart(), config.maxActorStartupTime().milliseconds)
+
     // create new driver
     driver = Some(driverFactory.createDriver())
+
+    // start timers
+    schedulePeriodicOperations()
 
     // The following block asynchronously runs the driver. Note that driver.run()
     // blocks until the driver has been stopped (or aborted).
@@ -230,7 +229,7 @@ class MarathonSchedulerService @Inject() (
         }
 
         // tell leader election that we step back, but want to be re-elected if isRunning is true.
-        electionService.abdicateLeadership(error = result.isFailure, reoffer = latch.getCount > 0)
+        electionService.abdicateLeadership(error = result.isFailure, reoffer = isRunningLatch.getCount > 0)
 
         log.info(s"Call postDriverRuns callbacks on ${prePostDriverCallbacks.mkString(", ")}")
         Await.result(Future.sequence(prePostDriverCallbacks.map(_.postDriverTerminates)), config.zkTimeoutDuration)
