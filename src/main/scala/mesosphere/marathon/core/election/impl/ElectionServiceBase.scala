@@ -116,11 +116,11 @@ abstract class ElectionServiceBase(
         state = Abdicating(candidate, reoffer = true, candidateWasStarted)
       case Leading(candidate, abdicate) =>
         log.info("Ignoring leadership offer while being leader")
-      case Offering(candidate) =>
+      case Offering(_) =>
         offeringCase
-      case Offered(candidate) =>
+      case Offered(_) =>
         log.info("Ignoring repeated leadership offer")
-      case Idle(candidate) =>
+      case Idle(_) =>
         idleCase
     }
   }
