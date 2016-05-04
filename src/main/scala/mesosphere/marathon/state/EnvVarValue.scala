@@ -5,20 +5,26 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.plugin
 
 sealed trait EnvVarValue extends plugin.EnvVarValue {
-  val valueValidator: Validator[EnvVarValue]
+  val valueValidator = new Validator[EnvVarValue] {
+    override def apply(v: EnvVarValue) =
+      v match {
+        //scalastyle:off null
+        case null               => Failure(Set(RuleViolation(null, "is a null", None)))
+        //scalastyle:on null
+        case s: EnvVarString    => validate(s)(EnvVarString.valueValidator)
+        case r: EnvVarSecretRef => validate(r)(EnvVarSecretRef.valueValidator)
+      }
+  }
 }
 
 sealed trait EnvVarRef extends EnvVarValue {
   val appValidator: Validator[AppDefinition]
 }
 
-case class EnvVarString(value: String) extends EnvVarValue {
-  override lazy val valueValidator = EnvVarString.valueValidator
-}
+case class EnvVarString(value: String) extends EnvVarValue
 
 case class EnvVarSecretRef(secret: String) extends EnvVarRef {
   override lazy val appValidator = EnvVarSecretRef.appValidator
-  override lazy val valueValidator = EnvVarSecretRef.valueValidator
 }
 
 object EnvVarValue {
@@ -47,17 +53,13 @@ object EnvVarValue {
 
 object EnvVarString {
   import com.wix.accord.combinators.NilValidator
-  lazy val valueValidator = new NilValidator[EnvVarValue]
+  lazy val valueValidator = new NilValidator[EnvVarString]
 }
 
 object EnvVarSecretRef {
   import mesosphere.marathon.api.v2.Validation._
 
-  lazy val valueValidator = validator[EnvVarValue] { v =>
-    v.asInstanceOf[EnvVarSecretRef] is valid(secretValueValidator)
-  }
-
-  lazy val secretValueValidator = validator[EnvVarSecretRef] { ref =>
+  lazy val valueValidator = validator[EnvVarSecretRef] { ref =>
     ref.secret is notEmpty
   }
 
