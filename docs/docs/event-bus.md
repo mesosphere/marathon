@@ -4,7 +4,7 @@ title: Event Bus
 
 # Event Bus
 
-Marathon has an internal event bus that captures all API requests and scaling events. By subscribing to the event bus, you can be informed about every event instantly, without pulling. The event bus is useful for integrating with any entity that acts based on the stat of Marathon, like load balancers, or to compile statistics.
+Marathon has an internal event bus that captures all API requests and scaling events. By subscribing to the event bus, you can be informed about every event instantly, without pulling. The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.
 
 Events can be subscribed to by pluggable subscribers.
 
@@ -35,10 +35,6 @@ $ ./bin/start --master ... --event_subscriber http_callback --http_endpoints htt
 ```
 
 Both host1 and host2 will receive events.
-
-## Subscription to Events via the Event Stream
-
-
 
 ## Event Types
 
