@@ -8,9 +8,6 @@ sealed trait EnvVarValue extends plugin.EnvVarValue {
   val valueValidator = new Validator[EnvVarValue] {
     override def apply(v: EnvVarValue) =
       v match {
-        //scalastyle:off null
-        case null               => Failure(Set(RuleViolation(null, "is a null", None)))
-        //scalastyle:on null
         case s: EnvVarString    => validate(s)(EnvVarString.valueValidator)
         case r: EnvVarSecretRef => validate(r)(EnvVarSecretRef.valueValidator)
       }
