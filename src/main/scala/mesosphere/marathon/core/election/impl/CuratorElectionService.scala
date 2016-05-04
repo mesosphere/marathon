@@ -35,9 +35,7 @@ class CuratorElectionService(
 
   override def leaderHostPortImpl: Option[String] = synchronized {
     try {
-      latch match {
-        case None => None
-        case Some(l) =>
+      latch.flatMap { l =>
           val participant = l.getLeader
           if (participant.isLeader) Some(participant.getId) else None
       }
@@ -53,14 +51,14 @@ class CuratorElectionService(
     log.info("Using HA and therefore offering leadership")
     latch match {
       case Some(l) =>
-        log.error("Offering leadership while being candidate")
+        log.info("Offering leadership while being candidate")
         l.close()
       case _ =>
     }
     latch = Some(new LeaderLatch(
       client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER
     ))
-    latch.get.addListener(Listener) // idem-potent
+    latch.get.addListener(Listener)
     latch.get.start()
   }
 
