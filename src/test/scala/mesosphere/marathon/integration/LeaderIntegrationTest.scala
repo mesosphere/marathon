@@ -134,7 +134,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
     When("Starting an instance with --enable_features_twitter_commons")
     val parameters = List(
       "--master", config.master,
-      "--leader_election_backend", "twittercommon"
+      "--leader_election_backend", "twitter_common"
     ) ++ extraMarathonParameters
     val twitterCommonsInstancePort = config.marathonPorts.last + 1
     startMarathon(twitterCommonsInstancePort, parameters: _*)
@@ -147,10 +147,10 @@ class LeaderIntegrationTest extends IntegrationFunSuite
       WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
       val leader = marathon.leader().value
 
-      Then("it is never the twittercommons instance")
+      Then("it is never the twitter_commons instance")
       leader.leader.split(":")(1).toInt should not be twitterCommonsInstancePort
 
-      And("the twittercommons instance knows the real leader")
+      And("the twitter_commons instance knows the real leader")
       WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
         val result = facade.leader()
         result.code == 200 && result.value == leader

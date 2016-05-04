@@ -25,7 +25,7 @@ class ElectionModule(
   private lazy val backoff = new ExponentialBackoff(name = "offerLeadership")
   lazy val service: ElectionService = if (config.highlyAvailable()) {
     config.leaderElectionBackend.get match {
-      case Some("twittercommon") =>
+      case Some("twitter_commons") =>
         new TwitterCommonsElectionService(
           config,
           system,
