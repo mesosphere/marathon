@@ -62,7 +62,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   }
 
   test("Create a new app (that uses secrets) successfully") {
-    Given("An app with a secret and an envvar secret-ref")
+    Given("The secrets feature is enabled")
+    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+
+    And("An app with a secret and an envvar secret-ref")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
       secrets = Map[String, Secret]("foo" -> Secret("/bar")),
       env = Map[String, EnvVarValue]("NAMED_FOO" -> EnvVarSecretRef("foo")))
@@ -91,7 +94,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   }
 
   test("Create a new app (that uses undefined secrets) and fails") {
-    Given("An app with an envvar secret-ref that does not point to an undefined secret")
+    Given("The secrets feature is enabled")
+    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+
+    And("An app with an envvar secret-ref that does not point to an undefined secret")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
       env = Map[String, EnvVarValue]("NAMED_FOO" -> EnvVarSecretRef("foo")))
     val group = Group(PathId("/"), Set(app))
@@ -104,9 +110,32 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     clock += 5.seconds
     val response = appsResource.create(body, force = false, auth.request)
 
-    Then("It is successful")
+    Then("It fails")
     response.getStatus should be(422)
     response.getEntity.toString should include("must reference secret identifiers declared within app")
+  }
+
+  test("Create the secrets feature is NOT enabled an app (that uses secrets) fails") {
+    Given("The secrets feature is NOT enabled")
+    AllConf.enabledFeatures should not contain Features.SECRETS
+
+    And("An app with an envvar secret-ref that does not point to an undefined secret")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
+      secrets = Map[String, Secret]("foo" -> Secret("/bar")),
+      env = Map[String, EnvVarValue]("NAMED_FOO" -> EnvVarSecretRef("foo")))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It fails")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("Feature secrets is not enabled")
   }
 
   test("Create a new app fails with Validation errors for negative resources") {

@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2.json
 
 import com.wix.accord._
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.{ Protos, MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.{ AllConf, Protos, MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
@@ -21,6 +21,9 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
+  before {
+    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+  }
 
   test("Validation") {
     def shouldViolate(app: AppDefinition, path: String, template: String): Unit = {

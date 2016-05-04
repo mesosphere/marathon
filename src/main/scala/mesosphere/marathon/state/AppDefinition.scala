@@ -19,7 +19,7 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.{ Protos, plugin }
+import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
@@ -571,6 +571,7 @@ object AppDefinition {
     appDef.disk should be >= 0.0
     appDef.secrets.values is valid
     appDef.secrets.keys is every(Secret.validSecretId)
+    appDef.secrets is empty or featureEnabled(Features.SECRETS)
     appDef.env.values is every(valid)
     appDef must complyWithResourceRoleRules
     appDef must complyWithResidencyRules

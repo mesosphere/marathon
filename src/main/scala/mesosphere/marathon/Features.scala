@@ -11,10 +11,14 @@ object Features {
   //enable external volumes
   val EXTERNAL_VOLUMES = "external_volumes"
 
+  //enable secrets
+  val SECRETS = "secrets"
+
   lazy val availableFeatures = Map(
     VIPS -> "Enable networking VIPs UI",
     TASK_KILLING -> "Enable the optional TASK_KILLING state, available in Mesos 0.28 and later",
-    EXTERNAL_VOLUMES -> "Enable external volumes support in Marathon"
+    EXTERNAL_VOLUMES -> "Enable external volumes support in Marathon",
+    SECRETS -> "Enable support for secrets in Marathon (experimental; requires DC/OS)"
   )
 
   def description: String = {
