@@ -4,7 +4,7 @@ title: Constraints
 
 # Constraints
 
-Constraints control where apps run to allow optimizing for either fault tolerance (by spreading a task out on multiple nodes) or locality (by running all of an applications tasks on the same node). Constraints have three parts: a field name, an operator, and an optional parameter. The field can be the slave hostname or any Mesos slave attribute.
+Constraints control where apps run to allow optimizing for either fault tolerance (by spreading a task out on multiple nodes) or locality (by running all of an applications tasks on the same node). Constraints have three parts: a field name, an operator, and an optional parameter. The field can be the hostname of the agent node or any attribute of the agent node.
 
 ## Fields
 
@@ -18,7 +18,7 @@ The `hostname` field matches the the agent node hostnames. See `UNIQUE operator`
 
 If the field name is not the agent node hostname, it will be treated as a Mesos agent node attribute. A Mesos agent node attribute allows you to tag an agent node. See `mesos-slave --help` to learn how to set the attributes.
 
-If the specified attribute is not defined on the slave, then most operators will refuse to run tasks on this slave. In fact, only the `UNLIKE` operator will (and always will) accept this offer for now, while other operators will always refuse it.
+If the specified attribute is not defined on the agent node, most operators will refuse to run tasks on it. In fact, only the `UNLIKE` operator will (and always will) accept this offer for now, while other operators will always refuse it.
 
 Attribute field supports all operators of Marathon.
 
@@ -41,7 +41,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 
 ### CLUSTER operator
 
-`CLUSTER` allows you to run all of your app's tasks on slaves that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency:
+`CLUSTER` allows you to run all of your app's tasks on agent nodes that share a certain attribute. This is useful for example if you have apps with special hardware needs, or if you want to run them on the same rack for low latency:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -90,7 +90,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
 
 ### LIKE operator
 
-`LIKE` accepts a regular expression as parameter, and allows you to run your tasks only on the slaves whose field values match the regular expression:
+`LIKE` accepts a regular expression as parameter, and allows you to run your tasks only on the agent nodes whose field values match the regular expression:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
@@ -105,7 +105,7 @@ Note, the parameter is required, or you'll get a warning.
 
 ### UNLIKE operator
 
-Just like `LIKE` operator, but only run tasks on slaves whose field values don't match the regular expression:
+Just like `LIKE` operator, but only run tasks on agent nodes whose field values don't match the regular expression:
 
 ``` bash
 $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
