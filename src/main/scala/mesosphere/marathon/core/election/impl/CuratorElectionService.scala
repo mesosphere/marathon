@@ -31,11 +31,11 @@ class CuratorElectionService(
   private lazy val log = LoggerFactory.getLogger(getClass.getName)
 
   private lazy val client = provideCuratorClient()
-  private var latch: Option[LeaderLatch] = None
+  private var maybeLatch: Option[LeaderLatch] = None
 
   override def leaderHostPortImpl: Option[String] = synchronized {
     try {
-      latch.flatMap { l =>
+      maybeLatch.flatMap { l =>
         val participant = l.getLeader
         if (participant.isLeader) Some(participant.getId) else None
       }
@@ -49,17 +49,17 @@ class CuratorElectionService(
 
   override def offerLeadershipImpl(): Unit = synchronized {
     log.info("Using HA and therefore offering leadership")
-    latch match {
+    maybeLatch match {
       case Some(l) =>
         log.info("Offering leadership while being candidate")
         l.close()
       case _ =>
     }
-    latch = Some(new LeaderLatch(
+    maybeLatch = Some(new LeaderLatch(
       client, config.zooKeeperLeaderPath + "-curator", hostPort, LeaderLatch.CloseMode.NOTIFY_LEADER
     ))
-    latch.get.addListener(Listener)
-    latch.get.start()
+    maybeLatch.get.addListener(Listener)
+    maybeLatch.get.start()
   }
 
   private object Listener extends LeaderLatchListener {
@@ -75,10 +75,10 @@ class CuratorElectionService(
     override def isLeader(): Unit = CuratorElectionService.this.synchronized {
       log.info("Elected (LeaderLatchListener Interface)")
       startLeadership(error => CuratorElectionService.this.synchronized {
-        latch match {
+        maybeLatch match {
           case None => log.error("Abdicating leadership while not being leader")
           case Some(l) =>
-            latch = None
+            maybeLatch = None
             l.close()
         }
         // stopLeadership() is called in notLeader
