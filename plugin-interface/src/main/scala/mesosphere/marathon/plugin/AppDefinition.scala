@@ -1,7 +1,5 @@
 package mesosphere.marathon.plugin
 
-trait EnvVarValue
-
 /**
   * A Marathon Application Definition
   */
@@ -11,4 +9,5 @@ trait AppDefinition {
   def env: Map[String, EnvVarValue]
   def labels: Map[String, String]
   def acceptedResourceRoles: Option[Set[String]]
+  def secrets: Map[String, Secret]
 }
