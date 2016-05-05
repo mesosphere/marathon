@@ -18,9 +18,9 @@ sealed trait EnvVarRef extends EnvVarValue {
   val appValidator: Validator[AppDefinition]
 }
 
-case class EnvVarString(value: String) extends EnvVarValue
+case class EnvVarString(value: String) extends EnvVarValue with plugin.EnvVarString
 
-case class EnvVarSecretRef(secret: String) extends EnvVarRef {
+case class EnvVarSecretRef(secret: String) extends EnvVarRef with plugin.EnvVarSecretRef {
   override lazy val appValidator = EnvVarSecretRef.appValidator
 }
 

@@ -2,12 +2,18 @@ package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Reservation
+import mesosphere.marathon.plugin
+import mesosphere.marathon.plugin.optfactory.AppOptFactory
+import mesosphere.marathon.plugin.plugin.Opt
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 
 /** Infers which TaskOps to create for given app definitions and offers. */
 trait TaskOpFactory {
+  import TaskOpFactory._
+
+  def withConfig(opts: Opt[Config]*): Unit
 
   /**
     * @return a TaskOp if and only if the offer matches the app.
@@ -17,6 +23,10 @@ trait TaskOpFactory {
 }
 
 object TaskOpFactory {
+
+  /** Config captures functional configuration options for a factory */
+  case class Config(
+    var optAppTaskInfoBuilder: AppOptFactory[Mesos.TaskInfo.Builder] = AppOptFactory.noop[Mesos.TaskInfo.Builder])
 
   /**
     * @param app the related app definition

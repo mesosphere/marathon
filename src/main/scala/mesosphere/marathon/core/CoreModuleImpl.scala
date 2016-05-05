@@ -123,7 +123,8 @@ class CoreModuleImpl @Inject() (
     // external guice dependencies
     appRepository,
     taskTrackerModule.taskTracker,
-    taskOpFactory
+    taskOpFactory,
+    pluginModule.pluginManager
   )
 
   // PLUGINS

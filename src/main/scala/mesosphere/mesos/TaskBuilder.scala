@@ -7,6 +7,8 @@ import mesosphere.marathon.api.serialization.{ PortMappingSerializer, PortDefini
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.plugin.optfactory.AppOptFactory
+import mesosphere.marathon.plugin.plugin.Opt
 import mesosphere.marathon.state.{
   PersistentVolume,
   ExternalVolume,
@@ -28,7 +30,8 @@ import scala.collection.immutable.Seq
 
 class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => Task.Id,
-                  config: MarathonConf) {
+                  config: MarathonConf,
+                  appOptFactory: AppOptFactory[TaskInfo.Builder] = AppOptFactory.noop[TaskInfo.Builder]) {
 
   val log = LoggerFactory.getLogger(getClass)
 
@@ -70,8 +73,10 @@ class TaskBuilder(app: AppDefinition,
     }
 
     resourceMatchOpt match {
-      case Some(resourceMatch) =>
-        build(offer, resourceMatch, volumeMatchOpt)
+      case Some(resourceMatch) => {
+        val taskBuildOpt = appOptFactory(app)
+        build(offer, resourceMatch, volumeMatchOpt, taskBuildOpt)
+      }
       case _ =>
         if (log.isInfoEnabled) logInsufficientResources()
         None
@@ -98,7 +103,8 @@ class TaskBuilder(app: AppDefinition,
   private[this] def build(
     offer: Offer,
     resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): Some[(TaskInfo, Seq[Int])] = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
+    taskBuildOpt: Option[Opt[TaskInfo.Builder]]): Some[(TaskInfo, Seq[Int])] = {
 
     val executor: Executor = if (app.executor == "") {
       config.executor
@@ -186,6 +192,7 @@ class TaskBuilder(app: AppDefinition,
     }
 
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
+    taskBuildOpt.map(_(builder)) // invoke builder plugins
 
     Some(builder.build -> resourceMatch.hostPorts)
   }
