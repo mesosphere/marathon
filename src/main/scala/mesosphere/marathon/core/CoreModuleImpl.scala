@@ -124,7 +124,7 @@ class CoreModuleImpl @Inject() (
     appRepository,
     taskTrackerModule.taskTracker,
     taskOpFactory,
-    pluginModule.pluginManager
+    Some(pluginModule.pluginManager)
   )
 
   // PLUGINS

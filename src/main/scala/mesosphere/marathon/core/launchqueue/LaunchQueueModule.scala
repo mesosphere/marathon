@@ -34,7 +34,7 @@ class LaunchQueueModule(
     appRepository: AppRepository,
     taskTracker: TaskTracker,
     taskOpFactory: TaskOpFactory,
-    pluginManager: PluginManager) {
+    pluginManager: Option[PluginManager] = None) {
 
   private[this] val launchQueueActorRef: ActorRef = {
     val props = LaunchQueueActor.props(config, appActorProps)
@@ -52,11 +52,14 @@ class LaunchQueueModule(
 
   // TODO(jdef) copied this from auth.AuthModule; seems useful to have this as a reusable func
   private[this] def pluginOption[T](implicit ct: ClassTag[T]): Option[T] = {
-    val plugins = pluginManager.plugins[T]
-    if (plugins.size > 1) throw new WrongConfigurationException(
-      s"Only one plugin expected for ${ct.runtimeClass.getName}, but found: ${plugins.map(_.getClass.getName)}"
-    )
-    plugins.headOption
+    val noPlugins: Option[T] = None
+    pluginManager.fold(noPlugins){ pm =>
+      val plugins = pm.plugins[T]
+      if (plugins.size > 1) throw new WrongConfigurationException(
+        s"Only one plugin expected for ${ct.runtimeClass.getName}, but found: ${plugins.map(_.getClass.getName)}"
+      )
+      plugins.headOption
+    }
   }
 
   private[this] lazy val appTaskInfoBuilderOptFactory = pluginOption[AppOptFactory[TaskInfo.Builder]]
@@ -72,7 +75,7 @@ class LaunchQueueModule(
       taskTracker,
       rateLimiterActor)(app, count)
 
-  def optAppTaskInfoBuilder = new Opt[TaskOpFactory.Config] {
+  def optAppTaskInfoBuilder: Opt[TaskOpFactory.Config] = new Opt[TaskOpFactory.Config] {
     override def apply(c: TaskOpFactory.Config): Option[Opt[TaskOpFactory.Config]] = {
       c.optAppTaskInfoBuilder = AppOptFactory.combine(c.optAppTaskInfoBuilder, appTaskInfoBuilderOptFactory)
       None // no rollback for this
