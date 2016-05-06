@@ -34,6 +34,8 @@ class LaunchQueueModuleTest
     Then("no apps are returned")
     apps should be(empty)
 
+    verify(taskOpFactory).withConfig(Matchers.any())
+
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
   }
@@ -56,6 +58,7 @@ class LaunchQueueModuleTest
     list.head.inProgress should equal(true)
 
     verify(taskTracker).tasksByAppSync
+    verify(taskOpFactory).withConfig(Matchers.any())
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -74,6 +77,7 @@ class LaunchQueueModuleTest
     Then("we get a count == 1")
     count should be(1)
     verify(taskTracker).tasksByAppSync
+    verify(taskOpFactory).withConfig(Matchers.any())
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -93,6 +97,7 @@ class LaunchQueueModuleTest
     Then("we get a count == 0")
     count should be (0)
     verify(taskTracker).tasksByAppSync
+    verify(taskOpFactory).withConfig(Matchers.any())
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -113,6 +118,7 @@ class LaunchQueueModuleTest
     Then("we get a count == 1")
     count should be(1)
     verify(taskTracker, times(2)).tasksByAppSync
+    verify(taskOpFactory).withConfig(Matchers.any())
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -132,6 +138,7 @@ class LaunchQueueModuleTest
       offerMatcherManager.offerMatchers.size == 1
     }
     verify(taskTracker).tasksByAppSync
+    verify(taskOpFactory).withConfig(Matchers.any())
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -150,6 +157,7 @@ class LaunchQueueModuleTest
     Then("No offer matchers remain registered")
     offerMatcherManager.offerMatchers should be(empty)
     verify(taskTracker).tasksByAppSync
+    verify(taskOpFactory).withConfig(Matchers.any())
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -178,6 +186,7 @@ class LaunchQueueModuleTest
     matchedTasks.opsWithSource should equal(Seq.empty)
 
     verify(taskTracker).tasksByAppSync
+    verify(taskOpFactory).withConfig(Matchers.any())
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
@@ -205,6 +214,7 @@ class LaunchQueueModuleTest
     matchedTasks.launchedTaskInfos should equal (Seq(mesosTask))
 
     verify(taskTracker).tasksByAppSync
+    verify(taskOpFactory).withConfig(Matchers.any())
 
     And("there should be no more interactions")
     f.verifyNoMoreInteractions()
