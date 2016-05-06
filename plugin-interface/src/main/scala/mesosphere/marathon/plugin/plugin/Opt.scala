@@ -21,7 +21,7 @@ object Opt {
 
   // TODO(jdef) we probably don't need the dsl stuff at all, this is just me playing with ideas.
   // I generally dislike dsl's.
-  object dsl {
+  object Dsl {
     import scala.language.implicitConversions
 
     /** invoke allows for tuple notation to apply an Opt to some T: `t -> someOpt` */

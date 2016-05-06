@@ -4,11 +4,11 @@ import mesosphere.marathon.plugin.{ Group, AppDefinition }
 
 /**
   * Base trait for all actions in the system.
-  * All actions are defined on a specific resource with a given Resource Type.
+  * All actions are defined on a specific resource with a given resource Type.
   *
-  * @tparam Resource the type of the Resource.
+  * @tparam R the type of the resource.
   */
-sealed trait AuthorizedAction[+Resource]
+sealed trait AuthorizedAction[+R]
 
 /**
   * The following objects will be passed to the Authorizer when an action affects an application, in order to identify
