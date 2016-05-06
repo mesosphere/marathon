@@ -3,16 +3,16 @@ package mesosphere.marathon
 object Features {
 
   //enable VIP UI
-  val VIPS = "vips"
+  lazy val VIPS = "vips"
 
   //enable the optional task killing state
-  val TASK_KILLING = "task_killing"
+  lazy val TASK_KILLING = "task_killing"
 
   //enable external volumes
-  val EXTERNAL_VOLUMES = "external_volumes"
+  lazy val EXTERNAL_VOLUMES = "external_volumes"
 
   //enable secrets
-  val SECRETS = "secrets"
+  lazy val SECRETS = "secrets"
 
   lazy val availableFeatures = Map(
     VIPS -> "Enable networking VIPs UI",
