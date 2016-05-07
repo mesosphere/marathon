@@ -13,7 +13,7 @@ object AppOptFactory {
     else Some(new AppOptFactory[T] {
       override def apply(p: AppDefinition): Option[Opt[T]] = {
         val opts = f.map(_(p)).flatten
-        if (opts.isEmpty) None else Some(Opt.combine(opts: _*))
+        if (opts.isEmpty) None else Opt.combine(opts: _*)
       }
     })
   }

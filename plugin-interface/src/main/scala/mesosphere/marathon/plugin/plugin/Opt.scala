@@ -39,9 +39,12 @@ object Opt {
     last
   }
 
-  def combine[T](opts: Opt[T]*): Opt[T] = new Opt[T] {
-    override def apply(t: T): Option[Opt[T]] = {
-      applyAll(t, opts: _*)
-    }
+  def combine[T](opts: Opt[T]*): Option[Opt[T]] = {
+    if (opts.isEmpty) None
+    else Some(new Opt[T] {
+      override def apply(t: T): Option[Opt[T]] = {
+        applyAll(t, opts: _*)
+      }
+    })
   }
 }
