@@ -31,7 +31,7 @@ import scala.collection.immutable.Seq
 class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => Task.Id,
                   config: MarathonConf,
-                  appOptFactory: AppOptFactory[TaskInfo.Builder] = AppOptFactory.noop[TaskInfo.Builder]) {
+                  appOptFactory: Option[AppOptFactory[TaskInfo.Builder]] = None) {
 
   val log = LoggerFactory.getLogger(getClass)
 
@@ -74,7 +74,7 @@ class TaskBuilder(app: AppDefinition,
 
     resourceMatchOpt match {
       case Some(resourceMatch) => {
-        val taskBuildOpt = appOptFactory(app)
+        val taskBuildOpt = appOptFactory.flatMap(_(app))
         build(offer, resourceMatch, volumeMatchOpt, taskBuildOpt)
       }
       case _ =>

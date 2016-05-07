@@ -26,7 +26,7 @@ object TaskOpFactory {
 
   /** Config captures functional configuration options for a factory */
   case class Config(
-    var optAppTaskInfoBuilder: AppOptFactory[Mesos.TaskInfo.Builder] = AppOptFactory.noop[Mesos.TaskInfo.Builder])
+    var optAppTaskInfoBuilder: Option[AppOptFactory[Mesos.TaskInfo.Builder]] = None)
 
   /**
     * @param app the related app definition

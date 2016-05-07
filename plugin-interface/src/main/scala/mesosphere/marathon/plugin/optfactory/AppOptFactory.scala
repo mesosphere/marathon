@@ -7,13 +7,14 @@ import mesosphere.marathon.plugin.plugin._
 trait AppOptFactory[T] extends Opt.Factory[AppDefinition, T] with Plugin
 
 object AppOptFactory {
-  def noop[T]: AppOptFactory[T] = new AppOptFactory[T] {
-    override def apply(p: AppDefinition): Option[Opt[T]] = Some(Opt.noop)
-  }
-  def combine[T](f: AppOptFactory[T]*): AppOptFactory[T] = new AppOptFactory[T] {
-    override def apply(p: AppDefinition): Option[Opt[T]] = {
-      val opts = f.map(_(p)).flatten
-      if (opts.isEmpty) None else Some(Opt.combine(opts: _*))
-    }
+  // TODO(jdef) I'd love to make this more generic/reusable; hitting my scala limits though
+  def combine[T](f: AppOptFactory[T]*): Option[AppOptFactory[T]] = {
+    if (f.isEmpty) None
+    else Some(new AppOptFactory[T] {
+      override def apply(p: AppDefinition): Option[Opt[T]] = {
+        val opts = f.map(_(p)).flatten
+        if (opts.isEmpty) None else Some(Opt.combine(opts: _*))
+      }
+    })
   }
 }

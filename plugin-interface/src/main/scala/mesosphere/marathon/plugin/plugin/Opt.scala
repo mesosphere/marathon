@@ -13,12 +13,6 @@ object Opt {
     */
   trait Factory[P, T] extends Function1[P, Option[Opt[T]]]
 
-  object Factory {
-    def noop[P, T]: Factory[P, T] = new Factory[P, T] {
-      override def apply(p: P): Option[Opt[T]] = Some(Opt.noop)
-    }
-  }
-
   // TODO(jdef) we probably don't need the dsl stuff at all, this is just me playing with ideas.
   // I generally dislike dsl's.
   object Dsl {
@@ -38,19 +32,11 @@ object Opt {
     * @return the result of the last invoked Opt, or else a no-op Opt
     */
   def applyAll[T](t: T, opts: Opt[T]*): Option[Opt[T]] = {
-    var last: Option[Opt[T]] = Some(noop[T])
+    var last: Option[Opt[T]] = None
     for (o <- opts) {
       last = o(t)
     }
     last
-  }
-
-  /**
-    * noop always returns an Opt that makes NO changes to its T argument
-    * @return an Opt that does nothing, and always returns Some Opt that does nothing
-    */
-  def noop[T]: Opt[T] = new Opt[T] {
-    override def apply(t: T): Option[Opt[T]] = Some(noop)
   }
 
   def combine[T](opts: Opt[T]*): Opt[T] = new Opt[T] {

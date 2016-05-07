@@ -63,7 +63,6 @@ class LaunchQueueModule(
   }
 
   private[this] lazy val appTaskInfoBuilderOptFactory = pluginOption[AppOptFactory[TaskInfo.Builder]]
-    .getOrElse(AppOptFactory.noop)
 
   private[this] def appActorProps(app: AppDefinition, count: Int): Props =
     AppTaskLauncherActor.props(
@@ -77,7 +76,8 @@ class LaunchQueueModule(
 
   def optAppTaskInfoBuilder: Opt[TaskOpFactory.Config] = new Opt[TaskOpFactory.Config] {
     override def apply(c: TaskOpFactory.Config): Option[Opt[TaskOpFactory.Config]] = {
-      c.optAppTaskInfoBuilder = AppOptFactory.combine(c.optAppTaskInfoBuilder, appTaskInfoBuilderOptFactory)
+      c.optAppTaskInfoBuilder = AppOptFactory.combine(
+        Seq(c.optAppTaskInfoBuilder, appTaskInfoBuilderOptFactory).flatten: _*)
       None // no rollback for this
     }
   }
