@@ -76,7 +76,7 @@ class LaunchQueueModule(
 
   def optAppTaskInfoBuilder: Opt[TaskOpFactory.Config] = new Opt[TaskOpFactory.Config] {
     override def apply(c: TaskOpFactory.Config): Option[Opt[TaskOpFactory.Config]] = {
-      c.optAppTaskInfoBuilder = AppOptFactory.combine(
+      c.optAppTaskInfoBuilder = Opt.Factory.combine(
         Seq(c.optAppTaskInfoBuilder, appTaskInfoBuilderOptFactory).flatten: _*)
       None // no rollback for this
     }

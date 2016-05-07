@@ -3,7 +3,6 @@ package mesosphere.marathon.core.launcher
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Reservation
 import mesosphere.marathon.plugin
-import mesosphere.marathon.plugin.optfactory.AppOptFactory
 import mesosphere.marathon.plugin.plugin.Opt
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.util.state.FrameworkId
@@ -26,7 +25,7 @@ object TaskOpFactory {
 
   /** Config captures functional configuration options for a factory */
   case class Config(
-    var optAppTaskInfoBuilder: Option[AppOptFactory[Mesos.TaskInfo.Builder]] = None)
+    var optAppTaskInfoBuilder: Option[Opt.Factory[plugin.AppDefinition, Mesos.TaskInfo.Builder]] = None)
 
   /**
     * @param app the related app definition

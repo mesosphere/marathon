@@ -7,7 +7,7 @@ import mesosphere.marathon.api.serialization.{ PortMappingSerializer, PortDefini
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.plugin.optfactory.AppOptFactory
+import mesosphere.marathon.plugin
 import mesosphere.marathon.plugin.plugin.Opt
 import mesosphere.marathon.state.{
   PersistentVolume,
@@ -31,7 +31,7 @@ import scala.collection.immutable.Seq
 class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => Task.Id,
                   config: MarathonConf,
-                  appOptFactory: Option[AppOptFactory[TaskInfo.Builder]] = None) {
+                  appOptFactory: Option[Opt.Factory[plugin.AppDefinition, TaskInfo.Builder]] = None) {
 
   val log = LoggerFactory.getLogger(getClass)
 

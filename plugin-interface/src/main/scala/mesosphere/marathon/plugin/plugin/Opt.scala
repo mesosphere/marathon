@@ -13,6 +13,18 @@ object Opt {
     */
   trait Factory[P, T] extends Function1[P, Option[Opt[T]]]
 
+  object Factory {
+    def combine[P, T](f: Factory[P, T]*): Option[Factory[P, T]] = {
+      if (f.isEmpty) None
+      else Some(new Factory[P, T] {
+        override def apply(p: P): Option[Opt[T]] = {
+          val opts = f.map(_(p)).flatten
+          if (opts.isEmpty) None else Opt.combine(opts: _*)
+        }
+      })
+    }
+  }
+
   // TODO(jdef) we probably don't need the dsl stuff at all, this is just me playing with ideas.
   // I generally dislike dsl's.
   object Dsl {
