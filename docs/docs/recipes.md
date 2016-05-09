@@ -244,9 +244,9 @@ The disadvantages are that nothing prevents another framework from scheduling ta
 
 ## Running a Single Instance Application
 
-Often legacy applications are built in a way which prevents running multiple instances of that application concurrently. Marathon supports a label which allows you to prevent the user scaling an application beyond a single instance.
+Often, multiple instances of legacy applications cannot be run concurrently. The `MARATHON_SINGLE_INSTANCE_APP` label allows you to prevent users from scaling such an application beyond a single instance.
 
-In your application definition, set the label `MARATHON_SINGLE_INSTANCE_APP` to true:
+1. In your application definition, set the label `MARATHON_SINGLE_INSTANCE_APP` to true:
 
 ```json
   "labels":{
@@ -254,7 +254,7 @@ In your application definition, set the label `MARATHON_SINGLE_INSTANCE_APP` to 
   }
 ```
 
-It's also necessary to specify an `upgradeStrategy` - this permits Marathon to kill all instances of this application when upgrading (otherwise it would be impossible to upgrade), and prevents Marathon from launching more than one instance:
+1. Specify the following `upgradeStrategy`, which permits Marathon to kill all instances:
 
 ```json
   "upgradeStrategy":{
