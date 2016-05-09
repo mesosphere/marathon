@@ -41,7 +41,7 @@ Here we use a simple non-restrictive example to illustrate the steps and place t
           ]
         }
 
-1. Define framework principals and their secrets. Create a file called `credentials` in `/tmp/mesos/config/credentials` with the following content:
+1. Define framework principals and their secrets. Create a file called `credentials` in `/tmp/mesos/config/` with the following content:
 
         marathon marathonsecret
 
