@@ -10,7 +10,7 @@ Marathon supports a high availability mode of operation by default. High availab
 
 ## Configuration
 
-When set to `true`, the `--ha` command line argument launches Marathon in high availability mode. `true` is the default setting.
+Marathon runs in HA mode by default. To disable HA mode, use the `--disable_ha` command line argument.
 
 Each Marathon instance must be launched with the same ZooKeeper quorum specified. For example, if your quorum is `zk://1.2.3.4:2181,2.3.4.5:2181,3.4.5.6:2181/marathon` then launch each instance in the normal way with the argument:
 
