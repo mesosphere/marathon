@@ -13,7 +13,7 @@ object TaskLabels {
     * labeled by this framework.
     */
   def taskIdForResource(frameworkId: FrameworkId, resource: MesosProtos.Resource): Option[Task.Id] = {
-    val labels = ReservationSelector(resource)
+    val labels = ReservationLabels(resource)
 
     val maybeMatchingFrameworkId = labels.get(FRAMEWORK_ID_LABEL).filter(_ == frameworkId.id)
     def maybeTaskId = labels.get(TASK_ID_LABEL).map(Task.Id(_))
@@ -21,11 +21,11 @@ object TaskLabels {
     maybeMatchingFrameworkId.flatMap(_ => maybeTaskId)
   }
 
-  def labelsForTask(frameworkId: FrameworkId, task: Task): ReservationSelector =
+  def labelsForTask(frameworkId: FrameworkId, task: Task): ReservationLabels =
     labelsForTask(frameworkId, task.taskId)
 
-  def labelsForTask(frameworkId: FrameworkId, taskId: Task.Id): ReservationSelector =
-    ReservationSelector(Map(
+  def labelsForTask(frameworkId: FrameworkId, taskId: Task.Id): ReservationLabels =
+    ReservationLabels(Map(
       FRAMEWORK_ID_LABEL -> frameworkId.id,
       TASK_ID_LABEL -> taskId.idString
     ))

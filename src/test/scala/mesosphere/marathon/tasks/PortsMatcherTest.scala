@@ -50,6 +50,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("get ports from multiple ranges, requirePorts") {
+    val f = new Fixture
     val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 100), requirePorts = true)
     val portsResource = RangesResource(
       Resource.PORTS,
@@ -62,7 +63,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
       .setHostname("localhost")
       .addResources(portsResource)
       .build
-    val matcher = new PortsMatcher(app, offer, ResourceSelector.wildcard)
+    val matcher = new PortsMatcher(app, offer, f.wildcardResourceSelector)
 
     assert(matcher.portsMatch.isDefined)
     assert(matcher.portsMatch.get.hostPorts == Seq(80, 81, 82, 83, 100))
@@ -71,9 +72,10 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
 
   // #2865 Multiple explicit ports are mixed up in task json
   test("get ports with requirePorts preserves the ports order") {
+    val f = new Fixture
     val app = AppDefinition(portDefinitions = PortDefinitions(100, 80), requirePorts = true)
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 70, endPort = 200).build
-    val matcher = new PortsMatcher(app, offer, ResourceSelector.wildcard)
+    val matcher = new PortsMatcher(app, offer, f.wildcardResourceSelector)
 
     assert(matcher.portsMatch.isDefined)
     assert(matcher.portsMatch.get.hostPorts == Seq(100, 80))
@@ -98,7 +100,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
       .addResources(portsResource)
       .addResources(portsResource2)
       .build
-    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set(ResourceRole.Unreserved, "marathon"), reservation = None))
+    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")))
 
     assert(matcher.portsMatch.isDefined)
     assert(5 == matcher.portsMatch.get.hostPorts.size)
@@ -106,6 +108,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
   }
 
   test("get ports from multiple ranges, ignore ranges with unwanted roles") {
+    val f = new Fixture
     val app = AppDefinition(portDefinitions = PortDefinitions(80, 81, 82, 83, 84))
     val portsResource = RangesResource(
       Resource.PORTS,
@@ -119,7 +122,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
       .setHostname("localhost")
       .addResources(portsResource)
       .build
-    val matcher = new PortsMatcher(app, offer, ResourceSelector.wildcard)
+    val matcher = new PortsMatcher(app, offer, f.wildcardResourceSelector)
 
     assert(matcher.portsMatch.isEmpty)
   }
@@ -315,7 +318,7 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
     )
 
     val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31000).addResources(portsResource).build
-    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector(Set(ResourceRole.Unreserved, "marathon"), reservation = None))
+    val matcher = new PortsMatcher(app, offer, resourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")))
 
     assert(matcher.portsMatch.isDefined)
     assert(matcher.portsMatch.get.hostPorts.toSet == Set(31000, 31001))
@@ -323,4 +326,8 @@ class PortsMatcherTest extends MarathonSpec with Matchers {
       PortWithRole(ResourceRole.Unreserved, 31000), PortWithRole("marathon", 31001)
     ))
   }
+}
+
+class Fixture {
+  lazy val wildcardResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved))
 }

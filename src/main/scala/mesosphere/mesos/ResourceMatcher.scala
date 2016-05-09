@@ -1,6 +1,6 @@
 package mesosphere.mesos
 
-import mesosphere.marathon.core.launcher.impl.{ ReservationSelector, TaskLabels }
+import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, ResourceRole }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
@@ -38,51 +38,79 @@ object ResourceMatcher {
     * accident.
     *
     * @param acceptedRoles contains all Mesos resource roles that are accepted
-    * @param reservation if given, only resources with a ReservationInfo are
-    *                    considered and will only match if their labels match
-    *                    the specified labels.
+    * @param needToReserve if true, only unreserved resources will considered
+    * @param labelMatcher a matcher that checks if the given resource labels
+    *                     are compliant with the expected or not expected labels
     */
-  case class ResourceSelector(acceptedRoles: Set[String], reservation: Option[ReservationSelector] = None) {
+  case class ResourceSelector(
+      acceptedRoles: Set[String],
+      needToReserve: Boolean,
+      labelMatcher: LabelMatcher) {
+
     def apply(resource: Protos.Resource): Boolean = {
+      import ResourceSelector._
       // resources with disks are matched by the VolumeMatcher or not at all
       val noAssociatedDisk = !resource.hasDisk
-      def matchesReservationSelector: Boolean = {
-        val labelMap: Map[String, String] =
-          if (!resource.hasReservation || !resource.getReservation.hasLabels)
-            Map.empty
-          else {
-            import scala.collection.JavaConverters._
-            resource.getReservation.getLabels.getLabelsList.asScala.iterator.map { label =>
-              label.getKey -> label.getValue
-            }.toMap
-          }
+      def matchesLabels: Boolean = labelMatcher.matches(reservationLabels(resource))
 
-        reservation match {
-          // only match if the reservation labels match the expectation
-          case Some(reservationWithLabels) =>
-            reservationWithLabels.labels.forall { case (k, v) => labelMap.get(k).contains(v) }
-
-          // allow dynamic reservations if no known reservation label is set
-          case None =>
-            labelMap.keys.toSet.intersect(TaskLabels.labelKeysForTaskReservations).isEmpty
-        }
-      }
-
-      noAssociatedDisk && acceptedRoles(resource.getRole) && matchesReservationSelector
+      noAssociatedDisk && acceptedRoles(resource.getRole) && matchesLabels
     }
 
     override def toString: String = {
-      val reservedString = if (reservation.nonEmpty) " RESERVED" else ""
+      val reserveString = if (needToReserve) " to reserve" else ""
       val rolesString = acceptedRoles.mkString(", ")
-      val labelStrings = if (reservation.exists(_.labels.nonEmpty)) s" and labels $reservation" else ""
-
-      s"Considering$reservedString resources with roles {$rolesString}$labelStrings"
+      s"Considering resources$reserveString with roles {$rolesString} $labelMatcher"
     }
   }
 
   object ResourceSelector {
-    /** Match unreserved resources for which role == '*' applies (default) */
-    def wildcard: ResourceSelector = ResourceSelector(Set(ResourceRole.Unreserved), reservation = None)
+    /** The reservation labels if the resource is reserved, or an empty Map */
+    private def reservationLabels(resource: Protos.Resource): Map[String, String] =
+      if (!resource.hasReservation || !resource.getReservation.hasLabels)
+        Map.empty
+      else {
+        import scala.collection.JavaConverters._
+        resource.getReservation.getLabels.getLabelsList.asScala.iterator.map { label =>
+          label.getKey -> label.getValue
+        }.toMap
+      }
+
+    /** Match resources with given roles that have at least the given labels */
+    def reservedWithLabels(acceptedRoles: Set[String], labels: Map[String, String]): ResourceSelector = {
+      ResourceSelector(acceptedRoles, needToReserve = false, LabelMatcher.WithReservationLabels(labels))
+    }
+    /** Match resources with given roles that do not have known reservation labels */
+    def reservable: ResourceSelector = {
+      ResourceSelector(Set(ResourceRole.Unreserved), needToReserve = true, LabelMatcher.WithoutReservationLabels)
+    }
+
+    /** Match any resources with given roles that do not have known reservation labels */
+    def any(acceptedRoles: Set[String]): ResourceSelector = {
+      ResourceSelector(acceptedRoles, needToReserve = false, LabelMatcher.WithoutReservationLabels)
+    }
+  }
+
+  private[mesos] sealed trait LabelMatcher {
+    def matches(resourceLabels: Map[String, String]): Boolean
+  }
+
+  private[this] object LabelMatcher {
+    case class WithReservationLabels(labels: Map[String, String]) extends LabelMatcher {
+      override def matches(resourceLabels: Map[String, String]): Boolean =
+        labels.forall { case (k, v) => resourceLabels.get(k).contains(v) }
+
+      override def toString: Role = {
+        val labelsStr = labels.map { case (k, v) => s"$k: $v" }.mkString(", ")
+        s"and labels {$labelsStr}"
+      }
+    }
+
+    case object WithoutReservationLabels extends LabelMatcher {
+      override def matches(resourceLabels: Map[String, String]): Boolean =
+        resourceLabels.keys.toSet.intersect(TaskLabels.labelKeysForTaskReservations).isEmpty
+
+      override def toString: Role = "without resident reservation labels"
+    }
   }
 
   /**
@@ -106,7 +134,8 @@ object ResourceMatcher {
 
     // Local volumes only need to be matched if we are making a reservation for resident tasks --
     // that means if the resources that are matched are still unreserved.
-    val diskMatch = if (selector.reservation.isEmpty && app.diskForPersistentVolumes > 0)
+    def needToReserveDisk = selector.needToReserve && app.diskForPersistentVolumes > 0
+    val diskMatch = if (needToReserveDisk)
       scalarResourceMatch(Resource.DISK, app.disk + app.diskForPersistentVolumes,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     else

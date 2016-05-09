@@ -3,9 +3,9 @@ package mesosphere.marathon.core.launcher.impl
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
-  * Encapsulates information about a reserced resource and its (probably empty) list of reservation labels.
+  * Encapsulates information about a reserved resource and its (probably empty) list of reservation labels.
   */
-case class ReservationSelector(labels: Map[String, String]) {
+case class ReservationLabels(labels: Map[String, String]) {
   lazy val mesosLabels: MesosProtos.Labels = {
     val labelsBuilder = MesosProtos.Labels.newBuilder()
     labels.foreach {
@@ -20,17 +20,17 @@ case class ReservationSelector(labels: Map[String, String]) {
   override def toString: String = labels.map { case (k, v) => s"$k: $v" }.mkString(", ")
 }
 
-object ReservationSelector {
-  def withoutLabels: ReservationSelector = new ReservationSelector(Map.empty)
+object ReservationLabels {
+  def withoutLabels: ReservationLabels = new ReservationLabels(Map.empty)
 
-  def apply(resource: MesosProtos.Resource): ReservationSelector = {
+  def apply(resource: MesosProtos.Resource): ReservationLabels = {
     if (resource.hasReservation && resource.getReservation.hasLabels)
-      ReservationSelector(resource.getReservation.getLabels)
+      ReservationLabels(resource.getReservation.getLabels)
     else
-      ReservationSelector.withoutLabels
+      ReservationLabels.withoutLabels
   }
-  def apply(labels: MesosProtos.Labels): ReservationSelector = {
+  def apply(labels: MesosProtos.Labels): ReservationLabels = {
     import scala.collection.JavaConverters._
-    ReservationSelector(labels.getLabelsList.asScala.iterator.map(l => l.getKey -> l.getValue).toMap)
+    ReservationLabels(labels.getLabelsList.asScala.iterator.map(l => l.getKey -> l.getValue).toMap)
   }
 }
