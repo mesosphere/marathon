@@ -16,8 +16,8 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.plugin.plugin.Opt
-import mesosphere.marathon.plugin.optfactory._
+import mesosphere.marathon.plugin.plugin
+import mesosphere.marathon.plugin.{ AppDefinition => PluginAppDefinition }
 import mesosphere.marathon.state.{ AppDefinition, AppRepository }
 import org.apache.mesos.Protos.TaskInfo
 import scala.reflect.ClassTag
@@ -50,19 +50,12 @@ class LaunchQueueModule(
 
   val launchQueue: LaunchQueue = new LaunchQueueDelegate(config, launchQueueActorRef, rateLimiterActor)
 
-  // TODO(jdef) copied this from auth.AuthModule; seems useful to have this as a reusable func
-  private[this] def pluginOption[T](implicit ct: ClassTag[T]): Option[T] = {
-    val noPlugins: Option[T] = None
-    pluginManager.fold(noPlugins){ pm =>
-      val plugins = pm.plugins[T]
-      if (plugins.size > 1) throw new WrongConfigurationException(
-        s"Only one plugin expected for ${ct.runtimeClass.getName}, but found: ${plugins.map(_.getClass.getName)}"
-      )
-      plugins.headOption
-    }
+  private[this] def pluginOptions[T <: plugin.Opt.Factory[_, _]](implicit ct: ClassTag[T]): Seq[T] = {
+    pluginManager.fold(Seq.empty[T]){ pm => pm.plugins[T] }
   }
 
-  private[this] lazy val appTaskInfoBuilderOptFactory = pluginOption[AppOptFactory[TaskInfo.Builder]]
+  private[this] def appTaskInfoBuilderOptFactories =
+    pluginOptions[plugin.Opt.Factory.Plugin[PluginAppDefinition, TaskInfo.Builder]]
 
   private[this] def appActorProps(app: AppDefinition, count: Int): Props =
     AppTaskLauncherActor.props(
@@ -74,10 +67,9 @@ class LaunchQueueModule(
       taskTracker,
       rateLimiterActor)(app, count)
 
-  def optAppTaskInfoBuilder: Opt[TaskOpFactory.Config] = new Opt[TaskOpFactory.Config] {
-    override def apply(c: TaskOpFactory.Config): Option[Opt[TaskOpFactory.Config]] = {
-      c.optAppTaskInfoBuilder = Opt.Factory.combine(
-        Seq(c.optAppTaskInfoBuilder, appTaskInfoBuilderOptFactory).flatten: _*)
+  def optAppTaskInfoBuilder: plugin.Opt[TaskOpFactory.Config] = new plugin.Opt[TaskOpFactory.Config] {
+    override def apply(c: TaskOpFactory.Config): Option[plugin.Opt[TaskOpFactory.Config]] = {
+      c.optAppTaskInfoBuilder = plugin.Opt.Factory.combine(appTaskInfoBuilderOptFactories: _*)
       None // no rollback for this
     }
   }

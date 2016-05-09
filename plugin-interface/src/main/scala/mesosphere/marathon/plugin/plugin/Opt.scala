@@ -14,6 +14,7 @@ object Opt {
   trait Factory[P, T] extends Function1[P, Option[Opt[T]]]
 
   object Factory {
+    /** @return a factory instance that combines the effect of the given factories */
     def combine[P, T](f: Factory[P, T]*): Option[Factory[P, T]] = {
       if (f.isEmpty) None
       else Some(new Factory[P, T] {
@@ -23,6 +24,9 @@ object Opt {
         }
       })
     }
+
+    /** Plugin represents a pluggable Opt.Factory */
+    trait Plugin[P, T] extends Factory[P, T] with mesosphere.marathon.plugin.plugin.Plugin
   }
 
   // TODO(jdef) we probably don't need the dsl stuff at all, this is just me playing with ideas.
