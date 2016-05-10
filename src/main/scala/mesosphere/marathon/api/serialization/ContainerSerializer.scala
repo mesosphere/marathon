@@ -69,7 +69,10 @@ object VolumeSerializer {
         .build()
   }
 
-  /** Only DockerVolumes can be serialized into a Mesos Protobuf */
+  /**
+    * Only DockerVolumes can be serialized into a Mesos Protobuf.
+    * see mesosphere.marathon.core.externalvolume.impl.providers.DVDIProvider.
+    */
   def toMesos(volume: DockerVolume): mesos.Protos.Volume =
     mesos.Protos.Volume.newBuilder
       .setContainerPath(volume.containerPath)
