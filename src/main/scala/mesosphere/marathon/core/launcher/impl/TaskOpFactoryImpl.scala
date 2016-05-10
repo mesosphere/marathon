@@ -92,13 +92,11 @@ class TaskOpFactoryImpl @Inject() (
         val tasksToConsiderForConstraints = tasks - volumeMatch.task.taskId
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
+        val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
             offer, app, tasksToConsiderForConstraints.values,
-            ResourceSelector(
-              rolesToConsider, reserved = true,
-              requiredLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task)
-            )
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
           )
 
         matchingReservedResourcesWithoutVolumes.flatMap { otherResourcesMatch =>
@@ -112,14 +110,14 @@ class TaskOpFactoryImpl @Inject() (
       val configuredRoles = app.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
       // We can only reserve unreserved resources
       val rolesToConsider = Set(ResourceRole.Unreserved).intersect(configuredRoles)
-      if (configuredRoles.isEmpty) {
-        log.warn(s"Will never match for ${app.id} as the app is configured to only accept $configuredRoles")
+      if (rolesToConsider.isEmpty) {
+        log.warn(s"Will never match for ${app.id}. The app is not configured to accept unreserved resources.")
       }
 
       val matchingResourcesForReservation =
         ResourceMatcher.matchResources(
           offer, app, tasks.values,
-          ResourceSelector(rolesToConsider, reserved = false)
+          ResourceSelector.reservable
         )
       matchingResourcesForReservation.map { resourceMatch =>
         reserveAndCreateVolumes(request.frameworkId, app, offer, resourceMatch)

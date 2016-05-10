@@ -30,7 +30,7 @@ case class PortsMatch(hostPortsWithRole: Seq[PortWithRole]) {
 class PortsMatcher(
   app: AppDefinition,
   offer: MesosProtos.Offer,
-  resourceSelector: ResourceSelector = ResourceSelector(Set(ResourceRole.Unreserved), reserved = false),
+  resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
   random: Random = Random)
     extends Logging {
 
