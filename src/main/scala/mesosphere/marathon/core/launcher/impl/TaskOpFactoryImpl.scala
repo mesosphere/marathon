@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.plugin.{ AppDefinition => PluginAppDefinition }
+import mesosphere.marathon.plugin.task.AppTaskProcessor
 import mesosphere.marathon.plugin.plugin
 import mesosphere.marathon.state.{ ResourceRole, AppDefinition }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -33,7 +33,7 @@ class TaskOpFactoryImpl(
   }
 
   private[this] def appTaskProcessor = {
-    val opts = pluginManager.plugins[plugin.Opt.Factory.Plugin[PluginAppDefinition, Mesos.TaskInfo.Builder]]
+    val opts = pluginManager.plugins[AppTaskProcessor]
     plugin.Opt.Factory.combine(opts: _*)
   }
 
