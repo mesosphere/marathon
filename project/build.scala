@@ -247,6 +247,7 @@ object Dependencies {
     chaos % "compile",
     mesosUtils % "compile",
     jacksonCaseClass % "compile",
+    mesos % "compile",
     twitterCommons % "compile",
     jodaTime % "compile",
     jodaConvert % "compile",
@@ -314,7 +315,6 @@ object Dependency {
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
   val excludeJavaxServlet = ExclusionRule(organization = "javax.servlet")
-
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
@@ -324,6 +324,7 @@ object Dependency {
   val guava = "com.google.guava" % "guava" % V.Guava
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
+  val mesos = "org.apache.mesos" % "mesos" % "0.28.1-extvol"
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
