@@ -17,6 +17,7 @@ object Opt {
     /** @return a factory instance that combines the effect of the given factories */
     def combine[P, T](f: Factory[P, T]*): Option[Factory[P, T]] = {
       if (f.isEmpty) None
+      else if (f.size == 1) f.headOption
       else Some(new Factory[P, T] {
         override def apply(p: P): Option[Opt[T]] = {
           val opts = f.map(_(p)).flatten
