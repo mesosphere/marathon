@@ -1,11 +1,12 @@
 package mesosphere.marathon.core.launcher.impl
 
-import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.plugin.plugin.Opt
+import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.plugin.{ AppDefinition => PluginAppDefinition }
+import mesosphere.marathon.plugin.plugin
 import mesosphere.marathon.state.{ ResourceRole, AppDefinition }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
@@ -15,10 +16,12 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
+import scala.reflect.ClassTag
 
-class TaskOpFactoryImpl @Inject() (
+class TaskOpFactoryImpl(
   config: MarathonConf,
-  clock: Clock)
+  clock: Clock,
+  pluginManager: PluginManager = PluginManager.None)
     extends TaskOpFactory {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -29,10 +32,9 @@ class TaskOpFactoryImpl @Inject() (
     new TaskOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  private[this] lazy val factoryConfig: TaskOpFactory.Config = new TaskOpFactory.Config
-
-  override def withConfig(opts: Opt[TaskOpFactory.Config]*): Unit = {
-    Opt.applyAll(factoryConfig, opts: _*)
+  private[this] def appTaskProcessor = {
+    val opts = pluginManager.plugins[plugin.Opt.Factory.Plugin[PluginAppDefinition, Mesos.TaskInfo.Builder]]
+    plugin.Opt.Factory.combine(opts: _*)
   }
 
   override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
@@ -49,8 +51,7 @@ class TaskOpFactoryImpl @Inject() (
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(app, offer, tasks, _) = request
 
-    new TaskBuilder(app, Task.Id.forApp, config,
-      factoryConfig.optAppTaskInfoBuilder).buildIfMatches(offer, tasks.values).map {
+    new TaskBuilder(app, Task.Id.forApp, config, appTaskProcessor).buildIfMatches(offer, tasks.values).map {
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
@@ -144,8 +145,7 @@ class TaskOpFactoryImpl @Inject() (
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(app, (_) => task.taskId, config,
-      factoryConfig.optAppTaskInfoBuilder).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(app, (_) => task.taskId, config, appTaskProcessor).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val taskStateOp = TaskStateOp.LaunchOnReservation(
           task.taskId,

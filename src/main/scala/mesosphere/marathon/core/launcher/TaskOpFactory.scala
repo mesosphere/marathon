@@ -10,23 +10,13 @@ import org.apache.mesos.{ Protos => Mesos }
 
 /** Infers which TaskOps to create for given app definitions and offers. */
 trait TaskOpFactory {
-  import TaskOpFactory._
-
-  def withConfig(opts: Opt[Config]*): Unit
-
   /**
     * @return a TaskOp if and only if the offer matches the app.
     */
   def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp]
-
 }
 
 object TaskOpFactory {
-
-  /** Config captures functional configuration options for a factory */
-  case class Config(
-    var optAppTaskInfoBuilder: Option[Opt.Factory[plugin.AppDefinition, Mesos.TaskInfo.Builder]] = None)
-
   /**
     * @param app the related app definition
     * @param offer the offer to match against
