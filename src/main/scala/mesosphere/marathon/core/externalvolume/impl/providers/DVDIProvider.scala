@@ -169,11 +169,22 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     }
 
     val validContainer = {
-      val validMesosVolume = validator[ExternalVolume] { volume => volume.mode is equalTo(Mode.RW) }
+      import PathPatterns._
+
+      val validMesosVolume = validator[ExternalVolume] {
+        volume =>
+          volume.mode is equalTo(Mode.RW)
+          volume.containerPath is notOneOf(DotPaths: _*)
+          // same as for local persistent volumes
+          volume.containerPath should matchRegexFully(NoSlashesPattern)
+      }
 
       val validDockerVolume = validator[ExternalVolume] { volume =>
         volume.external.options is isTrue(s"must only contain $driverOption")(_.filterKeys(_ != driverOption).isEmpty)
         volume.external.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
+        volume.containerPath is notOneOf(DotPaths: _*)
+        // TODO(jdef) change this once docker containerizer supports relative containerPaths
+        volume.containerPath should matchRegexFully(AbsolutePathPattern)
       }
 
       def ifDVDIVolume(vtor: Validator[ExternalVolume]): Validator[ExternalVolume] = conditional(matchesProvider)(vtor)
