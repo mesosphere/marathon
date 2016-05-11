@@ -65,10 +65,9 @@ You specify an external volume in the app definition of your Marathon app. [Lear
 
 In the app definition above:
 
-- `containerPath` specifies where the volume is mounted inside the container. This value must be relative to the container, i.e., the path cannot begin with `/`. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
+- `containerPath` specifies where the volume is mounted inside the container. For Mesos external volumes, this path must be relative to the container, i.e., the path cannot begin with `/`. For Docker external volumes, this path must be absolute. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
 
-- `name` is the name by which your volume driver looks up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used. **Note:** Implicit volume creation only works when using volumes with a Mesos container and requires that you set `volumes[x].external.size`.
-
+- `name` is the name by which your volume driver looks up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it is [created implicitly](#implicit-vol). Otherwise, the existing volume is re-used. 
 - The `external.options["dvdi/driver"]` option specifies which Docker volume driver to use for storage. If you are running Marathon on DCOS, this value should likely be `rexray`. [Learn more about REX-Ray](https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/).
 
 - You can specify additional options with `container.volumes[x].external.options[optionName]`. The dvdi provider for Mesos containers uses `dvdcli`, which offers the options [documented here](https://github.com/emccode/dvdcli#extra-options). The availability of any given option depends on your volume driver, however.
@@ -78,6 +77,10 @@ In the app definition above:
 - Volume parameters cannot be changed after you create the application.
 
 - **Note:** Marathon will not launch apps with external volumes if  `upgradeStrategy.minimusHealthCapacity` is less than 0.5, or if `upgradeStrategy.maximumOverCapacity` does not equal 0.
+
+<a name="implicit-vol"></a>
+### Implicit Volumes
+The default implicit volume size is 16GB. If you are using the Mesos containerizer, you can modify this default for a particular volume by setting `volumes[x].external.size`. For both the Mesos and Docker containerizers, you can modify the default size for all implicit volumes by [modifying the REX-Ray configuration](https://github.com/emccode/rexray/blob/master/.docs/user-guide/config.md).
 
 ### Using a Docker Container
 
