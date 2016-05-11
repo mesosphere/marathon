@@ -130,7 +130,8 @@ case class PersistentVolume(
 
 object PersistentVolume {
   import org.apache.mesos.Protos.Volume.Mode
-  import PathPatterns._
+
+  val NoSlashesPattern = """^[^/]*$""".r
 
   implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
     vol.containerPath is notEmpty
@@ -139,10 +140,6 @@ object PersistentVolume {
     vol.persistent is valid
     vol.mode is equalTo(Mode.RW)
   }
-}
-
-object PathPatterns {
-  val NoSlashesPattern = """^[^/]*$""".r
 }
 
 /**
@@ -218,13 +215,9 @@ case class ExternalVolume(
   mode: Mesos.Volume.Mode) extends Volume
 
 object ExternalVolume {
-  import PathPatterns._
-
   val validExternalVolume = validator[ExternalVolume] { ev =>
     ev is featureEnabled(Features.EXTERNAL_VOLUMES)
     ev.containerPath is notEmpty
-    ev.containerPath is notOneOf(".", "..")
-    ev.containerPath should matchRegexFully(NoSlashesPattern)
     ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
   } and ExternalVolumes.validExternalVolume
 }
