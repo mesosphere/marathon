@@ -7,7 +7,7 @@ title: Stateful Applications Using External Persistent Volumes
 <div class="alert alert-danger" role="alert">
   <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> Adapted in Marathon Version 1.0 <br/>
   External persistent storage functionality is considered beta, so use this feature at your own risk. We might add, change, or delete any functionality described in this document.
-  This functionality is **disabled by default** but may be turned on by including `external_volumes` in the value of the `--enable_features` command-line flag.
+  This functionality is *disabled by default* but may be turned on by including `external_volumes` in the value of the `--enable_features` command-line flag.
 </div>
 
 Marathon applications normally lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can use an external storage service, such as Amazon's Elastic Block Store (EBS), to create a persistent volume that follows your application instance.
@@ -45,7 +45,7 @@ You specify an external volume in the app definition of your Marathon app. [Lear
     "type": "MESOS",
     "volumes": [
       {
-        "containerPath": "/tmp/test-rexray-volume",
+        "containerPath": "tmp/test-rexray-volume",
         "external": {
           "size": 100,
           "name": "my-test-vol",
@@ -65,7 +65,7 @@ You specify an external volume in the app definition of your Marathon app. [Lear
 
 In the app definition above:
 
-- `containerPath` specifies where the volume is mounted inside the container. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
+- `containerPath` specifies where the volume is mounted inside the container. This value must be relative to the container, i.e., the path cannot begin with `/`. See [the REX-Ray documentation on data directories](https://rexray.readthedocs.org/en/v0.3.2/user-guide/config/#data-directories) for more information.
 
 - `name` is the name by which your volume driver looks up your volume. When your task is staged on an agent, the volume driver queries the storage service for a volume with this name. If one does not exist, it's created. Otherwise, the existing volume is re-used. **Note:** Implicit volume creation only works when using volumes with a Mesos container and requires that you set `volumes[x].external.size`.
 
@@ -126,7 +126,7 @@ For more information, refer to the [REX-Ray documentation](https://rexray.readth
 
 - Volumes are namespaced by their storage provider. If you're using EBS, volumes created on the same AWS account share a namespace. Choose unique volume names to avoid conflicts.
 
-- Docker apps do not support external volumes on DCOS installations running Docker older than 1.8. Currently, this means that DCOS Community Edition users cannot create Docker apps with external volumes.
+- Docker apps do not support external volumes on DCOS installations running Docker older than 1.8.
 
 - If you are using Amazon's EBS, it is possible that clusters can be created in different availability zones (AZs). This means that if you create a cluster with an external volume in one AZ and destroy it, a new cluster may not have access to that external volume because it could be in a different AZ.
 
