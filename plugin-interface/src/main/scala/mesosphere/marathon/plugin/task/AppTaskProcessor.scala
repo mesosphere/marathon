@@ -5,10 +5,7 @@ import mesosphere.marathon.plugin.plugin.Plugin
 import org.apache.mesos.Protos.TaskInfo
 
 /**
-  * AppTaskProcessor is a factory func that generates functional options that mutate Mesos
-  * task info's given some app specification. For example, a factory might generate functional
-  * options that inject specific labels into a Mesos task info based on some properties of an
-  * app specification.
+  * AppTaskProcessor is a mutates Mesos task info's given some app specification.
   */
 trait AppTaskProcessor extends Function2[AppDefinition, TaskInfo.Builder, Unit] with Plugin
 
