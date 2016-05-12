@@ -52,8 +52,8 @@ class LaunchQueueModuleTest
     list should have size 1
     list.head.app should equal(app)
     list.head.tasksLeftToLaunch should equal(1)
-    list.head.tasksLaunched should equal(0)
-    list.head.taskLaunchesInFlight should equal(0)
+    list.head.finalTaskCount should equal(1)
+    list.head.inProgress should equal(true)
 
     verify(taskTracker).tasksByAppSync
 

@@ -338,12 +338,14 @@ private class AppTaskLauncherActor(
   }
 
   private[this] def replyWithQueuedTaskCount(): Unit = {
+    val tasksLaunched = tasksMap.values.count(_.launched.isDefined)
+    val taskLaunchesInFlight = inFlightTaskOperations.keys
+      .count(taskId => tasksMap.get(taskId).exists(_.launched.isDefined))
     sender() ! QueuedTaskInfo(
       app,
+      inProgress = tasksToLaunch > 0 || inFlightTaskOperations.nonEmpty,
       tasksLeftToLaunch = tasksToLaunch,
-      taskLaunchesInFlight = inFlightTaskOperations.size,
-      // don't count tasks that are not launched in the tasksMap
-      tasksLaunched = tasksMap.values.count(_.launched.isDefined) - inFlightTaskOperations.size,
+      finalTaskCount = tasksToLaunch + taskLaunchesInFlight + tasksLaunched,
       backOffUntil.getOrElse(clock.now())
     )
   }
