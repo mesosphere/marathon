@@ -241,3 +241,26 @@ You can use constraints to restrict where to run the tasks for your apps. See
 The advantage of using constraints to restrict where tasks run is that you only have to provide appropriate attributes on the Mesos agents.
 
 The disadvantages are that nothing prevents another framework from scheduling tasks on these agents and consuming all the resources your special tasks need. To avoid this, you need to configure Marathon so that all non-special apps are constrained *not* to use the special nodes.
+
+## Running a Single Instance Application
+
+Often, multiple instances of legacy applications cannot be run concurrently. The `MARATHON_SINGLE_INSTANCE_APP` label allows you to prevent users from scaling such an application beyond a single instance.
+
+1. In your application definition, set the label `MARATHON_SINGLE_INSTANCE_APP` to true:
+
+```json
+  "labels":{
+    "MARATHON_SINGLE_INSTANCE_APP": "true",
+  }
+```
+
+1. Specify the following `upgradeStrategy`, which permits Marathon to kill all instances:
+
+```json
+  "upgradeStrategy":{
+    "minimumHealthCapacity": 0,
+    "maximumOverCapacity": 0
+  }
+```
+
+

@@ -108,13 +108,18 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * `--http_endpoints` (Optional. Default: None): Pre-configured http callback
     URLs. Valid only in conjunction with `--event_subscriber http_callback`.
     Additional callback URLs may also be set dynamically via the REST API.
-* `--zk` (Optional. Default: None): ZooKeeper URL for storing state.
+* `--zk` (Optional. Default: `zk://localhost:2181/marathon`): ZooKeeper URL for storing state.
     Format: `zk://host1:port1,host2:port2,.../path`
-* `--zk_max_versions` (Optional. Default: 25): Limit the number of versions stored for one entity.
+    - <span class="label label-default">v1.1.2</span> Format: `zk://user@pass:host1:port1,user@pass:host2:port2,.../path`.
+    When authentication is enabled the default ACL will be changed and all subsequent reads must be done using the same auth.
+* `--zk_max_versions` (Optional. Default: None): Limit the number of versions
+    stored for one entity.
 * `--zk_timeout` (Optional. Default: 10000 (10 seconds)): Timeout for ZooKeeper
     in milliseconds.
 *  <span class="label label-default">v0.9.0</span> `--zk_session_timeout` (Optional. Default: 1.800.000 (30 minutes)): Timeout for ZooKeeper
     sessions in milliseconds.
+* <span class="label label-default">v1.1.2</span> `--zk_max_node_size` (Optional. Default: 1 MiB):
+    Maximum allowed ZooKeeper node size (in bytes).
 * `--mesos_authentication_principal` (Optional.): The Mesos principal used for
     authentication
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret
@@ -142,6 +147,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     The timeout for preparing the Marathon instance when elected as leader.
 * <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
     A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
+
 ## Tuning Flags for Offer Matching/Launching Tasks
 
 Mesos frequently sends resource offers to Marathon (and all other frameworks). Each offer will represent the
@@ -279,6 +285,9 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * `--ssl_keystore_password` (Optional. Default: None): Password for the keystore
     supplied with the `ssl_keystore_path` option. Required if `ssl_keystore_path` is supplied.
     May also be specified with the `MESOSPHERE_KEYSTORE_PASS` environment variable.
+* `--leader_proxy_ssl_ignore_hostname` (Optional. Default: false): Do not
+    verify that the hostname of the Marathon leader matches the one in the SSL
+    certificate when proxying API requests to the current leader.
 *  <span class="label label-default">v0.10.0</span> `--http_max_concurrent_requests` (Optional.): the maximum number of
     concurrent HTTP requests, that is allowed concurrently before requests get answered directly with a
     HTTP 503 Service Temporarily Unavailable.

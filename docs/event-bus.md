@@ -4,12 +4,29 @@ title: Event Bus
 
 # Event Bus
 
-Marathon has an internal event bus that captures all API requests and scaling events. This is useful for integrating with load balancers, keeping stats, etc.
-Events can be subscribed to by pluggable subscribers. Currently an HTTP callback subscriber is implemented that POSTs events in JSON format to one or more endpoints. Other subscribers are easy to add. See the code in
+Marathon has an internal event bus that captures all API requests and scaling events. By subscribing to the event bus, you can be informed about every event instantly, without pulling. The event bus is useful for integrating with any entity that acts based on the state of Marathon, like load balancers, or to compile statistics.
+
+Events can be subscribed to by pluggable subscribers.
+
+The event bus has two APIs:
+
+* The event stream. For more information, see the `/v2/events` entry in the [Marathon REST API Reference](https://mesosphere.github.io/marathon/docs/generated/api.html).
+
+* The callback endpoint, which POSTs events in JSON format to one or more endpoints.
+
+We recommend using the event stream instead of the callback endpoint because:
+
+* It is easier to set up.
+
+* Delivery is faster because there is no request/response cycle.
+
+* The events are transferred in order.
+
+Other subscribers are easy to add. See the code in
 [marathon/event/http](https://github.com/mesosphere/marathon/tree/master/src/main/scala/mesosphere/marathon/event/http)
 for guidance.
 
-## Configuration
+## Subscription to Events via the Callback Endpoint
 
 Add these command line options to configure events:
 
