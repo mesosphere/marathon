@@ -15,7 +15,7 @@ trait AppTaskProcessor extends Function2[AppDefinition, TaskInfo.Builder, Unit] 
 object AppTaskProcessor {
   import scala.language.implicitConversions
 
-  def apply(f: (AppDefinition, TaskInfo.Builder) => Unit) = new AppTaskProcessor {
+  def apply(f: (AppDefinition, TaskInfo.Builder) => Unit): AppTaskProcessor = new AppTaskProcessor {
     override def apply(app: AppDefinition, b: TaskInfo.Builder): Unit = f(app, b)
   }
 
