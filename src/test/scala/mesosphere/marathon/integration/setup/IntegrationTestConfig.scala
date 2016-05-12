@@ -37,6 +37,9 @@ case class IntegrationTestConfig(
     //unused for useExternalSetup
     zkPort: Int,
 
+    //zookeeper digest authinfo. defaults to None
+    zkCredentials: Option[String],
+
     //url to mesos master. defaults to local. Unused for useExternalSetup.
     // unused for useExternalSetup
     master: String,
@@ -65,12 +68,15 @@ case class IntegrationTestConfig(
 
   private val zkURLPattern = """^zk://([A-z0-9-.]+):(\d+)(.+)$""".r
 
-  def zkHostAndPort = s"127.0.0.1:$zkPort"
-  def zkPath = "/marathon-itest"
-  def zk = s"zk://$zkHostAndPort$zkPath"
+  def zkHostAndPort: String = s"127.0.0.1:$zkPort"
+  def zkPath: String = "/marathon-itest"
+  def zk: String = zkCredentials match {
+    case None               => s"zk://$zkHostAndPort$zkPath"
+    case Some(userPassword) => s"zk://$userPassword@$zkHostAndPort$zkPath"
+  }
 
   def marathonUrls: Seq[String] = marathonPorts.map(port => s"http://$marathonHost:$port")
-  def marathonUrl = marathonUrls.head
+  def marathonUrl: String = marathonUrls.head
 }
 
 object IntegrationTestConfig {
@@ -113,6 +119,7 @@ object IntegrationTestConfig {
 
     val zkHost = string("zkHost", unusedForExternalSetup("localhost"))
     val zkPort = int("zkPort", 2183 + (math.random * 100).toInt)
+    val zkCredentials = config.getOptional[String]("zkCredentials")
     val master = string("master", unusedForExternalSetup("127.0.0.1:5050"))
     val mesosLib = string("mesosLib", unusedForExternalSetup(defaultMesosLibConfig))
     val httpPort = int("httpPort", 11211 + (math.random * 100).toInt)
@@ -125,7 +132,7 @@ object IntegrationTestConfig {
     IntegrationTestConfig(
       cwd,
       useExternalSetup,
-      zkHost, zkPort,
+      zkHost, zkPort, zkCredentials,
       master, mesosLib,
       marathonHost, marathonBasePort, marathonGroup,
       httpPort,
