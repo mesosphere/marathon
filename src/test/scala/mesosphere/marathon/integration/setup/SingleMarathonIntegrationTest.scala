@@ -1,13 +1,16 @@
 package mesosphere.marathon.integration.setup
 
 import java.io.File
+import java.util
 
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.integration.facades.{ MesosFacade, ITEnrichedTask, ITDeploymentResult, MarathonFacade }
 import mesosphere.marathon.state.{ DockerVolume, AppDefinition, Container, PathId }
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
-import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
+import org.apache.zookeeper.ZooDefs.Perms
+import org.apache.zookeeper.data.{ Id, ACL }
+import org.apache.zookeeper._
 import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
@@ -15,6 +18,7 @@ import play.api.libs.json.Json
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.util.Try
+import scala.util.control.NonFatal
 
 // scalastyle:off magic.number
 object SingleMarathonIntegrationTest {
@@ -70,10 +74,40 @@ trait SingleMarathonIntegrationTest
     def toTestPath: PathId = testBasePath.append(path)
   }
 
-  protected def startZooKeeperProcess(port: Int = config.zkPort,
-                                      path: String = "/tmp/foo/single",
-                                      wipeWorkDir: Boolean = true): Unit = {
-    ProcessKeeper.startZooKeeper(port, path, wipeWorkDir)
+  protected def startZooKeeperProcess(
+    port: Int = config.zkPort,
+    path: String = "/tmp/foo/single",
+    wipeWorkDir: Boolean = true,
+    optionCredentials: Option[String] = config.zkCredentials): Unit = {
+    ProcessKeeper.startZooKeeper(port, path, wipeWorkDir, superCreds = config.zkCredentials.map(_ => "super:secret"))
+    optionCredentials match {
+      case Some(credentials) =>
+        retry() {
+          // create Marathon root node using the super digest user and all permission for the given digest
+          val watcher = new Watcher {
+            override def process(event: WatchedEvent): Unit = ()
+          }
+          val zooKeeper = new ZooKeeper(s"${config.zkHost}:$port", 30 * 1000, watcher)
+          val superDigest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest("super:secret")
+          zooKeeper.addAuthInfo("digest", superDigest.getBytes("UTF-8"))
+          val acl = new util.ArrayList[ACL]()
+          acl.add(new ACL(Perms.ALL, new Id("digest", credentials)))
+          acl.addAll(ZooDefs.Ids.READ_ACL_UNSAFE)
+          zooKeeper.create(config.zkPath, new Array[Byte](0), acl, CreateMode.PERSISTENT)
+        }
+      case None =>
+    }
+  }
+
+  @annotation.tailrec
+  private def retry[T](backoff: FiniteDuration = 0.1.seconds, maxBackoff: FiniteDuration = 5.seconds)(fn: => T): T = {
+    scala.util.Try { fn } match {
+      case scala.util.Success(x) => x
+      case _ if backoff <= maxBackoff =>
+        Thread.sleep(backoff.toMillis)
+        retry(backoff * 2)(fn)
+      case scala.util.Failure(e) => throw e
+    }
   }
 
   override protected def beforeAll(configMap: ConfigMap): Unit = {
