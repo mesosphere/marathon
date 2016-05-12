@@ -7,7 +7,7 @@ import akka.event.EventStream
 import akka.testkit._
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.api.LeaderInfo
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -387,7 +387,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         taskTracker,
         queue,
         holder,
-        leaderInfo,
+        electionService,
         system.eventStream,
         conf
       ))
@@ -457,7 +457,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         taskTracker,
         queue,
         holder,
-        leaderInfo,
+        electionService,
         system.eventStream,
         conf,
         cancellationTimeout = 0.seconds
@@ -538,7 +538,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   var holder: MarathonSchedulerDriverHolder = _
   var storage: StorageProvider = _
   var taskFailureEventRepository: TaskFailureRepository = _
-  var leaderInfo: LeaderInfo = _
+  var electionService: ElectionService = _
   var schedulerActions: ActorRef => SchedulerActions = _
   var deploymentManagerProps: SchedulerActions => Props = _
   var historyActorProps: Props = _
@@ -560,7 +560,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     frameworkIdUtil = mock[FrameworkIdUtil]
     storage = mock[StorageProvider]
     taskFailureEventRepository = mock[TaskFailureRepository]
-    leaderInfo = mock[LeaderInfo]
+    electionService = mock[ElectionService]
     conf = mock[UpgradeConfig]
     readinessCheckExecutor = mock[ReadinessCheckExecutor]
 
@@ -607,7 +607,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         taskTracker,
         queue,
         holder,
-        leaderInfo,
+        electionService,
         system.eventStream,
         conf
       )

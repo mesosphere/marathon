@@ -10,6 +10,7 @@ import com.google.inject._
 import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService, RestModule }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api._
+import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.{ LeaderProxyConf, ModuleNames }
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
@@ -39,16 +40,19 @@ object ForwarderService {
     log.info(s"Leader configuration: elected=$elected leaderHostPort=$leaderHostPort")
 
     override def configure(): Unit = {
-      val electedAlias = elected
-      val leaderInfo = new LeaderInfo {
-        override def elected: Boolean = electedAlias
-        override def currentLeaderHostPort(): Option[String] = leaderHostPort
+      val leader = leaderHostPort
+      val electionService = new ElectionService {
+        override def isLeader: Boolean = elected
+        override def leaderHostPort: Option[String] = leader
+
+        def offerLeadership(candidate: ElectionCandidate): Unit = ???
+        def abdicateLeadership(error: Boolean = false, reoffer: Boolean = false): Unit = ???
 
         override def subscribe(self: ActorRef): Unit = ???
         override def unsubscribe(self: ActorRef): Unit = ???
       }
 
-      bind(classOf[LeaderInfo]).toInstance(leaderInfo)
+      bind(classOf[ElectionService]).toInstance(electionService)
     }
   }
 

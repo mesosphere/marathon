@@ -125,7 +125,7 @@ object ProcessKeeper {
       "-Dakka.actor.debug.lifecycle=true"
     )
 
-    val marathonWorkDir: String = "/tmp/marathon-itest-marathon"
+    val marathonWorkDir: String = s"/tmp/marathon-itest-$processName"
     val marathonWorkDirFile: File = new File(marathonWorkDir)
     FileUtils.deleteDirectory(marathonWorkDirFile)
     FileUtils.forceMkdir(marathonWorkDirFile)

@@ -13,8 +13,9 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent._
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -142,10 +143,18 @@ class MarathonScheduler @Inject() (
     if (removeFrameworkId) Await.ready(frameworkIdUtil.expunge(), config.zkTimeoutDuration)
 
     // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
-    // scalastyle:off magic.number
-    Future(sys.exit(9)).onFailure {
-      case NonFatal(t) => log.error("Exception while committing suicide", t)
-    }
-    // scalastyle:on
+    Future({
+      val exitCode = 9
+      try {
+        Await.result(Future(sys.exit(exitCode)), 10.seconds)
+      }
+      catch {
+        case _: TimeoutException => log.error("Shutdown timeout")
+        case NonFatal(t)         => log.error("Exception while committing suicide", t)
+      }
+
+      log.info("Halting JVM")
+      Runtime.getRuntime.halt(exitCode)
+    })
   }
 }

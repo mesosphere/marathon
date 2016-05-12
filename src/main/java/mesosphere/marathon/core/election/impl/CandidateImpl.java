@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.leadership;
+package mesosphere.marathon.core.election.impl;
 
 // =================================================================================================
 // Copyright 2011 Twitter, Inc.

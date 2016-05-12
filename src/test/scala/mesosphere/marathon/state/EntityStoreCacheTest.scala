@@ -12,13 +12,13 @@ import scala.concurrent.Future
 
 class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers with BeforeAndAfter with ScalaFutures with Mockito {
 
-  test("The onElected trigger fills the cache") {
+  test("The preDriverStarts trigger fills the cache") {
     Given("A store with some entries")
     val names = Set("a", "b", "c")
     content ++= names.map(t => t -> new TestApp(t))
 
     When("On elected is called on the cache")
-    entityCache.onElected.futureValue
+    entityCache.preDriverStarts.futureValue
 
     Then("All values are cached")
     entityCache.cacheOpt should not be (empty)
@@ -26,14 +26,14 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     entityCache.cacheOpt.get.keySet should be(names)
   }
 
-  test("The onDefeated trigger will clear the state") {
+  test("The postDriverTerminates trigger will clear the state") {
     Given("A pre-filled entityCache")
     val names = Set("a", "b", "c")
     entityCache.cacheOpt = Some(new TrieMap[String, Option[TestApp]]())
     entityCache.cacheOpt.get ++= names.map(t => t -> Some(new TestApp(t)))
 
     When("On defeated is called on the cache")
-    entityCache.onDefeated.futureValue
+    entityCache.postDriverTerminates.futureValue
 
     Then("All values are removed")
     entityCache.cacheOpt should be(empty)
@@ -119,7 +119,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     val names = Set("a", "b", "c")
     val fixed = Timestamp.now()
     content ++= names.map(t => s"$t:$fixed" -> TestApp(t, fixed))
-    entityCache.onElected.futureValue
+    entityCache.preDriverStarts.futureValue
 
     When("A known versioned entry is fetched")
     val a = entityCache.fetch(s"a:$fixed").futureValue
@@ -151,7 +151,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     val names = Set("a", "b", "c")
     val update = TestApp("a", Timestamp.now())
     content ++= names.map(t => t -> TestApp(t))
-    entityCache.onElected.futureValue
+    entityCache.preDriverStarts.futureValue
 
     When("Modify an entity")
     val a = entityCache.modify("a")(_ => update).futureValue
@@ -180,7 +180,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     Given("A pre-filled entityCache")
     val names = Set("a", "b", "c")
     content ++= names.map(t => t -> TestApp(t))
-    entityCache.onElected.futureValue
+    entityCache.preDriverStarts.futureValue
 
     When("Expunge an entity")
     val result = entityCache.expunge("a").futureValue
@@ -199,7 +199,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
     val now = Timestamp.now()
     content ++= (names.map(t => t -> TestApp(t)) ++ names.map(t => s"$t:$now" -> TestApp(t, now)))
     content should have size 6
-    entityCache.onElected.futureValue
+    entityCache.preDriverStarts.futureValue
 
     When("Get all names in the cache")
     val allNames = entityCache.names().futureValue
