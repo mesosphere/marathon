@@ -22,6 +22,8 @@ message Constraint {
       GROUP_BY = 3;
       // Field must not match the regex given by value.
       UNLIKE = 4;
+      // Field will be grouped by field. Value specifies the maximum size of each group.
+      MAX_PER = 5;
   }
   required Operator operator = 2;
   optional string value = 3;
