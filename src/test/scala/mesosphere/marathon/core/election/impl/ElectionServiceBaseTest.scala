@@ -7,7 +7,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.base.ShutdownHooks
 import mesosphere.marathon.event.LocalLeadershipEvent
-import mesosphere.marathon.{MarathonTestHelper, MarathonSpec, MarathonConf}
+import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, MarathonConf }
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
