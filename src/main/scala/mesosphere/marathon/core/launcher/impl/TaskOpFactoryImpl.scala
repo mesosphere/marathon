@@ -32,10 +32,7 @@ class TaskOpFactoryImpl(
     new TaskOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  private[this] def appTaskProcessor = {
-    val opts = pluginManager.plugins[AppTaskProcessor]
-    plugin.Opt.Factory.combine(opts: _*)
-  }
+  private[this] def appTaskProc: AppTaskProcessor = pluginManager.plugins[AppTaskProcessor]
 
   override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     log.debug("buildTaskOp")
@@ -51,7 +48,7 @@ class TaskOpFactoryImpl(
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(app, offer, tasks, _) = request
 
-    new TaskBuilder(app, Task.Id.forApp, config, appTaskProcessor).buildIfMatches(offer, tasks.values).map {
+    new TaskBuilder(app, Task.Id.forApp, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values).map {
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
@@ -145,7 +142,7 @@ class TaskOpFactoryImpl(
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(app, (_) => task.taskId, config, appTaskProcessor).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(app, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val taskStateOp = TaskStateOp.LaunchOnReservation(
           task.taskId,
