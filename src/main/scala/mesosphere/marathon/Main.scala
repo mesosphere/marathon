@@ -1,11 +1,6 @@
 package mesosphere.marathon
 
-import java.net.InetSocketAddress
-import java.util
-
 import com.google.inject.Module
-import com.twitter.common.quantity.{ Amount, Time }
-import com.twitter.common.zookeeper.ZooKeeperClient
 import mesosphere.chaos.App
 import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
@@ -14,51 +9,17 @@ import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.event.http.HttpEventModule
 import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
-import scala.concurrent.{ Future, Await }
-import org.apache.zookeeper.KeeperException
 import org.slf4j.LoggerFactory
-import scala.concurrent.duration._
-
-import scala.collection.JavaConverters._
 
 class MarathonApp extends App {
   val log = LoggerFactory.getLogger(getClass.getName)
-
-  lazy val zk: ZooKeeperClient = {
-    require(
-      conf.zooKeeperSessionTimeout() < Integer.MAX_VALUE,
-      "ZooKeeper timeout too large!"
-    )
-
-    val client = new ZooKeeperLeaderElectionClient(
-      Amount.of(conf.zooKeeperSessionTimeout().toInt, Time.MILLISECONDS),
-      conf.zooKeeperHostAddresses.asJavaCollection
-    )
-
-    // Marathon can't do anything useful without a ZK connection
-    // so we wait to proceed until one is available
-    var connectedToZk = false
-
-    while (!connectedToZk) {
-      try {
-        log.info("Connecting to ZooKeeper...")
-        client.get
-        connectedToZk = true
-      }
-      catch {
-        case t: Throwable =>
-          log.warn("Unable to connect to ZooKeeper, retrying...")
-      }
-    }
-    client
-  }
 
   def modules(): Seq[Module] = {
     Seq(
       new HttpModule(conf),
       new MetricsModule,
       new MetricsReporterModule(conf),
-      new MarathonModule(conf, conf, zk),
+      new MarathonModule(conf, conf),
       new MarathonRestModule,
       new EventModule(conf),
       new DebugModule(conf),
@@ -134,35 +95,6 @@ class MarathonApp extends App {
     setIfNotDefined("scala.concurrent.context.minThreads", "5")
     setIfNotDefined("scala.concurrent.context.numThreads", "x2")
     setIfNotDefined("scala.concurrent.context.maxThreads", "64")
-  }
-
-  class ZooKeeperLeaderElectionClient(sessionTimeout: Amount[Integer, Time],
-                                      zooKeeperServers: java.lang.Iterable[InetSocketAddress])
-      extends ZooKeeperClient(sessionTimeout, zooKeeperServers) {
-
-    override def shouldRetry(e: KeeperException): Boolean = {
-      log.error("Got ZooKeeper exception", e)
-      log.error("Committing suicide to avoid invalidating ZooKeeper state")
-
-      val f = Future {
-        // scalastyle:off magic.number
-        Runtime.getRuntime.exit(9)
-        // scalastyle:on
-      }(scala.concurrent.ExecutionContext.global)
-
-      try {
-        Await.result(f, 5.seconds)
-      }
-      catch {
-        case _: Throwable =>
-          log.error("Finalization failed, killing JVM.")
-          // scalastyle:off magic.number
-          Runtime.getRuntime.halt(1)
-        // scalastyle:on
-      }
-
-      false
-    }
   }
 }
 

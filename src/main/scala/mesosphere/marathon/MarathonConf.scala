@@ -260,6 +260,13 @@ trait MarathonConf
     default = Some(3 * 60 * 1000L) //3 minutes
   )
 
+  lazy val leaderElectionBackend = opt[String]("leader_election_backend",
+    descr = "The backend for leader election to use. One of twitter_commons, curator.",
+    hidden = true,
+    validate = Set("twitter_commons", "curator").contains,
+    default = Some("curator")
+  )
+
   lazy val internalMaxQueuedRootGroupUpdates = opt[Int]("max_queued_root_group_updates",
     descr = "INTERNAL TUNING PARAMETER: " +
       "The maximum number of root group updates that we queue before rejecting updates.",

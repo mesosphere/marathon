@@ -1,6 +1,7 @@
 package mesosphere.marathon.core
 
 import mesosphere.marathon.core.auth.AuthModule
+import mesosphere.marathon.core.election.ElectionModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -17,6 +18,7 @@ import mesosphere.marathon.core.task.tracker.TaskTrackerModule
   * (as long as we have them).
   */
 trait CoreModule {
+  def electionModule: ElectionModule
   def leadershipModule: LeadershipModule
   def taskBusModule: TaskBusModule
   def taskJobsModule: TaskJobsModule

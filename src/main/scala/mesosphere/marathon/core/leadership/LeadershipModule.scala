@@ -1,8 +1,7 @@
 package mesosphere.marathon.core.leadership
 
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
-import com.twitter.common.zookeeper.ZooKeeperClient
-import mesosphere.marathon.LeadershipAbdication
+import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.leadership.impl._
 
 trait LeadershipModule {
@@ -21,8 +20,10 @@ trait LeadershipModule {
 }
 
 object LeadershipModule {
-  def apply(actorRefFactory: ActorRefFactory, zk: ZooKeeperClient, leader: LeadershipAbdication): LeadershipModule = {
-    new LeadershipModuleImpl(actorRefFactory, zk, leader)
+  def apply(
+    actorRefFactory: ActorRefFactory,
+    electionService: ElectionService): LeadershipModule = {
+    new LeadershipModuleImpl(actorRefFactory, electionService)
   }
 }
 
@@ -34,7 +35,7 @@ object LeadershipModule {
   * The leadership election logic needs to call the appropriate methods for this module to work.
   */
 private[leadership] class LeadershipModuleImpl(
-    actorRefFactory: ActorRefFactory, zk: ZooKeeperClient, leader: LeadershipAbdication) extends LeadershipModule {
+    actorRefFactory: ActorRefFactory, electionService: ElectionService) extends LeadershipModule {
 
   private[this] var whenLeaderRefs = Set.empty[ActorRef]
   private[this] var started: Boolean = false
@@ -57,9 +58,4 @@ private[leadership] class LeadershipModuleImpl(
     val actorRef = actorRefFactory.actorOf(props, "leaderShipCoordinator")
     new LeadershipCoordinatorDelegate(actorRef)
   }
-
-  /**
-    * Register this actor by default.
-    */
-  startWhenLeader(AbdicateOnConnectionLossActor.props(zk, leader), "AbdicateOnConnectionLoss")
 }
