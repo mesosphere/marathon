@@ -131,10 +131,10 @@ class LeaderIntegrationTest extends IntegrationFunSuite
   }
 
   test("the tombstone stops old instances from becoming leader") {
-    When("Starting an instance with --enable_features_twitter_commons")
+    When("Starting an instance with --leader_election_backend")
     val parameters = List(
       "--master", config.master,
-      "--leader_election_backend", "twitter_common"
+      "--leader_election_backend", "twitter_commons"
     ) ++ extraMarathonParameters
     val twitterCommonsInstancePort = config.marathonPorts.last + 1
     startMarathon(twitterCommonsInstancePort, parameters: _*)
