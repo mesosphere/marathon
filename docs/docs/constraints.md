@@ -22,7 +22,7 @@ If the specified attribute is not defined on the agent node, most operators will
 
 Attribute field supports all operators of Marathon.
 
-Note that currently Marathon only supports text values for attributes and will not be able to process any numberic values. For example the attribute pair `foo:bar` will be recognised, but marathon will not be able to match `cpu:4`.
+Marathon supports text, scalar, range, and set attribute values. For scalars, ranges, and sets Marathon will perform a string comparison on the formatted values. The format matches that of the Mesos attribute formatting. For ranges and sets, the format is `[begin-end,...]` and `{item,...}` respectively. For example, you might have a range formatted as `[100-200]` and a set formatted as `{a,b,c}`.
 
 ## Operators
 
