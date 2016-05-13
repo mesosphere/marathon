@@ -4,7 +4,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
-import org.apache.mesos.Protos.Offer
+import org.apache.mesos.Protos.{ Attribute, Offer, Value }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -23,6 +23,22 @@ object Constraints {
     case "inf"  => Integer.MAX_VALUE
     case Int(x) => x
     case _      => default
+  }
+
+  private def getValueString(attribute: Attribute): String = attribute.getType match {
+    case Value.Type.SCALAR =>
+      java.text.NumberFormat.getInstance.format(attribute.getScalar.getValue)
+    case Value.Type.TEXT =>
+      attribute.getText.getValue
+    case Value.Type.RANGES =>
+      val s = attribute.getRanges.getRangeList.asScala
+        .sortWith(_.getBegin < _.getBegin)
+        .map(r => s"${r.getBegin.toString}-${r.getEnd.toString}")
+        .mkString(",")
+      s"[$s]"
+    case Value.Type.SET =>
+      val s = attribute.getSet.getItemList.asScala.sorted.mkString(",")
+      s"{$s}"
   }
 
   private final class ConstraintsChecker(tasks: Iterable[Task], offer: Offer, constraint: Constraint) {
@@ -77,23 +93,23 @@ object Constraints {
       }
 
     private def checkAttribute = {
-      def matches: Iterable[Task] = matchTaskAttributes(tasks, field, attr.get.getText.getValue)
+      def matches: Iterable[Task] = matchTaskAttributes(tasks, field, getValueString(attr.get))
       constraint.getOperator match {
         case Operator.UNIQUE => matches.isEmpty
         case Operator.CLUSTER =>
           // If no value is set, accept the first one. Otherwise check for it.
-          (value.isEmpty || attr.get.getText.getValue == value) &&
+          (value.isEmpty || getValueString(attr.get) == value) &&
             // All running tasks should have the matching attribute
             matches.size == tasks.size
         case Operator.GROUP_BY =>
           val groupFunc = (task: Task) =>
             task.agentInfo.attributes
               .find(_.getName == field)
-              .map(_.getText.getValue)
-          checkGroupBy(attr.get.getText.getValue, groupFunc)
+              .map(getValueString(_))
+          checkGroupBy(getValueString(attr.get), groupFunc)
         case Operator.LIKE =>
           if (value.nonEmpty) {
-            attr.get.getText.getValue.matches(value)
+            getValueString(attr.get).matches(value)
           }
           else {
             log.warn("Error, value is required for LIKE operation")
@@ -101,7 +117,7 @@ object Constraints {
           }
         case Operator.UNLIKE =>
           if (value.nonEmpty) {
-            !attr.get.getText.getValue.matches(value)
+            !getValueString(attr.get).matches(value)
           }
           else {
             log.warn("Error, value is required for UNLIKE operation")
@@ -120,7 +136,7 @@ object Constraints {
         _.agentInfo.attributes
           .filter { y =>
             y.getName == field &&
-              y.getText.getValue == value
+              getValueString(y) == value
           }.nonEmpty
       }
   }
@@ -150,7 +166,7 @@ object Constraints {
     val distributions = app.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
       def groupFn(task: Task): Option[String] = constraint.getField match {
         case "hostname"    => Some(task.agentInfo.host)
-        case field: String => task.agentInfo.attributes.find(_.getName == field).map(_.getText.getValue)
+        case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
       }
       val taskGroups: Seq[Map[Task.Id, Task]] =
         runningTasks.groupBy(groupFn).values.map(Task.tasksById(_)).toSeq
@@ -183,7 +199,7 @@ object Constraints {
     //log the selected tasks and why they were selected
     if (log.isInfoEnabled) {
       val taskDesc = toKillTasks.values.map { task =>
-        val attrs = task.agentInfo.attributes.map(a => s"${a.getName}=${a.getText.getValue}").mkString(", ")
+        val attrs = task.agentInfo.attributes.map(a => s"${a.getName}=${getValueString(a)}").mkString(", ")
         s"${task.taskId} host:${task.agentInfo.host} attrs:$attrs"
       }.mkString("Selected Tasks to kill:\n", "\n", "\n")
       val distDesc = distributions.map { d =>
