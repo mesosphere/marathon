@@ -294,7 +294,7 @@ object Dependency {
     val JGraphT = "0.9.1"
     val Hadoop = "2.4.1"
     val Diffson = "0.3"
-    val PlayJson = "2.4.3"
+    val PlayJson = "2.5.3"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
     val MarathonUI = "1.2.0-SNAPSHOT"
