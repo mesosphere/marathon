@@ -4,7 +4,13 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
+import mesosphere.marathon.api.serialization.{
+  SecretsSerializer,
+  ContainerSerializer,
+  PortDefinitionSerializer,
+  ResidencySerializer,
+  EnvVarRefSerializer
+}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -13,7 +19,7 @@ import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.{ Protos, plugin }
+import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
@@ -33,7 +39,7 @@ case class AppDefinition(
 
   user: Option[String] = AppDefinition.DefaultUser,
 
-  env: Map[String, String] = AppDefinition.DefaultEnv,
+  env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
 
   instances: Int = AppDefinition.DefaultInstances,
 
@@ -79,8 +85,9 @@ case class AppDefinition(
 
   versionInfo: VersionInfo = VersionInfo.NoVersion,
 
-  residency: Option[Residency] = AppDefinition.DefaultResidency)
+  residency: Option[Residency] = AppDefinition.DefaultResidency,
 
+  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets)
     extends plugin.AppDefinition with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
@@ -149,6 +156,8 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
+      .addAllSecrets(secrets.toIterable.map(SecretsSerializer.toProto).asJava)
+      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
@@ -176,10 +185,13 @@ case class AppDefinition(
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
-    val envMap: Map[String, String] =
+    val envMap: Map[String, EnvVarValue] =
       proto.getCmd.getEnvironment.getVariablesList.asScala.map {
         v => v.getName -> v.getValue
       }.toMap
+
+    val envRefs: Map[String, EnvVarValue] =
+      proto.getEnvVarReferencesList.asScala.flatMap(EnvVarRefSerializer.fromProto).toMap
 
     val resourcesMap: Map[String, Double] =
       proto.getResourcesList.asScala.map {
@@ -242,7 +254,7 @@ case class AppDefinition(
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
-      env = envMap,
+      env = envMap ++ envRefs,
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
@@ -256,7 +268,8 @@ case class AppDefinition(
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
       ipAddress = ipAddressOption,
-      residency = residencyOption
+      residency = residencyOption,
+      secrets = proto.getSecretsList.asScala.map(SecretsSerializer.fromProto).toMap
     )
   }
 
@@ -325,7 +338,8 @@ case class AppDefinition(
         acceptedResourceRoles != to.acceptedResourceRoles ||
         ipAddress != to.ipAddress ||
         readinessChecks != to.readinessChecks ||
-        residency != to.residency
+        residency != to.residency ||
+        secrets != to.secrets
     }
   }
 
@@ -480,7 +494,7 @@ object AppDefinition {
 
   val DefaultUser: Option[String] = None
 
-  val DefaultEnv: Map[String, String] = Map.empty
+  val DefaultEnv: Map[String, EnvVarValue] = Map.empty
 
   val DefaultInstances: Int = 1
 
@@ -520,6 +534,8 @@ object AppDefinition {
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
+  val DefaultSecrets: Map[String, Secret] = Map.empty
+
   object Labels {
     val Default: Map[String, String] = Map.empty
 
@@ -553,13 +569,17 @@ object AppDefinition {
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
     appDef.disk should be >= 0.0
+    appDef.secrets.values is valid
+    appDef.secrets.keys is every(Secret.validSecretId)
+    appDef.secrets is empty or featureEnabled(Features.SECRETS)
+    appDef.env.values is every(valid)
     appDef must complyWithResourceRoleRules
     appDef must complyWithResidencyRules
     appDef must complyWithMigrationAPI
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
-  } and ExternalVolumes.validApp
+  } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   /**
     * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.

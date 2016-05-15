@@ -39,7 +39,9 @@ class MarathonApp extends App {
     }
   }
 
-  override lazy val conf = new AllConf(args)
+  // args is only guaranteed to be != null if the MarathonApp's main is run. In tests
+  // this is not the case such that we have to handle null gracefully here.
+  override lazy val conf = new AllConf(Option[Array[String]](args).toList.flatten)
 
   def runDefault(): Unit = {
     setConcurrentContextDefaults()

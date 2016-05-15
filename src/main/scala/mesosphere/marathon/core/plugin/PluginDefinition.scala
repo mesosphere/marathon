@@ -10,3 +10,7 @@ case class PluginDefinition(id: String,
                             info: Option[JsObject])
 
 case class PluginDefinitions(plugins: Seq[PluginDefinition])
+
+object PluginDefinitions {
+  lazy val None = PluginDefinitions(Seq.empty[PluginDefinition])
+}

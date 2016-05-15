@@ -231,6 +231,7 @@ object Dependencies {
 
   val pluginInterface = Seq(
     playJson % "compile",
+    mesosUtils % "compile",
     guava % "compile"
   )
 
