@@ -119,7 +119,8 @@ class TaskOpFactoryImpl @Inject() (
       val matchingResourcesForReservation =
         ResourceMatcher.matchResources(
           offer, app, tasks.values,
-          ResourceSelector.reservable
+          ResourceSelector.reservable,
+          Some(rejectionCollector)
         )
       matchingResourcesForReservation.map { resourceMatch =>
         reserveAndCreateVolumes(request.frameworkId, app, offer, resourceMatch)
@@ -138,18 +139,19 @@ class TaskOpFactoryImpl @Inject() (
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(app, (_) => task.taskId, config, Some(rejectionCollector)).build(offer, resourceMatch, volumeMatch) map {
-      case (taskInfo, ports) =>
-        val taskStateOp = TaskStateOp.LaunchOnReservation(
-          task.taskId,
-          appVersion = app.version,
-          status = Task.Status(
-            stagedAt = clock.now()
-          ),
-          hostPorts = ports)
+    new TaskBuilder(app, (_) => task.taskId, config, Some(rejectionCollector))
+      .build(offer, resourceMatch, volumeMatch) map {
+        case (taskInfo, ports) =>
+          val taskStateOp = TaskStateOp.LaunchOnReservation(
+            task.taskId,
+            appVersion = app.version,
+            status = Task.Status(
+              stagedAt = clock.now()
+            ),
+            hostPorts = ports)
 
-        taskOperationFactory.launchOnReservation(taskInfo, taskStateOp, task)
-    }
+          taskOperationFactory.launchOnReservation(taskInfo, taskStateOp, task)
+      }
   }
 
   private[this] def reserveAndCreateVolumes(
