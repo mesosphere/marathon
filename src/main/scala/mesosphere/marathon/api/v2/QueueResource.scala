@@ -68,7 +68,6 @@ class QueueResource @Inject() (
                  @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
     val result = rejectOfferCollector.getStatsFor(appId)
-    println(result)
     val allKeys = result.stats.allKeys.map(k => (k, Json.toJsFieldJsValueWrapper("" + result.stats.count(k))))
     ok(Json.obj("count" -> result.count,
       "details" -> Json.obj(allKeys.toSeq: _*)).toString())
