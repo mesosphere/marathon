@@ -131,14 +131,14 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   private[this] def launchOnReservation(
-                                         app: AppDefinition,
-                                         offer: Mesos.Offer,
-                                         task: Task.Reserved,
-                                         resourceMatch: Option[ResourceMatcher.ResourceMatch],
-                                         volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
+    app: AppDefinition,
+    offer: Mesos.Offer,
+    task: Task.Reserved,
+    resourceMatch: Option[ResourceMatcher.ResourceMatch],
+    volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(app, (_) => task.taskId, config).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(app, (_) => task.taskId, config, Some(rejectionCollector)).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val taskStateOp = TaskStateOp.LaunchOnReservation(
           task.taskId,
