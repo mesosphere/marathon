@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launcher.impl
 
+import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
@@ -9,7 +10,7 @@ import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
 import mesosphere.marathon.state.{ ResourceRole, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
+import mesosphere.mesos.{ RejectOfferCollector, PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
@@ -17,9 +18,10 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-class TaskOpFactoryImpl(
+class TaskOpFactoryImpl @Inject() (
   config: MarathonConf,
   clock: Clock,
+  rejectionCollector: RejectOfferCollector
   pluginManager: PluginManager = PluginManager.None)
     extends TaskOpFactory {
 
@@ -46,7 +48,7 @@ class TaskOpFactoryImpl(
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values).map {
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc), Some(rejectionCollector)).buildIfMatches(offer, tasks.values).map {
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
@@ -100,7 +102,8 @@ class TaskOpFactoryImpl(
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
             offer, runSpec, tasksToConsiderForConstraints.values,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels,
+            Some(rejectionCollector))
           )
 
         matchingReservedResourcesWithoutVolumes.flatMap { otherResourcesMatch =>

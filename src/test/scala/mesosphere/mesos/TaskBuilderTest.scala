@@ -416,20 +416,20 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     def hasEnv(name: String, value: String): Boolean =
       taskInfo.getExecutor.getCommand.hasEnvironment &&
-        taskInfo.getExecutor.getCommand.getEnvironment.getVariablesList.asScala.find{ ev =>
+        taskInfo.getExecutor.getCommand.getEnvironment.getVariablesList.asScala.find { ev =>
           ev.getName == name && ev.getValue == value
         }.isDefined
 
     def missingEnv(name: String): Boolean =
       taskInfo.getExecutor.getCommand.hasEnvironment &&
-        taskInfo.getExecutor.getCommand.getEnvironment.getVariablesList.asScala.find{ ev =>
+        taskInfo.getExecutor.getCommand.getEnvironment.getVariablesList.asScala.find { ev =>
           ev.getName == name
         }.isEmpty
 
-    taskInfo.hasContainer should be (false)
-    taskInfo.hasCommand should be (false)
-    taskInfo.getExecutor.hasContainer should be (true)
-    taskInfo.getExecutor.getContainer.hasMesos should be (true)
+    taskInfo.hasContainer should be(false)
+    taskInfo.hasCommand should be(false)
+    taskInfo.getExecutor.hasContainer should be(true)
+    taskInfo.getExecutor.getContainer.hasMesos should be(true)
 
     // check protobuf construction, should be a ContainerInfo w/ no volumes, w/ envvar
     assert(
@@ -588,11 +588,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val (taskInfo, taskPorts) = task.get
 
-    taskInfo.hasExecutor should be (false)
-    taskInfo.hasContainer should be (true)
+    taskInfo.hasExecutor should be(false)
+    taskInfo.hasContainer should be(true)
 
     val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
-    networkInfos.size should be (1)
+    networkInfos.size should be(1)
 
     val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
       .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
@@ -617,12 +617,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val (taskInfo, taskPorts) = task.get
 
-    taskInfo.hasContainer should be (false)
-    taskInfo.hasExecutor should be (true)
-    taskInfo.getExecutor.hasContainer should be (true)
+    taskInfo.hasContainer should be(false)
+    taskInfo.hasExecutor should be(true)
+    taskInfo.getExecutor.hasContainer should be(true)
 
     val networkInfos = taskInfo.getExecutor.getContainer.getNetworkInfosList.asScala
-    networkInfos.size should be (1)
+    networkInfos.size should be(1)
 
     val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
       .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
@@ -638,8 +638,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     TextFormat.shortDebugString(networkInfos.head) should equal(TextFormat.shortDebugString(networkInfoProto))
     networkInfos.head should equal(networkInfoProto)
 
-    taskInfo.hasDiscovery should be (true)
-    taskInfo.getDiscovery.getName should be (taskInfo.getName)
+    taskInfo.hasDiscovery should be(true)
+    taskInfo.getDiscovery.getName should be(taskInfo.getName)
   }
 
   test("BuildIfMatchesWithIpAddressAndNetworkName") {
@@ -685,11 +685,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val (taskInfo, taskPorts) = task.get
 
-    taskInfo.hasExecutor should be (false)
-    taskInfo.hasContainer should be (true)
+    taskInfo.hasExecutor should be(false)
+    taskInfo.hasContainer should be(true)
 
     val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
-    networkInfos.size should be (1)
+    networkInfos.size should be(1)
 
     val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
       .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
@@ -705,7 +705,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     TextFormat.shortDebugString(networkInfos.head) should equal(TextFormat.shortDebugString(networkInfoProto))
     networkInfos.head should equal(networkInfoProto)
 
-    taskInfo.hasDiscovery should be (true)
+    taskInfo.hasDiscovery should be(true)
     val discoveryInfo = taskInfo.getDiscovery
 
     val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
@@ -992,9 +992,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val t2 = makeSampleTask(app.id, "rackid", "3")
     val s = Set(t1, t2)
 
-    val builder = new TaskBuilder(
-      app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+    val builder = new TaskBuilder(app,
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None)
 
     val task = builder.buildIfMatches(offer, s)
 
@@ -1016,9 +1015,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     var runningTasks = Set.empty[Task]
 
-    val builder = new TaskBuilder(
-      app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+    val builder = new TaskBuilder(app,
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None)
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
@@ -1068,9 +1066,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     var runningTasks = Set.empty[Task]
 
-    val builder = new TaskBuilder(
-      app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+    val builder = new TaskBuilder(app,
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None)
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
@@ -1611,7 +1608,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       MarathonTestHelper.defaultConfig(
         mesosRole = mesosRole,
         acceptedResourceRoles = acceptedResourceRoles,
-        envVarsPrefix = envVarsPrefix))
+        envVarsPrefix = envVarsPrefix), None)
 
     builder.buildIfMatches(offer, Iterable.empty)
   }

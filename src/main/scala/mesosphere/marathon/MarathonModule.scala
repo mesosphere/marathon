@@ -25,6 +25,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
+import mesosphere.mesos.{ InMemRejectOfferCollector, RejectOfferCollector }
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
@@ -73,6 +74,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
+
+    bind(classOf[RejectOfferCollector]).to(classOf[InMemRejectOfferCollector]).in(Scopes.SINGLETON)
+    bind(classOf[TaskOpFactory]).to(classOf[TaskOpFactoryImpl]).in(Scopes.SINGLETON)
+
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).in(Scopes.SINGLETON)
 
     bind(classOf[String])
