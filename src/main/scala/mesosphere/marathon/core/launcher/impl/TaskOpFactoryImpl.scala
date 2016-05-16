@@ -7,7 +7,7 @@ import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.{ ResourceRole, AppDefinition }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
+import mesosphere.mesos.{ RejectOfferCollector, PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
@@ -17,7 +17,8 @@ import scala.concurrent.duration._
 
 class TaskOpFactoryImpl @Inject() (
   config: MarathonConf,
-  clock: Clock)
+  clock: Clock,
+  rejectionCollector: RejectOfferCollector)
     extends TaskOpFactory {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -42,7 +43,7 @@ class TaskOpFactoryImpl @Inject() (
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(app, offer, tasks, _) = request
 
-    new TaskBuilder(app, Task.Id.forApp, config).buildIfMatches(offer, tasks.values).map {
+    new TaskBuilder(app, Task.Id.forApp, config, Some(rejectionCollector)).buildIfMatches(offer, tasks.values).map {
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
@@ -96,7 +97,8 @@ class TaskOpFactoryImpl @Inject() (
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
             offer, app, tasksToConsiderForConstraints.values,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels),
+            Some(rejectionCollector)
           )
 
         matchingReservedResourcesWithoutVolumes.flatMap { otherResourcesMatch =>
@@ -129,11 +131,11 @@ class TaskOpFactoryImpl @Inject() (
   }
 
   private[this] def launchOnReservation(
-    app: AppDefinition,
-    offer: Mesos.Offer,
-    task: Task.Reserved,
-    resourceMatch: Option[ResourceMatcher.ResourceMatch],
-    volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
+                                         app: AppDefinition,
+                                         offer: Mesos.Offer,
+                                         task: Task.Reserved,
+                                         resourceMatch: Option[ResourceMatcher.ResourceMatch],
+                                         volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(app, (_) => task.taskId, config).build(offer, resourceMatch, volumeMatch) map {

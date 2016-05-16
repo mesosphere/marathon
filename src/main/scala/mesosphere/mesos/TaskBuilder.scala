@@ -20,7 +20,8 @@ import scala.collection.immutable.Seq
 
 class TaskBuilder(app: AppDefinition,
                   newTaskId: PathId => Task.Id,
-                  config: MarathonConf) {
+                  config: MarathonConf,
+                  rejectionCollectorOpt: Option[RejectOfferCollector]) {
 
   val log = LoggerFactory.getLogger(getClass)
 
@@ -80,7 +81,7 @@ class TaskBuilder(app: AppDefinition,
 
     val resourceMatch =
       ResourceMatcher.matchResources(
-        offer, app, runningTasks, ResourceSelector.any(acceptedResourceRoles))
+        offer, app, runningTasks, ResourceSelector.any(acceptedResourceRoles), rejectionCollectorOpt)
 
     build(offer, resourceMatch)
   }
