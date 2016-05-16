@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 class TaskOpFactoryImpl @Inject() (
   config: MarathonConf,
   clock: Clock,
-  rejectionCollector: RejectOfferCollector
+  rejectionCollector: RejectOfferCollector,
   pluginManager: PluginManager = PluginManager.None)
     extends TaskOpFactory {
 
@@ -142,7 +142,7 @@ class TaskOpFactoryImpl @Inject() (
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(spec, (_) => task.taskId, config, Some(rejectionCollector), Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val taskStateOp = TaskStateOp.LaunchOnReservation(
           task.taskId,
