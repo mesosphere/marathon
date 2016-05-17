@@ -19,8 +19,8 @@ These labels are
 "labels": [
    {
      "DCOS_SERVICE_NAME": "my-marathon-app",
-     "DCOS_SERVICE_PROTOCOL: "https"
-     "DCOS_SERVICE_PORT_INDEX": "3",
+     "DCOS_SERVICE_PROTOCOL": "https",
+     "DCOS_SERVICE_PORT_INDEX": "3"
    }
 ]
 ```
