@@ -21,7 +21,6 @@ These labels are
      "DCOS_SERVICE_NAME": "my-marathon-app",
      "DCOS_SERVICE_PROTOCOL: "https"
      "DCOS_SERVICE_PORT_INDEX": "3",
-
    }
 ]
 ```
