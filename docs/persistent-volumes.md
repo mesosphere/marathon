@@ -43,7 +43,7 @@ Configure a persistent volume with the following options:
 }
 ```
 
-- `containerPath`: The path where your application will read and write data. This can currently be only relative and non-nested (`"data"`, but not `"/data"`, `"/var/data"` or `"var/data"`).
+- `containerPath`: The path where your application will read and write data. This must be a single-level path relative to the container; it cannot contain a forward slash (`/`). (`"data"`, but not `"/data"`, `"/var/data"` or `"var/data"`).
 - `mode`: The access mode of the volume. Currently, `"RW"` is the only possible value and will let your application read from and write to the volume.
 - `persistent.size`: The size of the persistent volume in MiBs.
 
