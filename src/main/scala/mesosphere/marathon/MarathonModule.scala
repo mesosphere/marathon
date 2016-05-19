@@ -411,7 +411,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Named(ModuleNames.STORE_TASK_FAILURES)
   @Provides
   @Singleton
-  def provideTaskFailreStore(store: PersistentStore, metrics: Metrics): EntityStore[TaskFailure] = {
+  def provideTaskFailureStore(store: PersistentStore, metrics: Metrics): EntityStore[TaskFailure] = {
     import org.apache.mesos.{ Protos => mesos }
     entityStore(store, metrics, "taskFailure:",
       () => TaskFailure(
