@@ -236,7 +236,8 @@ object Dependencies {
     playJson % "compile",
     mesosUtils % "compile",
     guava % "compile",
-    wixAccord % "compile"
+    wixAccord % "compile",
+    metrics % "compile"
   )
 
   val excludeSlf4jLog4j12 = ExclusionRule(organization = "org.slf4j", name = "slf4j-log4j12")
@@ -273,6 +274,7 @@ object Dependencies {
     marathonApiConsole % "compile",
     wixAccord % "compile",
     curator % "compile",
+    metrics % "compile",
 
     // test
     Test.diffson % "test",
@@ -311,6 +313,7 @@ object Dependency {
     val Logback = "1.1.3"
     val WixAccord = "0.5"
     val Curator = "2.10.0"
+    val Metrics = "3.1.2"
 
     // test deps versions
     val Mockito = "1.9.5"
@@ -350,6 +353,7 @@ object Dependency {
   val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
   val curator = "org.apache.curator" % "curator-recipes" % V.Curator
+  val metrics = "io.dropwizard.metrics" % "metrics-core" % V.Metrics
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
