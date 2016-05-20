@@ -22,7 +22,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
       QueuedTaskCount(
-        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunchedOrRunning = 0, clock.now() + 100.seconds
+        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunchedOrRunning = 0, tasksLost = 0, clock.now() + 100.seconds
       )
     )
 
@@ -46,7 +46,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
       QueuedTaskCount(
-        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunchedOrRunning = 0,
+        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunchedOrRunning = 0, tasksLost = 0,
         backOffUntil = clock.now() - 100.seconds
       )
     )
@@ -81,7 +81,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
       QueuedTaskCount(
-        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunchedOrRunning = 0,
+        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunchedOrRunning = 0, tasksLost = 0,
         backOffUntil = clock.now() + 100.seconds
       )
     )

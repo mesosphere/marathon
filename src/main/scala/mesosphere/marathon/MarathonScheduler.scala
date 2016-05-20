@@ -122,7 +122,7 @@ class MarathonScheduler @Inject() (
     // For now the frameworkId is removed based on the error message.
     val removeFrameworkId = message match {
       case "Framework has been removed" => true
-      case unknown: String => false
+      case unknown: String              => false
     }
     suicide(removeFrameworkId)
   }

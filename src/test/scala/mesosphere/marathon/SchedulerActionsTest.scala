@@ -14,7 +14,7 @@ import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ times, verify, verifyNoMoreInteractions, when }
-import org.scalatest.Matchers
+import org.scalatest.{ GivenWhenThen, Matchers }
 import org.scalatest.mock.MockitoSugar
 
 import scala.collection.JavaConverters._
@@ -184,4 +184,29 @@ class SchedulerActionsTest extends MarathonActorSupport with MarathonSpec with M
 
     verify(driver, times(1)).killTask(protos.TaskID(orphanedTask.getId))
   }
+
+  ignore("Scale up correctly in case of lost tasks") {
+    // Given currentCount = 10, tasksLost = 5, targetCount = 15
+    // When the app is scaled
+    // Then 5 tasks should be placed onto the launchQueue
+  }
+
+  ignore("Kill staged tasks in correct order in case of lost tasks") {
+    // Given currentCount = 10 (staged: 7), tasksLost = 5, targetCount = 5
+    // When the app is scaled
+    // Then the youngest 5 STAGED tasks are killed
+  }
+
+  ignore("Kill running tasks in correct order in case of lost tasks") {
+    // Given currentCount = 10 (all running), tasksLost = 5, targetCount = 5
+    // When the app is scaled
+    // Then the youngest running tasks are killed
+  }
+
+  ignore("Kill staged and running tasks in correct order in case of lost tasks") {
+    // Given currentCount = 10 (3 staging), tasksLost = 5, targetCount = 5
+    // When the app is scaled
+    // Then the 3 staging tasks plus the 2 youngest running tasks are killed
+  }
+
 }
