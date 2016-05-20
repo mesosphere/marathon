@@ -5,11 +5,11 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
-import mesosphere.mesos.protos.{FrameworkID, OfferID, SlaveID, TextAttribute}
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.mesos.protos.{ FrameworkID, OfferID, SlaveID, TextAttribute }
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.{Attribute, Offer}
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.apache.mesos.Protos.{ Attribute, Offer }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
@@ -557,7 +557,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
       makeOffer("foohost", Set(makeScalarAttribute("jdk", 7))), // slave attributes
       jdk7ConstraintCluster)
     assert(clusterVersionMet, "Should meet cluster-version constraints.")
-    
+
     val likeNoAttributeNotMet = Constraints.meetsConstraint(
       freshRack, // list of tasks register in the cluster
       makeOffer("foohost", Set()), // no slave attribute
@@ -653,7 +653,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
       makeOffer("foohost", Set(makeSetAttribute("gpu", List("0", "1")))), // slave attributes
       jdk7ConstraintClusterSet)
     assert(clusterSetVersionMet, "Should meet cluster-set-version constraints.")
-    
+
     val likeSetNoAttributeNotMet = Constraints.meetsConstraint(
       freshRack, // list of tasks register in the cluster
       makeOffer("foohost", Set()), // no slave attribute
