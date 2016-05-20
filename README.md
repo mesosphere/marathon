@@ -151,6 +151,7 @@ To develop on the web UI look into the instructions of the [Marathon UI](https:/
 Across all installations Marathon is managing applications on more than 100,000 nodes world-wide. These are some of the companies using it:
 
 * [Adform](http://site.adform.com/)
+* [Alauda](http://www.alauda.cn/)
 * [Allegro](http://allegro.tech)
 * [AllUnite](https://allunite.com/)
 * [Argus Cyber Security](http://argus-sec.com/)
