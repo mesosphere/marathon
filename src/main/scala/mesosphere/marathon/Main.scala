@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import com.google.inject.Module
+import dcos.marathon.BuildInfo
 import mesosphere.chaos.App
 import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
