@@ -46,7 +46,12 @@ object MarathonBuild extends Build {
         unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
         libraryDependencies ++= Dependencies.root,
         parallelExecution in Test := false,
-        buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
+        buildInfoKeys := Seq[BuildInfoKey](
+          name, version, scalaVersion,
+          BuildInfoKey.action("buildref") {
+            val suffix = Process("git diff --shortstat").lines.headOption.map(_ => "-dev").getOrElse("")
+            Process("git rev-parse HEAD").lines.headOption.getOrElse("unknown") + suffix
+          }),
         buildInfoPackage := "mesosphere.marathon",
         fork in Test := true
       )

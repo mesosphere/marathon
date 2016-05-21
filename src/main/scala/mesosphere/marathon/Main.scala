@@ -44,7 +44,7 @@ class MarathonApp extends App {
   def runDefault(): Unit = {
     setConcurrentContextDefaults()
 
-    log.info(s"Starting Marathon ${BuildInfo.version} with ${args.mkString(" ")}")
+    log.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
 
     AllConf.config = Some(conf)
 
