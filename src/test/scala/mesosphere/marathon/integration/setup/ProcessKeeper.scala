@@ -199,29 +199,32 @@ object ProcessKeeper {
   def stopProcess(name: String): Unit = {
     import mesosphere.util.ThreadPoolContext.ioContext
     log.info(s"Stop Process $name")
-    val process = processes(name)
-    def killProcess: Int = {
-      // Unfortunately, there seem to be race conditions in Process.exitValue.
-      // Thus this ugly workaround.
-      Await.result(Future {
-        scala.concurrent.blocking {
-          Try(process.destroy())
-          process.exitValue()
-        }
-      }, 5.seconds)
+    processes.get(name).foreach { process =>
+      def killProcess: Int = {
+        // Unfortunately, there seem to be race conditions in Process.exitValue.
+        // Thus this ugly workaround.
+        Await.result(Future {
+          scala.concurrent.blocking {
+            Try(process.destroy())
+            process.exitValue()
+          }
+        }, 5.seconds)
+      }
+      //retry on fail
+      Try(killProcess) recover { case _ => killProcess } match {
+        case Success(value)       => processes -= name
+        case Failure(NonFatal(e)) => log.error("giving up waiting for processes to finish", e)
+      }
+      log.info(s"Stop Process $name: Done")
     }
-    //retry on fail
-    Try(killProcess) recover { case _ => killProcess } match {
-      case Success(value)       => processes -= name
-      case Failure(NonFatal(e)) => log.error("giving up waiting for processes to finish", e)
-    }
-    log.info(s"Stop Process $name: Done")
   }
 
   def stopAllProcesses(): Unit = {
     processes.keys.toSeq.reverse.foreach(stopProcess)
     processes = ListMap.empty
   }
+
+  def hasProcess(name: String): Boolean = processes.contains(name)
 
   def startService(service: Service): Unit = {
     services ::= service
