@@ -22,9 +22,10 @@ object LaunchQueue {
       tasksLeftToLaunch: Int,
       taskLaunchesInFlight: Int,
       tasksLaunchedOrRunning: Int,
+      tasksLost: Int,
       backOffUntil: Timestamp) {
     def waiting: Boolean = tasksLeftToLaunch != 0 || taskLaunchesInFlight != 0
-    def totalTaskCount: Int = tasksLeftToLaunch + tasksLaunchedOrRunning + taskLaunchesInFlight
+    def totalTaskCount: Int = tasksLeftToLaunch + tasksLaunchedOrRunning + taskLaunchesInFlight - tasksLost
   }
 }
 
