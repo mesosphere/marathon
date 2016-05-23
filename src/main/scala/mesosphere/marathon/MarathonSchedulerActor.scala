@@ -580,7 +580,7 @@ private[this] object SchedulerActions {
       case 0          => a.getStagedAt compareTo b.getStagedAt
       case value: Int => value
     }
-    result < 0
+    result > 0
   }
 
   val runningOrStaged = Map(
