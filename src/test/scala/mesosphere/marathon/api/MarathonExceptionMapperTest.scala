@@ -47,7 +47,7 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
     val entityString = response.getEntity.asInstanceOf[String]
     val entity = Json.parse(entityString)
     (entity \ "message").as[String] should be("Invalid JSON")
-    (entity \ "details").as[String] should be("""Unexpected end-of-input: expected close marker for OBJECT (from [Source: {"id":"/test"; line: 1, column: 0])""")
+    (entity \ "details").as[String] should be("""Unexpected end-of-input: expected close marker for OBJECT (from [Source: {"id":"/test"; line: 1, column: 1])""")
   }
 
   test("Render json mapping exception correctly") {
@@ -63,7 +63,7 @@ class MarathonExceptionMapperTest extends MarathonSpec with GivenWhenThen with M
     val entityString = response.getEntity.asInstanceOf[String]
     val entity = Json.parse(entityString)
     (entity \ "message").as[String] should be("Please specify data in JSON format")
-    (entity \ "details").as[String] should be("No content to map due to end-of-input\n at [Source: ; line: 1, column: 1]")
+    (entity \ "details").as[String] should be("No content to map due to end-of-input\n at [Source: ; line: 1, column: 0]")
   }
 
   test("Render ConstraintValidationException correctly") {
