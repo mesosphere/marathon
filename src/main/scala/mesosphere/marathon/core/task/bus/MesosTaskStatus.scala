@@ -20,10 +20,11 @@ object MesosTaskStatus {
 
   object Terminal {
     def unapply(taskStatus: TaskStatus): Option[TaskStatus] = taskStatus.getState match {
-      case TASK_LOST if !MightComeBack(taskStatus.getReason) => Some(taskStatus)
+      case TASK_LOST if WontComeBack(taskStatus.getReason) => Some(taskStatus)
       case TASK_ERROR | TASK_FAILED | TASK_KILLED | TASK_FINISHED => Some(taskStatus)
       case _ => None
     }
+    def isTerminal(taskStatus: TaskStatus): Boolean = unapply(taskStatus).isDefined
   }
 
   object TemporarilyUnreachable {

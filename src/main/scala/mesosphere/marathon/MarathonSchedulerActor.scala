@@ -524,6 +524,7 @@ class SchedulerActions(
   /**
     * Make sure the app is running the correct number of instances
     */
+  // FIXME: extract computation into a function that can be easily tested
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     import SchedulerActions._
 
@@ -576,11 +577,11 @@ class SchedulerActions(
 
 private[this] object SchedulerActions {
   def sortByStateAndTime(a: MarathonTask, b: MarathonTask): Boolean = {
-    val result = runningOrStaged(a.getStatus.getState) compareTo runningOrStaged(b.getStatus.getState) match {
+    val result = runningOrStaged(b.getStatus.getState) compareTo runningOrStaged(a.getStatus.getState) match {
       case 0          => a.getStagedAt compareTo b.getStagedAt
       case value: Int => value
     }
-    result < 0
+    result >= 0
   }
 
   val runningOrStaged = Map(

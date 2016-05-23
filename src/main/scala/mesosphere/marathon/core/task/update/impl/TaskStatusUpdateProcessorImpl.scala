@@ -62,7 +62,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
           mesosStatus = status
         ).map(_ => acknowledge(status))
       case None =>
-        if (MesosTaskStatus.Terminal.unapply(status).isDefined) {
+        if (MesosTaskStatus.Terminal.isTerminal(status)) {
           killUnknownTaskTimer {
             if (status.getState != TaskState.TASK_LOST) {
               // If we kill an unknown task, we will get another TASK_LOST notification which leads to an endless
