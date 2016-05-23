@@ -337,6 +337,7 @@ private class AppTaskLauncherActor(
       taskLaunchesInFlight = inFlightTaskOperations.size,
       // don't count tasks that are not launched in the tasksMap
       tasksLaunched = tasksMap.values.count(_.launched.isDefined) - inFlightTaskOperations.size,
+      tasksLost = tasksMap.values.count(_.mesosStatus.fold(false)(_.getState == Mesos.TaskState.TASK_LOST)),
       backOffUntil.getOrElse(clock.now())
     )
   }

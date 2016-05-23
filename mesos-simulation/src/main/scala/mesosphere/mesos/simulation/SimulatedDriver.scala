@@ -1,6 +1,7 @@
 package mesosphere.mesos.simulation
 
 import java.util
+import java.util.Collections
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -58,9 +59,11 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
   override def declineOffer(offerId: OfferID, filters: Filters): Status = Status.DRIVER_RUNNING
 
   override def launchTasks(offerIds: util.Collection[OfferID], tasks: util.Collection[TaskInfo],
-                           filters: Filters): Status = ???
-  override def launchTasks(offerId: OfferID, tasks: util.Collection[TaskInfo], filters: Filters): Status = ???
-  override def launchTasks(offerId: OfferID, tasks: util.Collection[TaskInfo]): Status = ???
+                           filters: Filters): Status = launchTasks(offerIds, tasks)
+  override def launchTasks(offerId: OfferID, tasks: util.Collection[TaskInfo], filters: Filters): Status =
+    launchTasks(Collections.singleton(offerId), tasks)
+  override def launchTasks(offerId: OfferID, tasks: util.Collection[TaskInfo]): Status =
+    launchTasks(Collections.singleton(offerId), tasks)
   override def requestResources(requests: util.Collection[Request]): Status = ???
   override def sendFrameworkMessage(executorId: ExecutorID, slaveId: SlaveID, data: Array[Byte]): Status = ???
   override def acknowledgeStatusUpdate(ackStatus: TaskStatus): Status = status

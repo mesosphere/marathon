@@ -5,6 +5,7 @@ import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
+import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.state.ResourceRole
@@ -18,7 +19,7 @@ trait MarathonConf
     extends ScallopConf with ZookeeperConf with LeaderProxyConf
     with LaunchTokenConfig with OfferMatcherManagerConfig with OfferProcessorConfig with ReviveOffersConfig
     with MarathonSchedulerServiceConfig with LaunchQueueConfig with PluginManagerConfiguration
-    with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig {
+    with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with TaskJobsConfig {
 
   //scalastyle:off magic.number
 

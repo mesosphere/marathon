@@ -1,7 +1,7 @@
 package mesosphere.marathon.core
 
 import akka.actor.ActorSystem
-import com.google.inject.Inject
+import com.google.inject.{ Provider, Inject }
 import com.twitter.common.zookeeper.ZooKeeperClient
 import mesosphere.marathon.api.LeaderInfo
 import mesosphere.marathon.core.auth.AuthModule
@@ -19,6 +19,7 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.TaskUpdateStep
+import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
 import mesosphere.marathon.{ LeadershipAbdication, MarathonConf, MarathonSchedulerDriverHolder }
@@ -44,6 +45,7 @@ class CoreModuleImpl @Inject() (
     taskRepository: TaskRepository,
     taskOpFactory: TaskOpFactory,
     leaderInfo: LeaderInfo,
+    taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
     clock: Clock,
     taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
 
@@ -153,6 +155,7 @@ class CoreModuleImpl @Inject() (
     taskTrackerModule.taskReservationTimeoutHandler,
     marathonSchedulerDriverHolder
   )
+  taskJobsModule.expungeOverdueLostTasks(taskTrackerModule.taskTracker, taskTrackerModule.stateOpProcessor)
   maybeOfferReviver
   offerMatcherManagerModule
   launcherModule

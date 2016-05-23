@@ -17,7 +17,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ UpgradeConfig, DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos
-import org.apache.mesos.Protos.{ Status, TaskID }
+import org.apache.mesos.Protos.{ Status, TaskState, TaskID }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
@@ -516,8 +516,13 @@ class SchedulerActions(
   /**
     * Make sure the app is running the correct number of instances
     */
+  // FIXME: extract computation into a function that can be easily tested
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    val launchedCount = taskTracker.countLaunchedAppTasksSync(app.id)
+    import SchedulerActions._
+
+    // FIXME (merge): there are now 2 filters ...
+    val launchedCount = taskTracker.countLaunchedAppTasksSync(app.id,
+      _.mesosStatus.fold(false)(_.getState != TaskState.TASK_LOST))
     val targetCount = app.instances
 
     if (targetCount > launchedCount) {
@@ -538,7 +543,10 @@ class SchedulerActions(
       log.info(s"Scaling ${app.id} from $launchedCount down to $targetCount instances")
       launchQueue.purge(app.id)
 
-      val toKill = taskTracker.appTasksLaunchedSync(app.id).take(launchedCount - targetCount)
+      val toKill = taskTracker.appTasksSync(app.id).toSeq
+        .filter(t => t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
+        .sortWith(sortByStateAndTime)
+        .take(launchedCount - targetCount)
       val taskIds: Iterable[TaskID] = toKill.flatMap(_.launchedMesosId)
       log.info(s"Killing tasks: ${taskIds.map(_.getValue)}")
       for (taskId <- taskIds) {
@@ -559,4 +567,28 @@ class SchedulerActions(
 
   def currentAppVersion(appId: PathId): Future[Option[AppDefinition]] =
     appRepository.currentVersion(appId)
+}
+
+private[this] object SchedulerActions {
+  def sortByStateAndTime(a: Task, b: Task): Boolean = {
+
+    def opt[T](a: Option[T], b: Option[T], default: Boolean)(fn: (T, T) => Boolean): Boolean = (a, b) match {
+      case (Some(av), Some(bv)) => fn(av, bv)
+      case _                    => default
+    }
+    opt(a.mesosStatus, b.mesosStatus, a.mesosStatus.isDefined) { (aStatus, bStatus) =>
+      runningOrStaged(bStatus.getState) compareTo runningOrStaged(aStatus.getState) match {
+        case 0 => opt(a.launched, b.launched, a.launched.isDefined) { (aLaunched, bLaunched) =>
+          (aLaunched.status.stagedAt compareTo bLaunched.status.stagedAt) > 0
+        }
+        case value: Int => value > 0
+      }
+    }
+
+  }
+
+  val runningOrStaged = Map(
+    TaskState.TASK_STAGING -> 1,
+    TaskState.TASK_STARTING -> 2,
+    TaskState.TASK_RUNNING -> 3)
 }

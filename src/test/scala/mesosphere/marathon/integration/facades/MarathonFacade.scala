@@ -40,6 +40,7 @@ case class ITEnrichedTask(
     ipAddresses: Option[Seq[IpAddress]],
     startedAt: Option[Date],
     stagedAt: Option[Date],
+    state: String,
     version: Option[String]) {
 
   def launched: Boolean = startedAt.nonEmpty
@@ -95,8 +96,9 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
     (__ \ "ipAddresses").formatNullable[Seq[IpAddress]] ~
     (__ \ "startedAt").formatNullable[Date] ~
     (__ \ "stagedAt").formatNullable[Date] ~
+    (__ \ "state").format[String] ~
     (__ \ "version").formatNullable[String]
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)

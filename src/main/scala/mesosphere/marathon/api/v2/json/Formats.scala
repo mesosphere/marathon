@@ -113,12 +113,15 @@ trait Formats
       "persistenceId" -> id.idString
     )
   }
+  implicit lazy val TaskStateFormat: Format[mesos.TaskState] =
+    enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
 
   implicit lazy val TaskWrites: Writes[Task] = Writes { task =>
     val base = Json.obj(
       "id" -> task.taskId,
       "slaveId" -> task.agentInfo.agentId,
-      "host" -> task.agentInfo.host
+      "host" -> task.agentInfo.host,
+      "state" -> task.mesosStatus.fold(mesos.TaskState.TASK_STAGING)(_.getState)
     )
 
     val launched = task.launched.map { launched =>
