@@ -3,10 +3,14 @@ package mesosphere.marathon.core.task.bus
 import mesosphere.marathon.core.task.bus.TaskStatusObservables.TaskStatusUpdate
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.tasks.TaskIdUtil
-import org.apache.mesos.Protos.TaskID
+import org.apache.mesos.Protos.{ TaskID, TaskStatus }
+import org.apache.mesos.Protos.TaskStatus.Reason
 import org.joda.time.DateTime
+import org.slf4j.LoggerFactory
 
 class TaskStatusUpdateTestHelper(val wrapped: TaskStatusUpdate) {
+  import TaskStatusUpdateTestHelper.log
+
   def withTaskId(taskId: String): TaskStatusUpdateTestHelper = {
     withTaskId(TaskID.newBuilder().setValue(taskId).build())
   }
@@ -22,9 +26,17 @@ class TaskStatusUpdateTestHelper(val wrapped: TaskStatusUpdate) {
   def withStatus(status: MarathonTaskStatus): TaskStatusUpdateTestHelper = TaskStatusUpdateTestHelper {
     wrapped.copy(status = status)
   }
+
+  def taskStatus: TaskStatus = wrapped.status.mesosStatus.getOrElse{
+    log.error("no mesosStatus set!")
+    TaskStatusUpdateTestHelper.running.wrapped.status.mesosStatus.get
+  }
+
+  def reason: TaskStatus.Reason = taskStatus.getReason
 }
 
 object TaskStatusUpdateTestHelper {
+  val log = LoggerFactory.getLogger(getClass)
   def apply(update: TaskStatusUpdate): TaskStatusUpdateTestHelper =
     new TaskStatusUpdateTestHelper(update)
 
@@ -74,11 +86,11 @@ object TaskStatusUpdateTestHelper {
     )
   )
 
-  val lost = TaskStatusUpdateTestHelper(
+  def lost(reason: Reason) = TaskStatusUpdateTestHelper(
     TaskStatusUpdate(
       timestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 31, 0, 0)),
       taskId = taskId,
-      status = MarathonTaskStatusTestHelper.lost
+      status = MarathonTaskStatusTestHelper.lost(reason)
     )
   )
 

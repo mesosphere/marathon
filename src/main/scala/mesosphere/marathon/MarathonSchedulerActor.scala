@@ -13,7 +13,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
-import TaskTracker.AppTasks
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor }
 import mesosphere.mesos.protos
@@ -524,8 +524,12 @@ class SchedulerActions(
   /**
     * Make sure the app is running the correct number of instances
     */
+  // FIXME: extract computation into a function that can be easily tested
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    val currentCount = taskTracker.countAppTasksSync(app.id)
+    import SchedulerActions._
+
+    // current count should not include LOST tasks because we want to try to launch replacements for LOST tasks
+    val currentCount = taskTracker.countAppTasksSync(app.id, _.getStatus.getState != TaskState.TASK_LOST)
     val targetCount = app.instances
 
     if (targetCount > currentCount) {
@@ -546,7 +550,10 @@ class SchedulerActions(
       log.info(s"Scaling ${app.id} from $currentCount down to $targetCount instances")
       taskQueue.purge(app.id)
 
-      val toKill = taskTracker.appTasksSync(app.id).take(currentCount - targetCount)
+      val toKill = taskTracker.appTasksSync(app.id).toSeq
+        .filter(t => runningOrStaged.get(t.getStatus.getState).nonEmpty)
+        .sortWith(sortByStateAndTime)
+        .take(currentCount - targetCount)
       log.info(s"Killing tasks: ${toKill.map(_.getId)}")
       for (task <- toKill) {
         driver.killTask(protos.TaskID(task.getId))
@@ -566,4 +573,19 @@ class SchedulerActions(
 
   def currentAppVersion(appId: PathId): Future[Option[AppDefinition]] =
     appRepository.currentVersion(appId)
+}
+
+private[this] object SchedulerActions {
+  def sortByStateAndTime(a: MarathonTask, b: MarathonTask): Boolean = {
+    val result = runningOrStaged(b.getStatus.getState) compareTo runningOrStaged(a.getStatus.getState) match {
+      case 0          => a.getStagedAt compareTo b.getStagedAt
+      case value: Int => value
+    }
+    result > 0
+  }
+
+  val runningOrStaged = Map(
+    TaskState.TASK_STAGING -> 1,
+    TaskState.TASK_STARTING -> 2,
+    TaskState.TASK_RUNNING -> 3)
 }

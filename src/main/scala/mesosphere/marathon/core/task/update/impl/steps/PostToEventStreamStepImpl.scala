@@ -37,7 +37,7 @@ class PostToEventStreamStepImpl @Inject() (
     status.getState match {
       case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
         postEvent(timestamp, appId, status, task)
-      case TASK_RUNNING if !task.hasStartedAt => // staged, not running
+      case TASK_RUNNING if task.getStatus.getState != TASK_RUNNING => //do not report subsequent running updates
         postEvent(timestamp, appId, status, task)
 
       case state: TaskState =>
