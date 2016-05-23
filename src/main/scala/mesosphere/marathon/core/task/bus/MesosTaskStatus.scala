@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.bus
 
+import mesosphere.marathon.Protos.MarathonTask
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.Protos.TaskStatus.Reason._
@@ -28,6 +29,10 @@ object MesosTaskStatus {
   }
 
   object TemporarilyUnreachable {
+    def unapply(task: MarathonTask): Option[MarathonTask] = {
+      if (task.getStatus.getState == TASK_LOST && MightComeBack(task.getStatus.getReason)) Some(task)
+      else None
+    }
     def unapply(taskStatus: TaskStatus): Option[TaskStatus] = {
       if (taskStatus.getState == TASK_LOST && MightComeBack(taskStatus.getReason)) Some(taskStatus)
       else None

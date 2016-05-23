@@ -48,7 +48,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
   log.info("Started status update processor with steps:\n{}", steps.map(step => s"* ${step.name}").mkString("\n"))
 
-  override def publish(status: TaskStatus): Future[Unit] = publishFutureTimer.timeFuture {
+  override def publish(status: TaskStatus, ack: Boolean = true): Future[Unit] = publishFutureTimer.timeFuture {
     val now = clock.now()
     val taskId = status.getTaskId
     val appId = taskIdUtil.appId(taskId)
@@ -60,19 +60,17 @@ class TaskStatusUpdateProcessorImpl @Inject() (
           appId = appId,
           task = task,
           mesosStatus = status
-        ).map(_ => acknowledge(status))
+        ).map(_ => if (ack) acknowledge(status))
       case None =>
-        if (MesosTaskStatus.Terminal.isTerminal(status)) {
-          killUnknownTaskTimer {
-            if (status.getState != TaskState.TASK_LOST) {
-              // If we kill an unknown task, we will get another TASK_LOST notification which leads to an endless
-              // stream of kills and TASK_LOST updates.
-              log.warn("Killing unknown task ", taskId)
-              killTask(taskId)
-            }
+        killUnknownTaskTimer {
+          if (status.getState != TaskState.TASK_LOST) {
+            // If we kill an unknown task, we will get another TASK_LOST notification which leads to an endless
+            // stream of kills and TASK_LOST updates.
+            log.warn("Killing unknown task ", taskId)
+            killTask(taskId)
           }
         }
-        acknowledge(status)
+        if (ack) acknowledge(status)
         Future.successful(())
     }
   }
