@@ -74,6 +74,16 @@ class StatusUpdateActionResolverTest
     }
   }
 
+  test("a subsequent TASK_LOST update with another reason is mapped to a noop and will not update the timestamp") {
+    val f = new Fixture
+    val update = TaskStatusUpdateTestHelper.lost(TaskStatus.Reason.REASON_SLAVE_DISCONNECTED)
+    val task: MarathonTask = MarathonTestHelper.lostTask(update.wrapped.taskId.getValue, TaskStatus.Reason.REASON_RECONCILIATION)
+    val status: TaskStatus = update.taskStatus
+
+    val action = f.actionResolver.resolveForExistingTask(task, status)
+    action shouldEqual Action.Noop
+  }
+
   class Fixture {
     val taskTracker = mock[TaskTracker]
     val actionResolver = new StatusUpdateActionResolver(taskTracker)
