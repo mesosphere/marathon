@@ -61,7 +61,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
   test("ignore running notification of already running task") {
     Given("an existing RUNNING task")
     val f = new Fixture
-    val existingTask = stagedMarathonTask.toBuilder.setStartedAt(100).build()
+    val existingTask = runningMarathonTask
 
     When("we receive a running update")
     val status = runningTaskStatus
@@ -151,6 +151,17 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       .addAllPorts(portsList.asJava)
       .setVersion(version.toString)
       .build()
+
+  private[this] val runningMarathonTask =
+    MarathonTask
+      .newBuilder()
+      .setId(taskId.getValue)
+      .setStatus(TaskStatus.newBuilder().setState(TaskState.TASK_RUNNING).buildPartial())
+      .setStartedAt(100)
+      .setHost(host)
+      .addAllPorts(portsList.asJava)
+      .setVersion(version.toString)
+      .buildPartial()
 
   class Fixture {
     val eventStream = new EventStream()

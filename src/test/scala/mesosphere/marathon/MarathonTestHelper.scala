@@ -240,10 +240,19 @@ trait MarathonTestHelper {
       .buildPartial()
   }
 
-  private[this] def statusForState(state: MesosProtos.TaskState): MesosProtos.TaskStatus = {
+  def lostTask(id: String, reason: MesosProtos.TaskStatus.Reason): Protos.MarathonTask = {
+    Protos.MarathonTask
+      .newBuilder()
+      .setId(id)
+      .setStatus(statusForState(MesosProtos.TaskState.TASK_LOST))
+      .buildPartial()
+  }
+
+  private[this] def statusForState(state: MesosProtos.TaskState, maybeReason: Option[MesosProtos.TaskStatus.Reason] = None): MesosProtos.TaskStatus = {
     MesosProtos.TaskStatus
       .newBuilder()
       .setState(state)
+      .setReason(maybeReason.getOrElse(MesosProtos.TaskStatus.Reason.REASON_RECONCILIATION))
       .buildPartial()
   }
 

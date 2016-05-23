@@ -10,7 +10,7 @@ import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.core.task.tracker.{ TaskUpdater, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskUpdater }
 import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
@@ -19,6 +19,7 @@ import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timesta
 import mesosphere.marathon.tasks.TaskIdUtil
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
+import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
 import org.scalatest.concurrent.ScalaFutures
@@ -57,7 +58,7 @@ class TaskStatusUpdateProcessorImplTest
   test("update for unknown task (TASK_LOST) will get only acknowledged") {
     fOpt = Some(new Fixture)
 
-    val origUpdate = TaskStatusUpdateTestHelper.lost
+    val origUpdate = TaskStatusUpdateTestHelper.lost(reason = TaskStatus.Reason.REASON_RECONCILIATION)
     val status = origUpdate.wrapped.status.mesosStatus.get.toBuilder.setTaskId(TaskIdUtil.newTaskId(appId)).build()
     val update = origUpdate.withTaskId(status.getTaskId)
 
@@ -65,7 +66,7 @@ class TaskStatusUpdateProcessorImplTest
     import scala.concurrent.ExecutionContext.Implicits.global
     f.taskTracker.task(appId, update.wrapped.taskId.getValue)(global) returns Future.successful(None)
 
-    When("we process the updated")
+    When("we process the update")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")

@@ -20,7 +20,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.tasks.TaskFactory
-import org.apache.mesos.Protos.{ TaskID, TaskInfo }
+import org.apache.mesos.Protos.{ TaskID, TaskInfo, TaskState }
 
 import scala.concurrent.duration._
 
@@ -320,6 +320,7 @@ private class AppTaskLauncherActor(
       tasksLeftToLaunch = tasksToLaunch,
       taskLaunchesInFlight = inFlightTaskLaunches.size,
       tasksLaunchedOrRunning = tasksMap.size - inFlightTaskLaunches.size,
+      tasksLost = tasksMap.values.count(_.getStatus.getState == TaskState.TASK_LOST),
       backOffUntil.getOrElse(clock.now())
     )
   }

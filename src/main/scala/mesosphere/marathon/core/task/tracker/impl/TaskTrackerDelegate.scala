@@ -46,6 +46,9 @@ private[tracker] class TaskTrackerDelegate(
   }
 
   override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.appTasks(appId).size
+  override def countAppTasksSync(appId: PathId, filter: MarathonTask => Boolean): Int =
+    tasksByAppSync.appTasks(appId).count(filter)
+
   override def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
     tasksByApp().map(_.appTasks(appId).size)
   override def taskSync(appId: PathId, taskId: String): Option[MarathonTask] = tasksByAppSync.task(appId, taskId)

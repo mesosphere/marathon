@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.bus.MesosTaskStatus
 import mesosphere.marathon.core.task.update.TaskStatusUpdateStep
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus
@@ -24,14 +25,12 @@ class ScaleAppUpdateStepImpl @Inject() (
 
   override def processUpdate(
     timestamp: Timestamp, appId: PathId, task: MarathonTask, status: TaskStatus): Future[_] = {
-    val taskId = status.getTaskId
+    val taskId = status.getTaskId.getValue
 
-    import org.apache.mesos.Protos.TaskState._
-
-    status.getState match {
-      case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
-        // Remove from our internal list
-        log.info(s"initiating a scale check for app [$appId] after task [${taskId.getValue}}] terminated")
+    status match {
+      case MesosTaskStatus.Terminal(_) | MesosTaskStatus.TemporarilyUnreachable(_) =>
+        // Scale the app
+        log.info(s"initiating a scale check for app [$appId] due to [$taskId] ${status.getState} ${status.getReason}")
         schedulerActor ! ScaleApp(appId)
 
       case _ =>

@@ -1,14 +1,19 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.bus.{ MesosTaskStatus, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessor.Action
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.StatusUpdateActionResolver
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos.Protos.TaskStatus
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
+import scala.util.Random
 
 /**
   * Some specialized tests for statusUpdate action resolving.
@@ -41,6 +46,42 @@ class StatusUpdateActionResolverTest
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
+  }
+
+  for (
+    update <- MesosTaskStatus.MightComeBack.toSeq.map(r => TaskStatusUpdateTestHelper.lost(r))
+  ) {
+    test(s"a TASK_LOST update with ${update.reason} indicating a TemporarilyUnreachable Task is mapped to an update") {
+      val f = new Fixture
+      val task: MarathonTask = MarathonTestHelper.runningTask(update.wrapped.taskId.getValue)
+      val status: TaskStatus = update.taskStatus
+      val action = f.actionResolver.resolveForExistingTask(task, status)
+
+      action shouldEqual Action.Update(task.toBuilder.setStatus(status).build())
+    }
+  }
+
+  for (
+    update <- MesosTaskStatus.WontComeBack.toSeq.map(r => TaskStatusUpdateTestHelper.lost(r))
+  ) {
+    test(s"a TASK_LOST update with ${update.reason} indicating a Task that won't come back is mapped to an expunge") {
+      val f = new Fixture
+      val task: MarathonTask = MarathonTestHelper.runningTask(update.wrapped.taskId.getValue)
+      val status: TaskStatus = update.taskStatus
+      val action = f.actionResolver.resolveForExistingTask(task, status)
+
+      action shouldEqual Action.Expunge
+    }
+  }
+
+  test("a subsequent TASK_LOST update with another reason is mapped to a noop and will not update the timestamp") {
+    val f = new Fixture
+    val update = TaskStatusUpdateTestHelper.lost(TaskStatus.Reason.REASON_SLAVE_DISCONNECTED)
+    val task: MarathonTask = MarathonTestHelper.lostTask(update.wrapped.taskId.getValue, TaskStatus.Reason.REASON_RECONCILIATION)
+    val status: TaskStatus = update.taskStatus
+
+    val action = f.actionResolver.resolveForExistingTask(task, status)
+    action shouldEqual Action.Noop
   }
 
   class Fixture {

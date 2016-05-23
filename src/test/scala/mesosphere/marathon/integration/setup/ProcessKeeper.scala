@@ -69,6 +69,20 @@ object ProcessKeeper {
       upWhen = _.toLowerCase.contains("registered with master"))
   }
 
+  def startMesos(processName: String, workDir: String, args: Seq[String], startMessage: String, wipe: Boolean): Process = {
+    val workDirFile: File = new File(workDir)
+    if (wipe) FileUtils.deleteDirectory(workDirFile)
+    FileUtils.forceMkdir(workDirFile)
+    val mesosEnv = Seq(
+      ENV_MESOS_WORK_DIR -> workDir,
+      "MESOS_LAUNCHER" -> "posix",
+      "MESOS_CONTAINERIZERS" -> "mesos")
+    startProcess(
+      processName,
+      Process(args, cwd = None, mesosEnv: _*),
+      upWhen = _.toLowerCase.contains(startMessage))
+  }
+
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String],
                     mainClass: String = "mesosphere.marathon.Main",
                     startupLine: String = "Started ServerConnector",
@@ -118,6 +132,7 @@ object ProcessKeeper {
     val logger = new ProcessLogger {
       def checkUp(out: String) = {
         log.info(s"$name: $out")
+        checkLogFunctions.get(name).foreach(fn => fn.apply(out))
         if (!up.isCompleted && upWhen(out)) up.trySuccess(ProcessIsUp)
       }
       override def buffer[T](f: => T): T = f
@@ -184,29 +199,32 @@ object ProcessKeeper {
   def stopProcess(name: String): Unit = {
     import mesosphere.util.ThreadPoolContext.ioContext
     log.info(s"Stop Process $name")
-    val process = processes(name)
-    def killProcess: Int = {
-      // Unfortunately, there seem to be race conditions in Process.exitValue.
-      // Thus this ugly workaround.
-      Await.result(Future {
-        scala.concurrent.blocking {
-          Try(process.destroy())
-          process.exitValue()
-        }
-      }, 5.seconds)
+    processes.get(name).foreach { process =>
+      def killProcess: Int = {
+        // Unfortunately, there seem to be race conditions in Process.exitValue.
+        // Thus this ugly workaround.
+        Await.result(Future {
+          scala.concurrent.blocking {
+            Try(process.destroy())
+            process.exitValue()
+          }
+        }, 5.seconds)
+      }
+      //retry on fail
+      Try(killProcess) recover { case _ => killProcess } match {
+        case Success(value)       => processes -= name
+        case Failure(NonFatal(e)) => log.error("giving up waiting for processes to finish", e)
+      }
+      log.info(s"Stop Process $name: Done")
     }
-    //retry on fail
-    Try(killProcess) recover { case _ => killProcess } match {
-      case Success(value)       => processes -= name
-      case Failure(NonFatal(e)) => log.error("giving up waiting for processes to finish", e)
-    }
-    log.info(s"Stop Process $name: Done")
   }
 
   def stopAllProcesses(): Unit = {
     processes.keys.toSeq.reverse.foreach(stopProcess)
     processes = ListMap.empty
   }
+
+  def hasProcess(name: String): Boolean = processes.contains(name)
 
   def startService(service: Service): Unit = {
     services ::= service
@@ -223,6 +241,14 @@ object ProcessKeeper {
     }
     services = Nil
   }
+
+  /**
+    * Check log functions are used to analyze the output of the process.
+    * See SingleMarathonIntegrationTest.waitForProcessLogMessage
+    */
+  var checkLogFunctions: Map[String, String => Boolean] = Map.empty
+  def addCheck(process: String, fn: String => Boolean): Unit = checkLogFunctions += process -> fn
+  def removeCheck(process: String) = checkLogFunctions -= process
 
   def shutdown(): Unit = {
     log.info(s"Cleaning up Processes $processes and Services $services")

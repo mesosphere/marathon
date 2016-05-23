@@ -2,15 +2,14 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import akka.actor.{ ActorRef, Status }
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.bus.MesosTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessor.Action
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.StatusUpdateActionResolver
 import mesosphere.marathon.state.{ PathId, TaskRepository }
-import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.Protos.TaskStatus
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.slf4j.LoggerFactory
 
-import scala.annotation.tailrec
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
@@ -47,7 +46,7 @@ private[tracker] object TaskOpProcessorImpl {
     /**
       * Calculates the change that needs to performed on this task according to the given task status update
       */
-    private[this] def resolveForExistingTask(task: MarathonTask, status: TaskStatus): Action = {
+    private[impl] def resolveForExistingTask(task: MarathonTask, status: TaskStatus): Action = {
       def updateTaskOnStateChange(task: MarathonTask): Action = {
         def statusDidChange(statusA: TaskStatus, statusB: TaskStatus): Boolean = {
           val healthy = statusB.hasHealthy &&
@@ -65,11 +64,13 @@ private[tracker] object TaskOpProcessorImpl {
         }
       }
 
-      status.getState match {
-        case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST =>
+      status match {
+        case MesosTaskStatus.Terminal(_) =>
           Action.Expunge
-        case TASK_RUNNING if !task.hasStartedAt => // was staged, is now running
+        case MesosTaskStatus.Running(_) if task.getStatus.getState != TaskState.TASK_RUNNING => // was not running
           Action.Update(task.toBuilder.setStartedAt(System.currentTimeMillis).setStatus(status).build())
+        case MesosTaskStatus.TemporarilyUnreachable(_) =>
+          updateTaskOnStateChange(task)
         case _ =>
           updateTaskOnStateChange(task)
       }
