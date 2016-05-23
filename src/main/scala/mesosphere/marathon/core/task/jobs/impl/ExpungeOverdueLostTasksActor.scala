@@ -13,6 +13,7 @@ import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.{ Protos => mesos }
+import org.joda.time.DateTime
 import scala.concurrent.duration._
 
 class ExpungeOverdueLostTasksActor(
@@ -44,7 +45,11 @@ class ExpungeOverdueLostTasksActor(
   }
 
   def expungeLostGCTask(task: MarathonTask): Unit = {
-    log.warning(s"Task ${task.getId} is lost longer than ${config.taskLostExpungeGC} and will be expunged.")
+    val timestamp = new DateTime(task.getStatus.getTimestamp.toLong * 1000)
+    log.warning(s"Task ${task.getId} is lost since $timestamp and will be expunged.")
+    // To expunge the task from the repository, task tracker etc. and to also inform all listeners
+    // for this change, a TaskStatusUpdate is used, since the current infrastructure relies on that.
+    // TODO: update infrastructure in 1.0 and beyond will not use task status updates.
     val update = task.getStatus.toBuilder
       .setState(TaskState.TASK_ERROR)
       .setReason(mesos.TaskStatus.Reason.REASON_TASK_UNKNOWN)
