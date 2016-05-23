@@ -103,10 +103,14 @@ trait Formats
     )(toIpAddress, toTuple)
   }
 
+  implicit lazy val TaskStateFormat: Format[mesos.TaskState] =
+    enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
+
   implicit lazy val MarathonTaskWrites: Writes[MarathonTask] = Writes { task =>
     Json.obj(
       "id" -> task.getId,
       "host" -> (if (task.hasHost) task.getHost else JsNull),
+      "state" -> task.getStatus.getState,
       "ipAddresses" -> MarathonTasks.ipAddresses(task),
       "ports" -> task.getPortsList.asScala,
       "startedAt" -> (if (task.getStartedAt != 0) Timestamp(task.getStartedAt) else JsNull),

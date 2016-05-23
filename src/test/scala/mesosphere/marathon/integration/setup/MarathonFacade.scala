@@ -30,7 +30,7 @@ case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITDeploymentPlan(version: String, deploymentId: String)
 case class ITHealthCheckResult(taskId: String, firstSuccess: Date, lastSuccess: Date, lastFailure: Date, consecutiveFailures: Int, alive: Boolean)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
-case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Int], startedAt: Date, stagedAt: Date, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
+case class ITEnrichedTask(appId: String, id: String, host: String, ports: Seq[Int], startedAt: Date, stagedAt: Date, state: String, version: String /*, healthCheckResults:Seq[ITHealthCheckResult]*/ )
 case class ITLeaderResult(leader: String)
 
 case class ITListDeployments(deployments: Seq[ITDeployment])
