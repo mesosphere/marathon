@@ -1,5 +1,8 @@
 package mesosphere.marathon.integration.setup
 
+import java.io.File
+
+import org.apache.commons.io.FileUtils
 import org.scalatest.{ ConfigMap, Suite }
 
 import scala.collection.concurrent.TrieMap
@@ -11,6 +14,7 @@ trait WithMesosCluster extends SingleMarathonIntegrationTest { self: Suite =>
     cfg.copy(master = s"zk://${cfg.zkHostAndPort}/mesos")
   }
 
+  val mesosWorkDir = "/tmp/marathon-itest-mesos"
   val master1: String = "master1"
   val master2: String = "master2"
   val slave1: String = "slave1"
@@ -21,22 +25,19 @@ trait WithMesosCluster extends SingleMarathonIntegrationTest { self: Suite =>
   def processPort(name: String): Int = ports.getOrElseUpdate(name, portIt.next())
 
   def startMaster(name: String, wipe: Boolean = true): Unit = {
-    val dir = "/tmp/marathon-itest-mesos"
     val masterArgs = Seq("--slave_ping_timeout=1secs", "--max_slave_ping_timeouts=4", "--quorum=1")
-    ProcessKeeper.startMesos(name, s"$dir/$name", Seq("mesos", "master", s"--zk=zk://${config.zkHostAndPort}/mesos", s"--work_dir=$dir/$name", s"--port=${processPort(name)}") ++ masterArgs, "new candidate", wipe)
+    ProcessKeeper.startMesos(name, s"$mesosWorkDir/$name", Seq("mesos", "master", s"--zk=zk://${config.zkHostAndPort}/mesos", s"--work_dir=$mesosWorkDir/$name", s"--port=${processPort(name)}") ++ masterArgs, "new candidate", wipe)
   }
 
   def startSlave(name: String, wipe: Boolean = true): Unit = {
-    val dir = "/tmp/marathon-itest-mesos"
-    ProcessKeeper.startMesos(name, s"$dir/$name", Seq("mesos", "slave", s"--master=zk://${config.zkHostAndPort}/mesos", s"--work_dir=$dir/$name", s"--port=${processPort(name)}"), "registered with master", wipe)
+    ProcessKeeper.startMesos(name, s"$mesosWorkDir/$name", Seq("mesos", "slave", s"--master=zk://${config.zkHostAndPort}/mesos", s"--work_dir=$mesosWorkDir/$name", s"--port=${processPort(name)}"), "registered with master", wipe)
   }
 
   def stopMesos(name: String): Unit = ProcessKeeper.stopProcess(name)
 
   override protected def startMesos(): Unit = {
+    FileUtils.deleteDirectory(new File(mesosWorkDir))
     startMaster(master1)
-    startMaster(master2)
     startSlave(slave1)
-    startSlave(slave2)
   }
 }
