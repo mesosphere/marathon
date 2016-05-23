@@ -63,7 +63,6 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
     val f = new Fixture
     val existingTask = runningMarathonTask
 
-
     When("we receive a running update")
     val status = runningTaskStatus
     val (logs, events) = f.captureLogAndEvents {
