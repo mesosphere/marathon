@@ -129,8 +129,8 @@ Fired when a new http callback subscriber is added or removed:
 {
   "eventType": "subscribe_event",
   "timestamp": "2014-03-01T23:29:30.158Z",
-  "clientIp": 1.2.3.4,
-  "callbackUrl": http://subscriber.acme.org/callbacks
+  "clientIp": "1.2.3.4",
+  "callbackUrl": "http://subscriber.acme.org/callbacks"
 }
 ```
 
@@ -138,8 +138,8 @@ Fired when a new http callback subscriber is added or removed:
 {
   "eventType": "unsubscribe_event",
   "timestamp": "2014-03-01T23:29:30.158Z",
-  "clientIp": 1.2.3.4,
-  "callbackUrl": http://subscriber.acme.org/callbacks
+  "clientIp": "1.2.3.4",
+  "callbackUrl": "http://subscriber.acme.org/callbacks"
 }
 ```
 
@@ -210,14 +210,14 @@ Fired when a new http callback subscriber is added or removed:
 
 ``` json
 {
-  "appId":"/my-app",
-  "taskId":"my-app_0-1396592784349",
-  "version":"2016-03-16T13:05:00.590Z",
-  "reason":"500 Internal Server Error",
-  "host":"localhost",
-  "slaveId":"4fb620fa-ba8d-4eb0-8ae3-f2912aaf015c-S0",
-  "eventType":"unhealthy_task_kill_event",
-  "timestamp":"2016-03-21T09:15:10.764Z"
+  "appId": "/my-app",
+  "taskId": "my-app_0-1396592784349",
+  "version": "2016-03-16T13:05:00.590Z",
+  "reason": "500 Internal Server Error",
+  "host": "localhost",
+  "slaveId": "4fb620fa-ba8d-4eb0-8ae3-f2912aaf015c-S0",
+  "eventType": "unhealthy_task_kill_event",
+  "timestamp": "2016-03-21T09:15:10.764Z"
 }
 ```
 

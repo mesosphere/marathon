@@ -7,13 +7,11 @@ title: Artifact Store
 Deployments inside a distributed system need a location, where application specific resources can be found.
 In Marathon we call this place the artifact store.
 
-
 ## Usage
 
 The use of the Marathon Artifact Store functionality is completely optional.
 All functionality and goals can be accomplished manually as well.
 Marathon tries to simplify several use cases.
-
 
 ## Artifact Store Backend
 
@@ -21,7 +19,6 @@ Marathon supports different storage system, that can be used as artifact store.
 The type of the artifact store is configured via the command line.
 Example: start with --artifact_store hdfs://localhost:54310/path/to/store to use Hadoop DFS
 as artifact storage backend.
-
 
 ## Artifact REST endpoint
 
@@ -32,13 +29,13 @@ The URL's of the created artifacts can be used as URI's of an application defini
 
 Upload an artifact to the artifact store.
 A multipart form upload request has to be performed.
-The form parameter name has to be ```file```.
+The form parameter name has to be `file`.
 The filename used in the artifact store, is the same as given by the form parameter.
 The response holds the URL of the artifact in the artifact store in the Location Header.
 
 **Request:**
-```
-http
+
+```http
 POST /v2/artifacts HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -56,6 +53,7 @@ Content-Disposition: form-data; name="file"; filename="test.txt"
 ```
 
 **Response:**
+
 ```http
 HTTP/1.1 201 Created
 Content-Length: 0
@@ -67,8 +65,7 @@ If you want to specify a specific path in the artifact store, specify the path i
 
 **Request:**
 
-```
-http
+```http
 POST /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -87,8 +84,7 @@ Content-Disposition: form-data; name="file"; filename="test.txt"
 
 **Response:**
 
-```
-http
+```http
 HTTP/1.1 201 Created
 Content-Length: 0
 Location: hdfs://localhost:54310/artifact/special/file/name.txt
@@ -101,8 +97,7 @@ The path is the relative path in the artifact store.
 
 **Request:**
 
-```
-http
+```http
 GET /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -112,8 +107,7 @@ User-Agent: HTTPie/0.8.0
 
 **Response:**
 
-```
-http
+```http
 HTTP/1.1 200 OK
 Content-Length: 14
 Content-Type: text/plain
@@ -129,8 +123,7 @@ The path is the relative path in the artifact store.
 
 **Request:**
 
-```
-http
+```http
 DELETE /v2/artifacts/special/file/name.txt HTTP/1.1
 Accept: */*
 Accept-Encoding: gzip, deflate
@@ -141,14 +134,12 @@ User-Agent: HTTPie/0.8.0
 
 **Response:**
 
-```
-http
+```http
 HTTP/1.1 200 OK
 Content-Length: 0
 Content-Type: application/json
 Server: Jetty(8.1.11.v20130520)
 ```
-
 
 ## Automatic Artifact Storing
 
@@ -167,10 +158,10 @@ Every URL here is processed in this way:
 As a result, all storeUrls are accessible from the artifact store.
 All instances that will run the application, will load the needed assets from the artifact store.
 
-
 ### Create an application definition with automatic artifact resolution
 
 **Request:**
+
 ```http
 POST /v2/apps HTTP/1.1
 Accept: application/json
@@ -196,6 +187,7 @@ User-Agent: HTTPie/0.8.0
 ```
 
 **Response**
+
 ```http
 HTTP/1.1 201 Created
 Content-Type: application/json
@@ -213,6 +205,7 @@ When the app gets deployed, all storeUrls will be stored in the artifact store a
 the definition will be adapted and will look like this:
 
 **Request:**
+
 ```http
 GET /v2/apps/app HTTP/1.1
 Accept: */*
@@ -222,6 +215,7 @@ User-Agent: HTTPie/0.8.0
 ```
 
 **Response**
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -246,8 +240,6 @@ Transfer-Encoding: chunked
 }
 ```
 
-
-
 ### Automatic Path creation
 
 The path in the asset store is computed that way:
@@ -257,12 +249,11 @@ The path in the asset store is computed that way:
 * if ETag is not available (dumb HTTP server), download the resource and compute the Sha-1 hash manually
 * filename of the url remains the same
 
-The complete path is {artifact store base}/{ETag or ContentHash}/{filename of asset}
+The complete path is `{artifact store base}/{ETag or ContentHash}/{filename of asset}`
 This effectively will create a path, that is unique to the content of the resource.
 If the same URL holds a different entity, a new path is created.
 The same path is downloaded only once.
 In other words if the path is available in the artifact store, it is not downloaded again.
-
 
 ### Prerequisites
 
