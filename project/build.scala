@@ -47,7 +47,7 @@ object MarathonBuild extends Build {
         parallelExecution in Test := false,
         sourceGenerators in Compile <+= buildInfo,
         buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
-        buildInfoPackage := "mesosphere.marathon",
+        buildInfoPackage := "dcos.marathon",
         fork in Test := true
       )
   )
@@ -107,7 +107,7 @@ object MarathonBuild extends Build {
   lazy val IntegrationTest = config("integration") extend Test
 
   lazy val baseSettings = Seq (
-    organization := "mesosphere.marathon",
+    organization := "dcos.marathon",
     scalaVersion := "2.11.7",
     crossScalaVersions := Seq(scalaVersion.value),
     scalacOptions in Compile ++= Seq(

@@ -4,12 +4,13 @@ import javax.ws.rs.core.{ MediaType, Response }
 import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
+import dcos.marathon.BuildInfo
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.api.{ RestResource, MarathonMediaType }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
-import mesosphere.marathon.{ BuildInfo, LeaderProxyConf, MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ LeaderProxyConf, MarathonConf, MarathonSchedulerService }
 import mesosphere.util.state.MesosLeaderInfo
 import play.api.libs.json.{ JsObject, Json }
 
