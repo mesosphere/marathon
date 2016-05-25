@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.{ MarathonSpec, Protos }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.Matchers
@@ -223,6 +224,22 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     val result2 = AppDefinition().mergeFromProto(app2.toProto)
     assert(result2 == app2)
+  }
+
+  test("ProtoRoundtrip for secrets") {
+    val app = AppDefinition(
+      cmd = None,
+      secrets = Map[String, Secret](
+        "psst" -> Secret("/something/secret")
+      ),
+      env = Map[String, EnvVarValue](
+        "foo" -> "bar".toEnvVar,
+        "ssh" -> EnvVarSecretRef("psst")
+      ),
+      versionInfo = fullVersion
+    )
+    val result = AppDefinition().mergeFromProto(app.toProto)
+    assert(result == app, s"expected $app instead of $result")
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {

@@ -25,8 +25,9 @@ class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
 object AllConf {
 
   def option[T](prop: String)(implicit typeTag: TypeTag[T]): Option[T] = {
-    val conf = testConfig.getOrElse(Main.conf)
-    if (conf.builder.isSupplied(prop)) conf.builder.get[T](prop) else None
+    config.flatMap { conf =>
+      if (conf.builder.isSupplied(prop)) conf.builder.get[T](prop) else None
+    }
   }
 
   def enabledFeatures: Set[String] =
@@ -39,10 +40,10 @@ object AllConf {
   /**
     * We use a var here, in order to enable tests to use a specific configuration.
     */
-  @volatile var testConfig: Option[ScallopConf] = None
+  @volatile var config: Option[ScallopConf] = None
   def withTestConfig(args: Seq[String], withDefault: Boolean = true): Unit = {
     val result = if (withDefault) Seq("--master", "local") ++ args else args
     val conf = new AllConf(result)
-    testConfig = Some(conf)
+    config = Some(conf)
   }
 }

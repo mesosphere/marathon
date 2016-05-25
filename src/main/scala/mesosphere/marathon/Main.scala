@@ -40,12 +40,14 @@ class MarathonApp extends App {
     }
   }
 
-  override lazy val conf = new AllConf(args)
+  override val conf = new AllConf(args)
 
   def runDefault(): Unit = {
     setConcurrentContextDefaults()
 
     log.info(s"Starting Marathon ${BuildInfo.version} with ${args.mkString(" ")}")
+
+    AllConf.config = Some(conf)
 
     run(
       classOf[HttpService],

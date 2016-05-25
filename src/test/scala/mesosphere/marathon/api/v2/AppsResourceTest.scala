@@ -11,6 +11,7 @@ import mesosphere.marathon.api.{ TestGroupManagerFixture, JsonTestHelper, TaskKi
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
@@ -59,6 +60,84 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
     )
     JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app (that uses secrets) successfully") {
+    Given("The secrets feature is enabled")
+    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+
+    And("An app with a secret and an envvar secret-ref")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
+      secrets = Map[String, Secret]("foo" -> Secret("/bar")),
+      env = Map[String, EnvVarValue]("NAMED_FOO" -> EnvVarSecretRef("foo")))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app (that uses undefined secrets) and fails") {
+    Given("The secrets feature is enabled")
+    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+
+    And("An app with an envvar secret-ref that does not point to an undefined secret")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
+      env = Map[String, EnvVarValue]("NAMED_FOO" -> EnvVarSecretRef("foo")))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It fails")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/env(NAMED_FOO)")
+    response.getEntity.toString should include("references an undefined secret named 'foo'")
+  }
+
+  test("Create the secrets feature is NOT enabled an app (that uses secrets) fails") {
+    Given("The secrets feature is NOT enabled")
+    AllConf.enabledFeatures should not contain Features.SECRETS
+
+    And("An app with an envvar secret-ref that does not point to an undefined secret")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
+      secrets = Map[String, Secret]("foo" -> Secret("/bar")),
+      env = Map[String, EnvVarValue]("NAMED_FOO" -> EnvVarSecretRef("foo")))
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It fails")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("Feature secrets is not enabled")
   }
 
   test("Create a new app fails with Validation errors for negative resources") {
@@ -737,7 +816,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       config,
       auth.auth,
       auth.auth,
-      groupManager
+      groupManager,
+      PluginManager.None
     )
   }
 
@@ -758,7 +838,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       config,
       auth.auth,
       auth.auth,
-      groupManager
+      groupManager,
+      PluginManager.None
     )
   }
 }
