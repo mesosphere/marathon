@@ -41,6 +41,7 @@ object MarathonBuild extends Build {
       testSettings ++
       integrationTestSettings ++
       teamCitySetEnvSettings ++
+      publishSettings ++
       Seq(
         unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
         libraryDependencies ++= Dependencies.root,
