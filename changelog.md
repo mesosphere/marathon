@@ -1,8 +1,26 @@
-## Changes from 0.15.3 to 0.15.4
+## Changes from 0.15.4 to 0.15.5
 
 ### Fixed issues
 - Regression of #234 - Unsafe generation of task listing
 - #3942 - Unreachable Tasks (`TASK_LOST`) should not be health checked nor killed due to failing health checks
+
+## Changes from 0.15.3 to 0.15.4
+
+This release introduces changes in the way that task lost updates from
+Mesos are handled, in order to prevent Marathon from killing health
+tasks once an affected Mesos Agent rejoins the cluster.
+
+You can tweak the task lost behavior via these new command line flags:
+
+- `--task_lost_expunge_gc`
+- `--task_lost_expunge_initial_delay`
+- `--task_lost_expunge_interval`
+
+### Fixed issues
+- #3402 - Fix race conditions in HttpEventActor
+- #3377 - Remove the FrameworkId in case of a specific error message from Mesos.
+- #3924 - Tasks declared as Lost will be killed when reported running again
+
 
 ## Changes from 0.15.2 to 0.15.3
 
