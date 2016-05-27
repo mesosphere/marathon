@@ -8,7 +8,6 @@ import com.twitter.util.{ Future => TWFuture }
 import com.twitter.zk.{ ZNode, ZkClient }
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.{ Protos, StoreCommandFailedException }
-import mesosphere.util.ThreadPoolContext
 import mesosphere.util.state.zk.ZKStore._
 import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
 import org.apache.zookeeper.KeeperException
@@ -31,7 +30,6 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     */
   override def load(key: ID): Future[Option[ZKEntity]] = {
     val node = root(key)
-    require(node.parent == root, s"Nested paths are not supported: $key!")
     node.getData().asScala
       .map { data => Some(ZKEntity(node, ZKData(data.bytes), Some(data.stat.getVersion))) }
       .recover { case ex: NoNodeException => None }
@@ -40,7 +38,6 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
 
   override def create(key: ID, content: IndexedSeq[Byte]): Future[ZKEntity] = {
     val node = root(key)
-    require(node.parent == root, s"Nested paths are not supported: $key")
     val data = ZKData(key, UUID.randomUUID(), content)
     node.create(data.toProto(compressionConf).toByteArray).asScala
       .map { n => ZKEntity(n, data, Some(0)) } //first version after create is 0
@@ -67,7 +64,6 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     */
   override def delete(key: ID): Future[Boolean] = {
     val node = root(key)
-    require(node.parent == root, s"Nested paths are not supported: $key")
     node.exists().asScala
       .flatMap { d => node.delete(d.stat.getVersion).asScala.map(_ => true) }
       .recover { case ex: NoNodeException => false }
