@@ -4,6 +4,8 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.AppDefinition
 import org.apache.mesos.Protos.TaskState
 
+import scala.collection.JavaConverters._
+
 object EndpointsHelper {
   /**
     * Produces a script-friendly string representation of the supplied
@@ -35,7 +37,8 @@ object EndpointsHelper {
           sb.append(cleanId).append(delimiter).append(port).append(delimiter)
 
           for (task <- tasks if task.getStatus.getState == TaskState.TASK_RUNNING) {
-            val taskPort = Option(task.getPortsList.get(i): java.lang.Integer).getOrElse(java.lang.Integer.valueOf(0))
+            val taskPorts = task.getPortsList.asScala.lift
+            val taskPort: Integer = taskPorts(i).getOrElse(0)
             sb.append(task.getHost).append(':').append(taskPort).append(delimiter)
           }
           sb.append('\n')
