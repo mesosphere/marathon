@@ -5,15 +5,17 @@ import java.util.Collections
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.state.{ Group, GroupManager, Timestamp }
+import mesosphere.marathon.state._
 import mesosphere.marathon.tasks.{ MarathonTasks, TaskIdUtil }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, MarathonSpec }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos._
+import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -22,6 +24,36 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito {
+
+  test("list (txt) tasks with less ports than the current app version") {
+    // Regression test for #234
+    Given("one app with one task with less ports than required")
+    val app = AppDefinition("/foo".toRootPath, ports = Seq(0, 0, 0))
+
+    val taskId = taskIdUtil.newTaskId(app.id).getValue
+    val taskStatus = TaskStatus.newBuilder
+      .setTaskId(TaskID.newBuilder.setValue(taskId))
+      .setState(TaskState.TASK_RUNNING)
+    val task = MarathonTasks.makeTask(
+      taskId, "host", ports = Nil, attributes = Nil, version = Timestamp.now(),
+      now = Timestamp.now(), slaveId = SlaveID("foobar")
+    ).toBuilder.setStatus(taskStatus).build
+
+    config.zkTimeoutDuration returns 5.seconds
+
+    val appTasks = AppTasks(app.id, Seq(task))
+    val tasksByApp = TaskTracker.TasksByApp.of(appTasks)
+    taskTracker.tasksByAppSync returns tasksByApp
+
+    val rootGroup = Group("/".toRootPath, apps = Set(app))
+    groupManager.rootGroup() returns Future.successful(rootGroup)
+
+    When("Getting the txt tasks index")
+    val response = taskResource.indexTxt(auth.request, auth.response)
+
+    Then("The status should be 200")
+    response.getStatus shouldEqual 200
+  }
 
   test("killTasks") {
     Given("two apps and 1 task each")
