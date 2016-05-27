@@ -28,13 +28,15 @@ object MesosTaskStatus {
   }
 
   object TemporarilyUnreachable {
+    def isUnreachable(task: MarathonTask): Boolean = isUnreachable(task.getStatus)
+    def isUnreachable(taskStatus: TaskStatus): Boolean = {
+      taskStatus.getState == TASK_LOST && MightComeBack(taskStatus.getReason)
+    }
     def unapply(task: MarathonTask): Option[MarathonTask] = {
-      if (task.getStatus.getState == TASK_LOST && MightComeBack(task.getStatus.getReason)) Some(task)
-      else None
+      if (isUnreachable(task)) Some(task) else None
     }
     def unapply(taskStatus: TaskStatus): Option[TaskStatus] = {
-      if (taskStatus.getState == TASK_LOST && MightComeBack(taskStatus.getReason)) Some(taskStatus)
-      else None
+      if (isUnreachable(taskStatus)) Some(taskStatus) else None
     }
   }
 
