@@ -1,8 +1,21 @@
+## Changes from 0.15.3 to 0.15.4
+
+### Fixed issues
+- Regression of #234 - Unsafe generation of task listing
+- #3942 - Unreachable Tasks (`TASK_LOST`) should not be health checked nor killed due to failing health checks
+
+## Changes from 0.15.2 to 0.15.3
+
+### Fixed issues
+
+- #3192 - Adapt default Mem/CPU settings
+- #3251 - Tried to kill an existing app, said it doesn't exist even though it does
+
 ## Changes from 0.15.1 to 0.15.2
 
 This release includes fixes for two bugs introduced in 0.15.0.
 
-## Fixed issues
+### Fixed issues
 
 - #3172 - "Apply" button is broken (sending both uris and fetch)
 - #3242 - Treat "value" attribute in server-side validation errors as general error
@@ -11,7 +24,7 @@ This release includes fixes for two bugs introduced in 0.15.0.
 
 This release includes fixes for several bugs introduced in 0.15.0.
 
-## Fixed issues
+### Fixed issues
 
 - #3139 - Marathon 0.15.0 forces redeploy of app all the time
 - #3054 - Empty application attributes are accidentally submited by the UI
