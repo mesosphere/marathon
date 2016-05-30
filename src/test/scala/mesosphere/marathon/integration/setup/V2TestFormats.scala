@@ -72,6 +72,7 @@ object V2TestFormats {
       "container" -> update.container,
       "healthChecks" -> update.healthChecks,
       "readinessChecks" -> update.readinessChecks,
+      "taskKillGracePeriodSeconds" -> update.taskKillGracePeriod.map(_.toSeconds),
       "dependencies" -> update.dependencies,
       "upgradeStrategy" -> update.upgradeStrategy,
       "labels" -> update.labels,

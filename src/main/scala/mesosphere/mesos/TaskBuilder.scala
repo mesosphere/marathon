@@ -173,6 +173,12 @@ class TaskBuilder(app: AppDefinition,
         builder.setData(appJsonByteString)
     }
 
+    app.taskKillGracePeriod.foreach { period =>
+      val durationInfo = DurationInfo.newBuilder.setNanoseconds(period.toNanos)
+      val killPolicy = KillPolicy.newBuilder.setGracePeriod(durationInfo)
+      builder.setKillPolicy(killPolicy)
+    }
+
     // Mesos supports at most one health check, and only COMMAND checks
     // are currently implemented in the Mesos health check helper program.
     val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =

@@ -15,6 +15,7 @@ import org.joda.time.{ DateTime, DateTimeZone }
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 import scala.collection.immutable.Seq
 
 class TaskBuilderTest extends MarathonSpec with Matchers {
@@ -1406,6 +1407,28 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       asScalaRanges.flatMap(_.iterator).toList
     }
     assert(portsFromTaskInfo == Seq(25552, 25551))
+  }
+
+  test("taskKillGracePeriod specified in app definition is passed through to TaskInfo") {
+    val seconds = 12345.seconds
+    val app = MarathonTestHelper.makeBasicApp().copy(
+      taskKillGracePeriod = Some(seconds)
+    )
+
+    val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
+    val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+    val runningTasks = Set.empty[Task]
+    val task = builder.buildIfMatches(offer, runningTasks)
+
+    assert(task.isDefined)
+    val (taskInfo, taskPorts) = task.get
+    assert(taskInfo.hasKillPolicy)
+    val killPolicy = taskInfo.getKillPolicy
+    assert(killPolicy.hasGracePeriod)
+    val gracePeriod = killPolicy.getGracePeriod
+    assert(gracePeriod.hasNanoseconds)
+    val nanoSeconds = gracePeriod.getNanoseconds
+    assert(nanoSeconds == seconds.toNanos)
   }
 
   def buildIfMatches(

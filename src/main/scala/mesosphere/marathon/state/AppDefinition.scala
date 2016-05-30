@@ -79,6 +79,8 @@ case class AppDefinition(
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
+  taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
   upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
@@ -168,6 +170,7 @@ case class AppDefinition(
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
     readinessChecks.foreach { r => builder.addReadinessCheckDefinition(ReadinessCheckSerializer.toProto(r)) }
+    taskKillGracePeriod.foreach { t => builder.setTaskKillGracePeriod(t.toMillis) }
 
     acceptedResourceRoles.foreach { acceptedResourceRoles =>
       val roles = Protos.ResourceRoles.newBuilder()
@@ -267,6 +270,8 @@ case class AppDefinition(
       healthChecks = proto.getHealthChecksList.iterator().asScala.map(new HealthCheck().mergeFromProto).toSet,
       readinessChecks =
         proto.getReadinessCheckDefinitionList.iterator().asScala.map(ReadinessCheckSerializer.fromProto).to[Seq],
+      taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
+      else None,
       labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
       versionInfo = versionInfoFromProto,
       upgradeStrategy =
@@ -338,6 +343,7 @@ case class AppDefinition(
         maxLaunchDelay != to.maxLaunchDelay ||
         container != to.container ||
         healthChecks != to.healthChecks ||
+        taskKillGracePeriod != to.taskKillGracePeriod ||
         dependencies != to.dependencies ||
         upgradeStrategy != to.upgradeStrategy ||
         labels != to.labels ||
@@ -535,6 +541,8 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultHealthChecks: Set[HealthCheck] = Set.empty
 
   val DefaultReadinessChecks: Seq[ReadinessCheck] = Seq.empty
+
+  val DefaultTaskKillGracePeriod: Option[FiniteDuration] = None
 
   val DefaultDependencies: Set[PathId] = Set.empty
 

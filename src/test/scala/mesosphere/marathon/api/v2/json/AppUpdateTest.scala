@@ -117,6 +117,7 @@ class AppUpdateTest extends MarathonSpec {
         )
       ),
       healthChecks = Some(Set[HealthCheck]()),
+      taskKillGracePeriod = Some(2.seconds),
       dependencies = Some(Set[PathId]()),
       upgradeStrategy = Some(UpgradeStrategy.empty),
       labels = Some(

@@ -55,6 +55,8 @@ case class AppUpdate(
 
     readinessChecks: Option[Seq[ReadinessCheck]] = None,
 
+    taskKillGracePeriod: Option[FiniteDuration] = None,
+
     dependencies: Option[Set[PathId]] = None,
 
     upgradeStrategy: Option[UpgradeStrategy] = None,
@@ -132,7 +134,8 @@ case class AppUpdate(
     // has really changed.
     versionInfo = app.versionInfo,
     residency = residency.orElse(app.residency),
-    secrets = secrets.getOrElse(app.secrets)
+    secrets = secrets.getOrElse(app.secrets),
+    taskKillGracePeriod = taskKillGracePeriod.orElse(app.taskKillGracePeriod)
   )
 
   def withCanonizedIds(base: PathId = PathId.empty): AppUpdate = copy(
