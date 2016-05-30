@@ -74,6 +74,7 @@ class AppDefinitionFormatsTest
     (r1 \ "upgradeStrategy").as[UpgradeStrategy] should equal (DefaultUpgradeStrategy)
     (r1 \ "residency").asOpt[String] should equal (None)
     (r1 \ "secrets").as[Map[String, Secret]] should equal (DefaultSecrets)
+    (r1 \ "taskKillGracePeriodSeconds").asOpt[Long] should equal (DefaultTaskKillGracePeriod)
   }
 
   test("ToJson should serialize full version info") {
@@ -122,6 +123,7 @@ class AppDefinitionFormatsTest
     r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
     r1.acceptedResourceRoles should not be ('defined)
     r1.secrets should equal (DefaultSecrets)
+    r1.taskKillGracePeriod should equal (DefaultTaskKillGracePeriod)
   }
 
   test("FromJSON should ignore VersionInfo") {

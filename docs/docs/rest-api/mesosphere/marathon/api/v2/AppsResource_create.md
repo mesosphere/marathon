@@ -108,6 +108,7 @@ Here is an example of an application JSON which includes all fields.
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
     "maxLaunchDelaySeconds": 3600,
+    "taskKillGracePeriodSeconds": 2,
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
         "maximumOverCapacity": 0.2
@@ -334,6 +335,18 @@ This prevents sandboxes associated with consecutively failing tasks from
 filling up the hard disk on Mesos slaves. The backoff period is multiplied by
 the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
 This applies also to tasks that are killed due to failing too many health checks.
+
+##### taskKillGracePeriodSeconds (Optional.)
+
+Configures the termination signal escalation behavior of executors when stopping
+tasks. Sets the number of seconds between the executor sending SIGTERM to a task
+it is about to stop and then finally sending SIGKILL to enforce the matter.
+
+Using this grace period, tasks should perform orderly shutdown immediately upon
+receiving SIGTERM.
+
+By default, there is no grace period in effect or at most a minimal one, at the
+discretion of the Mesos implementation in use.
 
 ##### <a name="upgrade-strategy"></a> upgradeStrategy
 

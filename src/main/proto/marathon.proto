@@ -104,6 +104,7 @@ message ServiceDefinition {
   repeated ReadinessCheckDefinition readinessCheckDefinition = 28;
   repeated Secret secrets = 29;
   repeated EnvVarReference envVarReferences = 30;
+  optional int64 taskKillGracePeriod = 31; // stored as Millis
 }
 
 message ResourceRoles {

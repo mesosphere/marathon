@@ -1,5 +1,3 @@
-// Imported from https://raw.githubusercontent.com/apache/mesos/0.27.1/include/mesos/mesos.proto
-
 // Licensed to the Apache Software Foundation (ASF) under one
 // or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
@@ -62,10 +60,11 @@ message SlaveID {
 
 
 /**
- * A framework generated ID to distinguish a task. The ID must remain
- * unique while the task is active. However, a framework can reuse an
- * ID _only_ if a previous task with the same ID has reached a
- * terminal state (e.g., TASK_FINISHED, TASK_LOST, TASK_KILLED, etc.).
+ * A framework-generated ID to distinguish a task. The ID must remain
+ * unique while the task is active. A framework can reuse an ID _only_
+ * if the previous task with the same ID has reached a terminal state
+ * (e.g., TASK_FINISHED, TASK_LOST, TASK_KILLED, etc.). However,
+ * reusing task IDs is strongly discouraged (MESOS-2198).
  */
 message TaskID {
   required string value = 1;
@@ -73,9 +72,9 @@ message TaskID {
 
 
 /**
- * A framework generated ID to distinguish an executor. Only one
+ * A framework-generated ID to distinguish an executor. Only one
  * executor with the same ID can be active on the same slave at a
- * time.
+ * time. However, reusing executor IDs is discouraged.
  */
 message ExecutorID {
   required string value = 1;
@@ -83,7 +82,7 @@ message ExecutorID {
 
 
 /**
- * A slave generated ID to distinguish a container. The ID must be unique
+ * A slave-generated ID to distinguish a container. The ID must be unique
  * between any active or completed containers on the slave. In particular,
  * containers for different runs of the same (framework, executor) pair must be
  * unique.
@@ -221,10 +220,14 @@ message FrameworkInfo {
   // failover).
   optional FrameworkID id = 3;
 
-  // The amount of time that the master will wait for the scheduler to
-  // failover before it tears down the framework by killing all its
-  // tasks/executors. This should be non-zero if a framework expects
-  // to reconnect after a failover and not lose its tasks/executors.
+  // The amount of time (in seconds) that the master will wait for the
+  // scheduler to failover before it tears down the framework by
+  // killing all its tasks/executors. This should be non-zero if a
+  // framework expects to reconnect after a failure and not lose its
+  // tasks/executors.
+  //
+  // NOTE: To avoid accidental destruction of tasks, production
+  // frameworks typically set this to a large value (e.g., 1 week).
   optional double failover_timeout = 4 [default = 0.0];
 
   // If set, framework pid, executor pids and status updates are
@@ -256,13 +259,25 @@ message FrameworkInfo {
 
   message Capability {
     enum Type {
+      // This must be the first enum value in this list, to
+      // ensure that if 'type' is not set, the default value
+      // is UNKNOWN. This enables enum values to be added
+      // in a backwards-compatible way. See: MESOS-4997.
+      UNKNOWN = 0;
+
       // Receive offers with revocable resources. See 'Resource'
       // message for details.
       // TODO(vinod): This is currently a no-op.
       REVOCABLE_RESOURCES = 1;
+
+      // Receive the TASK_KILLING TaskState when a task is being
+      // killed by an executor. The executor will examine this
+      // capability to determine whether it can send TASK_KILLING.
+      TASK_KILLING_STATE = 2;
     }
 
-    required Type type = 1;
+    // Enum fields should be optional, see: MESOS-4997.
+    optional Type type = 1;
   }
 
   // This field allows a framework to advertise its set of
@@ -273,6 +288,7 @@ message FrameworkInfo {
   // Labels are free-form key value pairs supplied by the framework
   // scheduler (e.g., to describe additional functionality offered by
   // the framework). These labels are not interpreted by Mesos itself.
+  // Labels should not contain duplicate key-value pairs.
   optional Labels labels = 11;
 }
 
@@ -336,6 +352,36 @@ message HealthCheck {
 
 
 /**
+ * Describes a kill policy for a task. Currently does not express
+ * different policies (e.g. hitting HTTP endpoints), only controls
+ * how long to wait between graceful and forcible task kill:
+ *
+ *     graceful kill --------------> forcible kill
+ *                    grace_period
+ *
+ * Kill policies are best-effort, because machine failures / forcible
+ * terminations may occur.
+ *
+ * NOTE: For executor-less command-based tasks, the kill is performed
+ * via sending a signal to the task process: SIGTERM for the graceful
+ * kill and SIGKILL for the forcible kill. For the docker executor-less
+ * tasks the grace period is passed to 'docker stop --time'.
+ */
+message KillPolicy {
+  // The grace period specifies how long to wait before forcibly
+  // killing the task. It is recommended to attempt to gracefully
+  // kill the task (and send TASK_KILLING) to indicate that the
+  // graceful kill is in progress. Once the grace period elapses,
+  // if the task has not terminated, a forcible kill should occur.
+  // The task should not assume that it will always be allotted
+  // the full grace period. For example, the executor may be
+  // shutdown more quickly by the agent, or failures / forcible
+  // terminations may occur.
+  optional DurationInfo grace_period = 1;
+}
+
+
+/**
  * Describes a command, executed via: '/bin/sh -c value'. Any URIs specified
  * are fetched before executing the command.  If the executable field for an
  * uri is set, executable file permission is set on the downloaded file.
@@ -367,6 +413,13 @@ message CommandInfo {
     // downloading. See also "docs/fetcher.md" and
     // "docs/fetcher-cache-internals.md".
     optional bool cache = 4;
+
+    // The fetcher's default behavior is to use the URI string's basename to
+    // name the local copy. If this field is provided, the local copy will be
+    // named with its value instead. If there is a directory component (which
+    // must be a relative path), the local copy will be stored in that
+    // subdirectory inside the sandbox.
+    optional string output_file = 5;
   }
 
   repeated URI uris = 1;
@@ -405,20 +458,27 @@ message ExecutorInfo {
   required ExecutorID executor_id = 1;
   optional FrameworkID framework_id = 8; // TODO(benh): Make this required.
   required CommandInfo command = 7;
+
   // Executor provided with a container will launch the container
   // with the executor's CommandInfo and we expect the container to
   // act as a Mesos executor.
   optional ContainerInfo container = 11;
+
   repeated Resource resources = 5;
   optional string name = 9;
 
-  // Source is an identifier style string used by frameworks to track
-  // the source of an executor. This is useful when it's possible for
-  // different executor ids to be related semantically.
-  // NOTE: Source is exposed alongside the resource usage of the
-  // executor via JSON on the slave. This allows users to import
-  // usage information into a time series database for monitoring.
-  optional string source = 10;
+  // 'source' is an identifier style string used by frameworks to
+  // track the source of an executor. This is useful when it's
+  // possible for different executor ids to be related semantically.
+  //
+  // NOTE: 'source' is exposed alongside the resource usage of the
+  // executor via JSON on the slave. This allows users to import usage
+  // information into a time series database for monitoring.
+  //
+  // This field is deprecated since 0.29.0. Please use labels for
+  // free-form metadata instead.
+  optional string source = 10 [deprecated = true]; // Since 0.29.0.
+
   optional bytes data = 4;
 
   // Service discovery information for the executor. It is not
@@ -426,6 +486,22 @@ message ExecutorInfo {
   // discovery system to use this information as needed and to handle
   // executors without service discovery information.
   optional DiscoveryInfo discovery = 12;
+
+  // When shutting down an executor the agent will wait in a
+  // best-effort manner for the grace period specified here
+  // before forcibly destroying the container. The executor
+  // must not assume that it will always be allotted the full
+  // grace period, as the agent may decide to allot a shorter
+  // period and failures / forcible terminations may occur.
+  optional DurationInfo shutdown_grace_period = 13;
+
+  // Labels are free-form key value pairs which are exposed through
+  // master and slave endpoints. Labels will not be interpreted or
+  // acted upon by Mesos itself. As opposed to the data field, labels
+  // will be kept in memory on master and slave processes. Therefore,
+  // labels should be used to tag executors with lightweight metadata.
+  // Labels should not contain duplicate key-value pairs.
+  optional Labels labels = 14;
 }
 
 
@@ -471,9 +547,7 @@ message MasterInfo {
 /**
  * Describes a slave. Note that the 'id' field is only available after
  * a slave is registered with the master, and is made available here
- * to facilitate re-registration.  If checkpoint is set, the slave is
- * checkpointing its own information and potentially frameworks'
- * information (if a framework has checkpointing enabled).
+ * to facilitate re-registration.
  */
 message SlaveInfo {
   required string hostname = 1;
@@ -481,6 +555,9 @@ message SlaveInfo {
   repeated Resource resources = 3;
   repeated Attribute attributes = 5;
   optional SlaveID id = 6;
+
+  // Slave checkpointing is always enabled in recent Mesos versions;
+  // the value of this field is ignored.
   // TODO(joerg84): Remove checkpoint field after deprecation cycle starting
   // with 0.27 (MESOS-2317).
   optional bool checkpoint = 7 [default = false];
@@ -500,6 +577,14 @@ message Value {
   }
 
   message Scalar {
+    // Scalar values are represented using floating point. To reduce
+    // the chance of unpredictable floating point behavior due to
+    // roundoff error, Mesos only supports three decimal digits of
+    // precision for scalar resource values. That is, floating point
+    // values are converted to a fixed point format that supports
+    // three decimal digits of precision, and then converted back to
+    // floating point on output. Any additional precision in scalar
+    // resource values is discarded (via rounding).
     required double value = 1;
   }
 
@@ -544,13 +629,17 @@ message Attribute {
 
 
 /**
- * Describes a resource on a machine. A resource can take on one of
- * three types: scalar (double), a list of finite and discrete ranges
- * (e.g., [1-10, 20-30]), or a set of items. A resource is described
- * using the standard protocol buffer "union" trick.
+ * Describes a resource on a machine. The `name` field is a string
+ * like "cpus" or "mem" that indicates which kind of resource this is;
+ * the rest of the fields describe the properties of the resource. A
+ * resource can take on one of three types: scalar (double), a list of
+ * finite and discrete ranges (e.g., [1-10, 20-30]), or a set of
+ * items. A resource is described using the standard protocol buffer
+ * "union" trick.
  *
- * TODO(benh): Add better support for "expected" resources (e.g.,
- * cpus, memory, disk, network).
+ * Note that "disk" and "mem" resources are scalar values expressed in
+ * megabytes. Fractional "cpus" values are allowed (e.g., "0.5"),
+ * which correspond to partial shares of a CPU.
  */
 message Resource {
   required string name = 1;
@@ -572,17 +661,21 @@ message Resource {
     // NOTE: We currently do not allow frameworks with role "*" to
     // make dynamic reservations.
 
-    // This field indicates the principal of the framework or operator
+    // Indicates the principal, if any, of the framework or operator
     // that reserved this resource. If reserved by a framework, the
     // field should match the `FrameworkInfo.principal`. It is used in
     // conjunction with the `UnreserveResources` ACL to determine
     // whether the entity attempting to unreserve this resource is
     // permitted to do so.
-    //
-    // NOTE: Currently, a principal is required in order to reserve
-    // resources, so the master disallows any reserve operations
-    // without a principal. This constraint will be removed in 0.28.
     optional string principal = 1;
+
+    // Labels are free-form key value pairs that can be used to
+    // associate arbitrary metadata with a reserved resource.  For
+    // example, frameworks can use labels to identify the intended
+    // purpose for a portion of the resources the framework has
+    // reserved at a given slave. Labels should not contain duplicate
+    // key-value pairs.
+    optional Labels labels = 2;
   }
 
   // If this is set, this resource was dynamically reserved by an
@@ -592,30 +685,25 @@ message Resource {
 
   message DiskInfo {
     // Describes a persistent disk volume.
+    //
     // A persistent disk volume will not be automatically garbage
-    // collected if the task/executor/slave terminates, but is
+    // collected if the task/executor/slave terminates, but will be
     // re-offered to the framework(s) belonging to the 'role'.
-    // A framework can set the ID (if it is not set yet) to express
-    // the intention to create a new persistent disk volume from a
-    // regular disk resource. To reuse a previously created volume, a
-    // framework can launch a task/executor when it receives an offer
-    // with a persistent volume, i.e., ID is set.
-    // NOTE: Currently, we do not allow a persistent disk volume
-    // without a reservation (i.e., 'role' should not be '*').
+    //
+    // NOTE: Currently, we do not allow persistent disk volumes
+    // without a reservation (i.e., 'role' cannot be '*').
     message Persistence {
-      // A unique ID for the persistent disk volume.
-      // NOTE: The ID needs to be unique per role on each slave.
+      // A unique ID for the persistent disk volume. This ID must be
+      // unique per role on each slave. Although it is possible to use
+      // the same ID on different slaves in the cluster and to reuse
+      // IDs after a volume with that ID has been destroyed, both
+      // practices are discouraged.
       required string id = 1;
 
       // This field indicates the principal of the operator or
       // framework that created this volume. It is used in conjunction
       // with the "destroy" ACL to determine whether an entity
       // attempting to destroy the volume is permitted to do so.
-      //
-      // NOTE: This field is optional, while the `principal` found in
-      // `ReservationInfo` is required. This field is optional to
-      // allow for the possibility of volume creation without a
-      // principal, though currently it must be provided.
       //
       // NOTE: This field should match the FrameworkInfo.principal of
       // the framework that created the volume.
@@ -715,6 +803,99 @@ message TrafficControlStatistics {
   optional uint64 ratebps = 8;
   optional uint64 ratepps = 9;
   optional uint64 requeues = 10;
+}
+
+
+message IpStatistics {
+  optional int64 Forwarding =  1;
+  optional int64 DefaultTTL =  2;
+  optional int64 InReceives =  3;
+  optional int64 InHdrErrors =  4;
+  optional int64 InAddrErrors =  5;
+  optional int64 ForwDatagrams =  6;
+  optional int64 InUnknownProtos = 7;
+  optional int64 InDiscards =  8;
+  optional int64 InDelivers  = 9;
+  optional int64 OutRequests = 10;
+  optional int64 OutDiscards = 11;
+  optional int64 OutNoRoutes = 12;
+  optional int64 ReasmTimeout = 13;
+  optional int64 ReasmReqds = 14;
+  optional int64 ReasmOKs = 15;
+  optional int64 ReasmFails = 16;
+  optional int64 FragOKs = 17;
+  optional int64 FragFails = 18;
+  optional int64 FragCreates = 19;
+}
+
+
+message IcmpStatistics {
+  optional int64 InMsgs = 1;
+  optional int64 InErrors =  2;
+  optional int64 InCsumErrors = 3;
+  optional int64 InDestUnreachs =  4;
+  optional int64 InTimeExcds = 5;
+  optional int64 InParmProbs =  6;
+  optional int64 InSrcQuenchs = 7;
+  optional int64 InRedirects = 8;
+  optional int64 InEchos = 9;
+  optional int64 InEchoReps = 10;
+  optional int64 InTimestamps = 11;
+  optional int64 InTimestampReps = 12;
+  optional int64 InAddrMasks = 13;
+  optional int64 InAddrMaskReps = 14;
+  optional int64 OutMsgs = 15;
+  optional int64 OutErrors = 16;
+  optional int64 OutDestUnreachs = 17;
+  optional int64 OutTimeExcds = 18;
+  optional int64 OutParmProbs = 19;
+  optional int64 OutSrcQuenchs = 20;
+  optional int64 OutRedirects = 21;
+  optional int64 OutEchos = 22;
+  optional int64 OutEchoReps = 23;
+  optional int64 OutTimestamps = 24;
+  optional int64 OutTimestampReps = 25;
+  optional int64 OutAddrMasks = 26;
+  optional int64 OutAddrMaskReps = 27;
+}
+
+
+message TcpStatistics {
+  optional int64 RtoAlgorithm = 1;
+  optional int64 RtoMin = 2;
+  optional int64 RtoMax = 3;
+  optional int64 MaxConn = 4;
+  optional int64 ActiveOpens = 5;
+  optional int64 PassiveOpens = 6;
+  optional int64 AttemptFails = 7;
+  optional int64 EstabResets = 8;
+  optional int64 CurrEstab = 9;
+  optional int64 InSegs = 10;
+  optional int64 OutSegs = 11;
+  optional int64 RetransSegs = 12;
+  optional int64 InErrs = 13;
+  optional int64 OutRsts = 14;
+  optional int64 InCsumErrors = 15;
+}
+
+
+message UdpStatistics {
+  optional int64 InDatagrams = 1;
+  optional int64 NoPorts = 2;
+  optional int64 InErrors = 3;
+  optional int64 OutDatagrams = 4;
+  optional int64 RcvbufErrors = 5;
+  optional int64 SndbufErrors = 6;
+  optional int64 InCsumErrors = 7;
+  optional int64 IgnoredMulti = 8;
+}
+
+
+message SNMPStatistics {
+  optional IpStatistics ip_stats = 1;
+  optional IcmpStatistics icmp_stats = 2;
+  optional TcpStatistics tcp_stats = 3;
+  optional UdpStatistics udp_stats = 4;
 }
 
 
@@ -819,6 +1000,9 @@ message ResourceStatistics {
   // or dropped due to congestion or policy inside and outside the
   // container.
   repeated TrafficControlStatistics net_traffic_control_statistics = 35;
+
+  // Network SNMP statistics for each container.
+  optional SNMPStatistics net_snmp_statistics = 42;
 }
 
 
@@ -839,6 +1023,16 @@ message ResourceUsage {
 
     // The container id for the executor specified in the executor_info field.
     required ContainerID container_id = 4;
+
+    message Task {
+      required string name = 1;
+      required TaskID id = 2;
+      repeated Resource resources = 3;
+      optional Labels labels = 4;
+    }
+
+    // Non-terminal tasks.
+    repeated Task tasks = 5;
   }
 
   repeated Executor executors = 1;
@@ -1070,19 +1264,30 @@ message TaskInfo {
   repeated Resource resources = 4;
   optional ExecutorInfo executor = 5;
   optional CommandInfo command = 7;
+
   // Task provided with a container will launch the container as part
   // of this task paired with the task's CommandInfo.
   optional ContainerInfo container = 9;
-  optional bytes data = 6;
-  // A health check for the task (currently in *alpha* and initial
-  // support will only be for TaskInfo's that have a CommandInfo).
+
+  // A health check for the task. Implemented for executor-less
+  // command-based tasks. For tasks that specify an executor, it is
+  // the executor's responsibility to implement the health checking.
   optional HealthCheck health_check = 8;
+
+  // A kill policy for the task. Implemented for executor-less
+  // command-based and docker tasks. For tasks that specify other
+  // executor, it is the executor's responsibility to implement
+  // the kill policy.
+  optional KillPolicy kill_policy = 12;
+
+  optional bytes data = 6;
 
   // Labels are free-form key value pairs which are exposed through
   // master and slave endpoints. Labels will not be interpreted or
   // acted upon by Mesos itself. As opposed to the data field, labels
   // will be kept in memory on master and slave processes. Therefore,
   // labels should be used to tag tasks with light-weight meta-data.
+  // Labels should not contain duplicate key-value pairs.
   optional Labels labels = 10;
 
   // Service discovery information for the task. It is not interpreted
@@ -1101,14 +1306,19 @@ message TaskInfo {
  * another task).
  */
 enum TaskState {
-  TASK_STAGING = 6; // Initial state. Framework status updates should not use.
-  TASK_STARTING = 0;
+  TASK_STAGING = 6;  // Initial state. Framework status updates should not use.
+  TASK_STARTING = 0; // The task is being launched by the executor.
   TASK_RUNNING = 1;
-  TASK_FINISHED = 2; // TERMINAL. The task finished successfully.
-  TASK_FAILED = 3; // TERMINAL. The task failed to finish successfully.
-  TASK_KILLED = 4; // TERMINAL. The task was killed by the executor.
-  TASK_LOST = 5; // TERMINAL. The task failed but can be rescheduled.
-  TASK_ERROR = 7; // TERMINAL. The task description contains an error.
+
+  // NOTE: This should only be sent when the framework has
+  // the TASK_KILLING_STATE capability.
+  TASK_KILLING = 8;  // The task is being killed by the executor.
+
+  TASK_FINISHED = 2; // TERMINAL: The task finished successfully.
+  TASK_FAILED = 3;   // TERMINAL: The task failed to finish successfully.
+  TASK_KILLED = 4;   // TERMINAL: The task was killed by the executor.
+  TASK_LOST = 5;     // TERMINAL: The task failed but can be rescheduled.
+  TASK_ERROR = 7;    // TERMINAL: The task description contains an error.
 }
 
 
@@ -1190,7 +1400,7 @@ message TaskStatus {
   // acted upon by Mesos itself. As opposed to the data field, labels
   // will be kept in memory on master and slave processes. Therefore,
   // labels should be used to tag TaskStatus message with light-weight
-  // meta-data.
+  // meta-data. Labels should not contain duplicate key-value pairs.
   optional Labels labels = 12;
 
   // Container related information that is resolved dynamically such as
@@ -1373,6 +1583,7 @@ message Volume {
     RO = 2; // read-only.
   }
 
+  // TODO(gyliu513): Make this as `optional` after deprecation cycle of 0.29.
   required Mode mode = 3;
 
   // Path pointing to a directory or file in the container. If the
@@ -1391,6 +1602,42 @@ message Volume {
   // The source of the volume is an Image which describes a root
   // filesystem which will be provisioned by Mesos.
   optional Image image = 4;
+
+  // Describes where a volume originates from.
+  message Source {
+    enum Type {
+      // This must be the first enum value in this list, to
+      // ensure that if 'type' is not set, the default value
+      // is UNKNOWN. This enables enum values to be added
+      // in a backwards-compatible way. See: MESOS-4997.
+      UNKNOWN = 0;
+
+      // TODO(gyliu513): Add HOST_PATH and IMAGE as volume source type.
+      DOCKER_VOLUME = 1;
+    }
+
+    message DockerVolume {
+      // Driver of the volume, it can be flocker, convoy, raxrey etc.
+      required string driver = 1;
+
+      // Name of the volume.
+      required string name = 2;
+
+      // Volume driver specific options.
+      optional Parameters driver_options = 3;
+    }
+
+    // Enum fields should be optional, see: MESOS-4997.
+    optional Type type = 1;
+
+    // The following specifies the source of this volume. At most one of
+    // the following should be set.
+
+    // The source of the volume created by docker volume driver.
+    optional DockerVolume docker_volume = 2;
+  }
+
+  optional Source source = 5;
 }
 
 
@@ -1398,7 +1645,7 @@ message Volume {
  * Describes a network request from a framework as well as network resolution
  * provided by Mesos.
  *
- * A Framework may request the network isolator on the Agent to isolate the
+ * A framework may request the network isolator on the Agent to isolate the
  * container in a network namespace and create a virtual network interface.
  * The `NetworkInfo` message describes the properties of that virtual
  * interface, including the IP addresses and network isolation policy
@@ -1453,6 +1700,11 @@ message NetworkInfo {
   // this field is filled in automatically with the Agent IP address.
   repeated IPAddress ip_addresses = 5;
 
+  // Name of the network which will be used by network isolator to determine
+  // the network that the container joins. It's up to the network isolator
+  // to decide how to interpret this field.
+  optional string name = 6;
+
   // Specify IP address requirement. Set protocol to the desired value to
   // request the network isolator on the Agent to assign an IP address to the
   // container being launched. If a specific IP address is specified in
@@ -1498,6 +1750,7 @@ message ContainerInfo {
       HOST = 1;
       BRIDGE = 2;
       NONE = 3;
+      USER = 4;
     }
 
     optional Network network = 2 [default = HOST];
@@ -1548,17 +1801,39 @@ message ContainerInfo {
 
 
 /**
- * Container related information that is resolved during container setup. The
- * information is sent back to the framework as part of the TaskStatus message.
+ * Container related information that is resolved during container
+ * setup. The information is sent back to the framework as part of the
+ * TaskStatus message.
  */
 message ContainerStatus {
   // This field can be reliably used to identify the container IP address.
   repeated NetworkInfo network_infos = 1;
+
+  // Information about Linux control group (cgroup).
+  optional CgroupInfo cgroup_info = 2;
 }
 
 
 /**
- * Collection of labels.
+ * Linux control group (cgroup) information.
+ */
+message CgroupInfo {
+  // Configuration of a net_cls cgroup subsystem.
+  message NetCls {
+    // The 32-bit classid consists of two parts, a 16 bit major handle
+    // and a 16-bit minor handle. The major and minor handle are
+    // represented using the format 0xAAAABBBB, where 0xAAAA is the
+    // 16-bit major handle and 0xBBBB is the 16-bit minor handle.
+    optional uint32 classid = 1;
+  }
+
+  optional NetCls net_cls = 1;
+}
+
+
+/**
+ * Collection of labels. Labels should not contain duplicate key-value
+ * pairs.
  */
 message Labels {
   repeated Label labels = 1;
@@ -1580,15 +1855,19 @@ message Label {
 message Port {
   // Port number on which the framework exposes a service.
   required uint32 number = 1;
+
   // Name of the service hosted on this port.
   optional string name = 2;
+
   // Layer 4-7 protocol on which the framework exposes its services.
   optional string protocol = 3;
+
   // This field restricts discovery within a framework (FRAMEWORK),
   // within a Mesos cluster (CLUSTER), or places no restrictions (EXTERNAL).
   // The visibility setting for a Port overrides the general visibility setting
   // in the DiscoveryInfo.
   optional DiscoveryInfo.Visibility visibility = 4;
+
   // This can be used to decorate the message with metadata to be
   // interpreted by external applications such as firewalls.
   optional Labels labels = 5;
@@ -1635,33 +1914,12 @@ message DiscoveryInfo {
 
 
 /**
-* Protobuf for the Appc image manifest JSON schema:
-* https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
-* Where possible, any field required in the schema is required in the protobuf
-* but some cannot be expressed, e.g., a repeated string that has at least one
-* element. Further validation should be performed after parsing the JSON into
-* the protobuf.
-* This version of Appc protobuf is based on Appc spec version 0.6.1.
-* TODO(xujyan): This protobuf currently defines a subset of fields in the spec
-* that Mesos makes use of to avoid confusion. New fields are going to be added
-* when Mesos starts to support them.
-*/
-message AppcImageManifest {
-  required string acKind = 1;
-  required string acVersion = 2;
-  required string name = 3;
+ * Named WeightInfo to indicate resource allocation
+ * priority between the different roles.
+ */
+message WeightInfo {
+  required double weight = 1;
 
-  message Label {
-    required string name = 1;
-    required string value = 2;
-  }
-
-  repeated Label labels = 4;
-
-  message Annotation {
-    required string name = 1;
-    required string value = 2;
-  }
-
-  repeated Annotation annotations = 5;
+  // Related role name.
+  optional string role = 2;
 }
