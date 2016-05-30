@@ -42,5 +42,21 @@ trait HttpRequest {
     * @return IP address of the client that sent the request
     */
   def remoteAddr: String
+
+  /**
+    * @return the IP source port of the client or last proxy that sent the request.
+    */
+  def remotePort: Int
+
+  /**
+    * @return IP address of the interface on which the request was received.
+    */
+  def localAddr: String
+
+  /**
+    * @return the IP port number of the interface on which the request was received.
+    */
+  def localPort: Int
+
 }
 

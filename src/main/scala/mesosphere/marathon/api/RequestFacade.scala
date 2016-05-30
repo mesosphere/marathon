@@ -15,6 +15,9 @@ class RequestFacade(request: HttpServletRequest, path: String) extends HttpReque
   val cookies = request.getCookies
   val params = request.getParameterMap
   val remoteAddr = request.getRemoteAddr
+  val remotePort = request.getRemotePort
+  val localAddr = request.getLocalAddr
+  val localPort = request.getLocalPort
   override def header(name: String): Seq[String] = headers.getOrElse(name.toLowerCase, Seq.empty)
   override def requestPath: String = path
   override def cookie(name: String): Option[String] = cookies.find(_.getName == name).map(_.getValue)
