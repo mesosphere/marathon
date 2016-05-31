@@ -679,7 +679,8 @@ trait AppAndGroupFormats {
             residency: Option[Residency],
             maybePortDefinitions: Option[Seq[PortDefinition]],
             readinessChecks: Seq[ReadinessCheck],
-            secrets: Map[String, Secret]) {
+            secrets: Map[String, Secret],
+            maybeTaskKillGracePeriod: Option[FiniteDuration]) {
           def upgradeStrategyOrDefault: UpgradeStrategy = {
             import UpgradeStrategy.{ forResidentTasks, empty }
             upgradeStrategy.getOrElse {
@@ -706,7 +707,8 @@ trait AppAndGroupFormats {
             (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
             (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]].withDefault(
               AppDefinition.DefaultReadinessChecks) ~
-              (__ \ "secrets").readNullable[Map[String, Secret]].withDefault(AppDefinition.DefaultSecrets)
+              (__ \ "secrets").readNullable[Map[String, Secret]].withDefault(AppDefinition.DefaultSecrets) ~
+              (__ \ "taskKillGracePeriodSeconds").readNullable[Long].map(_.map(_.seconds))
           )(ExtraFields)
             .filter(ValidationError("You cannot specify both uris and fetch fields")) { extra =>
               !(extra.uris.nonEmpty && extra.fetch.nonEmpty)
@@ -748,7 +750,8 @@ trait AppAndGroupFormats {
             versionInfo = AppDefinition.VersionInfo.OnlyVersion(extra.version),
             residency = extra.residencyOrDefault,
             readinessChecks = extra.readinessChecks,
-            secrets = extra.secrets
+            secrets = extra.secrets,
+            taskKillGracePeriod = extra.maybeTaskKillGracePeriod
           )
         }
       }
@@ -850,7 +853,8 @@ trait AppAndGroupFormats {
         "ipAddress" -> app.ipAddress,
         "version" -> app.version,
         "residency" -> app.residency,
-        "secrets" -> app.secrets
+        "secrets" -> app.secrets,
+        "taskKillGracePeriodSeconds" -> app.taskKillGracePeriod
       )
       Json.toJson(app.versionInfo) match {
         case JsNull     => appJson
@@ -999,7 +1003,8 @@ trait AppAndGroupFormats {
         ports: Option[Seq[Int]],
         portDefinitions: Option[Seq[PortDefinition]],
         readinessChecks: Option[Seq[ReadinessCheck]],
-        secrets: Option[Map[String, Secret]])
+        secrets: Option[Map[String, Secret]],
+        taskKillGracePeriodSeconds: Option[FiniteDuration])
 
       val extraReads: Reads[ExtraFields] =
         (
@@ -1014,7 +1019,8 @@ trait AppAndGroupFormats {
           (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
           (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
           (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]] ~
-          (__ \ "secrets").readNullable[Map[String, Secret]]
+          (__ \ "secrets").readNullable[Map[String, Secret]] ~
+          (__ \ "taskKillGracePeriodSeconds").readNullable[Long].map(_.map(_.seconds))
         )(ExtraFields)
 
       extraReads
@@ -1038,7 +1044,8 @@ trait AppAndGroupFormats {
               extra.ports.map { ports => PortDefinitions.apply(ports: _*) }
             },
             readinessChecks = extra.readinessChecks,
-            secrets = extra.secrets
+            secrets = extra.secrets,
+            taskKillGracePeriod = extra.taskKillGracePeriodSeconds
           )
         }
     }.map(addHealthCheckPortIndexIfNecessary)
