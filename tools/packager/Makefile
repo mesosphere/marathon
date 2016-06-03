@@ -172,6 +172,24 @@ ubuntu-vivid: marathon.systemd.postinst
 		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
+.PHONY: ubuntu-wily
+ubuntu-wily: toor/ubuntu-wily/lib/systemd/system/marathon.service
+ubuntu-wily: toor/ubuntu-wily/$(PREFIX)/bin/marathon
+ubuntu-wily: marathon.systemd.postinst
+	fpm -C toor/ubuntu-wily --config-files lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).ubuntu1510 \
+		--after-install marathon.systemd.postinst \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
+.PHONY: ubuntu-xenial
+ubuntu-xenial: toor/ubuntu-xenial/lib/systemd/system/marathon.service
+ubuntu-xenial: toor/ubuntu-xenial/$(PREFIX)/bin/marathon
+ubuntu-xenial: marathon.systemd.postinst
+	fpm -C toor/ubuntu-xenial --config-files lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).ubuntu1604 \
+		--after-install marathon.systemd.postinst \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
 .PHONY: debian-wheezy-77
 debian-wheezy-77: toor/debian-wheezy-77/etc/init/marathon.conf
 debian-wheezy-77: toor/debian-wheezy-77/etc/init.d/marathon
