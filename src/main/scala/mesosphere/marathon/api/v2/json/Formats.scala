@@ -261,11 +261,15 @@ trait ContainerFormats {
   implicit lazy val ContainerTypeFormat: Format[mesos.ContainerInfo.Type] =
     enumFormat(mesos.ContainerInfo.Type.valueOf, str => s"$str is not a valid container type")
 
+  implicit lazy val NetworkInfoFormat: Format[NetworkInfo] = (
+    (__ \ "name").formatNullable[String]).inmap(NetworkInfo, unlift(NetworkInfo.unapply))
+
   implicit lazy val ContainerFormat: Format[Container] = (
     (__ \ "type").formatNullable[mesos.ContainerInfo.Type].withDefault(mesos.ContainerInfo.Type.DOCKER) ~
     (__ \ "volumes").formatNullable[Seq[Volume]].withDefault(Nil) ~
-    (__ \ "docker").formatNullable[Docker]
-  )(Container(_, _, _), unlift(Container.unapply))
+    (__ \ "docker").formatNullable[Docker] ~
+    (__ \ "networkInfo").formatNullable[Seq[NetworkInfo]].withDefault(Nil)
+  )(Container(_, _, _, _), unlift(Container.unapply))
 }
 
 trait IpAddressFormats {

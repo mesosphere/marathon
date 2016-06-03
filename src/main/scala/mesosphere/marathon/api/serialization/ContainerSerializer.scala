@@ -16,6 +16,7 @@ object ContainerSerializer {
       .setType(container.`type`)
       .addAllVolumes(container.volumes.map(VolumeSerializer.toProto).asJava)
     container.docker.foreach { d => builder.setDocker(DockerSerializer.toProto(d)) }
+    container.networkInfo.foreach(net => builder.addNetworkInfos(NetworkInfoSerializer.toProtos(net)))
     builder.build
   }
 
@@ -24,7 +25,8 @@ object ContainerSerializer {
     Container(
       `type` = proto.getType,
       volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
-      docker = maybeDocker
+      docker = maybeDocker,
+      networkInfo = proto.getNetworkInfosList.asScala.map(n => NetworkInfoSerializer.fromProtos(n)).to[Seq]
     )
   }
 
@@ -40,6 +42,7 @@ object ContainerSerializer {
       case ev: ExternalVolume   => ExternalVolumes.build(builder, ev) // this also adds the volume
       case dv: DockerVolume     => builder.addVolumes(VolumeSerializer.toMesos(dv))
     }
+    container.networkInfo.foreach((net => builder.addNetworkInfos(NetworkInfoSerializer.toMesos(net))))
 
     builder.build
   }
@@ -226,4 +229,20 @@ object ParameterSerializer {
       .setValue(param.value)
       .build
 
+}
+
+object NetworkInfoSerializer {
+  def toProtos(networkInfo: NetworkInfo): Protos.ExtendedContainerInfo.NetworkInfo = {
+    val builder = Protos.ExtendedContainerInfo.NetworkInfo.newBuilder
+    networkInfo.name.foreach(builder.setName)
+    builder.build
+  }
+  def toMesos(networkInfo: NetworkInfo): mesos.Protos.NetworkInfo = {
+    val builder = mesos.Protos.NetworkInfo.newBuilder
+    networkInfo.name.foreach(builder.setName)
+    builder.build
+  }
+  def fromProtos(networkInfo: Protos.ExtendedContainerInfo.NetworkInfo): NetworkInfo = {
+    NetworkInfo(if (networkInfo.hasName) Some(networkInfo.getName) else None)
+  }
 }

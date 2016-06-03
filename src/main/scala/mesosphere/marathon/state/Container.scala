@@ -11,7 +11,11 @@ import scala.collection.immutable.Seq
 case class Container(
   `type`: Mesos.ContainerInfo.Type = Mesos.ContainerInfo.Type.DOCKER,
   volumes: Seq[Volume] = Nil,
-  docker: Option[Container.Docker] = None)
+  docker: Option[Container.Docker] = None,
+  networkInfo: Seq[NetworkInfo] = Nil)
+
+case class NetworkInfo(
+  name: Option[String] = None)
 
 object Container {
 
