@@ -199,6 +199,11 @@ message ExtendedContainerInfo {
   repeated Volume volumes = 2;
 
   optional DockerInfo docker = 3;
+
+  message NetworkInfo {
+    optional string name = 1;
+  }
+  repeated NetworkInfo network_infos = 4;
 }
 
 // Copied from mesos.proto and adjusted to meet the needs of persistent volumes
