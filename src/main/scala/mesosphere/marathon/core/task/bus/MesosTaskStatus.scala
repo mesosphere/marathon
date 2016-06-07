@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.task.bus
 
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.Protos.TaskStatus

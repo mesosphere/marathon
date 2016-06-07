@@ -9,7 +9,6 @@ trait TaskStatusUpdateProcessor {
   /**
     * Process a task status update message.
     * @param status the status to update.
-    * @param ack if this update is coming from Mesos, you want to acknowledge this update.
     */
-  def publish(status: TaskStatus, ack: Boolean = true): Future[Unit]
+  def publish(status: TaskStatus): Future[Unit]
 }

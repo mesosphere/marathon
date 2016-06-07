@@ -520,9 +520,8 @@ class SchedulerActions(
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     import SchedulerActions._
 
-    // FIXME (merge): there are now 2 filters ...
-    val launchedCount = taskTracker.countLaunchedAppTasksSync(app.id,
-      _.mesosStatus.fold(false)(_.getState != TaskState.TASK_LOST))
+    def launchedNotLost(t: Task) = t.launched.isDefined && t.mesosStatus.fold(false)(_.getState != TaskState.TASK_LOST)
+    val launchedCount = taskTracker.countAppTasksSync(app.id, launchedNotLost)
     val targetCount = app.instances
 
     if (targetCount > launchedCount) {

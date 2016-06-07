@@ -133,7 +133,7 @@ class SchedulerActionsTest
     Given("An active queue and lost tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 15)
     f.queue.get(app.id) returns None
-    f.taskTracker.countLaunchedAppTasksSync(eq(app.id), any) returns 10
+    f.taskTracker.countAppTasksSync(eq(app.id), any) returns 10
 
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)
@@ -172,7 +172,7 @@ class SchedulerActionsTest
     )
 
     f.queue.get(app.id) returns Some(queued)
-    f.taskTracker.countLaunchedAppTasksSync(eq(app.id), any) returns 7
+    f.taskTracker.countAppTasksSync(eq(app.id), any) returns 7
     f.taskTracker.appTasksSync(app.id) returns tasks
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)
@@ -205,7 +205,7 @@ class SchedulerActionsTest
     )
 
     f.queue.get(app.id) returns None
-    f.taskTracker.countLaunchedAppTasksSync(eq(app.id), any) returns 7
+    f.taskTracker.countAppTasksSync(eq(app.id), any) returns 7
     f.taskTracker.appTasksSync(app.id) returns tasks
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)
@@ -244,7 +244,7 @@ class SchedulerActionsTest
     )
 
     f.queue.get(app.id) returns Some(queued)
-    f.taskTracker.countLaunchedAppTasksSync(eq(app.id), any) returns 5
+    f.taskTracker.countAppTasksSync(eq(app.id), any) returns 5
     f.taskTracker.appTasksSync(app.id) returns tasks
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)

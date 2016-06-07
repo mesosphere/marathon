@@ -37,7 +37,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
   log.info("Started status update processor")
 
-  override def publish(status: MesosProtos.TaskStatus, ack: Boolean = true): Future[Unit] = publishTimer.timeFuture {
+  override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishTimer.timeFuture {
     import TaskStatusUpdateProcessorImpl._
 
     val now = clock.now()
@@ -46,25 +46,25 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     taskTracker.task(taskId).flatMap {
       case Some(task) if task.launched.isDefined =>
         val taskStateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(status), now)
-        stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status, ack))
+        stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
       case maybeTask: Option[Task] if killWhenUnknownOrNotLaunched(status) =>
         killUnknownTaskTimer {
           val taskStr = taskKnownOrNotStr(maybeTask)
           log.warn(s"Kill $taskStr $taskId")
           killTask(taskId.mesosTaskId)
-          acknowledge(status, ack)
+          acknowledge(status)
         }
 
       case maybeTask: Option[Task] =>
         val taskStr = taskKnownOrNotStr(maybeTask)
         log.info(s"Ignoring ${status.getState} update for $taskStr $taskId")
-        acknowledge(status, ack)
+        acknowledge(status)
     }
   }
 
-  private[this] def acknowledge(taskStatus: MesosProtos.TaskStatus, ack: Boolean = true): Future[Unit] = {
-    if (ack) driverHolder.driver.foreach(_.acknowledgeStatusUpdate(taskStatus))
+  private[this] def acknowledge(taskStatus: MesosProtos.TaskStatus): Future[Unit] = {
+    driverHolder.driver.foreach(_.acknowledgeStatusUpdate(taskStatus))
     Future.successful(())
   }
 

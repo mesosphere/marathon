@@ -38,7 +38,6 @@ sealed trait Task {
     taskId.mesosTaskId
   }
 
-  // FIXME (merge): remove this accessor and add a universal Status to all tasks that includes unconfirmed states
   def mesosStatus: Option[MesosProtos.TaskStatus] = {
     launched.flatMap(_.status.mesosStatus).orElse {
       launchedMesosId.map { mesosId =>

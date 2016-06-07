@@ -29,7 +29,6 @@ class PostToEventStreamStepImpl @Inject() (
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
     import TaskStateOp.MesosUpdate
 
-    // FIXME (merge): it should be clear which task state (old or new) to post
     taskChanged match {
       // case 1: Mesos status update => update or expunge
       // In this case, we post the OLD state - when terminated, a persistent task no longer has a launched
