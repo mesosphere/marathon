@@ -4,10 +4,9 @@ import com.google.inject.Inject
 import mesosphere.marathon.core.election.ElectionService
 
 /**
-  * Makes the [[MarathonSchedulerService]] service usable as [[SchedulerCallbacks]].
+  * Trigger abdicating leadership after disconnection from Mesos.
   */
 class SchedulerCallbacksServiceAdapter @Inject() (
-    schedulerService: MarathonSchedulerService,
     electionService: ElectionService) extends SchedulerCallbacks {
   override def disconnected(): Unit = {
     // Abdicate leadership when we become disconnected from the Mesos master.

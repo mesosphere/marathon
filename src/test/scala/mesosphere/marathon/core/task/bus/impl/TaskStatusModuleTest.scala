@@ -36,7 +36,7 @@ class TaskStatusModuleTest extends FunSuite with BeforeAndAfter {
 
   test("observable forAppId includes only app status updates") {
     var received = List.empty[TaskChanged]
-    module.taskStatusObservables.forAppId(PathId("/a/a")).foreach(received :+= _)
+    module.taskStatusObservables.forRunSpecId(PathId("/a/a")).foreach(received :+= _)
     val aa: TaskChanged = TaskStatusUpdateTestHelper.running(taskForApp("/a/a")).wrapped
     val ab: TaskChanged = TaskStatusUpdateTestHelper.running(taskForApp("/a/b")).wrapped
     module.taskStatusEmitter.publish(aa)
@@ -46,14 +46,14 @@ class TaskStatusModuleTest extends FunSuite with BeforeAndAfter {
 
   test("observable forAppId unsubscribe works") {
     var received = List.empty[TaskChanged]
-    val subscription = module.taskStatusObservables.forAppId(PathId("/a/a")).subscribe(received :+= _)
+    val subscription = module.taskStatusObservables.forRunSpecId(PathId("/a/a")).subscribe(received :+= _)
     subscription.unsubscribe()
     val aa: TaskChanged = TaskStatusUpdateTestHelper.running(taskForApp("/a/a")).wrapped
     module.taskStatusEmitter.publish(aa)
     assert(received == List.empty)
   }
 
-  private[this] def taskForApp(appId: String) = MarathonTestHelper.stagedTask(Task.Id.forApp(PathId(appId)).idString)
+  private[this] def taskForApp(appId: String) = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(PathId(appId)).idString)
 
 }
 

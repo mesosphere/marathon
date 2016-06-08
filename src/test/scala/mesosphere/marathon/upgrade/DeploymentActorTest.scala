@@ -72,7 +72,7 @@ class DeploymentActorTest
         println(invocation.getArguments.toSeq)
         for (i <- 0 until invocation.getArguments()(1).asInstanceOf[Int])
           system.eventStream.publish(MesosStatusUpdateEvent(
-            slaveId = "", taskId = Task.Id.forApp(app2New.id), taskStatus = "TASK_RUNNING", message = "",
+            slaveId = "", taskId = Task.Id.forRunSpec(app2New.id), taskStatus = "TASK_RUNNING", message = "",
             appId = app2.id, host = "", ipAddresses = None, ports = Nil, version = app2New.version.toString)
           )
         true

@@ -8,7 +8,7 @@ import org.apache.mesos.Protos.TaskInfo
   * AppTaskProcessor mutates a Mesos task info given some app specification.
   */
 trait AppTaskProcessor extends Plugin {
-  def apply(appdef: AppDefinition, builder: TaskInfo.Builder): Unit
+  def apply(runSpec: AppDefinition, builder: TaskInfo.Builder): Unit
 }
 
 object AppTaskProcessor {

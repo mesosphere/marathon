@@ -190,12 +190,12 @@ class TaskStartActorTest
 
     verify(f.launchQueue, Mockito.timeout(3000)).add(app, app.instances)
 
-    system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id.forApp(app.id), "TASK_FAILED", "", app.id, "", None, Nil, app.version.toString))
+    system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id.forRunSpec(app.id), "TASK_FAILED", "", app.id, "", None, Nil, app.version.toString))
 
     verify(f.launchQueue, Mockito.timeout(3000)).add(app, 1)
 
     for (i <- 0 until app.instances)
-      system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id.forApp(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString))
+      system.eventStream.publish(MesosStatusUpdateEvent("", Task.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString))
 
     Await.result(promise.future, 3.seconds) should be(())
 
@@ -230,7 +230,7 @@ class TaskStartActorTest
       ipAddresses = None, ports = Nil,
       // The version does not match the app.version so that it is filtered in StartingBehavior.
       // does that make sense?
-      version = outdatedTask.launched.get.appVersion.toString
+      version = outdatedTask.launched.get.runSpecVersion.toString
     ))
 
     // sync will reschedule task

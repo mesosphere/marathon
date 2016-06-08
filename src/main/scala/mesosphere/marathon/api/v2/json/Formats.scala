@@ -128,7 +128,7 @@ trait Formats
           "startedAt" -> launched.status.startedAt,
           "stagedAt" -> launched.status.stagedAt,
           "ports" -> launched.hostPorts,
-          "version" -> launched.appVersion
+          "version" -> launched.runSpecVersion
         )
       ){
           case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
@@ -812,51 +812,51 @@ trait AppAndGroupFormats {
     .withDefault(Residency.defaultTaskLostBehaviour)
   ) (Residency(_, _), unlift(Residency.unapply))
 
-  implicit lazy val AppDefinitionWrites: Writes[AppDefinition] = {
+  implicit lazy val RunSpecWrites: Writes[RunSpec] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
     }
 
-    Writes[AppDefinition] { app =>
+    Writes[RunSpec] { runSpec =>
       val appJson: JsObject = Json.obj(
-        "id" -> app.id.toString,
-        "cmd" -> app.cmd,
-        "args" -> app.args,
-        "user" -> app.user,
-        "env" -> app.env,
-        "instances" -> app.instances,
-        "cpus" -> app.cpus,
-        "mem" -> app.mem,
-        "disk" -> app.disk,
-        "executor" -> app.executor,
-        "constraints" -> app.constraints,
-        "uris" -> app.fetch.map(_.uri),
-        "fetch" -> app.fetch,
-        "storeUrls" -> app.storeUrls,
+        "id" -> runSpec.id.toString,
+        "cmd" -> runSpec.cmd,
+        "args" -> runSpec.args,
+        "user" -> runSpec.user,
+        "env" -> runSpec.env,
+        "instances" -> runSpec.instances,
+        "cpus" -> runSpec.cpus,
+        "mem" -> runSpec.mem,
+        "disk" -> runSpec.disk,
+        "executor" -> runSpec.executor,
+        "constraints" -> runSpec.constraints,
+        "uris" -> runSpec.fetch.map(_.uri),
+        "fetch" -> runSpec.fetch,
+        "storeUrls" -> runSpec.storeUrls,
         // the ports field was written incorrectly in old code if a container was specified
         // it should contain the service ports
-        "ports" -> app.servicePorts,
-        "portDefinitions" -> app.portDefinitions.zip(app.servicePorts).map {
+        "ports" -> runSpec.servicePorts,
+        "portDefinitions" -> runSpec.portDefinitions.zip(runSpec.servicePorts).map {
           case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
         },
-        "requirePorts" -> app.requirePorts,
-        "backoffSeconds" -> app.backoff,
-        "backoffFactor" -> app.backoffFactor,
-        "maxLaunchDelaySeconds" -> app.maxLaunchDelay,
-        "container" -> app.container,
-        "healthChecks" -> app.healthChecks,
-        "readinessChecks" -> app.readinessChecks,
-        "dependencies" -> app.dependencies,
-        "upgradeStrategy" -> app.upgradeStrategy,
-        "labels" -> app.labels,
-        "acceptedResourceRoles" -> app.acceptedResourceRoles,
-        "ipAddress" -> app.ipAddress,
-        "version" -> app.version,
-        "residency" -> app.residency,
-        "secrets" -> app.secrets,
-        "taskKillGracePeriodSeconds" -> app.taskKillGracePeriod
+        "requirePorts" -> runSpec.requirePorts,
+        "backoffSeconds" -> runSpec.backoff,
+        "backoffFactor" -> runSpec.backoffFactor,
+        "maxLaunchDelaySeconds" -> runSpec.maxLaunchDelay,
+        "container" -> runSpec.container,
+        "healthChecks" -> runSpec.healthChecks,
+        "readinessChecks" -> runSpec.readinessChecks,
+        "dependencies" -> runSpec.dependencies,
+        "upgradeStrategy" -> runSpec.upgradeStrategy,
+        "labels" -> runSpec.labels,
+        "acceptedResourceRoles" -> runSpec.acceptedResourceRoles,
+        "ipAddress" -> runSpec.ipAddress,
+        "version" -> runSpec.version,
+        "residency" -> runSpec.residency,
+        "secrets" -> runSpec.secrets,
+        "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod
       )
-      Json.toJson(app.versionInfo) match {
+      Json.toJson(runSpec.versionInfo) match {
         case JsNull     => appJson
         case v: JsValue => appJson + ("versionInfo" -> v)
       }
@@ -930,7 +930,7 @@ trait AppAndGroupFormats {
 
   implicit lazy val ExtendedAppInfoWrites: Writes[AppInfo] =
     Writes { info =>
-      val appJson = AppDefinitionWrites.writes(info.app).as[JsObject]
+      val appJson = RunSpecWrites.writes(info.app).as[JsObject]
 
       val maybeJson = Seq[Option[JsObject]](
         info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),

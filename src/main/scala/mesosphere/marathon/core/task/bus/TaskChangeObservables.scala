@@ -8,7 +8,7 @@ import rx.lang.scala.Observable
 object TaskChangeObservables {
   case class TaskChanged(stateOp: TaskStateOp, stateChange: TaskStateChange) {
     def taskId: Task.Id = stateOp.taskId
-    def appId: PathId = stateOp.taskId.appId
+    def runSpecId: PathId = stateOp.taskId.runSpecId
   }
 }
 
@@ -17,6 +17,6 @@ object TaskChangeObservables {
   */
 trait TaskChangeObservables {
   def forAll: Observable[TaskChanged]
-  def forAppId(appId: PathId): Observable[TaskChanged]
+  def forRunSpecId(appId: PathId): Observable[TaskChanged]
 }
 
