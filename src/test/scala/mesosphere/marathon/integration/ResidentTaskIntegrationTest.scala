@@ -266,9 +266,15 @@ class ResidentTaskIntegrationTest
     val cpus: Double = 0.001
     val mem: Double = 1.0
     val disk: Double = 1.0
+    val gpus: Double = 0.0
     val persistentVolumeSize: Long = 2
 
-    val itMesosResources = ITResources("mem" -> mem, "cpus" -> cpus, "disk" -> (disk + persistentVolumeSize))
+    val itMesosResources = ITResources(
+      "mem" -> mem,
+      "cpus" -> cpus,
+      "disk" -> (disk + persistentVolumeSize),
+      "gpus" -> gpus
+    )
 
     def residentApp(
       containerPath: String = "persistent-volume",
