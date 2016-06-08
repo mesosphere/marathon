@@ -170,7 +170,7 @@ class TaskTrackerActorTest
 
     When("a new staged task gets added")
     val probe = TestProbe()
-    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forApp(appId).toString)
+    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId).toString)
     val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).wrapped
 
     val ack = TaskTrackerActor.Ack(probe.ref, update.stateChange)

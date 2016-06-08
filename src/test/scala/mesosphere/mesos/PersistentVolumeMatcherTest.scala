@@ -58,7 +58,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
       f.makeTask(app.id, Task.Reservation(Seq(localVolumeId2), f.taskReservationStateNew)),
       f.makeTask(app.id, Task.Reservation(Seq(localVolumeId3), f.taskReservationStateNew))
     )
-    val unknownTaskId = Task.Id.forApp(app.id)
+    val unknownTaskId = Task.Id.forRunSpec(app.id)
     val offer =
       f.offerWithVolumes(unknownTaskId, localVolumeId1)
         .toBuilder

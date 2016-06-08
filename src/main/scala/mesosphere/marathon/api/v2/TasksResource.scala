@@ -111,7 +111,7 @@ class TasksResource @Inject() (
 
     val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
     val tasksToAppId = taskIds.map { id =>
-      try { id -> Task.Id.appId(id) }
+      try { id -> Task.Id.runSpecId(id) }
       catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'.") }
     }.toMap
 
@@ -128,12 +128,12 @@ class TasksResource @Inject() (
       val killed = result(Future.sequence(toKill.map {
         case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe)
       })).flatten
-      ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.appId, task, Seq.empty))))
+      ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.runSpecId, task, Seq.empty))))
     }
 
     val tasksByAppId = tasksToAppId
       .flatMap { case (taskId, appId) => taskTracker.tasksByAppSync.task(Task.Id(taskId)) }
-      .groupBy { task => task.taskId.appId }
+      .groupBy { task => task.taskId.runSpecId }
       .map{ case (appId, tasks) => appId -> tasks }
 
     if (scale) scaleAppWithKill(tasksByAppId)

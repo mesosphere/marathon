@@ -138,7 +138,7 @@ object DeploymentManager {
                                       nr: Int,
                                       readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
     lazy val readinessChecksByApp: Map[PathId, Iterable[ReadinessCheckResult]] = {
-      readinessChecks.values.groupBy(_.taskId.appId).withDefaultValue(Iterable.empty)
+      readinessChecks.values.groupBy(_.taskId.runSpecId).withDefaultValue(Iterable.empty)
     }
   }
 

@@ -85,7 +85,7 @@ class MarathonHealthCheckManagerTest
   }
 
   def makeRunningTask(appId: PathId, version: Timestamp) = {
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
 
     val taskStatus = MarathonTestHelper.runningTask(taskId.idString).launched.get.status.mesosStatus.get
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
@@ -130,7 +130,7 @@ class MarathonHealthCheckManagerTest
     val app: AppDefinition = AppDefinition(id = appId)
     appRepository.store(app).futureValue
 
-    val taskId = Task.Id.forApp(appId)
+    val taskId = Task.Id.forRunSpec(appId)
 
     val taskStatus = MarathonTestHelper.unhealthyTask(taskId.idString).launched.get.status.mesosStatus.get
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = app.version)

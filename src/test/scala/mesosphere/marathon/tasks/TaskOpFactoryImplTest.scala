@@ -39,7 +39,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
         agentId = Some(offer.getSlaveId.getValue),
         attributes = List.empty
       ),
-      appVersion = app.version,
+      runSpecVersion = app.version,
       status = Task.Status(
         stagedAt = f.clock.now()
       ),

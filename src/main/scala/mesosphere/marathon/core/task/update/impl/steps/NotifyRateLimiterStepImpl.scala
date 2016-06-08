@@ -44,7 +44,7 @@ class NotifyRateLimiterStepImpl @Inject() (
   private[this] def notifyRateLimiter(status: TaskStatus, task: Task): Future[_] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     task.launched.fold(Future.successful(())) { launched =>
-      appRepository.app(task.appId, launched.appVersion).map { maybeApp =>
+      appRepository.app(task.runSpecId, launched.runSpecVersion).map { maybeApp =>
         // It would be nice if we could make sure that the delay gets send
         // to the AppTaskLauncherActor before we continue but that would require quite some work.
         //
