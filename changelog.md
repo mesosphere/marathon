@@ -1,3 +1,9 @@
+## Changes from 1.1.0 to (unreleased version)
+
+### Fixed issues
+
+- #3926 - Create PORT_NAME environment variable when we define portDefinitions with name
+
 ## Changes from 1.0.0 to 1.1.0
 
 ### Recommended Mesos version is 0.28.0
