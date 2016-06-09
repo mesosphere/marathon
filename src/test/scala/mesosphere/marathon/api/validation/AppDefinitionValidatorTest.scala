@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.validation
 
-import mesosphere.marathon.Protos.HealthCheckDefinition
+import mesosphere.marathon.Protos.{ Constraint, HealthCheckDefinition }
 import mesosphere.marathon.api.v2.Validation._
 import com.wix.accord.validate
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -527,6 +527,76 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
 
     Then("validation fails")
     AppDefinition.validAppDefinition(app).isFailure shouldBe true
+  }
+
+  test("validation of constraints") {
+    import Constraint.Operator._
+
+    val unique = Constraint.newBuilder.setField("hostname").setOperator(UNIQUE)
+    val cluster = Constraint.newBuilder.setField("rack-id").setOperator(CLUSTER)
+    val groupBy = Constraint.newBuilder.setField("rack-id").setOperator(GROUP_BY)
+    val like = Constraint.newBuilder.setField("rack-id").setOperator(LIKE)
+    val unlike = Constraint.newBuilder.setField("rack-id").setOperator(UNLIKE)
+
+    Given("no constraints")
+    val app = AppDefinition(
+      id = PathId("/test"),
+      cmd = Some("true"),
+      constraints = Set())
+    Then("validation succeeds")
+    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+
+    Given("A UNIQUE constraint without a value")
+    val appUnique = app.copy(constraints = Set(unique.build()))
+    Then("validation succeeds")
+    AppDefinition.validAppDefinition(appUnique).isSuccess shouldBe true
+
+    Given("A UNIQUE constraint with a value")
+    val appUniqueValue = app.copy(constraints = Set(unique.setValue("a").build()))
+    Then("validation fails")
+    AppDefinition.validAppDefinition(appUniqueValue).isFailure shouldBe true
+
+    Given("A CLUSTER constraint without a value")
+    val appClusterNoValue = app.copy(constraints = Set(cluster.build()))
+    Then("validation fails")
+    AppDefinition.validAppDefinition(appClusterNoValue).isFailure shouldBe true
+
+    Given("A CLUSTER constraint with a value")
+    val appCluster = app.copy(constraints = Set(cluster.setValue("abc").build()))
+    Then("validation succeeds")
+    AppDefinition.validAppDefinition(appCluster).isSuccess shouldBe true
+
+    Given("A GROUP_BY without a value")
+    val appGroupByNoValue = app.copy(constraints = Set(groupBy.build()))
+    Then("validation succeeds")
+    AppDefinition.validAppDefinition(appGroupByNoValue).isSuccess shouldBe true
+
+    Given("A GROUP_BY with a numeric value")
+    val appGroupByNumericValue = app.copy(constraints = Set(groupBy.setValue("123").build()))
+    Then("validation succeeds")
+    AppDefinition.validAppDefinition(appGroupByNumericValue).isSuccess shouldBe true
+
+    Given("A GROUP_BY with a non-numeric value")
+    val appGroupByNonNumericValue = app.copy(constraints = Set(groupBy.setValue("AbcDZ").build()))
+    Then("validation fails")
+    AppDefinition.validAppDefinition(appGroupByNonNumericValue).isFailure shouldBe true
+
+    Seq(like, unlike).foreach { op =>
+      Given(s"A ${op.getOperator} without a value")
+      val appOpNoValue = app.copy(constraints = Set(op.build()))
+      Then("validation fails")
+      AppDefinition.validAppDefinition(appOpNoValue).isFailure shouldBe true
+
+      Given(s"A ${op.getOperator} with a valid regex")
+      val appOpRegex = app.copy(constraints = Set(op.setValue(".*").build()))
+      Then("validation succeeds")
+      AppDefinition.validAppDefinition(appOpRegex).isSuccess shouldBe true
+
+      Given(s"A ${op.getOperator} with an invalid regex")
+      val appOpBadRegex = app.copy(constraints = Set(op.setValue("*").build()))
+      Then("validation fails")
+      AppDefinition.validAppDefinition(appOpBadRegex).isFailure shouldBe true
+    }
   }
 
   test("Resident app may only define unreserved acceptedResourceRoles or None") {
