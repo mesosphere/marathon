@@ -24,6 +24,8 @@ Attribute field supports all operators of Marathon.
 
 Marathon supports text, scalar, range, and set attribute values. For scalars, ranges, and sets Marathon will perform a string comparison on the formatted values. The format matches that of the Mesos attribute formatting. For ranges and sets, the format is `[begin-end,...]` and `{item,...}` respectively. For example, you might have a range formatted as `[100-200]` and a set formatted as `{a,b,c}`.
 
+Regex is also allowed; to match ANY value, use the string `.*`.
+
 ## Operators
 
 ### UNIQUE operator
