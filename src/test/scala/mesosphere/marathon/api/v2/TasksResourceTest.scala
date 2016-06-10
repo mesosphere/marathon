@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.state.{ AppDefinition, Group, GroupManager, Timestamp }
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.mockito.Mockito._
@@ -20,6 +20,30 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito {
+  test("list (txt) tasks with less ports than the current app version") {
+    // Regression test for #234
+    Given("one app with one task with less ports than required")
+    val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+
+    val taskId = Task.Id.forApp(app.id).idString
+    val task = MarathonTestHelper.runningTask(taskId)
+
+    config.zkTimeoutDuration returns 5.seconds
+
+    val tasksByApp = TaskTracker.TasksByApp.forTasks(task)
+    taskTracker.tasksByAppSync returns tasksByApp
+
+    val rootGroup = Group("/".toRootPath, apps = Set(app))
+    groupManager.rootGroup() returns Future.successful(rootGroup)
+
+    assert(app.servicePorts.size > task.launched.get.hostPorts.size)
+
+    When("Getting the txt tasks index")
+    val response = taskResource.indexTxt(auth.request)
+
+    Then("The status should be 200")
+    response.getStatus shouldEqual 200
+  }
 
   test("killTasks") {
     Given("two apps and 1 task each")
