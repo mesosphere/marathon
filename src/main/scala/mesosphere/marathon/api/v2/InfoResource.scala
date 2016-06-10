@@ -50,7 +50,7 @@ class InfoResource @Inject() (
 
   // ZooKeeper congiurations
   private[this] lazy val zookeeperConfigValues = Json.obj(
-    "zk" -> config.zooKeeperUrl(),
+    "zk" -> s"zk://${config.zkHosts}${config.zkPath}",
     "zk_timeout" -> config.zooKeeperTimeout(),
     "zk_session_timeout" -> config.zooKeeperSessionTimeout(),
     "zk_max_versions" -> config.zooKeeperMaxVersions()
