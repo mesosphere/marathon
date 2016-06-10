@@ -318,8 +318,9 @@ trait IpAddressFormats {
   implicit lazy val IpAddressFormat: Format[IpAddress] = (
     (__ \ "groups").formatNullable[Seq[String]].withDefault(Nil) ~
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
-    (__ \ "discovery").formatNullable[DiscoveryInfo].withDefault(DiscoveryInfo.empty)
-  )(IpAddress(_, _, _), unlift(IpAddress.unapply))
+    (__ \ "discovery").formatNullable[DiscoveryInfo].withDefault(DiscoveryInfo.empty) ~
+    (__ \ "name").formatNullable[String]
+  )(IpAddress(_, _, _, _), unlift(IpAddress.unapply))
 }
 
 trait DeploymentFormats {
