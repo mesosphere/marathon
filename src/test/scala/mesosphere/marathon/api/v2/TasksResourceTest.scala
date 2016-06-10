@@ -25,7 +25,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     Given("one app with one task with less ports than required")
     val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
 
-    val taskId = Task.Id.forApp(app.id).idString
+    val taskId = Task.Id.forRunSpec(app.id).idString
     val task = MarathonTestHelper.runningTask(taskId)
 
     config.zkTimeoutDuration returns 5.seconds
