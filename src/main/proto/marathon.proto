@@ -67,6 +67,7 @@ message IpAddress {
   repeated string groups = 1;
   repeated mesos.Label labels = 2;
   optional DiscoveryInfo discoveryInfo = 3;
+  optional string name = 4;
 }
 
 message DiscoveryInfo {

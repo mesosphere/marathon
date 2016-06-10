@@ -246,6 +246,8 @@ object Dependencies {
     sprayHttpx % "compile",
     chaos % "compile",
     mesosUtils % "compile",
+    mesos % "compile",
+    protobuf % "compile",
     twitterCommons % "compile",
     jodaTime % "compile",
     jodaConvert % "compile",
@@ -281,7 +283,7 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.8.6"
     val Guava = "18.0"
-    val MesosUtils = "0.28.0"
+    val MesosUtils = "0.29.0"
     val Akka = "2.3.9"
     val Spray = "1.3.2"
     val TwitterCommons = "0.0.76"
@@ -320,7 +322,7 @@ object Dependency {
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
   val guava = "com.google.guava" % "guava" % V.Guava
-  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
+  val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils from "file://./lib/mesos-utils_2.11-0.29.0.jar"
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
@@ -333,6 +335,8 @@ object Dependency {
   val hadoopCommon = "org.apache.hadoop" % "hadoop-common" % V.Hadoop excludeAll(excludeMortbayJetty,
     excludeJavaxServlet)
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.2"
+  val mesos = "org.apache.mesos" % "mesos" % "0.29.0" from "file://./lib/mesos-0.29.0.jar"
+  val protobuf = "com.google.protobuf" % "protobuf-java" % "2.6.1"
   val jsonSchemaValidator = "com.github.fge" % "json-schema-validator" % V.JsonSchemaValidator
   val twitterZk = "com.twitter" %% "util-zk" % V.TwitterZk
   val rxScala = "io.reactivex" %% "rxscala" % V.RxScala
