@@ -3,9 +3,9 @@ package mesosphere.marathon.metrics
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.codahale.metrics.{Gauge, MetricRegistry}
+import com.codahale.metrics.{ Gauge, MetricRegistry }
 import com.google.inject.Inject
-import mesosphere.marathon.metrics.Metrics.{Counter, Histogram, Meter, Timer}
+import mesosphere.marathon.metrics.Metrics.{ Counter, Histogram, Meter, Timer }
 import org.aopalliance.intercept.MethodInvocation
 
 import scala.collection.concurrent.TrieMap
