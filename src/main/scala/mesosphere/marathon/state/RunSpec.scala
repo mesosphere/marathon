@@ -6,7 +6,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
-import mesosphere.marathon.state.Container.Docker.PortMapping
 
 import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
@@ -90,8 +89,6 @@ trait RunSpec extends plugin.RunSpec {
   def diskForPersistentVolumes: Double
   def portNumbers: Seq[Int]
   def portNames: Seq[String]
-  def containerHostPorts: Option[Seq[Int]]
-  def portMappings: Option[Seq[PortMapping]]
   def servicePorts: Seq[Int]
   def portAssignments(task: Task): Option[Seq[PortAssignment]]
 }

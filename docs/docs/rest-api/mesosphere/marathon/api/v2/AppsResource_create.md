@@ -170,7 +170,7 @@ The port array currently serves multiple roles:
   for details.
 
 Since this is confusing, we recommend to configure ports assignment for Docker
-containers for `BRIDGE` networking in `container.docker.portMappings` instead, see
+containers for `BRIDGE` and `USER` networking in `container.docker.portMappings` instead, see
 [Docker Containers doc page]({{ site.baseurl }}/docs/native-docker.html#bridged-networking-mode)).
 
 Alternatively or if you use the Mesos Containerizer, pass zeros as port values to generate one or more arbitrary
@@ -197,7 +197,7 @@ The portDefinitions array currently serves multiple roles:
   See [Service Discovery Load Balancing doc page]({{ site.baseurl }}/docs/service-discovery-load-balancing.html)
   for details.
 
-Since this is confusing, we recommend to configure ports assignment for Docker containers for `BRIDGE` networking in
+Since this is confusing, we recommend to configure ports assignment for Docker containers for `BRIDGE` and `USER` networking in
 `container.docker.portMappings` instead, see [Docker Containers doc page]({{ site.baseurl }}/docs/native-docker.html#bridged-networking-mode)).
 
 Alternatively or if you use the Mesos Containerizer, pass zeros as port values to generate one or more arbitrary

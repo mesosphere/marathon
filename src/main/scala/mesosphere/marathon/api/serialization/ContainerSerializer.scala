@@ -160,10 +160,10 @@ object PortMappingSerializer {
   def toProto(mapping: Container.Docker.PortMapping): Protos.ExtendedContainerInfo.DockerInfo.PortMapping = {
     val builder = Protos.ExtendedContainerInfo.DockerInfo.PortMapping.newBuilder
       .setContainerPort(mapping.containerPort)
-      .setHostPort(mapping.hostPort)
       .setProtocol(mapping.protocol)
       .setServicePort(mapping.servicePort)
 
+    mapping.hostPort.foreach(builder.setHostPort)
     mapping.name.foreach(builder.setName)
     mapping.labels
       .map { case (key, value) => mesos.Protos.Label.newBuilder.setKey(key).setValue(value).build }
@@ -175,7 +175,7 @@ object PortMappingSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo.DockerInfo.PortMapping): PortMapping =
     PortMapping(
       proto.getContainerPort,
-      proto.getHostPort,
+      if (proto.hasHostPort) Some(proto.getHostPort) else None,
       proto.getServicePort,
       proto.getProtocol,
       if (proto.hasName) Some(proto.getName) else None,
@@ -183,14 +183,20 @@ object PortMappingSerializer {
     )
 
   def toMesos(mapping: Container.Docker.PortMapping): Seq[mesos.Protos.ContainerInfo.DockerInfo.PortMapping] = {
-    def mesosPort(protocol: String) = {
+    def mesosPort(protocol: String, hostPort: Int) = {
       mesos.Protos.ContainerInfo.DockerInfo.PortMapping.newBuilder
         .setContainerPort (mapping.containerPort)
-        .setHostPort(mapping.hostPort)
+        .setHostPort(hostPort)
         .setProtocol(protocol)
         .build
     }
-    mapping.protocol.split(',').map(mesosPort).toList
+    // we specifically don't want to generate a mesos proto port mapping here if there's no hostport:
+    //
+    // 1. hostport is required for the mesos proto, because...
+    // 2. the mapping is used to set up NAT or port-forwarding from hostport to containerport; noop if hostport is None
+    mapping.hostPort.fold(Seq.empty[mesos.Protos.ContainerInfo.DockerInfo.PortMapping]) { hp =>
+      mapping.protocol.split(',').map(mesosPort(_, hp)).toList
+    }
   }
 
   /**

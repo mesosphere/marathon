@@ -175,7 +175,7 @@ message ExtendedContainerInfo {
     optional mesos.ContainerInfo.DockerInfo.Network network = 2 [default = HOST];
 
     message PortMapping {
-      required uint32 host_port = 1;
+      optional uint32 host_port = 1;
       required uint32 container_port = 2;
       optional string protocol = 3;
       optional string name = 4;

@@ -19923,13 +19923,13 @@ public final class Protos {
       public interface PortMappingOrBuilder
           extends com.google.protobuf.MessageOrBuilder {
 
-        // required uint32 host_port = 1;
+        // optional uint32 host_port = 1;
         /**
-         * <code>required uint32 host_port = 1;</code>
+         * <code>optional uint32 host_port = 1;</code>
          */
         boolean hasHostPort();
         /**
-         * <code>required uint32 host_port = 1;</code>
+         * <code>optional uint32 host_port = 1;</code>
          */
         int getHostPort();
 
@@ -20135,17 +20135,17 @@ public final class Protos {
         }
 
         private int bitField0_;
-        // required uint32 host_port = 1;
+        // optional uint32 host_port = 1;
         public static final int HOST_PORT_FIELD_NUMBER = 1;
         private int hostPort_;
         /**
-         * <code>required uint32 host_port = 1;</code>
+         * <code>optional uint32 host_port = 1;</code>
          */
         public boolean hasHostPort() {
           return ((bitField0_ & 0x00000001) == 0x00000001);
         }
         /**
-         * <code>required uint32 host_port = 1;</code>
+         * <code>optional uint32 host_port = 1;</code>
          */
         public int getHostPort() {
           return hostPort_;
@@ -20318,10 +20318,6 @@ public final class Protos {
           byte isInitialized = memoizedIsInitialized;
           if (isInitialized != -1) return isInitialized == 1;
 
-          if (!hasHostPort()) {
-            memoizedIsInitialized = 0;
-            return false;
-          }
           if (!hasContainerPort()) {
             memoizedIsInitialized = 0;
             return false;
@@ -20646,10 +20642,6 @@ public final class Protos {
           }
 
           public final boolean isInitialized() {
-            if (!hasHostPort()) {
-              
-              return false;
-            }
             if (!hasContainerPort()) {
               
               return false;
@@ -20682,22 +20674,22 @@ public final class Protos {
           }
           private int bitField0_;
 
-          // required uint32 host_port = 1;
+          // optional uint32 host_port = 1;
           private int hostPort_ ;
           /**
-           * <code>required uint32 host_port = 1;</code>
+           * <code>optional uint32 host_port = 1;</code>
            */
           public boolean hasHostPort() {
             return ((bitField0_ & 0x00000001) == 0x00000001);
           }
           /**
-           * <code>required uint32 host_port = 1;</code>
+           * <code>optional uint32 host_port = 1;</code>
            */
           public int getHostPort() {
             return hostPort_;
           }
           /**
-           * <code>required uint32 host_port = 1;</code>
+           * <code>optional uint32 host_port = 1;</code>
            */
           public Builder setHostPort(int value) {
             bitField0_ |= 0x00000001;
@@ -20706,7 +20698,7 @@ public final class Protos {
             return this;
           }
           /**
-           * <code>required uint32 host_port = 1;</code>
+           * <code>optional uint32 host_port = 1;</code>
            */
           public Builder clearHostPort() {
             bitField0_ = (bitField0_ & ~0x00000001);
@@ -36097,7 +36089,7 @@ public final class Protos {
       "ing\022\031\n\nprivileged\030\004 \001(\010:\005false\022$\n\nparame" +
       "ters\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020force_pu" +
       "ll_image\030\006 \001(\010\032\217\001\n\013PortMapping\022\021\n\thost_p" +
-      "ort\030\001 \002(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010pro" +
+      "ort\030\001 \001(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010pro" +
       "tocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(",
       "\0132\014.mesos.Label\022\027\n\014service_port\030d \001(\r:\0010" +
       "\"\203\003\n\006Volume\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume" +

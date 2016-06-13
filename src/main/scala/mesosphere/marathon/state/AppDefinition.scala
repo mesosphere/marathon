@@ -104,18 +104,6 @@ case class AppDefinition(
 
   lazy val portNumbers: Seq[Int] = portDefinitions.map(_.port)
 
-  /**
-    * Returns true if all health check port index values are in the range
-    * of ths app's ports array, or if defined, the array of container
-    * port mappings.
-    */
-  def portIndicesAreValid(): Boolean = {
-    val validPortIndices = portIndices
-    healthChecks.forall { hc =>
-      hc.protocol == Protocol.COMMAND || hc.portIndex.forall(validPortIndices.contains(_))
-    }
-  }
-
   def isResident: Boolean = residency.isDefined
 
   def isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
@@ -131,7 +119,7 @@ case class AppDefinition(
       runSpec = this,
       taskId = None,
       host = None,
-      ports = Seq.empty,
+      hostPorts = Seq.empty,
       envPrefix = None
     )
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
@@ -284,28 +272,17 @@ case class AppDefinition(
     )
   }
 
-  def portMappings: Option[Seq[PortMapping]] =
-    for {
-      c <- container
-      d <- c.docker
-      n <- d.network if n == DockerInfo.Network.BRIDGE
-      pms <- d.portMappings
-    } yield pms
+  private def portIndices: Range = container.flatMap(_.hostPorts).getOrElse(portNumbers).indices
 
-  def containerHostPorts: Option[Seq[Int]] =
-    for (pms <- portMappings) yield pms.map(_.hostPort)
-
-  def containerServicePorts: Option[Seq[Int]] =
-    for (pms <- portMappings) yield pms.map(_.servicePort)
-
-  def portIndices: Range = containerHostPorts.getOrElse(portNumbers).indices
-
-  def servicePorts: Seq[Int] = containerServicePorts.getOrElse(portNumbers)
+  def servicePorts: Seq[Int] = container.flatMap(_.servicePorts).getOrElse(portNumbers)
 
   def hasDynamicPort: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
-  def bridgeMode: Boolean =
-    container.flatMap(_.docker.map(_.network == Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE))).getOrElse(false)
+  def networkModeBridge: Boolean =
+    container.exists(_.docker.exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
+
+  def networkModeUser: Boolean =
+    container.exists(_.docker.exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.USER)))
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
@@ -396,40 +373,41 @@ case class AppDefinition(
         for {
           launched <- task.launched
           effectiveIpAddress <- task.effectiveIpAddress(this)
-        } yield appPorts.zip(launched.hostPorts).zipWithIndex.map {
-          case ((appPort, hostPort), portIndex) =>
-            PortAssignment(Some(appPort.name), portIndex, effectiveIpAddress, hostPort)
+        } yield appPorts.zip(launched.hostPorts).map {
+          case (appPort, hostPort) =>
+            PortAssignment(Some(appPort.name), effectiveIpAddress, hostPort)
         }.toList
     }
 
     def fromPortMappings: Option[Seq[PortAssignment]] =
       for {
-        pms <- portMappings
+        c <- container
+        pms <- c.portMappings
         launched <- task.launched
-      } yield pms.zip(launched.hostPorts).zipWithIndex.map {
-        case ((portMapping, hostPort), portIndex) =>
-          PortAssignment(portMapping.name, portIndex, task.agentInfo.host, hostPort)
+      } yield pms.filter(_.hostPort.isDefined).zip(launched.hostPorts).map {
+        case (portMapping, hostPort) =>
+          PortAssignment(portMapping.name, task.agentInfo.host, hostPort)
       }.toList
 
     def fromPortDefinitions: Option[Seq[PortAssignment]] = task.launched.map { launched =>
-      portDefinitions.zip(launched.hostPorts).zipWithIndex.map {
-        case ((portDefinition, hostPort), portIndex) =>
-          PortAssignment(portDefinition.name, portIndex, task.agentInfo.host, hostPort)
+      portDefinitions.zip(launched.hostPorts).map {
+        case (portDefinition, hostPort) =>
+          PortAssignment(portDefinition.name, task.agentInfo.host, hostPort)
       }
     }
 
-    if (ipAddress.isDefined) fromIpAddress
-    else if (bridgeMode) fromPortMappings
+    if (networkModeBridge || networkModeUser) fromPortMappings
+    else if (ipAddress.isDefined) fromIpAddress // mappings is the future; this is deprecated
     else fromPortDefinitions
   }
 
   def portNames: Seq[String] = {
     def fromIpAddress = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
-    def fromPortMappings = portMappings.getOrElse(Seq.empty).flatMap(_.name)
+    def fromPortMappings = container.map(_.portMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
     def fromPortDefinitions = portDefinitions.flatMap(_.name)
 
-    if (ipAddress.isDefined) fromIpAddress
-    else if (bridgeMode) fromPortMappings
+    if (networkModeBridge || networkModeUser) fromPortMappings
+    else if (ipAddress.isDefined) fromIpAddress // mappings is the future; this is deprecated
     else fromPortDefinitions
   }
 }
@@ -593,6 +571,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
     appDef.constraints.each must complyWithConstraintRules
+    appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   /**
@@ -626,6 +605,14 @@ object AppDefinition extends GeneralPurposeCombinators {
         new And(plugins: _*)(app)
       }
     }
+
+  private def complyWithIpAddressRules(app: AppDefinition): Validator[IpAddress] = {
+    import mesos.ContainerInfo.DockerInfo.Network.{ BRIDGE, USER }
+    isTrue[IpAddress]("ipAddress/discovery is not allowed for Docker containers using BRIDGE or USER networks") { ip =>
+      !(ip.discoveryInfo.nonEmpty &&
+        app.container.exists(_.docker.exists(_.network.exists(Set(BRIDGE, USER)))))
+    }
+  }
 
   private val complyWithResidencyRules: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
