@@ -12,7 +12,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
 
 //scalastyle:off
-trait RunSpec extends plugin.AppDefinition {
+trait RunSpec extends plugin.RunSpec {
   def id: PathId
 
   def cmd: Option[String]

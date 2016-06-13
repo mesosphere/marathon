@@ -68,7 +68,7 @@ class AppsResource @Inject() (
       val now = clock.now()
       val app = appDef.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(now))
 
-      checkAuthorization(CreateApp, app)
+      checkAuthorization(CreateRunSpec, app)
 
       def createOrThrow(opt: Option[AppDefinition]) = opt
         .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
@@ -116,7 +116,7 @@ class AppsResource @Inject() (
     def app(appId: PathId): Response = {
       result(appInfoService.selectApp(appId, allAuthorized, resolvedEmbed)) match {
         case Some(appInfo) =>
-          checkAuthorization(ViewApp, appInfo.app)
+          checkAuthorization(ViewRunSpec, appInfo.app)
           ok(jsonObjString("app" -> appInfo))
         case None => unknownApp(appId)
       }
@@ -178,7 +178,7 @@ class AppsResource @Inject() (
     val appId = id.toRootPath
 
     def deleteAppFromGroup(group: Group) = {
-      checkAuthorization(DeleteApp, group.app(appId), UnknownAppException(appId))
+      checkAuthorization(DeleteRunSpec, group.app(appId), UnknownAppException(appId))
       group.removeApplication(appId)
     }
 
@@ -201,7 +201,7 @@ class AppsResource @Inject() (
 
     def markForRestartingOrThrow(opt: Option[AppDefinition]) = {
       opt
-        .map(checkAuthorization(UpdateApp, _))
+        .map(checkAuthorization(UpdateRunSpec, _))
         .map(_.markedForRestarting)
         .getOrElse(throw UnknownAppException(appId))
     }
@@ -220,18 +220,18 @@ class AppsResource @Inject() (
                              newVersion: Timestamp)(implicit identity: Identity): AppDefinition = {
     def createApp(): AppDefinition = {
       val app = validateOrThrow(appUpdate.empty(appId))
-      checkAuthorization(CreateApp, app)
+      checkAuthorization(CreateRunSpec, app)
     }
 
     def updateApp(current: AppDefinition): AppDefinition = {
       val app = validateOrThrow(appUpdate(current))
-      checkAuthorization(UpdateApp, app)
+      checkAuthorization(UpdateRunSpec, app)
     }
 
     def rollback(current: AppDefinition, version: Timestamp): AppDefinition = {
       val app = service.getApp(appId, version).getOrElse(throw UnknownAppException(appId))
-      checkAuthorization(ViewApp, app)
-      checkAuthorization(UpdateApp, current)
+      checkAuthorization(ViewRunSpec, app)
+      checkAuthorization(UpdateRunSpec, current)
       app
     }
 
@@ -262,12 +262,12 @@ class AppsResource @Inject() (
   }
 
   def allAuthorized(implicit identity: Identity): AppSelector = new AppSelector {
-    override def matches(app: AppDefinition): Boolean = isAuthorized(ViewApp, app)
+    override def matches(app: AppDefinition): Boolean = isAuthorized(ViewRunSpec, app)
   }
 
   def selectAuthorized(fn: => AppSelector)(implicit identity: Identity): AppSelector = {
     val authSelector = new AppSelector {
-      override def matches(app: AppDefinition): Boolean = isAuthorized(ViewApp, app)
+      override def matches(app: AppDefinition): Boolean = isAuthorized(ViewRunSpec, app)
     }
     AppSelector.forall(Seq(authSelector, fn))
   }

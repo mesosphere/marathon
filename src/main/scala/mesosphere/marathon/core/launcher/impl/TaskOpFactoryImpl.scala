@@ -5,8 +5,8 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.plugin.task.AppTaskProcessor
-import mesosphere.marathon.plugin.{ AppDefinition => PluginAppDefinition }
+import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
+import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
 import mesosphere.marathon.state.{ ResourceRole, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
@@ -31,7 +31,7 @@ class TaskOpFactoryImpl(
     new TaskOpFactoryHelper(principalOpt, roleOpt)
   }
 
-  private[this] lazy val appTaskProc: AppTaskProcessor = combine(pluginManager.plugins[AppTaskProcessor])
+  private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor])
 
   override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     log.debug("buildTaskOp")
@@ -185,6 +185,6 @@ class TaskOpFactoryImpl(
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, taskStateOp, resourceMatch.resources, localVolumes)
   }
 
-  def combine(procs: Seq[AppTaskProcessor]): AppTaskProcessor =
-    AppTaskProcessor{ (app: PluginAppDefinition, b: Mesos.TaskInfo.Builder) => procs.foreach(_(app, b)) }
+  def combine(procs: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor =
+    RunSpecTaskProcessor{ (app: PluginAppDefinition, b: Mesos.TaskInfo.Builder) => procs.foreach(_(app, b)) }
 }

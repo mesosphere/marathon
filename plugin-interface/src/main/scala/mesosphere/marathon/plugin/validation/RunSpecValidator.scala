@@ -1,16 +1,16 @@
 package mesosphere.marathon.plugin.validation
 
 import com.wix.accord._
-import mesosphere.marathon.plugin.AppDefinition
+import mesosphere.marathon.plugin.RunSpec
 import mesosphere.marathon.plugin.plugin.Plugin
 
 /**
-  * AppDefinitionValidator defines a high level interface for AppDefinition validation.
-  * An AppDefinition is only "accepted" by the system once it passes all validation checks.
+  * RunSpecValidator defines a high level interface for RunSpec validation.
+  * A RunSpec is only "accepted" by the system once it passes all validation checks.
   */
-trait AppDefinitionValidator extends Validator[AppDefinition] with Plugin
+trait RunSpecValidator extends Validator[RunSpec] with Plugin
 
-object AppDefinitionValidator {
+object RunSpecValidator {
   implicit def every[T](implicit validator: Validator[T]): Validator[Iterable[T]] = {
     // TODO(jdef) copied this func from marathon api/Validation.scala; would be nice to extract that
     // into a shared validations subproject.

@@ -13,7 +13,7 @@ import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateApp, ViewApp }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.{ GroupManager, PathId }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
 import org.apache.mesos.Protos.TaskState
@@ -69,7 +69,7 @@ class TasksResource @Inject() (
     val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
       (appId, task) <- tasks
       app <- appIdsToApps(appId)
-      if isAuthorized(ViewApp, app)
+      if isAuthorized(ViewRunSpec, app)
       if statusSet.isEmpty || task.mesosStatus.exists(s => statusSet(s.getState))
     } yield {
       EnrichedTask(
@@ -91,7 +91,7 @@ class TasksResource @Inject() (
   def indexTxt(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     ok(EndpointsHelper.appsToEndpointString(
       taskTracker,
-      result(groupManager.rootGroup()).transitiveApps.toSeq.filter(app => isAuthorized(ViewApp, app)),
+      result(groupManager.rootGroup()).transitiveApps.toSeq.filter(app => isAuthorized(ViewRunSpec, app)),
       "\t"
     ))
   }
@@ -123,7 +123,7 @@ class TasksResource @Inject() (
       val affectedApps = tasksToAppId.values.flatMap(appId => result(groupManager.app(appId))).toSeq
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
-      affectedApps.foreach(checkAuthorization(UpdateApp, _))
+      affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
 
       val killed = result(Future.sequence(toKill.map {
         case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe)
