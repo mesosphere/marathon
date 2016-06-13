@@ -17,7 +17,7 @@ import play.api.libs.json.Json
 import scala.collection.immutable.Seq
 import scala.reflect.ClassTag
 
-class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
+class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
 
   implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
 
@@ -679,9 +679,9 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     val pm = new PluginManager() {
       def plugins[T](implicit ct: ClassTag[T]): Seq[T] = {
         ct.toString() match {
-          case "mesosphere.marathon.plugin.validation.AppDefinitionValidator" =>
+          case "mesosphere.marathon.plugin.validation.RunSpecValidator" =>
             List(
-              isTrue[mesosphere.marathon.plugin.AppDefinition]("SECURITY_* environment variables are not permitted") {
+              isTrue[mesosphere.marathon.plugin.RunSpec]("SECURITY_* environment variables are not permitted") {
                 _.env.keys.count(_.startsWith("SECURITY_")) == 0
               }.asInstanceOf[T]
             )

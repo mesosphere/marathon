@@ -5,7 +5,7 @@ import javax.inject.Inject
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.plugin.auth.{ Identity, UpdateApp, Authenticator, Authorizer }
+import mesosphere.marathon.plugin.auth.{ Identity, UpdateRunSpec, Authenticator, Authorizer }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
@@ -30,7 +30,7 @@ class TaskKiller @Inject() (
 
     result(groupManager.app(appId)) match {
       case Some(app) =>
-        checkAuthorization(UpdateApp, app)
+        checkAuthorization(UpdateRunSpec, app)
 
         import scala.concurrent.ExecutionContext.Implicits.global
         taskTracker.appTasks(appId).flatMap { allTasks =>
@@ -72,7 +72,7 @@ class TaskKiller @Inject() (
   def killAndScale(appTasks: Map[PathId, Iterable[Task]],
                    force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
-      checkAuthorization(UpdateApp, app)
+      checkAuthorization(UpdateRunSpec, app)
       appTasks.get(app.id).fold(app) { toKill => app.copy(instances = app.instances - toKill.size) }
     }
 

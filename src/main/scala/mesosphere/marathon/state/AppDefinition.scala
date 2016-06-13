@@ -20,7 +20,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.plugin.validation.AppDefinitionValidator
+import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -96,7 +96,7 @@ case class AppDefinition(
   residency: Option[Residency] = AppDefinition.DefaultResidency,
 
   secrets: Map[String, Secret] = AppDefinition.DefaultSecrets)
-    extends RunSpec with plugin.AppDefinition with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    extends RunSpec with plugin.RunSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -622,7 +622,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
-        val plugins = pluginManager.plugins[AppDefinitionValidator]
+        val plugins = pluginManager.plugins[RunSpecValidator]
         new And(plugins: _*)(app)
       }
     }

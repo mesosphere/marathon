@@ -7,7 +7,7 @@ import mesosphere.marathon.api.serialization.{ PortMappingSerializer, PortDefini
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.plugin.task.AppTaskProcessor
+import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state.{
   AppDefinition,
   RunSpec,
@@ -27,7 +27,7 @@ import scala.collection.immutable.Seq
 class TaskBuilder(runSpec: RunSpec,
                   newTaskId: PathId => Task.Id,
                   config: MarathonConf,
-                  appTaskProc: Option[AppTaskProcessor] = None) {
+                  appTaskProc: Option[RunSpecTaskProcessor] = None) {
 
   import TaskBuilder.log
 
@@ -98,7 +98,7 @@ class TaskBuilder(runSpec: RunSpec,
     offer: Offer,
     resourceMatch: ResourceMatch,
     volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
-    taskBuildOpt: Option[AppTaskProcessor]): Some[(TaskInfo, Seq[Int])] = {
+    taskBuildOpt: Option[RunSpecTaskProcessor]): Some[(TaskInfo, Seq[Int])] = {
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
