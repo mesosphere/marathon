@@ -1,4 +1,5 @@
 bin/run-tests-config.sh
+.ensime*
 .idea
 *.iml
 docker-volumes
