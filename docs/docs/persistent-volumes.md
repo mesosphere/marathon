@@ -9,9 +9,9 @@ title: Stateful Applications Using Local Persistent Volumes
   The Persistent Storage functionality is considered beta, so use this feature at your own risk. We might add, change, or delete any functionality described in this document.
 </div>
 
-Marathon applications lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you’ll want your application to preserve its state. You can create a stateful application by specifying a local persistent volume. Local volumes enable stateful tasks because tasks can be restarted without data loss.
+Marathon applications lose their state when they terminate and are relaunched. In some contexts, for instance, if your application uses MySQL, you'll want your application to preserve its state. You can create a stateful application by specifying a local persistent volume. Local volumes enable stateful tasks because tasks can be restarted without data loss.
 
-When you specify a local volume or volumes, tasks and their associated data are “pinned” to the node they are first launched on and will be relaunched on that node if they terminate. The resources the application requires are also reserved. Marathon will implicitly reserve an appropriate amount of disk space (as declared in the volume via `persistent.size`) in addition to the sandbox `disk` size you specify as part of your application definition.
+When you specify a local volume or volumes, tasks and their associated data are "pinned" to the node they are first launched on and will be relaunched on that node if they terminate. The resources the application requires are also reserved. Marathon will implicitly reserve an appropriate amount of disk space (as declared in the volume via `persistent.size`) in addition to the sandbox `disk` size you specify as part of your application definition.
 
 ### Benefits of using local persistent volumes
 
@@ -33,7 +33,7 @@ In order to create stateful applications using local persistent volumes in Marat
 
 Configure a persistent volume with the following options:
 
-```
+```json
 {
   "containerPath": "data",
   "mode": "RW",
@@ -135,7 +135,7 @@ The temporary Mesos sandbox is still the target for the `stdout` and `stderr` lo
 
 A model app definition for PostgreSQL on Marathon would look like this. Note that we set the postgres data folder to `pgdata` which is relative to the Mesos sandbox (as contained in the `$MESOS_SANDBOX` variable). This enables us to set up a persistent volume with a containerPath of `pgdata`. This path is is not nested and relative to the sandbox as required:
 
-```
+```json
 {
   "id": "/postgres",
   "cpus": 1,
@@ -182,7 +182,8 @@ A model app definition for PostgreSQL on Marathon would look like this. Note tha
 ### Running stateful MySQL on Marathon
 
 The default MySQL docker image does not allow you to change the data folder. Since we cannot define a persistent volume with an absolute nested `containerPath` like `/var/lib/mysql`, we need to configure a workaround to set up a docker mount from hostPath `mysql` (relative to the Mesos sandbox) to `/var/lib/mysql` (the path that MySQL attempts to read/write):
-```
+
+```json
 {
   "containerPath": "/var/lib/mysql",
   "hostPath": "mysqldata",
@@ -192,7 +193,7 @@ The default MySQL docker image does not allow you to change the data folder. Sin
 
 In addition to that, we configure a persistent volume with a containerPath `mysql`, which will mount the local persistent volume as `mysql` into the docker container:
 
-```
+```json
 {
   "containerPath": "mysqldata",
   "mode": "RW",
@@ -204,7 +205,7 @@ In addition to that, we configure a persistent volume with a containerPath `mysq
 
 The complete JSON application definition reads as follows:
 
-```
+```json
 {
   "id": "/mysql",
   "cpus": 1,
@@ -287,8 +288,6 @@ _Note_: A running task will show `stagedAt`, `startedAt` and `version` in additi
 You can then
 
 1. Remove the data on disk by `ssh'ing` into the agent and running the `rm -rf <volume-path>/*` command.
-<!-- provide snippets -->
-
 1. Delete the task with `wipe=true`, which will expunge the task information from the Marathon internal repository and eventually destroy the volume and unreserve the resources previously associated with the task:
 ```
 http DELETE http://dcos/service/marathon/v2/apps/postgres/tasks/postgres.53ab8733-fd96-11e5-8e70-76a1c19f8c3d?wipe=true
@@ -298,6 +297,6 @@ http DELETE http://dcos/service/marathon/v2/apps/postgres/tasks/postgres.53ab873
 
 After you have created your Marathon application, click the _Volumes_ tab of the application detail view to get detailed information about your app instances and associated volumes.
 
-The Status column tells you if your app instance is attached to the volume or not. The app instance will read as “detached” if you have scaled down your application. Currently the only Operation Type available is read/write (RW).
+The Status column tells you if your app instance is attached to the volume or not. The app instance will read as "detached" if you have scaled down your application. Currently the only Operation Type available is read/write (RW).
 
 Click a volume to view the Volume Detail Page, where you can see information about the individual volume.
