@@ -444,6 +444,10 @@
           "description": "Key value pair for meta data on that network interface.",
           "properties": {},
           "additionalProperties": true
+        },
+        "networkName": {
+          "type": "string",
+          "description": "If present, declares the name of the network that the container should join. In practice it is up to the IPAM to decide how to interpret this field."
         }
       }
     },

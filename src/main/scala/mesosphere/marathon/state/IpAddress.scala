@@ -9,7 +9,8 @@ import org.apache.mesos.{ Protos => mesos }
 case class IpAddress(
     groups: Seq[String] = Seq.empty,
     labels: Map[String, String] = Map.empty[String, String],
-    discoveryInfo: DiscoveryInfo = DiscoveryInfo.empty) {
+    discoveryInfo: DiscoveryInfo = DiscoveryInfo.empty,
+    networkName: Option[String] = None) {
 
   def toProto: Protos.IpAddress = {
     val builder = Protos.IpAddress.newBuilder
@@ -18,6 +19,7 @@ case class IpAddress(
       .map { case (key, value) => mesos.Label.newBuilder.setKey(key).setValue(value).build }
       .foreach(builder.addLabels)
     builder.setDiscoveryInfo(discoveryInfo.toProto)
+    networkName.foreach { name => builder.setNetworkName(name) }
     builder.build
   }
 }
@@ -31,7 +33,10 @@ object IpAddress {
       labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
       discoveryInfo =
         if (proto.hasDiscoveryInfo) DiscoveryInfo.fromProto(proto.getDiscoveryInfo)
-        else DiscoveryInfo.empty
+        else DiscoveryInfo.empty,
+      networkName =
+        if (proto.hasNetworkName) Some(proto.getNetworkName)
+        else None
     )
   }
 }

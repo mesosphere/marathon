@@ -392,7 +392,7 @@ case class AppDefinition(
 
   def portAssignments(task: Task): Option[Seq[PortAssignment]] = {
     def fromIpAddress: Option[Seq[PortAssignment]] = ipAddress.flatMap {
-      case IpAddress(_, _, DiscoveryInfo(appPorts)) =>
+      case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
         for {
           launched <- task.launched
           effectiveIpAddress <- task.effectiveIpAddress(this)

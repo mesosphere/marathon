@@ -553,30 +553,37 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     // TODO test for resources etc.
   }
 
-  test("BuildIfMatchesWithIpAddress") {
-    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "testApp".toPath,
-        args = Some(Seq("a", "b", "c")),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        portDefinitions = Nil,
-        ipAddress = Some(
-          IpAddress(
-            groups = Seq("a", "b", "c"),
-            labels = Map(
-              "foo" -> "bar",
-              "baz" -> "buzz"
-            )
-          )
+  def buildIfMatchesWithIpAddress(
+    offer: MesosProtos.Offer,
+    executor: String = AppDefinition.DefaultExecutor,
+    discoveryInfo: DiscoveryInfo = DiscoveryInfo.empty,
+    networkName: Option[String] = None): Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
+    offer,
+    AppDefinition(
+      id = "testApp".toPath,
+      args = Some(Seq("a", "b", "c")),
+      cpus = 1.0,
+      mem = 64.0,
+      disk = 1.0,
+      portDefinitions = Nil,
+      executor = executor,
+      ipAddress = Some(
+        IpAddress(
+          groups = Seq("a", "b", "c"),
+          labels = Map(
+            "foo" -> "bar",
+            "baz" -> "buzz"
+          ),
+          discoveryInfo = discoveryInfo,
+          networkName = networkName
         )
       )
     )
+  )
 
+  test("BuildIfMatchesWithIpAddress") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatchesWithIpAddress(offer)
     assert(task.isDefined)
 
     val (taskInfo, taskPorts) = task.get
@@ -604,28 +611,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   test("BuildIfMatchesWithIpAddressAndCustomExecutor") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "testApp".toPath,
-        args = Some(Seq("a", "b", "c")),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        executor = "/custom/executor",
-        portDefinitions = Nil,
-        ipAddress = Some(
-          IpAddress(
-            groups = Seq("a", "b", "c"),
-            labels = Map(
-              "foo" -> "bar",
-              "baz" -> "buzz"
-            )
-          )
-        )
-      )
-    )
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatchesWithIpAddress(offer, executor = "/custom/executor")
 
     assert(task.isDefined)
 
@@ -656,30 +642,41 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     taskInfo.getDiscovery.getName should be (taskInfo.getName)
   }
 
+  test("BuildIfMatchesWithIpAddressAndNetworkName") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatchesWithIpAddress(offer, networkName = Some("foonet"))
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+
+    taskInfo.hasExecutor should be (false)
+    taskInfo.hasContainer should be (true)
+
+    val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
+    networkInfos.size should be (1)
+
+    val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
+      .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
+      .addAllGroups(Seq("a", "b", "c").asJava)
+      .setLabels(
+        MesosProtos.Labels.newBuilder.addAllLabels(
+          Seq(
+            MesosProtos.Label.newBuilder.setKey("foo").setValue("bar").build,
+            MesosProtos.Label.newBuilder.setKey("baz").setValue("buzz").build
+          ).asJava
+        ))
+      .setName("foonet")
+      .build
+    TextFormat.shortDebugString(networkInfos.head) should equal(TextFormat.shortDebugString(networkInfoProto))
+    networkInfos.head should equal(networkInfoProto)
+  }
+
   test("BuildIfMatchesWithIpAddressAndDiscoveryInfo") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
-      offer,
-      AppDefinition(
-        id = "/product/frontend".toPath,
-        args = Some(Seq("a", "b", "c")),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
-        portDefinitions = Nil,
-        ipAddress = Some(
-          IpAddress(
-            groups = Seq("a", "b", "c"),
-            labels = Map(
-              "foo" -> "bar",
-              "baz" -> "buzz"
-            ),
-            discoveryInfo = DiscoveryInfo(
-              ports = Seq(DiscoveryInfo.Port(name = "http", number = 80, protocol = "tcp"))
-            )
-          )
-        )
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatchesWithIpAddress(offer,
+      discoveryInfo = DiscoveryInfo(
+        ports = Seq(DiscoveryInfo.Port(name = "http", number = 80, protocol = "tcp"))
       )
     )
 

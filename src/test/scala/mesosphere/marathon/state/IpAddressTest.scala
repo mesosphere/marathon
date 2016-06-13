@@ -22,6 +22,10 @@ class IpAddressTest extends MarathonSpec with Matchers {
       labels = Map.empty
     )
 
+    lazy val ipAddressWithNetworkName = IpAddress(
+      networkName = Some("foo")
+    )
+
     lazy val ipAddressWithGroupsAndLabels = IpAddress(
       groups = Vector("a", "b", "c"),
       labels = Map(
@@ -53,6 +57,12 @@ class IpAddressTest extends MarathonSpec with Matchers {
     val defaultIpAddressProto =
       Protos.IpAddress.newBuilder().setDiscoveryInfo(Protos.DiscoveryInfo.getDefaultInstance).build()
     proto should be(defaultIpAddressProto)
+  }
+
+  test("ToProto with networkName") {
+    val f = fixture()
+    val proto = f.ipAddressWithNetworkName.toProto
+    proto.getNetworkName should equal(f.ipAddressWithNetworkName.networkName.get)
   }
 
   test("ToProto with groups") {
@@ -106,6 +116,15 @@ class IpAddressTest extends MarathonSpec with Matchers {
     result should equal(f.ipAddressWithGroups)
   }
 
+  test("ConstructFromProto with networkName") {
+    val f = fixture()
+    val proto = Protos.IpAddress.newBuilder
+      .setNetworkName("foo")
+      .build
+    val result = IpAddress.fromProto(proto)
+    result should equal(f.ipAddressWithNetworkName)
+  }
+
   test("ConstructFromProto with groups and labels") {
     val f = fixture()
     val protoWithGroupsAndLabels = Protos.IpAddress.newBuilder
@@ -157,6 +176,11 @@ class IpAddressTest extends MarathonSpec with Matchers {
   test("JSON Serialization round-trip ipAddressWithDiscoveryInfo") {
     val f = fixture()
     JsonTestHelper.assertSerializationRoundtripWorks(f.ipAddressWithDiscoveryInfo)
+  }
+
+  test("JSON Serialization round-trip ipAddressWithNetworkName") {
+    val f = fixture()
+    JsonTestHelper.assertSerializationRoundtripWorks(f.ipAddressWithNetworkName)
   }
 
   private[this] def fromJson(json: String): IpAddress = {
