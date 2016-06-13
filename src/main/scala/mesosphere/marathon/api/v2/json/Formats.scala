@@ -223,7 +223,7 @@ trait ContainerFormats {
 
   implicit lazy val PortMappingFormat: Format[Docker.PortMapping] = (
     (__ \ "containerPort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
-    (__ \ "hostPort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
+    (__ \ "hostPort").formatNullable[Int] ~
     (__ \ "servicePort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
     (__ \ "protocol").formatNullable[String].withDefault("tcp") ~
     (__ \ "name").formatNullable[String] ~
@@ -237,7 +237,7 @@ trait ContainerFormats {
     (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
     (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
     (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-  )(Docker(_, _, _, _, _, _), unlift(Docker.unapply))
+  )(Docker.withDefaultPortMappings(_, _, _, _, _, _), unlift(Docker.unapply))
 
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mde")
@@ -724,12 +724,12 @@ trait AppAndGroupFormats {
             }
 
         extraReads.map { extra =>
-          // Normally, our default is one port. If an ipAddress is defined that would lead to an error
-          // if left unchanged.
           def fetch: Seq[FetchUri] =
             if (extra.fetch.nonEmpty) extra.fetch
             else extra.uris.map { uri => FetchUri(uri = uri, extract = FetchUri.isExtract(uri)) }
 
+          // Normally, our default is one port. If an ipAddress is defined that would lead to an error
+          // if left unchanged.
           def portDefinitions: Seq[PortDefinition] = extra.ipAddress match {
             case Some(ipAddress) => Seq.empty[PortDefinition]
             case None =>
@@ -819,7 +819,7 @@ trait AppAndGroupFormats {
     }
 
     Writes[RunSpec] { runSpec =>
-      val appJson: JsObject = Json.obj(
+      var appJson: JsObject = Json.obj(
         "id" -> runSpec.id.toString,
         "cmd" -> runSpec.cmd,
         "args" -> runSpec.args,
@@ -834,13 +834,6 @@ trait AppAndGroupFormats {
         "uris" -> runSpec.fetch.map(_.uri),
         "fetch" -> runSpec.fetch,
         "storeUrls" -> runSpec.storeUrls,
-        // the ports field was written incorrectly in old code if a container was specified
-        // it should contain the service ports
-        "ports" -> runSpec.servicePorts,
-        "portDefinitions" -> runSpec.portDefinitions.zip(runSpec.servicePorts).map {
-          case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
-        },
-        "requirePorts" -> runSpec.requirePorts,
         "backoffSeconds" -> runSpec.backoff,
         "backoffFactor" -> runSpec.backoffFactor,
         "maxLaunchDelaySeconds" -> runSpec.maxLaunchDelay,
@@ -857,6 +850,26 @@ trait AppAndGroupFormats {
         "secrets" -> runSpec.secrets,
         "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod
       )
+      // top-level ports fields are incompatible with IP/CT
+      if (runSpec.ipAddress.isEmpty) {
+        appJson = appJson ++ Json.obj(
+          // the ports field was written incorrectly in old code if a container was specified
+          // it should contain the service ports
+          //
+          // "ports" -> runSpec.servicePorts, -- can't specify both this and portDefinitions and be valid,
+          // so I'm removing it. it's been deprecated for a while, users will have to deal.
+          //
+          // TODO(jdef) honestly, it's still very confusing even without IP/CT mode if you're
+          // using BRIDGE networking because portMappings stuff bubbles up to the top-level
+          // ports fields here -- which results in serialized JSON that's invalid according to
+          // our own validation funcs.
+          "portDefinitions" -> runSpec.portDefinitions.zip(runSpec.servicePorts).map {
+            case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
+          },
+          // requirePorts only makes sense when allocating hostPorts, which you can't do in IP/CT mode
+          "requirePorts" -> runSpec.requirePorts
+        )
+      }
       Json.toJson(runSpec.versionInfo) match {
         case JsNull     => appJson
         case v: JsValue => appJson + ("versionInfo" -> v)

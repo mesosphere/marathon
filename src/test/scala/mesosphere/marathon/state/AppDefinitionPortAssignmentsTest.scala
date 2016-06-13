@@ -33,7 +33,6 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
         Seq(
           PortAssignment(
             portName = Some("http"),
-            portIndex = 0,
             effectiveIpAddress = "192.168.0.1",
             effectivePort = 1)
         )))
@@ -93,7 +92,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
           image = "mesosphere/marathon",
           network = Some(Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
           portMappings = Some(Seq(
-            Docker.PortMapping(containerPort = 80, hostPort = 0, servicePort = 0, protocol = "tcp",
+            Docker.PortMapping(containerPort = 80, hostPort = Some(0), servicePort = 0, protocol = "tcp",
               name = Some("http"))
           ))
         ))
@@ -110,7 +109,6 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
         Seq(
           PortAssignment(
             portName = Some("http"),
-            portIndex = 0,
             effectiveIpAddress = task.agentInfo.host,
             effectivePort = 1)
         )))
@@ -149,7 +147,6 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
         Seq(
           PortAssignment(
             portName = Some("http"),
-            portIndex = 0,
             effectiveIpAddress = task.agentInfo.host,
             effectivePort = 1)
         )))

@@ -90,8 +90,8 @@
             },
             "network": {
               "type": "string",
-              "description": "The networking mode, this container should operate in. One of BRIDGED|HOST|NONE",
-              "enum": ["BRIDGE", "HOST", "NONE"]
+              "description": "The networking mode, this container should operate in. One of BRIDGE|HOST|NONE|USER",
+              "enum": ["BRIDGE", "HOST", "NONE", "USER"]
             },
             "parameters": {
               "type": "array",
@@ -121,13 +121,13 @@
                 "properties": {
                   "containerPort": {
                     "type": "integer",
-                    "description": "Refers to the port the application listens to inside of the container. It is optional and now defaults to 0, in which case Marathon assigns the container port the same value as the assigned hostPort. This is especially useful for apps that advertise the port they are listening on to the outside world for P2P communication. Without containerPort: 0 they would erroneously advertise their private container port which is usually not the same as the externally visible host port.",
+                    "description": "Refers to the port the application listens to inside of the container. It is optional and defaults to 0. For each containerPort with a value of 0 Marathon assigns the containerPort the same value as the assigned hostPort. This is especially useful for apps that advertise the port they are listening on to the outside world for P2P communication. Without containerPort: 0 they would erroneously advertise their private container port which is usually not the same as the externally visible host port.",
                     "maximum": 65535,
                     "minimum": 0
                   },
                   "hostPort": {
                     "type": "integer",
-                    "description": "Retains the traditional meaning in Marathon, which is a random port from the range included in the Mesos resource offer. The resulting host ports for each task are exposed via the task details in the REST API and the Marathon web UI. hostPort is optional and defaults to 0.",
+                    "description": "Retains the traditional meaning in Marathon, which is a random port from the range included in the Mesos resource offer. The resulting host ports for each task are exposed via the task details in the REST API and the Marathon web UI. hostPort is optional. In BRIDGE mode it defaults to 0 if left unspecified. In USER mode an unspecified hostPort does not allocate a port from a Mesos offer.",
                     "maximum": 65535,
                     "minimum": 0
                   },

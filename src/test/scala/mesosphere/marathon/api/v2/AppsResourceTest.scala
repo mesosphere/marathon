@@ -23,6 +23,7 @@ import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.scalatest.{ GivenWhenThen, Matchers }
+import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.{ JsResultException, JsNumber, JsObject, Json }
 
 import scala.collection.immutable
@@ -121,6 +122,37 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
       portDefinitions = Seq.empty[PortDefinition])
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app with IP/CT on virtual network foo w/ MESOS container spec") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(networkName = Some("foo"))),
+      portDefinitions = Seq.empty[PortDefinition],
+      container = Some(Container(
+        `type` = Mesos.ContainerInfo.Type.MESOS
+      ))
+    )
     val (body, plan) = prepareApp(app)
 
     When("The create request is made")
@@ -251,6 +283,163 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
       portDefinitions = Seq.empty[PortDefinition])
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app with IP/CT with virtual network foo w/ Docker") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(networkName = Some("foo"))),
+      container = Some(Container(
+        `type` = Mesos.ContainerInfo.Type.DOCKER,
+        docker = Some(Container.Docker(
+          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+          image = "jdef/helpme",
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+          ))
+        ))
+      )),
+      portDefinitions = Nil
+    )
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app in BRIDGE mode w/ Docker") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      container = Some(Container(
+        `type` = Mesos.ContainerInfo.Type.DOCKER,
+        docker = Some(Container.Docker(
+          network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+          image = "jdef/helpme",
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+          ))
+        ))
+      )),
+      portDefinitions = Nil
+    )
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(
+        versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
+        container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
+          ))
+        ))))
+      ),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app in USER mode w/ ipAddress.discoveryInfo w/ Docker") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(
+        networkName = Some("foo"),
+        discoveryInfo = DiscoveryInfo(ports = Seq(
+          DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
+        ))
+      )),
+      container = Some(Container(
+        `type` = Mesos.ContainerInfo.Type.DOCKER,
+        docker = Some(Container.Docker(
+          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+          image = "jdef/helpme",
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+          ))
+        ))
+      )),
+      portDefinitions = Nil
+    )
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is not successful")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/ipAddress")
+    response.getEntity.toString should include("ipAddress/discovery is not allowed for Docker containers")
+  }
+
+  test("Create a new app in HOST mode w/ ipAddress.discoveryInfo w/ Docker") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(
+        networkName = Some("foo"),
+        discoveryInfo = DiscoveryInfo(ports = Seq(
+          DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
+        ))
+      )),
+      container = Some(Container(
+        `type` = Mesos.ContainerInfo.Type.DOCKER,
+        docker = Some(Container.Docker(
+          network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
+          image = "jdef/helpme"
+        ))
+      )),
+      portDefinitions = Nil
+    )
     val (body, plan) = prepareApp(app)
 
     When("The create request is made")

@@ -24,13 +24,21 @@ class PortMappingTest extends FunSuiteLike with Matchers {
   }
 
   test("portMapping with invalid port is invalid") {
-    validate(Fixture.validPortMapping.copy(hostPort = -1)).isFailure should be(true)
+    validate(Fixture.validPortMapping.copy(hostPort = Some(-1))).isFailure should be(true)
     validate(Fixture.validPortMapping.copy(containerPort = -1)).isFailure should be(true)
+  }
+
+  test("portMapping without hostport may be valid") {
+    validate(Fixture.validPortMapping.copy(hostPort = None)) should be (Success)
+  }
+
+  test("portMapping with zero hostport is valid") {
+    validate(Fixture.validPortMapping.copy(hostPort = Some(0))) should be (Success)
   }
 
   object Fixture {
     val validPortMapping = PortMapping(
-      hostPort = 80,
+      hostPort = Some(80),
       containerPort = 80,
       protocol = "tcp",
       name = Some("http-port"),

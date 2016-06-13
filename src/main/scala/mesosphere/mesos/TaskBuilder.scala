@@ -33,12 +33,11 @@ class TaskBuilder(runSpec: RunSpec,
   def build(
     offer: Offer,
     resourceMatchOpt: Option[ResourceMatcher.ResourceMatch],
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch] = None): Option[(TaskInfo, Seq[Int])] = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch] = None): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = if (runSpec.requirePorts) runSpec.portNumbers else runSpec.portNumbers.map(_ => 0)
-      val containerHostPorts: Option[Seq[Int]] = runSpec.containerHostPorts
-      val hostPorts = containerHostPorts.getOrElse(runSpecHostPorts)
+      val hostPorts = runSpec.container.flatMap(_.hostPorts).getOrElse(runSpecHostPorts)
       val staticHostPorts = hostPorts.filter(_ != 0)
       val numberDynamicHostPorts = hostPorts.count(_ == 0)
 
@@ -76,7 +75,7 @@ class TaskBuilder(runSpec: RunSpec,
     }
   }
 
-  def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Int])] = {
+  def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     val acceptedResourceRoles: Set[String] = {
       val roles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
@@ -97,7 +96,7 @@ class TaskBuilder(runSpec: RunSpec,
     offer: Offer,
     resourceMatch: ResourceMatch,
     volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
-    taskBuildOpt: Option[RunSpecTaskProcessor]): Some[(TaskInfo, Seq[Int])] = {
+    taskBuildOpt: Option[RunSpecTaskProcessor]): Some[(TaskInfo, Seq[Option[Int]])] = {
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
@@ -182,7 +181,9 @@ class TaskBuilder(runSpec: RunSpec,
     Some(builder.build -> resourceMatch.hostPorts)
   }
 
-  protected def computeDiscoveryInfo(runSpec: RunSpec, hostPorts: Seq[Int]): org.apache.mesos.Protos.DiscoveryInfo = {
+  protected def computeDiscoveryInfo(
+    runSpec: RunSpec,
+    hostPorts: Seq[Option[Int]]): org.apache.mesos.Protos.DiscoveryInfo = {
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
     discoveryInfoBuilder.setName(runSpec.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
@@ -190,17 +191,17 @@ class TaskBuilder(runSpec: RunSpec,
     val portProtos = runSpec.ipAddress match {
       case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
       case _ =>
-        runSpec.portMappings match {
+        runSpec.container.flatMap(_.portMappings) match {
           case Some(portMappings) =>
-            // The run spec uses bridge mode with portMappings, use them to create the Port messages
-            portMappings.zip(hostPorts).map {
-              case (portMapping, hostPort) => PortMappingSerializer.toMesosPort(portMapping, hostPort)
+            // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
+            portMappings.zip(hostPorts).collect {
+              case (portMapping, Some(hostPort)) => PortMappingSerializer.toMesosPort(portMapping, hostPort)
             }
           case None =>
             // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
             // overwrite them the port numbers assigned to this particular task.
-            runSpec.portDefinitions.zip(hostPorts).map {
-              case (portDefinition, hostPort) =>
+            runSpec.portDefinitions.zip(hostPorts).collect {
+              case (portDefinition, Some(hostPort)) =>
                 PortDefinitionSerializer.toProto(portDefinition).toBuilder.setNumber(hostPort).build
             }
         }
@@ -213,7 +214,7 @@ class TaskBuilder(runSpec: RunSpec,
     discoveryInfoBuilder.build
   }
 
-  protected def computeContainerInfo(ports: Seq[Int]): Option[ContainerInfo] = {
+  protected def computeContainerInfo(hostPorts: Seq[Option[Int]]): Option[ContainerInfo] = {
     if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) None
     else {
       val builder = ContainerInfo.newBuilder
@@ -222,8 +223,8 @@ class TaskBuilder(runSpec: RunSpec,
       runSpec.container.foreach { c =>
         val portMappings = c.docker.map { d =>
           d.portMappings.map { pms =>
-            pms zip ports map {
-              case (mapping, port) =>
+            pms.zip(hostPorts).collect {
+              case (mapping, Some(hport)) =>
                 // Use case: containerPort = 0 and hostPort = 0
                 //
                 // For apps that have their own service registry and require p2p communication,
@@ -233,10 +234,10 @@ class TaskBuilder(runSpec: RunSpec,
                 // fixed most easily if the container port is the same as the externally visible host
                 // port.
                 if (mapping.containerPort == 0) {
-                  mapping.copy(hostPort = port, containerPort = port)
+                  mapping.copy(hostPort = Some(hport), containerPort = hport)
                 }
                 else {
-                  mapping.copy(hostPort = port)
+                  mapping.copy(hostPort = Some(hport))
                 }
             }
           }
@@ -291,15 +292,18 @@ object TaskBuilder {
   def commandInfo(runSpec: RunSpec,
                   taskId: Option[Task.Id],
                   host: Option[String],
-                  ports: Seq[Int],
+                  hostPorts: Seq[Option[Int]],
                   envPrefix: Option[String]): CommandInfo.Builder = {
-    val containerPorts = for (pms <- runSpec.portMappings) yield pms.map(_.containerPort)
+    val containerPorts = for {
+      c <- runSpec.container
+      pms <- c.portMappings
+    } yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(runSpec.portNumbers)
     val portNames = runSpec.portDefinitions.map(_.name)
 
     val envMap: Map[String, String] =
       taskContextEnv(runSpec, taskId) ++
-        addPrefix(envPrefix, portsEnv(declaredPorts, ports, portNames) ++ host.map("HOST" -> _).toMap) ++
+        addPrefix(envPrefix, portsEnv(declaredPorts, hostPorts, portNames) ++ host.map("HOST" -> _).toMap) ++
         runSpec.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
 
     val builder = CommandInfo.newBuilder()
@@ -342,33 +346,83 @@ object TaskBuilder {
     builder.build()
   }
 
-  def portsEnv(definedPorts: Seq[Int], assignedPorts: Seq[Int], portNames: Seq[Option[String]]): Map[String, String] = {
+  // portsEnv generates $PORT{x} and $PORT_{y} environment variables, wherein `x` is an index into
+  // the portDefinitions or portMappings array and `y` is a non-zero port specifically requested by
+  // the application specification.
+  //
+  // @param definedPorts are either declared container ports (if port mappings are specified) or host ports; may be 0's
+  // @param assignedPorts are "real" host ports allocated from Mesos resource offers
+  // @return a dictionary of variables that should be added to a tasks environment
+  def portsEnv(
+    definedPorts: Seq[Int],
+    assignedPorts: Seq[Option[Int]],
+    portNames: Seq[Option[String]]): Map[String, String] = {
     if (assignedPorts.isEmpty) {
       Map.empty
     }
     else {
       val env = Map.newBuilder[String, String]
+      val generatedPorts = Map.newBuilder[Int, Int] // index -> container port
 
-      assignedPorts.zipWithIndex.foreach {
-        case (p, n) =>
-          env += (s"PORT$n" -> p.toString)
+      object ContainerPortGenerator {
+        // track which port numbers are already referenced by PORT_xxx envvars
+        lazy val consumedPorts = scala.collection.mutable.Set(definedPorts: _*) ++= assignedPorts.flatten
+        lazy val rand = new scala.util.Random(System.currentTimeMillis)
+        val maxPort: Int = 65535 - 1024
+
+        // carefully pick a container port that doesn't overlap with other ports used by this
+        // container. and avoid ports in the range (0 - 1024)
+        def next: Int = {
+          val p = rand.nextInt(maxPort) + 1025
+          if (!consumedPorts.contains(p)) {
+            consumedPorts += p
+            p
+          }
+          else next // TODO(jdef) **highly** unlikely, but still possible that the port range could be exhausted
+        }
       }
 
-      definedPorts.zip(assignedPorts).foreach {
-        case (defined, assigned) =>
-          if (defined != AppDefinition.RandomPortValue) {
-            env += (s"PORT_$defined" -> assigned.toString)
+      assignedPorts.zipWithIndex.foreach {
+        // matches fixed or dynamic host port assignments
+        case (Some(p), n) =>
+          env += (s"PORT$n" -> p.toString)
+
+        // matches container-port-only mappings; no host port was defined for this mapping
+        case (None, n) =>
+          definedPorts.lift(n) match {
+            case Some(containerPort) if containerPort == AppDefinition.RandomPortValue =>
+              val cp = ContainerPortGenerator.next
+              generatedPorts += n -> cp
+              env += (s"PORT$n" -> cp.toString)
+            case Some(containerPort) if containerPort != AppDefinition.RandomPortValue =>
+              env += (s"PORT$n" -> containerPort.toString)
+            case _ => () // should never happen, means that index was out of bounds!
           }
       }
 
-      portNames.zip(assignedPorts).foreach {
-        case (Some(portName), assignedPort) =>
-          env += (s"PORT_${portName.toUpperCase}" -> assignedPort.toString)
-        case (None, _) =>
+      val gp = generatedPorts.result
+      definedPorts.zip(assignedPorts).zipWithIndex.foreach {
+        case ((defined, Some(assigned)), _) if (defined != AppDefinition.RandomPortValue) =>
+          env += (s"PORT_$defined" -> assigned.toString)
+        case ((defined, Some(assigned)), _) if (defined == AppDefinition.RandomPortValue) =>
+          env += (s"PORT_$assigned" -> assigned.toString)
+        case ((defined, None), _) if (defined != AppDefinition.RandomPortValue) =>
+          env += (s"PORT_$defined" -> defined.toString)
+        case ((defined, None), n) if (defined == AppDefinition.RandomPortValue) =>
+          val generated = gp(n)
+          env += (s"PORT_$generated" -> generated.toString)
       }
 
-      env += ("PORT" -> assignedPorts.head.toString)
-      env += ("PORTS" -> assignedPorts.mkString(","))
+      portNames.zip(assignedPorts).foreach {
+        case (Some(portName), Some(assignedPort)) =>
+          env += (s"PORT_${portName.toUpperCase}" -> assignedPort.toString)
+        // TODO(jdef) port name envvars for generated container ports
+        case _ =>
+      }
+
+      val allAssigned = assignedPorts.flatten ++ gp.values
+      env += ("PORT" -> allAssigned.head.toString)
+      env += ("PORTS" -> allAssigned.mkString(","))
       env.result()
     }
   }

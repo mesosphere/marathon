@@ -76,9 +76,9 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
         image = "busybox",
         network = Some(Network.BRIDGE),
         portMappings = Some(Seq(
-          PortMapping(containerPort = 8080, hostPort = 0, servicePort = 0, protocol = "tcp"),
-          PortMapping (containerPort = 9000, hostPort = 10555, servicePort = 10555, protocol = "udp"),
-          PortMapping(containerPort = 9001, hostPort = 0, servicePort = 0, protocol = "tcp")
+          PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 0, protocol = "tcp"),
+          PortMapping (containerPort = 9000, hostPort = Some(10555), servicePort = 10555, protocol = "udp"),
+          PortMapping(containerPort = 9001, hostPort = Some(0), servicePort = 0, protocol = "tcp")
         ))
       ))
     )
@@ -108,8 +108,8 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
         image = "busybox",
         network = Some(Network.BRIDGE),
         portMappings = Some(Seq(
-          PortMapping(containerPort = 8080, hostPort = 0, servicePort = 80, protocol = "tcp"),
-          PortMapping (containerPort = 9000, hostPort = 10555, servicePort = 81, protocol = "udp")
+          PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 80, protocol = "tcp"),
+          PortMapping (containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
         ))
       ))
     )

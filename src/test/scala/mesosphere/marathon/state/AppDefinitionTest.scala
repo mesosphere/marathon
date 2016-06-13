@@ -14,7 +14,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
   val fullVersion = AppDefinition.VersionInfo.forNewConfig(Timestamp(1))
 
-  test("ToProto") {
+  test("ToProto with port definitions") {
     val app1 = AppDefinition(
       id = "play".toPath,
       cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
@@ -128,6 +128,70 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val proto = app.toProto
     proto.getId should be("app-with-ip-address")
     proto.hasIpAddress should be (true)
+
+    val read = AppDefinition().mergeFromProto(proto)
+    read should be(app)
+  }
+
+  test("ipAddress to proto and back again w/ Docker container w/ virtual networking") {
+    val app = AppDefinition(
+      id = "app-with-ip-address".toPath,
+      cmd = Some("sleep 30"),
+      portDefinitions = Nil,
+      ipAddress = Some(
+        IpAddress(
+          groups = Seq("a", "b", "c"),
+          labels = Map(
+            "foo" -> "bar",
+            "baz" -> "buzz"
+          ),
+          networkName = Some("blahze")
+        )
+      ),
+      container = Some(Container(
+        `type` = mesos.ContainerInfo.Type.DOCKER,
+        docker = Some(Container.Docker(
+          image = "jdef/foo",
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(hostPort = None),
+            Container.Docker.PortMapping(hostPort = Some(123)),
+            Container.Docker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+          ))
+        ))
+      ))
+    )
+
+    val proto = app.toProto
+    proto.getId should be("app-with-ip-address")
+    proto.hasIpAddress should be (true)
+
+    val read = AppDefinition().mergeFromProto(proto)
+    read should be(app)
+  }
+
+  test("ipAddress to proto and back again w/ Docker container w/ bridge") {
+    val app = AppDefinition(
+      id = "app-with-ip-address".toPath,
+      cmd = Some("sleep 30"),
+      portDefinitions = Nil,
+      container = Some(Container(
+        `type` = mesos.ContainerInfo.Type.DOCKER,
+        docker = Some(Container.Docker(
+          image = "jdef/foo",
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(hostPort = Some(0)),
+            Container.Docker.PortMapping(hostPort = Some(123)),
+            Container.Docker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+          ))
+        ))
+      ))
+    )
+
+    val proto = app.toProto
+    proto.getId should be("app-with-ip-address")
+    proto.hasIpAddress should be (false)
 
     val read = AppDefinition().mergeFromProto(proto)
     read should be(app)

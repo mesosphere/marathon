@@ -20,7 +20,7 @@ class ResourceMatchTest
           scope = ScalarMatchResult.Scope.NoneDisk
         )
       ),
-      portsMatch = PortsMatch(Seq(PortsMatcher.PortWithRole("role2", 80, reservation = Some(portReservation))))
+      portsMatch = PortsMatch(Seq(Some(PortsMatcher.PortWithRole("role2", 80, reservation = Some(portReservation)))))
     )
 
     When("converting it to resources")

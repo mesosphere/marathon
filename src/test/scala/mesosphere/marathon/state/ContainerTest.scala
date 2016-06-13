@@ -42,14 +42,14 @@ class ContainerTest extends MarathonSpec with Matchers {
           portMappings = Some(Seq(
             Container.Docker.PortMapping(
               containerPort = 8080,
-              hostPort = 32001,
+              hostPort = Some(32001),
               servicePort = 9000,
               protocol = Container.Docker.PortMapping.TCP,
               name = Some("http"),
               labels = Map("foo" -> "bar")),
             Container.Docker.PortMapping(
               containerPort = 8081,
-              hostPort = 32002,
+              hostPort = Some(32002),
               servicePort = 9001,
               protocol = Container.Docker.PortMapping.UDP)
           )
@@ -102,12 +102,12 @@ class ContainerTest extends MarathonSpec with Matchers {
           portMappings = Some(Seq(
             Container.Docker.PortMapping(
               containerPort = 8080,
-              hostPort = 32001,
+              hostPort = Some(32001),
               servicePort = 9000,
               protocol = "tcp,udp"),
             Container.Docker.PortMapping(
               containerPort = 8081,
-              hostPort = 32002,
+              hostPort = Some(32002),
               servicePort = 9001,
               protocol = "udp,tcp")
           ))

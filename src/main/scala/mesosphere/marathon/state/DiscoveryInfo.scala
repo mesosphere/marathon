@@ -10,6 +10,9 @@ case class DiscoveryInfo(ports: Seq[DiscoveryInfo.Port] = Seq.empty) {
       .addAllPorts(ports.map(_.toProto).asJava)
       .build
   }
+
+  def isEmpty: Boolean = DiscoveryInfo.empty.equals(this)
+  def nonEmpty: Boolean = !isEmpty
 }
 
 object DiscoveryInfo {

@@ -32,7 +32,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
   test("Validation") {
     def shouldViolate(app: AppDefinition, path: String, template: String): Unit = {
       validate(app) match {
-        case Success => fail()
+        case Success => fail(s"expected failure '$template'")
         case f: Failure =>
           val violations = ValidationHelper.getAllRuleConstrains(f)
 
@@ -110,8 +110,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
           image = "mesosphere/marathon",
           network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
           portMappings = Some(Seq(
-            Docker.PortMapping(8080, 0, 0, "tcp", Some("foo")),
-            Docker.PortMapping(8081, 0, 0, "tcp", Some("foo"))
+            Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+            Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
           ))
         ))
       )),
@@ -145,13 +145,57 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
           image = "mesosphere/marathon",
           network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
           portMappings = Some(Seq(
-            Docker.PortMapping(8080, 0, 0, "tcp", Some("foo")),
-            Docker.PortMapping(8081, 0, 0, "tcp", Some("bar"))
+            Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+            Docker.PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
           ))
         ))
       )),
       portDefinitions = Nil)
     shouldNotViolate(
+      app,
+      "/container/docker/portMappings",
+      "Port names must be unique."
+    )
+
+    app = correct.copy(
+      container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+        portMappings = Some(Seq(
+          Docker.PortMapping(8080, None, 0, "tcp", Some("foo")),
+          Docker.PortMapping(8081, None, 0, "tcp", Some("bar"))
+        ))
+      )))),
+      portDefinitions = Nil)
+    shouldViolate(
+      app,
+      "/container/docker/portMappings(0)",
+      "hostPort is required for BRIDGE mode."
+    )
+
+    app = correct.copy(
+      container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+        network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
+        portMappings = Some(Seq(
+          Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+          Docker.PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
+        ))
+      )))),
+      portDefinitions = Nil)
+    shouldNotViolate(
+      app,
+      "/container/docker/portMappings",
+      "Port names must be unique."
+    )
+
+    // unique port names for USER mode
+    app = correct.copy(
+      container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+        portMappings = Some(Seq(
+          Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+          Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
+        ))
+      )))),
+      portDefinitions = Nil)
+    shouldViolate(
       app,
       "/container/docker/portMappings",
       "Port names must be unique."
@@ -270,8 +314,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
         docker = Some(Docker(
           network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
           portMappings = Some(Seq(
-            Docker.PortMapping(8080, 0, 0, "tcp"),
-            Docker.PortMapping(8081, 0, 0, "tcp")
+            Docker.PortMapping(8080, Some(0), 0, "tcp"),
+            Docker.PortMapping(8081, Some(0), 0, "tcp")
           ))
         ))
       )),
@@ -526,7 +570,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
           image = "python:3",
           network = Some(Network.BRIDGE),
           portMappings = Some(Seq(
-            PortMapping(containerPort = 8080, hostPort = 0, servicePort = 9000, protocol = "tcp")
+            PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
           ))
         ))
       ))

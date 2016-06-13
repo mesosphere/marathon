@@ -62,7 +62,6 @@ class AppDefinitionFormatsTest
     (r1 \ "uris").as[Seq[String]] should equal (DefaultUris)
     (r1 \ "fetch").as[Seq[FetchUri]] should equal (DefaultFetch)
     (r1 \ "storeUrls").as[Seq[String]] should equal (DefaultStoreUrls)
-    (r1 \ "ports").as[Seq[Long]] should equal (DefaultPortDefinitions.map(_.port))
     (r1 \ "portDefinitions").as[Seq[PortDefinition]] should equal (DefaultPortDefinitions)
     (r1 \ "requirePorts").as[Boolean] should equal (DefaultRequirePorts)
     (r1 \ "backoffSeconds").as[Long] should equal (DefaultBackoff.toSeconds)
