@@ -50,6 +50,12 @@ trait AuthResource extends RestResource {
       }
     }
 
+  def withAuthorization[A, B >: A](action: AuthorizedAction[B],
+                                   resource: A)(fn: => Response)(implicit identity: Identity): Response = {
+    checkAuthorization(action, resource)
+    fn
+  }
+
   def checkAuthorization[A, B >: A](action: AuthorizedAction[B], resource: A)(implicit identity: Identity): A = {
     if (authorizer.isAuthorized(identity, action, resource)) resource
     else throw AccessDeniedException()

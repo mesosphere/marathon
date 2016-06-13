@@ -1,15 +1,18 @@
 package mesosphere.marathon.api.v2
 
-import javax.ws.rs.core.{ MediaType, Response }
+import javax.servlet.http.HttpServletRequest
+import javax.ws.rs.core.{ Context, MediaType, Response }
 import javax.ws.rs.{ Consumes, GET, Path, Produces }
 
 import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
-import mesosphere.marathon.api.{ RestResource, MarathonMediaType }
+import mesosphere.marathon.BuildInfo
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
-import mesosphere.marathon.{ BuildInfo, LeaderProxyConf, MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, ViewSystemConfig }
+import mesosphere.marathon.{ LeaderProxyConf, MarathonConf, MarathonSchedulerService }
 import mesosphere.util.state.MesosLeaderInfo
 import play.api.libs.json.{ JsObject, Json }
 
@@ -19,10 +22,12 @@ class InfoResource @Inject() (
     schedulerService: MarathonSchedulerService,
     mesosLeaderInfo: MesosLeaderInfo,
     electionService: ElectionService,
+    val authenticator: Authenticator,
+    val authorizer: Authorizer,
     // format: OFF
     protected val config: MarathonConf
       with HttpConf with EventConfiguration with HttpEventConfiguration with LeaderProxyConf
-) extends RestResource {
+) extends AuthResource {
   // format: ON
 
   // Marathon configurations
@@ -78,18 +83,20 @@ class InfoResource @Inject() (
 
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
-  def index(): Response = {
-    val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
-    Response.ok(
-      jsonObjString(
-        "name" -> BuildInfo.name,
-        "version" -> BuildInfo.version,
-        "elected" -> electionService.isLeader,
-        "leader" -> electionService.leaderHostPort,
-        "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
-        "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
-        "zookeeper_config" -> zookeeperConfigValues,
-        "event_subscriber" -> config.eventSubscriber.get.map(_ => eventHandlerConfigValues),
-        "http_config" -> httpConfigValues)).build()
+  def index(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    withAuthorization(ViewSystemConfig, "/v2/info") {
+      val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
+      Response.ok(
+        jsonObjString(
+          "name" -> BuildInfo.name,
+          "version" -> BuildInfo.version,
+          "elected" -> electionService.isLeader,
+          "leader" -> electionService.leaderHostPort,
+          "frameworkId" -> schedulerService.frameworkId.map(_.getValue),
+          "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
+          "zookeeper_config" -> zookeeperConfigValues,
+          "event_subscriber" -> config.eventSubscriber.get.map(_ => eventHandlerConfigValues),
+          "http_config" -> httpConfigValues)).build()
+    }
   }
 }
