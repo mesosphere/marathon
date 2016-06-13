@@ -147,6 +147,7 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     The timeout for preparing the Marathon instance when elected as leader.
 * <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
     A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
+* `--default_network_name` (Optional.): Network name, injected into applications' `ipAddress{}` specs that do not define their own `networkName`.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 

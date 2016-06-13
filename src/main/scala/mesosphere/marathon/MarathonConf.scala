@@ -234,6 +234,11 @@ trait MarathonConf
     noshort = true
   )
 
+  lazy val defaultNetworkName = opt[String]("default_network_name",
+    descr = "Network name, injected into applications' ipAddress{} specs that do not define their own networkName.",
+    noshort = true
+  )
+
   //Internal settings, that are not intended for external use
   lazy val internalStoreBackend = opt[String]("internal_store_backend",
     descr = "The backend storage system to use. One of zk, mesos_zk, mem.",

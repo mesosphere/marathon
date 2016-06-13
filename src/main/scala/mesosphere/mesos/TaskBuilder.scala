@@ -197,7 +197,7 @@ class TaskBuilder(runSpec: RunSpec,
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
 
     val portProtos = runSpec.ipAddress match {
-      case Some(IpAddress(_, _, DiscoveryInfo(ports))) if ports.nonEmpty => ports.map(_.toProto)
+      case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
       case _ =>
         runSpec.portMappings match {
           case Some(portMappings) =>
@@ -272,6 +272,7 @@ class TaskBuilder(runSpec: RunSpec,
             .addAllGroups(ipAddress.groups.asJava)
             .setLabels(ipAddressLabels)
             .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
+        ipAddress.networkName.foreach(networkInfo.setName(_))
         builder.addNetworkInfos(networkInfo)
       }
 

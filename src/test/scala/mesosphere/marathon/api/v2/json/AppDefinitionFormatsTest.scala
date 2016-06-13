@@ -248,6 +248,29 @@ class AppDefinitionFormatsTest
     rereadApp should equal(app)
   }
 
+  test("FromJSON should parse ipAddress.networkName") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "ipAddress": {
+        |    "networkName": "foo"
+        |  }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
+    appDef.ipAddress.get.networkName should equal(Some("foo"))
+  }
+
+  test("FromJSON should parse ipAddress without networkName") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "ipAddress": { }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.ipAddress.isDefined && !appDef.ipAddress.get.networkName.isDefined should equal(true)
+  }
+
   test("FromJSON should parse secrets") {
     val appDef = Json.parse(
       """{
