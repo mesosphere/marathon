@@ -639,7 +639,7 @@ object AppDefinition {
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") { hc =>
       hc.protocol == Protocol.COMMAND || (hc.portIndex match {
         case Some(idx) => hostPortsIndices contains idx
-        case None      => hostPortsIndices.length == 1 && hostPortsIndices.head == 0
+        case None      => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
       })
     }
 

@@ -550,6 +550,31 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     AppDefinition.validAppDefinition(to3).isSuccess shouldBe true
   }
 
+  test("health check validation should allow port specifications without port indices") {
+    Given("A docker app with no portDefinitions and HTTP health checks")
+
+    val app1 = AppDefinition(
+      container = Some(
+        Container(docker = Some(
+          Container.Docker(
+            "group/image",
+            network = Some(mesos.ContainerInfo.DockerInfo.Network.HOST)
+          )))
+      ),
+      portDefinitions = List.empty,
+      healthChecks = Set(
+        HealthCheck(
+          path = Some("/"),
+          protocol = Protos.HealthCheckDefinition.Protocol.HTTP,
+          port = Some(8000),
+          portIndex = None
+        )
+      )
+    )
+    Then("validation succeeds")
+    AppDefinition.validAppDefinition(app1).isSuccess shouldBe true
+  }
+
   test("cassandraWithoutResidency") {
     import Formats._
 
