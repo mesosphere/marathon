@@ -1,4 +1,5 @@
 import com.amazonaws.auth.InstanceProfileCredentialsProvider
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
 import ohnosequences.sbt.SbtS3Resolver
 import ohnosequences.sbt.SbtS3Resolver._
 import sbt._
@@ -222,7 +223,8 @@ object MarathonBuild extends Build {
       "Mesosphere Public Repo (S3)",
       s3("downloads.mesosphere.io/maven")
     )),
-    SbtS3Resolver.s3credentials := new InstanceProfileCredentialsProvider()
+    SbtS3Resolver.s3credentials := new EnvironmentVariableCredentialsProvider() | 
+    new InstanceProfileCredentialsProvider()
   )
 }
 
