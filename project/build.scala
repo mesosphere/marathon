@@ -247,6 +247,7 @@ object Dependencies {
     // runtime
     akkaActor % "compile",
     akkaSlf4j % "compile",
+    asyncAwait % "compile",
     sprayClient % "compile",
     sprayHttpx % "compile",
     chaos % "compile",
@@ -287,7 +288,8 @@ object Dependency {
     val Chaos = "0.8.7"
     val Guava = "18.0"
     val MesosUtils = "1.0.0-rc1"
-    val Akka = "2.3.9"
+    val Akka = "2.3.15"
+    val AsyncAwait = "0.9.6-RC2"
     val Spray = "1.3.2"
     val TwitterCommons = "0.0.76"
     val TwitterZk = "6.24.0"
@@ -320,6 +322,7 @@ object Dependency {
 
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
+  val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
