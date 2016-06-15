@@ -92,3 +92,21 @@ trait PersistentStoreManagement {
     */
   def initialize(): Future[Unit]
 }
+
+trait PersistentStoreWithNestedPathsSupport extends PersistentStore {
+
+  /**
+    * List all children of a parent identifier.
+    * @param parent the parent node
+    * @return the list of children
+    */
+  def allIds(parent: ID): Future[Seq[ID]]
+
+  /**
+    * Create an empty node.
+    * @param path the absolute path of the node.
+    * @throws mesosphere.marathon.StoreCommandFailedException
+    *         if the node could not get created or underlying store problems.
+    */
+  def createPath(path: String): Future[Unit]
+}

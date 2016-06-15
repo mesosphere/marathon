@@ -9,7 +9,12 @@ import com.twitter.zk.{ ZNode, ZkClient }
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.{ Protos, StoreCommandFailedException }
 import mesosphere.util.state.zk.ZKStore._
-import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
+import mesosphere.util.state.{
+  PersistentEntity,
+  PersistentStore,
+  PersistentStoreManagement,
+  PersistentStoreWithNestedPathsSupport
+}
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.slf4j.LoggerFactory
@@ -19,7 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
 
 class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionConf) extends PersistentStore
-    with PersistentStoreManagement {
+    with PersistentStoreManagement with PersistentStoreWithNestedPathsSupport {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] implicit val ec = ExecutionContext.Implicits.global
@@ -47,6 +52,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   /**
     * This will store a previously fetched entity.
     * The entity will be either created or updated, depending on the read state.
+    *
     * @return Some value, if the store operation is successful otherwise None
     */
   override def update(entity: PersistentEntity): Future[ZKEntity] = {
@@ -74,6 +80,14 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     root.getChildren().asScala
       .map(_.children.map(_.name))
       .recover(exceptionTransform("Can not list all identifiers"))
+  }
+
+  override def allIds(parent: ID): Future[Seq[ID]] = {
+    val rootNode = this.root(parent)
+
+    rootNode.getChildren().asScala
+      .map(_.children.map(_.name))
+      .recover(exceptionTransform(s"Can not list children of $parent"))
   }
 
   private[this] def exceptionTransform[T](errorMessage: String): PartialFunction[Throwable, T] = {
@@ -107,6 +121,8 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   }
 
   override def initialize(): Future[Unit] = createPath(root).map(_ => ())
+
+  override def createPath(path: String): Future[Unit] = createPath(root(path)).map(_ => ())
 }
 
 case class ZKEntity(node: ZNode, data: ZKData, version: Option[Int] = None) extends PersistentEntity {
