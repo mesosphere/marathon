@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.validation
 
-import com.wix.accord._
+import com.wix.accord.validate
 import mesosphere.marathon.Protos.{ Constraint, HealthCheckDefinition }
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
