@@ -293,9 +293,11 @@ object TaskBuilder {
                   envPrefix: Option[String]): CommandInfo.Builder = {
     val containerPorts = for (pms <- app.portMappings) yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(app.portNumbers)
+    val portNames = app.portDefinitions.map(_.name)
+
     val envMap: Map[String, String] =
       taskContextEnv(app, taskId) ++
-        addPrefix(envPrefix, portsEnv(declaredPorts, ports) ++ host.map("HOST" -> _).toMap) ++
+        addPrefix(envPrefix, portsEnv(declaredPorts, ports, portNames) ++ host.map("HOST" -> _).toMap) ++
         app.env
 
     val builder = CommandInfo.newBuilder()
@@ -336,7 +338,7 @@ object TaskBuilder {
     builder.build()
   }
 
-  def portsEnv(definedPorts: Seq[Int], assignedPorts: Seq[Int]): Map[String, String] = {
+  def portsEnv(definedPorts: Seq[Int], assignedPorts: Seq[Int], portNames: Seq[Option[String]]): Map[String, String] = {
     if (assignedPorts.isEmpty) {
       Map.empty
     }
@@ -353,6 +355,12 @@ object TaskBuilder {
           if (defined != AppDefinition.RandomPortValue) {
             env += (s"PORT_$defined" -> assigned.toString)
           }
+      }
+
+      portNames.zip(assignedPorts).foreach {
+        case (Some(portName), assignedPort) =>
+          env += (s"PORT_${portName.toUpperCase}" -> assignedPort.toString)
+        case (None, _) =>
       }
 
       env += ("PORT" -> assignedPorts.head.toString)
