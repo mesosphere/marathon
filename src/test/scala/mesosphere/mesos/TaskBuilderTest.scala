@@ -406,6 +406,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("build creates task for MESOS container using named, external [ExternalVolume] volumes") {
+    import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
     val offer = MarathonTestHelper.makeBasicOffer(
       cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
     ).build
@@ -460,23 +461,25 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     taskInfo.getExecutor.getContainer.hasMesos should be (true)
 
     // check protobuf construction, should be a ContainerInfo w/ no volumes, w/ envvar
-    assert(taskInfo.getExecutor.getContainer.getVolumesList.isEmpty, "check that container has no volumes declared")
-    assert(hasEnv("DVDI_VOLUME_NAME", "namedFoo"),
-      s"missing expected command w/ envvar declaring volume namedFoo, got instead: ${taskInfo.getExecutor.getCommand}")
-    assert(hasEnv("DVDI_VOLUME_DRIVER", "bar"),
-      s"missing expected command w/ envvar declaring volume namedFoo, got instead: ${taskInfo.getExecutor.getCommand}")
-    assert(missingEnv("DVDI_VOLUME_OPTS"),
-      s"has unexpected command w/ envvar declaring volume namedFoo, got instead: ${taskInfo.getExecutor.getCommand}")
+    assert(taskInfo.getExecutor.getContainer.getVolumesList.size == 2,
+      s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}")
 
-    assert(hasEnv("DVDI_VOLUME_NAME1", "namedEdc"),
-      s"missing expected command w/ envvar declaring volume namedEdc, got instead: ${taskInfo.getExecutor.getCommand}")
-    assert(hasEnv("DVDI_VOLUME_DRIVER1", "ert"),
-      s"missing expected command w/ envvar declaring volume namedEdc, got instead: ${taskInfo.getExecutor.getCommand}")
-    assert(hasEnv("DVDI_VOLUME_OPTS1", "size=2"),
-      s"missing expected command w/ envvar declaring volume namedEdc, got instead: ${taskInfo.getExecutor.getCommand}")
+    val vol1 = volumeWith(
+      containerPath("/container/path"),
+      mode(MesosProtos.Volume.Mode.RW),
+      volumeRef("bar", "namedFoo")
+    )
+    val got1 = taskInfo.getExecutor.getContainer.getVolumes(0)
+    assert(vol1.equals(got1), s"expected volume $vol1, got instead: $got1")
 
-    assert(missingEnv("DVDI_VOLUME_NAME2"),
-      s"has unexpected command w/ envvar declaring volume namedFoo, got instead: ${taskInfo.getExecutor.getCommand}")
+    val vol2 = volumeWith(
+      containerPath("/container/path2"),
+      mode(MesosProtos.Volume.Mode.RW),
+      volumeRef("ert", "namedEdc"),
+      options(Map("size" -> "2"))
+    )
+    val got2 = taskInfo.getExecutor.getContainer.getVolumes(1)
+    assert(vol2.equals(got2), s"expected volume $vol2, got instead: $got2")
   }
 
   test("BuildIfMatchesWithLabels") {
