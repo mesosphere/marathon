@@ -119,30 +119,24 @@ object Constraints {
           checkGroupBy(getValueString(attr.get), groupFunc)
         case Operator.MAX_PER =>
           checkMaxPer(offer.getHostname, value.toInt, groupFunc)
-        case Operator.LIKE   => checkLike
-        case Operator.UNLIKE => checkUnlike
+        case Operator.LIKE   => checkLike()
+        case Operator.UNLIKE => checkUnLike
       }
     }
 
-    def checkLike: Boolean = {
+    private def checkLike(errLikePrefix: String = "", f: (Boolean => Boolean) = e => e): Boolean = {
       if (value.nonEmpty) {
-        getValueString(attr.get).matches(value)
+        f(getValueString(attr.get).matches(value))
       }
       else {
-        log.warn("Error, value is required for LIKE operation")
+        log.warn(s"Error, value is required for ${errLikePrefix}LIKE operation")
         false
       }
     }
 
-    def checkUnlike: Boolean = {
-      if (value.nonEmpty) {
-        !getValueString(attr.get).matches(value)
-      }
-      else {
-        log.warn("Error, value is required for UNLIKE operation")
-        false
-      }
-    }
+    private val NEGATION = (v: Boolean) => !v
+
+    private def checkUnLike = checkLike("UN", NEGATION)
 
     private def checkMissingAttribute = constraint.getOperator == Operator.UNLIKE
 
