@@ -1453,6 +1453,8 @@ message NetworkInfo {
   // this field is filled in automatically with the Agent IP address.
   repeated IPAddress ip_addresses = 5;
 
+  optional string name = 6;
+
   // Specify IP address requirement. Set protocol to the desired value to
   // request the network isolator on the Agent to assign an IP address to the
   // container being launched. If a specific IP address is specified in

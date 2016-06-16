@@ -188,7 +188,7 @@ class TaskBuilder(app: AppDefinition,
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
 
     val portProtos = app.ipAddress match {
-      case Some(IpAddress(_, _, DiscoveryInfo(ports))) if ports.nonEmpty => ports.map(_.toProto)
+      case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
       case _ =>
         app.portMappings match {
           case Some(portMappings) =>
@@ -263,6 +263,9 @@ class TaskBuilder(app: AppDefinition,
             .addAllGroups(ipAddress.groups.asJava)
             .setLabels(ipAddressLabels)
             .addIpAddresses(NetworkInfo.IPAddress.getDefaultInstance)
+        if (ipAddress.name.isDefined) {
+          networkInfo.setName(ipAddress.name.get)
+        }
         builder.addNetworkInfos(networkInfo)
       }
 
