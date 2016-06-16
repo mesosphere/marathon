@@ -723,8 +723,18 @@ object AppDefinition extends GeneralPurposeCombinators {
             else {
               Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
             }
+          case MAX_PER =>
+            if (c.hasValue && c.getValue.nonEmpty && Try(c.getValue.toInt).isSuccess) {
+              Success
+            }
+            else {
+              Failure(Set(RuleViolation(c,
+                "Value was specified but is not a number",
+                Some("MAX_PER may have an integer value"))))
+            }
           case _ =>
-            Failure(Set(RuleViolation(c, "Operator must be one of UNIQUE, CLUSTER, GROUP_BY, LIKE, or UNLIKE", None)))
+            Failure(Set(
+              RuleViolation(c, "Operator must be one of UNIQUE, CLUSTER, GROUP_BY, LIKE, MAX_PER or UNLIKE", None)))
         }
       }
     }

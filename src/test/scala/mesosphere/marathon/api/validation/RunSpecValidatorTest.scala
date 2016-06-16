@@ -541,6 +541,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     val groupBy = Constraint.newBuilder.setField("rack-id").setOperator(GROUP_BY)
     val like = Constraint.newBuilder.setField("rack-id").setOperator(LIKE)
     val unlike = Constraint.newBuilder.setField("rack-id").setOperator(UNLIKE)
+    val max_per = Constraint.newBuilder.setField("rack-id").setOperator(MAX_PER)
 
     Given("no constraints")
     val app = AppDefinition(
@@ -584,6 +585,16 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     val appGroupByNonNumericValue = app.copy(constraints = Set(groupBy.setValue("AbcDZ").build()))
     Then("validation fails")
     validAppDefinition(appGroupByNonNumericValue).isFailure shouldBe true
+
+    Given("A MAX_PER with a numeric value")
+    val appMaxPerNumericValue = app.copy(constraints = Set(max_per.setValue("123").build()))
+    Then("validation succeeds")
+    validAppDefinition(appMaxPerNumericValue).isSuccess shouldBe true
+
+    Given("A MAX_PER with a non-numeric value")
+    val appMaxPerNonNumericValue = app.copy(constraints = Set(max_per.setValue("AbcDZ").build()))
+    Then("validation fails")
+    validAppDefinition(appMaxPerNonNumericValue).isFailure shouldBe true
 
     Seq(like, unlike).foreach { op =>
       Given(s"A ${op.getOperator} without a value")
