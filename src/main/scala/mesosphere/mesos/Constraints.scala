@@ -94,7 +94,7 @@ object Constraints {
         // All running tasks must have a hostname that is different from the one in the offer
         case Operator.UNIQUE   => tasks.forall(_.agentInfo.host != offer.getHostname)
         case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (task: Task) => Some(task.agentInfo.host))
-        case Operator.MAX_PER => checkMaxPer(offer.getHostname, value.toInt, (task: Task) => Some(task.agentInfo.host))
+        case Operator.MAX_PER  => checkMaxPer(offer.getHostname, value.toInt, (task: Task) => Some(task.agentInfo.host))
         case Operator.CLUSTER =>
           // Hostname must match or be empty
           (value.isEmpty || value == offer.getHostname) &&
@@ -119,7 +119,7 @@ object Constraints {
           checkGroupBy(getValueString(attr.get), groupFunc)
         case Operator.MAX_PER =>
           checkMaxPer(offer.getHostname, value.toInt, groupFunc)
-        case Operator.LIKE => checkLike
+        case Operator.LIKE   => checkLike
         case Operator.UNLIKE => checkUnlike
       }
     }
@@ -133,7 +133,6 @@ object Constraints {
         false
       }
     }
-
 
     def checkUnlike: Boolean = {
       if (value.nonEmpty) {

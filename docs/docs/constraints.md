@@ -132,4 +132,4 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
   }'
 ```
 
-Note, the parameter is required.
+Note, the parameter is required, or you'll get a warning.

@@ -6,20 +6,20 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.serialization.{ContainerSerializer, PortDefinitionSerializer, ResidencySerializer}
+import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.state.AppDefinition.VersionInfo.{FullVersionInfo, OnlyVersion}
-import mesosphere.marathon.state.AppDefinition.{Labels, VersionInfo}
+import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
+import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.{Protos, plugin}
+import mesosphere.marathon.{ Protos, plugin }
 import mesosphere.mesos.TaskBuilder
-import mesosphere.mesos.protos.{Resource, ScalarResource}
+import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
-import org.apache.mesos.{Protos => mesos}
+import org.apache.mesos.{ Protos => mesos }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
@@ -644,24 +644,28 @@ object AppDefinition {
     override def apply(c: Constraint): Result = {
       if (!c.hasField || !c.hasOperator) {
         Failure(Set(RuleViolation(c, "Missing field and operator", None)))
-      } else {
+      }
+      else {
         c.getOperator match {
           case UNIQUE =>
             if (c.hasValue && c.getValue.nonEmpty) {
               Failure(Set(RuleViolation(c, "Value specified but not used", None)))
-            } else {
+            }
+            else {
               Success
             }
           case CLUSTER =>
             if (c.hasValue && c.getValue.nonEmpty) {
               Success
-            } else {
+            }
+            else {
               Failure(Set(RuleViolation(c, "Missing value", None)))
             }
           case GROUP_BY =>
             if (!c.hasValue || (c.hasValue && c.getValue.nonEmpty && Try(c.getValue.toInt).isSuccess)) {
               Success
-            } else {
+            }
+            else {
               Failure(Set(RuleViolation(c,
                 "Value was specified but is not a number",
                 Some("GROUP_BY may either have no value or an integer value"))))
@@ -676,11 +680,22 @@ object AppDefinition {
                     s"'${c.getValue}' is not a valid regular expression",
                     Some(s"${c.getValue}\n${e.getMessage}"))))
               }
-            } else {
+            }
+            else {
               Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
             }
+          case MAX_PER =>
+            if (c.hasValue && c.getValue.nonEmpty && Try(c.getValue.toInt).isSuccess) {
+              Success
+            }
+            else {
+              Failure(Set(RuleViolation(c,
+                "Value was specified but is not a number",
+                Some("MAX_PER may have an integer value"))))
+            }
           case _ =>
-            Failure(Set(RuleViolation(c, "Operator must be one of UNIQUE, CLUSTER, GROUP_BY, LIKE, or UNLIKE", None)))
+            Failure(Set(
+              RuleViolation(c, "Operator must be one of UNIQUE, CLUSTER, GROUP_BY, LIKE, MAX_PER or UNLIKE", None)))
         }
       }
     }
