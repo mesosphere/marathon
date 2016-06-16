@@ -117,3 +117,19 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "constraints": [["rack_id", "UNLIKE", "rack-[7-9]"]]
   }'
 ```
+
+### MAX_PER operator
+
+`MAX_PER` accepts a number as parameter which specifies the maximum size of each group.
+ It can be used to limit tasks across racks or datacenters:
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "MAX_PER", "2"]]
+  }'
+```
+
+Note, the parameter is required.
