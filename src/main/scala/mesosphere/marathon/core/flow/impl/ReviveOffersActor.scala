@@ -85,6 +85,11 @@ private[impl] class ReviveOffersActor(
     }
   }
 
+  private[this] def suppressOffers(): Unit = {
+    log.info("=> Suppress offers NOW")
+    driverHolder.driver.foreach(_.suppressOffers())
+  }
+
   override def receive: Receive = LoggingReceive {
     Seq(
       receiveOffersWantedNotifications,
@@ -104,6 +109,12 @@ private[impl] class ReviveOffersActor(
       revivesNeeded = 0
       nextReviveCancellableOpt.foreach(_.cancel())
       nextReviveCancellableOpt = None
+
+      // When we don't want any more offers, we ask mesos to suppress
+      // them. This alleviates load on the allocator, and acts as an
+      // infinite duration filter for all agents until the next time
+      // we call `Revive`.
+      suppressOffers()
   }
 
   def initiateNewSeriesOfRevives(): Unit = {
