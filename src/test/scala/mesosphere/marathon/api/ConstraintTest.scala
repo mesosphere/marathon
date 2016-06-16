@@ -17,6 +17,7 @@ class ConstraintTest extends MarathonSpec with Matchers {
     }
 
     shouldMatch("""["hostname","UNIQUE"]""", "hostname", Constraint.Operator.UNIQUE)
+    shouldMatch("""["hostname","MAX_PER","1"]""", "hostname", Constraint.Operator.MAX_PER, "1")
     shouldMatch("""["rackid","GROUP_BY","1"]""", "rackid", Constraint.Operator.GROUP_BY, "1")
     shouldMatch("""["jdk","LIKE","7"]""", "jdk", Constraint.Operator.LIKE, "7")
     shouldMatch("""["jdk","UNLIKE","7"]""", "jdk", Constraint.Operator.UNLIKE, "7")

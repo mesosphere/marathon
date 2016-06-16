@@ -518,6 +518,61 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
     assert(groupByHostMet6, "Should meet group-by-host constraint.")
   }
 
+  test("HostnameMaxPerConstraints") {
+    val task1_host1 = makeTaskWithHost("task1", "host1")
+    val task2_host1 = makeTaskWithHost("task2", "host1")
+    val task3_host2 = makeTaskWithHost("task3", "host2")
+    val task4_host3 = makeTaskWithHost("task4", "host3")
+
+    var groupHost = Iterable.empty[Task]
+    val attributes: Set[Attribute] = Set()
+
+    val maxPerHost = makeConstraint("hostname", Constraint.Operator.MAX_PER, "2")
+
+    val maxPerFreshHostMet = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host1", attributes),
+      maxPerHost)
+
+    assert(maxPerFreshHostMet, "Should be able to schedule in fresh host.")
+
+    groupHost ++= Set(task1_host1)
+
+    val maxPerHostMet = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host1", attributes),
+      maxPerHost)
+
+    assert(maxPerHostMet, "Should meet max-per-host constraint.")
+
+    groupHost ++= Set(task2_host1)
+
+    val maxPerHostMet2 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host2", attributes),
+      maxPerHost)
+
+    assert(maxPerHostMet2, "Should meet max-per-host constraint.")
+
+    groupHost ++= Set(task3_host2)
+
+    val maxPerHostMet3 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host1", attributes),
+      maxPerHost)
+
+    assert(!maxPerHostMet3, "Should not meet max-per-host constraint.")
+
+    groupHost ++= Set(task2_host1)
+
+    val maxPerHostMet4 = Constraints.meetsConstraint(
+      groupHost,
+      makeOffer("host3", attributes),
+      maxPerHost)
+
+    assert(maxPerHostMet4, "Should meet max-per-host constraint.")
+  }
+
   test("AttributesTypes") {
     val task1_rack1 = makeSampleTaskWithTextAttrs("task1", Map("foo" -> "bar"))
     val task2_rack1 = makeSampleTaskWithScalarAttrs("task2", Map("jdk" -> 7))

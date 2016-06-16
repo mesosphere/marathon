@@ -77,6 +77,16 @@ object Constraints {
       }
     }
 
+    private def checkMaxPer(constraintValue: String, maxCount: Int, groupFunc: (Task) => Option[String]) = {
+      // Group tasks by the constraint value, and calculate the task count of each group
+      val groupedTasks = tasks.groupBy(groupFunc).mapValues(_.size)
+
+      groupedTasks.find(_._1.contains(constraintValue)) match {
+        case Some(pair) => (pair._2 < maxCount)
+        case None       => true
+      }
+    }
+
     private def checkHostName =
       constraint.getOperator match {
         case Operator.LIKE     => offer.getHostname.matches(value)
@@ -84,6 +94,7 @@ object Constraints {
         // All running tasks must have a hostname that is different from the one in the offer
         case Operator.UNIQUE   => tasks.forall(_.agentInfo.host != offer.getHostname)
         case Operator.GROUP_BY => checkGroupBy(offer.getHostname, (task: Task) => Some(task.agentInfo.host))
+        case Operator.MAX_PER  => checkMaxPer(offer.getHostname, value.toInt, (task: Task) => Some(task.agentInfo.host))
         case Operator.CLUSTER =>
           // Hostname must match or be empty
           (value.isEmpty || value == offer.getHostname) &&
@@ -94,6 +105,9 @@ object Constraints {
 
     private def checkAttribute = {
       def matches: Iterable[Task] = matchTaskAttributes(tasks, field, getValueString(attr.get))
+      def groupFunc = (task: Task) => task.agentInfo.attributes
+        .find(_.getName == field)
+        .map(getValueString(_))
       constraint.getOperator match {
         case Operator.UNIQUE => matches.isEmpty
         case Operator.CLUSTER =>
@@ -102,29 +116,27 @@ object Constraints {
             // All running tasks should have the matching attribute
             matches.size == tasks.size
         case Operator.GROUP_BY =>
-          val groupFunc = (task: Task) =>
-            task.agentInfo.attributes
-              .find(_.getName == field)
-              .map(getValueString(_))
           checkGroupBy(getValueString(attr.get), groupFunc)
-        case Operator.LIKE =>
-          if (value.nonEmpty) {
-            getValueString(attr.get).matches(value)
-          }
-          else {
-            log.warn("Error, value is required for LIKE operation")
-            false
-          }
-        case Operator.UNLIKE =>
-          if (value.nonEmpty) {
-            !getValueString(attr.get).matches(value)
-          }
-          else {
-            log.warn("Error, value is required for UNLIKE operation")
-            false
-          }
+        case Operator.MAX_PER =>
+          checkMaxPer(offer.getHostname, value.toInt, groupFunc)
+        case Operator.LIKE   => checkLike()
+        case Operator.UNLIKE => checkUnLike
       }
     }
+
+    private def checkLike(errLikePrefix: String = "", f: (Boolean => Boolean) = e => e): Boolean = {
+      if (value.nonEmpty) {
+        f(getValueString(attr.get).matches(value))
+      }
+      else {
+        log.warn(s"Error, value is required for ${errLikePrefix}LIKE operation")
+        false
+      }
+    }
+
+    private val NEGATION = (v: Boolean) => !v
+
+    private def checkUnLike = checkLike("UN", NEGATION)
 
     private def checkMissingAttribute = constraint.getOperator == Operator.UNLIKE
 
