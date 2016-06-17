@@ -62,7 +62,7 @@
           },
           {
             "type": "string",
-            "enum": ["UNIQUE", "CLUSTER", "GROUP_BY", "LIKE", "UNLIKE"]
+            "enum": ["UNIQUE", "CLUSTER", "GROUP_BY", "LIKE", "UNLIKE", "MAX_PER"]
           },
           {
             "type": "string"
@@ -71,7 +71,7 @@
         "minItems": 2,
         "additionalItems": false
       },
-      "description": "Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE."
+      "description": "Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE, MAX_PER."
     },
     "container": {
       "additionalProperties": false,
