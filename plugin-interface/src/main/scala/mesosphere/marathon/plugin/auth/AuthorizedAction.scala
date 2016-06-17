@@ -29,12 +29,8 @@ case object DeleteGroup extends AuthorizedAction[Group]
 case object ViewGroup extends AuthorizedAction[Group]
 
 /**
-  * The following object will be passed to the Authorizer when an action affects system configuration
+  * The following object will be passed to the Authorizer when an action affects system resources
   */
-case object ViewSystemConfig extends AuthorizedAction[String]
-case object UpdateSystemConfig extends AuthorizedAction[String]
+case object ViewResource extends AuthorizedAction[AuthorizedResource]
+case object UpdateResource extends AuthorizedAction[AuthorizedResource]
 
-/**
-  * The following object will be passed to the Authorizer when an action affects the event stream.
-  */
-case object ViewEventStream extends AuthorizedAction[Unit]

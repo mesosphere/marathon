@@ -7,7 +7,7 @@ import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }
 import akka.actor.ActorRef
 import mesosphere.marathon.api.RequestFacade
 import mesosphere.marathon.event.http.HttpEventStreamActor._
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, ViewEventStream }
+import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import mesosphere.marathon.{ MarathonConf, ModuleNames }
 import org.eclipse.jetty.servlets.EventSource.Emitter
@@ -75,7 +75,9 @@ class HttpEventStreamServlet @Inject() (
       }
       fn(facade)
     }
-    def isAuthorized(identity: Identity): Boolean = authorizer.isAuthorized(identity, ViewEventStream, ())
+    def isAuthorized(identity: Identity): Boolean = {
+      authorizer.isAuthorized(identity, ViewResource, AuthorizedResource.Events)
+    }
     maybeIdentity match {
       case Some(identity) if isAuthorized(identity) =>
         super.doGet(request, response)
