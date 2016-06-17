@@ -69,7 +69,7 @@ class ReadinessCheckResultTest extends FunSuite with GivenWhenThen with Matchers
   }
   class Fixture {
     val check = ReadinessCheckSpec(
-      taskId = Task.Id.forApp(PathId("/test")),
+      taskId = Task.Id.forRunSpec(PathId("/test")),
       checkName = "testCheck",
       url = "http://sample.url:123",
       interval = 3.seconds,

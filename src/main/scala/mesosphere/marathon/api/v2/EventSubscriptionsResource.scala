@@ -7,12 +7,12 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 import com.google.inject.Inject
 import com.wix.accord.dsl._
-
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.Validation.urlIsValid
-import mesosphere.marathon.api.{ MarathonMediaType, RestResource }
+import mesosphere.marathon.api.v2.json.Formats._
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.event.http.HttpCallbackSubscriptionService
 import mesosphere.marathon.event.{ MarathonEvent, Subscribe, Unsubscribe }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, ViewEventStream }
 import mesosphere.marathon.{ BadRequestException, MarathonConf }
 
 import scala.concurrent.Future
@@ -20,7 +20,9 @@ import scala.concurrent.Future
 @Path("v2/eventSubscriptions")
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class EventSubscriptionsResource @Inject() (val config: MarathonConf) extends RestResource {
+class EventSubscriptionsResource @Inject() (val config: MarathonConf,
+                                            val authenticator: Authenticator,
+                                            val authorizer: Authorizer) extends AuthResource {
 
   //scalastyle:off null
 
@@ -28,32 +30,40 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf) extends Re
 
   @GET
   @Timed
-  def listSubscribers(@Context req: HttpServletRequest): Response = {
-    validateSubscriptionService()
-    ok(jsonString(result(service.getSubscribers)))
+  def listSubscribers(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    withAuthorization(ViewEventStream, ()) {
+      validateSubscriptionService()
+      ok(jsonString(result(service.getSubscribers)))
+    }
   }
 
   @POST
   @Timed
-  def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response = {
-    validateSubscriptionService()
-    implicit val httpCallbackValidator = validator[String] { callback =>
-      callback is urlIsValid
+  def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
+    authenticated(req) { implicit identity =>
+      withAuthorization(ViewEventStream, ()) {
+        validateSubscriptionService()
+        implicit val httpCallbackValidator = validator[String] { callback =>
+          callback is urlIsValid
+        }
+        withValid(callbackUrl) { callback =>
+          val future: Future[MarathonEvent] = service.handleSubscriptionEvent(
+            Subscribe(req.getRemoteAddr, callback))
+          ok(jsonString(eventToJson(result(future))))
+        }
+      }
     }
-    withValid(callbackUrl) { callback =>
-      val future: Future[MarathonEvent] = service.handleSubscriptionEvent(
-        Subscribe(req.getRemoteAddr, callback))
-      ok(jsonString(eventToJson(result(future))))
-    }
-  }
 
   @DELETE
   @Timed
-  def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response = {
-    validateSubscriptionService()
-    val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
-    ok(jsonString(eventToJson(result(future))))
-  }
+  def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
+    authenticated(req) { implicit identity =>
+      withAuthorization(ViewEventStream, ()) {
+        validateSubscriptionService()
+        val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
+        ok(jsonString(eventToJson(result(future))))
+      }
+    }
 
   private def validateSubscriptionService(): Unit = {
     if (service eq null) throw new BadRequestException(

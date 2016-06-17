@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.state.{ AppDefinition, PathId, PersistentVolume, Timestamp }
+import mesosphere.marathon.state.{ RunSpec, PathId, PersistentVolume, Timestamp }
 import org.apache.mesos.Protos.{ TaskState }
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -59,7 +59,7 @@ sealed trait Task {
   /** update the task based on the given trigger - depending on its state the task will decide what should happen */
   def update(update: TaskStateOp): TaskStateChange
 
-  def appId: PathId = taskId.appId
+  def runSpecId: PathId = taskId.runSpecId
 
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task
@@ -82,8 +82,8 @@ sealed trait Task {
     }
   }
 
-  def effectiveIpAddress(app: AppDefinition): Option[String] = {
-    if (app.ipAddress.isDefined)
+  def effectiveIpAddress(runSpec: RunSpec): Option[String] = {
+    if (runSpec.ipAddress.isDefined)
       launched.flatMap(_.ipAddresses).flatMap(_.headOption).map(_.getIpAddress)
     else
       Some(agentInfo.host)
@@ -97,7 +97,7 @@ object Task {
   case class LaunchedEphemeral(
       taskId: Task.Id,
       agentInfo: AgentInfo,
-      appVersion: Timestamp,
+      runSpecVersion: Timestamp,
       status: Status,
       hostPorts: Seq[Int]) extends Task {
 
@@ -105,7 +105,7 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = None
 
-    override def launched: Option[Launched] = Some(Task.Launched(appVersion, status, hostPorts))
+    override def launched: Option[Launched] = Some(Task.Launched(runSpecVersion, status, hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -175,8 +175,8 @@ object Task {
     override def launched: Option[Launched] = None
 
     override def update(update: TaskStateOp): TaskStateChange = update match {
-      case TaskStateOp.LaunchOnReservation(_, appVersion, status, hostPorts) =>
-        val updatedTask = LaunchedOnReservation(taskId, agentInfo, appVersion, status, hostPorts, reservation)
+      case TaskStateOp.LaunchOnReservation(_, runSpecVersion, status, hostPorts) =>
+        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, status, hostPorts, reservation)
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       case _: TaskStateOp.ReservationTimeout =>
@@ -205,7 +205,7 @@ object Task {
   case class LaunchedOnReservation(
       taskId: Task.Id,
       agentInfo: AgentInfo,
-      appVersion: Timestamp,
+      runSpecVersion: Timestamp,
       status: Status,
       hostPorts: Seq[Int],
       reservation: Reservation) extends Task {
@@ -214,7 +214,7 @@ object Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
-    override def launched: Option[Launched] = Some(Task.Launched(appVersion, status, hostPorts))
+    override def launched: Option[Launched] = Some(Task.Launched(runSpecVersion, status, hostPorts))
 
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
@@ -306,27 +306,27 @@ object Task {
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
-    lazy val appId: PathId = Id.appId(idString)
+    lazy val runSpecId: PathId = Id.runSpecId(idString)
     override def toString: String = s"task [$idString]"
     override def compare(that: Id): Int = idString.compare(that.idString)
   }
 
   object Id {
-    private val appDelimiter = "."
+    private val runSpecDelimiter = "."
     private val TaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
-    def appId(taskId: String): PathId = {
+    def runSpecId(taskId: String): PathId = {
       taskId match {
-        case TaskIdRegex(appId, uuid) => PathId.fromSafePath(appId)
-        case _                        => throw new MatchError(s"taskId $taskId is no valid identifier")
+        case TaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
+        case _                            => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
     }
 
     def apply(mesosTaskId: MesosProtos.TaskID): Id = new Id(mesosTaskId.getValue)
 
-    def forApp(appId: PathId): Id = {
-      val taskId = appId.safePath + appDelimiter + uuidGenerator.generate()
+    def forRunSpec(id: PathId): Id = {
+      val taskId = id.safePath + runSpecDelimiter + uuidGenerator.generate()
       Task.Id(taskId)
     }
   }
@@ -359,6 +359,7 @@ object Task {
 
     /**
       * A timeout that eventually leads to a state transition
+      *
       * @param initiated When this timeout was setup
       * @param deadline When this timeout should become effective
       * @param reason The reason why this timeout was set up
@@ -379,9 +380,9 @@ object Task {
 
   case class LocalVolume(id: LocalVolumeId, persistentVolume: PersistentVolume)
 
-  case class LocalVolumeId(appId: PathId, containerPath: String, uuid: String) {
+  case class LocalVolumeId(runSpecId: PathId, containerPath: String, uuid: String) {
     import LocalVolumeId._
-    lazy val idString = appId.safePath + delimiter + containerPath + delimiter + uuid
+    lazy val idString = runSpecId.safePath + delimiter + containerPath + delimiter + uuid
 
     override def toString: String = s"LocalVolume [$idString]"
   }
@@ -391,12 +392,12 @@ object Task {
     private val delimiter = "#"
     private val LocalVolumeEncoderRE = s"^([^.]+)[$delimiter]([^.]+)[$delimiter]([^.]+)$$".r
 
-    def apply(appId: PathId, volume: PersistentVolume): LocalVolumeId =
-      LocalVolumeId(appId, volume.containerPath, uuidGenerator.generate().toString)
+    def apply(runSpecId: PathId, volume: PersistentVolume): LocalVolumeId =
+      LocalVolumeId(runSpecId, volume.containerPath, uuidGenerator.generate().toString)
 
     def unapply(id: String): Option[(LocalVolumeId)] = id match {
-      case LocalVolumeEncoderRE(app, path, uuid) => Some(LocalVolumeId(PathId.fromSafePath(app), path, uuid))
-      case _                                     => None
+      case LocalVolumeEncoderRE(runSpec, path, uuid) => Some(LocalVolumeId(PathId.fromSafePath(runSpec), path, uuid))
+      case _                                         => None
     }
   }
 
@@ -406,7 +407,7 @@ object Task {
     * @param hostPorts sequence of ports in the Mesos Agent allocated to the task
     */
   case class Launched(
-      appVersion: Timestamp,
+      runSpecVersion: Timestamp,
       status: Status,
       hostPorts: Seq[Int]) {
 

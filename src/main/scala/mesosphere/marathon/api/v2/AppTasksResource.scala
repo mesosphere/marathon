@@ -57,7 +57,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
       case _ =>
         val appId = id.toRootPath
         val maybeApp = result(groupManager.app(appId))
-        withAuthorization(ViewApp, maybeApp, unknownApp(appId)) { _ =>
+        withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
           ok(jsonObjString("tasks" -> runningTasks(Set(appId))))
         }
     }
@@ -69,7 +69,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   def indexTxt(@PathParam("appId") appId: String,
                @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
-    withAuthorization(ViewApp, result(groupManager.app(id)), unknownApp(id)) { app =>
+    withAuthorization(ViewRunSpec, result(groupManager.app(id)), unknownApp(id)) { app =>
       ok(EndpointsHelper.appsToEndpointString(taskTracker, Seq(app), "\t"))
     }
   }

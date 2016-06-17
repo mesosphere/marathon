@@ -108,9 +108,23 @@ Here is an example of an application JSON which includes all fields.
     "backoffSeconds": 1,
     "backoffFactor": 1.15,
     "maxLaunchDelaySeconds": 3600,
+    "taskKillGracePeriodSeconds": 2,
     "upgradeStrategy": {
         "minimumHealthCapacity": 0.5,
         "maximumOverCapacity": 0.2
+    },
+    "ipAddress": {
+        "groups": [
+            "backend"
+        ],
+        "labels": {
+            "color":   "purple",
+            "flavor":  "grape",
+            "org":     "product",
+            "service": "myApp",
+            "tier":    "backend"
+        },
+        "networkName": "dev-network"
     }
 }
 ```
@@ -335,6 +349,18 @@ filling up the hard disk on Mesos slaves. The backoff period is multiplied by
 the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
 This applies also to tasks that are killed due to failing too many health checks.
 
+##### taskKillGracePeriodSeconds (Optional.)
+
+Configures the termination signal escalation behavior of executors when stopping
+tasks. Sets the number of seconds between the executor sending SIGTERM to a task
+it is about to stop and then finally sending SIGKILL to enforce the matter.
+
+Using this grace period, tasks should perform orderly shutdown immediately upon
+receiving SIGTERM.
+
+By default, there is no grace period in effect or at most a minimal one, at the
+discretion of the Mesos implementation in use.
+
 ##### <a name="upgrade-strategy"></a> upgradeStrategy
 
 During an upgrade all instances of an application get replaced by a new version.
@@ -379,6 +405,27 @@ A combination of `minimumHealthCapacity` equal to `1.0` and
 `maximumOverCapacity` equal to `0.1` results in a rolling update, replacing
 10% of the instances at a time and keeping at least 100% of the app online at
 any point of time during the upgrade with 10% of additional capacity.
+
+##### <a name="ipaddress"></a> ipAddress
+
+`ipAddress` declares that your application will use IP-per-task networking.
+
+* `groups` (Optional) -
+A group is the name given to a set of logically-related interfaces that
+are allowed to communicate among themselves. Network traffic is allowed
+between two container interfaces that share at least one network group.
+For example, one might want to create separate groups for isolating dev,
+testing, qa and prod deployment environments.
+
+* `labels` (Optional) -
+To tag certain metadata to be used by Isolator/IPAM, e.g., rack, etc.
+
+* `networkName` (Optional) -
+Name of the network which will be used by Mesos to determine the network
+that the container joins. It is up to Mesos to decide how to interpret this
+field. If `ipAddress` is defined and its `networkName` is not then the value
+of `networkName` defaults to the value of the `default_network_name`
+command-line flag (if specified).
 
 ##### Example
 

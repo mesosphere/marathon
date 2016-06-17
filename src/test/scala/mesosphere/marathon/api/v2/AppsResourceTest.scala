@@ -11,6 +11,7 @@ import mesosphere.marathon.api.{ TestGroupManagerFixture, JsonTestHelper, TaskKi
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
@@ -34,14 +35,20 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   import mesosphere.marathon.api.v2.json.Formats._
 
-  test("Create a new app successfully") {
-    Given("An app and group")
-    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero))
+  def prepareApp(app: AppDefinition): (Array[Byte], DeploymentPlan) = {
     val group = Group(PathId("/"), Set(app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
     groupManager.rootGroup() returns Future.successful(group)
+    groupManager.app(app.id) returns Future.successful(Some(app))
+    (body, plan)
+  }
+
+  test("Create a new app successfully") {
+    Given("An app and group")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero))
+    val (body, plan) = prepareApp(app)
 
     When("The create request is made")
     clock += 5.seconds
@@ -61,41 +68,305 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
   }
 
+  test("Create a new app with IP/CT, no default network name, Alice does not specify a network") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress()),
+      portDefinitions = Seq.empty[PortDefinition])
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app with IP/CT, no default network name, Alice does not specify a network, then update it to bar") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress()),
+      portDefinitions = Seq.empty[PortDefinition])
+    prepareApp(app)
+
+    When("The application is updated")
+    val updatedApp = app.copy(ipAddress = Some(IpAddress(networkName = Some("bar"))))
+    val updatedJson = Json.toJson(updatedApp).as[JsObject] - "uris" - "version"
+    val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
+    val response = appsResource.replace(updatedApp.id.toString, updatedBody, false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(200)
+  }
+
+  test("Create a new app with IP/CT on virtual network foo") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(networkName = Some("foo"))),
+      portDefinitions = Seq.empty[PortDefinition])
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app with IP/CT on virtual network foo, then update it to bar") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(networkName = Some("foo"))),
+      portDefinitions = Seq.empty[PortDefinition])
+    prepareApp(app)
+
+    When("The application is updated")
+    val updatedApp = app.copy(ipAddress = Some(IpAddress(networkName = Some("bar"))))
+    val updatedJson = Json.toJson(updatedApp).as[JsObject] - "uris" - "version"
+    val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
+    val response = appsResource.replace(updatedApp.id.toString, updatedBody, false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(200)
+  }
+
+  test("Create a new app with IP/CT on virtual network foo, then update it to nothing") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(networkName = Some("foo"))),
+      portDefinitions = Seq.empty[PortDefinition])
+    prepareApp(app)
+
+    When("The application is updated")
+    val updatedApp = app.copy(ipAddress = Some(IpAddress()))
+    val updatedJson = Json.toJson(updatedApp).as[JsObject] - "uris" - "version"
+    val updatedBody = Json.stringify(updatedJson).getBytes("UTF-8")
+    val response = appsResource.replace(updatedApp.id.toString, updatedBody, false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(200)
+  }
+
+  test("Create a new app without IP/CT when default virtual network is bar") {
+    Given("An app and group")
+    configArgs = Seq("--default_network_name", "bar")
+    resetAppsResource
+
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      portDefinitions = Seq.empty[PortDefinition])
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app with IP/CT when default virtual network is bar, Alice did not specify network name") {
+    Given("An app and group")
+    configArgs = Seq("--default_network_name", "bar")
+    resetAppsResource
+
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress()),
+      portDefinitions = Seq.empty[PortDefinition])
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(
+        versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
+        ipAddress = Some(IpAddress(networkName = Some("bar")))
+      ),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app with IP/CT when default virtual network is bar, but Alice specified foo") {
+    Given("An app and group")
+    configArgs = Seq("--default_network_name", "bar")
+    resetAppsResource
+
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(networkName = Some("foo"))),
+      portDefinitions = Seq.empty[PortDefinition])
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app (that uses secrets) successfully") {
+    Given("The secrets feature is enabled")
+    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+
+    And("An app with a secret and an envvar secret-ref")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
+      secrets = Map[String, Secret]("foo" -> Secret("/bar")),
+      env = Map[String, EnvVarValue]("NAMED_FOO" -> EnvVarSecretRef("foo")))
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
+  test("Create a new app (that uses undefined secrets) and fails") {
+    Given("The secrets feature is enabled")
+    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+
+    And("An app with an envvar secret-ref that does not point to an undefined secret")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
+      env = Map[String, EnvVarValue]("NAMED_FOO" -> EnvVarSecretRef("foo")))
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It fails")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/env(NAMED_FOO)")
+    response.getEntity.toString should include("references an undefined secret named 'foo'")
+  }
+
+  test("Create the secrets feature is NOT enabled an app (that uses secrets) fails") {
+    Given("The secrets feature is NOT enabled")
+    AllConf.enabledFeatures should not contain Features.SECRETS
+
+    And("An app with an envvar secret-ref that does not point to an undefined secret")
+    val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
+      secrets = Map[String, Secret]("foo" -> Secret("/bar")),
+      env = Map[String, EnvVarValue]("NAMED_FOO" -> EnvVarSecretRef("foo")))
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It fails")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("Feature secrets is not enabled")
+  }
+
   test("Create a new app fails with Validation errors for negative resources") {
     Given("An app with negative resources")
-    var app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
-      versionInfo = OnlyVersion(Timestamp.zero), mem = -128)
-    var group = Group(PathId("/"), Set(app))
-    var plan = DeploymentPlan(group, group)
-    var body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-    groupManager.rootGroup() returns Future.successful(group)
 
-    Then("A constraint violation exception is thrown")
-    var response = appsResource.create(body, false, auth.request)
-    response.getStatus should be(422)
+    {
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
+        versionInfo = OnlyVersion(Timestamp.zero), mem = -128)
+      val (body, plan) = prepareApp(app)
 
-    app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
-      versionInfo = OnlyVersion(Timestamp.zero), cpus = -1)
-    group = Group(PathId("/"), Set(app))
-    plan = DeploymentPlan(group, group)
-    body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-    groupManager.rootGroup() returns Future.successful(group)
+      Then("A constraint violation exception is thrown")
+      val response = appsResource.create(body, false, auth.request)
+      response.getStatus should be(422)
+    }
 
-    response = appsResource.create(body, false, auth.request)
-    response.getStatus should be(422)
+    {
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
+        versionInfo = OnlyVersion(Timestamp.zero), cpus = -1)
+      val (body, plan) = prepareApp(app)
 
-    app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
-      versionInfo = OnlyVersion(Timestamp.zero), instances = -1)
-    group = Group(PathId("/"), Set(app))
-    plan = DeploymentPlan(group, group)
-    body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-    groupManager.rootGroup() returns Future.successful(group)
+      val response = appsResource.create(body, false, auth.request)
+      response.getStatus should be(422)
+    }
 
-    response = appsResource.create(body, false, auth.request)
-    response.getStatus should be(422)
+    {
+      val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
+        versionInfo = OnlyVersion(Timestamp.zero), instances = -1)
+      val (body, plan) = prepareApp(app)
+
+      val response = appsResource.create(body, false, auth.request)
+      response.getStatus should be(422)
+    }
 
   }
 
@@ -107,14 +378,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       portDefinitions = PortDefinitions(1000, 1001),
       versionInfo = OnlyVersion(Timestamp.zero)
     )
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
+    val (_, plan) = prepareApp(app)
     val appJson = Json.toJson(app).as[JsObject]
     val appJsonWithOnlyPorts = appJson - "portDefinitions" + ("ports" -> Json.parse("""[1000, 1001]"""))
     val body = Json.stringify(appJsonWithOnlyPorts).getBytes("UTF-8")
-
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-    groupManager.rootGroup() returns Future.successful(group)
 
     When("The create request is made")
     clock += 5.seconds
@@ -137,10 +404,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app fails with Validation errors") {
     Given("An app with validation errors")
     val app = AppDefinition(id = PathId("/app"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
-    val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    val (body, _) = prepareApp(app)
 
     Then("A constraint violation exception is thrown")
     val response = appsResource.create(body, false, auth.request)
@@ -179,10 +443,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Replace an existing application using ports instead of portDefinitions") {
     Given("An app and group")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-    groupManager.app(PathId("/app")) returns Future.successful(Some(app))
+    prepareApp(app)
 
     val appJson = Json.toJson(app).as[JsObject]
     val appJsonWithOnlyPorts = appJson - "uris" - "portDefinitions" - "version" +
@@ -199,8 +460,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Replace an existing application fails due to docker container validation") {
     Given("An app update with an invalid container (missing docker field)")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
+    prepareApp(app)
+
     val body =
       """{
         |  "cmd": "sleep 1",
@@ -208,7 +469,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |    "type": "DOCKER"
         |  }
         |}""".stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
     When("The application is updated")
     val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
@@ -221,8 +481,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   def createAppWithVolumes(`type`: String, volumes: String): Response = {
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
+    prepareApp(app)
+
     val docker = if (`type` == "DOCKER") """"docker": {"image": "fop"},""" else ""
     val body =
       s"""
@@ -239,8 +499,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
          |}
       """.stripMargin
 
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-
     When("The request is processed")
     appsResource.create(body.getBytes("UTF-8"), false, auth.request)
   }
@@ -250,7 +508,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val response = createAppWithVolumes("MESOS",
       """
         |    "volumes": [{
-        |      "containerPath": "/var",
+        |      "containerPath": "var",
         |      "persistent_WRONG_FIELD_NAME": {
         |        "size": 10
         |      },
@@ -269,7 +527,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val response = createAppWithVolumes("MESOS",
       """
         |    "volumes": [{
-        |      "containerPath": "/var",
+        |      "containerPath": "var",
         |      "external": {
         |        "size": 10,
         |        "name": "foo",
@@ -292,7 +550,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       createAppWithVolumes("MESOS",
         """
           |    "volumes": [{
-          |      "containerPath": "/var",
+          |      "containerPath": "var",
           |      "external": {
           |        "size": 10
           |      },
@@ -307,12 +565,56 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     e.getMessage should include("/container/volumes(0)/external/name")
   }
 
-  test("Creating an app with an external volume and MESOS containerizer should pass validation") {
+  test("Creating an app with an external volume w/ MESOS and absolute containerPath should fail validation") {
     Given("An app with a named, non-'agent' volume provider")
     val response = createAppWithVolumes("MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
+        |      "external": {
+        |        "size": 10,
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "options": {"dvdi/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates create failure")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/containerPath")
+  }
+
+  test("Creating an app with an external volume w/ MESOS and nested containerPath should fail validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("MESOS",
+      """
+        |    "volumes": [{
+        |      "containerPath": "var/child",
+        |      "external": {
+        |        "size": 10,
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "options": {"dvdi/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates create failure")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/containerPath")
+  }
+
+  test("Creating an app with an external volume and MESOS containerizer should pass validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("MESOS",
+      """
+        |    "volumes": [{
+        |      "containerPath": "var",
         |      "external": {
         |        "size": 10,
         |        "provider": "dvdi",
@@ -333,7 +635,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val response = createAppWithVolumes("MESOS",
       """
         |    "volumes": [{
-        |      "containerPath": "/var",
+        |      "containerPath": "var",
         |      "external": {
         |        "size": 10,
         |        "provider": "dvdi",
@@ -348,6 +650,27 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     Then("The return code indicates validation error")
     response.getStatus should be(422)
     response.getEntity.toString should include("/container/volumes(0)/external/options(\\\"dvdi/iops\\\")")
+  }
+
+  test("Creating an app with an external volume w/ relative containerPath DOCKER containerizer should fail validation") {
+    Given("An app with a named, non-'agent' volume provider")
+    val response = createAppWithVolumes("DOCKER",
+      """
+        |    "volumes": [{
+        |      "containerPath": "var",
+        |      "external": {
+        |        "provider": "dvdi",
+        |        "name": "namedfoo",
+        |        "options": {"dvdi/driver": "bar"}
+        |      },
+        |      "mode": "RW"
+        |    }]
+      """.stripMargin
+    )
+
+    Then("The return code indicates create failed")
+    response.getStatus should be(422)
+    response.getEntity.toString should include("/container/volumes(0)/containerPath")
   }
 
   test("Creating an app with an external volume and DOCKER containerizer should pass validation") {
@@ -472,8 +795,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Replace an existing application fails due to mesos container validation") {
     Given("An app update with an invalid container (missing docker field)")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
-    val plan = DeploymentPlan(group, group)
+    prepareApp(app)
+
     val body =
       """{
         |  "cmd": "sleep 1",
@@ -484,7 +807,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |    }
         |  }
         |}""".stripMargin.getBytes("UTF-8")
-    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
 
     When("The application is updated")
     val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
@@ -711,23 +1033,12 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   var appRepository: AppRepository = _
   var appTaskResource: AppTasksResource = _
   var groupRepository: GroupRepository = _
+  var configArgs: Seq[String] = _
 
-  before {
+  def resetAppsResource(): Unit = {
     //enable feature external volumes
-    AllConf.withTestConfig(Seq("--enable_features", "external_volumes"))
-    clock = ConstantClock()
-    auth = new TestAuthFixture
-    eventBus = mock[EventStream]
-    service = mock[MarathonSchedulerService]
-    taskTracker = mock[TaskTracker]
-    taskKiller = mock[TaskKiller]
-    healthCheckManager = mock[HealthCheckManager]
-    taskFailureRepo = mock[TaskFailureRepository]
-    config = mock[MarathonConf]
-    appInfoService = mock[AppInfoService]
-    groupManager = mock[GroupManager]
-    appRepository = mock[AppRepository]
-    appTaskResource = mock[AppTasksResource]
+    AllConf.withTestConfig(configArgs)
+    config = AllConf.config.get.asInstanceOf[MarathonConf] // TODO(jdef) any better ideas here?
     appsResource = new AppsResource(
       clock,
       eventBus,
@@ -737,8 +1048,26 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       config,
       auth.auth,
       auth.auth,
-      groupManager
+      groupManager,
+      PluginManager.None
     )
+  }
+
+  before {
+    configArgs = Seq("--enable_features", "external_volumes")
+    clock = ConstantClock()
+    auth = new TestAuthFixture
+    eventBus = mock[EventStream]
+    service = mock[MarathonSchedulerService]
+    taskTracker = mock[TaskTracker]
+    taskKiller = mock[TaskKiller]
+    healthCheckManager = mock[HealthCheckManager]
+    taskFailureRepo = mock[TaskFailureRepository]
+    appInfoService = mock[AppInfoService]
+    groupManager = mock[GroupManager]
+    appRepository = mock[AppRepository]
+    appTaskResource = mock[AppTasksResource]
+    resetAppsResource
   }
 
   private[this] def useRealGroupManager(): Unit = {
@@ -758,7 +1087,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       config,
       auth.auth,
       auth.auth,
-      groupManager
+      groupManager,
+      PluginManager.None
     )
   }
 }

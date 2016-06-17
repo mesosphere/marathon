@@ -1,7 +1,7 @@
 package mesosphere.marathon.integration
 
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{ ConfigMap, GivenWhenThen, Matchers }
 
 class InfoIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegrationTest with GivenWhenThen with Matchers {
   test("v2/info returns the right values") {
@@ -32,5 +32,29 @@ class InfoIntegrationTest extends IntegrationFunSuite with SingleMarathonIntegra
 
     And("the leader should match the value returned by /v2/leader")
     (info \ "leader").as[String] should be (marathon.leader().value.leader)
+  }
+}
+
+class AuthorizedZooKeeperInfoIntegrationTest extends IntegrationFunSuite
+    with SingleMarathonIntegrationTest with GivenWhenThen with Matchers {
+  lazy val credentials = "user:secret"
+  lazy val digest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(credentials)
+
+  override protected def beforeAll(configMap: ConfigMap): Unit = {
+    super.beforeAll(configMap + ("zkCredentials" -> credentials))
+  }
+
+  test("v2/info doesn't include the zk credentials") {
+    When("fetching the info")
+    val response = marathon.info
+
+    Then("the response should be successful")
+    response.code should be (200)
+
+    val info = response.entityJson
+
+    And("the ZooKeeper info should not contain the ZK credentials")
+    (info \ "zookeeper_config" \ "zk").as[String] should not contain ("user")
+    (info \ "zookeeper_config" \ "zk").as[String] should not contain ("secret")
   }
 }

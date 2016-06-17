@@ -1,23 +1,23 @@
 package mesosphere.marathon.plugin.auth
 
-import mesosphere.marathon.plugin.{ Group, AppDefinition }
+import mesosphere.marathon.plugin.{ Group, RunSpec }
 
 /**
   * Base trait for all actions in the system.
-  * All actions are defined on a specific resource with a given Resource Type.
+  * All actions are defined on a specific resource with a given resource Type.
   *
-  * @tparam Resource the type of the Resource.
+  * @tparam R the type of the resource.
   */
-sealed trait AuthorizedAction[+Resource]
+sealed trait AuthorizedAction[+R]
 
 /**
   * The following objects will be passed to the Authorizer when an action affects an application, in order to identify
   * which CRUD action needs to be authorized.
   */
-case object CreateApp extends AuthorizedAction[AppDefinition]
-case object UpdateApp extends AuthorizedAction[AppDefinition]
-case object DeleteApp extends AuthorizedAction[AppDefinition]
-case object ViewApp extends AuthorizedAction[AppDefinition]
+case object CreateRunSpec extends AuthorizedAction[RunSpec]
+case object UpdateRunSpec extends AuthorizedAction[RunSpec]
+case object DeleteRunSpec extends AuthorizedAction[RunSpec]
+case object ViewRunSpec extends AuthorizedAction[RunSpec]
 
 /**
   * The following objects will be passed to the Authorizer when an action affects group, in order to identify which CRUD
@@ -27,3 +27,14 @@ case object CreateGroup extends AuthorizedAction[Group]
 case object UpdateGroup extends AuthorizedAction[Group]
 case object DeleteGroup extends AuthorizedAction[Group]
 case object ViewGroup extends AuthorizedAction[Group]
+
+/**
+  * The following object will be passed to the Authorizer when an action affects system configuration
+  */
+case object ViewSystemConfig extends AuthorizedAction[String]
+case object UpdateSystemConfig extends AuthorizedAction[String]
+
+/**
+  * The following object will be passed to the Authorizer when an action affects the event stream.
+  */
+case object ViewEventStream extends AuthorizedAction[Unit]

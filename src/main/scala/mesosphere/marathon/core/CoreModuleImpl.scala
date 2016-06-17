@@ -9,7 +9,7 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.flow.FlowModule
-import mesosphere.marathon.core.launcher.{ TaskOpFactory, LauncherModule }
+import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -47,7 +47,6 @@ class CoreModuleImpl @Inject() (
     appRepository: AppRepository,
     groupRepository: GroupRepository,
     taskRepository: TaskRepository,
-    taskOpFactory: TaskOpFactory,
     clock: Clock,
     taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
 
@@ -109,7 +108,8 @@ class CoreModuleImpl @Inject() (
     StopOnFirstMatchingOfferMatcher(
       offerMatcherReconcilerModule.offerMatcherReconciler,
       offerMatcherManagerModule.globalOfferMatcher
-    )
+    ),
+    pluginModule.pluginManager
   )
 
   override lazy val appOfferMatcherModule = new LaunchQueueModule(
@@ -121,9 +121,8 @@ class CoreModuleImpl @Inject() (
     maybeOfferReviver,
 
     // external guice dependencies
-    appRepository,
     taskTrackerModule.taskTracker,
-    taskOpFactory
+    launcherModule.taskOpFactory
   )
 
   // PLUGINS

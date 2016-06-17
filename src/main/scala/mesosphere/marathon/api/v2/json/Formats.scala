@@ -59,7 +59,8 @@ trait Formats
     with EventFormats
     with EventSubscribersFormats
     with PluginFormats
-    with IpAddressFormats {
+    with IpAddressFormats
+    with SecretFormats {
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
     Json.obj(
@@ -127,7 +128,7 @@ trait Formats
           "startedAt" -> launched.status.startedAt,
           "stagedAt" -> launched.status.stagedAt,
           "ports" -> launched.hostPorts,
-          "version" -> launched.appVersion
+          "version" -> launched.runSpecVersion
         )
       ){
           case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
@@ -318,8 +319,9 @@ trait IpAddressFormats {
   implicit lazy val IpAddressFormat: Format[IpAddress] = (
     (__ \ "groups").formatNullable[Seq[String]].withDefault(Nil) ~
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
-    (__ \ "discovery").formatNullable[DiscoveryInfo].withDefault(DiscoveryInfo.empty)
-  )(IpAddress(_, _, _), unlift(IpAddress.unapply))
+    (__ \ "discovery").formatNullable[DiscoveryInfo].withDefault(DiscoveryInfo.empty) ~
+    (__ \ "networkName").formatNullable[String]
+  )(IpAddress(_, _, _, _), unlift(IpAddress.unapply))
 }
 
 trait DeploymentFormats {
@@ -565,6 +567,10 @@ trait FetchUriFormats {
   }
 }
 
+trait SecretFormats {
+  implicit lazy val SecretFormat = Json.format[Secret]
+}
+
 trait AppAndGroupFormats {
 
   import Formats._
@@ -608,6 +614,26 @@ trait AppAndGroupFormats {
     }
   )
 
+  implicit lazy val EnvVarSecretRefFormat: Format[EnvVarSecretRef] = Json.format[EnvVarSecretRef]
+  implicit lazy val EnvVarValueFormat: Format[EnvVarValue] = Format(
+    new Reads[EnvVarValue] {
+      override def reads(json: JsValue): JsResult[EnvVarValue] = {
+        json.asOpt[String] match {
+          case Some(stringValue) => JsSuccess(EnvVarString(stringValue))
+          case _                 => JsSuccess(json.as[EnvVarSecretRef])
+        }
+      }
+    },
+    new Writes[EnvVarValue] {
+      override def writes(envvar: EnvVarValue): JsValue = {
+        envvar match {
+          case s: EnvVarString      => JsString(s.value)
+          case ref: EnvVarSecretRef => EnvVarSecretRefFormat.writes(ref)
+        }
+      }
+    }
+  )
+
   implicit lazy val AppDefinitionReads: Reads[AppDefinition] = {
     val executorPattern = "^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r
     (
@@ -615,7 +641,7 @@ trait AppAndGroupFormats {
       (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
       (__ \ "args").readNullable[Seq[String]] ~
       (__ \ "user").readNullable[String] ~
-      (__ \ "env").readNullable[Map[String, String]].withDefault(AppDefinition.DefaultEnv) ~
+      (__ \ "env").readNullable[Map[String, EnvVarValue]].withDefault(AppDefinition.DefaultEnv) ~
       (__ \ "instances").readNullable[Int].withDefault(AppDefinition.DefaultInstances) ~
       (__ \ "cpus").readNullable[Double].withDefault(AppDefinition.DefaultCpus) ~
       (__ \ "mem").readNullable[Double].withDefault(AppDefinition.DefaultMem) ~
@@ -653,7 +679,9 @@ trait AppAndGroupFormats {
             version: Timestamp,
             residency: Option[Residency],
             maybePortDefinitions: Option[Seq[PortDefinition]],
-            readinessChecks: Seq[ReadinessCheck]) {
+            readinessChecks: Seq[ReadinessCheck],
+            secrets: Map[String, Secret],
+            maybeTaskKillGracePeriod: Option[FiniteDuration]) {
           def upgradeStrategyOrDefault: UpgradeStrategy = {
             import UpgradeStrategy.{ forResidentTasks, empty }
             upgradeStrategy.getOrElse {
@@ -678,7 +706,10 @@ trait AppAndGroupFormats {
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
             (__ \ "residency").readNullable[Residency] ~
             (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
-            (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]].withDefault(AppDefinition.DefaultReadinessChecks)
+            (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]].withDefault(
+              AppDefinition.DefaultReadinessChecks) ~
+              (__ \ "secrets").readNullable[Map[String, Secret]].withDefault(AppDefinition.DefaultSecrets) ~
+              (__ \ "taskKillGracePeriodSeconds").readNullable[Long].map(_.map(_.seconds))
           )(ExtraFields)
             .filter(ValidationError("You cannot specify both uris and fetch fields")) { extra =>
               !(extra.uris.nonEmpty && extra.fetch.nonEmpty)
@@ -719,7 +750,9 @@ trait AppAndGroupFormats {
             ipAddress = extra.ipAddress,
             versionInfo = AppDefinition.VersionInfo.OnlyVersion(extra.version),
             residency = extra.residencyOrDefault,
-            readinessChecks = extra.readinessChecks
+            readinessChecks = extra.readinessChecks,
+            secrets = extra.secrets,
+            taskKillGracePeriod = extra.maybeTaskKillGracePeriod
           )
         }
       }
@@ -780,49 +813,51 @@ trait AppAndGroupFormats {
     .withDefault(Residency.defaultTaskLostBehaviour)
   ) (Residency(_, _), unlift(Residency.unapply))
 
-  implicit lazy val AppDefinitionWrites: Writes[AppDefinition] = {
+  implicit lazy val RunSpecWrites: Writes[RunSpec] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
     }
 
-    Writes[AppDefinition] { app =>
+    Writes[RunSpec] { runSpec =>
       val appJson: JsObject = Json.obj(
-        "id" -> app.id.toString,
-        "cmd" -> app.cmd,
-        "args" -> app.args,
-        "user" -> app.user,
-        "env" -> app.env,
-        "instances" -> app.instances,
-        "cpus" -> app.cpus,
-        "mem" -> app.mem,
-        "disk" -> app.disk,
-        "executor" -> app.executor,
-        "constraints" -> app.constraints,
-        "uris" -> app.fetch.map(_.uri),
-        "fetch" -> app.fetch,
-        "storeUrls" -> app.storeUrls,
+        "id" -> runSpec.id.toString,
+        "cmd" -> runSpec.cmd,
+        "args" -> runSpec.args,
+        "user" -> runSpec.user,
+        "env" -> runSpec.env,
+        "instances" -> runSpec.instances,
+        "cpus" -> runSpec.cpus,
+        "mem" -> runSpec.mem,
+        "disk" -> runSpec.disk,
+        "executor" -> runSpec.executor,
+        "constraints" -> runSpec.constraints,
+        "uris" -> runSpec.fetch.map(_.uri),
+        "fetch" -> runSpec.fetch,
+        "storeUrls" -> runSpec.storeUrls,
         // the ports field was written incorrectly in old code if a container was specified
         // it should contain the service ports
-        "ports" -> app.servicePorts,
-        "portDefinitions" -> app.portDefinitions.zip(app.servicePorts).map {
+        "ports" -> runSpec.servicePorts,
+        "portDefinitions" -> runSpec.portDefinitions.zip(runSpec.servicePorts).map {
           case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
         },
-        "requirePorts" -> app.requirePorts,
-        "backoffSeconds" -> app.backoff,
-        "backoffFactor" -> app.backoffFactor,
-        "maxLaunchDelaySeconds" -> app.maxLaunchDelay,
-        "container" -> app.container,
-        "healthChecks" -> app.healthChecks,
-        "readinessChecks" -> app.readinessChecks,
-        "dependencies" -> app.dependencies,
-        "upgradeStrategy" -> app.upgradeStrategy,
-        "labels" -> app.labels,
-        "acceptedResourceRoles" -> app.acceptedResourceRoles,
-        "ipAddress" -> app.ipAddress,
-        "version" -> app.version,
-        "residency" -> app.residency
+        "requirePorts" -> runSpec.requirePorts,
+        "backoffSeconds" -> runSpec.backoff,
+        "backoffFactor" -> runSpec.backoffFactor,
+        "maxLaunchDelaySeconds" -> runSpec.maxLaunchDelay,
+        "container" -> runSpec.container,
+        "healthChecks" -> runSpec.healthChecks,
+        "readinessChecks" -> runSpec.readinessChecks,
+        "dependencies" -> runSpec.dependencies,
+        "upgradeStrategy" -> runSpec.upgradeStrategy,
+        "labels" -> runSpec.labels,
+        "acceptedResourceRoles" -> runSpec.acceptedResourceRoles,
+        "ipAddress" -> runSpec.ipAddress,
+        "version" -> runSpec.version,
+        "residency" -> runSpec.residency,
+        "secrets" -> runSpec.secrets,
+        "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod
       )
-      Json.toJson(app.versionInfo) match {
+      Json.toJson(runSpec.versionInfo) match {
         case JsNull     => appJson
         case v: JsValue => appJson + ("versionInfo" -> v)
       }
@@ -896,7 +931,7 @@ trait AppAndGroupFormats {
 
   implicit lazy val ExtendedAppInfoWrites: Writes[AppInfo] =
     Writes { info =>
-      val appJson = AppDefinitionWrites.writes(info.app).as[JsObject]
+      val appJson = RunSpecWrites.writes(info.app).as[JsObject]
 
       val maybeJson = Seq[Option[JsObject]](
         info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
@@ -932,7 +967,7 @@ trait AppAndGroupFormats {
     (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
     (__ \ "args").readNullable[Seq[String]] ~
     (__ \ "user").readNullable[String] ~
-    (__ \ "env").readNullable[Map[String, String]] ~
+    (__ \ "env").readNullable[Map[String, EnvVarValue]] ~
     (__ \ "instances").readNullable[Int] ~
     (__ \ "cpus").readNullable[Double] ~
     (__ \ "mem").readNullable[Double] ~
@@ -968,7 +1003,9 @@ trait AppAndGroupFormats {
         residency: Option[Residency],
         ports: Option[Seq[Int]],
         portDefinitions: Option[Seq[PortDefinition]],
-        readinessChecks: Option[Seq[ReadinessCheck]])
+        readinessChecks: Option[Seq[ReadinessCheck]],
+        secrets: Option[Map[String, Secret]],
+        taskKillGracePeriodSeconds: Option[FiniteDuration])
 
       val extraReads: Reads[ExtraFields] =
         (
@@ -982,7 +1019,9 @@ trait AppAndGroupFormats {
           (__ \ "residency").readNullable[Residency] ~
           (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
           (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
-          (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]]
+          (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]] ~
+          (__ \ "secrets").readNullable[Map[String, Secret]] ~
+          (__ \ "taskKillGracePeriodSeconds").readNullable[Long].map(_.map(_.seconds))
         )(ExtraFields)
 
       extraReads
@@ -1005,7 +1044,9 @@ trait AppAndGroupFormats {
             portDefinitions = extra.portDefinitions.orElse {
               extra.ports.map { ports => PortDefinitions.apply(ports: _*) }
             },
-            readinessChecks = extra.readinessChecks
+            readinessChecks = extra.readinessChecks,
+            secrets = extra.secrets,
+            taskKillGracePeriod = extra.taskKillGracePeriodSeconds
           )
         }
     }.map(addHealthCheckPortIndexIfNecessary)

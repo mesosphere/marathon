@@ -266,7 +266,7 @@ class GroupsResource @Inject() (
 
       maybeExistingGroup match {
         case Some(existingGroup) => checkAuthorization(UpdateGroup, existingGroup)
-        case None                => checkAuthorization(CreateApp, updatedGroup)
+        case None                => checkAuthorization(CreateRunSpec, updatedGroup)
       }
 
       updatedGroup
@@ -287,6 +287,6 @@ class GroupsResource @Inject() (
 
   def allAuthorized(implicit identity: Identity): GroupSelector = new GroupSelector {
     override def matches(group: Group): Boolean = isAuthorized(ViewGroup, group)
-    override def matches(app: AppDefinition): Boolean = isAuthorized(ViewApp, app)
+    override def matches(app: AppDefinition): Boolean = isAuthorized(ViewRunSpec, app)
   }
 }

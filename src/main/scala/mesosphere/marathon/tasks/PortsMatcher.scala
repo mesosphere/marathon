@@ -1,6 +1,6 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.state.{ ResourceRole, AppDefinition, Container }
+import mesosphere.marathon.state.{ ResourceRole, RunSpec, Container }
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -28,7 +28,7 @@ case class PortsMatch(hostPortsWithRole: Seq[PortWithRole]) {
   * Utility class for checking if the ports resource in an offer matches the requirements of an app.
   */
 class PortsMatcher(
-  app: AppDefinition,
+  runSpec: RunSpec,
   offer: MesosProtos.Offer,
   resourceSelector: ResourceSelector = ResourceSelector.any(Set(ResourceRole.Unreserved)),
   random: Random = Random)
@@ -41,25 +41,25 @@ class PortsMatcher(
   private[this] def portsWithRoles: Option[Seq[PortWithRole]] = {
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
       for {
-        c <- app.container
+        c <- runSpec.container
         d <- c.docker
         pms <- d.portMappings if pms.nonEmpty
       } yield pms
 
-    (app.portNumbers, portMappings) match {
+    (runSpec.portNumbers, portMappings) match {
       case (Nil, None) => // optimization for empty special case
         Some(Seq.empty)
 
-      case (appPortSpec, Some(mappings)) =>
+      case (ports, Some(mappings)) =>
         // We use the mappings from the containers if they are available and ignore any other port specification.
         // We cannot warn about this because we autofill the ports field.
         mappedPortRanges(mappings)
 
-      case (appPorts, None) if app.requirePorts =>
-        findPortsInOffer(appPorts, failLog = true)
+      case (ports, None) if runSpec.requirePorts =>
+        findPortsInOffer(ports, failLog = true)
 
-      case (appPorts, None) =>
-        randomPorts(appPorts.size)
+      case (ports, None) =>
+        randomPorts(ports.size)
     }
   }
 
@@ -76,7 +76,7 @@ class PortsMatcher(
             log.info(
               s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
                 s"Couldn't find host port $port (of ${requiredPorts.mkString(", ")}) " +
-                s"in any offered range for app [${app.id}]")
+                s"in any offered range for run spec [${runSpec.id}]")
           None
         }
       }
@@ -91,7 +91,7 @@ class PortsMatcher(
       shuffledAvailablePorts.map(Some(_))
     } orElse {
       log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
-        s"Couldn't find $numberOfPorts ports in offer for app [${app.id}]")
+        s"Couldn't find $numberOfPorts ports in offer for run spec [${runSpec.id}]")
       None
     }
   }
@@ -113,7 +113,7 @@ class PortsMatcher(
         case PortMapping(containerPort, hostPort, servicePort, protocol, name, labels) if hostPort == 0 =>
           if (!availablePortsWithoutStaticHostPorts.hasNext) {
             log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
-              s"Insufficient ports in offer for app [${app.id}]")
+              s"Insufficient ports in offer for run spec [${runSpec.id}]")
             None
           }
           else {
@@ -125,7 +125,7 @@ class PortsMatcher(
               Some(PortWithRole(role, pm.hostPort, reservation))
             case None =>
               log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
-                s"Cannot find range with host port ${pm.hostPort} for app [${app.id}]")
+                s"Cannot find range with host port ${pm.hostPort} for run spec [${runSpec.id}]")
               None
           }
       }
@@ -217,7 +217,7 @@ object PortsMatcher {
     }
 
     /**
-      * We want to make it less likely that we are reusing the same dynamic port for tasks of different apps.
+      * We want to make it less likely that we are reusing the same dynamic port for tasks of different run specs.
       * This way we allow load balancers to reconfigure before reusing the same ports.
       *
       * Therefore we want to choose dynamic ports randomly from all the offered port ranges.

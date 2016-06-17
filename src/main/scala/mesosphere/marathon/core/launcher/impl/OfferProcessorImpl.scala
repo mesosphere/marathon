@@ -130,7 +130,7 @@ private[launcher] class OfferProcessorImpl(
           case NonFatal(e) =>
             savingTasksErrorMeter.mark()
             taskOpWithSource.reject(s"storage error: $e")
-            log.warn(s"error while storing task $taskId for app [${taskId.appId}]", e)
+            log.warn(s"error while storing task $taskId for app [${taskId.runSpecId}]", e)
             revertTaskOps(Some(taskOpWithSource.op))
         }.map {
           case Some(savedTask) => Some(taskOpWithSource)

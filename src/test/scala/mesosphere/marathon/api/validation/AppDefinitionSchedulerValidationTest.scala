@@ -1,10 +1,13 @@
 package mesosphere.marathon.api.validation
 
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class AppDefinitionSchedulerValidationTest extends MarathonSpec with Matchers with GivenWhenThen {
+
+  lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
 
   test("scheduler app using API is considered a scheduler and valid") {
     val f = new Fixture
@@ -12,7 +15,7 @@ class AppDefinitionSchedulerValidationTest extends MarathonSpec with Matchers wi
     val app = f.schedulerAppWithApi()
 
     Then("the app is considered valid")
-    AppDefinition.validAppDefinition(app).isSuccess shouldBe true
+    validAppDefinition(app).isSuccess shouldBe true
   }
 
   test("required scheduler labels") {
@@ -28,21 +31,21 @@ class AppDefinitionSchedulerValidationTest extends MarathonSpec with Matchers wi
       AppDefinition.Labels.DcosMigrationApiVersion -> "v1"
     ))
     Then("the app is not valid")
-    AppDefinition.validAppDefinition(step1).isSuccess shouldBe false
+    validAppDefinition(step1).isSuccess shouldBe false
 
     When("the framework label is added")
     val step2 = normalApp.copy(labels = step1.labels + (
       AppDefinition.Labels.DcosPackageFrameworkName -> "Framework-42"
     ))
     Then("the app is not valid")
-    AppDefinition.validAppDefinition(step2).isSuccess shouldBe false
+    validAppDefinition(step2).isSuccess shouldBe false
 
     When("the Migration API path is added")
     val step3 = normalApp.copy(labels = step2.labels + (
       AppDefinition.Labels.DcosMigrationApiPath -> "/v1/plan"
     ))
     Then("the app is valid")
-    AppDefinition.validAppDefinition(step3).isSuccess shouldBe true
+    validAppDefinition(step3).isSuccess shouldBe true
   }
 
   test("If a scheduler application defines DCOS_MIGRATION_API_VERSION, only 'v1' is valid") {
@@ -51,7 +54,7 @@ class AppDefinitionSchedulerValidationTest extends MarathonSpec with Matchers wi
     val app = f.schedulerAppWithApi(migrationApiVersion = "v2")
 
     Then("the validation should fail")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("If a scheduler application defines DCOS_MIGRATION_API_PATH it must be non-empty") {
@@ -60,7 +63,7 @@ class AppDefinitionSchedulerValidationTest extends MarathonSpec with Matchers wi
     val app = f.schedulerAppWithApi(migrationApiPath = "")
 
     Then("the validation should fail")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   test("If a scheduler application defines DCOS_PACKAGE_FRAMEWORK_NAME it must be non-empty") {
@@ -69,7 +72,7 @@ class AppDefinitionSchedulerValidationTest extends MarathonSpec with Matchers wi
     val app = f.schedulerAppWithApi(frameworkName = "")
 
     Then("the validation should fail")
-    AppDefinition.validAppDefinition(app).isFailure shouldBe true
+    validAppDefinition(app).isFailure shouldBe true
   }
 
   class Fixture {

@@ -62,7 +62,7 @@ object MarathonTestHelper {
     mesosRole.foreach(args ++= Seq("--mesos_role", _))
     acceptedResourceRoles.foreach(v => args ++= Seq("--default_accepted_resource_roles", v.mkString(",")))
     maxZkNodeSize.foreach(size => args ++= Seq("--zk_max_node_size", size.toString))
-    envVarsPrefix.foreach(args ++ Seq("--env_vars_prefix", _))
+    envVarsPrefix.foreach(args ++= Seq("--env_vars_prefix", _))
     makeConfig(args: _*)
   }
 
@@ -254,7 +254,7 @@ object MarathonTestHelper {
           agentId = Some(offer.getSlaveId.getValue),
           attributes = offer.getAttributesList.asScala
         ),
-        appVersion = version,
+        runSpecVersion = version,
         status = Task.Status(
           stagedAt = now
         ),
@@ -323,13 +323,13 @@ object MarathonTestHelper {
     createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
   }
 
-  def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forApp(appId).idString)
+  def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forRunSpec(appId).idString)
   def mininimalTask(taskId: Task.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
   def mininimalTask(taskId: String, now: Timestamp = clock.now()): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
-      appVersion = now,
+      runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,
         startedAt = None,
@@ -341,7 +341,7 @@ object MarathonTestHelper {
 
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
-      taskId = Task.Id.forApp(appId),
+      taskId = Task.Id.forRunSpec(appId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       reservation = reservation)
 
@@ -356,12 +356,12 @@ object MarathonTestHelper {
 
   def taskLaunchedOp(taskId: Task.Id): TaskStateOp.LaunchOnReservation = {
     val now = Timestamp.now()
-    TaskStateOp.LaunchOnReservation(taskId = taskId, appVersion = now, status = Task.Status(now), hostPorts = Seq.empty)
+    TaskStateOp.LaunchOnReservation(taskId = taskId, runSpecVersion = now, status = Task.Status(now), hostPorts = Seq.empty)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     startingTask(
-      Task.Id.forApp(appId).idString,
+      Task.Id.forRunSpec(appId).idString,
       appVersion = appVersion,
       stagedAt = stagedAt
     )
@@ -369,7 +369,7 @@ object MarathonTestHelper {
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
       agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
-      appVersion = appVersion,
+      runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
         startedAt = None,
@@ -380,7 +380,7 @@ object MarathonTestHelper {
 
   def stagedTaskForApp(
     appId: PathId = PathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
-    stagedTask(Task.Id.forApp(appId).idString, appVersion = appVersion, stagedAt = stagedAt)
+    stagedTask(Task.Id.forRunSpec(appId).idString, appVersion = appVersion, stagedAt = stagedAt)
   def stagedTask(
     taskId: String,
     appVersion: Timestamp = Timestamp(1),
@@ -389,7 +389,7 @@ object MarathonTestHelper {
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
       agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
-      appVersion = appVersion,
+      runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
         startedAt = None,
@@ -403,7 +403,7 @@ object MarathonTestHelper {
                         stagedAt: Long = 2,
                         startedAt: Long = 3): Task.LaunchedEphemeral =
     runningTask(
-      Task.Id.forApp(appId).idString,
+      Task.Id.forRunSpec(appId).idString,
       appVersion = appVersion,
       stagedAt = stagedAt,
       startedAt = startedAt
@@ -425,7 +425,7 @@ object MarathonTestHelper {
 
   }
 
-  def healthyTask(appId: PathId): Task.LaunchedEphemeral = healthyTask(Task.Id.forApp(appId).idString)
+  def healthyTask(appId: PathId): Task.LaunchedEphemeral = healthyTask(Task.Id.forRunSpec(appId).idString)
   def healthyTask(taskId: String): Task.LaunchedEphemeral = {
     import Implicits._
     runningTask(taskId).withStatus { status =>
@@ -433,7 +433,7 @@ object MarathonTestHelper {
     }
   }
 
-  def unhealthyTask(appId: PathId): Task.LaunchedEphemeral = unhealthyTask(Task.Id.forApp(appId).idString)
+  def unhealthyTask(appId: PathId): Task.LaunchedEphemeral = unhealthyTask(Task.Id.forRunSpec(appId).idString)
   def unhealthyTask(taskId: String): Task.LaunchedEphemeral = {
     import Implicits._
     runningTask(taskId).withStatus { status =>
@@ -500,9 +500,9 @@ object MarathonTestHelper {
   def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
-      taskId = Task.Id.forApp(appId),
+      taskId = Task.Id.forRunSpec(appId),
       agentInfo = Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
-      appVersion = now,
+      runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,
         startedAt = None,

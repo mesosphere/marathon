@@ -34,7 +34,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
           case Failure(t) =>
             replyTo ! Unhealthy(
               task.taskId,
-              launched.appVersion,
+              launched.runSpecVersion,
               s"${t.getClass.getSimpleName}: ${t.getMessage}"
             )
         }
@@ -48,7 +48,9 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         check.hostPort(launched) match {
           case None => Future.successful {
             Some(
-              Unhealthy(task.taskId, launched.appVersion, "Missing/invalid port index and no explicit port specified"))
+              Unhealthy(task.taskId,
+                launched.runSpecVersion,
+                "Missing/invalid port index and no explicit port specified"))
           }
           case Some(port) => check.protocol match {
             case HTTP  => http(task, launched, check, host, port)
@@ -92,13 +94,13 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Some(Healthy(task.taskId, launched.appVersion))
+        Some(Healthy(task.taskId, launched.runSpecVersion))
       else if (check.ignoreHttp1xx && (toIgnoreResponses contains response.status.intValue)) {
         log.debug(s"Ignoring health check HTTP response ${response.status.intValue} for ${task.taskId}")
         None
       }
       else {
-        Some(Unhealthy(task.taskId, launched.appVersion, response.status.toString()))
+        Some(Unhealthy(task.taskId, launched.runSpecVersion, response.status.toString()))
       }
     }
   }
@@ -116,7 +118,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
         socket.connect(address, timeoutMillis)
         socket.close()
       }
-      Some(Healthy(task.taskId, launched.appVersion, Timestamp.now()))
+      Some(Healthy(task.taskId, launched.runSpecVersion, Timestamp.now()))
     }(ThreadPoolContext.ioContext)
   }
 
@@ -148,9 +150,9 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
 
     get(url).map { response =>
       if (acceptableResponses contains response.status.intValue)
-        Some(Healthy(task.taskId, launched.appVersion))
+        Some(Healthy(task.taskId, launched.runSpecVersion))
       else
-        Some(Unhealthy(task.taskId, launched.appVersion, response.status.toString()))
+        Some(Unhealthy(task.taskId, launched.runSpecVersion, response.status.toString()))
     }
   }
 

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.state.{ AppDefinition, Group, GroupManager, Timestamp }
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import org.mockito.Mockito._
@@ -20,13 +20,37 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito {
+  test("list (txt) tasks with less ports than the current app version") {
+    // Regression test for #234
+    Given("one app with one task with less ports than required")
+    val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+
+    val taskId = Task.Id.forRunSpec(app.id).idString
+    val task = MarathonTestHelper.runningTask(taskId)
+
+    config.zkTimeoutDuration returns 5.seconds
+
+    val tasksByApp = TaskTracker.TasksByApp.forTasks(task)
+    taskTracker.tasksByAppSync returns tasksByApp
+
+    val rootGroup = Group("/".toRootPath, apps = Set(app))
+    groupManager.rootGroup() returns Future.successful(rootGroup)
+
+    assert(app.servicePorts.size > task.launched.get.hostPorts.size)
+
+    When("Getting the txt tasks index")
+    val response = taskResource.indexTxt(auth.request)
+
+    Then("The status should be 200")
+    response.getStatus shouldEqual 200
+  }
 
   test("killTasks") {
     Given("two apps and 1 task each")
     val app1 = "/my/app-1".toRootPath
     val app2 = "/my/app-2".toRootPath
-    val taskId1 = Task.Id.forApp(app1).idString
-    val taskId2 = Task.Id.forApp(app2).idString
+    val taskId1 = Task.Id.forRunSpec(app1).idString
+    val taskId2 = Task.Id.forRunSpec(app2).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
 
@@ -60,8 +84,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     Given("two apps and 1 task each")
     val app1 = "/my/app-1".toRootPath
     val app2 = "/my/app-2".toRootPath
-    val taskId1 = Task.Id.forApp(app1).idString
-    val taskId2 = Task.Id.forApp(app2).idString
+    val taskId1 = Task.Id.forRunSpec(app1).idString
+    val taskId2 = Task.Id.forRunSpec(app2).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
     val deploymentPlan = new DeploymentPlan("plan", Group.empty, Group.empty, Seq.empty[DeploymentStep], Timestamp.zero)
@@ -94,7 +118,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
   test("killTasks with scale and wipe fails") {
     Given("a request")
     val app1 = "/my/app-1".toRootPath
-    val taskId1 = Task.Id.forApp(app1).idString
+    val taskId1 = Task.Id.forRunSpec(app1).idString
     val body = s"""{"ids": ["$taskId1"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
 
@@ -113,7 +137,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     Given("a task that shall be killed")
     val app1 = "/my/app-1".toRootPath
-    val taskId1 = Task.Id.forApp(app1).idString
+    val taskId1 = Task.Id.forRunSpec(app1).idString
     val body = s"""{"ids": ["$taskId1"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
     val task1 = MarathonTestHelper.runningTask(taskId1)
@@ -141,9 +165,9 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     auth.authenticated = false
     val req = auth.request
     val appId = "/my/app".toRootPath
-    val taskId1 = Task.Id.forApp(appId).idString
-    val taskId2 = Task.Id.forApp(appId).idString
-    val taskId3 = Task.Id.forApp(appId).idString
+    val taskId1 = Task.Id.forRunSpec(appId).idString
+    val taskId2 = Task.Id.forRunSpec(appId).idString
+    val taskId3 = Task.Id.forRunSpec(appId).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
     Given("the app exists")
@@ -160,9 +184,9 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     auth.authenticated = false
     val req = auth.request
     val appId = "/my/app".toRootPath
-    val taskId1 = Task.Id.forApp(appId).idString
-    val taskId2 = Task.Id.forApp(appId).idString
-    val taskId3 = Task.Id.forApp(appId).idString
+    val taskId1 = Task.Id.forRunSpec(appId).idString
+    val taskId2 = Task.Id.forRunSpec(appId).idString
+    val taskId3 = Task.Id.forRunSpec(appId).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
     Given("the app does not exist")
@@ -196,9 +220,9 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     auth.authorized = false
     val req = auth.request
     val appId = "/my/app".toRootPath
-    val taskId1 = Task.Id.forApp(appId).idString
-    val taskId2 = Task.Id.forApp(appId).idString
-    val taskId3 = Task.Id.forApp(appId).idString
+    val taskId1 = Task.Id.forRunSpec(appId).idString
+    val taskId2 = Task.Id.forRunSpec(appId).idString
+    val taskId3 = Task.Id.forRunSpec(appId).idString
     val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
     taskKiller = new TaskKiller(taskTracker, stateOpProcessor, groupManager, service, config, auth.auth, auth.auth)
@@ -226,7 +250,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
   test("killTasks fails for invalid taskId") {
     Given("a valid and an invalid taskId")
     val app1 = "/my/app-1".toRootPath
-    val taskId1 = Task.Id.forApp(app1).idString
+    val taskId1 = Task.Id.forRunSpec(app1).idString
     val body = s"""{"ids": ["$taskId1", "invalidTaskId"]}"""
     val bodyBytes = body.toCharArray.map(_.toByte)
 

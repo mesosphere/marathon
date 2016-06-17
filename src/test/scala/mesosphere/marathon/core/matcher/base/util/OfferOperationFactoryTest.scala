@@ -32,7 +32,7 @@ class OfferOperationFactoryTest extends MarathonSpec with GivenWhenThen with Moc
 
     When("We create a reserve operation")
     val error = intercept[WrongConfigurationException] {
-      factory.reserve(f.frameworkId, Task.Id.forApp(PathId("/test")), Seq(Mesos.Resource.getDefaultInstance))
+      factory.reserve(f.frameworkId, Task.Id.forRunSpec(PathId("/test")), Seq(Mesos.Resource.getDefaultInstance))
     }
 
     Then("A meaningful exception is thrown")

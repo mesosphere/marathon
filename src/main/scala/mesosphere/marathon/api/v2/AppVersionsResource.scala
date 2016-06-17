@@ -7,7 +7,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, ViewApp }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, ViewRunSpec }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ GroupManager, Timestamp }
 import mesosphere.marathon.{ UnknownAppException, MarathonConf, MarathonSchedulerService }
@@ -28,7 +28,7 @@ class AppVersionsResource(service: MarathonSchedulerService,
   def index(@PathParam("appId") appId: String,
             @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
-    withAuthorization(ViewApp, result(groupManager.app(id)), unknownApp(id)) { _ =>
+    withAuthorization(ViewRunSpec, result(groupManager.app(id)), unknownApp(id)) { _ =>
       ok(jsonObjString("versions" -> service.listAppVersions(id).toSeq))
     }
   }
@@ -41,7 +41,7 @@ class AppVersionsResource(service: MarathonSchedulerService,
            @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
     val timestamp = Timestamp(version)
-    withAuthorization(ViewApp, service.getApp(id, timestamp), unknownApp(id, Some(timestamp))) { app =>
+    withAuthorization(ViewRunSpec, service.getApp(id, timestamp), unknownApp(id, Some(timestamp))) { app =>
       ok(jsonString(app))
     }
   }

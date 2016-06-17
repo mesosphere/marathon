@@ -24,7 +24,7 @@ object TaskStatusUpdateTestHelper {
     new TaskStatusUpdateTestHelper(taskChanged)
 
   private def newTaskID(appId: String) = {
-    Task.Id.forApp(PathId(appId))
+    Task.Id.forRunSpec(PathId(appId))
   }
 
   val taskId = newTaskID("/app")

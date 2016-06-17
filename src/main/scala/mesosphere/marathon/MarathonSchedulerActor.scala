@@ -21,6 +21,7 @@ import org.apache.mesos.Protos.{ Status, TaskID }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
+import scala.async.Async.{ async, await }
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -162,10 +163,11 @@ class MarathonSchedulerActor private (
       withLockFor(appId) {
         val promise = Promise[Unit]()
         context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, taskIds, config, promise))
-        val res = for {
-          _ <- promise.future
-          Some(app) <- appRepository.currentVersion(appId)
-        } yield schedulerActions.scale(driver, app)
+        val res = async {
+          await(promise.future)
+          val app = await(appRepository.currentVersion(appId))
+          app.foreach(schedulerActions.scale(driver, _))
+        }
 
         res onComplete { _ =>
           self ! cmd.answer // unlock app
@@ -213,11 +215,12 @@ class MarathonSchedulerActor private (
     } orElse {
       case CancellationTimeoutExceeded =>
         val reason = new TimeoutException("Exceeded timeout for canceling conflicting deployments.")
-        deploymentFailed(plan, reason)
-        origSender ! CommandFailed(Deploy(plan, force = true), reason)
-        unstashAll()
-        context.become(started)
-
+        async {
+          await(deploymentFailed(plan, reason))
+          origSender ! CommandFailed(Deploy(plan, force = true), reason)
+          unstashAll()
+          context.become(started)
+        }
       case _ => stash()
     }
 
@@ -311,18 +314,22 @@ class MarathonSchedulerActor private (
     }
   }
 
-  def deploymentSuccess(plan: DeploymentPlan): Unit = {
+  def deploymentSuccess(plan: DeploymentPlan): Future[Unit] = {
     log.info(s"Deployment of ${plan.target.id} successful")
     eventBus.publish(DeploymentSuccess(plan.id, plan))
-    deploymentRepository.expunge(plan.id)
+    deploymentRepository.expunge(plan.id).map(_ => ())
   }
 
-  def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
+  def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Future[Unit] = {
     log.error(reason, s"Deployment of ${plan.target.id} failed")
     plan.affectedApplicationIds.foreach(appId => launchQueue.purge(appId))
     eventBus.publish(DeploymentFailed(plan.id, plan))
-    if (reason.isInstanceOf[DeploymentCanceledException])
-      deploymentRepository.expunge(plan.id)
+    if (reason.isInstanceOf[DeploymentCanceledException]) {
+      deploymentRepository.expunge(plan.id).map(_ => ())
+    }
+    else {
+      Future.successful(())
+    }
   }
 }
 
@@ -439,7 +446,7 @@ class SchedulerActions(
 
     log.info(s"Stopping app ${app.id}")
     taskTracker.appTasks(app.id).map { tasks =>
-      for (taskId <- tasks.iterator.flatMap(_.launchedMesosId)) {
+      tasks.flatMap(_.launchedMesosId).foreach { taskId =>
         log.info(s"Killing task [${taskId.getValue}]")
         driver.killTask(taskId)
       }
@@ -475,12 +482,12 @@ class SchedulerActions(
           tasksByApp.appTasks(appId).flatMap(_.mesosStatus)
         }
 
-        for (unknownAppId <- tasksByApp.allAppIdsWithTasks -- appIds) {
+        (tasksByApp.allAppIdsWithTasks -- appIds).foreach { unknownAppId =>
           log.warn(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          for (orphanTask <- tasksByApp.appTasks(unknownAppId)) {
+          tasksByApp.appTasks(unknownAppId).foreach { orphanTask =>
             log.info(s"Killing ${orphanTask.taskId}")
             driver.killTask(orphanTask.taskId.mesosTaskId)
           }
@@ -498,10 +505,11 @@ class SchedulerActions(
   }
 
   def reconcileHealthChecks(): Unit = {
-    for {
-      apps <- groupRepository.rootGroup().map(_.map(_.transitiveApps).getOrElse(Set.empty))
-      app <- apps
-    } healthCheckManager.reconcileWith(app.id)
+    async {
+      val group = await(groupRepository.rootGroup())
+      val apps = group.map(_.transitiveApps).getOrElse(Set.empty)
+      apps.foreach(app => healthCheckManager.reconcileWith(app.id))
+    }
   }
 
   /**
@@ -544,9 +552,7 @@ class SchedulerActions(
       val toKill = taskTracker.appTasksLaunchedSync(app.id).take(launchedCount - targetCount)
       val taskIds: Iterable[TaskID] = toKill.flatMap(_.launchedMesosId)
       log.info(s"Killing tasks: ${taskIds.map(_.getValue)}")
-      for (taskId <- taskIds) {
-        driver.killTask(taskId)
-      }
+      taskIds.foreach(driver.killTask)
     }
     else {
       log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")

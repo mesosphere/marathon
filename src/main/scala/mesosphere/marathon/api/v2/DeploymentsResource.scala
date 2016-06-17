@@ -29,7 +29,7 @@ class DeploymentsResource @Inject() (
   @GET
   def running(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val infos = result(service.listRunningDeployments())
-      .filter(_.plan.affectedApplications.exists(isAuthorized(ViewApp, _)))
+      .filter(_.plan.affectedApplications.exists(isAuthorized(ViewRunSpec, _)))
     ok(infos)
   }
 
@@ -41,7 +41,7 @@ class DeploymentsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val plan = result(service.listRunningDeployments()).find(_.plan.id == id).map(_.plan)
     plan.fold(notFound(s"DeploymentPlan $id does not exist")) { deployment =>
-      deployment.affectedApplications.foreach(checkAuthorization(UpdateApp, _))
+      deployment.affectedApplications.foreach(checkAuthorization(UpdateRunSpec, _))
 
       deployment match {
         case plan: DeploymentPlan if force =>

@@ -5,7 +5,7 @@ package mesosphere.marathon.plugin
   */
 trait Group {
   def id: PathId
-  def apps: Iterable[AppDefinition]
+  def apps: Iterable[RunSpec]
   def groups: Iterable[Group]
   def dependencies: Iterable[PathId]
 }

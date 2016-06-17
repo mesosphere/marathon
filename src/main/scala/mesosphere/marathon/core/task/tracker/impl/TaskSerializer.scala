@@ -56,7 +56,7 @@ object TaskSerializer {
       if (proto.hasStagedAt) {
         Some(
           Task.Launched(
-            appVersion = appVersion,
+            runSpecVersion = appVersion,
             status = taskStatus,
             hostPorts = hostPorts
           )
@@ -85,14 +85,14 @@ object TaskSerializer {
 
       case (Some(reservation), Some(launched)) =>
         Task.LaunchedOnReservation(
-          taskId, agentInfo, launched.appVersion, launched.status, launched.hostPorts, reservation)
+          taskId, agentInfo, launched.runSpecVersion, launched.status, launched.hostPorts, reservation)
 
       case (Some(reservation), None) =>
         Task.Reserved(taskId, agentInfo, reservation)
 
       case (None, Some(launched)) =>
         Task.LaunchedEphemeral(
-          taskId, agentInfo, launched.appVersion, launched.status, launched.hostPorts)
+          taskId, agentInfo, launched.runSpecVersion, launched.status, launched.hostPorts)
 
       case (None, None) =>
         val msg = s"Unable to deserialize task $taskId, agentInfo=$agentInfo. It is neither reserved nor launched"
@@ -127,13 +127,13 @@ object TaskSerializer {
 
     task match {
       case launched: Task.LaunchedEphemeral =>
-        setLaunched(launched.appVersion, launched.status, launched.hostPorts)
+        setLaunched(launched.runSpecVersion, launched.status, launched.hostPorts)
 
       case reserved: Task.Reserved =>
         setReservation(reserved.reservation)
 
       case launchedOnR: Task.LaunchedOnReservation =>
-        setLaunched(launchedOnR.appVersion, launchedOnR.status, launchedOnR.hostPorts)
+        setLaunched(launchedOnR.runSpecVersion, launchedOnR.status, launchedOnR.hostPorts)
         setReservation(launchedOnR.reservation)
     }
 

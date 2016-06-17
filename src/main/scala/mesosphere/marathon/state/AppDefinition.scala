@@ -3,19 +3,28 @@ package mesosphere.marathon.state
 import java.util.regex.Pattern
 
 import com.wix.accord._
+import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, ResidencySerializer }
+import mesosphere.marathon.api.serialization.{
+  ContainerSerializer,
+  EnvVarRefSerializer,
+  PortDefinitionSerializer,
+  ResidencySerializer,
+  SecretsSerializer
+}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
 import mesosphere.marathon.state.Container.Docker.PortMapping
-import mesosphere.marathon.{ Protos, plugin }
+import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
@@ -36,7 +45,7 @@ case class AppDefinition(
 
   user: Option[String] = AppDefinition.DefaultUser,
 
-  env: Map[String, String] = AppDefinition.DefaultEnv,
+  env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
 
   instances: Int = AppDefinition.DefaultInstances,
 
@@ -70,6 +79,8 @@ case class AppDefinition(
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
+  taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
   upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
@@ -82,9 +93,10 @@ case class AppDefinition(
 
   versionInfo: VersionInfo = VersionInfo.NoVersion,
 
-  residency: Option[Residency] = AppDefinition.DefaultResidency)
+  residency: Option[Residency] = AppDefinition.DefaultResidency,
 
-    extends plugin.AppDefinition with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+  secrets: Map[String, Secret] = AppDefinition.DefaultSecrets)
+    extends RunSpec with plugin.RunSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -116,7 +128,7 @@ case class AppDefinition(
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(
-      app = this,
+      runSpec = this,
       taskId = None,
       host = None,
       ports = Seq.empty,
@@ -152,10 +164,13 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
+      .addAllSecrets(secrets.toIterable.map(SecretsSerializer.toProto).asJava)
+      .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
     readinessChecks.foreach { r => builder.addReadinessCheckDefinition(ReadinessCheckSerializer.toProto(r)) }
+    taskKillGracePeriod.foreach { t => builder.setTaskKillGracePeriod(t.toMillis) }
 
     acceptedResourceRoles.foreach { acceptedResourceRoles =>
       val roles = Protos.ResourceRoles.newBuilder()
@@ -179,10 +194,13 @@ case class AppDefinition(
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
-    val envMap: Map[String, String] =
+    val envMap: Map[String, EnvVarValue] = EnvVarValue(
       proto.getCmd.getEnvironment.getVariablesList.asScala.map {
         v => v.getName -> v.getValue
-      }.toMap
+      }.toMap)
+
+    val envRefs: Map[String, EnvVarValue] =
+      proto.getEnvVarReferencesList.asScala.flatMap(EnvVarRefSerializer.fromProto).toMap
 
     val resourcesMap: Map[String, Double] =
       proto.getResourcesList.asScala.map {
@@ -245,13 +263,15 @@ case class AppDefinition(
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
-      env = envMap,
+      env = envMap ++ envRefs,
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
       healthChecks = proto.getHealthChecksList.iterator().asScala.map(new HealthCheck().mergeFromProto).toSet,
       readinessChecks =
         proto.getReadinessCheckDefinitionList.iterator().asScala.map(ReadinessCheckSerializer.fromProto).to[Seq],
+      taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
+      else None,
       labels = proto.getLabelsList.asScala.map { p => p.getKey -> p.getValue }.toMap,
       versionInfo = versionInfoFromProto,
       upgradeStrategy =
@@ -259,7 +279,8 @@ case class AppDefinition(
         else UpgradeStrategy.empty,
       dependencies = proto.getDependenciesList.asScala.map(PathId.apply).toSet,
       ipAddress = ipAddressOption,
-      residency = residencyOption
+      residency = residencyOption,
+      secrets = proto.getSecretsList.asScala.map(SecretsSerializer.fromProto).toMap
     )
   }
 
@@ -296,13 +317,13 @@ case class AppDefinition(
   /**
     * Returns whether this is a scaling change only.
     */
-  def isOnlyScaleChange(to: AppDefinition): Boolean = !isUpgrade(to) && (instances != to.instances)
+  def isOnlyScaleChange(to: RunSpec): Boolean = !isUpgrade(to) && (instances != to.instances)
 
   /**
     * True if the given app definition is a change to the current one in terms of runtime characteristics
     * of all deployed tasks of the current app, otherwise false.
     */
-  def isUpgrade(to: AppDefinition): Boolean = {
+  def isUpgrade(to: RunSpec): Boolean = {
     id == to.id && {
       cmd != to.cmd ||
         args != to.args ||
@@ -322,13 +343,15 @@ case class AppDefinition(
         maxLaunchDelay != to.maxLaunchDelay ||
         container != to.container ||
         healthChecks != to.healthChecks ||
+        taskKillGracePeriod != to.taskKillGracePeriod ||
         dependencies != to.dependencies ||
         upgradeStrategy != to.upgradeStrategy ||
         labels != to.labels ||
         acceptedResourceRoles != to.acceptedResourceRoles ||
         ipAddress != to.ipAddress ||
         readinessChecks != to.readinessChecks ||
-        residency != to.residency
+        residency != to.residency ||
+        secrets != to.secrets
     }
   }
 
@@ -343,7 +366,7 @@ case class AppDefinition(
     * This can either be caused by changed configuration (e.g. a new cmd, a new docker image version)
     * or by a forced restart.
     */
-  def needsRestart(to: AppDefinition): Boolean = this.versionInfo != to.versionInfo || isUpgrade(to)
+  def needsRestart(to: RunSpec): Boolean = this.versionInfo != to.versionInfo || isUpgrade(to)
 
   /**
     * Identify other app definitions as the same, if id and version is the same.
@@ -369,7 +392,7 @@ case class AppDefinition(
 
   def portAssignments(task: Task): Option[Seq[PortAssignment]] = {
     def fromIpAddress: Option[Seq[PortAssignment]] = ipAddress.flatMap {
-      case IpAddress(_, _, DiscoveryInfo(appPorts)) =>
+      case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
         for {
           launched <- task.launched
           effectiveIpAddress <- task.effectiveIpAddress(this)
@@ -411,7 +434,7 @@ case class AppDefinition(
   }
 }
 
-object AppDefinition {
+object AppDefinition extends GeneralPurposeCombinators {
 
   sealed trait VersionInfo {
     def version: Timestamp
@@ -483,7 +506,7 @@ object AppDefinition {
 
   val DefaultUser: Option[String] = None
 
-  val DefaultEnv: Map[String, String] = Map.empty
+  val DefaultEnv: Map[String, EnvVarValue] = Map.empty
 
   val DefaultInstances: Int = 1
 
@@ -519,9 +542,13 @@ object AppDefinition {
 
   val DefaultReadinessChecks: Seq[ReadinessCheck] = Seq.empty
 
+  val DefaultTaskKillGracePeriod: Option[FiniteDuration] = None
+
   val DefaultDependencies: Set[PathId] = Set.empty
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
+
+  val DefaultSecrets: Map[String, Secret] = Map.empty
 
   object Labels {
     val Default: Map[String, String] = Map.empty
@@ -556,6 +583,9 @@ object AppDefinition {
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
     appDef.disk should be >= 0.0
+    appDef.secrets is valid(Secret.secretsValidator)
+    appDef.secrets is empty or featureEnabled(Features.SECRETS)
+    appDef.env is valid(EnvVarValue.envValidator)
     appDef must complyWithResourceRoleRules
     appDef must complyWithResidencyRules
     appDef must complyWithMigrationAPI
@@ -563,7 +593,7 @@ object AppDefinition {
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
     appDef.constraints.each must complyWithConstraintRules
-  } and ExternalVolumes.validApp
+  } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   /**
     * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.
@@ -572,11 +602,12 @@ object AppDefinition {
     * Until the user changed all invalid apps, the user would get weird validation
     * errors for every deployment potentially unrelated to the deployed apps.
     */
-  implicit val validAppDefinition: Validator[AppDefinition] = validator[AppDefinition] { app =>
-    app.id is valid
-    app.id is PathId.absolutePathValidator
-    app.dependencies is every(PathId.validPathWithBase(app.id.parent))
-  } and validBasicAppDefinition
+  def validAppDefinition(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+    validator[AppDefinition] { app =>
+      app.id is valid
+      app.id is PathId.absolutePathValidator
+      app.dependencies is every(PathId.validPathWithBase(app.id.parent))
+    } and validBasicAppDefinition and pluginValidators
 
   /**
     * Validator for apps, which are being part of a group.
@@ -587,6 +618,14 @@ object AppDefinition {
   def validNestedAppDefinition(base: PathId): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.id is PathId.validPathWithBase(base)
   } and validBasicAppDefinition
+
+  private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+    new Validator[AppDefinition] {
+      override def apply(app: AppDefinition): Result = {
+        val plugins = pluginManager.plugins[RunSpecValidator]
+        new And(plugins: _*)(app)
+      }
+    }
 
   private val complyWithResidencyRules: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
