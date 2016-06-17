@@ -12,7 +12,7 @@ object LaunchQueue {
   /**
     * @param runSpec the currently used runSpec
     */
-  protected[marathon] case class QueuedTaskInfo(
+  case class QueuedTaskInfo(
     runSpec: RunSpec,
     inProgress: Boolean,
     tasksLeftToLaunch: Int,
