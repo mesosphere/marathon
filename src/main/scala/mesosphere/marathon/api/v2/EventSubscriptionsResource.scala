@@ -12,7 +12,7 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.event.http.HttpCallbackSubscriptionService
 import mesosphere.marathon.event.{ MarathonEvent, Subscribe, Unsubscribe }
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, ViewEventStream }
+import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.{ BadRequestException, MarathonConf }
 
 import scala.concurrent.Future
@@ -31,7 +31,7 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf,
   @GET
   @Timed
   def listSubscribers(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewEventStream, ()) {
+    withAuthorization(ViewResource, AuthorizedResource.Events) {
       validateSubscriptionService()
       ok(jsonString(result(service.getSubscribers)))
     }
@@ -41,7 +41,7 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf,
   @Timed
   def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
-      withAuthorization(ViewEventStream, ()) {
+      withAuthorization(UpdateResource, AuthorizedResource.Events) {
         validateSubscriptionService()
         implicit val httpCallbackValidator = validator[String] { callback =>
           callback is urlIsValid
@@ -58,7 +58,7 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf,
   @Timed
   def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
-      withAuthorization(ViewEventStream, ()) {
+      withAuthorization(UpdateResource, AuthorizedResource.Events) {
         validateSubscriptionService()
         val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
         ok(jsonString(eventToJson(result(future))))

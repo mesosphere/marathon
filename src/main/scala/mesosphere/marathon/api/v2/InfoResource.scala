@@ -11,7 +11,7 @@ import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, ViewSystemConfig }
+import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.{ LeaderProxyConf, MarathonConf, MarathonSchedulerService }
 import mesosphere.util.state.MesosLeaderInfo
 import play.api.libs.json.{ JsObject, Json }
@@ -84,7 +84,7 @@ class InfoResource @Inject() (
   @GET
   @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
   def index(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    withAuthorization(ViewSystemConfig, "/v2/info") {
+    withAuthorization(ViewResource, AuthorizedResource.SystemConfig) {
       val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
       Response.ok(
         jsonObjString(
