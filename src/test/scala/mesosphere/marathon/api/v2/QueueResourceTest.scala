@@ -156,7 +156,8 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
       queue,
       auth.auth,
       auth.auth,
-      config
+      config,
+      null
     )
   }
 }
