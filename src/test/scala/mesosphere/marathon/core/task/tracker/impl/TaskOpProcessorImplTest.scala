@@ -1,17 +1,18 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import akka.actor.{ Status, ActorRef }
+import akka.actor.{ ActorRef, Status }
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
 import mesosphere.marathon.core.CoreGuiceModule
+import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, MarathonTaskStatusTestHelper, TaskStatusEmitter }
 import mesosphere.marathon.core.task.tracker.TaskUpdater
 import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
-import mesosphere.marathon.core.task.{ TaskStateChangeException, Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateChangeException, TaskStateOp }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppRepository, PathId, TaskRepository, Timestamp }
@@ -398,7 +399,8 @@ class TaskOpProcessorImplTest
     lazy val taskRepository = mock[TaskRepository]
     lazy val stateOpResolver = mock[TaskOpProcessorImpl.TaskStateOpResolver]
     lazy val metrics = new Metrics(new MetricRegistry)
-    lazy val now = Timestamp(0)
+    lazy val clock = ConstantClock()
+    lazy val now = clock.now()
 
     def stateOpLaunch(task: Task) = TaskStateOp.LaunchEphemeral(task)
     def stateOpUpdate(task: Task, status: MarathonTaskStatus, now: Timestamp = now) = TaskStateOp.MesosUpdate(task, status, now)
@@ -441,7 +443,7 @@ class TaskOpProcessorImplTest
     // task status update steps
     lazy val notifyHealthCheckManager = new NotifyHealthCheckManagerStepImpl(healthCheckManager)
     lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueueProvider, appRepositoryProvider)
-    lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus)
+    lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus, clock)
     lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueueProvider)
     lazy val emitUpdate = new TaskStatusEmitterPublishStepImpl(taskStatusEmitterProvider)
     lazy val scaleApp = new ScaleAppUpdateStepImpl(schedulerActorProvider)

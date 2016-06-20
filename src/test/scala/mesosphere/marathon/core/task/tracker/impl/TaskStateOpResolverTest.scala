@@ -1,12 +1,13 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.bus.MarathonTaskStatusTestHelper
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
+import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, MarathonTaskStatusTestHelper, MesosTaskStatus, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
-import mesosphere.marathon.state.{ Timestamp, PathId }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
+import org.apache.mesos
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
@@ -80,6 +81,83 @@ class TaskStateOpResolverTest
     And("the result is a Failure")
     stateChange shouldBe a[TaskStateChange.Failure]
 
+    And("there are no more interactions")
+    f.verifyNoMoreInteractions()
+  }
+
+  for (
+    reason <- MesosTaskStatus.MightComeBack
+  ) {
+    test(s"a TASK_LOST update with $reason indicating a TemporarilyUnreachable task is mapped to an update") {
+      val f = new Fixture
+
+      Given("an existing task")
+      f.taskTracker.task(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
+
+      When("A TASK_LOST update is received with a reason indicating it might come back")
+      val stateOp = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).wrapped.stateOp
+      val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+
+      Then("taskTracker.task is called")
+      verify(f.taskTracker).task(f.existingTask.taskId)
+
+      And("the result is an Update")
+      stateChange shouldBe a[TaskStateChange.Update]
+
+      And("the new state should have the correct status")
+      val update: TaskStateChange.Update = stateChange.asInstanceOf[TaskStateChange.Update]
+      update.newState.mesosStatus should not be empty
+      update.newState.mesosStatus.get.getState shouldEqual mesos.Protos.TaskState.TASK_LOST
+
+      And("there are no more interactions")
+      f.verifyNoMoreInteractions()
+    }
+  }
+
+  for (
+    reason <- MesosTaskStatus.WontComeBack
+  ) {
+    test(s"a TASK_LOST update with $reason indicating a task won't come back is mapped to an expunge") {
+      val f = new Fixture
+
+      Given("an existing task")
+      f.taskTracker.task(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
+
+      When("A TASK_LOST update is received with a reason indicating it won't come back")
+      val stateOp: TaskStateOp.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).wrapped.stateOp.asInstanceOf[TaskStateOp.MesosUpdate]
+      val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+
+      Then("taskTracker.task is called")
+      verify(f.taskTracker).task(f.existingTask.taskId)
+
+      And("the result is an Expunge")
+      stateChange shouldBe a[TaskStateChange.Expunge]
+      val expectedState = f.existingTask.copy(
+        status = f.existingTask.status.copy(
+          mesosStatus = stateOp.status.mesosStatus))
+      stateChange shouldEqual TaskStateChange.Expunge(expectedState)
+
+      And("there are no more interactions")
+      f.verifyNoMoreInteractions()
+    }
+  }
+
+  test("a subsequent TASK_LOST update with another reason is mapped to a noop and will not update the timestamp") {
+    val f = new Fixture
+
+    Given("an existing lost task")
+    f.taskTracker.task(f.existingLostTask.taskId) returns Future.successful(Some(f.existingLostTask))
+
+    When("A subsequent TASK_LOST update is received")
+    val reason = mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DISCONNECTED
+    val stateOp: TaskStateOp.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingLostTask).wrapped.stateOp.asInstanceOf[TaskStateOp.MesosUpdate]
+    val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
+
+    Then("taskTracker.task is called")
+    verify(f.taskTracker).task(f.existingLostTask.taskId)
+
+    And("the result is an noop")
+    stateChange shouldBe a[TaskStateChange.NoChange]
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
   }
@@ -160,6 +238,7 @@ class TaskStateOpResolverTest
     val existingTask = MarathonTestHelper.mininimalTask(appId)
     val existingReservedTask = MarathonTestHelper.residentReservedTask(appId)
     val notExistingTaskId = Task.Id.forRunSpec(appId)
+    val existingLostTask = MarathonTestHelper.mininimalLostTask(appId)
 
     def verifyNoMoreInteractions(): Unit = {
       noMoreInteractions(taskTracker)

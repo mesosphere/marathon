@@ -9,6 +9,7 @@ object LaunchQueueTestHelper {
     inProgress = true,
     tasksLeftToLaunch = 0,
     finalTaskCount = 0,
+    tasksLost = 0,
     backOffUntil = Timestamp(0)
   )
 }

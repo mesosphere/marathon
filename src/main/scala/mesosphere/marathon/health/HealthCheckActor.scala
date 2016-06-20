@@ -4,6 +4,7 @@ import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.MesosTaskStatus.TemporarilyUnreachable
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
@@ -82,10 +83,12 @@ private[health] class HealthCheckActor(
     }
 
   def dispatchJobs(): Unit = {
+    import TemporarilyUnreachable.isUnreachable
+
     log.debug("Dispatching health check jobs to workers")
     taskTracker.appTasksSync(app.id).foreach { task =>
       task.launched.foreach { launched =>
-        if (launched.runSpecVersion == app.version && launched.hasStartedRunning) {
+        if (launched.runSpecVersion == app.version && launched.hasStartedRunning && !isUnreachable(task)) {
           log.debug("Dispatching health check job for {}", task.taskId)
           val worker: ActorRef = context.actorOf(workerProps)
           worker ! HealthCheckJob(app, task, launched, healthCheck)
@@ -104,21 +107,27 @@ private[health] class HealthCheckActor(
         s"Detected unhealthy ${task.taskId} of app [${app.id}] version [${app.version}] on host ${task.agentInfo.host}"
       )
 
-      // kill the task
-      marathonSchedulerDriverHolder.driver.foreach { driver =>
-        log.info(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
-        eventBus.publish(
-          UnhealthyTaskKillEvent(
-            appId = task.runSpecId,
-            taskId = task.taskId,
-            version = app.version,
-            reason = health.lastFailureCause.getOrElse("unknown"),
-            host = task.agentInfo.host,
-            slaveId = task.agentInfo.agentId,
-            timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
-          )
-        )
-        driver.killTask(task.taskId.mesosTaskId)
+      // kill the task, if it is reachable
+      task match {
+        case TemporarilyUnreachable(_) =>
+          val id = task.taskId
+          log.warning(s"Task $id on host ${task.agentInfo.host} is temporarily unreachable. Performing no kill.")
+        case _ =>
+          marathonSchedulerDriverHolder.driver.foreach { driver =>
+            log.warning(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
+            eventBus.publish(
+              UnhealthyTaskKillEvent(
+                appId = task.runSpecId,
+                taskId = task.taskId,
+                version = app.version,
+                reason = health.lastFailureCause.getOrElse("unknown"),
+                host = task.agentInfo.host,
+                slaveId = task.agentInfo.agentId,
+                timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
+              )
+            )
+            driver.killTask(task.taskId.mesosTaskId)
+          }
       }
     }
   }

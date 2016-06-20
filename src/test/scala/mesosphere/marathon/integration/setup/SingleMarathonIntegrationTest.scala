@@ -109,9 +109,13 @@ trait SingleMarathonIntegrationTest
     }
   }
 
+  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal()
+
+  protected def createConfig(configMap: ConfigMap): IntegrationTestConfig = IntegrationTestConfig(configMap)
+
   override protected def beforeAll(configMap: ConfigMap): Unit = {
     log.info("Setting up local mesos/marathon infrastructure...")
-    configOption = Some(IntegrationTestConfig(configMap))
+    configOption = Some(createConfig(configMap))
     super.beforeAll(configMap)
 
     if (!config.useExternalSetup) {
@@ -120,7 +124,7 @@ trait SingleMarathonIntegrationTest
 
       log.info("Setting up local mesos/marathon infrastructure...")
       startZooKeeperProcess()
-      ProcessKeeper.startMesosLocal()
+      startMesos()
       cleanMarathonState()
 
       startMarathon(config.marathonBasePort, marathonParameters: _*)
@@ -168,6 +172,24 @@ trait SingleMarathonIntegrationTest
       if (tasks.size == num) Some(tasks) else None
     }
     WaitTestSupport.waitFor(s"$num tasks to launch", maxWait)(checkTasks)
+  }
+
+  def waitForProcessLogMessage(process: String, maxWait: FiniteDuration = 30.seconds)(messageFn: String => Boolean): String = {
+    var result: Option[String] = None
+    def message(log: String) = {
+      if (messageFn(log)) {
+        result = Some(log)
+        true
+      }
+      else false
+    }
+    try {
+      ProcessKeeper.addCheck(process, message)
+      WaitTestSupport.waitFor(s"Log message in process $process", maxWait)(result)
+    }
+    finally {
+      ProcessKeeper.removeCheck(process)
+    }
   }
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = 30.seconds) = {

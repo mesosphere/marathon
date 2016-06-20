@@ -4,8 +4,8 @@ import javax.inject.Named
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import com.google.inject.Inject
 import mesosphere.chaos.http.HttpConf
+import com.google.inject.{ Provider, Inject }
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.flow.FlowModule
@@ -23,6 +23,7 @@ import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.event.EventModule
+import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
@@ -47,6 +48,7 @@ class CoreModuleImpl @Inject() (
     appRepository: AppRepository,
     groupRepository: GroupRepository,
     taskRepository: TaskRepository,
+    taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
     clock: Clock,
     taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
 
@@ -165,6 +167,7 @@ class CoreModuleImpl @Inject() (
     taskTrackerModule.taskReservationTimeoutHandler,
     marathonSchedulerDriverHolder
   )
+  taskJobsModule.expungeOverdueLostTasks(taskTrackerModule.taskTracker, taskTrackerModule.stateOpProcessor)
   maybeOfferReviver
   offerMatcherManagerModule
   launcherModule

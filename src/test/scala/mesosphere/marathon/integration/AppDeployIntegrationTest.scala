@@ -101,8 +101,9 @@ class AppDeployIntegrationTest
     deployment2.code should be (200) //Created
 
     And("the task eventually fails AGAIN")
-    val events2 = waitForEvents("status_update_event", "status_update_event")()
+    val events2 = waitForEvents("status_update_event", "status_update_event", "status_update_event")()
     val statuses2 = events2.values.flatMap(_.map(_.info("taskStatus")))
+    statuses2 should contain("TASK_STAGING")
     statuses2 should contain("TASK_RUNNING")
     statuses2 should contain("TASK_FAILED")
   }
@@ -124,8 +125,9 @@ class AppDeployIntegrationTest
     result.code should be(201) //Created
 
     And("the task eventually fails")
-    val events = waitForEvents("status_update_event", "status_update_event")()
+    val events = waitForEvents("status_update_event", "status_update_event", "status_update_event")()
     val statuses = events.values.flatMap(_.map(_.info("taskStatus")))
+    statuses should contain("TASK_STAGING")
     statuses should contain("TASK_RUNNING")
     statuses should contain("TASK_FAILED")
 
