@@ -224,7 +224,7 @@ object MarathonBuild extends Build {
       "Mesosphere Public Repo (S3)",
       s3("downloads.mesosphere.io/maven")
     )),
-    SbtS3Resolver.s3credentials := new EnvironmentVariableCredentialsProvider() | 
+    SbtS3Resolver.s3credentials := new EnvironmentVariableCredentialsProvider() |
     new InstanceProfileCredentialsProvider()
   )
 }
@@ -304,7 +304,7 @@ object Dependency {
     val PlayJson = "2.5.3"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.25.0"
-    val MarathonUI = "1.2.0-SNAPSHOT"
+    val MarathonUI = "1.1.3"
     val MarathonApiConsole = "0.1.1"
     val Graphite = "3.1.2"
     val DataDog = "1.1.3"
