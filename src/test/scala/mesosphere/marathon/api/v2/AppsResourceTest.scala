@@ -304,6 +304,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
   }
 
+  /*
   test("Create a new app with IP/CT with virtual network foo w/ Docker") {
     useRealGroupManager()
     object Config extends ScallopConf() {
@@ -384,6 +385,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     )
     JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
   }
+  */
 
   test("Create a new app in BRIDGE mode w/ Docker") {
     Given("An app and group")
