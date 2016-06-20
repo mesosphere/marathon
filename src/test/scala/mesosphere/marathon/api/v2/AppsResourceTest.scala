@@ -319,7 +319,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           ))
         ))
       )),
-      portDefinitions = Nil
+      portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
 
@@ -356,9 +356,15 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           ))
         ))
       )),
-      portDefinitions = Nil
+      portDefinitions = Seq.empty
     )
-    val (body, plan) = prepareApp(app)
+
+    val group = Group(PathId("/"), Set(app))
+    val plan = DeploymentPlan(group, group)
+    val body = Json.stringify(Json.toJson(app).as[JsObject] - "ports").getBytes("UTF-8")
+    groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+    groupManager.rootGroup() returns Future.successful(group)
+    groupManager.app(app.id) returns Future.successful(Some(app))
 
     When("The create request is made")
     clock += 5.seconds
@@ -406,7 +412,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           ))
         ))
       )),
-      portDefinitions = Nil
+      portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
 
@@ -438,7 +444,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           image = "jdef/helpme"
         ))
       )),
-      portDefinitions = Nil
+      portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
 

@@ -853,16 +853,7 @@ trait AppAndGroupFormats {
       // top-level ports fields are incompatible with IP/CT
       if (runSpec.ipAddress.isEmpty) {
         appJson = appJson ++ Json.obj(
-          // the ports field was written incorrectly in old code if a container was specified
-          // it should contain the service ports
-          //
-          // "ports" -> runSpec.servicePorts, -- can't specify both this and portDefinitions and be valid,
-          // so I'm removing it. it's been deprecated for a while, users will have to deal.
-          //
-          // TODO(jdef) honestly, it's still very confusing even without IP/CT mode if you're
-          // using BRIDGE networking because portMappings stuff bubbles up to the top-level
-          // ports fields here -- which results in serialized JSON that's invalid according to
-          // our own validation funcs.
+          "ports" -> runSpec.servicePorts,
           "portDefinitions" -> runSpec.portDefinitions.zip(runSpec.servicePorts).map {
             case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
           },
