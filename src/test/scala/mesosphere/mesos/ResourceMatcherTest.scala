@@ -7,15 +7,16 @@ import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, PortDefinitions, ResourceRole, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, ResourceRole, Timestamp }
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.{ Resource, TextAttribute }
-import org.apache.mesos.Protos.Attribute
+import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
 import org.scalatest.Matchers
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
+import scala.collection.immutable.Seq
 
 class ResourceMatcherTest extends MarathonSpec with Matchers {
   test("match with app.disk == 0, even if no disk resource is contained in the offer") {
@@ -67,6 +68,72 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     res.scalarMatch(Resource.DISK) should be(empty)
 
     res.hostPorts should have size 2
+  }
+
+  test("match resources success with BRIDGE and portMappings") {
+    val offer = MarathonTestHelper.makeBasicOffer().build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      cpus = 1.0,
+      mem = 128.0,
+      disk = 0.0,
+      portDefinitions = Nil,
+      container = Some(Container(
+        docker = Some(Container.Docker(
+          image = "foo/bar",
+          network = Some(ContainerInfo.DockerInfo.Network.BRIDGE),
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(31001, Some(0), 0, "tcp", Some("qax")),
+            Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
+          ))
+        ))
+      ))
+    )
+
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, wildcardResourceSelector)
+
+    resOpt should not be empty
+    val res = resOpt.get
+
+    res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
+    res.scalarMatch(Resource.MEM).get.roles should be(Seq(ResourceRole.Unreserved))
+    res.scalarMatch(Resource.DISK) should be(empty)
+
+    res.hostPorts should have size 2
+  }
+
+  test("match resources success with USER and portMappings") {
+    val offer = MarathonTestHelper.makeBasicOffer().build()
+    val app = AppDefinition(
+      id = "/test".toRootPath,
+      cpus = 1.0,
+      mem = 128.0,
+      disk = 0.0,
+      portDefinitions = Nil,
+      container = Some(Container(
+        docker = Some(Container.Docker(
+          image = "foo/bar",
+          network = Some(ContainerInfo.DockerInfo.Network.USER),
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(0, Some(0), 0, "tcp", Some("yas")),
+            Container.Docker.PortMapping(31001, None, 0, "tcp", Some("qax")),
+            Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
+          ))
+        ))
+      ))
+    )
+
+    val resOpt = ResourceMatcher.matchResources(offer, app, runningTasks = Iterable.empty, wildcardResourceSelector)
+
+    resOpt should not be empty
+    val res = resOpt.get
+
+    res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
+    res.scalarMatch(Resource.MEM).get.roles should be(Seq(ResourceRole.Unreserved))
+    res.scalarMatch(Resource.DISK) should be(empty)
+
+    res.hostPorts should have size 3
+    res.hostPorts.flatten should have size 2
   }
 
   test("match resources success with preserved reservations") {
@@ -122,7 +189,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     )
 
     res.portsMatch.hostPortsWithRole.toSet should be(
-      Set(PortsMatcher.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation)))
+      Set(Some(PortsMatcher.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
     )
 
     // reserved resources with labels should not be matched by selector if don't match for reservation with labels
@@ -183,7 +250,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     )
 
     res.portsMatch.hostPortsWithRole.toSet should be(
-      Set(PortsMatcher.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation)))
+      Set(Some(PortsMatcher.PortWithRole(ResourceRole.Unreserved, 80, reservation = Some(portsReservation))))
     )
   }
 

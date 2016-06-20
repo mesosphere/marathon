@@ -23,7 +23,7 @@ object ResourceMatcher {
     * A successful match result of the [[ResourceMatcher]].matchResources method.
     */
   case class ResourceMatch(scalarMatches: Iterable[ScalarMatch], portsMatch: PortsMatch) {
-    lazy val hostPorts: Seq[Int] = portsMatch.hostPorts
+    lazy val hostPorts: Seq[Option[Int]] = portsMatch.hostPorts
 
     def scalarMatch(name: String): Option[ScalarMatch] = scalarMatches.find(_.resourceName == name)
 

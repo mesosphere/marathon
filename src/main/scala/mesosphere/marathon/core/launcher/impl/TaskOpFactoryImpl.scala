@@ -60,7 +60,7 @@ class TaskOpFactoryImpl(
           status = Task.Status(
             stagedAt = clock.now()
           ),
-          hostPorts = ports
+          hostPorts = ports.flatten
         )
 
         taskOperationFactory.launchEphemeral(taskInfo, task)
@@ -150,7 +150,7 @@ class TaskOpFactoryImpl(
           status = Task.Status(
             stagedAt = clock.now()
           ),
-          hostPorts = ports)
+          hostPorts = ports.flatten)
 
         taskOperationFactory.launchOnReservation(taskInfo, taskStateOp, task)
     }

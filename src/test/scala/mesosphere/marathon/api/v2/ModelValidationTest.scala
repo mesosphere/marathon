@@ -114,7 +114,7 @@ class ModelValidationTest
         docker = Some(Docker(
           image = "demothing",
           network = Some(Network.BRIDGE),
-          portMappings = Some(Seq(PortMapping(2000, servicePort = servicePort)))
+          portMappings = Some(Seq(PortMapping(2000, Some(0), servicePort = servicePort)))
         ))
       ))
     )
