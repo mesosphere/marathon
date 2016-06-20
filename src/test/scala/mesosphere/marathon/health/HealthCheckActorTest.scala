@@ -10,7 +10,6 @@ import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon._
 import mesosphere.util.CallerThreadExecutionContext
-import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
@@ -30,21 +29,78 @@ class HealthCheckActorTest
 
   // regression test for #934
   test("should not dispatch health checks for staging tasks") {
-    val tracker = mock[TaskTracker]
+    val f = new Fixture
     val latch = TestLatch(1)
+    val appId = "/test".toPath
+    val appVersion = Timestamp(1)
+    val app = AppDefinition(id = appId)
+    val appRepository: AppRepository = mock[AppRepository]
+
+    when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
+
+    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.task))
+
+    val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
+    actor.underlyingActor.dispatchJobs()
+    latch.isOpen should be (false)
+    verifyNoMoreInteractions(f.driver)
+  }
+
+  test("should not dispatch health checks for lost tasks") {
+    val f = new Fixture
+    val latch = TestLatch(1)
+    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.lostTask))
+
+    val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
+
+    actor.underlyingActor.dispatchJobs()
+    latch.isOpen should be (false)
+    verifyNoMoreInteractions(f.driver)
+  }
+
+  // regression test for #1456
+  test("task should be killed if health check fails") {
+    val f = new Fixture
+    val actor = f.actor(HealthCheck(maxConsecutiveFailures = 3))
+
+    actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.taskId, consecutiveFailures = 3))
+    verify(f.driver).killTask(f.task.taskId.mesosTaskId)
+    verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
+  }
+
+  test("task should not be killed if health check fails, but the task is unreachable") {
+    val f = new Fixture
+    val actor = f.actor(HealthCheck(maxConsecutiveFailures = 3))
+
+    actor.underlyingActor.checkConsecutiveFailures(f.lostTask, Health(f.lostTask.taskId, consecutiveFailures = 3))
+    verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
+  }
+
+  class Fixture {
+    val tracker = mock[TaskTracker]
 
     val appId = "/test".toPath
     val appVersion = Timestamp(1)
     val app = AppDefinition(id = appId)
     val appRepository: AppRepository = mock[AppRepository]
+    val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
+    val driver = mock[SchedulerDriver]
+    holder.driver = Some(driver)
     when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
 
-    val task = MarathonTestHelper.stagedTask("test_task.9876543", appVersion = appVersion)
+    val taskId = "test_task.9876543"
+    val scheduler: MarathonScheduler = mock[MarathonScheduler]
 
-    when(tracker.appTasksSync(appId)).thenReturn(Set(task))
+    val task = MarathonTestHelper.runningTask("test_task.9876543", appVersion = appVersion)
+    val lostTask = MarathonTestHelper.mininimalLostTask(appId)
 
-    val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
-    val actor = TestActorRef[HealthCheckActor](
+    def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
+      Props(
+        new HealthCheckActor(app, holder, healthCheck, tracker, system.eventStream)
+      )
+    )
+
+    def actorWithLatch(healthCheck: HealthCheck, latch: TestLatch) = TestActorRef[HealthCheckActor](
       Props(
         new HealthCheckActor(app, holder, HealthCheck(), tracker, system.eventStream) {
           override val workerProps = Props {
@@ -54,41 +110,6 @@ class HealthCheckActorTest
         }
       )
     )
-
-    actor.underlyingActor.dispatchJobs()
-
-    latch.isOpen should be (false)
-  }
-
-  // regression test for #1456
-  test("task should be killed if health check fails") {
-    val tracker: TaskTracker = mock[TaskTracker]
-    val scheduler: MarathonScheduler = mock[MarathonScheduler]
-    val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
-    val driver = mock[SchedulerDriver]
-    holder.driver = Some(driver)
-
-    val appId = "test".toPath
-    val appVersion = Timestamp(1)
-    val app = AppDefinition(id = appId)
-    val appRepository: AppRepository = mock[AppRepository]
-    when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
-
-    val task = MarathonTestHelper.runningTask("test_task.9876543", appVersion = appVersion)
-
-    val healthCheck: HealthCheck = HealthCheck(maxConsecutiveFailures = 3)
-
-    val actor = TestActorRef[HealthCheckActor](
-      Props(
-        new HealthCheckActor(app, holder, healthCheck, tracker, system.eventStream)
-      )
-    )
-
-    actor.underlyingActor.checkConsecutiveFailures(task, Health(task.taskId, consecutiveFailures = 3))
-
-    verify(driver).killTask(task.taskId.mesosTaskId)
-
-    verifyNoMoreInteractions(tracker, driver, scheduler)
   }
 }
 

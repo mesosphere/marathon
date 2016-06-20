@@ -15,7 +15,7 @@ import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpRejected
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.bus.{ MesosTaskStatus, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
@@ -264,7 +264,7 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
   test("Expunged task is removed from counts") {
     val update = TaskStatusUpdateTestHelper.finished(f.marathonTask).wrapped
-    val expectedCounts = QueuedTaskInfo(f.app, 0, 0, 0, Timestamp(0))
+    val expectedCounts = QueuedTaskInfo(f.app, 0, 0, 0, 0, Timestamp(0))
 
     Mockito.when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.forTasks(f.marathonTask))
 
@@ -284,9 +284,65 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     Mockito.verify(taskTracker).tasksByAppSync
   }
 
+  for (
+    update <- MesosTaskStatus.WontComeBack.toSeq.map(reason => TaskStatusUpdateTestHelper.lost(reason, f.marathonTask))
+      .union(Seq(
+        TaskStatusUpdateTestHelper.finished(f.marathonTask),
+        TaskStatusUpdateTestHelper.killed(f.marathonTask),
+        TaskStatusUpdateTestHelper.error(f.marathonTask)))
+  ) {
+    test(s"Terminated task (${update.simpleName} with ${update.reason} is removed") {
+      Mockito.when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.forTasks(f.marathonTask))
+
+      val launcherRef = createLauncherRef(instances = 0)
+      launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
+
+      // wait for startup
+      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
+
+      // task status update
+      val counts = Await.result(launcherRef ? update.wrapped, 3.seconds).asInstanceOf[QueuedTaskInfo]
+
+      assert(counts.tasksLaunched == 0)
+      assert(counts.tasksLost == 0)
+
+      assert(!counts.inProgress)
+      assert(counts.taskLaunchesInFlight == 0)
+      assert(counts.tasksLeftToLaunch == 0)
+
+      Mockito.verify(taskTracker).tasksByAppSync
+    }
+  }
+
+  for (
+    update <- MesosTaskStatus.MightComeBack.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonTask))
+  ) {
+    test(s"TemporarilyUnreachable task (${update.simpleName} with ${update.reason} is NOT removed") {
+      Mockito.when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.forTasks(f.marathonTask))
+
+      val launcherRef = createLauncherRef(instances = 0)
+      launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
+
+      // wait for startup
+      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
+
+      // task status update
+      val counts = Await.result(launcherRef ? update.wrapped, 3.seconds).asInstanceOf[QueuedTaskInfo]
+
+      assert(counts.tasksLaunched == 1)
+      assert(counts.tasksLost == 1)
+
+      assert(!counts.inProgress)
+      assert(counts.taskLaunchesInFlight == 0)
+      assert(counts.tasksLeftToLaunch == 0)
+
+      Mockito.verify(taskTracker).tasksByAppSync
+    }
+  }
+
   test("Updated task is reflected in counts") {
     val update = TaskStatusUpdateTestHelper.runningHealthy(f.marathonTask)
-    val expectedCounts = QueuedTaskInfo(f.app, 0, 0, 1, Timestamp(0))
+    val expectedCounts = QueuedTaskInfo(f.app, 0, 0, 1, 0, Timestamp(0))
 
     Mockito.when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.forTasks(f.marathonTask))
 
@@ -306,31 +362,38 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     Mockito.verify(taskTracker).tasksByAppSync
   }
 
-  test(s"Revive offers if task with constraints terminates") {
-    Given("an actor for an app with constraints and one task")
-    val constraint = Protos.Constraint
-      .newBuilder()
-      .setField("test")
-      .setOperator(Protos.Constraint.Operator.CLUSTER)
-      .build()
-    val appWithConstraints = f.app.copy(constraints = Set(constraint))
-    Mockito.when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.forTasks(f.marathonTask))
+  for (
+    update <- MesosTaskStatus.WontComeBack.toSeq.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonTask))
+      .union(Seq(
+        TaskStatusUpdateTestHelper.finished(f.marathonTask),
+        TaskStatusUpdateTestHelper.killed(f.marathonTask),
+        TaskStatusUpdateTestHelper.error(f.marathonTask)))
+  ) {
+    test(s"Revive offers if task with constraints terminates (${update.simpleName} with ${update.reason})") {
+      Given("an actor for an app with constraints and one task")
+      val constraint = Protos.Constraint
+        .newBuilder()
+        .setField("test")
+        .setOperator(Protos.Constraint.Operator.CLUSTER)
+        .build()
+      val appWithConstraints = f.app.copy(constraints = Set(constraint))
+      Mockito.when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.forTasks(f.marathonTask))
 
-    val launcherRef = createLauncherRef(instances = 0, appToLaunch = appWithConstraints)
-    launcherRef ! RateLimiterActor.DelayUpdate(appWithConstraints, clock.now())
+      val launcherRef = createLauncherRef(instances = 0, appToLaunch = appWithConstraints)
+      launcherRef ! RateLimiterActor.DelayUpdate(appWithConstraints, clock.now())
 
-    And("that has succesfully started up")
-    Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
+      And("that has succesfully started up")
+      Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
-    When("we get a status update about a terminated task")
-    val expunge = TaskStatusUpdateTestHelper.error(f.marathonTask)
-    Await.result(launcherRef ? expunge.wrapped, 3.seconds).asInstanceOf[QueuedTaskInfo]
+      When("we get a status update about a terminated task")
+      val counts = Await.result(launcherRef ? update.wrapped, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
-    Then("reviveOffers has been called")
-    Mockito.verify(offerReviver).reviveOffers()
+      Then("reviveOffers has been called")
+      Mockito.verify(offerReviver).reviveOffers()
 
-    And("the task tracker as well")
-    Mockito.verify(taskTracker).tasksByAppSync
+      And("the task tracker as well")
+      Mockito.verify(taskTracker).tasksByAppSync
+    }
   }
 
   for (

@@ -105,7 +105,7 @@ class TaskTrackerActorTest
 
     When("staged task gets deleted")
     val probe = TestProbe()
-    val stagedUpdate = TaskStatusUpdateTestHelper.lost(stagedTaskState).wrapped
+    val stagedUpdate = TaskStatusUpdateTestHelper.killed(stagedTaskState).wrapped
     val stagedAck = TaskTrackerActor.Ack(probe.ref, stagedUpdate.stateChange)
     probe.send(f.taskTrackerActor, TaskTrackerActor.StateChanged(stagedUpdate, stagedAck))
     probe.expectMsg(TaskStateChange.Expunge(stagedTaskState))
@@ -115,7 +115,7 @@ class TaskTrackerActorTest
     f.actorMetrics.stagedCount.getValue should be(0)
 
     When("running task gets deleted")
-    val runningUpdate = TaskStatusUpdateTestHelper.lost(runningTask1State).wrapped
+    val runningUpdate = TaskStatusUpdateTestHelper.killed(runningTask1State).wrapped
     val runningAck = TaskTrackerActor.Ack(probe.ref, stagedUpdate.stateChange)
     probe.send(f.taskTrackerActor, TaskTrackerActor.StateChanged(runningUpdate, runningAck))
     probe.expectMsg(())

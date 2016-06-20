@@ -1,9 +1,9 @@
 package mesosphere.marathon.api.v2.json
 
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.collection.immutable.Seq
@@ -27,7 +27,16 @@ class MarathonTaskFormatTest extends MarathonSpec {
       status = Task.Status(time, None),
       hostPorts = Seq.empty)
 
-    import scala.collection.JavaConverters._
+    def mesosStatus(taskId: Task.Id) = {
+      import scala.collection.JavaConverters._
+      MesosProtos.TaskStatus.newBuilder()
+        .setTaskId(taskId.mesosTaskId)
+        .setState(MesosProtos.TaskState.TASK_STAGING)
+        .setContainerStatus(
+          MesosProtos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
+        ).build
+    }
+
     val taskWithMultipleIPs = new Task.LaunchedEphemeral(
       taskId = Task.Id("/foo/bar"),
       agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
@@ -35,14 +44,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
       status = Task.Status(
         stagedAt = time,
         startedAt = None,
-        mesosStatus = Some(
-          MesosProtos.TaskStatus.newBuilder()
-            .setTaskId(Task.Id("/foo/bar").mesosTaskId)
-            .setState(MesosProtos.TaskState.TASK_RUNNING)
-            .setContainerStatus(
-              MesosProtos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
-            ).build
-        )),
+        mesosStatus = Some(mesosStatus(Task.Id("/foo/bar")))),
       hostPorts = Seq.empty
     )
 
@@ -64,6 +66,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
         |{
         |  "id": "/foo/bar",
         |  "host": "agent1.mesos",
+        |  "state": "TASK_STAGING"
         |  "ports": [],
         |  "startedAt": null,
         |  "stagedAt": "1970-01-01T00:00:01.024Z",
@@ -81,6 +84,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
         |{
         |  "id": "/foo/bar",
         |  "host": "agent1.mesos",
+        |  "state": "TASK_STAGING"
         |  "ipAddresses": [
         |    {
         |      "ipAddress": "123.123.123.123",
@@ -108,6 +112,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
         |{
         |  "id": "/foo/bar",
         |  "host": "agent1.mesos",
+        |  "state" : "TASK_STAGING",
         |  "ports": [],
         |  "startedAt": "1970-01-01T00:00:01.024Z",
         |  "stagedAt": "1970-01-01T00:00:01.024Z",

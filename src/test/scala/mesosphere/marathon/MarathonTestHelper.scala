@@ -11,8 +11,9 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ResourceLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
@@ -338,7 +339,7 @@ object MarathonTestHelper {
 
   def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forApp(appId).idString)
   def mininimalTask(taskId: Task.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
-  def mininimalTask(taskId: String, now: Timestamp = clock.now()): Task.LaunchedEphemeral = {
+  def mininimalTask(taskId: String, now: Timestamp = clock.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
@@ -346,10 +347,18 @@ object MarathonTestHelper {
       status = Task.Status(
         stagedAt = now,
         startedAt = None,
-        mesosStatus = None
+        mesosStatus = mesosStatus
       ),
       hostPorts = Seq.empty
     )
+  }
+
+  def mininimalLostTask(appId: PathId): Task.LaunchedEphemeral = {
+    val taskId = Task.Id.forApp(appId)
+    val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION))
+    mininimalTask(
+      taskId = taskId.idString,
+      mesosStatus = Some(status))
   }
 
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
@@ -477,12 +486,23 @@ object MarathonTestHelper {
       .buildPartial()
   }
 
-  def statusForState(taskId: String, state: Mesos.TaskState): Mesos.TaskStatus = {
-    Mesos.TaskStatus
+  def lostTask(id: String, reason: TaskStatus.Reason): Protos.MarathonTask = {
+    Protos.MarathonTask
+      .newBuilder()
+      .setId(id)
+      .setStatus(statusForState(id, TaskState.TASK_LOST))
+      .buildPartial()
+  }
+
+  def statusForState(taskId: String, state: Mesos.TaskState, maybeReason: Option[TaskStatus.Reason] = None): Mesos.TaskStatus = {
+    val builder = Mesos.TaskStatus
       .newBuilder()
       .setTaskId(TaskID.newBuilder().setValue(taskId))
       .setState(state)
-      .buildPartial()
+
+    maybeReason.foreach(builder.setReason)
+
+    builder.buildPartial()
   }
 
   def persistentVolumeResources(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) = localVolumeIds.map { id =>

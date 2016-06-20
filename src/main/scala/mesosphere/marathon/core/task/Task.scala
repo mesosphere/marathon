@@ -92,8 +92,9 @@ object Task {
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(_), now) =>
-        TaskStateChange.Expunge(this)
+      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(updatedStatus), now) =>
+        val updated = copy(status = status.copy(mesosStatus = updatedStatus.mesosStatus))
+        TaskStateChange.Expunge(updated)
 
       // case 3: health or state updated
       case TaskStateOp.MesosUpdate(_, taskStatus, now) =>

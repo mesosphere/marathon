@@ -22,7 +22,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
       QueuedTaskInfo(
-        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunched = 0, clock.now() + 100.seconds
+        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunched = 0, tasksLost = 0, clock.now() + 100.seconds
       )
     )
 
@@ -46,7 +46,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
       QueuedTaskInfo(
-        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunched = 0,
+        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunched = 0, tasksLost = 0,
         backOffUntil = clock.now() - 100.seconds
       )
     )
@@ -81,7 +81,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
     val app = AppDefinition(id = "app".toRootPath)
     queue.list returns Seq(
       QueuedTaskInfo(
-        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunched = 0,
+        app, tasksLeftToLaunch = 23, taskLaunchesInFlight = 0, tasksLaunched = 0, tasksLost = 0,
         backOffUntil = clock.now() + 100.seconds
       )
     )
@@ -118,7 +118,7 @@ class QueueResourceTest extends MarathonSpec with Matchers with Mockito with Giv
 
     When(s"one delay is reset")
     val appId = "appId".toRootPath
-    val taskCount = LaunchQueue.QueuedTaskInfo(AppDefinition(appId), 0, 0, 0, Timestamp.now())
+    val taskCount = LaunchQueue.QueuedTaskInfo(AppDefinition(appId), 0, 0, 0, 0, Timestamp.now())
     queue.list returns Seq(taskCount)
 
     val resetDelay = queueResource.resetDelay("appId", req)

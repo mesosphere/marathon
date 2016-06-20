@@ -48,7 +48,13 @@ private[tracker] class TaskTrackerDelegate(
 
   override def countLaunchedAppTasksSync(appId: PathId): Int =
     tasksByAppSync.appTasks(appId).count(_.launched.isDefined)
+  override def countLaunchedAppTasksSync(appId: PathId, filter: Task => Boolean): Int =
+    tasksByAppSync.appTasks(appId).count { t =>
+      t.launched.isDefined && filter(t)
+    }
   override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.marathonAppTasks(appId).size
+  override def countAppTasksSync(appId: PathId, filter: Task => Boolean): Int =
+    tasksByAppSync.appTasks(appId).count(filter)
   override def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
     tasksByApp().map(_.marathonAppTasks(appId).size)
   override def marathonTaskSync(taskId: Task.Id): Option[MarathonTask] =

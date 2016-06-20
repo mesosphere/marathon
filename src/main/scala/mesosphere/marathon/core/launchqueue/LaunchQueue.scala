@@ -21,6 +21,7 @@ object LaunchQueue {
       tasksLeftToLaunch: Int,
       taskLaunchesInFlight: Int, // FIXME (217): rename to taskOpsInFlight
       tasksLaunched: Int,
+      tasksLost: Int,
       backOffUntil: Timestamp) {
     /**
       * Indicates if the launch queue tries to launch tasks for this app.
@@ -30,7 +31,7 @@ object LaunchQueue {
     /**
       * This is the final number of tasks, the launch queue tries to reach for this app.
       */
-    def finalTaskCount: Int = tasksLaunched + taskLaunchesInFlight + tasksLeftToLaunch
+    def finalTaskCount: Int = tasksLaunched + taskLaunchesInFlight + tasksLeftToLaunch - tasksLost
   }
 }
 
