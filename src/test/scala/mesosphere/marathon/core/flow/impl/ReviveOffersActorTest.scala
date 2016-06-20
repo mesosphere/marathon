@@ -186,6 +186,9 @@ class ReviveOffersActorTest extends MarathonSpec with GivenWhenThen with Matcher
 
     Then("we cancel the timer")
     Mockito.verify(f.actorRef.underlyingActor.cancellable, Mockito.timeout(1000)).cancel()
+
+    Then("we suppress offers")
+    Mockito.verify(f.driver, Mockito.timeout(1000)).suppressOffers()
     f.verifyNoMoreInteractions()
   }
 
