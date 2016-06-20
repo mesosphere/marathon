@@ -87,7 +87,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     ))
     val update = manager(minServicePort = 10, maxServicePort = 20).assignDynamicServicePorts(Group.empty, group)
     update.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
-    update.transitiveApps.flatMap(_.portNumbers.filter(x => x >= 10 && x <= 20)) should have size 2
+    update.transitiveApps.flatMap(_.hostPorts.flatten.filter(x => x >= 10 && x <= 20)) should have size 2
   }
 
   //regression for #2743

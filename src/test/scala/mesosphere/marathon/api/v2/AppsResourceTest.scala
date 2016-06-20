@@ -25,6 +25,7 @@ import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics
 import org.scalatest.{ GivenWhenThen, Matchers }
 import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.{ JsResultException, JsNumber, JsObject, Json }
+import org.rogach.scallop.ScallopConf
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -304,24 +305,47 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   }
 
   test("Create a new app with IP/CT with virtual network foo w/ Docker") {
+    useRealGroupManager()
+    object Config extends ScallopConf() {
+      val localPortMin = opt[Int](default = Some(2000))
+      val localPortMax = opt[Int](default = Some(3000))
+      val defaultNetworkName = opt[String]()
+      val maxApps = opt[Int](default = Some(10))
+      verify()
+    }
+    config.localPortMin returns Config.localPortMin
+    config.localPortMax returns Config.localPortMax
+    config.defaultNetworkName returns Config.defaultNetworkName
+    config.maxApps returns Config.maxApps
+
+    val group = Group(PathId.empty, apps = Set(AppDefinition("/notapp".toRootPath)))
+    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
+    groupRepository.rootGroup returns Future.successful(Some(group))
+    val plan = DeploymentPlan(group, group)
+
     Given("An app and group")
-    val app = AppDefinition(
-      id = PathId("/app"),
-      cmd = Some("cmd"),
-      ipAddress = Some(IpAddress(networkName = Some("foo"))),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
-        ))
-      )),
-      portDefinitions = Seq.empty
-    )
-    val (body, plan) = prepareApp(app)
+    val body =
+      """{
+        |  "id": "app",
+        |  "ipAddress": {
+        |    "networkName": "foo"
+        |  },
+        |  "cmd": "cmd",
+        |  "container": {
+        |    "type": "DOCKER",
+        |    "docker": {
+        |      "image": "jdef/helpme",
+        |      "network": "USER",
+        |      "portMappings": [{
+        |        "containerPort": 0, "protocol": "tcp"
+        |      },{
+        |        "containerPort": 123, "hostPort": 345
+        |      },{
+        |        "containerPort": 789, "servicePort": 80, "name": "foo"
+        |      }]
+        |    }
+        |  }
+        |}""".stripMargin.getBytes("UTF-8")
 
     When("The create request is made")
     clock += 5.seconds
@@ -332,6 +356,26 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     And("the JSON is as expected, including a newly generated version")
     import mesosphere.marathon.api.v2.json.Formats._
+
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(networkName = Some("foo"))),
+      container = Some(Container(
+        `type` = Mesos.ContainerInfo.Type.DOCKER,
+        docker = Some(Container.Docker(
+          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+          image = "jdef/helpme",
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp"),
+            Container.Docker.PortMapping(containerPort = 123, hostPort = Some(345)),
+            Container.Docker.PortMapping(containerPort = 789, servicePort = 80, name = Some("foo"))
+          ))
+        ))
+      )),
+      portDefinitions = Seq.empty
+    )
+
     val expected = AppInfo(
       app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
       maybeTasks = Some(immutable.Seq.empty),

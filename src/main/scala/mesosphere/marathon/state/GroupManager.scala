@@ -202,10 +202,10 @@ class GroupManager @Inject() (
       }
   }
 
-  //scalastyle:off method.length
+  //scalastyle:off method.length cyclomatic.complexity
   private[state] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = from.transitiveApps.flatMap(_.portNumbers) ++ to.transitiveApps.flatMap(_.portNumbers)
+    var taken = from.transitiveApps.flatMap(_.hostPorts.flatten) ++ to.transitiveApps.flatMap(_.hostPorts.flatten)
 
     def nextGlobalFreePort: Int = synchronized {
       val port = portRange.find(!taken.contains(_))
@@ -218,11 +218,14 @@ class GroupManager @Inject() (
       port
     }
 
-    def mergeServicePortsAndPortDefinitions(portDefinitions: Seq[PortDefinition], servicePorts: Seq[Int]) = {
-      portDefinitions.zipAll(servicePorts, AppDefinition.RandomPortDefinition, AppDefinition.RandomPortValue).map {
-        case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
-      }
-    }
+    def mergeServicePortsAndPortDefinitions(
+      portDefinitions: Seq[PortDefinition],
+      servicePorts: Seq[Int]): Seq[PortDefinition] =
+      if (portDefinitions.nonEmpty)
+        portDefinitions.zipAll(servicePorts, AppDefinition.RandomPortDefinition, AppDefinition.RandomPortValue).map {
+          case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
+        }
+      else Seq.empty
 
     def assignPorts(app: AppDefinition): AppDefinition = {
 
@@ -230,7 +233,7 @@ class GroupManager @Inject() (
       //if the app uses dynamic ports (0), it will get always the same ports assigned
       val assignedAndAvailable = mutable.Queue(
         from.app(app.id)
-          .map(_.portNumbers.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
+          .map(_.hostPorts.flatten.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
           .getOrElse(Nil): _*
       )
 
@@ -249,7 +252,15 @@ class GroupManager @Inject() (
         pms <- d.portMappings
       } yield {
         val mappings = pms.zip(servicePorts).map {
-          case (pm, sp) => pm.copy(servicePort = sp)
+          case (pm, sp) => pm match {
+            // merge service ports and container port mappings:
+            // always assign service port; if hostPort == 0, assign that to service port too
+            // (same affect as mergeServicePortsDefinitions, except on portMappings)
+            case Container.Docker.PortMapping(_, Some(0), 0, _, _, _) =>
+              pm.copy(hostPort = Some(sp), servicePort = sp)
+            case _ =>
+              pm.copy(servicePort = sp)
+          }
         }
         c.copy(
           docker = Some(d.copy(
