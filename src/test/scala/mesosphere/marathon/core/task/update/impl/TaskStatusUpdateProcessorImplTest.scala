@@ -10,6 +10,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
+import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -76,7 +77,7 @@ class TaskStatusUpdateProcessorImplTest
   test("update for unknown task (TASK_LOST) will get only acknowledged") {
     fOpt = Some(new Fixture)
 
-    val origUpdate = TaskStatusUpdateTestHelper.lost()
+    val origUpdate = TaskStatusUpdateTestHelper.lost(TaskStatus.Reason.REASON_RECONCILIATION)
     val status = origUpdate.status
     val update = origUpdate
     val taskId = update.wrapped.stateOp.taskId

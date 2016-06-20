@@ -4,14 +4,14 @@ import javax.inject.Named
 
 import akka.event.EventStream
 import com.google.inject.Inject
-import mesosphere.marathon.core.task.Task.Terminated
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
+import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus.WithMesosStatus
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.{ EffectiveTaskStateChange, Task, TaskStateOp }
 import mesosphere.marathon.event.{ EventModule, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
+import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -20,37 +20,40 @@ import scala.concurrent.Future
   * Post this update to the internal event stream.
   */
 class PostToEventStreamStepImpl @Inject() (
-    @Named(EventModule.busName) eventBus: EventStream) extends TaskUpdateStep {
+    @Named(EventModule.busName) eventBus: EventStream, clock: Clock) extends TaskUpdateStep {
+
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def name: String = "postTaskStatusEvent"
 
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
-    taskChanged.stateOp match {
-      case TaskStateOp.MesosUpdate(task, MarathonTaskStatus.WithMesosStatus(mesosStatus), timestamp) =>
-        mesosStatus.getState match {
-          case Terminated(_) =>
-            postEvent(timestamp, mesosStatus, task)
-          case TaskState.TASK_RUNNING if task.launched.exists(!_.hasStartedRunning) => // staged, not running
-            postEvent(timestamp, mesosStatus, task)
-          case TaskState.TASK_KILLING if task.launched.isDefined =>
-            postEvent(timestamp, mesosStatus, task)
+    import TaskStateOp.MesosUpdate
 
-          case state: TaskState =>
-            val taskId = task.taskId
-            log.debug(s"Do not post event $state for $taskId of app [${taskId.runSpecId}].")
-        }
+    taskChanged match {
+      // case 1: Mesos status update => update or expunge
+      // In this case, we post the OLD state - when terminated, a persistent task no longer has a launched
+      case TaskChanged(MesosUpdate(task, WithMesosStatus(status), now), EffectiveTaskStateChange(_)) =>
+        postEvent(clock.now(), Some(status), task)
+
+      // case 2: Any TaskStateOp => update or expunge
+      // In this case, we post the NEW state
+      case TaskChanged(_, EffectiveTaskStateChange(task)) =>
+        postEvent(clock.now(), task.mesosStatus, task)
 
       case _ =>
-      // ignore
+        log.debug("Ignoring noop for {}", taskChanged.taskId)
     }
 
     Future.successful(())
   }
 
-  private[this] def postEvent(timestamp: Timestamp, status: TaskStatus, task: Task): Unit = {
+  private[this] def postEvent(timestamp: Timestamp, maybeStatus: Option[TaskStatus], task: Task): Unit = {
     val taskId = task.taskId
-    task.launched.foreach { launched =>
+
+    for {
+      launched <- task.launched
+      status <- maybeStatus
+    } {
       log.info(
         "Sending event notification for {} of app [{}]: {}",
         Array[Object](taskId, taskId.runSpecId, status.getState): _*

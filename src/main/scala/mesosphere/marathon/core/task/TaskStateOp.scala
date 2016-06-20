@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.task
 
 import mesosphere.marathon.core.task.Task.Id
+import mesosphere.marathon.core.task.TaskStateChange.{ Expunge, Update }
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 
@@ -59,6 +60,14 @@ object TaskStateChange {
   case class Failure(cause: Throwable) extends TaskStateChange
   object Failure {
     def apply(message: String): Failure = Failure(TaskStateChangeException(message))
+  }
+}
+
+object EffectiveTaskStateChange {
+  def unapply(stateChange: TaskStateChange): Option[Task] = stateChange match {
+    case Update(newState, _) => Some(newState)
+    case Expunge(oldState)   => Some(oldState)
+    case _                   => None
   }
 }
 

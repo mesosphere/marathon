@@ -148,6 +148,12 @@ The core functionality flags can be also set by environment variable `MARATHON_O
 * <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
     A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
 * `--default_network_name` (Optional.): Network name, injected into applications' `ipAddress{}` specs that do not define their own `networkName`.
+* <span class="label label-default">v0.15.4</span> `--task_lost_expunge_gc` (Optional. Default: 24 hours):
+    This is the length of time in milliseconds, until a lost task is garbage collected and expunged from the task tracker and task repository.
+* <span class="label label-default">v0.15.4</span> `--task_lost_expunge_initial_delay` (Optional. Default: 5 minutes):
+    This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations
+* <span class="label label-default">v0.15.4</span> `--task_lost_expunge_interval` (Optional. Default: 1 hour):
+    This is the length of time in milliseconds, for lost task gc operations.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 

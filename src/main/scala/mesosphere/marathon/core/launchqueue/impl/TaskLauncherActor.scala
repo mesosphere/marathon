@@ -104,6 +104,7 @@ private class TaskLauncherActor(
       runSpec.id, runSpec.version, tasksToLaunch)
 
     tasksMap = taskTracker.tasksByAppSync.appTasksMap(runSpec.id).taskMap
+    log.info(">>> received tasksMap: {}", tasksMap.keySet.mkString(","))
 
     rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
   }
@@ -346,6 +347,7 @@ private class TaskLauncherActor(
       inProgress = tasksToLaunch > 0 || inFlightTaskOperations.nonEmpty,
       tasksLeftToLaunch = tasksToLaunch,
       finalTaskCount = tasksToLaunch + taskLaunchesInFlight + tasksLaunched,
+      tasksLost = tasksMap.values.count(_.mesosStatus.fold(false)(_.getState == Mesos.TaskState.TASK_LOST)),
       backOffUntil.getOrElse(clock.now())
     )
   }

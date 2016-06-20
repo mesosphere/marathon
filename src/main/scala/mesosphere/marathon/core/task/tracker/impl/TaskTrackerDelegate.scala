@@ -6,7 +6,6 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -48,6 +47,13 @@ private[tracker] class TaskTrackerDelegate(
 
   override def countLaunchedAppTasksSync(appId: PathId): Int =
     tasksByAppSync.appTasks(appId).count(_.launched.isDefined)
+  override def countLaunchedAppTasksSync(appId: PathId, filter: Task => Boolean): Int =
+    tasksByAppSync.appTasks(appId).count { t =>
+      t.launched.isDefined && filter(t)
+    }
+  override def countAppTasksSync(appId: PathId, filter: Task => Boolean): Int =
+    tasksByAppSync.appTasks(appId).count(filter)
+
   override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.appTasks(appId).size
   override def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
     tasksByApp().map(_.appTasks(appId).size)

@@ -17,6 +17,7 @@ object LaunchQueue {
     inProgress: Boolean,
     tasksLeftToLaunch: Int,
     finalTaskCount: Int,
+    tasksLost: Int,
     backOffUntil: Timestamp)
 }
 
