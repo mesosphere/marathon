@@ -304,6 +304,44 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
   }
 
+  test("Create a new app with IP/CT with virtual network foo w/ Docker") {
+    Given("An app and group")
+    val app = AppDefinition(
+      id = PathId("/app"),
+      cmd = Some("cmd"),
+      ipAddress = Some(IpAddress(networkName = Some("foo"))),
+      container = Some(Container(
+        `type` = Mesos.ContainerInfo.Type.DOCKER,
+        docker = Some(Container.Docker(
+          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+          image = "jdef/helpme",
+          portMappings = Some(Seq(
+            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+          ))
+        ))
+      )),
+      portDefinitions = Seq.empty
+    )
+    val (body, plan) = prepareApp(app)
+
+    When("The create request is made")
+    clock += 5.seconds
+    val response = appsResource.create(body, force = false, auth.request)
+
+    Then("It is successful")
+    response.getStatus should be(201)
+
+    And("the JSON is as expected, including a newly generated version")
+    import mesosphere.marathon.api.v2.json.Formats._
+    val expected = AppInfo(
+      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
+      maybeTasks = Some(immutable.Seq.empty),
+      maybeCounts = Some(TaskCounts.zero),
+      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+    )
+    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+  }
+
   /*
   test("Create a new app with IP/CT with virtual network foo w/ Docker") {
     useRealGroupManager()
