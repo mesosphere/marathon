@@ -90,6 +90,79 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     update.transitiveApps.flatMap(_.hostPorts.flatten.filter(x => x >= 10 && x <= 20)) should have size 2
   }
 
+  test("Assign dynamic service ports specified in multiple containers") {
+    import Container.Docker
+    import Docker.PortMapping
+    import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    val c1 = Some(Container(
+      docker = Some(Docker(
+        image = "busybox",
+        network = Some(Network.USER),
+        portMappings = Some(Seq(
+          PortMapping(containerPort = 8080)
+        ))
+      ))
+    ))
+    val c2 = Some(Container(
+      docker = Some(Docker(
+        image = "busybox",
+        network = Some(Network.USER),
+        portMappings = Some(Seq(
+          PortMapping(containerPort = 8081)
+        ))
+      ))
+    ))
+    val group = Group(PathId.empty, Set(
+      AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1),
+      AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2)
+    ))
+    val update = manager(minServicePort = 10, maxServicePort = 20).assignDynamicServicePorts(Group.empty, group)
+    update.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
+    update.transitiveApps.flatMap(_.hostPorts.flatten.filter(x => x >= 10 && x <= 20)).toSet should have size 0
+    update.transitiveApps.flatMap(_.servicePorts.filter(x => x >= 10 && x <= 20)).toSet should have size 2
+  }
+
+  test("Assign dynamic service ports w/ anonymous host-ports specified in multiple containers") {
+    import Container.Docker
+    import Docker.PortMapping
+    import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    val c1 = Some(Container(
+      docker = Some(Docker(
+        image = "busybox",
+        network = Some(Network.BRIDGE),
+        portMappings = Some(Seq(
+          PortMapping(containerPort = 8080, servicePort = 10, hostPort = Some(0))
+        ))
+      ))
+    ))
+    val c2 = Some(Container(
+      docker = Some(Docker(
+        image = "busybox",
+        network = Some(Network.USER),
+        portMappings = Some(Seq(
+          PortMapping(containerPort = 8081)
+        ))
+      ))
+    ))
+    val fromGroup = Group(PathId.empty, Set(
+      AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
+    ))
+    val toGroup = Group(PathId.empty, Set(
+      AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1),
+      AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2)
+    ))
+    // the port range 10 - 12 actually excludes 12
+    val mgr = manager(minServicePort = 10, maxServicePort = 12)
+    val groupsV1 = mgr.assignDynamicServicePorts(Group.empty, fromGroup)
+    groupsV1.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
+    val groupsV2 = mgr.assignDynamicServicePorts(groupsV1, toGroup)
+    groupsV2.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
+    val assignedHostPorts = groupsV2.transitiveApps.flatMap(_.hostPorts.flatten.filter(x => x >= 10 && x <= 12)).toSet
+    assignedHostPorts should have size 0
+    val assignedServicePorts = groupsV2.transitiveApps.flatMap(_.servicePorts.filter(x => x >= 10 && x <= 12)).toSet
+    assignedServicePorts should have size 2
+  }
+
   //regression for #2743
   test("Reassign dynamic service ports specified in the container") {
     val from = Group(PathId.empty, Set(AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))))
