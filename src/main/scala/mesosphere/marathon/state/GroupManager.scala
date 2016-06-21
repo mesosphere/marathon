@@ -205,7 +205,8 @@ class GroupManager @Inject() (
   //scalastyle:off method.length cyclomatic.complexity
   private[state] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = from.transitiveApps.flatMap(_.hostPorts.flatten) ++ to.transitiveApps.flatMap(_.hostPorts.flatten)
+    var taken = (from.transitiveApps.flatMap(app => app.hostPorts.flatten ++ app.servicePorts) ++
+      to.transitiveApps.flatMap(app => app.hostPorts.flatten ++ app.servicePorts)).toSet
 
     def nextGlobalFreePort: Int = synchronized {
       val port = portRange.find(!taken.contains(_))
@@ -276,9 +277,13 @@ class GroupManager @Inject() (
 
     val dynamicApps: Set[AppDefinition] =
       to.transitiveApps.map {
+        // assign values for service ports that the user has left "blank" (set to zero)
         case app: AppDefinition if app.hasDynamicPort => assignPorts(app)
         case app: AppDefinition =>
           // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
+          // TODO(jdef) not sure why we do this:
+          // (1) HOST mode, servicePorts returns portNumbers; we know all ports != 0 so this is an identity assignment
+          // (2) !HOST mode, servicePorts = some set(mappings.servicePort); we shouldn't generate portDefinitions anyway
           app.copy(
             portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
           )
