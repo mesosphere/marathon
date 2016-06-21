@@ -415,7 +415,7 @@ object TaskBuilder {
       }
 
       val allAssigned = effectivePorts.flatten ++ generatedPorts.values
-      env += ("PORT" -> allAssigned.head.toString)
+      allAssigned.headOption.foreach { port => env += ("PORT" -> port.toString) }
       env += ("PORTS" -> allAssigned.mkString(","))
       env.result()
     }
