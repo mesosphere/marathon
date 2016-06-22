@@ -51,12 +51,14 @@ object MarathonSchedulerDriver {
 
     //set credentials only if principal and secret is set
     val credential: Option[Credential] = {
+      def secretFileContent = config.mesosAuthenticationSecretFile.get.map { secretFile =>
+        ByteString.readFrom(new FileInputStream(secretFile)).toStringUtf8
+      }
       for {
         principal <- config.mesosAuthenticationPrincipal.get
-        secretFile <- config.mesosAuthenticationSecretFile.get
+        secret <- config.mesosAuthenticationSecret.get orElse secretFileContent
       } yield {
-        val secretBytes = ByteString.readFrom(new FileInputStream(secretFile))
-        Credential.newBuilder().setPrincipal(principal).setSecret(secretBytes.toStringUtf8).build()
+        Credential.newBuilder().setPrincipal(principal).setSecret(secret).build()
       }
     }
 

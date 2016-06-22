@@ -226,9 +226,14 @@ trait MarathonConf
   )
 
   lazy val mesosAuthenticationSecretFile = opt[String]("mesos_authentication_secret_file",
+    descr = "Mesos Authentication Secret written to a file.",
+    noshort = true
+  )
+  lazy val mesosAuthenticationSecret = opt[String]("mesos_authentication_secret",
     descr = "Mesos Authentication Secret.",
     noshort = true
   )
+  mutuallyExclusive(mesosAuthenticationSecret, mesosAuthenticationSecretFile)
 
   lazy val envVarsPrefix = opt[String]("env_vars_prefix",
     descr = "Prefix to use for environment variables injected automatically into all started tasks.",
