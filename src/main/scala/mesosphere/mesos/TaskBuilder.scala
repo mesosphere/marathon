@@ -294,6 +294,7 @@ object TaskBuilder {
       pms <- c.portMappings
     } yield pms.map(_.containerPort)
     val declaredPorts = containerPorts.getOrElse(runSpec.portNumbers)
+    // TODO(jdef) why doesn't this pull port names from container.portMappings?
     val portNames = runSpec.portDefinitions.map(_.name)
 
     val envMap: Map[String, String] =
