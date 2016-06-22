@@ -3,6 +3,7 @@ package mesosphere.marathon.core.base
 import akka.actor.{ ActorRefFactory, ActorSystem }
 import org.slf4j.LoggerFactory
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 /**
@@ -15,7 +16,6 @@ class ActorsModule(shutdownHooks: ShutdownHooks, actorSystem: ActorSystem = Acto
 
   shutdownHooks.onShutdown {
     log.info("Shutting down actor system {}", actorSystem)
-    actorSystem.shutdown()
-    actorSystem.awaitTermination(10.seconds)
+    Await.result(actorSystem.terminate(), 10.seconds)
   }
 }

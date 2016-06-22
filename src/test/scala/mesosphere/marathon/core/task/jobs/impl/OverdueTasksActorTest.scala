@@ -4,21 +4,20 @@ import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
+import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.TaskID
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.apache.mesos.{ Protos => MesosProtos, SchedulerDriver }
+import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.scalatest.GivenWhenThen
 import org.scalatest.concurrent.ScalaFutures
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
   implicit var actorSystem: ActorSystem = _
@@ -52,9 +51,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
     waitForActorProcessingAllAndDying()
 
-    actorSystem.shutdown()
-    actorSystem.awaitTermination()
-
+    Await.result(actorSystem.terminate(), Duration.Inf)
     noMoreInteractions(taskTracker)
     noMoreInteractions(driver)
     noMoreInteractions(taskReservationTimeoutHandler)

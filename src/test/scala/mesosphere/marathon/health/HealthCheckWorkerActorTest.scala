@@ -5,7 +5,6 @@ import java.net.{ InetAddress, ServerSocket }
 import akka.actor.Props
 import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.MarathonActorSupport

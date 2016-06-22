@@ -42,8 +42,7 @@ class CuratorElectionService(
         val participant = l.getLeader
         if (participant.isLeader) Some(participant.getId) else None
       }
-    }
-    catch {
+    } catch {
       case NonFatal(e) =>
         log.error("error while getting current leader", e)
         None
@@ -166,8 +165,7 @@ class CuratorElectionService(
           creatingParentsIfNeeded().
           withMode(CreateMode.EPHEMERAL).
           forPath(path, hostPort.getBytes("UTF-8"))
-      }
-      catch {
+      } catch {
         case e: Exception =>
           log.error(s"Exception while creating tombstone for twitter commons leader election: ${e.getMessage}")
           abdicateLeadership(error = true)
@@ -183,9 +181,8 @@ class CuratorElectionService(
               log.info("Deleting existing tombstone for old twitter commons leader election")
               client.delete().guaranteed().withVersion(tombstone.getVersion).forPath(path)
             }
-          }
-          catch {
-            case _: KeeperException.NoNodeException     =>
+          } catch {
+            case _: KeeperException.NoNodeException =>
             case _: KeeperException.BadVersionException =>
           }
       }

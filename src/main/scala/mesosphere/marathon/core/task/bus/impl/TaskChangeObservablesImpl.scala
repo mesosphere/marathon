@@ -11,11 +11,9 @@ private[bus] class TaskChangeObservablesImpl(eventStream: InternalTaskChangeEven
   override def forAll: Observable[TaskChanged] = forRunSpecId(PathId.empty)
 
   override def forRunSpecId(appId: PathId): Observable[TaskChanged] = {
-    Observable.create { observer =>
+    Observable { observer =>
+      observer.add(Subscription(eventStream.unsubscribe(observer, appId)))
       eventStream.subscribe(observer, appId)
-      Subscription {
-        eventStream.unsubscribe(observer, appId)
-      }
     }
   }
 }

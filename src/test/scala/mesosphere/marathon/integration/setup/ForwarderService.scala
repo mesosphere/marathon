@@ -7,7 +7,7 @@ import javax.ws.rs.{ GET, Path }
 import akka.actor.ActorRef
 import com.google.common.util.concurrent.Service
 import com.google.inject._
-import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService, RestModule }
+import mesosphere.chaos.http.{ HttpConf, HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }

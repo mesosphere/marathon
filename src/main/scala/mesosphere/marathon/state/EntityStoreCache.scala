@@ -1,6 +1,6 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.{ PrePostDriverCallback, MarathonSchedulerService }
+import mesosphere.marathon.PrePostDriverCallback
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
@@ -32,11 +32,10 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
       Future.successful{
         cache.get(key) match {
           case Some(t) => t
-          case _       => None
+          case _ => None
         }
       }
-    }
-    else {
+    } else {
       //if we need to fetch a versioned entry, try if this is the latest version we have in the cache
       //otherwise let the underlying store fetch that entry.
       val id = idFromVersionKey(key)
@@ -78,7 +77,7 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
     def preloadEntry(nextName: String): Future[Unit] = {
       store.fetch(nextName).map {
         case Some(t) => cache.update(nextName, Some(t))
-        case None    => log.warn(s"Expected to find entry $nextName in store $store")
+        case None => log.warn(s"Expected to find entry $nextName in store $store")
       }
     }
 
@@ -117,7 +116,7 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
   private[this] def directOrCached[R](direct: => R)(cached: TrieMap[String, Option[T]] => R): R = {
     cacheOpt match {
       case Some(cache) => cached(cache)
-      case None        => direct
+      case None => direct
     }
   }
 }

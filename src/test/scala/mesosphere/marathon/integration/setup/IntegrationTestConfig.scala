@@ -5,8 +5,6 @@ import java.io.File
 import mesosphere.marathon.state.PathId
 import org.scalatest.ConfigMap
 
-import scala.util.Try
-
 /**
   * Configuration used in integration test.
   * Pass parameter from scala test by command line and create via ConfigMap.
@@ -71,7 +69,7 @@ case class IntegrationTestConfig(
   def zkHostAndPort: String = s"127.0.0.1:$zkPort"
   def zkPath: String = "/marathon-itest"
   def zk: String = zkCredentials match {
-    case None               => s"zk://$zkHostAndPort$zkPath"
+    case None => s"zk://$zkHostAndPort$zkPath"
     case Some(userPassword) => s"zk://$userPassword@$zkHostAndPort$zkPath"
   }
 
@@ -111,8 +109,7 @@ object IntegrationTestConfig {
     def unusedForExternalSetup(block: => String): String = {
       if (useExternalSetup) {
         "UNUSED FOR EXTERNAL SETUP"
-      }
-      else {
+      } else {
         block
       }
     }

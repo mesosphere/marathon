@@ -5,8 +5,6 @@ import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskState
 
-import scala.collection.mutable
-
 /** Precalculated task infos for internal calculations. */
 private[appinfo] class TaskForStatistics(
   val version: Timestamp,

@@ -5,11 +5,12 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.appinfo.{ AppInfo, TaskCounts }
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ AppDefinition, Timestamp, TaskFailure, Identifiable, PathId }
-import org.scalatest.GivenWhenThen
-import play.api.libs.json.{ Writes, JsObject, Json }
-import scala.collection.immutable.Seq
+import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId, TaskFailure, Timestamp }
 import org.apache.mesos.{ Protos => mesos }
+import org.scalatest.GivenWhenThen
+import play.api.libs.json.{ JsObject, Json }
+
+import scala.collection.immutable.Seq
 
 class AppDefinitionAppInfoTest extends MarathonSpec with GivenWhenThen {
   import Formats._

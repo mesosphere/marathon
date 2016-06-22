@@ -1,15 +1,14 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.Features
-import mesosphere.marathon.integration.facades.{ ITLeaderResult, MarathonFacade }
+import mesosphere.marathon.integration.facades.MarathonFacade
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId
 import org.apache.zookeeper.data.Stat
-import org.apache.zookeeper.{ ZooKeeper, WatchedEvent, Watcher }
+import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 import scala.util.Try
 
 class LeaderIntegrationTest extends IntegrationFunSuite
@@ -105,8 +104,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
         val apiLeader: String = marathon.leader().value.leader
         val tombstoneData = zooKeeper.getData(config.zkPath + "/leader/member_-00000000", false, stat.get)
         new String(tombstoneData, "UTF-8") should equal(apiLeader)
-      }
-      finally {
+      } finally {
         zooKeeper.close()
       }
     }

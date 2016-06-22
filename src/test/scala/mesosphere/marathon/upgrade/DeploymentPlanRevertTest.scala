@@ -1,11 +1,9 @@
 package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.scalatest.{ GivenWhenThen, Matchers }
-import mesosphere.marathon.state.PathId._
-
-import scala.collection.SortedSet
 
 class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhenThen {
   private def normalizeVersions(group: Group): Group = {
@@ -445,52 +443,52 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
   testWithConcurrentChange(
     original
   )(
-      // revert first
-      addApp("/changeme/some/a"),
-      // concurrent deployments
-      addApp("/changeme/some/b/a"),
-      addApp("/changeme/some/b/b"),
-      addApp("/changeme/some/b/c")
-    ) {
-        // expected outcome after revert
-        Group(
-          PathId.empty,
-          groups = Set(
-            Group("othergroup1".toRootPath),
-            Group("othergroup2".toRootPath),
-            Group("othergroup3".toRootPath),
-            {
-              val id = "changeme".toRootPath
-              Group(
-                id,
-                dependencies = Set(
-                  "othergroup1".toRootPath,
-                  "othergroup2".toRootPath
-                ),
-                apps = Set(
-                  AppDefinition(id / "app1"),
-                  AppDefinition(id / "app2")
-                ),
-                groups = Set(
-                  Group(
-                    id / "some",
-                    groups = Set(
-                      Group(
-                        id / "some" / "b",
-                        apps = Set(
-                          AppDefinition(id / "some" / "b" / "a"),
-                          AppDefinition(id / "some" / "b" / "b"),
-                          AppDefinition(id / "some" / "b" / "c")
-                        )
+    // revert first
+    addApp("/changeme/some/a"),
+    // concurrent deployments
+    addApp("/changeme/some/b/a"),
+    addApp("/changeme/some/b/b"),
+    addApp("/changeme/some/b/c")
+  ) {
+      // expected outcome after revert
+      Group(
+        PathId.empty,
+        groups = Set(
+          Group("othergroup1".toRootPath),
+          Group("othergroup2".toRootPath),
+          Group("othergroup3".toRootPath),
+          {
+            val id = "changeme".toRootPath
+            Group(
+              id,
+              dependencies = Set(
+                "othergroup1".toRootPath,
+                "othergroup2".toRootPath
+              ),
+              apps = Set(
+                AppDefinition(id / "app1"),
+                AppDefinition(id / "app2")
+              ),
+              groups = Set(
+                Group(
+                  id / "some",
+                  groups = Set(
+                    Group(
+                      id / "some" / "b",
+                      apps = Set(
+                        AppDefinition(id / "some" / "b" / "a"),
+                        AppDefinition(id / "some" / "b" / "b"),
+                        AppDefinition(id / "some" / "b" / "c")
                       )
                     )
                   )
                 )
               )
-            }
-          )
+            )
+          }
         )
-      }
+      )
+    }
 
   case class Deployment(name: String, change: Group => Group)
 

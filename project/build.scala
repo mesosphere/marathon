@@ -1,19 +1,19 @@
-import com.amazonaws.auth.InstanceProfileCredentialsProvider
-import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
-import ohnosequences.sbt.SbtS3Resolver
-import ohnosequences.sbt.SbtS3Resolver._
-import sbt._
-import Keys._
-import sbtassembly.Plugin._
-import AssemblyKeys._
-import com.typesafe.sbt.SbtScalariform._
+import com.amazonaws.auth.{ EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider }
+import com.typesafe.sbt.SbtScalariform
+import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+import ohnosequences.sbt.SbtS3Resolver.autoImport._
 import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
-import scalariform.formatter.preferences._
-import sbtbuildinfo.Plugin._
-import spray.revolver.RevolverPlugin.Revolver.{ settings => revolverSettings }
+import sbt.Keys._
+import sbt._
+import sbtassembly.AssemblyKeys._
+import sbtassembly.MergeStrategy
+import sbtbuildinfo.BuildInfoKeys._
+import sbtbuildinfo.{ BuildInfoKey, BuildInfoPlugin }
+import sbtrelease.ReleasePlugin.autoImport._
+import sbtrelease.ReleaseStateTransformations._
 import sbtrelease._
-import ReleasePlugin._
-import ReleaseStateTransformations._
+
+import scalariform.formatter.preferences._
 
 object MarathonBuild extends Build {
   lazy val pluginInterface: Project = Project(
@@ -33,12 +33,10 @@ object MarathonBuild extends Build {
     id = "marathon",
     base = file("."),
     settings = baseSettings ++
-      buildInfoSettings ++
       asmSettings ++
       customReleaseSettings ++
       formatSettings ++
       scalaStyleSettings ++
-      revolverSettings ++
       testSettings ++
       integrationTestSettings ++
       teamCitySetEnvSettings ++
@@ -47,13 +45,13 @@ object MarathonBuild extends Build {
         unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
         libraryDependencies ++= Dependencies.root,
         parallelExecution in Test := false,
-        sourceGenerators in Compile <+= buildInfo,
         buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
         buildInfoPackage := "mesosphere.marathon",
         fork in Test := true
       )
   )
     .configs(IntegrationTest)
+    .enablePlugins(BuildInfoPlugin)
     .dependsOn(pluginInterface)
     // run mesos-simulation/test:test when running test
     .settings((test in Test) <<= (test in Test) dependsOn (test in Test in LocalProject("mesos-simulation")))
@@ -64,7 +62,6 @@ object MarathonBuild extends Build {
     settings = baseSettings ++
       formatSettings ++
       scalaStyleSettings ++
-      revolverSettings ++
       testSettings ++
       integrationTestSettings
     ).dependsOn(root % "compile->compile; test->test").configs(IntegrationTest)
@@ -110,7 +107,7 @@ object MarathonBuild extends Build {
 
   lazy val baseSettings = Seq (
     organization := "mesosphere.marathon",
-    scalaVersion := "2.11.7",
+    scalaVersion := "2.11.8",
     crossScalaVersions := Seq(scalaVersion.value),
     scalacOptions in Compile ++= Seq(
       "-encoding", "UTF-8",
@@ -130,12 +127,13 @@ object MarathonBuild extends Build {
       "Mesosphere Public Repo"    at "http://downloads.mesosphere.com/maven",
       "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
       "Spray Maven Repository"    at "http://repo.spray.io/"
-  ),
+    ),
+    cancelable in Global := true,
     fork in Test := true
   )
 
-  lazy val asmSettings = assemblySettings ++ Seq(
-    mergeStrategy in assembly <<= (mergeStrategy in assembly) { old =>
+  lazy val asmSettings = Seq(
+    assemblyMergeStrategy in assembly <<= (assemblyMergeStrategy in assembly) { old =>
       {
         case "application.conf"                                             => MergeStrategy.concat
         case "META-INF/jersey-module-version"                               => MergeStrategy.first
@@ -145,7 +143,7 @@ object MarathonBuild extends Build {
         case x                                                              => old(x)
       }
     },
-    excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+    assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
       val exclude = Set(
         "commons-beanutils-1.7.0.jar",
         "stax-api-1.0.1.jar",
@@ -157,23 +155,25 @@ object MarathonBuild extends Build {
     }
   )
 
-  lazy val formatSettings = scalariformSettings ++ Seq(
+  lazy val formatSettings = SbtScalariform.scalariformSettings ++ Seq(
     ScalariformKeys.preferences := FormattingPreferences()
-      .setPreference(IndentWithTabs, false)
-      .setPreference(IndentSpaces, 2)
-      .setPreference(AlignParameters, true)
+      .setPreference(AlignArguments, false)
+      .setPreference(AlignParameters, false)
+      .setPreference(AlignSingleLineCaseStatements, false)
+      .setPreference(CompactControlReadability, false)
       .setPreference(DoubleIndentClassDeclaration, true)
+      .setPreference(DanglingCloseParenthesis, Preserve)
+      .setPreference(FormatXml, true)
+      .setPreference(IndentSpaces, 2)
+      .setPreference(IndentWithTabs, false)
       .setPreference(MultilineScaladocCommentsStartOnFirstLine, false)
       .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
-      .setPreference(PreserveDanglingCloseParenthesis, true)
-      .setPreference(CompactControlReadability, true) //MV: should be false!
-      .setPreference(AlignSingleLineCaseStatements, true)
       .setPreference(PreserveSpaceBeforeArguments, true)
+      .setPreference(SpacesAroundMultiImports, true)
       .setPreference(SpaceBeforeColon, false)
       .setPreference(SpaceInsideBrackets, false)
       .setPreference(SpaceInsideParentheses, false)
       .setPreference(SpacesWithinPatternBinders, true)
-      .setPreference(FormatXml, true)
     )
 
   /**
@@ -182,8 +182,8 @@ object MarathonBuild extends Build {
    * -setNextVersion
    * -commitNextVersion
    */
-  lazy val customReleaseSettings = releaseSettings ++ Seq(
-    ReleaseKeys.releaseProcess := Seq[ReleaseStep](
+  lazy val customReleaseSettings = Seq(
+    releaseProcess := Seq[ReleaseStep](
       checkSnapshotDependencies,
       inquireVersions,
       runTest,
@@ -219,13 +219,13 @@ object MarathonBuild extends Build {
     }
   )
 
-  lazy val publishSettings = S3Resolver.defaults ++ Seq(
+  lazy val publishSettings = Seq(
     publishTo := Some(s3resolver.value(
       "Mesosphere Public Repo (S3)",
       s3("downloads.mesosphere.io/maven")
     )),
-    SbtS3Resolver.s3credentials := new EnvironmentVariableCredentialsProvider() |
-    new InstanceProfileCredentialsProvider()
+    s3credentials := new EnvironmentVariableCredentialsProvider() |
+      new InstanceProfileCredentialsProvider()
   )
 }
 
@@ -247,6 +247,7 @@ object Dependencies {
     // runtime
     akkaActor % "compile",
     akkaSlf4j % "compile",
+    akkaStream % "compile",
     asyncAwait % "compile",
     sprayClient % "compile",
     sprayHttpx % "compile",
@@ -273,12 +274,16 @@ object Dependencies {
     marathonApiConsole % "compile",
     wixAccord % "compile",
     curator % "compile",
+    curatorClient % "compile",
+    curatorFramework % "compile",
+    java8Compat % "compile",
 
     // test
     Test.diffson % "test",
     Test.scalatest % "test",
     Test.mockito % "test",
-    Test.akkaTestKit % "test"
+    Test.akkaTestKit % "test",
+    Test.junit % "test"
   ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
 }
 
@@ -286,35 +291,37 @@ object Dependency {
   object V {
     // runtime deps versions
     val Chaos = "0.8.7"
-    val Guava = "18.0"
+    val Guava = "19.0"
     val MesosUtils = "1.0.0-rc1"
-    val Akka = "2.3.15"
+    val Akka = "2.4.7"
     val AsyncAwait = "0.9.6-RC2"
-    val Spray = "1.3.2"
+    val Spray = "1.3.3"
     val TwitterCommons = "0.0.76"
-    val TwitterZk = "6.24.0"
+    val TwitterZk = "6.34.0"
     val Jersey = "1.18.1"
-    val JettyServlets = "9.3.2.v20150730"
-    val JodaTime = "2.3"
-    val JodaConvert = "1.6"
-    val UUIDGenerator = "3.1.3"
-    val JGraphT = "0.9.1"
-    val Hadoop = "2.4.1"
-    val Diffson = "0.3"
-    val PlayJson = "2.5.3"
+    val JettyServlets = "9.3.6.v20151106"
+    val JodaTime = "2.9.4"
+    val JodaConvert = "1.8.1"
+    val UUIDGenerator = "3.1.4"
+    val JGraphT = "0.9.3"
+    val Hadoop = "2.7.2"
+    val Diffson = "2.0.2"
+    val PlayJson = "2.5.4"
     val JsonSchemaValidator = "2.2.6"
-    val RxScala = "0.25.0"
+    val RxScala = "0.26.2"
     val MarathonUI = "1.1.3"
     val MarathonApiConsole = "0.1.1"
     val Graphite = "3.1.2"
-    val DataDog = "1.1.3"
+    val DataDog = "1.1.5"
     val Logback = "1.1.3"
     val WixAccord = "0.5"
     val Curator = "2.10.0"
+    val Java8Compat = "0.8.0-RC1"
 
     // test deps versions
-    val Mockito = "1.9.5"
-    val ScalaTest = "2.1.7"
+    val Mockito = "1.10.19"
+    val ScalaTest = "2.2.6"
+    val JUnit = "4.12"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -322,6 +329,7 @@ object Dependency {
 
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
+  val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
@@ -350,11 +358,15 @@ object Dependency {
   val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
   val curator = "org.apache.curator" % "curator-recipes" % V.Curator
+  val curatorClient = "org.apache.curator" % "curator-client" % V.Curator
+  val curatorFramework = "org.apache.curator" % "curator-framework" % V.Curator
+  val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
     val diffson = "org.gnieh" %% "diffson" % V.Diffson
+    val junit = "junit" % "junit" % V.JUnit
   }
 }

@@ -1,10 +1,10 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
-import mesosphere.util.{ LockManager, ThreadPoolContext }
-import mesosphere.util.state.PersistentStore
 import mesosphere.marathon.metrics.Metrics.Histogram
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.util.LockManager
+import mesosphere.util.state.PersistentStore
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future

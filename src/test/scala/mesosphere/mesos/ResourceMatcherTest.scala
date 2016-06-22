@@ -3,7 +3,7 @@ package mesosphere.mesos
 import mesosphere.marathon.MarathonTestHelper.Implicits._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
+import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.PathId._
@@ -11,11 +11,12 @@ import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinitions, Re
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
+import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{ Resource, TextAttribute }
+import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Attribute, ContainerInfo }
 import org.scalatest.Matchers
-import mesosphere.mesos.protos.Implicits._
-import mesosphere.util.state.FrameworkId
+
 import scala.collection.immutable.Seq
 
 class ResourceMatcherTest extends MarathonSpec with Matchers {

@@ -1,12 +1,11 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.Props
 import akka.testkit.TestActorRef
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.MesosStatusUpdateEvent
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.StoppingBehavior.KillNextBatch
 import mesosphere.marathon.{ MarathonTestHelper, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
