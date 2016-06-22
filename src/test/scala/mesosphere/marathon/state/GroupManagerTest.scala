@@ -63,7 +63,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       AppDefinition("/app3".toPath, portDefinitions = PortDefinitions(0, 2, 0))
     ))
     val update = manager(10, 20).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicPort) should be('empty)
+    update.transitiveApps.filter(_.hasDynamicPort) should be(empty)
     update.transitiveApps.flatMap(_.portNumbers.filter(x => x >= 10 && x <= 20)) should have size 5
   }
 
@@ -86,7 +86,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       AppDefinition("/app1".toPath, portDefinitions = Seq(), container = Some(container))
     ))
     val update = manager(minServicePort = 10, maxServicePort = 20).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
+    update.transitiveApps.filter(_.hasDynamicPort) should be (empty)
     update.transitiveApps.flatMap(_.hostPorts.flatten.filter(x => x >= 10 && x <= 20)) should have size 2
   }
 
@@ -116,13 +116,13 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1),
       AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2)
     ))
-    val update = manager(minServicePort = 10, maxServicePort = 20).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
-    update.transitiveApps.flatMap(_.hostPorts.flatten.filter(x => x >= 10 && x <= 20)).toSet should have size 0
-    update.transitiveApps.flatMap(_.servicePorts.filter(x => x >= 10 && x <= 20)).toSet should have size 2
+    val update = manager(minServicePort = 10, maxServicePort = 12).assignDynamicServicePorts(Group.empty, group)
+    update.transitiveApps.filter(_.hasDynamicPort) should be (empty)
+    update.transitiveApps.flatMap(_.hostPorts.flatten.filter(x => x >= 10 && x < 12)).toSet should have size 0
+    update.transitiveApps.flatMap(_.servicePorts.filter(x => x >= 10 && x < 12)).toSet should have size 2
   }
 
-  test("Assign dynamic service ports w/ anonymous host-ports specified in multiple containers") {
+  test("Assign dynamic service ports w/ both BRIDGE and USER containers") {
     import Container.Docker
     import Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
@@ -154,12 +154,12 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     // the port range 10 - 12 actually excludes 12
     val mgr = manager(minServicePort = 10, maxServicePort = 12)
     val groupsV1 = mgr.assignDynamicServicePorts(Group.empty, fromGroup)
-    groupsV1.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
+    groupsV1.transitiveApps.filter(_.hasDynamicPort) should be (empty)
     val groupsV2 = mgr.assignDynamicServicePorts(groupsV1, toGroup)
-    groupsV2.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
-    val assignedHostPorts = groupsV2.transitiveApps.flatMap(_.hostPorts.flatten.filter(x => x >= 10 && x <= 12)).toSet
+    groupsV2.transitiveApps.filter(_.hasDynamicPort) should be (empty)
+    val assignedHostPorts = groupsV2.transitiveApps.flatMap(_.hostPorts.flatten.filter(x => x >= 10 && x < 12)).toSet
     assignedHostPorts should have size 0
-    val assignedServicePorts = groupsV2.transitiveApps.flatMap(_.servicePorts.filter(x => x >= 10 && x <= 12)).toSet
+    val assignedServicePorts = groupsV2.transitiveApps.flatMap(_.servicePorts.filter(x => x >= 10 && x < 12)).toSet
     assignedServicePorts should have size 2
   }
 
@@ -190,7 +190,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       AppDefinition("/app1".toPath, container = Some(container))
     ))
     val update = manager(minServicePort = 90, maxServicePort = 900).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicPort) should be ('empty)
+    update.transitiveApps.filter(_.hasDynamicPort) should be (empty)
     update.transitiveApps.flatMap(_.portNumbers) should equal (Set(80, 81))
   }
 
@@ -200,7 +200,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 2, 0))
     ))
     val update = manager(10, 20).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicPort) should be('empty)
+    update.transitiveApps.filter(_.hasDynamicPort) should be(empty)
     update.transitiveApps.flatMap(_.portNumbers.filter(x => x >= 10 && x <= 20)) should have size 5
   }
 
