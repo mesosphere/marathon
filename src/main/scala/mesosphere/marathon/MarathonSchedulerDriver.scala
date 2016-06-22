@@ -49,17 +49,17 @@ object MarathonSchedulerDriver {
     // set the authentication principal, if provided
     config.mesosAuthenticationPrincipal.get.foreach(frameworkInfoBuilder.setPrincipal)
 
-    //set credentials only if principal and secret is set
     val credential: Option[Credential] = {
       def secretFileContent = config.mesosAuthenticationSecretFile.get.map { secretFile =>
         ByteString.readFrom(new FileInputStream(secretFile)).toStringUtf8
       }
-      for {
-        principal <- config.mesosAuthenticationPrincipal.get
-        secret <- config.mesosAuthenticationSecret.get orElse secretFileContent
-      } yield {
-        Credential.newBuilder().setPrincipal(principal).setSecret(secret).build()
+      def credentials = config.mesosAuthenticationPrincipal.get.map { principal =>
+        val credentials = Credential.newBuilder().setPrincipal(principal)
+        //secret is optional
+        config.mesosAuthenticationSecret.get.orElse(secretFileContent).foreach(credentials.setSecret)
+        credentials.build()
       }
+      if (config.mesosAuthentication()) credentials else None
     }
 
     // Task Killing Behavior enables a dedicated task update (TASK_KILLING) from mesos before a task is killed.

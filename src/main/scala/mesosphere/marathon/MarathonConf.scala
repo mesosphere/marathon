@@ -220,6 +220,15 @@ trait MarathonConf
     noshort = true
   )
 
+  lazy val mesosAuthentication = toggle("mesos_authentication",
+    default = Some(false),
+    noshort = true,
+    descrYes = "Will enforce framework authentication while registering with Mesos with principal and optional secret.",
+    descrNo = "(Default) will not use framework authentication while registering with Mesos.",
+    prefix = "disable_"
+  )
+  dependsOnAll(mesosAuthentication, List(mesosAuthenticationPrincipal))
+
   lazy val mesosAuthenticationPrincipal = opt[String]("mesos_authentication_principal",
     descr = "Mesos Authentication Principal.",
     noshort = true
