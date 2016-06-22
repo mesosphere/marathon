@@ -1313,8 +1313,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
             docker = Some(Docker(
               network = Some(DockerInfo.Network.BRIDGE),
               portMappings = Some(Seq(
-                PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp"),
-                PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
+                PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("http")),
+                PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("jabber"))
               ))
             ))
           ))
@@ -1329,6 +1329,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     assert("1000" == env("PORT_8080"))
     assert("1001" == env("PORT_8081"))
+    assert("1000" == env("PORT_HTTP"))
+    assert("1001" == env("PORT_JABBER"))
   }
 
   test("PortsEnvWithBothPortsAndMappings") {
