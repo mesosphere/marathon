@@ -23,7 +23,7 @@ import scala.concurrent.Future
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppTasksResource @Inject() (
-  service: MarathonSchedulerService,
+    service: MarathonSchedulerService,
     taskTracker: TaskTracker,
     taskKiller: TaskKiller,
     healthCheckManager: HealthCheckManager,

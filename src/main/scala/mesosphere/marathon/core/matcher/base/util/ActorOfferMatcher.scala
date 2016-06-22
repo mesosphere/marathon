@@ -15,7 +15,7 @@ import scala.concurrent.Future
   * Provides a thin wrapper around an OfferMatcher implemented as an actors.
   */
 class ActorOfferMatcher(
-  clock: Clock,
+    clock: Clock,
     actorRef: ActorRef,
     override val precedenceFor: Option[PathId]) extends OfferMatcher {
   def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedTaskOps] = {

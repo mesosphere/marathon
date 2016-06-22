@@ -3,14 +3,14 @@ package mesosphere.marathon.integration.setup
 import java.io.File
 
 import org.apache.commons.io.FileUtils
-import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap }
+import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
 
-trait StartedZookeeper extends BeforeAndAfterAllConfigMap { self: IntegrationFunSuite =>
+trait StartedZookeeper extends BeforeAndAfterAllConfigMap { self: Suite =>
 
   private var configOption: Option[IntegrationTestConfig] = None
   def config: IntegrationTestConfig = configOption.get
 
-  override protected def beforeAll(configMap: ConfigMap): Unit = {
+  abstract override protected def beforeAll(configMap: ConfigMap): Unit = {
     super.beforeAll(configMap)
     configOption = Some(IntegrationTestConfig(configMap))
     if (!config.useExternalSetup) {
@@ -19,7 +19,7 @@ trait StartedZookeeper extends BeforeAndAfterAllConfigMap { self: IntegrationFun
     }
   }
 
-  override protected def afterAll(configMap: ConfigMap): Unit = {
+  abstract override protected def afterAll(configMap: ConfigMap): Unit = {
     super.afterAll(configMap)
     ProcessKeeper.shutdown()
   }

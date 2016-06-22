@@ -3,7 +3,7 @@ package mesosphere.marathon.core.appinfo
 import mesosphere.marathon.state.Group
 
 case class GroupInfo(
-  group: Group,
+    group: Group,
     maybeApps: Option[Seq[AppInfo]],
     maybeGroups: Option[Seq[GroupInfo]]) {
 

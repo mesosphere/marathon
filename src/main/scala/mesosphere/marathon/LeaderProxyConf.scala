@@ -12,7 +12,7 @@ trait LeaderProxyConf extends ScallopConf {
   lazy val leaderProxyConnectionTimeout = opt[Int](
     "leader_proxy_connection_timeout",
     descr = "Maximum time, in milliseconds, to wait for connecting to the current Marathon leader from " +
-    "another Marathon instance.",
+      "another Marathon instance.",
     default = Some(5000)) // 5 seconds
 
   lazy val leaderProxyReadTimeout = opt[Int](
@@ -23,6 +23,6 @@ trait LeaderProxyConf extends ScallopConf {
   lazy val leaderProxySSLIgnoreHostname = opt[Boolean](
     "leader_proxy_ssl_ignore_hostname",
     descr = "Do not verify that the hostname of the Marathon leader matches the one in the SSL certificate" +
-    " when proxying API requests to the current leader.",
+      " when proxying API requests to the current leader.",
     default = Some(false))
 }

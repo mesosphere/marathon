@@ -133,7 +133,7 @@ object DeploymentManager {
   final case class CancelConflictingDeployments(plan: DeploymentPlan)
 
   final case class DeploymentStepInfo(
-    plan: DeploymentPlan,
+      plan: DeploymentPlan,
       step: DeploymentStep,
       nr: Int,
       readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {

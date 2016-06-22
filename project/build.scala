@@ -85,12 +85,12 @@ object MarathonBuild extends Build {
 
   lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
     Seq(
-      testOptions in IntegrationTest := Seq(formattingTestArg, Tests.Argument("-n", "integration"))
+      testOptions in IntegrationTest := Seq(formattingTestArg, Tests.Argument("-n", "mesosphere.marathon.IntegrationTest"))
     )
 
   lazy val testSettings = Seq(
-    testOptions in Test := Seq(formattingTestArg, Tests.Argument("-l", "integration")),
     parallelExecution in Test := false,
+    testOptions in Test := Seq(formattingTestArg, Tests.Argument("-l", "mesosphere.marathon.IntegrationTest")),
     fork in Test := true
   )
 
@@ -129,7 +129,8 @@ object MarathonBuild extends Build {
       "Spray Maven Repository"    at "http://repo.spray.io/"
     ),
     cancelable in Global := true,
-    fork in Test := true
+    fork in Test := true,
+    javaOptions += "-Xmx4G"
   )
 
   lazy val asmSettings = Seq(

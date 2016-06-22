@@ -21,7 +21,7 @@ import scala.concurrent.Future
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
 class EventSubscriptionsResource @Inject() (
-  val config: MarathonConf,
+    val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer) extends AuthResource {
 

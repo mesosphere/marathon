@@ -60,7 +60,7 @@ object ProcessKeeper {
       FileUtils.forceMkdir(workDirFile)
     }
 
-    startJavaProcess("zookeeper", heapInMegs = 256, systemArgs ++ sd ++ app, new File("."),
+    startJavaProcess("zookeeper", heapInMegs = 512, systemArgs ++ sd ++ app, new File("."),
       sys.env, _.contains("binding to port"))
   }
 
@@ -151,7 +151,7 @@ object ProcessKeeper {
     val argsWithMain = mainClass :: arguments ++ authSettings
 
     startJavaProcess(
-      processName, heapInMegs = 512, /* debugArgs ++ */ argsWithMain, cwd,
+      processName, heapInMegs = 1024, /* debugArgs ++ */ argsWithMain, cwd,
       env + (ENV_MESOS_WORK_DIR -> marathonWorkDir),
       upWhen = _.contains(startupLine))
   }

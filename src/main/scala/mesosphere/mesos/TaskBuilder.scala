@@ -19,7 +19,7 @@ import scala.collection.immutable.Seq
 import scala.util.Random
 
 class TaskBuilder(
-  runSpec: RunSpec,
+    runSpec: RunSpec,
     newTaskId: PathId => Task.Id,
     config: MarathonConf,
     appTaskProc: Option[RunSpecTaskProcessor] = None) {
