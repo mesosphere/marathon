@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ ExecutionContext, TimeoutException, Await, Future }
 import scala.util.control.NonFatal
 import scala.concurrent.duration._
+import scala.concurrent.blocking
 
 object CurrentRuntime {
 
@@ -19,19 +20,21 @@ object CurrentRuntime {
     * @return the Future of this operation.
     */
   //scalastyle:off magic.number
-  def asyncExit(exitCode: Int = 9,
+  def asyncExit(exitCode: Int = 137, //Fatal error signal "n" is 128+n ==> n for killed is 9 ==> 137
                 waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Unit] = {
-    Future({
-      try {
-        Await.result(Future(sys.exit(exitCode)), waitForExit)
-      }
-      catch {
-        case _: TimeoutException => log.error("Shutdown timeout")
-        case NonFatal(t)         => log.error("Exception while committing suicide", t)
-      }
+    Future(
+      blocking {
+        try {
+          Await.result(Future(blocking(sys.exit(exitCode))), waitForExit)
+        }
+        catch {
+          case _: TimeoutException => log.error("Shutdown timeout")
+          case NonFatal(t)         => log.error("Exception while committing suicide", t)
+        }
 
-      log.info("Halting JVM")
-      Runtime.getRuntime.halt(exitCode)
-    })
+        log.info("Halting JVM")
+        Runtime.getRuntime.halt(exitCode)
+      }
+    )
   }
 }
