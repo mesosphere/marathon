@@ -5,7 +5,7 @@ import akka.event.EventStream
 import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.ShutdownHooks
+import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -13,7 +13,7 @@ import mesosphere.marathon.metrics.Metrics.Timer
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
-import scala.util.control.NonFatal
+import scala.util.control.{ ControlThrowable, NonFatal }
 
 private[impl] object ElectionServiceBase {
   protected type Abdicator = /* error: */ Boolean => Unit
@@ -208,6 +208,12 @@ abstract class ElectionServiceBase(
           case NonFatal(e) => // catch Scala and Java exceptions
             log.error("Failed to take over leadership", e)
             abdicateLeadership(error = true)
+          case ex: ControlThrowable => // scala uses exceptions to control flow. Those exceptions need to be propagated
+            throw ex
+          case ex: Throwable => // all other exceptions here are fatal errors, that can not be handled.
+            log.error("Fatal error while trying to take over leadership. Exit now.", ex)
+            abdicateLeadership(error = true)
+            CurrentRuntime.asyncExit()
         }
     }
   }
