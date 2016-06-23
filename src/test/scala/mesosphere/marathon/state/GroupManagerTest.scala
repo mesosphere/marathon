@@ -172,6 +172,29 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     assignedServicePorts should have size 3
   }
 
+  test("Assign a service port for an app using Docker USER networking with a default port mapping") {
+    import Container.Docker
+    import Docker.PortMapping
+    import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
+    val c1 = Some(Container(
+      docker = Some(Docker(
+        image = "busybox",
+        network = Some(Network.USER),
+        portMappings = Some(Seq(
+          PortMapping()
+        ))
+      ))
+    ))
+    val group = Group(PathId.empty, Set(
+      AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
+    ))
+    val servicePortsRange = 10 to 11
+    val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
+    update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
+    update.transitiveApps.flatMap(_.hostPorts.flatten) should have size 0
+    update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1
+  }
+
   //regression for #2743
   test("Reassign dynamic service ports specified in the container") {
     val from = Group(PathId.empty, Set(AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))))
