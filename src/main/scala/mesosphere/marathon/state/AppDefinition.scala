@@ -279,7 +279,7 @@ case class AppDefinition(
 
   def servicePorts: Seq[Int] = container.flatMap(_.servicePorts).getOrElse(portNumbers)
 
-  def hasDynamicPort: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
+  def hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
   def networkModeBridge: Boolean =
     container.exists(_.docker.exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))

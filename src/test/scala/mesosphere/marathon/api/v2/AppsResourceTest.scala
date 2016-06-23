@@ -1,31 +1,25 @@
 package mesosphere.marathon.api.v2
 
 import java.util
-import java.util.concurrent.atomic.AtomicInteger
 import javax.ws.rs.core.Response
 
 import akka.event.EventStream
-import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon._
-import mesosphere.marathon.api.{ TestGroupManagerFixture, JsonTestHelper, TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture, TestGroupManagerFixture }
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
-import org.scalatest.{ GivenWhenThen, Matchers }
 import org.apache.mesos.{ Protos => Mesos }
-import play.api.libs.json.{ JsResultException, JsNumber, JsObject, Json }
-import org.rogach.scallop.ScallopConf
+import org.scalatest.{ GivenWhenThen, Matchers }
+import play.api.libs.json.{ JsNumber, JsObject, JsResultException, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -341,89 +335,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     )
     JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
   }
-
-  /*
-  test("Create a new app with IP/CT with virtual network foo w/ Docker") {
-    useRealGroupManager()
-    object Config extends ScallopConf() {
-      val localPortMin = opt[Int](default = Some(2000))
-      val localPortMax = opt[Int](default = Some(3000))
-      val defaultNetworkName = opt[String]()
-      val maxApps = opt[Int](default = Some(10))
-      verify()
-    }
-    config.localPortMin returns Config.localPortMin
-    config.localPortMax returns Config.localPortMax
-    config.defaultNetworkName returns Config.defaultNetworkName
-    config.maxApps returns Config.maxApps
-
-    val group = Group(PathId.empty, apps = Set(AppDefinition("/notapp".toRootPath)))
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
-    val plan = DeploymentPlan(group, group)
-
-    Given("An app and group")
-    val body =
-      """{
-        |  "id": "app",
-        |  "ipAddress": {
-        |    "networkName": "foo"
-        |  },
-        |  "cmd": "cmd",
-        |  "container": {
-        |    "type": "DOCKER",
-        |    "docker": {
-        |      "image": "jdef/helpme",
-        |      "network": "USER",
-        |      "portMappings": [{
-        |        "containerPort": 0, "protocol": "tcp"
-        |      },{
-        |        "containerPort": 123, "hostPort": 345
-        |      },{
-        |        "containerPort": 789, "servicePort": 80, "name": "foo"
-        |      }]
-        |    }
-        |  }
-        |}""".stripMargin.getBytes("UTF-8")
-
-    When("The create request is made")
-    clock += 5.seconds
-    val response = appsResource.create(body, force = false, auth.request)
-
-    Then("It is successful")
-    response.getStatus should be(201)
-
-    And("the JSON is as expected, including a newly generated version")
-    import mesosphere.marathon.api.v2.json.Formats._
-
-    val app = AppDefinition(
-      id = PathId("/app"),
-      cmd = Some("cmd"),
-      ipAddress = Some(IpAddress(networkName = Some("foo"))),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp"),
-            Container.Docker.PortMapping(containerPort = 123, hostPort = Some(345)),
-            Container.Docker.PortMapping(containerPort = 789, servicePort = 80, name = Some("foo"))
-          ))
-        ))
-      )),
-      portDefinitions = Seq.empty
-    )
-
-    val expected = AppInfo(
-      app.copy(versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now())),
-      maybeTasks = Some(immutable.Seq.empty),
-      maybeCounts = Some(TaskCounts.zero),
-      maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
-    )
-    JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
-  }
-  */
 
   test("Create a new app in BRIDGE mode w/ Docker") {
     Given("An app and group")
@@ -1221,7 +1132,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val req = auth.request
     val embed = new util.HashSet[String]()
     val app = """{"id":"/a","cmd":"foo","ports":[]}"""
-    config.zkTimeoutDuration returns 5.seconds
 
     When("we try to create an app")
     val create = appsResource.create(app.getBytes("UTF-8"), false, req)

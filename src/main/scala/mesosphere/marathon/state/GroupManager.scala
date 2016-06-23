@@ -205,8 +205,7 @@ class GroupManager @Inject() (
   //scalastyle:off method.length cyclomatic.complexity
   private[state] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = (from.transitiveApps.flatMap(app => app.hostPorts.flatten ++ app.servicePorts) ++
-      to.transitiveApps.flatMap(app => app.hostPorts.flatten ++ app.servicePorts)).toSet
+    var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
 
     def nextGlobalFreePort: Int = synchronized {
       val port = portRange.find(!taken.contains(_))
@@ -234,16 +233,16 @@ class GroupManager @Inject() (
       //if the app uses dynamic ports (0), it will get always the same ports assigned
       val assignedAndAvailable = mutable.Queue(
         from.app(app.id)
-          .map(_.hostPorts.flatten.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
+          .map(_.servicePorts.filter(p => portRange.contains(p) && !app.servicePorts.contains(p)))
           .getOrElse(Nil): _*
       )
 
-      def nextFreeAppPort: Int =
+      def nextFreeServicePort: Int =
         if (assignedAndAvailable.nonEmpty) assignedAndAvailable.dequeue()
         else nextGlobalFreePort
 
       val servicePorts: Seq[Int] = app.servicePorts.map { port =>
-        if (port == 0) nextFreeAppPort else port
+        if (port == 0) nextFreeServicePort else port
       }
 
       // defined only if there are port mappings
@@ -252,20 +251,13 @@ class GroupManager @Inject() (
         d <- c.docker
         pms <- d.portMappings
       } yield {
-        val mappings = pms.zip(servicePorts).map {
-          case (pm, sp) => pm match {
-            // merge service ports and container port mappings:
-            // always assign service port; if hostPort == 0, assign that to service port too
-            // (same affect as mergeServicePortsDefinitions, except on portMappings)
-            case Container.Docker.PortMapping(_, Some(0), 0, _, _, _) =>
-              pm.copy(hostPort = Some(sp), servicePort = sp)
-            case _ =>
-              pm.copy(servicePort = sp)
-          }
+        val portMappings = pms.zip(servicePorts).map {
+          case (portMapping, servicePort) =>
+            portMapping.copy(servicePort = servicePort)
         }
+
         c.copy(
-          docker = Some(d.copy(
-            portMappings = Some(mappings)))
+          docker = Some(d.copy(portMappings = Some(portMappings)))
         )
       }
 
@@ -278,12 +270,9 @@ class GroupManager @Inject() (
     val dynamicApps: Set[AppDefinition] =
       to.transitiveApps.map {
         // assign values for service ports that the user has left "blank" (set to zero)
-        case app: AppDefinition if app.hasDynamicPort => assignPorts(app)
+        case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
         case app: AppDefinition =>
           // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-          // TODO(jdef) not sure why we do this:
-          // (1) HOST mode, servicePorts returns portNumbers; we know all ports != 0 so this is an identity assignment
-          // (2) !HOST mode, servicePorts = some set(mappings.servicePort); we shouldn't generate portDefinitions anyway
           app.copy(
             portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
           )
