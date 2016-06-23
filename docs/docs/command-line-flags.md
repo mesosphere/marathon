@@ -120,8 +120,13 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     sessions in milliseconds.
 * <span class="label label-default">v1.1.2</span> `--zk_max_node_size` (Optional. Default: 1 MiB):
     Maximum allowed ZooKeeper node size (in bytes).
+* <span class="label label-default">v1.2.0</span> `--[disable_]mesos_authentication`  (Optional. Default: disabled):
+    If enabled, framework authentication will be used while registering with Mesos with principal and optional secret.
 * `--mesos_authentication_principal` (Optional.): The Mesos principal used for
-    authentication
+    authentication and for resource reservations
+* <span class="label label-default">v1.2.0</span> `--mesos_authentication_secret` (Optional.): The secret to use for authentication.
+    Please also consider using `--mesos_authentication_secret_file` to specify the secret in a file.
+    Only specify `--mesos_authentication_secret_file` or `--mesos_authentication_secret`
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret
     file containing the authentication secret
 * `--mesos_leader_ui_url` (Optional.): The URL to the Mesos master facade. By default this

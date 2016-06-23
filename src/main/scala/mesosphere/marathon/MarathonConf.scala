@@ -220,15 +220,29 @@ trait MarathonConf
     noshort = true
   )
 
+  lazy val mesosAuthentication = toggle("mesos_authentication",
+    default = Some(false),
+    noshort = true,
+    descrYes = "Will use framework authentication while registering with Mesos with principal and optional secret.",
+    descrNo = "(Default) will not use framework authentication while registering with Mesos.",
+    prefix = "disable_"
+  )
+  dependsOnAll(mesosAuthentication, List(mesosAuthenticationPrincipal))
+
   lazy val mesosAuthenticationPrincipal = opt[String]("mesos_authentication_principal",
     descr = "Mesos Authentication Principal.",
     noshort = true
   )
 
   lazy val mesosAuthenticationSecretFile = opt[String]("mesos_authentication_secret_file",
+    descr = "Path to a file containing the Mesos Authentication Secret.",
+    noshort = true
+  )
+  lazy val mesosAuthenticationSecret = opt[String]("mesos_authentication_secret",
     descr = "Mesos Authentication Secret.",
     noshort = true
   )
+  mutuallyExclusive(mesosAuthenticationSecret, mesosAuthenticationSecretFile)
 
   lazy val envVarsPrefix = opt[String]("env_vars_prefix",
     descr = "Prefix to use for environment variables injected automatically into all started tasks.",
