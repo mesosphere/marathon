@@ -39,6 +39,7 @@ object MarathonBuild extends Build {
       scalaStyleSettings ++
       testSettings ++
       integrationTestSettings ++
+      benchmarkSettings ++
       teamCitySetEnvSettings ++
       publishSettings ++
       Seq(
@@ -50,7 +51,7 @@ object MarathonBuild extends Build {
         fork in Test := true
       )
   )
-    .configs(IntegrationTest)
+    .configs(IntegrationTest, Benchmark)
     .enablePlugins(BuildInfoPlugin)
     .dependsOn(pluginInterface)
     // run mesos-simulation/test:test when running test
@@ -63,8 +64,9 @@ object MarathonBuild extends Build {
       formatSettings ++
       scalaStyleSettings ++
       testSettings ++
-      integrationTestSettings
-    ).dependsOn(root % "compile->compile; test->test").configs(IntegrationTest)
+      integrationTestSettings ++
+      benchmarkSettings
+    ).dependsOn(root % "compile->compile; test->test").configs(IntegrationTest, Benchmark)
 
   /**
    * Determine scala test runner output. `-e` for reporting on standard error.
@@ -82,6 +84,15 @@ object MarathonBuild extends Build {
    * http://scalatest.org/user_guide/using_the_runner
    */
   lazy val formattingTestArg = Tests.Argument("-eDFG")
+
+  lazy val benchmarkSettings = inConfig(Benchmark)(Defaults.testTasks) ++
+    Seq(
+      testFrameworks := Seq(new TestFramework("org.scalameter.ScalaMeterFramework")),
+      testOptions in Benchmark := Seq(),
+      logBuffered := false,
+      parallelExecution in Benchmark := false,
+      fork in Test := false
+    )
 
   lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
     Seq(
@@ -104,6 +115,7 @@ object MarathonBuild extends Build {
   )
 
   lazy val IntegrationTest = config("integration") extend Test
+  lazy val Benchmark = config("bench") extend Test
 
   lazy val baseSettings = Seq (
     organization := "mesosphere.marathon",
@@ -283,7 +295,8 @@ object Dependencies {
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test",
-    Test.junit % "test"
+    Test.junit % "test",
+    Test.scalameter % "test"
   ).map(_.excludeAll(excludeSlf4jLog4j12).excludeAll(excludeLog4j).excludeAll(excludeJCL))
 }
 
@@ -322,6 +335,7 @@ object Dependency {
     val Mockito = "1.10.19"
     val ScalaTest = "2.2.6"
     val JUnit = "4.12"
+    val ScalaMeter = "0.7"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -368,5 +382,6 @@ object Dependency {
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
     val diffson = "org.gnieh" %% "diffson" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
+    val scalameter = "com.storm-enroute" %% "scalameter" % V.ScalaMeter
   }
 }
