@@ -289,12 +289,23 @@ object TaskBuilder {
                   host: Option[String],
                   hostPorts: Seq[Option[Int]],
                   envPrefix: Option[String]): CommandInfo.Builder = {
-    val containerPorts = for {
-      c <- runSpec.container
-      pms <- c.portMappings
-    } yield pms.map(_.containerPort)
-    val declaredPorts = containerPorts.getOrElse(runSpec.portNumbers)
-    val portNames = runSpec.portDefinitions.map(_.name)
+
+    val declaredPorts = {
+      val containerPorts = for {
+        c <- runSpec.container
+        pms <- c.portMappings
+      } yield pms.map(_.containerPort)
+
+      containerPorts.getOrElse(runSpec.portNumbers)
+    }
+    val portNames = {
+      val containerPortNames = for {
+        c <- runSpec.container
+        pms <- c.portMappings
+      } yield pms.map(_.name)
+
+      containerPortNames.getOrElse(runSpec.portDefinitions.map(_.name))
+    }
 
     val envMap: Map[String, String] =
       taskContextEnv(runSpec, taskId) ++
@@ -415,7 +426,7 @@ object TaskBuilder {
       }
 
       val allAssigned = effectivePorts.flatten ++ generatedPorts.values
-      env += ("PORT" -> allAssigned.head.toString)
+      allAssigned.headOption.foreach { port => env += ("PORT" -> port.toString) }
       env += ("PORTS" -> allAssigned.mkString(","))
       env.result()
     }

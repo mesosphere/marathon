@@ -260,6 +260,73 @@ class AppDefinitionFormatsTest
     appDef.ipAddress.get.networkName should equal(Some("foo"))
   }
 
+  test("FromJSON should parse ipAddress.networkName with MESOS container") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "ipAddress": {
+        |    "networkName": "foo"
+        |  },
+        |  "container": {
+        |    "type": "MESOS"
+        |  }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
+    appDef.ipAddress.get.networkName should equal(Some("foo"))
+    appDef.container.map(_.`type`.toString) should equal (Some("MESOS"))
+  }
+
+  test("FromJSON should parse ipAddress.networkName with DOCKER container w/o port mappings") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "ipAddress": {
+        |    "networkName": "foo"
+        |  },
+        |  "container": {
+        |    "type": "DOCKER",
+        |    "docker": {
+        |      "image": "busybox",
+        |      "network": "USER"
+        |    }
+        |  }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
+    appDef.ipAddress.get.networkName should equal(Some("foo"))
+    appDef.container.map(_.`type`.toString) should equal (Some("DOCKER"))
+    appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
+  }
+
+  test("FromJSON should parse ipAddress.networkName with DOCKER container w/ port mappings") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "ipAddress": {
+        |    "networkName": "foo"
+        |  },
+        |  "container": {
+        |    "type": "DOCKER",
+        |    "docker": {
+        |      "image": "busybox",
+        |      "network": "USER",
+        |      "portMappings": [{
+        |        "containerPort": 123, "servicePort": 80, "name": "foobar"
+        |      }]
+        |    }
+        |  }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
+    appDef.ipAddress.get.networkName should equal(Some("foo"))
+    appDef.container.map(_.`type`.toString) should equal (Some("DOCKER"))
+    appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
+    appDef.container.flatMap(_.docker.flatMap(_.portMappings)) should equal (Some(Seq(
+      Container.Docker.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))
+    )))
+  }
+
   test("FromJSON should parse ipAddress without networkName") {
     val appDef = Json.parse(
       """{

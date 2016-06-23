@@ -8,10 +8,8 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppRepository, GroupManager, GroupRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ AllConf, MarathonConf, MarathonSchedulerService }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
-
-import scala.concurrent.duration._
 
 class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
   val service = mock[MarathonSchedulerService]
@@ -19,7 +17,9 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
   val groupRepository = mock[GroupRepository]
   val eventBus = mock[EventStream]
   val provider = mock[StorageProvider]
-  val config = mock[MarathonConf]
+
+  AllConf.withTestConfig(Seq("--zk_timeout", "1000"))
+  val config = AllConf.config.get.asInstanceOf[MarathonConf]
 
   val metricRegistry = new MetricRegistry()
   val metrics = new Metrics(metricRegistry)
@@ -34,7 +34,6 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
     maxQueued = 10
   )
 
-  config.zkTimeoutDuration returns 1.seconds
   groupRepository.zkRootName returns GroupRepository.zkRootName
 
   val groupManager = new GroupManager(
