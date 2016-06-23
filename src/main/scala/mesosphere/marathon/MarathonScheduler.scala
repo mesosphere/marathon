@@ -4,7 +4,7 @@ import javax.inject.{ Inject, Named }
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.base.{ CurrentRuntime, Clock }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.event._
@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent._
 import scala.util.control.NonFatal
-import scala.concurrent.duration._
 
 trait SchedulerCallbacks {
   def disconnected(): Unit
@@ -142,19 +141,7 @@ class MarathonScheduler @Inject() (
 
     if (removeFrameworkId) Await.ready(frameworkIdUtil.expunge(), config.zkTimeoutDuration)
 
-    // Asynchronously call sys.exit() to avoid deadlock due to the JVM shutdown hooks
-    Future({
-      val exitCode = 9
-      try {
-        Await.result(Future(sys.exit(exitCode)), 10.seconds)
-      }
-      catch {
-        case _: TimeoutException => log.error("Shutdown timeout")
-        case NonFatal(t)         => log.error("Exception while committing suicide", t)
-      }
-
-      log.info("Halting JVM")
-      Runtime.getRuntime.halt(exitCode)
-    })
+    // Asynchronously call asyncExit to avoid deadlock due to the JVM shutdown hooks
+    CurrentRuntime.asyncExit()
   }
 }
