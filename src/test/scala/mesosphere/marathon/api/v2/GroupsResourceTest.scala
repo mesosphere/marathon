@@ -249,8 +249,6 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     groupRepository = f.groupRepository
     groupManager = f.groupManager
 
-    config.zkTimeoutDuration returns 1.second
-
     groupsResource = new GroupsResource(groupManager, groupInfo, auth.auth, auth.auth, config)
   }
 }

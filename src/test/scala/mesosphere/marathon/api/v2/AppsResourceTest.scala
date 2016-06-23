@@ -1,30 +1,25 @@
 package mesosphere.marathon.api.v2
 
 import java.util
-import java.util.concurrent.atomic.AtomicInteger
 import javax.ws.rs.core.Response
 
 import akka.event.EventStream
-import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon._
-import mesosphere.marathon.api.{ TestGroupManagerFixture, JsonTestHelper, TaskKiller, TestAuthFixture }
+import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture, TestGroupManagerFixture }
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
-import org.scalatest.{ GivenWhenThen, Matchers }
 import org.apache.mesos.{ Protos => Mesos }
-import play.api.libs.json.{ JsResultException, JsNumber, JsObject, Json }
+import org.scalatest.{ GivenWhenThen, Matchers }
+import play.api.libs.json.{ JsNumber, JsObject, JsResultException, Json }
 
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -1137,7 +1132,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val req = auth.request
     val embed = new util.HashSet[String]()
     val app = """{"id":"/a","cmd":"foo","ports":[]}"""
-    config.zkTimeoutDuration returns 5.seconds
 
     When("we try to create an app")
     val create = appsResource.create(app.getBytes("UTF-8"), false, req)
