@@ -7,7 +7,7 @@ import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.base.ShutdownHooks
+import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
 import mesosphere.marathon.metrics.Metrics
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.{ RetrySleeper, RetryPolicy }
@@ -17,9 +17,7 @@ import org.apache.zookeeper.data.ACL
 import org.apache.zookeeper.{ ZooDefs, KeeperException, CreateMode }
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
-import scala.concurrent.duration._
 import scala.collection.JavaConversions._
 
 class CuratorElectionService(
@@ -114,26 +112,8 @@ class CuratorElectionService(
       }).
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {
-          log.error("ZooKeeper access failed")
-          log.error("Committing suicide to avoid invalidating ZooKeeper state")
-
-          val f = Future {
-            // scalastyle:off magic.number
-            Runtime.getRuntime.exit(9)
-            // scalastyle:on
-          }(scala.concurrent.ExecutionContext.global)
-
-          try {
-            Await.result(f, 5.seconds)
-          }
-          catch {
-            case _: Throwable =>
-              log.error("Finalization failed, killing JVM.")
-              // scalastyle:off magic.number
-              Runtime.getRuntime.halt(1)
-            // scalastyle:on
-          }
-
+          log.error("ZooKeeper access failed - Committing suicide to avoid invalidating ZooKeeper state")
+          CurrentRuntime.asyncExit()(scala.concurrent.ExecutionContext.global)
           false
         }
       })
