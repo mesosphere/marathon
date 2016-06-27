@@ -16,4 +16,14 @@ trait Benchmark extends HTMLReport {
   def historian: RegressionReporter.Historian =
     RegressionReporter.Historian.ExponentialBackoff()
   def online: Boolean = false
+
+  protected def beforeAll(): Unit = {}
+  protected def afterAll(): Unit = {}
+
+  override def executeTests(): Boolean = {
+    beforeAll()
+    val result = super.executeTests()
+    afterAll()
+    result
+  }
 }

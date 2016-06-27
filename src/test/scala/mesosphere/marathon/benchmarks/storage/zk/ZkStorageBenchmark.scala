@@ -7,22 +7,36 @@ import mesosphere.marathon.integration.setup.ProcessKeeper
 import mesosphere.marathon.test.zk.NoRetryPolicy
 import mesosphere.util.PortAllocator
 import mesosphere.util.state.zk.RichCuratorFramework
-import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
+import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.scalameter.api._
 
 import scala.collection.immutable.IndexedSeq
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Future }
-import scala.util.Try
 import scala.async.Async.{ async, await }
 
 class ZkStorageBenchmark extends Benchmark {
   // scalastyle:off magic.number
-  val sizes = Gen.range("Number of Nodes")(1000, 100000, 10000)
+  val sizes = Gen.exponential("nodes")(256, 262144, 2)
   // scalastyle:on
-  var port = Option.empty[Int]
-  var client = Option.empty[CuratorFramework]
+  val zkClient = {
+    val port = PortAllocator.ephemeralPort()
+    val dir = Files.createTempDirectory("zk-benchmark").toFile
+    dir.deleteOnExit()
+    ProcessKeeper.startZooKeeper(port, dir.getAbsolutePath)
+    val c = CuratorFrameworkFactory.newClient(s"127.0.0.1:$port", NoRetryPolicy)
+    c.start()
+    c
+  }
+  val rootClient = new RichCuratorFramework(zkClient)
+  val flatClient = new RichCuratorFramework(zkClient.usingNamespace("flat"))
+  val nestedClient = new RichCuratorFramework(zkClient.usingNamespace("nested"))
+  var ranSetup: Boolean = false
+  var ranTeardown: Boolean = false
+
+  override def warmer: Warmer = Warmer.Zero
 
   def path(num: Int): String = s"/$num"
 
@@ -31,157 +45,127 @@ class ZkStorageBenchmark extends Benchmark {
     s"/$folder/$path"
   }
 
-  def beforeAll(): Unit = {
-    port = Some(PortAllocator.ephemeralPort())
-    val dir = Files.createTempDirectory("zk").toFile
-    dir.deleteOnExit()
-    ProcessKeeper.startZooKeeper(port.get, dir.getAbsolutePath)
-    client = Some(CuratorFrameworkFactory.newClient(s"127.0.0.1:${port.get}", NoRetryPolicy))
-    client.foreach(_.start())
+  def createRoots(): Unit = {
+    val roots = rootClient.create("/flat") +: 0.until(16).map { i =>
+      rootClient.create(s"/nested/$i", creatingParentsIfNeeded = true)
+    }
+    val futures = roots.map(_.recover {
+      case _: NodeExistsException => ""
+    })
+    Await.result(Future.sequence(futures), Duration.Inf)
   }
 
-  def afterAll(): Unit = {
-    client.foreach(_.close())
-    port = None
-    client = None
+  def createFlat(size: Int): Future[IndexedSeq[String]] = {
+    val futures = 0.until(size).map { entry =>
+      flatClient.create(path(entry))
+    }
+    Future.sequence(futures)
+  }
+
+  def createNested(size: Int): Future[IndexedSeq[String]] = {
+    val futures = 0.until(size).map { entry =>
+      nestedClient.create(nestedPath(entry))
+    }
+    Future.sequence(futures)
+  }
+
+  def deleteChildren(): Unit = {
+    val flat = async {
+      val children = await(rootClient.children("/flat")).children
+      val deleteAll = children.map(c => flatClient.delete(s"/$c").recover {
+        case _: NoNodeException => ""
+      })
+      await(Future.sequence(deleteAll))
+    }
+    val nested = async {
+      val allChildrenFutures = 0.until(16).map { i =>
+        nestedClient.children(s"/$i").map(_.children.map(c => s"/$i/$c"))
+      }
+      val children = await(Future.sequence(allChildrenFutures)).flatten
+      val deleteAll = children.map(nestedClient.delete(_).recover {
+        case _: NoNodeException => ""
+      })
+      await(Future.sequence(deleteAll))
+    }
+    Await.result(flat, Duration.Inf)
+    Await.result(nested, Duration.Inf)
+  }
+
+  override def beforeAll(): Unit = {
+    createRoots()
+  }
+
+  override def afterAll(): Unit = {
+    zkClient.close()
     ProcessKeeper.stopAllProcesses()
   }
 
-  def before(size: Int): Unit = {
-    client.foreach { c =>
-      Try(c.create().creatingParentContainersIfNeeded().forPath("/flat"))
-      0.until(16).foreach { i =>
-        Try(c.create().creatingParentContainersIfNeeded().forPath(s"/nested/$i"))
-      }
-    }
-  }
-
-  def after(size: Int): Unit = {
-    client.foreach { c =>
-      val rc = new RichCuratorFramework(c)
-      val flatFuture = async {
-        val deleteChildren = await(rc.children("/flat")).children.map(child =>
-          rc.delete(s"/flat/$child", deletingChildrenIfNeeded = true)
-        )
-        await(Future.sequence(deleteChildren))
-        await(rc.delete("/flat", deletingChildrenIfNeeded = true))
-      }
-      val nestedFuture = async {
-        val allChildren = 0.until(16).map { i =>
-          rc.children(s"/nested/$i").map(_.children.map(c => s"/nested/$i/$c"))
-        }
-        val deleteChildren = await(Future.sequence(allChildren))
-          .flatten.map(rc.delete(_, deletingChildrenIfNeeded = true))
-        await(Future.sequence(deleteChildren))
-        val deleteFolders = 0.until(16).map { i =>
-          rc.delete(s"/nested/$i")
-        }
-        await(Future.sequence(deleteFolders))
-        await(rc.delete(s"/nested", deletingChildrenIfNeeded = true))
-      }
-      Await.result(flatFuture, Duration.Inf)
-      Await.result(nestedFuture, Duration.Inf)
-    }
-  }
-
-  def createFlat(client: CuratorFramework, size: Int): Future[IndexedSeq[String]] = {
-    val c = new RichCuratorFramework(client.usingNamespace("flat"))
-    val futures = 0.until(size).map { entry =>
-      c.create(path(entry), creatingParentContainersIfNeeded = true)
-    }
-    Future.sequence(futures)
-  }
-
-  def createNested(client: CuratorFramework, size: Int): Future[IndexedSeq[String]] = {
-    val c = new RichCuratorFramework(client.usingNamespace("nested"))
-    val futures = 0.until(size).map { entry =>
-      c.create(nestedPath(entry), creatingParentContainersIfNeeded = true)
-    }
-    Future.sequence(futures)
-  }
+  override def defaultConfig: Context = Context(exec.benchRuns -> 2)
 
   performance of ("Zookeeper Storage") in {
-    measure method ("creation - flat") in {
-      using(sizes).beforeTests(beforeAll()).afterTests(afterAll()).setUp(before).tearDown(after) in { size =>
-        Await.result(createFlat(client.get, size), Duration.Inf)
+    measure method ("flat") in {
+      measure method ("create") in {
+        using(sizes) tearDown (_ => deleteChildren) in { size =>
+          Await.result(createFlat(size), Duration.Inf)
+        }
+      }
+      measure method ("all children") in {
+        using(sizes) setUp (createFlat) tearDown (_ => deleteChildren()) in { _ =>
+          Await.result(flatClient.children("/"), Duration.Inf)
+        }
+      }
+      measure method ("subset of children") in {
+        using(sizes) setUp (createFlat) tearDown (_ => deleteChildren()) in { _ =>
+          // can't do that...
+          Await.result(flatClient.children("/"), Duration.Inf)
+        }
+      }
+      measure method ("add a new child") in {
+        using(sizes) setUp (createFlat) tearDown (_ => deleteChildren()) in { _ =>
+          Await.result(flatClient.create("/new-child"), Duration.Inf)
+        }
+      }
+      measure method ("delete child") in {
+        using(sizes) setUp { size =>
+          createFlat(size)
+          Await.result(flatClient.create("/delete-me"), Duration.Inf)
+        } tearDown (_ => deleteChildren()) in { _ =>
+          Await.result(flatClient.delete("/delete-me"), Duration.Inf)
+        }
       }
     }
-    measure method ("list children - flat") in {
-      using(sizes).beforeTests(beforeAll()).afterTests(afterAll()).setUp { size =>
-        before(size)
-        createFlat(client.get, size)
-      }.tearDown(after) in { size =>
-        val rc = new RichCuratorFramework(client.get.usingNamespace("flat"))
-        Await.result(rc.children("/"), Duration.Inf)
-      }
 
-      measure method ("add child - flat") in {
-        using(sizes).beforeTests(beforeAll()).afterTests(afterAll()).setUp { size =>
-          before(size)
-          createFlat(client.get, size)
-        }.tearDown(after).in { size =>
-          Await.result(new RichCuratorFramework(client.get.usingNamespace("flat")).create("/new-child"), Duration.Inf)
+    measure method ("nested") in {
+      measure method ("create") in {
+        using(sizes) tearDown (_ => deleteChildren) in { size =>
+          Await.result(createNested(size), Duration.Inf)
         }
       }
 
-      measure method ("delete child - flat") in {
-        using(sizes).beforeTests(beforeAll()).afterTests(afterAll()).setUp { size =>
-          before(size)
-          createFlat(client.get, size)
-          Await.result(new RichCuratorFramework(client.get.usingNamespace("flat")).create("/delete-me"), Duration.Inf)
-        }.tearDown(after).in { size =>
-          Await.result(new RichCuratorFramework(client.get.usingNamespace("flat")).delete("/delete-me"), Duration.Inf)
-        }
-      }
-
-      measure method ("create - nested") in {
-        using(sizes).beforeTests(beforeAll()).afterTests(afterAll()).setUp(before).tearDown(after) in { size =>
-          Await.result(createNested(client.get, size), Duration.Inf)
-        }
-      }
-
-      measure method ("list all children - nested") in {
-        using(sizes).beforeTests(beforeAll()).afterTests(afterAll()).setUp { size =>
-          before(size)
-          createNested(client.get, size)
-        }.tearDown(after).in { size =>
-          val c = new RichCuratorFramework(client.get.usingNamespace("nested"))
-          val futures = 0.until(16).map { i =>
-            c.children(s"/$i")
+      measure method ("children") in {
+        using(sizes) setUp (createNested) tearDown (_ => deleteChildren()) in { _ =>
+          val allChildren = 0.until(16).map { i =>
+            nestedClient.children(s"/$i")
           }
-          Await.result(Future.sequence(futures), Duration.Inf)
+          Await.result(Future.sequence(allChildren), Duration.Inf)
         }
       }
-
-      measure method ("list a group of children - nested") in {
-        using(sizes).beforeTests(beforeAll()).afterTests(afterAll()).setUp { size =>
-          before(size)
-          createNested(client.get, size)
-        }.tearDown(after).in { size =>
-          val c = new RichCuratorFramework(client.get.usingNamespace("nested"))
-          Await.result(c.children(s"/1"), Duration.Inf)
+      measure method ("subset of children") in {
+        using(sizes) setUp (createNested) tearDown (_ => deleteChildren()) in { _ =>
+          Await.result(nestedClient.children("/1"), Duration.Inf)
         }
       }
-
-      measure method ("add child - nested") in {
-        using(sizes).beforeTests(beforeAll()).afterTests(afterAll()).setUp { size =>
-          before(size)
-          createNested(client.get, size)
-        }.tearDown(after).in { size =>
-          val c = new RichCuratorFramework(client.get.usingNamespace("nested"))
-          Await.result(c.create("/1/new-node"), Duration.Inf)
+      measure method ("add new child") in {
+        using(sizes) setUp (createNested) tearDown (_ => deleteChildren()) in { _ =>
+          Await.result(nestedClient.create("/1/new-child"), Duration.Inf)
         }
       }
-
-      measure method ("delete child - nested") in {
-        using(sizes).beforeTests(beforeAll()).afterTests(afterAll()).setUp { size =>
-          before(size)
-          createNested(client.get, size)
-          val c = new RichCuratorFramework(client.get.usingNamespace("nested"))
-          Await.result(c.create("/1/delete-node"), Duration.Inf)
-        }.tearDown(after).in { size =>
-          val c = new RichCuratorFramework(client.get.usingNamespace("nested"))
-          Await.result(c.delete("/1/delete-node"), Duration.Inf)
+      measure method ("delete child") in {
+        using(sizes) setUp { size =>
+          createNested(size)
+          Await.result(nestedClient.create("/1/delete-me"), Duration.Inf)
+        } tearDown (_ => deleteChildren()) in { _ =>
+          Await.result(nestedClient.delete("/1/delete-me"), Duration.Inf)
         }
       }
     }
