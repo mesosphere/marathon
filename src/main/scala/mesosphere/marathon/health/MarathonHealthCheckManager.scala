@@ -20,8 +20,8 @@ import org.apache.mesos.Protos.TaskStatus
 import scala.collection.immutable.{ Map, Seq }
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
 
 class MarathonHealthCheckManager @Inject() (
     system: ActorSystem,
@@ -94,8 +94,7 @@ class MarathonHealthCheckManager @Inject() (
       val currentHealthChecksForApp = ahcs(appId)
       val newHealthChecksForApp = if (newHealthChecksForVersion.isEmpty) {
         currentHealthChecksForApp - appVersion
-      }
-      else {
+      } else {
         currentHealthChecksForApp + (appVersion -> newHealthChecksForVersion)
       }
 
@@ -168,8 +167,7 @@ class MarathonHealthCheckManager @Inject() (
           val healthy = taskStatus.getHealthy
           log.info(s"Received status for $taskId with version [$version] and healthy [$healthy]")
           Some(if (healthy) Healthy(taskId, version) else Unhealthy(taskId, version, ""))
-        }
-        else {
+        } else {
           log.debug(s"Ignoring status for $taskId with no health information")
           None
         }
@@ -226,7 +224,7 @@ class MarathonHealthCheckManager @Inject() (
           appTasks.iterator.map { task =>
             groupedHealth.get(task.taskId) match {
               case Some(xs) => task.taskId -> xs.toSeq
-              case None     => task.taskId -> Nil
+              case None => task.taskId -> Nil
             }
           }.toMap
         }

@@ -1,22 +1,20 @@
 package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
+import mesosphere.FutureTestSupport._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.{ MarathonConf, MarathonSpec, StoreCommandFailedException }
-import mesosphere.util.ThreadPoolContext
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Matchers
-import mesosphere.FutureTestSupport._
 
 import scala.collection.immutable.Seq
 import scala.concurrent._
 import scala.concurrent.duration._
-import scala.language.postfixOps
 
 class MarathonStoreTest extends MarathonSpec with Matchers {
   var metrics: Metrics = _
@@ -158,7 +156,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
     def populate(key: String, value: Array[Byte]) = {
       state.load(key).futureValue match {
         case Some(ent) => state.update(ent.withNewContent(value)).futureValue
-        case None      => state.create(key, value).futureValue
+        case None => state.create(key, value).futureValue
       }
     }
 

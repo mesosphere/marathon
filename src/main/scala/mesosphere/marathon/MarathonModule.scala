@@ -16,8 +16,6 @@ import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.launcher.TaskOpFactory
-import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -36,8 +34,8 @@ import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics
 import org.apache.mesos.state.ZooKeeperState
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.Await
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
@@ -93,7 +91,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   def provideMesosLeaderInfo(): MesosLeaderInfo = {
     conf.mesosLeaderUiUrl.get match {
       case someUrl @ Some(_) => ConstMesosLeaderInfo(someUrl)
-      case None              => new MutableMesosLeaderInfo
+      case None => new MutableMesosLeaderInfo
     }
   }
 
@@ -115,10 +113,11 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Named(ModuleNames.HTTP_EVENT_STREAM)
   @Provides
   @Singleton
-  def provideHttpEventStreamActor(system: ActorSystem,
-                                  electionService: ElectionService,
-                                  @Named(EventModule.busName) eventBus: EventStream,
-                                  metrics: HttpEventStreamActorMetrics): ActorRef = {
+  def provideHttpEventStreamActor(
+    system: ActorSystem,
+    electionService: ElectionService,
+    @Named(EventModule.busName) eventBus: EventStream,
+    metrics: HttpEventStreamActorMetrics): ActorRef = {
     val outstanding = conf.eventStreamMaxOutstandingMessages.get.getOrElse(50)
     def handleStreamProps(handle: HttpEventStreamHandle): Props =
       Props(new HttpEventStreamHandleActor(handle, eventBus, outstanding))
@@ -135,7 +134,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
       val authInfo = (conf.zkUsername, conf.zkPassword) match {
         case (Some(user), Some(pass)) => Some(AuthInfo.digest(user, pass))
-        case _                        => None
+        case _ => None
       }
 
       val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true), authInfo)
@@ -156,9 +155,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
       new MesosStateStore(state, conf.zkTimeoutDuration)
     }
     conf.internalStoreBackend.get match {
-      case Some("zk")              => directZK()
-      case Some("mesos_zk")        => mesosZK()
-      case Some("mem")             => new InMemoryStore()
+      case Some("zk") => directZK()
+      case Some("mesos_zk") => mesosZK()
+      case Some("mem") => new InMemoryStore()
       case backend: Option[String] => throw new IllegalArgumentException(s"Storage backend $backend not known!")
     }
   }

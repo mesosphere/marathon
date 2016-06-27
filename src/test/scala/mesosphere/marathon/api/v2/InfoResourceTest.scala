@@ -5,10 +5,10 @@ import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.event.EventConfiguration
 import mesosphere.marathon.event.http.HttpEventConfiguration
-import mesosphere.marathon.{ LeaderProxyConf, MarathonConf, MarathonSchedulerService, MarathonSpec }
 import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.{ LeaderProxyConf, MarathonConf, MarathonSchedulerService, MarathonSpec }
 import mesosphere.util.state.MesosLeaderInfo
-import org.scalatest.{ GivenWhenThen, Matchers, FunSuite }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class InfoResourceTest extends MarathonSpec with Matchers with Mockito with GivenWhenThen {
 

@@ -36,7 +36,7 @@ class ElectionServiceBaseTest
     )
     val httpConfig: HttpConf = mock[HttpConf]
     val electionService: ElectionService = mock[ElectionService]
-    val events: EventStream = new EventStream()
+    val events: EventStream = new EventStream(system)
     val candidate: ElectionCandidate = mock[ElectionCandidate]
     val metrics: Metrics = new Metrics(new MetricRegistry)
     val backoff: Backoff = new ExponentialBackoff(0.01.seconds, 0.1.seconds)

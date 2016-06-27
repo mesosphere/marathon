@@ -1,12 +1,13 @@
 package mesosphere.util
 
-import akka.testkit.{ TestProbe, TestActorRef, TestKit }
-import akka.actor.{ Status, Props, ActorSystem }
+import akka.actor.{ Props, Status }
+import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.test.MarathonActorSupport
-import org.scalatest.{ Matchers, BeforeAndAfterAll }
-import scala.concurrent.{ Future, Await, Promise }
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
+
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future, Promise }
 
 class PromiseActorTest
     extends MarathonActorSupport

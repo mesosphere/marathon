@@ -6,9 +6,8 @@ import java.util.concurrent.TimeUnit
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.tasks.PortsMatcher.{ PortRange, PortWithRole }
 import org.slf4j.LoggerFactory
-import scala.collection.immutable.Seq
-import org.apache.mesos.Protos
 
+import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Random
 

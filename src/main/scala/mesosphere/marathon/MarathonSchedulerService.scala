@@ -5,15 +5,14 @@ import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.event.EventStream
-import akka.pattern.{ after, ask }
+import akka.pattern.ask
 import akka.util.Timeout
+import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
@@ -24,12 +23,11 @@ import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
-import com.codahale.metrics.MetricRegistry
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, TimeoutException }
-import scala.util.{ Failure, Success }
+import scala.util.Failure
 
 /**
   * PrePostDriverCallback is implemented by callback receivers which have to listen for driver
@@ -108,7 +106,7 @@ class MarathonSchedulerService @Inject() (
     val future: Future[Any] = PromiseActor.askWithoutTimeout(system, schedulerActor, Deploy(plan, force))
     future.map {
       case DeploymentStarted(_) => ()
-      case CommandFailed(_, t)  => throw t
+      case CommandFailed(_, t) => throw t
     }
   }
 
@@ -225,7 +223,7 @@ class MarathonSchedulerService @Inject() (
         log.info(s"Driver future completed with result=$result.")
         result match {
           case Failure(t) => log.error("Exception while running driver", t)
-          case _          =>
+          case _ =>
         }
 
         // tell leader election that we step back, but want to be re-elected if isRunning is true.
@@ -252,8 +250,7 @@ class MarathonSchedulerService @Inject() (
       // Note that abdication command will be ran upon driver shutdown which
       // will then offer leadership again.
       stopDriver()
-    }
-    else {
+    } else {
       electionService.offerLeadership(this)
     }
   }
@@ -266,8 +263,7 @@ class MarathonSchedulerService @Inject() (
         def run() {
           if (electionService.isLeader) {
             schedulerActor ! ScaleApps
-          }
-          else log.info("Not leader therefore not scaling apps")
+          } else log.info("Not leader therefore not scaling apps")
         }
       },
       scaleAppsInitialDelay.toMillis,
@@ -280,8 +276,7 @@ class MarathonSchedulerService @Inject() (
           if (electionService.isLeader) {
             schedulerActor ! ReconcileTasks
             schedulerActor ! ReconcileHealthChecks
-          }
-          else log.info("Not leader therefore not reconciling tasks")
+          } else log.info("Not leader therefore not reconciling tasks")
         }
       },
       reconciliationInitialDelay.toMillis,

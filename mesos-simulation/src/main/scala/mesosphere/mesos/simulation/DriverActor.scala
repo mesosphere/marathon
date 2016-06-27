@@ -168,8 +168,7 @@ class DriverActor(schedulerProps: Props) extends Actor {
     case ReconcileTask(taskStatuses) =>
       if (taskStatuses.isEmpty) {
         tasks.values.foreach(scheduler ! _)
-      }
-      else {
+      } else {
         taskStatuses.iterator.map(_.getTaskId.getValue).map(tasks).foreach(scheduler ! _)
       }
   }
@@ -193,14 +192,12 @@ class DriverActor(schedulerProps: Props) extends Actor {
         tasksToLaunch.map(_.getTaskId).foreach {
           scheduleStatusChange(toState = TaskState.TASK_RUNNING, afterDuration = 5.seconds)
         }
-      }
-      else {
+      } else {
         tasksToLaunch.map(_.getTaskId).foreach {
           scheduleStatusChange(toState = TaskState.TASK_FAILED, afterDuration = 5.seconds)
         }
       }
-    }
-    else {
+    } else {
       log.debug("simulating lost launch")
     }
   }
@@ -215,12 +212,10 @@ class DriverActor(schedulerProps: Props) extends Actor {
       }
       log.debug(s"${tasks.size} tasks")
       scheduler ! status
-    }
-    else {
+    } else {
       if (status.getState == TaskState.TASK_LOST) {
         scheduler ! status
-      }
-      else {
+      } else {
         log.debug(s"${status.getTaskId.getValue} does not exist anymore")
       }
     }

@@ -127,8 +127,7 @@ class SingleAppScalingTest
 
       if (instances == 0) {
         Some(())
-      }
-      else {
+      } else {
         // slow down
         Thread.sleep(1000)
         None

@@ -76,7 +76,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A Launch is inferred")
-    taskOp shouldBe a[Some[TaskOp.Launch]]
+    taskOp.value shouldBe a[TaskOp.Launch]
   }
 
   test("Resident app -> None (insufficient offer)") {
@@ -121,7 +121,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A ReserveAndCreateVolumes is returned")
-    taskOp shouldBe a[Some[TaskOp.ReserveAndCreateVolumes]]
+    taskOp.value shouldBe a[TaskOp.ReserveAndCreateVolumes]
   }
 
   test("Resident app -> Launch succeeds") {
@@ -144,7 +144,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A Launch is returned")
-    taskOp shouldBe a[Some[TaskOp.Launch]]
+    taskOp.value shouldBe a[TaskOp.Launch]
 
     And("the taskInfo contains the correct persistent volume")
     import scala.collection.JavaConverters._

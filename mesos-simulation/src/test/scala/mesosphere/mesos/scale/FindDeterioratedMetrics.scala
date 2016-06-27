@@ -59,8 +59,7 @@ object FindDeterioratedMetrics {
         printSlope(deteriorated)
         throw new IllegalStateException(s"Sample is deteriorated according to deterioration factor")
       }
-    }
-    else {
+    } else {
       println(
         """Usage:
           | FindDeterioratedMetrics <file_base> <file_sample> <deterioration_factor>"

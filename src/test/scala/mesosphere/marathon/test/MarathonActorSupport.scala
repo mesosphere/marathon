@@ -1,9 +1,9 @@
 package mesosphere.marathon.test
 
 import akka.actor.ActorSystem
-import akka.testkit.{ TestKitBase, TestKit }
+import akka.testkit.{ TestKit, TestKitBase }
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfter, Suite }
+import org.scalatest.{ BeforeAndAfterAll, Suite }
 import org.slf4j.LoggerFactory
 
 /**

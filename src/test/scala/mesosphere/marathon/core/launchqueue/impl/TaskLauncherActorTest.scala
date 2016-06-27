@@ -466,9 +466,6 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     // Mockito.verifyNoMoreInteractions(offerMatcherManager)
     Mockito.verifyNoMoreInteractions(taskOpFactory)
     //    Mockito.verifyNoMoreInteractions(taskTracker)
-
-    actorSystem.shutdown()
-    actorSystem.awaitTermination()
-
+    Await.result(actorSystem.terminate(), Duration.Inf)
   }
 }

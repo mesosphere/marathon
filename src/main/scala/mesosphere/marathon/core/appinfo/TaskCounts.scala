@@ -4,7 +4,6 @@ import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.{ Protos => mesos }
 
 /**
   * @param tasksStaged snapshot of the number of staged tasks

@@ -11,14 +11,14 @@ import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.integration.setup.WaitTestSupport
-import mesosphere.marathon.state.{ AppRepository, PathId }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonShutdownHookSupport, Mockito }
 import org.mockito.Matchers
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatchers }
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ ExecutionContext, Future }
 
 class LaunchQueueModuleTest
     extends MarathonSpec

@@ -5,6 +5,9 @@ import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.leadership.PreparationMessages
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
 class WhenLeaderActorTest extends MarathonSpec {
   test("when suspended, respond to all unknown messages with failures") {
     val ref = whenLeaderRef()
@@ -97,7 +100,6 @@ class WhenLeaderActorTest extends MarathonSpec {
   }
 
   after {
-    actorSystem.shutdown()
-    actorSystem.awaitTermination()
+    Await.result(actorSystem.terminate(), Duration.Inf)
   }
 }

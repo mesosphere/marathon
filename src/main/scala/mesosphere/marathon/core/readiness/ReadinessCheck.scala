@@ -22,6 +22,7 @@ case class ReadinessCheck(
   preserveLastResponse: Boolean = ReadinessCheck.DefaultPreserveLastResponse)
 
 object ReadinessCheck {
+  import scala.language.implicitConversions
 
   val DefaultName = "readinessCheck"
   val DefaultProtocol = Protocol.HTTP
@@ -38,7 +39,7 @@ object ReadinessCheck {
     case object HTTPS extends Protocol
   }
 
-  def readinessCheckValidator(runSpec: RunSpec): Validator[ReadinessCheck] =
+  implicit def readinessCheckValidator(runSpec: RunSpec): Validator[ReadinessCheck] =
     validator[ReadinessCheck] { rc =>
       rc.name is notEmpty
       rc.path is notEmpty
