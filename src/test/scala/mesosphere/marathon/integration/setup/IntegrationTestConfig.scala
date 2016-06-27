@@ -3,6 +3,7 @@ package mesosphere.marathon.integration.setup
 import java.io.File
 
 import mesosphere.marathon.state.PathId
+import mesosphere.util.PortAllocator
 import org.scalatest.ConfigMap
 
 /**
@@ -115,13 +116,13 @@ object IntegrationTestConfig {
     }
 
     val zkHost = string("zkHost", unusedForExternalSetup("localhost"))
-    val zkPort = int("zkPort", 2183 + (math.random * 100).toInt)
+    val zkPort = int("zkPort", PortAllocator.ephemeralPort())
     val zkCredentials = config.getOptional[String]("zkCredentials")
     val master = string("master", unusedForExternalSetup("127.0.0.1:5050"))
     val mesosLib = string("mesosLib", unusedForExternalSetup(defaultMesosLibConfig))
-    val httpPort = int("httpPort", 11211 + (math.random * 100).toInt)
+    val httpPort = int("httpPort", PortAllocator.ephemeralPort())
     val marathonHost = string("marathonHost", "localhost")
-    val marathonBasePort = int("marathonPort", 8080 + (math.random * 100).toInt)
+    val marathonBasePort = int("marathonPort", PortAllocator.ephemeralPort())
     val clusterSize = int("clusterSize", 3)
     val marathonPorts = 0.to(clusterSize - 1).map(_ + marathonBasePort)
     val marathonGroup = PathId(string("marathonGroup", "/marathon_integration_test"))
