@@ -45,7 +45,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck): Future[Option[HealthResult]] =
     task.effectiveIpAddress(app) match {
       case Some(host) =>
-        check.hostPort(launched) match {
+        check.effectivePort(app, task) match {
           case None => Future.successful {
             Some(
               Unhealthy(task.taskId,
@@ -58,8 +58,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
             case HTTPS => https(task, launched, check, host, port)
             case COMMAND =>
               Future.failed {
-                val message = s"COMMAND health checks can only be performed " +
-                  "by the Mesos executor."
+                val message = "COMMAND health checks can only be performed by the Mesos executor."
                 log.warning(message)
                 new UnsupportedOperationException(message)
               }
