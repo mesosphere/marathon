@@ -23,7 +23,8 @@ private[tracker] class TaskTrackerUpdateStepProcessorImpl(
     step.name -> metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, s"step-${step.name}"))
   }.toMap
 
-  log.info("Started TaskTrackerUpdateStepsProcessorImpl with steps:\n{}",
+  log.info(
+    "Started TaskTrackerUpdateStepsProcessorImpl with steps:\n{}",
     steps.map(step => s"* ${step.name}").mkString("\n"))
 
   override def process(taskChanged: TaskChanged)(implicit ec: ExecutionContext): Future[Unit] = {

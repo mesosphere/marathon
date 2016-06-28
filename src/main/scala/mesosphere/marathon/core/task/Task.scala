@@ -291,8 +291,7 @@ object Task {
             val changed = healthy || current.getState != update.getState
             if (changed) {
               Some(update)
-            }
-            else {
+            } else {
               None
             }
           case None => Some(update)
@@ -320,7 +319,7 @@ object Task {
     def runSpecId(taskId: String): PathId = {
       taskId match {
         case TaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
-        case _                            => throw new MatchError(s"taskId $taskId is no valid identifier")
+        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
       }
     }
 
@@ -398,7 +397,7 @@ object Task {
 
     def unapply(id: String): Option[(LocalVolumeId)] = id match {
       case LocalVolumeEncoderRE(runSpec, path, uuid) => Some(LocalVolumeId(PathId.fromSafePath(runSpec), path, uuid))
-      case _                                         => None
+      case _ => None
     }
   }
 

@@ -20,9 +20,10 @@ import scala.concurrent.Future
 @Path("v2/eventSubscriptions")
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class EventSubscriptionsResource @Inject() (val config: MarathonConf,
-                                            val authenticator: Authenticator,
-                                            val authorizer: Authorizer) extends AuthResource {
+class EventSubscriptionsResource @Inject() (
+  val config: MarathonConf,
+    val authenticator: Authenticator,
+    val authorizer: Authorizer) extends AuthResource {
 
   //scalastyle:off null
 

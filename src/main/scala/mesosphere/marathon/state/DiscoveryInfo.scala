@@ -24,10 +24,11 @@ object DiscoveryInfo {
     )
   }
 
-  case class Port(number: Int,
-                  name: String,
-                  protocol: String,
-                  labels: Map[String, String] = Map.empty[String, String]) {
+  case class Port(
+    number: Int,
+      name: String,
+      protocol: String,
+      labels: Map[String, String] = Map.empty[String, String]) {
     require(Port.AllowedProtocols(protocol), "protocol can only be 'tcp' or 'udp'")
 
     def toProto: MesosProtos.Port = {

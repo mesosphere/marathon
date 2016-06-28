@@ -101,11 +101,12 @@ class TasksResource @Inject() (
   @Consumes(Array(MediaType.APPLICATION_JSON))
   @Timed
   @Path("delete")
-  def killTasks(@QueryParam("scale")@DefaultValue("false") scale: Boolean,
-                @QueryParam("force")@DefaultValue("false") force: Boolean,
-                @QueryParam("wipe")@DefaultValue("false") wipe: Boolean,
-                body: Array[Byte],
-                @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def killTasks(
+    @QueryParam("scale")@DefaultValue("false") scale: Boolean,
+    @QueryParam("force")@DefaultValue("false") force: Boolean,
+    @QueryParam("wipe")@DefaultValue("false") wipe: Boolean,
+    body: Array[Byte],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
@@ -143,6 +144,6 @@ class TasksResource @Inject() (
   private def toTaskState(state: String): Option[TaskState] = state.toLowerCase match {
     case "running" => Some(TaskState.TASK_RUNNING)
     case "staging" => Some(TaskState.TASK_STAGING)
-    case _         => None
+    case _ => None
   }
 }

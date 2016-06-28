@@ -111,7 +111,8 @@ class SchedulerActionsTest
 
     Given("An active queue and lost tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 15)
-    val queued = QueuedTaskInfo(app,
+    val queued = QueuedTaskInfo(
+      app,
       tasksLeftToLaunch = 1,
       inProgress = true,
       finalTaskCount = 15,
@@ -152,7 +153,8 @@ class SchedulerActionsTest
 
     Given("an active queue, staged tasks and 5 overCapacity")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 5)
-    val queued = QueuedTaskInfo(app,
+    val queued = QueuedTaskInfo(
+      app,
       tasksLeftToLaunch = 0,
       inProgress = true,
       finalTaskCount = 7,
@@ -225,7 +227,8 @@ class SchedulerActionsTest
     Given("an active queue, running tasks and some overCapacity")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 3)
 
-    val queued = QueuedTaskInfo(app,
+    val queued = QueuedTaskInfo(
+      app,
       tasksLeftToLaunch = 0,
       inProgress = true,
       finalTaskCount = 5,

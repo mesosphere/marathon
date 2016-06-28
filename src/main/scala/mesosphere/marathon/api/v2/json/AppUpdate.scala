@@ -77,7 +77,7 @@ case class AppUpdate(
 
   protected[api] def onlyVersionOrIdSet: Boolean = productIterator forall {
     case x @ Some(_) => x == version || x == id
-    case _           => true
+    case _ => true
   }
 
   def isResident: Boolean = residency.isDefined

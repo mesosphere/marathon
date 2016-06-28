@@ -44,7 +44,7 @@ object MesosTaskStatus {
   object Running {
     def unapply(taskStatus: TaskStatus): Option[TaskStatus] = taskStatus.getState match {
       case TASK_RUNNING => Some(taskStatus)
-      case _            => None
+      case _ => None
     }
   }
 }

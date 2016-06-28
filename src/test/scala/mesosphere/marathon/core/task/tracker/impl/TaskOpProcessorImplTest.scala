@@ -458,7 +458,7 @@ class TaskOpProcessorImplTest
     def toLaunched(task: Task, taskStateOp: TaskStateOp.LaunchOnReservation): Task =
       task.update(taskStateOp) match {
         case TaskStateChange.Update(updatedTask, _) => updatedTask
-        case _                                      => throw new scala.RuntimeException("taskStateOp did not result in a launched task")
+        case _ => throw new scala.RuntimeException("taskStateOp did not result in a launched task")
       }
   }
 }

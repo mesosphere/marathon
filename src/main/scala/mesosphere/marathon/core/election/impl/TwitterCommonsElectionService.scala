@@ -43,8 +43,7 @@ class TwitterCommonsElectionService(
   override def leaderHostPortImpl: Option[String] = synchronized {
     val maybeLeaderData: Option[Array[Byte]] = try {
       Option(commonsCandidate.getLeaderData.orNull())
-    }
-    catch {
+    } catch {
       case NonFatal(e) =>
         log.error("error while getting current leader", e)
         None
@@ -118,8 +117,7 @@ class TwitterCommonsElectionService(
         log.info("Connecting to ZooKeeper...")
         client.get
         connectedToZk = true
-      }
-      catch {
+      } catch {
         case t: Throwable =>
           log.warn("Unable to connect to ZooKeeper, retrying...")
       }
@@ -127,8 +125,9 @@ class TwitterCommonsElectionService(
     client
   }
 
-  class ZooKeeperLeaderElectionClient(sessionTimeout: Amount[Integer, Time],
-                                      zooKeeperServers: java.lang.Iterable[InetSocketAddress])
+  class ZooKeeperLeaderElectionClient(
+    sessionTimeout: Amount[Integer, Time],
+    zooKeeperServers: java.lang.Iterable[InetSocketAddress])
       extends ZooKeeperClient(sessionTimeout, zooKeeperServers) {
 
     override def shouldRetry(e: KeeperException): Boolean = {
@@ -143,8 +142,7 @@ class TwitterCommonsElectionService(
 
       try {
         Await.result(f, 5.seconds)
-      }
-      catch {
+      } catch {
         case _: Throwable =>
           log.error("Finalization failed, killing JVM.")
           // scalastyle:off magic.number

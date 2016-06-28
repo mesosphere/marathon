@@ -120,8 +120,8 @@ object StorageProvider {
 
   def isValidUrl(url: String): Boolean = url match {
     case HDFS(_, _) => true
-    case FILE(_)    => true
-    case _          => false
+    case FILE(_) => true
+    case _ => false
   }
 
   def examples: Map[String, String] = Map (

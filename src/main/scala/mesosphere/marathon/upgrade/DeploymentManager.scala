@@ -60,8 +60,7 @@ class DeploymentManager(
             plan.id,
             if (conflictingDeployments.nonEmpty) {
               conflictingDeployments.map(_.plan).to[Seq]
-            }
-            else Seq(plan))
+            } else Seq(plan))
       }
 
     case CancelAllDeployments =>
@@ -133,10 +132,11 @@ object DeploymentManager {
   case object CancelAllDeployments
   final case class CancelConflictingDeployments(plan: DeploymentPlan)
 
-  final case class DeploymentStepInfo(plan: DeploymentPlan,
-                                      step: DeploymentStep,
-                                      nr: Int,
-                                      readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
+  final case class DeploymentStepInfo(
+    plan: DeploymentPlan,
+      step: DeploymentStep,
+      nr: Int,
+      readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
     lazy val readinessChecksByApp: Map[PathId, Iterable[ReadinessCheckResult]] = {
       readinessChecks.values.groupBy(_.taskId.runSpecId).withDefaultValue(Iterable.empty)
     }

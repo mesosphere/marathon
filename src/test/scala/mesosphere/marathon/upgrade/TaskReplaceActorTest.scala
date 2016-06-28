@@ -488,8 +488,7 @@ class TaskReplaceActorTest
 
         if (taskId == taskB.taskId && firstKillForTaskB) {
           firstKillForTaskB = false
-        }
-        else {
+        } else {
           val update = MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", app.id, "", None, Nil, app.version.toString)
           system.eventStream.publish(update)
         }

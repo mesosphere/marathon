@@ -60,8 +60,7 @@ class ArtifactsResource @Inject() (val config: MarathonConf, val storage: Storag
     val item = storage.item(path)
     if (!item.exists) {
       notFound(s"No artifact with path $path")
-    }
-    else {
+    } else {
       Response.
         ok(item.inputStream(), mediaMime(path)).
         lastModified(new Date(item.lastModified)).

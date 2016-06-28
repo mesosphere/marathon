@@ -125,9 +125,9 @@ object ProcessKeeper {
   }
 
   def startMarathon(cwd: File, env: Map[String, String], arguments: List[String],
-                    mainClass: String = "mesosphere.marathon.Main",
-                    startupLine: String = "Started ServerConnector",
-                    processName: String = "marathon"): Process = {
+    mainClass: String = "mesosphere.marathon.Main",
+    startupLine: String = "Started ServerConnector",
+    processName: String = "marathon"): Process = {
 
     val debugArgs = List(
       "-Dakka.loglevel=DEBUG",
@@ -165,7 +165,7 @@ object ProcessKeeper {
   }
 
   def startJavaProcess(name: String, heapInMegs: Int, arguments: List[String],
-                       cwd: File = new File("."), env: Map[String, String] = Map.empty, upWhen: String => Boolean): Process = {
+    cwd: File = new File("."), env: Map[String, String] = Map.empty, upWhen: String => Boolean): Process = {
     val javaExecutable = sys.props.get("java.home").fold("java")(_ + "/bin/java")
     val classPath = sys.props.getOrElse("java.class.path", "target/classes")
     val memSettings = s"-Xmx${heapInMegs}m"
@@ -269,7 +269,7 @@ object ProcessKeeper {
       }
       //retry on fail
       Try(killProcess) recover { case _ => killProcess } match {
-        case Success(value)       => processes -= name
+        case Success(value) => processes -= name
         case Failure(NonFatal(e)) => log.error("giving up waiting for processes to finish", e)
       }
       log.info(s"Stop Process $name: Done")

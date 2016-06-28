@@ -267,8 +267,8 @@ object DeploymentPlan {
     // 1. Destroy apps that do not exist in the target.
     steps += DeploymentStep(
       (originalApps -- targetApps.keys).valuesIterator.map { oldApp =>
-        StopApplication(oldApp)
-      }.to[Seq]
+      StopApplication(oldApp)
+    }.to[Seq]
     )
 
     // 2. Start apps that do not exist in the original, requiring only 0
@@ -276,8 +276,8 @@ object DeploymentPlan {
     //    steps that follow.
     steps += DeploymentStep(
       (targetApps -- originalApps.keys).valuesIterator.map { newApp =>
-        StartApplication(newApp, 0)
-      }.to[Seq]
+      StartApplication(newApp, 0)
+    }.to[Seq]
     )
 
     // 3. For each app in each dependency class,

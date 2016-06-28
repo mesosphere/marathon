@@ -180,8 +180,8 @@ case class AppDefinition(
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
     val envMap: Map[String, EnvVarValue] = EnvVarValue(
       proto.getCmd.getEnvironment.getVariablesList.asScala.map {
-        v => v.getName -> v.getValue
-      }.toMap)
+      v => v.getName -> v.getValue
+    }.toMap)
 
     val envRefs: Map[String, EnvVarValue] =
       proto.getEnvVarReferencesList.asScala.flatMap(EnvVarRefSerializer.fromProto).toMap
