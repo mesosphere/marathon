@@ -13,7 +13,7 @@ COPY . /marathon
 WORKDIR /marathon
 
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
-    echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
     echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
     apt-get update && \
     apt-get install --no-install-recommends -y --force-yes mesos=1.0.0-1.0.59.rc1.debian81 && \
