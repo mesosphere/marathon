@@ -5,7 +5,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ Command, MarathonState, Timestamp }
+import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.concurrent.duration._
@@ -106,8 +106,11 @@ case class HealthCheck(
       .build
   }
 
-  def hostPort(launched: Task.Launched): Option[Int] = {
-    def portViaIndex: Option[Int] = portIndex.flatMap(launched.hostPorts.lift(_))
+  def effectivePort(app: AppDefinition, task: Task): Option[Int] = {
+    def portViaIndex: Option[Int] = portIndex.flatMap { portIndex =>
+      app.portAssignments(task).flatMap(_.lift(portIndex)).map(_.effectivePort)
+    }
+
     port.orElse(portViaIndex)
   }
 
