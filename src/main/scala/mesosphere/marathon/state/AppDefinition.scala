@@ -389,8 +389,7 @@ case class AppDefinition(
           val effectivePort =
             if (ipAddress.isDefined || portMapping.hostPort.isEmpty) {
               portMapping.containerPort
-            }
-            else {
+            } else {
               val hostPort = hostPorts.head
               hostPorts = hostPorts.drop(1)
               hostPort
