@@ -1,8 +1,10 @@
-package mesosphere.util
+package mesosphere.marathon.util
 
 import java.util.{ Timer, TimerTask }
 
 import akka.actor.Scheduler
+import mesosphere.util.CallerThreadExecutionContext
+import mesosphere.util.DurationToHumanReadable
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ ExecutionContext, Future, Promise, blocking => blockingCall }

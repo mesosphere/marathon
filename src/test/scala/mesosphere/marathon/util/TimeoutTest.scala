@@ -1,4 +1,4 @@
-package mesosphere.util
+package mesosphere.marathon.util
 
 import mesosphere.AkkaUnitTest
 

@@ -1,4 +1,4 @@
-package mesosphere.util
+package mesosphere.marathon.util
 
 import akka.actor.Scheduler
 

@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.base
 
 import akka.Done
-import mesosphere.util.Timeout
+import mesosphere.marathon.util.Timeout
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._

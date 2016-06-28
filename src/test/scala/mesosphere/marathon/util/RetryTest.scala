@@ -1,14 +1,15 @@
-package mesosphere.util
+package mesosphere.marathon.util
 
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.{ Cancellable, Scheduler }
 import mesosphere.AkkaUnitTest
-import mesosphere.util.Retry.RetryOnFn
+import mesosphere.marathon.util
+import mesosphere.marathon.util.Retry.RetryOnFn
 
 import scala.collection.mutable
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ ExecutionContext, Future }
 
 class RetryTest extends AkkaUnitTest {
   implicit val scheduler = system.scheduler
@@ -46,13 +47,13 @@ class RetryTest extends AkkaUnitTest {
     "async" should {
       "complete normally" in {
         val counter = new AtomicInteger()
-        Retry("complete")(countCalls(counter)(Future.successful(1))).futureValue should equal(1)
+        util.Retry("complete")(countCalls(counter)(Future.successful(1))).futureValue should equal(1)
         counter.intValue() should equal(1)
       }
       "fail if the exception is not in the allowed list" in {
         val ex = new Exception("expected")
         val counter = new AtomicInteger()
-        val result = Retry("failure", retryOn = retryFn)(countCalls(counter)(Future.failed(ex))).failed.futureValue
+        val result = util.Retry("failure", retryOn = retryFn)(countCalls(counter)(Future.failed(ex))).failed.futureValue
         result should be(ex)
         counter.intValue() should equal(1)
       }
@@ -60,7 +61,7 @@ class RetryTest extends AkkaUnitTest {
         val counter = new AtomicInteger()
         val ex = new Exception
         // scalastyle:off
-        val result = Retry("failure", maxAttempts = 5, minDelay = 1.nano, maxDelay = 1.nano) {
+        val result = util.Retry("failure", maxAttempts = 5, minDelay = 1.nano, maxDelay = 1.nano) {
           // scalastyle:on
           countCalls(counter)(Future.failed(ex))
         }.failed.futureValue
@@ -74,7 +75,7 @@ class RetryTest extends AkkaUnitTest {
         val delays = mutable.Queue.empty[FiniteDuration]
         implicit val scheduler = trackingScheduler(delays)
         // scalastyle:off
-        Retry("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
+        util.Retry("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
           // scalastyle:on
           Future.failed(new Exception)
         }.failed.futureValue
@@ -88,7 +89,7 @@ class RetryTest extends AkkaUnitTest {
     "blocking" should {
       "complete normally" in {
         val counter = new AtomicInteger()
-        Retry.blocking("complete") {
+        util.Retry.blocking("complete") {
           countCalls(counter)(1)
         }.futureValue should equal(1)
         counter.intValue() should equal(1)
@@ -96,7 +97,7 @@ class RetryTest extends AkkaUnitTest {
       "fail if the exception is not in the allowed list" in {
         val counter = new AtomicInteger()
         val ex = new Exception()
-        val result = Retry.blocking("fail", retryOn = retryFn) {
+        val result = util.Retry.blocking("fail", retryOn = retryFn) {
           countCalls(counter)(throw ex)
         }.failed.futureValue
         counter.intValue() should equal(1)
@@ -106,7 +107,7 @@ class RetryTest extends AkkaUnitTest {
         val counter = new AtomicInteger()
         val ex = new Exception
         // scalastyle:off
-        val result = Retry.blocking("failure", maxAttempts = 5, minDelay = 1.nano, maxDelay = 1.nano) {
+        val result = util.Retry.blocking("failure", maxAttempts = 5, minDelay = 1.nano, maxDelay = 1.nano) {
           // scalastyle:on
           countCalls(counter)(throw ex)
         }.failed.futureValue
@@ -120,7 +121,7 @@ class RetryTest extends AkkaUnitTest {
         val delays = mutable.Queue.empty[FiniteDuration]
         implicit val scheduler = trackingScheduler(delays)
         // scalastyle:off
-        Retry.blocking("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
+        util.Retry.blocking("failure", maxAttempts = 5, minDelay = 1.milli, maxDelay = 5.seconds) {
           // scalastyle:on
           throw new Exception
         }.failed.futureValue
