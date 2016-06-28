@@ -20,16 +20,16 @@ object CurrentRuntime {
     * @return the Future of this operation.
     */
   //scalastyle:off magic.number
-  def asyncExit(exitCode: Int = 137, //Fatal error signal "n" is 128+n ==> n for killed is 9 ==> 137
-                waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Unit] = {
+  def asyncExit(
+    exitCode: Int = 137, //Fatal error signal "n" is 128+n ==> n for killed is 9 ==> 137
+    waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Unit] = {
     Future(
       blocking {
         try {
           Await.result(Future(blocking(sys.exit(exitCode))), waitForExit)
-        }
-        catch {
+        } catch {
           case _: TimeoutException => log.error("Shutdown timeout")
-          case NonFatal(t)         => log.error("Exception while committing suicide", t)
+          case NonFatal(t) => log.error("Exception while committing suicide", t)
         }
 
         log.info("Halting JVM")

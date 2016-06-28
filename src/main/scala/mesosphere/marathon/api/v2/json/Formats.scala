@@ -204,8 +204,7 @@ trait Formats
       case JsString(str) =>
         try {
           JsSuccess(read(str))
-        }
-        catch {
+        } catch {
           case _: IllegalArgumentException => JsError(errorMsg(str))
         }
 
@@ -437,28 +436,28 @@ trait EventFormats {
 
   //scalastyle:off cyclomatic.complexity
   def eventToJson(event: MarathonEvent): JsValue = event match {
-    case event: AppTerminatedEvent         => Json.toJson(event)
-    case event: ApiPostEvent               => Json.toJson(event)
-    case event: Subscribe                  => Json.toJson(event)
-    case event: Unsubscribe                => Json.toJson(event)
-    case event: EventStreamAttached        => Json.toJson(event)
-    case event: EventStreamDetached        => Json.toJson(event)
-    case event: AddHealthCheck             => Json.toJson(event)
-    case event: RemoveHealthCheck          => Json.toJson(event)
-    case event: FailedHealthCheck          => Json.toJson(event)
-    case event: HealthStatusChanged        => Json.toJson(event)
-    case event: UnhealthyTaskKillEvent     => Json.toJson(event)
-    case event: GroupChangeSuccess         => Json.toJson(event)
-    case event: GroupChangeFailed          => Json.toJson(event)
-    case event: DeploymentSuccess          => Json.toJson(event)
-    case event: DeploymentFailed           => Json.toJson(event)
-    case event: DeploymentStatus           => Json.toJson(event)
-    case event: DeploymentStepSuccess      => Json.toJson(event)
-    case event: DeploymentStepFailure      => Json.toJson(event)
-    case event: MesosStatusUpdateEvent     => Json.toJson(event)
+    case event: AppTerminatedEvent => Json.toJson(event)
+    case event: ApiPostEvent => Json.toJson(event)
+    case event: Subscribe => Json.toJson(event)
+    case event: Unsubscribe => Json.toJson(event)
+    case event: EventStreamAttached => Json.toJson(event)
+    case event: EventStreamDetached => Json.toJson(event)
+    case event: AddHealthCheck => Json.toJson(event)
+    case event: RemoveHealthCheck => Json.toJson(event)
+    case event: FailedHealthCheck => Json.toJson(event)
+    case event: HealthStatusChanged => Json.toJson(event)
+    case event: UnhealthyTaskKillEvent => Json.toJson(event)
+    case event: GroupChangeSuccess => Json.toJson(event)
+    case event: GroupChangeFailed => Json.toJson(event)
+    case event: DeploymentSuccess => Json.toJson(event)
+    case event: DeploymentFailed => Json.toJson(event)
+    case event: DeploymentStatus => Json.toJson(event)
+    case event: DeploymentStepSuccess => Json.toJson(event)
+    case event: DeploymentStepFailure => Json.toJson(event)
+    case event: MesosStatusUpdateEvent => Json.toJson(event)
     case event: MesosFrameworkMessageEvent => Json.toJson(event)
     case event: SchedulerDisconnectedEvent => Json.toJson(event)
-    case event: SchedulerRegisteredEvent   => Json.toJson(event)
+    case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
   }
   //scalastyle:on
@@ -538,7 +537,7 @@ trait ReadinessCheckFormats {
         case JsString(string) =>
           StringToProtocol.get(string) match {
             case Some(protocol) => JsSuccess(protocol)
-            case None           => JsError(ProtocolErrorString)
+            case None => JsError(ProtocolErrorString)
           }
         case _: JsValue => JsError(ProtocolErrorString)
       },
@@ -600,8 +599,7 @@ trait AppAndGroupFormats {
               val builder = Constraint.newBuilder().setField(seq(0)).setOperator(Operator.valueOf(seq(1)))
               if (seq.size == 3) builder.setValue(seq(2))
               JsSuccess(builder.build())
-            }
-            else {
+            } else {
               JsError(s"Constraint operator must be one of the following: [${validOperators.mkString(", ")}]")
             }
           case _ => JsError("Constraint definition must be an array of strings in format: <key>, <operator>[, value]")
@@ -623,14 +621,14 @@ trait AppAndGroupFormats {
       override def reads(json: JsValue): JsResult[EnvVarValue] = {
         json.asOpt[String] match {
           case Some(stringValue) => JsSuccess(EnvVarString(stringValue))
-          case _                 => JsSuccess(json.as[EnvVarSecretRef])
+          case _ => JsSuccess(json.as[EnvVarSecretRef])
         }
       }
     },
     new Writes[EnvVarValue] {
       override def writes(envvar: EnvVarValue): JsValue = {
         envvar match {
-          case s: EnvVarString      => JsString(s.value)
+          case s: EnvVarString => JsString(s.value)
           case ref: EnvVarSecretRef => EnvVarSecretRefFormat.writes(ref)
         }
       }
@@ -711,8 +709,8 @@ trait AppAndGroupFormats {
             (__ \ "portDefinitions").readNullable[Seq[PortDefinition]] ~
             (__ \ "readinessChecks").readNullable[Seq[ReadinessCheck]].withDefault(
               AppDefinition.DefaultReadinessChecks) ~
-              (__ \ "secrets").readNullable[Map[String, Secret]].withDefault(AppDefinition.DefaultSecrets) ~
-              (__ \ "taskKillGracePeriodSeconds").readNullable[Long].map(_.map(_.seconds))
+            (__ \ "secrets").readNullable[Map[String, Secret]].withDefault(AppDefinition.DefaultSecrets) ~
+            (__ \ "taskKillGracePeriodSeconds").readNullable[Long].map(_.map(_.seconds))
           )(ExtraFields)
             .filter(ValidationError("You cannot specify both uris and fetch fields")) { extra =>
               !(extra.uris.nonEmpty && extra.fetch.nonEmpty)
@@ -865,7 +863,7 @@ trait AppAndGroupFormats {
         )
       }
       Json.toJson(runSpec.versionInfo) match {
-        case JsNull     => appJson
+        case JsNull => appJson
         case v: JsValue => appJson + ("versionInfo" -> v)
       }
     }
@@ -880,7 +878,7 @@ trait AppAndGroupFormats {
         )
 
       case AppDefinition.VersionInfo.OnlyVersion(version) => JsNull
-      case AppDefinition.VersionInfo.NoVersion            => JsNull
+      case AppDefinition.VersionInfo.NoVersion => JsNull
     }
 
   implicit lazy val TaskCountsWrites: Writes[TaskCounts] =
@@ -931,8 +929,8 @@ trait AppAndGroupFormats {
       )
       Json.toJson(
         maybeJsons.iterator.flatMap {
-          case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
-        }.toMap
+        case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
+      }.toMap
       )
     }
 

@@ -11,9 +11,10 @@ import scala.concurrent.duration.FiniteDuration
 trait UpgradeConfig extends ScallopConf {
   //scalastyle:off magic.number
 
-  lazy val killsPerBatch = opt[Int]("killsPerBatch",
+  lazy val killsPerBatch = opt[Int](
+    "killsPerBatch",
     descr = "INTERNAL TUNING PARAMETER: " +
-      "The number of kills that can be issued in one batch size.",
+    "The number of kills that can be issued in one batch size.",
     noshort = true,
     hidden = true,
     default = Some(100)
@@ -22,9 +23,10 @@ trait UpgradeConfig extends ScallopConf {
   /**
     * Defines the duration of one batch cycle
     */
-  lazy val killBatchDuration = opt[Long]("killBatchDuration",
+  lazy val killBatchDuration = opt[Long](
+    "killBatchDuration",
     descr = "INTERNAL TUNING PARAMETER: " +
-      "The duration of one batch cycle in milliseconds.",
+    "The duration of one batch cycle in milliseconds.",
     noshort = true,
     hidden = true,
     default = Some(10000L) //10 seconds

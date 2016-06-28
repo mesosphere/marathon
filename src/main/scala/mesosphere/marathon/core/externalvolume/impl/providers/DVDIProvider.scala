@@ -62,8 +62,7 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
         // explicitly clear the options field if there are none to add; a nil parameters field is
         // semantically different than an empty one.
         dv.clearDriverOptions
-      }
-      else {
+      } else {
         dv.setDriverOptions(Parameters.newBuilder.addAllParameter(opts.asJava))
       }
     }
@@ -92,8 +91,7 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
       val driverName = ev.external.options(driverOption)
       builder.setDocker(builder.getDocker.toBuilder.setVolumeDriver(driverName).build)
       builder.addVolumes(Builders.toDockerizedMesosVolume(ev))
-    }
-    else if (builder.getType == ContainerInfo.Type.MESOS) {
+    } else if (builder.getType == ContainerInfo.Type.MESOS) {
       builder.addVolumes(Builders.toUnifiedMesosVolume(ev))
     }
   }
@@ -190,7 +188,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       def ifDVDIVolume(vtor: Validator[ExternalVolume]): Validator[ExternalVolume] = conditional(matchesProvider)(vtor)
 
       def volumeValidator(`type`: ContainerInfo.Type) = `type` match {
-        case ContainerInfo.Type.MESOS  => validMesosVolume
+        case ContainerInfo.Type.MESOS => validMesosVolume
         case ContainerInfo.Type.DOCKER => validDockerVolume
       }
 

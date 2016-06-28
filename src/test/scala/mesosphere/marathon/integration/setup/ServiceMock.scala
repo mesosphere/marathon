@@ -35,10 +35,11 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
     server.join()
   }
 
-  override def handle(target: String,
-                      baseRequest: Request,
-                      request: HttpServletRequest,
-                      response: HttpServletResponse): Unit = synchronized {
+  override def handle(
+    target: String,
+    baseRequest: Request,
+    request: HttpServletRequest,
+    response: HttpServletResponse): Unit = synchronized {
     def status[T](t: T, code: Int)(implicit writes: Writes[T]): Unit = {
       response.getWriter.write(Json.prettyPrint(Json.toJson(t)))
       response.setHeader("Content-Type", "application/json")
@@ -62,15 +63,13 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
         if (plan.validPosition(pos)) {
           plan.allBlocks.dropWhile(_.name != pos.block_id).foreach(_.rollback())
           ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
-        }
-        else error(Json.obj("Invalid position" -> pos))
+        } else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/v1/plan/force_complete") =>
         val pos = Json.parse(request.getInputStream).as[BlockPosition]
         if (plan.validPosition(pos)) {
           plan.allBlocks.takeWhile(_.name != pos.block_id).foreach(_.doFinalize())
           ok(Json.obj("result" -> s"Rescheduled Tasks: []"))
-        }
-        else error(Json.obj("Invalid position" -> pos))
+        } else error(Json.obj("Invalid position" -> pos))
       case ("POST", "/admin/rollback") =>
         plan.rollback()
         ok(Json.obj("Result" -> plan.status))
@@ -91,10 +90,9 @@ class ServiceMock(plan: Plan) extends AbstractHandler {
     try {
       baseRequest.setHandled(true)
       handleRequest()
-    }
-    catch {
+    } catch {
       case js: JsResultException => error(Json.obj("error" -> "Invalid Json", "details" -> js.errors.toString()))
-      case NonFatal(ex)          => error(Json.obj("error" -> ex.getMessage))
+      case NonFatal(ex) => error(Json.obj("error" -> ex.getMessage))
     }
   }
 }
@@ -151,10 +149,10 @@ object ServiceMock {
     def next(decideYes: Boolean): Boolean = {
       status = status match {
         case Pending if decisionPoint => Waiting
-        case Pending                  => InProgress
-        case Waiting if decideYes     => Complete
-        case InProgress               => Complete
-        case current                  => current
+        case Pending => InProgress
+        case Waiting if decideYes => Complete
+        case InProgress => Complete
+        case current => current
       }
       isDone
     }
@@ -240,7 +238,7 @@ object ServiceMock {
 
     def parsePlan(in: String): Plan = {
       parseAll(plan, in) match {
-        case Success(plan, _)      => plan
+        case Success(plan, _) => plan
         case NoSuccess(message, r) => throw new RuntimeException(message + r.pos)
       }
     }

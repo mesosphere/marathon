@@ -197,15 +197,15 @@ class ContainerTest extends MarathonSpec with Matchers {
 
     val expectedPortMappings = Seq(
       mesos.ContainerInfo.DockerInfo.PortMapping.newBuilder
-        .setContainerPort(8080)
-        .setHostPort(32001)
-        .setProtocol("tcp")
-        .build,
+      .setContainerPort(8080)
+      .setHostPort(32001)
+      .setProtocol("tcp")
+      .build,
       mesos.ContainerInfo.DockerInfo.PortMapping.newBuilder
-        .setContainerPort(8081)
-        .setHostPort(32002)
-        .setProtocol("udp")
-        .build
+      .setContainerPort(8081)
+      .setHostPort(32002)
+      .setProtocol("udp")
+      .build
     )
 
     assert(expectedPortMappings == proto2.getDocker.getPortMappingsList.asScala)

@@ -21,7 +21,7 @@ private[appinfo] class DefaultInfoService(
     log.debug(s"queryForAppId $id")
     appRepository.currentVersion(id).flatMap {
       case Some(app) if selector.matches(app) => newBaseData().appInfoFuture(app, embed).map(Some(_))
-      case None                               => Future.successful(None)
+      case None => Future.successful(None)
     }
   }
 
@@ -33,7 +33,7 @@ private[appinfo] class DefaultInfoService(
   }
 
   override def selectAppsInGroup(groupId: PathId, selector: AppSelector,
-                                 embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
+    embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
     log.debug(s"queryAllInGroup $groupId")
     groupManager
       .group(groupId)
@@ -42,25 +42,26 @@ private[appinfo] class DefaultInfoService(
   }
 
   override def selectGroup(groupId: PathId, groupSelector: GroupSelector,
-                           appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
+    appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
     groupManager.group(groupId).flatMap {
       case Some(group) => queryForGroup(group, groupSelector, appEmbed, groupEmbed)
-      case None        => Future.successful(None)
+      case None => Future.successful(None)
     }
   }
 
   override def selectGroupVersion(groupId: PathId, version: Timestamp, groupSelector: GroupSelector,
-                                  groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
+    groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
     groupManager.group(groupId, version).flatMap {
       case Some(group) => queryForGroup(group, groupSelector, Set.empty, groupEmbed)
-      case None        => Future.successful(None)
+      case None => Future.successful(None)
     }
   }
 
-  private[this] def queryForGroup(group: Group,
-                                  groupSelector: GroupSelector,
-                                  appEmbed: Set[AppInfo.Embed],
-                                  groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
+  private[this] def queryForGroup(
+    group: Group,
+    groupSelector: GroupSelector,
+    appEmbed: Set[AppInfo.Embed],
+    groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
 
     //fetch all transitive app infos with one request
     val appInfos = {

@@ -18,12 +18,11 @@ class LimitConcurrentRequestsFilter(concurrentOption: Option[Int]) extends Filte
     if (semaphore.tryAcquire()) {
       try { chain.doFilter(request, response) }
       finally { semaphore.release() }
-    }
-    else {
+    } else {
       response match {
         //scalastyle:off magic.number
         case r: HttpServletResponse => r.sendError(503, s"Too many concurrent requests! Allowed: $concurrent.")
-        case r: ServletResponse     => throw new IllegalArgumentException(s"Expected http response but got $response")
+        case r: ServletResponse => throw new IllegalArgumentException(s"Expected http response but got $response")
       }
     }
   }

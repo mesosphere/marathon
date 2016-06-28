@@ -49,14 +49,14 @@ private[state] object ReadinessCheckSerializer {
   object ProtocolSerializer {
     def fromProto(proto: Protos.ReadinessCheckDefinition.Protocol): ReadinessCheck.Protocol = {
       proto match {
-        case Protos.ReadinessCheckDefinition.Protocol.HTTP  => ReadinessCheck.Protocol.HTTP
+        case Protos.ReadinessCheckDefinition.Protocol.HTTP => ReadinessCheck.Protocol.HTTP
         case Protos.ReadinessCheckDefinition.Protocol.HTTPS => ReadinessCheck.Protocol.HTTPS
       }
     }
 
     def toProto(protocol: ReadinessCheck.Protocol): Protos.ReadinessCheckDefinition.Protocol = {
       protocol match {
-        case ReadinessCheck.Protocol.HTTP  => Protos.ReadinessCheckDefinition.Protocol.HTTP
+        case ReadinessCheck.Protocol.HTTP => Protos.ReadinessCheckDefinition.Protocol.HTTP
         case ReadinessCheck.Protocol.HTTPS => Protos.ReadinessCheckDefinition.Protocol.HTTPS
       }
     }

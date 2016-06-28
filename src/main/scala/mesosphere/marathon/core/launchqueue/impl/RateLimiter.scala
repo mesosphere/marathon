@@ -31,7 +31,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
   def addDelay(runSpec: RunSpec): Timestamp = {
     setNewDelay(runSpec, "Increasing delay") {
       case Some(delay) => Some(delay.increased(clock, runSpec))
-      case None        => Some(Delay(clock, runSpec))
+      case None => Some(Delay(clock, runSpec))
     }
   }
 
@@ -47,8 +47,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
 
         if (newDelay.deadline <= now) {
           resetDelay(unSpec)
-        }
-        else {
+        } else {
           log.info(s"$message. Task launch delay for [${unSpec.id}] changed from [$priorTimeLeft] to [$timeLeft].")
           taskLaunchDelays += ((unSpec.id, unSpec.versionInfo.lastConfigChangeVersion) -> newDelay)
         }

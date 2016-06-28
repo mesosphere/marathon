@@ -106,7 +106,8 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
         GroupUpdate(
           "/test/group3".toPath,
           Set.empty[AppDefinition],
-          Set(GroupUpdate("/test/group3/sub1".toPath, Set(AppDefinition("/test/group3/sub1/app4".toPath,
+          Set(GroupUpdate("/test/group3/sub1".toPath, Set(AppDefinition(
+            "/test/group3/sub1/app4".toPath,
             Some("foo")))))
         )
       )
@@ -148,7 +149,8 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     val update = GroupUpdate(PathId.empty, Set.empty[AppDefinition], Set(
       GroupUpdate(
         "test-group".toPath,
-        Set(AppDefinition("test-app1".toPath, Some("foo")),
+        Set(
+          AppDefinition("test-app1".toPath, Some("foo")),
           AppDefinition("test-app2".toPath, Some("foo"), dependencies = Set("test-app1".toPath)))
       )
     ))

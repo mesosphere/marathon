@@ -55,18 +55,18 @@ case class HealthCheck(
   def mergeFromProto(proto: Protos.HealthCheckDefinition): HealthCheck =
     HealthCheck(
       path =
-        if (proto.hasPath) Some(proto.getPath) else None,
+      if (proto.hasPath) Some(proto.getPath) else None,
       protocol = proto.getProtocol,
       portIndex =
-        if (proto.hasPortIndex)
-          Some(proto.getPortIndex)
-        else if (!proto.hasPort && proto.getProtocol != Protocol.COMMAND)
-          Some(0) // backward compatibility, this used to be the default value in marathon.proto
-        else
-          None,
+      if (proto.hasPortIndex)
+        Some(proto.getPortIndex)
+      else if (!proto.hasPort && proto.getProtocol != Protocol.COMMAND)
+        Some(0) // backward compatibility, this used to be the default value in marathon.proto
+      else
+        None,
       command =
-        if (proto.hasCommand) Some(Command("").mergeFromProto(proto.getCommand))
-        else None,
+      if (proto.hasCommand) Some(Command("").mergeFromProto(proto.getCommand))
+      else None,
       gracePeriod = proto.getGracePeriodSeconds.seconds,
       timeout = proto.getTimeoutSeconds.seconds,
       interval = proto.getIntervalSeconds.seconds,
@@ -141,9 +141,9 @@ object HealthCheck {
         val hasPath = hc.path.isDefined
         if (hc.protocol match {
           case Protocol.COMMAND => hasCommand && !hasPath && hc.port.isEmpty
-          case Protocol.HTTP    => !hasCommand && eitherPortIndexOrPort
-          case Protocol.TCP     => !hasCommand && !hasPath && eitherPortIndexOrPort
-          case _                => true
+          case Protocol.HTTP => !hasCommand && eitherPortIndexOrPort
+          case Protocol.TCP => !hasCommand && !hasPath && eitherPortIndexOrPort
+          case _ => true
         }) Success else Failure(Set(RuleViolation(hc, s"HealthCheck is having parameters violation ${hc.protocol} protocol.", None)))
       }
     }

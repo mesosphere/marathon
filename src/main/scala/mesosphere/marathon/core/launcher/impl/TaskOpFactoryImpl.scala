@@ -38,8 +38,7 @@ class TaskOpFactoryImpl(
 
     if (request.isForResidentRunSpec) {
       inferForResidents(request)
-    }
-    else {
+    } else {
       inferNormalTaskOp(request)
     }
   }
@@ -109,8 +108,7 @@ class TaskOpFactoryImpl(
             matchingReservedResourcesWithoutVolumes, maybeVolumeMatch)
         }
       }
-    }
-    else None
+    } else None
 
     def maybeReserveAndCreateVolumes = if (needToReserve) {
       val configuredRoles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
@@ -128,8 +126,7 @@ class TaskOpFactoryImpl(
       matchingResourcesForReservation.map { resourceMatch =>
         reserveAndCreateVolumes(request.frameworkId, runSpec, offer, resourceMatch)
       }
-    }
-    else None
+    } else None
 
     maybeLaunchOnReservation orElse maybeReserveAndCreateVolumes
   }

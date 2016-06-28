@@ -68,7 +68,8 @@ private[tracker] class TaskTrackerDelegate(
   override def appTasksLaunchedSync(appId: PathId): Iterable[Task] = appTasksSync(appId).filter(_.launched.isDefined)
 
   override def task(taskId: Task.Id)(
-    implicit ec: ExecutionContext): Future[Option[Task]] =
+    implicit
+    ec: ExecutionContext): Future[Option[Task]] =
     tasksByApp().map(_.task(taskId))
 
   private[this] val tasksByAppTimer =

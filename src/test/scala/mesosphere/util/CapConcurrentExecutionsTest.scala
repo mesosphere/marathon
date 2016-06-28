@@ -28,8 +28,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
       result2 should be(2)
       val result3 = serialize(Future.successful(3)).futureValue
       result3 should be(3)
-    }
-    finally {
+    } finally {
       serialize.close()
     }
   }
@@ -42,8 +41,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
       result2 should be(2)
       val result3 = serialize(Future.successful(3)).futureValue
       result3 should be(3)
-    }
-    finally {
+    } finally {
       serialize.close()
     }
   }
@@ -57,8 +55,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
       result2 should be(2)
       val result3 = serialize(Future.successful(3)).futureValue
       result3 should be(3)
-    }
-    finally {
+    } finally {
       serialize.close()
     }
   }
@@ -111,8 +108,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
 
       And("all futures have been timed")
       metrics.processingTimer.invocationCount should be(3)
-    }
-    finally {
+    } finally {
       serialize.close()
     }
   }
@@ -155,8 +151,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
 
       result1.futureValue should be(())
       result2.futureValue should be(())
-    }
-    finally {
+    } finally {
       serialize.close()
     }
   }

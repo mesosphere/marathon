@@ -18,7 +18,7 @@ object ExternalVolumes {
   def validExternalVolume: Validator[ExternalVolume] = new Validator[ExternalVolume] {
     def apply(ev: ExternalVolume) = providers.get(ev.external.provider) match {
       case Some(p) => p.validations.volume(ev)
-      case None    => Failure(Set(RuleViolation(None, "is unknown provider", Some("external/provider"))))
+      case None => Failure(Set(RuleViolation(None, "is unknown provider", Some("external/provider"))))
     }
   }
 

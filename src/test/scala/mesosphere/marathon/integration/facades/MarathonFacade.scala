@@ -335,8 +335,7 @@ object MarathonFacade {
     try {
       for (deployment <- (app.entityJson \ "deployments").as[JsArray].value)
         yield (deployment \ "id").as[String]
-    }
-    catch {
+    } catch {
       case NonFatal(e) =>
         throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
     }

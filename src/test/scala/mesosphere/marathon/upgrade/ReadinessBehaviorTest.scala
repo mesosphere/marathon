@@ -23,7 +23,8 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     Given ("An app with one instance")
     val f = new Fixture
     var taskIsReady = false
-    val appWithReadyCheck = AppDefinition(f.appId,
+    val appWithReadyCheck = AppDefinition(
+      f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
       readinessChecks = Seq(ReadinessCheck("test")))
@@ -41,7 +42,8 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     Given ("An app with one instance")
     val f = new Fixture
     var taskIsReady = false
-    val appWithReadyCheck = AppDefinition(f.appId,
+    val appWithReadyCheck = AppDefinition(
+      f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
       healthChecks = Set(HealthCheck()),
@@ -61,7 +63,8 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     Given ("An app with one instance")
     val f = new Fixture
     var taskIsReady = false
-    val appWithReadyCheck = AppDefinition(f.appId,
+    val appWithReadyCheck = AppDefinition(
+      f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
       healthChecks = Set(HealthCheck()))
@@ -79,7 +82,8 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     Given ("An app with one instance")
     val f = new Fixture
     var taskIsReady = false
-    val appWithReadyCheck = AppDefinition(f.appId,
+    val appWithReadyCheck = AppDefinition(
+      f.appId,
       versionInfo = VersionInfo.OnlyVersion(f.version))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
@@ -95,7 +99,8 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     Given ("An app with one instance")
     val f = new Fixture
     var taskIsReady = false
-    val appWithReadyCheck = AppDefinition(f.appId,
+    val appWithReadyCheck = AppDefinition(
+      f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
       healthChecks = Set(HealthCheck()),
@@ -125,7 +130,8 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     Given ("An app with one instance")
     val f = new Fixture
     var taskIsReady = false
-    val appWithReadyCheck = AppDefinition(f.appId,
+    val appWithReadyCheck = AppDefinition(
+      f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
       readinessChecks = Seq(ReadinessCheck("test")))

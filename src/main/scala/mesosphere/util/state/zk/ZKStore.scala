@@ -97,7 +97,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   private[this] def zkEntity(entity: PersistentEntity): ZKEntity = {
     entity match {
       case zk: ZKEntity => zk
-      case _            => throw new IllegalArgumentException(s"Can not handle this kind of entity: ${entity.getClass}")
+      case _ => throw new IllegalArgumentException(s"Can not handle this kind of entity: ${entity.getClass}")
     }
   }
 
@@ -113,7 +113,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
 
     def createPath(node: ZNode): Future[ZNode] = {
       nodeExists(node).flatMap {
-        case true  => Future.successful(node)
+        case true => Future.successful(node)
         case false => createPath(node.parent).flatMap(_ => createNode(node))
       }
     }
@@ -151,8 +151,7 @@ object ZKData {
       val proto = Protos.ZKStoreEntry.parseFrom(bytes)
       val content = if (proto.getCompressed) uncompress(proto.getValue.toByteArray) else proto.getValue.toByteArray
       new ZKData(proto.getName, UUIDUtil.uuid(proto.getUuid.toByteArray), content)
-    }
-    catch {
+    } catch {
       case ex: InvalidProtocolBufferException =>
         throw new StoreCommandFailedException(s"Can not deserialize Protobuf from ${bytes.length}", ex)
     }

@@ -170,8 +170,7 @@ private[health] class HealthCheckActor(
               if (ignoreFailures(task, health)) {
                 // Don't update health
                 health
-              }
-              else {
+              } else {
                 eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
                 checkConsecutiveFailures(task, health)
                 health.update(result)

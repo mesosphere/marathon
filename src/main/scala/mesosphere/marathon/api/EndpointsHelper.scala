@@ -29,8 +29,7 @@ object EndpointsHelper {
           sb.append(task.agentInfo.host).append(' ')
         }
         sb.append('\n')
-      }
-      else {
+      } else {
         for ((port, i) <- servicePorts.zipWithIndex) {
           sb.append(cleanId).append(delimiter).append(port).append(delimiter)
 

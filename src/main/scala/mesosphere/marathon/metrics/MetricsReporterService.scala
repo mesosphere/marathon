@@ -22,7 +22,7 @@ object MetricsReporterService {
   object QueryParam {
     def unapply(str: String): Option[(String, String)] = str.split("=") match {
       case Array(key: String, value: String) => Some(key -> value)
-      case _                                 => None
+      case _ => None
     }
   }
 }

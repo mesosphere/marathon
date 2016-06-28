@@ -28,8 +28,7 @@ class ArtifactsIntegrationTest extends IntegrationFunSuite with SingleMarathonIn
 
       Then("the request should be successful")
       result.code should be (201) // created
-    }
-    finally {
+    } finally {
       tempFile.delete()
     }
 
@@ -47,8 +46,7 @@ class ArtifactsIntegrationTest extends IntegrationFunSuite with SingleMarathonIn
       Given("an uploaded artifact")
       Files.write("foobar".getBytes, tempFile)
       marathon.uploadArtifact("/foobar", tempFile)
-    }
-    finally {
+    } finally {
       tempFile.delete()
     }
 

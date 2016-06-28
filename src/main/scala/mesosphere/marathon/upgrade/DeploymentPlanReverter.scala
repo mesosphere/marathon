@@ -64,14 +64,13 @@ private[upgrade] object DeploymentPlanReverter {
   //scalastyle:off cyclomatic.complexity method.length
   private[this] def revertGroupChanges(
     version: Timestamp, groupChanges: Seq[(Option[Group], Option[Group])])(
-      group: Group): Group = {
+    group: Group): Group = {
 
     def revertGroupRemoval(oldGroup: Group)(existingGroup: Group): Group = {
       log.debug("re-adding group {} with dependencies {}", Seq(oldGroup.id, oldGroup.dependencies): _*)
       if ((oldGroup.dependencies -- existingGroup.dependencies).nonEmpty) {
         existingGroup.copy(dependencies = existingGroup.dependencies ++ oldGroup.dependencies)
-      }
-      else {
+      } else {
         existingGroup
       }
     }
@@ -88,8 +87,7 @@ private[upgrade] object DeploymentPlanReverter {
               s"removing added {${addedDependencies.mkString(", ")}}")
 
         group.copy(dependencies = group.dependencies ++ removedDependencies -- addedDependencies)
-      }
-      else {
+      } else {
         // common case, unchanged
         group
       }
@@ -164,7 +162,7 @@ private[upgrade] object DeploymentPlanReverter {
     */
   private[this] def revertAppChanges(
     version: Timestamp, changes: Seq[(Option[AppDefinition], Option[AppDefinition])])(
-      g: Group): Group = {
+    g: Group): Group = {
 
     changes.foldLeft(g) {
       case (result, appUpdate) =>

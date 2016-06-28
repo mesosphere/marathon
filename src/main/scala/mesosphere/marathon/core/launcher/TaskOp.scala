@@ -72,8 +72,7 @@ object TaskOp {
               .build()
 
           Some(op)
-        }
-        else None
+        } else None
 
       val maybeUnreserve: Option[MesosProtos.Offer.Operation] =
         if (withDisk.nonEmpty || reservationsForDisks.nonEmpty) {
@@ -87,8 +86,7 @@ object TaskOp {
               .setUnreserve(unreserveOp)
               .build()
           Some(op)
-        }
-        else None
+        } else None
 
       Iterable(maybeDestroyVolumes, maybeUnreserve).flatten
     }

@@ -59,7 +59,7 @@ class MarathonConfTest extends MarathonSpec with Matchers {
       "--mesos_authentication_secret_file", secretFile
     )) match {
       case Failure(ex) => ex.getMessage should include("There should be only one or zero of the following options: mesos_authentication_secret, mesos_authentication_secret_file")
-      case _           => fail("Should give an error")
+      case _ => fail("Should give an error")
     }
   }
 

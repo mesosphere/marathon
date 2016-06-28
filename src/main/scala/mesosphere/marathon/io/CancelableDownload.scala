@@ -31,8 +31,7 @@ final class CancelableDownload(val url: URL, val provider: StorageProvider, val 
     if (!canceled) {
       log.info(s"Download finished from $url to path $path")
       tempItem.moveTo(path)
-    }
-    else {
+    } else {
       log.info(s"Cancel download of $url. Remove temporary storage item $tempItem")
       tempItem.delete()
       throw new CanceledActionException(s"Download of $path from $url has been canceled")
@@ -43,7 +42,7 @@ final class CancelableDownload(val url: URL, val provider: StorageProvider, val 
   override def hashCode(): Int = url.hashCode()
   override def equals(other: Any): Boolean = other match {
     case c: CancelableDownload => (c.url == this.url) && (c.path == path)
-    case _                     => false
+    case _ => false
   }
 }
 

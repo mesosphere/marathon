@@ -78,19 +78,18 @@ private class DeploymentActor(
   def performStep(step: DeploymentStep): Future[Unit] = {
     if (step.actions.isEmpty) {
       Future.successful(())
-    }
-    else {
+    } else {
       val status = DeploymentStatus(plan, step)
       eventBus.publish(status)
 
       val futures = step.actions.map { action =>
         healthCheckManager.addAllFor(action.app) // ensure health check actors are in place before tasks are launched
         action match {
-          case StartApplication(app, scaleTo)         => startApp(app, scaleTo, status)
+          case StartApplication(app, scaleTo) => startApp(app, scaleTo, status)
           case ScaleApplication(app, scaleTo, toKill) => scaleApp(app, scaleTo, toKill, status)
-          case RestartApplication(app)                => restartApp(app, status)
-          case StopApplication(app)                   => stopApp(app.copy(instances = 0))
-          case ResolveArtifacts(app, urls)            => resolveArtifacts(app, urls)
+          case RestartApplication(app) => restartApp(app, status)
+          case StopApplication(app) => stopApp(app.copy(instances = 0))
+          case ResolveArtifacts(app, urls) => resolveArtifacts(app, urls)
         }
       }
 
@@ -111,8 +110,8 @@ private class DeploymentActor(
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int,
-               toKill: Option[Iterable[Task]],
-               status: DeploymentStatus): Future[Unit] = {
+    toKill: Option[Iterable[Task]],
+    status: DeploymentStatus): Future[Unit] = {
     val runningTasks = taskTracker.appTasksLaunchedSync(app.id)
     def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
@@ -153,8 +152,7 @@ private class DeploymentActor(
   def restartApp(app: AppDefinition, status: DeploymentStatus): Future[Unit] = {
     if (app.instances == 0) {
       Future.successful(())
-    }
-    else {
+    } else {
       val promise = Promise[Unit]()
       context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, launchQueue, taskTracker,
         eventBus, readinessCheckExecutor, app, promise))

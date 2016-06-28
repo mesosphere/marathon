@@ -114,8 +114,7 @@ private[util] class RestrictParallelExecutionsActor(
     case exec: Execute[_] =>
       if (active >= maxParallel && queue.size >= maxQueued) {
         sender ! Status.Failure(new IllegalStateException(s"$self queue may not exceed $maxQueued entries"))
-      }
-      else {
+      } else {
         queue :+= exec
         startNextIfPossible()
       }

@@ -39,8 +39,7 @@ object ResourceUtil {
       val leftOver: Double = resource.getScalar.getValue - usedResource.getScalar.getValue
       if (leftOver <= 0) {
         None
-      }
-      else {
+      } else {
         Some(resource
           .toBuilder
           .setScalar(
@@ -55,11 +54,9 @@ object ResourceUtil {
       usedRange: MesosProtos.Value.Range): Seq[MesosProtos.Value.Range] = {
       if (baseRange.getEnd < usedRange.getBegin) { // baseRange completely before usedRange
         Seq(baseRange)
-      }
-      else if (baseRange.getBegin > usedRange.getEnd) { // baseRange completely after usedRange
+      } else if (baseRange.getBegin > usedRange.getEnd) { // baseRange completely after usedRange
         Seq(baseRange)
-      }
-      else {
+      } else {
         val rangeBefore: Option[MesosProtos.Value.Range] = if (baseRange.getBegin < usedRange.getBegin)
           Some(baseRange.toBuilder.setEnd(usedRange.getBegin - 1).build())
         else
@@ -121,7 +118,7 @@ object ResourceUtil {
     resource.getType match {
       case MesosProtos.Value.Type.SCALAR => consumeScalarResource
       case MesosProtos.Value.Type.RANGES => consumeRangeResource
-      case MesosProtos.Value.Type.SET    => consumeSetResource
+      case MesosProtos.Value.Type.SET => consumeSetResource
 
       case unexpectedResourceType: MesosProtos.Value.Type =>
         log.warn("unexpected resourceType {} for resource {}", Seq(unexpectedResourceType, resource.getName): _*)
@@ -145,11 +142,11 @@ object ResourceUtil {
           usedResources.foldLeft(Some(resource): Option[MesosProtos.Resource]) {
             case (Some(resource), usedResource) =>
               if (resource.getType != usedResource.getType) {
-                log.warn("Different resource types for resource {}: {} and {}",
+                log.warn(
+                  "Different resource types for resource {}: {} and {}",
                   resource.getName, resource.getType, usedResource.getType)
                 None
-              }
-              else
+              } else
                 try ResourceUtil.consumeResource(resource, usedResource)
                 catch {
                   case NonFatal(e) =>

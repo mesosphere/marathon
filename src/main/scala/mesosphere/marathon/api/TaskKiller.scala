@@ -24,9 +24,10 @@ class TaskKiller @Inject() (
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  def kill(appId: PathId,
-           findToKill: (Iterable[Task] => Iterable[Task]),
-           wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Task]] = {
+  def kill(
+    appId: PathId,
+    findToKill: (Iterable[Task] => Iterable[Task]),
+    wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Task]] = {
 
     result(groupManager.app(appId)) match {
       case Some(app) =>
@@ -42,8 +43,7 @@ class TaskKiller @Inject() (
             if (launchedTasks.nonEmpty) {
               service.killTasks(appId, launchedTasks)
               foundTasks
-            }
-            else foundTasks
+            } else foundTasks
           }
         }
 
@@ -63,14 +63,16 @@ class TaskKiller @Inject() (
     }
   }
 
-  def killAndScale(appId: PathId,
-                   findToKill: (Iterable[Task] => Iterable[Task]),
-                   force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
+  def killAndScale(
+    appId: PathId,
+    findToKill: (Iterable[Task] => Iterable[Task]),
+    force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId))), force)
   }
 
-  def killAndScale(appTasks: Map[PathId, Iterable[Task]],
-                   force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
+  def killAndScale(
+    appTasks: Map[PathId, Iterable[Task]],
+    force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
       checkAuthorization(UpdateRunSpec, app)
       appTasks.get(app.id).fold(app) { toKill => app.copy(instances = app.instances - toKill.size) }

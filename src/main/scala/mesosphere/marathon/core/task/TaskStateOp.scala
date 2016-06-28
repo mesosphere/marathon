@@ -66,8 +66,8 @@ object TaskStateChange {
 object EffectiveTaskStateChange {
   def unapply(stateChange: TaskStateChange): Option[Task] = stateChange match {
     case Update(newState, _) => Some(newState)
-    case Expunge(oldState)   => Some(oldState)
-    case _                   => None
+    case Expunge(oldState) => Some(oldState)
+    case _ => None
   }
 }
 

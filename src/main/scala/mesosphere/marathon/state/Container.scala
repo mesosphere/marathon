@@ -63,7 +63,7 @@ object Container {
             m match {
               // backwards compat: when in BRIDGE mode, missing host ports default to zero
               case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(PortMapping.HostPortDefault), y, z, w, a)
-              case _                                => m
+              case _ => m
             }
           })
         case _ => portMappings
@@ -152,9 +152,9 @@ object Container {
 
     new Validator[Container] {
       override def apply(c: Container): Result = c.`type` match {
-        case Mesos.ContainerInfo.Type.MESOS  => validate(c)(validMesosContainer)
+        case Mesos.ContainerInfo.Type.MESOS => validate(c)(validMesosContainer)
         case Mesos.ContainerInfo.Type.DOCKER => validate(c)(validDockerContainer)
-        case _                               => Failure(Set(RuleViolation(c.`type`, "unknown", None)))
+        case _ => Failure(Set(RuleViolation(c.`type`, "unknown", None)))
       }
     } and validGeneralContainer
   }

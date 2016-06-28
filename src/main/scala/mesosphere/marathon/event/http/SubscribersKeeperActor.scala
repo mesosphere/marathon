@@ -51,8 +51,7 @@ class SubscribersKeeperActor(val store: EntityStore[EventSubscribers]) extends A
       if (existingSubscribers.urls.contains(callbackUrl)) {
         log.info("Existing callback {} resubscribed.", callbackUrl)
         existingSubscribers
-      }
-      else EventSubscribers(existingSubscribers.urls + callbackUrl)
+      } else EventSubscribers(existingSubscribers.urls + callbackUrl)
     }
 
   protected[this] def remove(callbackUrl: String): Future[EventSubscribers] =

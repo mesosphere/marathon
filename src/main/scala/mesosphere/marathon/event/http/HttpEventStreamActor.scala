@@ -66,9 +66,9 @@ class HttpEventStreamActor(
       newConnectionBehaviour,
       warnAboutUnknownMessages
     ).reduceLeft {
-        // Prevent fatal warning about deriving type Any as type parameter
-        _.orElse[Any, Unit](_)
-      }
+      // Prevent fatal warning about deriving type Any as type parameter
+      _.orElse[Any, Unit](_)
+    }
   }
 
   // behaviour components
@@ -105,7 +105,7 @@ class HttpEventStreamActor(
   /** Cleanup child actors which are not needed anymore. */
   private[this] def cleanupHandlerActors: Receive = {
     case HttpEventStreamConnectionClosed(handle) => removeHandler(handle)
-    case Terminated(actor)                       => unexpectedTerminationOfHandlerActor(actor)
+    case Terminated(actor) => unexpectedTerminationOfHandlerActor(actor)
   }
 
   private[this] def removeHandler(handle: HttpEventStreamHandle): Unit = {

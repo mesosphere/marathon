@@ -34,7 +34,7 @@ object TaskTrackerActor {
     def sendAck(): Unit = {
       val msg = stateChange match {
         case TaskStateChange.Failure(cause) => Status.Failure(cause)
-        case _                              => stateChange
+        case _ => stateChange
       }
       initiator ! msg
     }
@@ -109,7 +109,7 @@ private class TaskTrackerActor(
 
     def becomeWithUpdatedApp(appId: PathId)(taskId: Task.Id, newTask: Option[Task]): Unit = {
       val updatedAppTasks = newTask match {
-        case None       => appTasks.updateApp(appId)(_.withoutTask(taskId))
+        case None => appTasks.updateApp(appId)(_.withoutTask(taskId))
         case Some(task) => appTasks.updateApp(appId)(_.withTask(task))
       }
 

@@ -14,10 +14,11 @@ object MarathonSchedulerDriver {
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off method.length
-  def newDriver(config: MarathonConf,
-                httpConfig: HttpConf,
-                newScheduler: MarathonScheduler,
-                frameworkId: Option[FrameworkID]): SchedulerDriver = {
+  def newDriver(
+    config: MarathonConf,
+    httpConfig: HttpConf,
+    newScheduler: MarathonScheduler,
+    frameworkId: Option[FrameworkID]): SchedulerDriver = {
 
     log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId")
 
@@ -36,12 +37,10 @@ object MarathonSchedulerDriver {
 
     if (config.webuiUrl.isSupplied) {
       frameworkInfoBuilder.setWebuiUrl(config.webuiUrl())
-    }
-    else if (httpConfig.sslKeystorePath.isDefined) {
+    } else if (httpConfig.sslKeystorePath.isDefined) {
       // ssl enabled, use https
       frameworkInfoBuilder.setWebuiUrl(s"https://${config.hostname()}:${httpConfig.httpsPort()}")
-    }
-    else {
+    } else {
       // ssl disabled, use http
       frameworkInfoBuilder.setWebuiUrl(s"http://${config.hostname()}:${httpConfig.httpPort()}")
     }
