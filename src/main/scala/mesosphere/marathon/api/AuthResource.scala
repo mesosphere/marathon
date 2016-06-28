@@ -7,6 +7,8 @@ import mesosphere.marathon.AccessDeniedException
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 
+import scala.util.{ Failure, Success, Try }
+
 /**
   * Base trait for authentication and authorization in http resource endpoints.
   */
@@ -16,15 +18,20 @@ trait AuthResource extends RestResource {
 
   def authenticated(request: HttpServletRequest)(fn: Identity => Response): Response = {
     val requestWrapper = new RequestFacade(request)
-    val maybeIdentity = result(authenticator.authenticate(requestWrapper))
-    maybeIdentity.map { identity =>
-      try {
-        fn(identity)
-      } catch {
-        case e: AccessDeniedException => withResponseFacade(authorizer.handleNotAuthorized(identity, _))
-      }
-    }.getOrElse {
-      withResponseFacade(authenticator.handleNotAuthenticated(requestWrapper, _))
+    val authenticationRequest = authenticator.authenticate(requestWrapper)
+
+    Try(result(authenticationRequest)) match {
+      case Success(maybeIdentity: Option[Identity]) =>
+        maybeIdentity.map { identity =>
+          try {
+            fn(identity)
+          } catch {
+            case e: AccessDeniedException => withResponseFacade(authorizer.handleNotAuthorized(identity, _))
+          }
+        }.getOrElse {
+          withResponseFacade(authenticator.handleNotAuthenticated(requestWrapper, _))
+        }
+      case Failure(e) => Response.status(Response.Status.SERVICE_UNAVAILABLE).build()
     }
   }
 
