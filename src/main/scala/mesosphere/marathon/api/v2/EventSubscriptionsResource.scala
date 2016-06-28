@@ -42,7 +42,7 @@ class EventSubscriptionsResource @Inject() (
   @Timed
   def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
-      withAuthorization(UpdateResource, AuthorizedResource.Events) {
+      withAuthorization(ViewResource, AuthorizedResource.Events) {
         validateSubscriptionService()
         implicit val httpCallbackValidator = validator[String] { callback =>
           callback is urlIsValid
@@ -59,7 +59,7 @@ class EventSubscriptionsResource @Inject() (
   @Timed
   def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
-      withAuthorization(UpdateResource, AuthorizedResource.Events) {
+      withAuthorization(ViewResource, AuthorizedResource.Events) {
         validateSubscriptionService()
         val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
         ok(jsonString(eventToJson(result(future))))
