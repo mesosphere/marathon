@@ -31,13 +31,13 @@ trait DebugConf extends ScallopConf {
   lazy val metrics = toggle(
     "metrics",
     descrYes =
-    "(Default) Expose the execution time of service method calls using code instrumentation" +
-      " via the metrics endpoint (/metrics). This might noticeably degrade performance" +
-      " but can help finding performance problems.",
+      "(Default) Expose the execution time of service method calls using code instrumentation" +
+        " via the metrics endpoint (/metrics). This might noticeably degrade performance" +
+        " but can help finding performance problems.",
     descrNo =
-    "Disable exposing execution time of service method calls using code instrumentation" +
-      " via the metrics endpoing (/metrics). " +
-      "This does not turn off reporting of other metrics.",
+      "Disable exposing execution time of service method calls using code instrumentation" +
+        " via the metrics endpoing (/metrics). " +
+        "This does not turn off reporting of other metrics.",
     default = Some(true),
     noshort = true,
     prefix = "disable_")

@@ -25,7 +25,7 @@ object DiscoveryInfo {
   }
 
   case class Port(
-    number: Int,
+      number: Int,
       name: String,
       protocol: String,
       labels: Map[String, String] = Map.empty[String, String]) {

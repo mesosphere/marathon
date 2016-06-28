@@ -14,7 +14,7 @@ trait UpgradeConfig extends ScallopConf {
   lazy val killsPerBatch = opt[Int](
     "killsPerBatch",
     descr = "INTERNAL TUNING PARAMETER: " +
-    "The number of kills that can be issued in one batch size.",
+      "The number of kills that can be issued in one batch size.",
     noshort = true,
     hidden = true,
     default = Some(100)
@@ -26,7 +26,7 @@ trait UpgradeConfig extends ScallopConf {
   lazy val killBatchDuration = opt[Long](
     "killBatchDuration",
     descr = "INTERNAL TUNING PARAMETER: " +
-    "The duration of one batch cycle in milliseconds.",
+      "The duration of one batch cycle in milliseconds.",
     noshort = true,
     hidden = true,
     default = Some(10000L) //10 seconds
