@@ -371,7 +371,7 @@ case class AppDefinition(
   }
 
   def portAssignments(task: Task): Option[Seq[PortAssignment]] = {
-    def fromIpAddress: Option[Seq[PortAssignment]] = ipAddress.flatMap {
+    def fromDiscoveryInfo: Option[Seq[PortAssignment]] = ipAddress.flatMap {
       case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
         for {
           launched <- task.launched
@@ -382,15 +382,29 @@ case class AppDefinition(
         }.toList
     }
 
-    def fromPortMappings: Option[Seq[PortAssignment]] =
+    def fromPortMappings: Option[Seq[PortAssignment]] = {
       for {
         c <- container
         pms <- c.portMappings
         launched <- task.launched
-      } yield pms.filter(_.hostPort.isDefined).zip(launched.hostPorts).map {
-        case (portMapping, hostPort) =>
-          PortAssignment(portMapping.name, task.agentInfo.host, hostPort)
+        effectiveIpAddress <- task.effectiveIpAddress(this)
+      } yield {
+        var hostPorts = launched.hostPorts
+        pms.map { portMapping =>
+          val effectivePort =
+            if (ipAddress.isDefined || portMapping.hostPort.isEmpty) {
+              portMapping.containerPort
+            }
+            else {
+              val hostPort = hostPorts.head
+              hostPorts = hostPorts.drop(1)
+              hostPort
+            }
+
+          PortAssignment(portMapping.name, effectiveIpAddress, effectivePort)
+        }
       }.toList
+    }
 
     def fromPortDefinitions: Option[Seq[PortAssignment]] = task.launched.map { launched =>
       portDefinitions.zip(launched.hostPorts).map {
@@ -400,17 +414,17 @@ case class AppDefinition(
     }
 
     if (networkModeBridge || networkModeUser) fromPortMappings
-    else if (ipAddress.isDefined) fromIpAddress // mappings is the future; this is deprecated
+    else if (ipAddress.isDefined) fromDiscoveryInfo
     else fromPortDefinitions
   }
 
   def portNames: Seq[String] = {
-    def fromIpAddress = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
+    def fromDiscoveryInfo = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
     def fromPortMappings = container.map(_.portMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
     def fromPortDefinitions = portDefinitions.flatMap(_.name)
 
     if (networkModeBridge || networkModeUser) fromPortMappings
-    else if (ipAddress.isDefined) fromIpAddress // mappings is the future; this is deprecated
+    else if (ipAddress.isDefined) fromDiscoveryInfo
     else fromPortDefinitions
   }
 }
