@@ -40,9 +40,15 @@ class NetworkPartitionIntegrationTest extends IntegrationFunSuite with WithMesos
     lost.state should be("TASK_LOST")
 
     When("the master bounds and the slave starts again")
+    // network partition of zk
+    ProcessKeeper.stopProcess("zookeeper")
+    // and master
     stopMesos(master1)
 
-    // start zk
+    // zk back in service
+    startZooKeeperProcess(wipeWorkDir = false)
+
+    // bring up the cluster
     startMaster(master1, wipe = false)
     startSlave(slave1, wipe = false)
 
