@@ -22,6 +22,12 @@ class AppStopActor(
 
   def initializeStop(): Unit = {
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
+
+    if (idsToKill.size > 10) {
+      log.info("Stopping [{}]. Killing all {} tasks.", app.id, idsToKill.size)
+    } else {
+      log.info("Stopping [{}]. Killing all tasks: {}", app.id, idsToKill.mkString(", "))
+    }
     for (id <- idsToKill) driver.killTask(Protos.TaskID.newBuilder.setValue(id).build())
   }
 }
