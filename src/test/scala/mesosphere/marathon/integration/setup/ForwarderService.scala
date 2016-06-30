@@ -85,13 +85,15 @@ object ForwarderService {
       upWhen = _.contains("Started ServerConnector"))
   }
 
-  def startForwarderProcess(forwardToPort: Int, args: String*): Unit = {
+  def startForwarderProcess(forwardToPort: Int, trustStorePath: Option[String], args: String*): Unit = {
     val conf = createConf(args: _*)
+
+    val trustStoreArgs = trustStorePath.map { p => List(s"-Djavax.net.ssl.trustStore=${p}") }.getOrElse(List.empty)
 
     ProcessKeeper.startJavaProcess(
       s"forwarder_${conf.httpPort()}",
       heapInMegs = 128,
-      arguments = List(ForwarderService.className, "forwarder", forwardToPort.toString) ++ args,
+      arguments = trustStoreArgs ++ List(ForwarderService.className, "forwarder", forwardToPort.toString) ++ args,
       upWhen = _.contains("ServerConnector@"))
   }
 
