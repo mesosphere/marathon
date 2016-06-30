@@ -19,7 +19,7 @@ object EndpointsHelper {
     val sb = new StringBuilder
     for (app <- apps) {
       val cleanId = app.id.safePath.replaceAll("\\s+", "_")
-      val tasks = taskTracker.get(app.id)
+      val tasks = taskTracker.getTasks(app.id)
 
       val servicePorts = app.servicePorts
 

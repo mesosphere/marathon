@@ -3,7 +3,6 @@ package mesosphere.marathon.tasks
 import java.io._
 import javax.inject.Inject
 
-import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos._
 import mesosphere.marathon.metrics.Metrics
@@ -46,6 +45,8 @@ class TaskTracker @Inject() (
 
   def get(appId: PathId): Set[MarathonTask] =
     getInternal(appId).values.toSet
+  def getTasks(appId: PathId): Iterable[MarathonTask] =
+    getInternal(appId).values
 
   def getVersion(appId: PathId, taskId: String): Option[Timestamp] =
     get(appId).collectFirst {
@@ -284,8 +285,8 @@ object TaskTracker {
       var tasks: TrieMap[String, MarathonTask],
       var shutdown: Boolean) {
 
-    def toApp: App = App(appName, tasks.values.toSet, shutdown)
+    def toApp: App = App(appName, tasks.values, shutdown)
   }
 
-  case class App(appName: PathId, tasks: Set[MarathonTask], shutdown: Boolean)
+  case class App(appName: PathId, tasks: Iterable[MarathonTask], shutdown: Boolean)
 }

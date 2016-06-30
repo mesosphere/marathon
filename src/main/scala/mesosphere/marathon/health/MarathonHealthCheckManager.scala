@@ -131,7 +131,7 @@ class MarathonHealthCheckManager @Inject() (
       case None => Future(())
       case Some(app) => withWriteLock {
         val versionTasksMap: Map[String, MarathonTask] =
-          taskTracker.get(app.id).map { task => task.getVersion -> task }.toMap
+          taskTracker.getTasks(app.id).map { task => task.getVersion -> task }.toMap
 
         // remove health checks for which the app version is not current and no tasks remain
         // since only current version tasks are launched.
@@ -216,7 +216,7 @@ class MarathonHealthCheckManager @Inject() (
     Future.sequence(futureHealths) map { healths =>
       val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
 
-      taskTracker.get(appId).toSeq.map { task =>
+      taskTracker.getTasks(appId).toSeq.map { task =>
         groupedHealth.get(task.getId) match {
           case Some(xs) => task.getId -> xs.toSeq
           case None     => task.getId -> Nil
