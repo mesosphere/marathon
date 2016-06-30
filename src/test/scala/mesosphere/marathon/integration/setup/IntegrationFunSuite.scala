@@ -20,9 +20,14 @@ object IntegrationTag extends Tag("mesosphere.marathon.IntegrationTest")
 /**
   * Convenience trait, which will mark all test cases as integration tests.
   */
-trait IntegrationFunSuite extends FunSuite {
+trait IntegrationFunSuite extends FunSuite with Retries {
   override protected def test(testName: String, testTags: Tag*)(testFun: => Unit): Unit = {
     super.test(testName, IntegrationTag +: testTags: _*)(testFun)
+  }
+
+  override protected def withFixture(test: NoArgTest): Outcome = {
+    // a failed or canceled test case should be retried
+    withRetry { super.withFixture(test) }
   }
 }
 
