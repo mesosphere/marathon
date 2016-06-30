@@ -126,7 +126,7 @@ object ResourceMatcher {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, runningTasks: => Iterable[Task],
-                     selector: ResourceSelector): Option[ResourceMatch] = {
+    selector: ResourceSelector): Option[ResourceMatch] = {
 
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
 
@@ -173,16 +173,15 @@ object ResourceMatcher {
         portsMatch <- portsMatchOpt
         if meetsAllConstraints
       } yield ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch)
-    }
-    else {
+    } else {
       None
     }
   }
 
   private[this] def matchScalarResource(
     groupedResources: Map[Role, mutable.Buffer[Protos.Resource]], selector: ResourceSelector)(
-      name: String, requiredValue: Double,
-      scope: ScalarMatchResult.Scope = ScalarMatchResult.Scope.NoneDisk): ScalarMatchResult = {
+    name: String, requiredValue: Double,
+    scope: ScalarMatchResult.Scope = ScalarMatchResult.Scope.NoneDisk): ScalarMatchResult = {
 
     require(scope == ScalarMatchResult.Scope.NoneDisk || name == Resource.DISK)
 
@@ -193,8 +192,7 @@ object ResourceMatcher {
       resourcesConsumed: List[ScalarMatch.Consumption] = List.empty): ScalarMatchResult = {
       if (valueLeft <= 0) {
         ScalarMatch(name, requiredValue, resourcesConsumed, scope = scope)
-      }
-      else {
+      } else {
         resourcesLeft.headOption match {
           case None => NoMatch(name, requiredValue, requiredValue - valueLeft, scope = scope)
           case Some(nextResource) =>
@@ -212,9 +210,10 @@ object ResourceMatcher {
     findMatches(requiredValue, matchingScalarResources)
   }
 
-  private[this] def logUnsatisfiedResources(offer: Offer,
-                                            selector: ResourceSelector,
-                                            scalarMatchResults: Iterable[ScalarMatchResult]): Unit = {
+  private[this] def logUnsatisfiedResources(
+    offer: Offer,
+    selector: ResourceSelector,
+    scalarMatchResults: Iterable[ScalarMatchResult]): Unit = {
     if (log.isInfoEnabled) {
       if (scalarMatchResults.exists(!_.matches)) {
         val basicResourceString = scalarMatchResults.mkString(", ")

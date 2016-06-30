@@ -102,8 +102,7 @@ object IO {
         }
       }
       read()
-    }
-    finally { if (close) Try(in.close()) }
+    } finally { if (close) Try(in.close()) }
   }
 
   def copyInputStreamToString(in: InputStream): String = {
@@ -116,7 +115,7 @@ object IO {
     Option(getClass.getResourceAsStream(path)).flatMap { stream =>
       Try(stream.available()) match {
         case Success(length) => Some(fn(stream))
-        case Failure(ex)     => None
+        case Failure(ex) => None
       }
     }
   }
@@ -124,8 +123,7 @@ object IO {
   def using[A <: Closeable, B](closeable: A)(fn: (A) => B): B = {
     try {
       fn(closeable)
-    }
-    finally {
+    } finally {
       Try(closeable.close())
     }
   }

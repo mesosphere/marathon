@@ -22,22 +22,24 @@ import scala.concurrent.Future
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
-class AppTasksResource @Inject() (service: MarathonSchedulerService,
-                                  taskTracker: TaskTracker,
-                                  taskKiller: TaskKiller,
-                                  healthCheckManager: HealthCheckManager,
-                                  val config: MarathonConf,
-                                  groupManager: GroupManager,
-                                  val authorizer: Authorizer,
-                                  val authenticator: Authenticator) extends AuthResource {
+class AppTasksResource @Inject() (
+    service: MarathonSchedulerService,
+    taskTracker: TaskTracker,
+    taskKiller: TaskKiller,
+    healthCheckManager: HealthCheckManager,
+    val config: MarathonConf,
+    groupManager: GroupManager,
+    val authorizer: Authorizer,
+    val authenticator: Authenticator) extends AuthResource {
 
   val log = LoggerFactory.getLogger(getClass.getName)
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
   @GET
   @Timed
-  def indexJson(@PathParam("appId") id: String,
-                @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def indexJson(
+    @PathParam("appId") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val taskMap = taskTracker.tasksByAppSync
 
     def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
@@ -66,8 +68,9 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @GET
   @Produces(Array(MediaType.TEXT_PLAIN))
   @Timed
-  def indexTxt(@PathParam("appId") appId: String,
-               @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def indexTxt(
+    @PathParam("appId") appId: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val id = appId.toRootPath
     withAuthorization(ViewRunSpec, result(groupManager.app(id)), unknownApp(id)) { app =>
       ok(EndpointsHelper.appsToEndpointString(taskTracker, Seq(app), "\t"))
@@ -76,12 +79,13 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
 
   @DELETE
   @Timed
-  def deleteMany(@PathParam("appId") appId: String,
-                 @QueryParam("host") host: String,
-                 @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
-                 @QueryParam("force")@DefaultValue("false") force: Boolean = false,
-                 @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
-                 @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def deleteMany(
+    @PathParam("appId") appId: String,
+    @QueryParam("host") host: String,
+    @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
+    @QueryParam("force")@DefaultValue("false") force: Boolean = false,
+    @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
 
     def findToKill(appTasks: Iterable[Task]): Iterable[Task] = {
@@ -95,8 +99,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
     if (scale) {
       val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
       deploymentResult(result(deploymentF))
-    }
-    else {
+    } else {
       reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
         tasks => ok(jsonObjString("tasks" -> tasks))
       }
@@ -106,12 +109,13 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
   @DELETE
   @Path("{taskId}")
   @Timed
-  def deleteOne(@PathParam("appId") appId: String,
-                @PathParam("taskId") id: String,
-                @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
-                @QueryParam("force")@DefaultValue("false") force: Boolean = false,
-                @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
-                @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def deleteOne(
+    @PathParam("appId") appId: String,
+    @PathParam("taskId") id: String,
+    @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
+    @QueryParam("force")@DefaultValue("false") force: Boolean = false,
+    @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
     def findToKill(appTasks: Iterable[Task]): Iterable[Task] = appTasks.find(_.taskId == Task.Id(id))
 
@@ -120,8 +124,7 @@ class AppTasksResource @Inject() (service: MarathonSchedulerService,
     if (scale) {
       val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
       deploymentResult(result(deploymentF))
-    }
-    else {
+    } else {
       reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
         tasks => tasks.headOption.fold(unknownTask(id))(task => ok(jsonObjString("task" -> task)))
       }

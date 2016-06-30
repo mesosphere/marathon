@@ -1,6 +1,6 @@
 package mesosphere.marathon.integration.setup
 
-import mesosphere.marathon.api.v2.json.{ AppUpdate, AppUpdate$ }
+import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.state.{ Group, Timestamp }
@@ -19,7 +19,7 @@ object V2TestFormats {
         original = (js \ "original").as[Group],
         target = (js \ "target").as[Group],
         version = (js \ "version").as[Timestamp]).copy(id = (js \ "id").as[String]
-        )
+      )
     )
   }
 

@@ -26,8 +26,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
     // WebApplicationException are things like invalid requests etc, no need to log a stack trace
     if (!exception.isInstanceOf[WebApplicationException]) {
       log.warn("mapping exception to status code", exception)
-    }
-    else {
+    } else {
       log.info("mapping exception to status code", exception)
     }
 
@@ -41,19 +40,19 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
   //scalastyle:off magic.number cyclomatic.complexity
   private def statusCode(exception: Exception): Int = exception match {
     //scalastyle:off magic.number
-    case e: TimeoutException           => 503 // Service Unavailable
-    case e: UnknownAppException        => 404 // Not found
-    case e: UnknownGroupException      => 404 // Not found
-    case e: AppLockedException         => 409 // Conflict
+    case e: TimeoutException => 503 // Service Unavailable
+    case e: UnknownAppException => 404 // Not found
+    case e: UnknownGroupException => 404 // Not found
+    case e: AppLockedException => 409 // Conflict
     case e: ConflictingChangeException => 409 // Conflict
-    case e: BadRequestException        => 400 // Bad Request
-    case e: JsonParseException         => 400 // Bad Request
-    case e: JsResultException          => 400 // Bad Request
-    case e: JsonMappingException       => 400 // Bad Request
-    case e: IllegalArgumentException   => 422 // Unprocessable entity
-    case e: ValidationFailedException  => 422 // Unprocessable Entity
-    case e: WebApplicationException    => e.getResponse.getStatus
-    case _                             => 500 // Internal server error
+    case e: BadRequestException => 400 // Bad Request
+    case e: JsonParseException => 400 // Bad Request
+    case e: JsResultException => 400 // Bad Request
+    case e: JsonMappingException => 400 // Bad Request
+    case e: IllegalArgumentException => 422 // Unprocessable entity
+    case e: ValidationFailedException => 422 // Unprocessable Entity
+    case e: WebApplicationException => e.getResponse.getStatus
+    case _ => 500 // Internal server error
     //scalastyle:on
   }
 
@@ -88,8 +87,7 @@ class MarathonExceptionMapper extends ExceptionMapper[Exception] {
       //scalastyle:off null
       if (Status.fromStatusCode(e.getResponse.getStatus) != null) {
         Json.obj("message" -> Status.fromStatusCode(e.getResponse.getStatus).getReasonPhrase)
-      }
-      else {
+      } else {
         Json.obj("message" -> e.getMessage)
       }
     case _ =>

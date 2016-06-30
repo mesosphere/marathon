@@ -32,19 +32,20 @@ private[tracker] object TaskOpProcessorImpl {
       */
     def resolve(op: TaskStateOp)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
       op match {
-        case op: TaskStateOp.LaunchEphemeral     => updateIfNotExists(op.taskId, op.task)
+        case op: TaskStateOp.LaunchEphemeral => updateIfNotExists(op.taskId, op.task)
         case op: TaskStateOp.LaunchOnReservation => updateExistingTask(op)
-        case op: TaskStateOp.MesosUpdate         => updateExistingTask(op)
-        case op: TaskStateOp.ReservationTimeout  => updateExistingTask(op)
-        case op: TaskStateOp.Reserve             => updateIfNotExists(op.taskId, op.task)
-        case op: TaskStateOp.ForceExpunge        => expungeTask(op.taskId)
+        case op: TaskStateOp.MesosUpdate => updateExistingTask(op)
+        case op: TaskStateOp.ReservationTimeout => updateExistingTask(op)
+        case op: TaskStateOp.Reserve => updateIfNotExists(op.taskId, op.task)
+        case op: TaskStateOp.ForceExpunge => expungeTask(op.taskId)
         case op: TaskStateOp.Revert =>
           Future.successful(TaskStateChange.Update(newState = op.task, oldState = None))
       }
     }
 
     private[this] def updateIfNotExists(taskId: Task.Id, updatedTask: Task)(
-      implicit ec: ExecutionContext): Future[TaskStateChange] = {
+      implicit
+      ec: ExecutionContext): Future[TaskStateChange] = {
       directTaskTracker.task(taskId).map {
         case Some(existingTask) =>
           TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.runSpecId}] already exists"))
@@ -123,7 +124,8 @@ private[tracker] class TaskOpProcessorImpl(
   }
 
   private[this] def notifyTaskTrackerActor(op: Operation, ack: TaskTrackerActor.Ack)(
-    implicit ec: ExecutionContext): Future[Unit] = {
+    implicit
+    ec: ExecutionContext): Future[Unit] = {
 
     import akka.pattern.ask
     import scala.concurrent.duration._
@@ -143,7 +145,8 @@ private[tracker] class TaskOpProcessorImpl(
     * which are only triggered for a certain combination of fields.
     */
   private[this] def tryToRecover(op: Operation)(expectedState: Option[Task], oldState: Option[Task])(
-    implicit ec: ExecutionContext): PartialFunction[Throwable, Future[TaskTrackerActor.Ack]] = {
+    implicit
+    ec: ExecutionContext): PartialFunction[Throwable, Future[TaskTrackerActor.Ack]] = {
 
     case NonFatal(cause) =>
       def ack(actualTaskState: Option[MarathonTask], change: TaskStateChange): TaskTrackerActor.Ack = {
@@ -163,7 +166,7 @@ private[tracker] class TaskOpProcessorImpl(
         case None =>
           val stateChange = oldState match {
             case Some(oldTask) => TaskStateChange.Expunge(oldTask)
-            case None          => TaskStateChange.NoChange(op.taskId)
+            case None => TaskStateChange.NoChange(op.taskId)
           }
           ack(None, stateChange)
       }.recover {

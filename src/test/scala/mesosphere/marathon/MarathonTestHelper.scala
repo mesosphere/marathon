@@ -16,6 +16,8 @@ import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
@@ -71,8 +73,8 @@ object MarathonTestHelper {
   val frameworkId: FrameworkId = FrameworkId("").mergeFromProto(frameworkID)
 
   def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
-                     beginPort: Int = 31000, endPort: Int = 32000, role: String = ResourceRole.Unreserved,
-                     reservation: Option[ReservationLabels] = None): Offer.Builder = {
+    beginPort: Int = 31000, endPort: Int = 32000, role: String = ResourceRole.Unreserved,
+    reservation: Option[ReservationLabels] = None): Offer.Builder = {
 
     require(role != ResourceRole.Unreserved || reservation.isEmpty, "reserved resources cannot have role *")
 
@@ -99,8 +101,7 @@ object MarathonTestHelper {
         Seq(Range(beginPort.toLong, endPort.toLong)),
         role
       )))
-    }
-    else {
+    } else {
       None
     }
     val offerBuilder = Offer.newBuilder
@@ -167,7 +168,7 @@ object MarathonTestHelper {
   }
 
   def reservedDisk(id: String, size: Double = 4096, role: String = ResourceRole.Unreserved,
-                   principal: String = "test", containerPath: String = "/container"): Mesos.Resource.Builder = {
+    principal: String = "test", containerPath: String = "/container"): Mesos.Resource.Builder = {
     import Mesos.Resource.{ DiskInfo, ReservationInfo }
     Mesos.Resource.newBuilder()
       .setType(Mesos.Value.Type.SCALAR)
@@ -213,7 +214,7 @@ object MarathonTestHelper {
   }
 
   def makeBasicOfferWithRole(cpus: Double, mem: Double, disk: Double,
-                             beginPort: Int, endPort: Int, role: String) = {
+    beginPort: Int, endPort: Int, role: String) = {
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(Range(beginPort.toLong, endPort.toLong)),
@@ -242,9 +243,10 @@ object MarathonTestHelper {
       .addResources(ScalarResource(Resource.CPUS, 1.0, ResourceRole.Unreserved))
   }
 
-  def makeTaskFromTaskInfo(taskInfo: TaskInfo,
-                           offer: Offer = makeBasicOffer().build(),
-                           version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): Task.LaunchedEphemeral =
+  def makeTaskFromTaskInfo(
+    taskInfo: TaskInfo,
+    offer: Offer = makeBasicOffer().build(),
+    version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): Task.LaunchedEphemeral =
     {
       import scala.collection.JavaConverters._
 
@@ -407,10 +409,11 @@ object MarathonTestHelper {
       hostPorts = Seq.empty
     )
 
-  def runningTaskForApp(appId: PathId = PathId("/test"),
-                        appVersion: Timestamp = Timestamp(1),
-                        stagedAt: Long = 2,
-                        startedAt: Long = 3): Task.LaunchedEphemeral =
+  def runningTaskForApp(
+    appId: PathId = PathId("/test"),
+    appVersion: Timestamp = Timestamp(1),
+    stagedAt: Long = 2,
+    startedAt: Long = 3): Task.LaunchedEphemeral =
     runningTask(
       Task.Id.forRunSpec(appId).idString,
       appVersion = appVersion,
@@ -564,6 +567,20 @@ object MarathonTestHelper {
       def withNoPortDefinitions(): AppDefinition = app.withPortDefinitions(Seq.empty)
 
       def withIpAddress(ipAddress: IpAddress): AppDefinition = app.copy(ipAddress = Some(ipAddress))
+
+      def withDockerNetwork(network: Mesos.ContainerInfo.DockerInfo.Network): AppDefinition = {
+        val container = app.container.getOrElse(Container())
+        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(network = Some(network))
+
+        app.copy(container = Some(container.copy(docker = Some(docker))))
+      }
+
+      def withPortMapings(portMappings: Seq[PortMapping]): AppDefinition = {
+        val container = app.container.getOrElse(Container())
+        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(portMappings))
+
+        app.copy(container = Some(container.copy(docker = Some(docker))))
+      }
     }
 
     implicit class TaskImprovements(task: Task) {
@@ -579,9 +596,9 @@ object MarathonTestHelper {
       }
 
       def withHostPorts(update: Seq[Int]): Task = task match {
-        case launchedEphemeral: Task.LaunchedEphemeral         => launchedEphemeral.copy(hostPorts = update)
+        case launchedEphemeral: Task.LaunchedEphemeral => launchedEphemeral.copy(hostPorts = update)
         case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(hostPorts = update)
-        case reserved: Task.Reserved                           => throw new scala.RuntimeException("Reserved task cannot have hostPorts")
+        case reserved: Task.Reserved => throw new scala.RuntimeException("Reserved task cannot have hostPorts")
       }
 
       def withNetworkInfos(update: scala.collection.Seq[NetworkInfo]): Task = {

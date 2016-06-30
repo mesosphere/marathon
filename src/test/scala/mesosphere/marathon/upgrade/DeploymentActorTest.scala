@@ -21,7 +21,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
 class DeploymentActorTest
@@ -106,9 +106,8 @@ class DeploymentActorTest
       verify(f.scheduler).startApp(f.driver, app3.copy(instances = 0))
       verify(f.driver, times(1)).killTask(task1_2.taskId.mesosTaskId)
       verify(f.scheduler).stopApp(f.driver, app4.copy(instances = 0))
-    }
-    finally {
-      system.shutdown()
+    } finally {
+      Await.result(system.terminate(), Duration.Inf)
     }
   }
 
@@ -158,9 +157,8 @@ class DeploymentActorTest
       verify(f.driver).killTask(task1_1.taskId.mesosTaskId)
       verify(f.driver).killTask(task1_2.taskId.mesosTaskId)
       verify(f.queue).add(appNew, 2)
-    }
-    finally {
-      f.system.shutdown()
+    } finally {
+      Await.result(system.terminate(), Duration.Inf)
     }
   }
 
@@ -184,9 +182,8 @@ class DeploymentActorTest
     try {
       f.deploymentActor(managerProbe.ref, receiverProbe.ref, plan)
       receiverProbe.expectMsg(DeploymentFinished(plan))
-    }
-    finally {
-      f.system.shutdown()
+    } finally {
+      Await.result(system.terminate(), Duration.Inf)
     }
   }
 
@@ -224,9 +221,8 @@ class DeploymentActorTest
 
       verify(f.driver, times(1)).killTask(task1_2.taskId.mesosTaskId)
       verifyNoMoreInteractions(f.driver)
-    }
-    finally {
-      f.system.shutdown()
+    } finally {
+      Await.result(system.terminate(), Duration.Inf)
     }
   }
 

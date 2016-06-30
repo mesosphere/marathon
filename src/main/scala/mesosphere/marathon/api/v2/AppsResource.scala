@@ -46,11 +46,12 @@ class AppsResource @Inject() (
 
   @GET
   @Timed
-  def index(@QueryParam("cmd") cmd: String,
-            @QueryParam("id") id: String,
-            @QueryParam("label") label: String,
-            @QueryParam("embed") embed: java.util.Set[String],
-            @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def index(
+    @QueryParam("cmd") cmd: String,
+    @QueryParam("id") id: String,
+    @QueryParam("label") label: String,
+    @QueryParam("embed") embed: java.util.Set[String],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val selector = selectAuthorized(search(Option(cmd), Option(id), Option(label)))
     // additional embeds are deprecated!
     val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) +
@@ -61,9 +62,10 @@ class AppsResource @Inject() (
 
   @POST
   @Timed
-  def create(body: Array[Byte],
-             @DefaultValue("false")@QueryParam("force") force: Boolean,
-             @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def create(
+    body: Array[Byte],
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withValid(Json.parse(body).as[AppDefinition].withCanonizedIds()) { appDef =>
       val now = clock.now()
       val app = appDef.copy(
@@ -102,9 +104,10 @@ class AppsResource @Inject() (
   @GET
   @Path("""{id:.+}""")
   @Timed
-  def show(@PathParam("id") id: String,
-           @QueryParam("embed") embed: java.util.Set[String],
-           @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def show(
+    @PathParam("id") id: String,
+    @QueryParam("embed") embed: java.util.Set[String],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) ++ Set(
       // deprecated. For compatibility.
       AppInfo.Embed.Counts, AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments
@@ -132,7 +135,7 @@ class AppsResource @Inject() (
 
     id match {
       case ListApps(gid) => transitiveApps(gid.toRootPath)
-      case _             => app(id.toRootPath)
+      case _ => app(id.toRootPath)
     }
   }
 
@@ -160,16 +163,17 @@ class AppsResource @Inject() (
 
   @PUT
   @Timed
-  def replaceMultiple(@DefaultValue("false")@QueryParam("force") force: Boolean,
-                      body: Array[Byte],
-                      @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def replaceMultiple(
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    body: Array[Byte],
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     withValid(Json.parse(body).as[Seq[AppUpdate]].map(_.withCanonizedIds())) { updates =>
       val version = clock.now()
 
       def updateGroup(root: Group): Group = updates.foldLeft(root) { (group, update) =>
         update.id match {
           case Some(id) => group.updateApp(id, updateOrCreate(id, _, update, version), version)
-          case None     => group
+          case None => group
         }
       }
 
@@ -180,9 +184,10 @@ class AppsResource @Inject() (
   @DELETE
   @Path("""{id:.+}""")
   @Timed
-  def delete(@DefaultValue("true")@QueryParam("force") force: Boolean,
-             @PathParam("id") id: String,
-             @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def delete(
+    @DefaultValue("true")@QueryParam("force") force: Boolean,
+    @PathParam("id") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
 
     def deleteAppFromGroup(group: Group) = {
@@ -202,9 +207,10 @@ class AppsResource @Inject() (
 
   @POST
   @Path("{id:.+}/restart")
-  def restart(@PathParam("id") id: String,
-              @DefaultValue("false")@QueryParam("force") force: Boolean,
-              @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def restart(
+    @PathParam("id") id: String,
+    @DefaultValue("false")@QueryParam("force") force: Boolean,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
 
     def markForRestartingOrThrow(opt: Option[AppDefinition]) = {
@@ -222,10 +228,11 @@ class AppsResource @Inject() (
     deploymentResult(restartDeployment)
   }
 
-  private def updateOrCreate(appId: PathId,
-                             existing: Option[AppDefinition],
-                             appUpdate: AppUpdate,
-                             newVersion: Timestamp)(implicit identity: Identity): AppDefinition = {
+  private def updateOrCreate(
+    appId: PathId,
+    existing: Option[AppDefinition],
+    appUpdate: AppUpdate,
+    newVersion: Timestamp)(implicit identity: Identity): AppDefinition = {
     def createApp(): AppDefinition = {
       val app = validateOrThrow(appUpdate.empty(appId))
       checkAuthorization(CreateRunSpec, app)

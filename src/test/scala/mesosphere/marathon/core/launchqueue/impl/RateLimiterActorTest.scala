@@ -7,7 +7,7 @@ import akka.util.Timeout
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import org.mockito.Mockito
 
 import scala.concurrent.Await
@@ -65,7 +65,6 @@ class RateLimiterActorTest extends MarathonSpec {
   }
 
   after {
-    actorSystem.shutdown()
-    actorSystem.awaitTermination()
+    Await.result(actorSystem.terminate(), Duration.Inf)
   }
 }

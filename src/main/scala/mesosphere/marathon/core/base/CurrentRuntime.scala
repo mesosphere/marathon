@@ -1,11 +1,12 @@
 package mesosphere.marathon.core.base
 
+import akka.Done
+import mesosphere.marathon.util.Timeout
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ ExecutionContext, TimeoutException, Await, Future }
-import scala.util.control.NonFatal
 import scala.concurrent.duration._
-import scala.concurrent.blocking
+import scala.concurrent.{ ExecutionContext, Future, TimeoutException }
+import scala.util.control.NonFatal
 
 object CurrentRuntime {
 
@@ -20,21 +21,17 @@ object CurrentRuntime {
     * @return the Future of this operation.
     */
   //scalastyle:off magic.number
-  def asyncExit(exitCode: Int = 137, //Fatal error signal "n" is 128+n ==> n for killed is 9 ==> 137
-                waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Unit] = {
-    Future(
-      blocking {
-        try {
-          Await.result(Future(blocking(sys.exit(exitCode))), waitForExit)
-        }
-        catch {
-          case _: TimeoutException => log.error("Shutdown timeout")
-          case NonFatal(t)         => log.error("Exception while committing suicide", t)
-        }
-
+  def asyncExit(
+    exitCode: Int = 137, //Fatal error signal "n" is 128+n ==> n for killed is 9 ==> 137
+    waitForExit: FiniteDuration = 10.seconds)(implicit ec: ExecutionContext): Future[Done] = {
+    Timeout.unsafeBlocking(waitForExit)(sys.exit(exitCode)).recover {
+      case _: TimeoutException => log.error("Shutdown timeout")
+      case NonFatal(t) => log.error("Exception while committing suicide", t)
+    }.failed.map {
+      case _ =>
         log.info("Halting JVM")
         Runtime.getRuntime.halt(exitCode)
-      }
-    )
+        Done
+    }
   }
 }

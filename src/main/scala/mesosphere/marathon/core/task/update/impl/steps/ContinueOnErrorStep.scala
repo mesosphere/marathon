@@ -22,11 +22,13 @@ class ContinueOnErrorStep(wrapped: TaskUpdateStep) extends TaskUpdateStep {
       case Some(processed) =>
         processed.recover {
           case NonFatal(e) =>
-            log.error("while executing step {} for [{}], continue with other steps",
+            log.error(
+              "while executing step {} for [{}], continue with other steps",
               wrapped.name, taskChanged.taskId.idString, e)
         }
       case None =>
-        log.error("step {} for [{}] returned null, continue with other steps",
+        log.error(
+          "step {} for [{}] returned null, continue with other steps",
           Array[Object](wrapped.name, taskChanged.taskId.idString): _*)
         Future.successful(())
     }

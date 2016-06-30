@@ -101,7 +101,7 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
     def jsonResult(result: Result): String = {
       Json.prettyPrint(
         result match {
-          case Success    => JsString("Success")
+          case Success => JsString("Success")
           case f: Failure => Json.toJson(f)(Validation.failureWrites)
         }
       )
@@ -125,7 +125,7 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
       withClue(jsonResult(globalResult)) { globalResult.isFailure should be(expectFailure) }
 
       val ruleViolations = globalResult match {
-        case Success    => Set.empty[RuleViolation]
+        case Success => Set.empty[RuleViolation]
         case f: Failure => f.violations.flatMap(Validation.allRuleViolationsWithFullDescription(_))
       }
 

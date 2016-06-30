@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.Timestamp
 import org.scalatest.{ FunSuite, Matchers }
 
 class ScalingPropositionTest extends FunSuite with Matchers {

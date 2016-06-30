@@ -138,8 +138,7 @@ class AppDeployIntegrationTest
         queue should have size 1
         queue.map(_.delay.overdue) should contain(false)
         true
-      }
-      catch {
+      } catch {
         case NonFatal(e) =>
           log.info("while querying queue", e)
           false

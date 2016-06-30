@@ -119,8 +119,7 @@ class PortsMatcher(
             log.info(s"Offer [${offer.getId.getValue}]. $resourceSelector. " +
               s"Insufficient ports in offer for run spec [${runSpec.id}]")
             None
-          }
-          else {
+          } else {
             Option(availablePortsWithoutStaticHostPorts.next())
           }
         case PortMapping(_, Some(hostPort), _, _, _, _) =>
@@ -150,7 +149,7 @@ class PortsMatcher(
     val allocatedPorts = ports.takeWhile(_.isDefined).take(expectedSize).flatten.toVector
     if (allocatedPorts.size == expectedSize)
       Some(allocatedPorts.map(_ match {
-        case RequestNone      => None
+        case RequestNone => None
         case pr: PortWithRole => Some(pr)
       }))
     else None

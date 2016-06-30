@@ -30,7 +30,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       doCheck(app, task, launched, check)
         .andThen {
           case Success(Some(result)) => replyTo ! result
-          case Success(None)         => // ignore
+          case Success(None) => // ignore
           case Failure(t) =>
             replyTo ! Unhealthy(
               task.taskId,
@@ -45,21 +45,21 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     app: AppDefinition, task: Task, launched: Task.Launched, check: HealthCheck): Future[Option[HealthResult]] =
     task.effectiveIpAddress(app) match {
       case Some(host) =>
-        check.hostPort(launched) match {
+        check.effectivePort(app, task) match {
           case None => Future.successful {
             Some(
-              Unhealthy(task.taskId,
+              Unhealthy(
+                task.taskId,
                 launched.runSpecVersion,
                 "Missing/invalid port index and no explicit port specified"))
           }
           case Some(port) => check.protocol match {
-            case HTTP  => http(task, launched, check, host, port)
-            case TCP   => tcp(task, launched, check, host, port)
+            case HTTP => http(task, launched, check, host, port)
+            case TCP => tcp(task, launched, check, host, port)
             case HTTPS => https(task, launched, check, host, port)
             case COMMAND =>
               Future.failed {
-                val message = s"COMMAND health checks can only be performed " +
-                  "by the Mesos executor."
+                val message = "COMMAND health checks can only be performed by the Mesos executor."
                 log.warning(message)
                 new UnsupportedOperationException(message)
               }
@@ -98,8 +98,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
       else if (check.ignoreHttp1xx && (toIgnoreResponses contains response.status.intValue)) {
         log.debug(s"Ignoring health check HTTP response ${response.status.intValue} for ${task.taskId}")
         None
-      }
-      else {
+      } else {
         Some(Unhealthy(task.taskId, launched.runSpecVersion, response.status.toString()))
       }
     }

@@ -13,15 +13,15 @@ object MarathonTaskStatus {
 
   def apply(mesosStatus: TaskStatus): MarathonTaskStatus = {
     val constructor: Option[TaskStatus] => MarathonTaskStatus = mesosStatus.getState match {
-      case TASK_STAGING  => Staging
+      case TASK_STAGING => Staging
       case TASK_STARTING => Starting
-      case TASK_RUNNING  => Running
-      case TASK_KILLING  => Killing
+      case TASK_RUNNING => Running
+      case TASK_KILLING => Killing
       case TASK_FINISHED => Finished
-      case TASK_FAILED   => Failed
-      case TASK_KILLED   => Killed
-      case TASK_LOST     => Lost
-      case TASK_ERROR    => Error
+      case TASK_FAILED => Failed
+      case TASK_KILLED => Killed
+      case TASK_LOST => Lost
+      case TASK_ERROR => Error
     }
     constructor(Some(mesosStatus))
   }
@@ -43,7 +43,7 @@ object MarathonTaskStatus {
     def unapply(terminal: Terminal): Option[Terminal] = Some(terminal)
     def unapply(status: MarathonTaskStatus): Option[MarathonTaskStatus] = status.mesosStatus match {
       case Some(MesosTaskStatus.Terminal(_)) => Some(status)
-      case _                                 => None
+      case _ => None
     }
   }
 

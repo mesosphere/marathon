@@ -1,10 +1,10 @@
 package mesosphere.marathon.core.appinfo
 
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, Protos }
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 class TaskLifeTimeTest extends MarathonSpec with Mockito with GivenWhenThen with Matchers {

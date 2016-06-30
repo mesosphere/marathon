@@ -126,8 +126,7 @@ class TaskReplaceActor(
       log.info(s"App All new tasks for $appId are ready and all old tasks have been killed")
       promise.success(())
       context.stop(self)
-    }
-    else if (log.isDebugEnabled) {
+    } else if (log.isDebugEnabled) {
       log.debug(s"For app: [${app.id}] there are [${healthyTasks.size}] healthy and " +
         s"[${readyTasks.size}] ready new instances and " +
         s"[${oldTaskIds.size}] old instances.")
@@ -191,8 +190,7 @@ object TaskReplaceActor {
           "maxCapacity == minHealthy for resident app: " +
             s"adjusting nrToKillImmediately to $nrToKillImmediately in order to prevent over-capacity for resident app"
         )
-      }
-      else {
+      } else {
         log.info(s"maxCapacity == minHealthy: Allow temporary over-capacity of one task to allow restarting")
         maxCapacity += 1
       }

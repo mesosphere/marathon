@@ -40,7 +40,7 @@ object MesosFacade {
     def empty: ITResources = new ITResources(Map.empty)
     def apply(vals: (String, Any)*): ITResources = {
       val resources = vals.toMap.mapValues {
-        case value: Double       => ITResourceScalarValue(value)
+        case value: Double => ITResourceScalarValue(value)
         case portsString: String => ITResourcePortValue(portsString)
       }
       ITResources(resources)

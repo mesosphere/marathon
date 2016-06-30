@@ -10,6 +10,8 @@ import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
   * The facade to the mesos simulation.
@@ -59,7 +61,7 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
   override def declineOffer(offerId: OfferID, filters: Filters): Status = Status.DRIVER_RUNNING
 
   override def launchTasks(offerIds: util.Collection[OfferID], tasks: util.Collection[TaskInfo],
-                           filters: Filters): Status = launchTasks(offerIds, tasks)
+    filters: Filters): Status = launchTasks(offerIds, tasks)
   override def launchTasks(offerId: OfferID, tasks: util.Collection[TaskInfo], filters: Filters): Status =
     launchTasks(Collections.singleton(offerId), tasks)
   override def launchTasks(offerId: OfferID, tasks: util.Collection[TaskInfo]): Status =
@@ -76,7 +78,7 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
   var driverActorRefOpt: Option[ActorRef] = None
 
   private def status: Status = system match {
-    case None    => Status.DRIVER_STOPPED
+    case None => Status.DRIVER_STOPPED
     case Some(_) => Status.DRIVER_RUNNING
   }
 
@@ -97,7 +99,7 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
     system match {
       case None => Status.DRIVER_NOT_STARTED
       case Some(sys) =>
-        sys.shutdown()
+        sys.terminate()
         Status.DRIVER_ABORTED
     }
   }
@@ -111,7 +113,7 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver {
     system match {
       case None => Status.DRIVER_NOT_STARTED
       case Some(sys) =>
-        sys.awaitTermination()
+        Await.result(sys.whenTerminated, Duration.Inf)
         driverActorRefOpt = None
         system = None
         log.info("Stopped simulated Mesos")

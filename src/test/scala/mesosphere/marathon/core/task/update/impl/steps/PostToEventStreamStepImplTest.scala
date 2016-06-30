@@ -1,31 +1,38 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
+import akka.actor.ActorSystem
 import akka.event.EventStream
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.event.{ MarathonEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
-import org.slf4j.LoggerFactory
+import org.scalatest.{ BeforeAndAfterAll, FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
-class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhenThen with ScalaFutures {
+class PostToEventStreamStepImplTest extends FunSuite
+    with Matchers with GivenWhenThen with ScalaFutures with BeforeAndAfterAll {
+  val system = ActorSystem()
+  override def afterAll(): Unit = {
+    Await.result(system.terminate(), Duration.Inf)
+  }
   test("name") {
-    new Fixture().step.name should be ("postTaskStatusEvent")
+    new Fixture(system).step.name should be ("postTaskStatusEvent")
   }
 
   test("process running notification of staged task") {
     Given("an existing STAGED task")
-    val f = new Fixture
+    val f = new Fixture(system)
     val existingTask = stagedMarathonTask
 
     When("we receive a running status update")
@@ -60,7 +67,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
   test("ignore running notification of already running task") {
     Given("an existing RUNNING task")
-    val f = new Fixture
+    val f = new Fixture(system)
     val existingTask = MarathonTestHelper.runningTaskForApp(appId, startedAt = 100)
 
     When("we receive a running update")
@@ -86,7 +93,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
   private[this] def testExistingTerminatedTask(terminalTaskState: TaskState): Unit = {
     Given("an existing task")
-    val f = new Fixture
+    val f = new Fixture(system)
     val existingTask = stagedMarathonTask
 
     When("we receive a terminal status update")
@@ -149,8 +156,8 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
       .withAgentInfo(_.copy(host = host))
       .withHostPorts(portsList)
 
-  class Fixture {
-    val eventStream = new EventStream()
+  class Fixture(system: ActorSystem) {
+    val eventStream = new EventStream(system)
     val captureEvents = new CaptureEvents(eventStream)
 
     def captureLogAndEvents(block: => Unit): (Vector[ILoggingEvent], Seq[MarathonEvent]) = {

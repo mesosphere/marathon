@@ -18,7 +18,7 @@ class PromiseActor(promise: Promise[Any]) extends Actor {
       x match {
         case Status.Failure(t) => promise.failure(t)
         case Status.Success(x) => promise.success(x)
-        case _                 => promise.success(x)
+        case _ => promise.success(x)
       }
       context.stop(self)
   }

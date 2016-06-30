@@ -56,8 +56,8 @@ private class WhenLeaderActor(childProps: => Props)
 
   private[impl] def active(childRef: ActorRef): Receive = LoggingReceive.withLabel("active") {
     case PrepareForStart => sender() ! Prepared(self)
-    case Stop            => stop(childRef)
-    case unhandled: Any  => childRef.forward(unhandled)
+    case Stop => stop(childRef)
+    case unhandled: Any => childRef.forward(unhandled)
   }
 
   private[impl] def dying(stopAckRef: ActorRef, childRef: ActorRef): Receive = LoggingReceive.withLabel("dying") {

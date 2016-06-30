@@ -2,14 +2,13 @@ package mesosphere.util.state.mesos
 
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.util.BackToTheFuture.Timeout
-import mesosphere.util.ThreadPoolContext
 import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 import org.apache.mesos.state.{ State, Variable }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
@@ -52,7 +51,7 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
       .flatMap { variable =>
         futureToFuture(state.expunge(variable))
           .map{
-            case java.lang.Boolean.TRUE  => true
+            case java.lang.Boolean.TRUE => true
             case java.lang.Boolean.FALSE => false
           }
       }
@@ -83,7 +82,7 @@ class MesosStateStore(state: State, timeout: Duration) extends PersistentStore {
   private[this] def throwOnNull[T](t: T): T = {
     Option(t) match {
       case Some(value) => value
-      case None        => throw new StoreCommandFailedException("Null returned from state store!")
+      case None => throw new StoreCommandFailedException("Null returned from state store!")
     }
   }
 

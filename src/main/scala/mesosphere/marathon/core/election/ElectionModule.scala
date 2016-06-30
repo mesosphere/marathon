@@ -50,8 +50,7 @@ class ElectionModule(
       case backend: Option[String] =>
         throw new IllegalArgumentException(s"Leader election backend $backend not known!")
     }
-  }
-  else {
+  } else {
     new PseudoElectionService(
       config,
       system,

@@ -68,7 +68,7 @@ class InfoResource @Inject() (
 
     def eventConfig(): JsObject = config.eventSubscriber.get match {
       case Some("http_callback") => httpEventConfig
-      case _                     => Json.obj()
+      case _ => Json.obj()
     }
 
     Json.obj(

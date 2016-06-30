@@ -25,7 +25,8 @@ class ExpungeOverdueLostTasksActor(
 
   override def preStart(): Unit = {
     log.info("ExpungeOverdueLostTasksActor has started")
-    tickTimer = Some(context.system.scheduler.schedule(config.taskLostExpungeInitialDelay,
+    tickTimer = Some(context.system.scheduler.schedule(
+      config.taskLostExpungeInitialDelay,
       config.taskLostExpungeInterval, self, Tick))
   }
 
@@ -35,7 +36,7 @@ class ExpungeOverdueLostTasksActor(
   }
 
   override def receive: Receive = {
-    case Tick                             => taskTracker.tasksByApp() pipeTo self
+    case Tick => taskTracker.tasksByApp() pipeTo self
     case TaskTracker.TasksByApp(appTasks) => filterLostGCTasks(appTasks).foreach(expungeLostGCTask)
   }
 
@@ -65,7 +66,7 @@ object ExpungeOverdueLostTasksActor {
   case object Tick
 
   def props(clock: Clock, config: TaskJobsConfig,
-            taskTracker: TaskTracker, stateOpProcessor: TaskStateOpProcessor): Props = {
+    taskTracker: TaskTracker, stateOpProcessor: TaskStateOpProcessor): Props = {
     Props(new ExpungeOverdueLostTasksActor(clock, config, taskTracker, stateOpProcessor))
   }
 }

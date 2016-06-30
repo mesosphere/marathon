@@ -20,11 +20,11 @@ private[impl] object ElectionServiceBase {
 
   sealed trait State {
     def getCandidate: Option[ElectionCandidate] = this match {
-      case Idle(c)             => c
-      case Leading(c, _)       => Some(c)
+      case Idle(c) => c
+      case Leading(c, _) => Some(c)
       case Abdicating(c, _, _) => Some(c)
-      case Offering(c)         => Some(c)
-      case Offered(c)          => Some(c)
+      case Offering(c) => Some(c)
+      case Offered(c) => Some(c)
     }
   }
 
@@ -62,8 +62,7 @@ abstract class ElectionServiceBase(
     synchronized {
       try {
         leaderHostPortImpl
-      }
-      catch {
+      } catch {
         case NonFatal(e) =>
           log.error("error while getting current leader", e)
           None
@@ -74,7 +73,7 @@ abstract class ElectionServiceBase(
   override def isLeader: Boolean = synchronized {
     state match {
       case Leading(_, _) => true
-      case _             => false
+      case _ => false
     }
   }
 
@@ -99,7 +98,7 @@ abstract class ElectionServiceBase(
         log.info(s"Abdicating leadership while being NO candidate (reoffer=$reoffer)")
         if (reoffer) {
           candidate match {
-            case None    => log.error("Cannot reoffer leadership without being a leadership candidate")
+            case None => log.error("Cannot reoffer leadership without being a leadership candidate")
             case Some(c) => offerLeadership(c)
           }
         }
@@ -128,8 +127,7 @@ abstract class ElectionServiceBase(
   final override def offerLeadership(candidate: ElectionCandidate): Unit = synchronized {
     if (shutdownHooks.isShuttingDown) {
       log.info("Ignoring leadership offer while shutting down")
-    }
-    else {
+    } else {
       setOfferState({
         // some offering attempt is running
         log.info("Ignoring repeated leadership offer")
@@ -155,11 +153,11 @@ abstract class ElectionServiceBase(
 
   protected def stopLeadership(): Unit = synchronized {
     val (candidate, reoffer, candidateWasStarted) = state match {
-      case Leading(c, a)          => (c, false, false)
+      case Leading(c, a) => (c, false, false)
       case Abdicating(c, ro, cws) => (c, ro, cws)
-      case Offered(c)             => (c, false, false)
-      case Offering(c)            => (c, false, false)
-      case Idle(c)                => (c.get, false, false)
+      case Offered(c) => (c, false, false)
+      case Offering(c) => (c, false, false)
+      case Idle(c) => (c.get, false, false)
     }
     state = Idle(Some(candidate))
 
@@ -203,8 +201,7 @@ abstract class ElectionServiceBase(
           if (isLeader) {
             backoff.reset()
           }
-        }
-        catch {
+        } catch {
           case NonFatal(e) => // catch Scala and Java exceptions
             log.error("Failed to take over leadership", e)
             abdicateLeadership(error = true)

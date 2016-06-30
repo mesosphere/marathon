@@ -100,7 +100,8 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
     val file = File.createTempFile("serviceProxy", ".sh")
     file.deleteOnExit()
 
-    FileUtils.write(file,
+    FileUtils.write(
+      file,
       s"""#!/bin/sh
           |set -x
           |exec $run $$*""".stripMargin)

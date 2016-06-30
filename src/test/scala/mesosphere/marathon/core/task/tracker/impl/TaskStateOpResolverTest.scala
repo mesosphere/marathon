@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, MarathonTaskStatusTestHelper, MesosTaskStatus, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.bus.{ MarathonTaskStatusTestHelper, MesosTaskStatus, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }

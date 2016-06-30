@@ -17,7 +17,8 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
     Given("a resident app with persistent volumes and an offer without persistent volumes")
     val app = f.appWithPersistentVolume()
     val offer = MarathonTestHelper.makeBasicOffer().build()
-    val tasks = Seq(f.makeTask(app.id,
+    val tasks = Seq(f.makeTask(
+      app.id,
       Task.Reservation(Seq(Task.LocalVolumeId(app.id, "persistent-volume", "uuid")), f.taskReservationStateNew)))
 
     When("We ask for a volume match")

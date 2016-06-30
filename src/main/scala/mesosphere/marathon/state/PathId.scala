@@ -1,12 +1,9 @@
 package mesosphere.marathon.state
 
+import com.wix.accord._
+import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.isTrue
 import mesosphere.marathon.plugin
-
-import scala.language.implicitConversions
-
-import com.wix.accord.dsl._
-import com.wix.accord._
 
 case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[PathId] with plugin.PathId {
 
@@ -21,8 +18,8 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
   def isRoot: Boolean = path.isEmpty
 
   def parent: PathId = path match {
-    case Nil          => this
-    case head :: Nil  => PathId(Nil, absolute)
+    case Nil => this
+    case head :: Nil => PathId(Nil, absolute)
     case head :: rest => PathId(path.reverse.tail.reverse, absolute)
   }
 
@@ -51,10 +48,10 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
   def canonicalPath(base: PathId = PathId(Nil, absolute = true)): PathId = {
     require(base.absolute, "Base path is not absolute, canonical path can not be computed!")
     def in(remaining: List[String], result: List[String] = Nil): List[String] = remaining match {
-      case head :: tail if head == "."  => in(tail, result)
+      case head :: tail if head == "." => in(tail, result)
       case head :: tail if head == ".." => in(tail, if (result.nonEmpty) result.tail else Nil)
-      case head :: tail                 => in(tail, head :: result)
-      case Nil                          => result.reverse
+      case head :: tail => in(tail, head :: result)
+      case Nil => result.reverse
     }
     if (absolute) PathId(in(path)) else PathId(in(base.path ::: path))
   }

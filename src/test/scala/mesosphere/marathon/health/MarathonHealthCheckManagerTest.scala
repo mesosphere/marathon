@@ -66,7 +66,7 @@ class MarathonHealthCheckManagerTest
       None,
       metrics)
 
-    eventStream = new EventStream()
+    eventStream = new EventStream(system)
 
     val schedulerDriverHolderProvider = new Provider[MarathonSchedulerDriverHolder] {
       override def get(): MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder

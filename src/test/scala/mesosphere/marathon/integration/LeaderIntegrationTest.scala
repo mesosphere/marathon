@@ -1,15 +1,14 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.Features
-import mesosphere.marathon.integration.facades.{ ITLeaderResult, MarathonFacade }
+import mesosphere.marathon.integration.facades.MarathonFacade
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.PathId
 import org.apache.zookeeper.data.Stat
-import org.apache.zookeeper.{ ZooKeeper, WatchedEvent, Watcher }
+import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooKeeper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 import scala.util.Try
 
 class LeaderIntegrationTest extends IntegrationFunSuite
@@ -105,8 +104,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
         val apiLeader: String = marathon.leader().value.leader
         val tombstoneData = zooKeeper.getData(config.zkPath + "/leader/member_-00000000", false, stat.get)
         new String(tombstoneData, "UTF-8") should equal(apiLeader)
-      }
-      finally {
+      } finally {
         zooKeeper.close()
       }
     }
@@ -130,7 +128,8 @@ class LeaderIntegrationTest extends IntegrationFunSuite
     checkTombstone()
   }
 
-  test("the tombstone stops old instances from becoming leader") {
+  ignore("the tombstone stops old instances from becoming leader") {
+    // FIXME(jason): https://github.com/mesosphere/marathon/issues/4040
     When("Starting an instance with --leader_election_backend")
     val parameters = List(
       "--master", config.master,
@@ -142,28 +141,28 @@ class LeaderIntegrationTest extends IntegrationFunSuite
     val facade = new MarathonFacade(s"http://${config.marathonHost}:$twitterCommonsInstancePort", PathId.empty)
     val random = new scala.util.Random
 
-    for (_ <- 1 to 10) {
-      Given("a leader")
+    1.to(10).map { i =>
+      Given(s"a leader ($i)")
       WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) { marathon.leader().code == 200 }
       val leader = marathon.leader().value
 
-      Then("it is never the twitter_commons instance")
+      Then(s"it is never the twitter_commons instance ($i)")
       leader.leader.split(":")(1).toInt should not be twitterCommonsInstancePort
 
-      And("the twitter_commons instance knows the real leader")
+      And(s"the twitter_commons instance knows the real leader ($i)")
       WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
         val result = facade.leader()
         result.code == 200 && result.value == leader
       }
 
-      When("calling DELETE /v2/leader")
+      When(s"calling DELETE /v2/leader ($i)")
       val result = marathon.abdicate()
 
-      Then("the request should be successful")
+      Then(s"the request should be successful ($i)")
       result.code should be (200)
       (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
-      And("the leader must have changed")
+      And(s"the leader must have changed ($i)")
       WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
         val result = marathon.leader()
         result.code == 200 && result.value != leader

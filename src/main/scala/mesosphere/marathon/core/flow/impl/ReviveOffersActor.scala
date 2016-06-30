@@ -67,19 +67,19 @@ private[impl] class ReviveOffersActor(
 
       revivesNeeded -= 1
       if (revivesNeeded > 0) {
-        log.info("{} further revives still needed. Repeating reviveOffers according to --{} {}",
+        log.info(
+          "{} further revives still needed. Repeating reviveOffers according to --{} {}",
           revivesNeeded, conf.reviveOffersRepetitions.name, conf.reviveOffersRepetitions())
         reviveOffers()
       }
-    }
-    else {
+    } else {
       lazy val untilNextRevive = now until nextRevive
       if (nextReviveCancellableOpt.isEmpty) {
-        log.info("=> Schedule next revive at {} in {}, adhering to --{} {} (ms)",
+        log.info(
+          "=> Schedule next revive at {} in {}, adhering to --{} {} (ms)",
           nextRevive, untilNextRevive, conf.minReviveOffersInterval.name, conf.minReviveOffersInterval())
         nextReviveCancellableOpt = Some(schedulerCheck(untilNextRevive))
-      }
-      else if (log.isDebugEnabled) {
+      } else if (log.isDebugEnabled) {
         log.info("=> Next revive already scheduled at {} not yet due for {}", nextRevive, untilNextRevive)
       }
     }
@@ -128,8 +128,7 @@ private[impl] class ReviveOffersActor(
       if (offersCurrentlyWanted) {
         log.info(s"Received reviveOffers notification: ${msg.getClass.getSimpleName}")
         initiateNewSeriesOfRevives()
-      }
-      else {
+      } else {
         log.info(s"Ignoring ${msg.getClass.getSimpleName} because no one is currently interested in offers")
       }
 
@@ -137,8 +136,7 @@ private[impl] class ReviveOffersActor(
       log.info(s"Received TimedCheck")
       if (revivesNeeded > 0) {
         reviveOffers()
-      }
-      else {
+      } else {
         log.info("=> no revives needed right now")
       }
   }

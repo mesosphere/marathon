@@ -2,8 +2,8 @@ package mesosphere.marathon.health
 
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.state.Command
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, Protos }
+import mesosphere.marathon.state.{ Command, PortDefinition }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
@@ -364,11 +364,21 @@ class HealthCheckTest extends MarathonSpec {
     ))
   }
 
-  test("getPort") {
+  test("effectivePort with a hard-coded port") {
     import MarathonTestHelper.Implicits._
     val check = new HealthCheck(port = Some(1234))
+    val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
     val task = MarathonTestHelper.runningTask("test_id").withHostPorts(Seq(4321))
 
-    assert(check.hostPort(task.launched.get).contains(1234))
+    assert(check.effectivePort(app, task).contains(1234))
+  }
+
+  test("effectivePort with a port index") {
+    import MarathonTestHelper.Implicits._
+    val check = new HealthCheck(portIndex = Some(0))
+    val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
+    val task = MarathonTestHelper.runningTask("test_id").withHostPorts(Seq(4321))
+
+    assert(check.effectivePort(app, task).contains(4321))
   }
 }

@@ -15,7 +15,8 @@ import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, Future }
 
 class TaskStatusUpdateProcessorImplTest
     extends MarathonSpec with Mockito with ScalaFutures with GivenWhenThen with Matchers {
@@ -194,8 +195,7 @@ class TaskStatusUpdateProcessorImplTest
     }
 
     def shutdown(): Unit = {
-      actorSystem.shutdown()
-      actorSystem.awaitTermination()
+      Await.result(actorSystem.terminate(), Duration.Inf)
       fOpt = None
     }
   }

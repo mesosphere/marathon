@@ -29,18 +29,18 @@ class AppMock(appId: String, version: String, url: String) extends AbstractHandl
     println(s"AppMock[$appId $version]: says goodbye")
   }
 
-  override def handle(target: String,
-                      baseRequest: Request,
-                      request: HttpServletRequest,
-                      response: HttpServletResponse): Unit = {
+  override def handle(
+    target: String,
+    baseRequest: Request,
+    request: HttpServletRequest,
+    response: HttpServletResponse): Unit = {
 
     if (request.getMethod == "GET" && request.getPathInfo == "/ping") {
       response.setStatus(200)
       baseRequest.setHandled(true)
       val marathonId = sys.env.getOrElse("MARATHON_APP_ID", "NO_MARATHON_APP_ID_SET")
       response.getWriter.println(s"Pong $marathonId")
-    }
-    else {
+    } else {
       val res = result(pipeline(Get(url)), waitTime)
       println(s"AppMock[$appId $version]: current health is $res")
       response.setStatus(res.status.intValue)

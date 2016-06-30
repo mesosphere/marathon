@@ -18,9 +18,10 @@ import scala.reflect.ClassTag
   * The plugin manager can load plugins from given urls.
   * @param urls the urls pointing to plugins.
   */
-private[plugin] class PluginManagerImpl(val config: MarathonConf,
-                                        val definitions: PluginDefinitions,
-                                        val urls: Seq[URL]) extends PluginManager {
+private[plugin] class PluginManagerImpl(
+    val config: MarathonConf,
+    val definitions: PluginDefinitions,
+    val urls: Seq[URL]) extends PluginManager {
   private[this] val log: Logger = LoggerFactory.getLogger(getClass)
 
   private[this] var pluginHolders: List[PluginHolder[_]] = List.empty[PluginHolder[_]]

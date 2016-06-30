@@ -3,7 +3,7 @@ package mesosphere.marathon.core.leadership.impl
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props, Stash, Status, Terminated }
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.leadership.PreparationMessages
-import mesosphere.marathon.core.leadership.impl.WhenLeaderActor.{ Stopped, Stop }
+import mesosphere.marathon.core.leadership.impl.WhenLeaderActor.Stop
 
 private[leadership] object LeadershipCoordinatorActor {
   def props(whenLeaderActors: Set[ActorRef]): Props = {
@@ -46,8 +46,7 @@ private class LeadershipCoordinatorActor(var whenLeaderActors: Set[ActorRef])
         ackStartRef ! PreparationMessages.Prepared(self)
       }
       active
-    }
-    else {
+    } else {
       LoggingReceive.withLabel("preparingForStart") {
         case PreparationMessages.PrepareForStart =>
           context.become(preparingForStart(ackStartRefs + sender(), whenLeaderActorsWithoutAck))

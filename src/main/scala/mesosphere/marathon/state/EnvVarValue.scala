@@ -8,7 +8,7 @@ sealed trait EnvVarValue extends plugin.EnvVarValue {
   val valueValidator = new Validator[EnvVarValue] {
     override def apply(v: EnvVarValue) =
       v match {
-        case s: EnvVarString    => validate(s)(EnvVarString.valueValidator)
+        case s: EnvVarString => validate(s)(EnvVarString.valueValidator)
         case r: EnvVarSecretRef => validate(r)(EnvVarSecretRef.valueValidator)
       }
   }
@@ -25,8 +25,6 @@ case class EnvVarSecretRef(secret: String) extends EnvVarRef with plugin.EnvVarS
 }
 
 object EnvVarValue {
-  import scala.language.implicitConversions
-
   def apply(m: Map[String, String]): Map[String, EnvVarValue] =
     m.map { case (k, v) => k -> v.toEnvVar }
 

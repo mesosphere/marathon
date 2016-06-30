@@ -132,8 +132,7 @@ private[impl] class TaskUpdateActor(
             new TimeoutException(s"Timeout: ${op.stateOp} for app [${op.appId}] and ${op.taskId}.")
           )
           Future.successful(())
-        }
-        else
+        } else
           metrics.processOpTimer.timeFuture(processor.process(op))
       }.map { _ =>
         log.debug(s"Finished processing ${op.stateOp} for app [${op.appId}] and ${op.taskId}")

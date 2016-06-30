@@ -25,8 +25,7 @@ class Metrics @Inject() (val registry: MetricRegistry) {
     val startTime = System.nanoTime()
     try {
       block
-    }
-    finally {
+    } finally {
       timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
     }
   }
@@ -98,8 +97,7 @@ object Metrics {
       val startTime = System.nanoTime()
       try {
         block
-      }
-      finally {
+      } finally {
         timer.update(System.nanoTime() - startTime, TimeUnit.NANOSECONDS)
       }
     }

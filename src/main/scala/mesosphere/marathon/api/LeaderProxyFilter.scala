@@ -2,7 +2,6 @@ package mesosphere.marathon.api
 
 import java.io.{ IOException, InputStream, OutputStream }
 import java.net._
-import java.security.cert.X509Certificate
 import javax.inject.Named
 import javax.net.ssl._
 import javax.servlet._
@@ -24,10 +23,11 @@ import scala.util.control.NonFatal
 /**
   * Servlet filter that proxies requests to the leader if we are not the leader.
   */
-class LeaderProxyFilter @Inject() (httpConf: HttpConf,
-                                   electionService: ElectionService,
-                                   @Named(ModuleNames.HOST_PORT) myHostPort: String,
-                                   forwarder: RequestForwarder) extends Filter {
+class LeaderProxyFilter @Inject() (
+    httpConf: HttpConf,
+    electionService: ElectionService,
+    @Named(ModuleNames.HOST_PORT) myHostPort: String,
+    forwarder: RequestForwarder) extends Filter {
   //scalastyle:off null
 
   import LeaderProxyFilter._
@@ -47,16 +47,17 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
     {
       queryStringOpt match {
         case Some(queryString) => new URL(s"$scheme://$leaderData$requestURI?$queryString")
-        case None              => new URL(s"$scheme://$leaderData$requestURI")
+        case None => new URL(s"$scheme://$leaderData$requestURI")
       }
     }
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   @tailrec
-  final def doFilter(rawRequest: ServletRequest,
-                     rawResponse: ServletResponse,
-                     chain: FilterChain) {
+  final def doFilter(
+    rawRequest: ServletRequest,
+    rawResponse: ServletResponse,
+    chain: FilterChain) {
 
     def waitForConsistentLeadership(response: HttpServletResponse): Boolean = {
       //scalastyle:off magic.number
@@ -79,8 +80,7 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
         if (retries >= 0) {
           log.info(s"Waiting for consistent leadership state. Are we leader?: $weAreLeader, leader: $currentLeaderData")
           sleep()
-        }
-        else {
+        } else {
           log.error(
             s"inconsistent leadership state, refusing request for ourselves at $myHostPort. " +
               s"Are we leader?: $weAreLeader, leader: $currentLeaderData")
@@ -99,24 +99,20 @@ class LeaderProxyFilter @Inject() (httpConf: HttpConf,
         if (electionService.isLeader) {
           response.addHeader(LeaderProxyFilter.HEADER_MARATHON_LEADER, buildUrl(myHostPort).toString)
           chain.doFilter(request, response)
-        }
-        else if (leaderDataOpt.forall(_ == myHostPort)) { // either not leader or ourselves
+        } else if (leaderDataOpt.forall(_ == myHostPort)) { // either not leader or ourselves
           log.info(
             s"Do not proxy to myself. Waiting for consistent leadership state. " +
               s"Are we leader?: false, leader: $leaderDataOpt")
           if (waitForConsistentLeadership(response)) {
             doFilter(rawRequest, rawResponse, chain)
-          }
-          else {
+          } else {
             response.sendError(HttpStatus.SC_SERVICE_UNAVAILABLE, ERROR_STATUS_NO_CURRENT_LEADER)
           }
-        }
-        else {
+        } else {
           try {
             val url: URL = buildUrl(leaderDataOpt.get, request)
             forwarder.forward(url, request, response)
-          }
-          catch {
+          } catch {
             case NonFatal(e) =>
               throw new RuntimeException("while proxying", e)
           }
@@ -265,8 +261,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       IO.using(response.getOutputStream) { output =>
         try {
           IO.using(leaderConnection.getInputStream) { connectionInput => copy(connectionInput, output) }
-        }
-        catch {
+        } catch {
           case e: IOException =>
             log.debug("got exception response, this is maybe an error code", e)
             IO.using(leaderConnection.getErrorStream) { connectionError => copy(connectionError, output) }
@@ -280,24 +275,20 @@ class JavaUrlConnectionRequestForwarder @Inject() (
       if (hasProxyLoop) {
         log.error("Prevent proxy cycle, rejecting request")
         response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_LOOP)
-      }
-      else {
+      } else {
         val leaderConnection: HttpURLConnection = createAndConfigureConnection(url)
         try {
           copyRequestToConnection(leaderConnection, request)
           copyConnectionResponse(leaderConnection, response)
-        }
-        catch {
+        } catch {
           case connException: ConnectException =>
             response.sendError(HttpStatus.SC_BAD_GATEWAY, ERROR_STATUS_CONNECTION_REFUSED)
-        }
-        finally {
+        } finally {
           Try(leaderConnection.getInputStream.close())
           Try(leaderConnection.getErrorStream.close())
         }
       }
-    }
-    finally {
+    } finally {
       Try(request.getInputStream.close())
       Try(response.getOutputStream.close())
     }
@@ -310,8 +301,7 @@ class JavaUrlConnectionRequestForwarder @Inject() (
         in <- Option(nullableIn)
         out <- Option(nullableOut)
       } IO.transfer(in, out, close = false)
-    }
-    catch {
+    } catch {
       case e: UnknownServiceException =>
         log.warn("unexpected unknown service exception", e)
     }

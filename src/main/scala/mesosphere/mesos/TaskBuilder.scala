@@ -18,10 +18,11 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.util.Random
 
-class TaskBuilder(runSpec: RunSpec,
-                  newTaskId: PathId => Task.Id,
-                  config: MarathonConf,
-                  appTaskProc: Option[RunSpecTaskProcessor] = None) {
+class TaskBuilder(
+    runSpec: RunSpec,
+    newTaskId: PathId => Task.Id,
+    config: MarathonConf,
+    appTaskProc: Option[RunSpecTaskProcessor] = None) {
 
   import TaskBuilder.log
 
@@ -38,15 +39,13 @@ class TaskBuilder(runSpec: RunSpec,
 
       val maybeStatic: Option[String] = if (staticHostPorts.nonEmpty) {
         Some(s"[${staticHostPorts.mkString(", ")}] required")
-      }
-      else {
+      } else {
         None
       }
 
       val maybeDynamic: Option[String] = if (numberDynamicHostPorts > 0) {
         Some(s"$numberDynamicHostPorts dynamic")
-      }
-      else {
+      } else {
         None
       }
 
@@ -95,8 +94,7 @@ class TaskBuilder(runSpec: RunSpec,
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
-    }
-    else {
+    } else {
       Executor.dispatch(runSpec.executor)
     }
 
@@ -230,8 +228,7 @@ class TaskBuilder(runSpec: RunSpec,
                 // port.
                 if (mapping.containerPort == 0) {
                   mapping.copy(hostPort = Some(hport), containerPort = hport)
-                }
-                else {
+                } else {
                   mapping.copy(hostPort = Some(hport))
                 }
             }
@@ -284,11 +281,12 @@ object TaskBuilder {
   val labelEnvironmentKeyPrefix = "MARATHON_APP_LABEL_"
   val maxVariableLength = maxEnvironmentVarLength - labelEnvironmentKeyPrefix.length
 
-  def commandInfo(runSpec: RunSpec,
-                  taskId: Option[Task.Id],
-                  host: Option[String],
-                  hostPorts: Seq[Option[Int]],
-                  envPrefix: Option[String]): CommandInfo.Builder = {
+  def commandInfo(
+    runSpec: RunSpec,
+    taskId: Option[Task.Id],
+    host: Option[String],
+    hostPorts: Seq[Option[Int]],
+    envPrefix: Option[String]): CommandInfo.Builder = {
 
     val declaredPorts = {
       val containerPorts = for {
@@ -366,8 +364,7 @@ object TaskBuilder {
     portNames: Seq[Option[String]]): Map[String, String] = {
     if (effectivePorts.isEmpty) {
       Map.empty
-    }
-    else {
+    } else {
       val env = Map.newBuilder[String, String]
       val generatedPortsBuilder = Map.newBuilder[Int, Int] // index -> container port
 
@@ -383,8 +380,7 @@ object TaskBuilder {
           if (!consumedPorts.contains(p)) {
             consumedPorts += p
             p
-          }
-          else next // TODO(jdef) **highly** unlikely, but still possible that the port range could be exhausted
+          } else next // TODO(jdef) **highly** unlikely, but still possible that the port range could be exhausted
         }
       }
 
@@ -435,7 +431,7 @@ object TaskBuilder {
   def addPrefix(envVarsPrefix: Option[String], env: Map[String, String]): Map[String, String] = {
     envVarsPrefix match {
       case Some(prefix) => env.map { case (key: String, value: String) => (prefix + key, value) }
-      case None         => env
+      case None => env
     }
   }
 
@@ -443,8 +439,7 @@ object TaskBuilder {
     if (taskId.isEmpty) {
       // This branch is taken during serialization. Do not add environment variables in this case.
       Map.empty
-    }
-    else {
+    } else {
       Seq(
         "MESOS_TASK_ID" -> taskId.map(_.idString),
         "MARATHON_APP_ID" -> Some(runSpec.id.toString),

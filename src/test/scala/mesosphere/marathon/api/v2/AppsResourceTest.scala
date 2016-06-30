@@ -695,7 +695,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with broken volume definition fails with readable error message") {
     Given("An app update with an invalid volume (wrong field name)")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -714,7 +715,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume for an illegal provider should fail") {
     Given("An app invalid volume (illegal volume provider)")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -737,7 +739,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Creating an app with an external volume with no name provider name specified should FAIL provider validation") {
     Given("An app with an unnamed volume provider")
     val e = intercept[JsResultException]{
-      createAppWithVolumes("MESOS",
+      createAppWithVolumes(
+        "MESOS",
         """
           |    "volumes": [{
           |      "containerPath": "var",
@@ -757,7 +760,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume w/ MESOS and absolute containerPath should fail validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -779,7 +783,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume w/ MESOS and nested containerPath should fail validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var/child",
@@ -801,7 +806,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume and MESOS containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -822,7 +828,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume using an invalid rexray option should fail") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("MESOS",
+    val response = createAppWithVolumes(
+      "MESOS",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -844,7 +851,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume w/ relative containerPath DOCKER containerizer should fail validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "var",
@@ -865,7 +873,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume and DOCKER containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -885,7 +894,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating a DOCKER app with an external volume without driver option should NOT pass validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -907,7 +917,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating a Docker app with an external volume with size should fail validation") {
     Given("An app with a named, non-'agent' volume provider")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -934,7 +945,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Creating an app with an external volume, and docker volume and DOCKER containerizer should pass validation") {
     Given("An app with a named, non-'agent' volume provider and a docker host volume")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -960,7 +972,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     // we'll need to mitigate this with documentation: probably deprecating support for using
     // volume names with non-persistent volumes.
     Given("An app with DOCKER containerizer and multiple references to the same named volume")
-    val response = createAppWithVolumes("DOCKER",
+    val response = createAppWithVolumes(
+      "DOCKER",
       """
         |    "volumes": [{
         |      "containerPath": "/var",
@@ -1169,7 +1182,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     auth.authFn = (resource: Any) => {
       val id = resource match {
         case app: AppDefinition => app.id.toString
-        case _                  => resource.asInstanceOf[Group].id.toString
+        case _ => resource.asInstanceOf[Group].id.toString
       }
       id.startsWith("/visible")
     }

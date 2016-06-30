@@ -3,7 +3,6 @@ package mesosphere.marathon
 import java.util.{ Timer, TimerTask }
 
 import akka.actor.ActorRef
-import akka.event.EventStream
 import akka.testkit.TestProbe
 import com.codahale.metrics.MetricRegistry
 import mesosphere.chaos.http.HttpConf
@@ -17,7 +16,7 @@ import mesosphere.marathon.state.{ AppRepository, MarathonStore, Migration }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
-import org.apache.mesos.{ Protos => mesos, SchedulerDriver }
+import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
 import org.mockito.Matchers.{ any, eq => mockEq }
 import org.mockito.Mockito
 import org.mockito.Mockito.{ times, verify, when }
@@ -260,8 +259,7 @@ class MarathonSchedulerServiceTest
 
     try {
       schedulerService.startLeadership()
-    }
-    catch {
+    } catch {
       case _: TimeoutException =>
         schedulerService.stopLeadership()
     }
@@ -293,8 +291,7 @@ class MarathonSchedulerServiceTest
 
     try {
       schedulerService.startLeadership()
-    }
-    catch {
+    } catch {
       case e: Exception => schedulerService.stopLeadership()
     }
 

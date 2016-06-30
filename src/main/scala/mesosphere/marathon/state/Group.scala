@@ -37,7 +37,7 @@ case class Group(
   def findGroup(fn: Group => Boolean): Option[Group] = {
     def in(groups: List[Group]): Option[Group] = groups match {
       case head :: rest => if (fn(head)) Some(head) else in(rest).orElse(in(head.groups.toList))
-      case Nil          => None
+      case Nil => None
     }
     if (fn(this)) Some(this) else in(groups.toList)
   }
@@ -71,7 +71,7 @@ case class Group(
   def update(timestamp: Timestamp = Timestamp.now())(fn: Group => Group): Group = {
     def in(groups: List[Group]): List[Group] = groups match {
       case head :: rest => head.update(timestamp)(fn) :: in(rest)
-      case Nil          => Nil
+      case Nil => Nil
     }
     fn(this.copy(groups = in(groups.toList).toSet, version = timestamp))
   }
@@ -181,7 +181,7 @@ case class Group(
   override def equals(obj: Any): Boolean = {
     obj match {
       case that: Group => (that eq this) || (that.id == id && that.version == version)
-      case _           => false
+      case _ => false
     }
   }
 
@@ -215,7 +215,8 @@ object Group {
     case object doesNotExceedMaxApps extends Validator[Group] {
       override def apply(group: Group): Result = {
         maxApps.filter(group.transitiveApps.size > _).map { num =>
-          Failure(Set(RuleViolation(group,
+          Failure(Set(RuleViolation(
+            group,
             s"""This Marathon instance may only handle up to $num Apps!
                 |(Override with command line option --max_apps)""".stripMargin, None)))
         } getOrElse Success
@@ -261,7 +262,8 @@ object Group {
               existingServicePort <- existingApp.container.flatMap(_.portMappings).toList.flatten.map(_.servicePort)
               if existingServicePort != 0 // ignore zero ports, which will be chosen at random
               if servicePorts contains existingServicePort
-            } yield RuleViolation(app.id,
+            } yield RuleViolation(
+              app.id,
               s"Requested service port $existingServicePort conflicts with a service port in app ${existingApp.id}",
               None)
           }

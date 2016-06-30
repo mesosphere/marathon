@@ -121,7 +121,7 @@ object TaskFailure {
     import mesos.TaskState._
     state match {
       case TASK_FAILED | TASK_LOST | TASK_ERROR => true
-      case _                                    => false
+      case _ => false
     }
   }
 }

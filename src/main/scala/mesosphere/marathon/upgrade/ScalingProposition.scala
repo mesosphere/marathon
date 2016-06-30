@@ -6,10 +6,11 @@ import mesosphere.marathon.state.Timestamp
 case class ScalingProposition(tasksToKill: Option[Seq[Task]], tasksToStart: Option[Int])
 
 object ScalingProposition {
-  def propose(runningTasks: Iterable[Task],
-              toKill: Option[Iterable[Task]],
-              meetConstraints: ((Iterable[Task], Int) => Iterable[Task]),
-              scaleTo: Int): ScalingProposition = {
+  def propose(
+    runningTasks: Iterable[Task],
+    toKill: Option[Iterable[Task]],
+    meetConstraints: ((Iterable[Task], Int) => Iterable[Task]),
+    scaleTo: Int): ScalingProposition = {
 
     val runningTaskMap = Task.tasksById(runningTasks)
     val toKillMap = Task.tasksById(toKill.getOrElse(Set.empty))

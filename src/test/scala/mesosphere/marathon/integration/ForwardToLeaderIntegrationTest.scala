@@ -1,14 +1,16 @@
 package mesosphere.marathon.integration
 
 import java.net.URL
-import javax.net.ssl.HttpsURLConnection
 
 import akka.actor.ActorSystem
-import mesosphere.marathon.api.{ LeaderProxyFilter, JavaUrlConnectionRequestForwarder }
+import mesosphere.marathon.api.{ JavaUrlConnectionRequestForwarder, LeaderProxyFilter }
 import mesosphere.marathon.integration.setup._
+import mesosphere.marathon.io.IO
 import org.apache.commons.httpclient.HttpStatus
 import org.scalatest.BeforeAndAfter
-import mesosphere.marathon.io.IO
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
   * Tests forwarding requests.
@@ -24,8 +26,7 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
   }
 
   after {
-    actorSystem.shutdown()
-    actorSystem.awaitTermination()
+    Await.result(actorSystem.terminate(), Duration.Inf)
     ProcessKeeper.shutdown()
   }
 

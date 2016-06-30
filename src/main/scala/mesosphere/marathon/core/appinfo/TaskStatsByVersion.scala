@@ -25,7 +25,7 @@ object TaskStatsByVersion {
 
       val maybeFullVersionInfo = versionInfo match {
         case full: FullVersionInfo => Some(full)
-        case _                     => None
+        case _ => None
       }
 
       TaskStatsByVersion(
@@ -67,8 +67,7 @@ object TaskStats {
   def forSomeTasks(tasks: Iterable[TaskForStatistics]): Option[TaskStats] = {
     if (tasks.isEmpty) {
       None
-    }
-    else {
+    } else {
       Some(
         TaskStats(
           counts = TaskCounts(tasks),

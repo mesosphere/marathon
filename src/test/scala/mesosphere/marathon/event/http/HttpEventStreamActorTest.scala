@@ -1,6 +1,6 @@
 package mesosphere.marathon.event.http
 
-import akka.actor.{ Terminated, ActorSystem, Props }
+import akka.actor.{ Props, Terminated }
 import akka.event.EventStream
 import akka.testkit._
 import com.codahale.metrics.MetricRegistry
@@ -10,9 +10,10 @@ import mesosphere.marathon.event.LocalLeadershipEvent
 import mesosphere.marathon.event.http.HttpEventStreamActor.{ HttpEventStreamConnectionClosed, HttpEventStreamConnectionOpen }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
-import org.mockito.Mockito.{ when => call, verify, verifyNoMoreInteractions }
+import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when => call }
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+
 import scala.concurrent.duration._
 
 class HttpEventStreamActorTest extends MarathonActorSupport

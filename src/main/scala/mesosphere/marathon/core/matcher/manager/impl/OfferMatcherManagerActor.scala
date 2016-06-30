@@ -182,8 +182,7 @@ private[impl] class OfferMatcherManagerActor private (
           launchTokens -= acceptedOps.size
           metrics.launchTokenGauge.setValue(launchTokens)
           newData
-        }
-        catch {
+        } catch {
           case NonFatal(e) =>
             log.error(s"unexpected error processing ops for ${offerId.getValue} from ${sender()}", e)
             data
@@ -222,20 +221,17 @@ private[impl] class OfferMatcherManagerActor private (
     val nextMatcherOpt = if (data.deadline < clock.now()) {
       log.warning(s"Deadline for ${data.offer.getId.getValue} overdue. Scheduled ${data.ops.size} ops so far.")
       None
-    }
-    else if (data.ops.size >= conf.maxTasksPerOffer()) {
+    } else if (data.ops.size >= conf.maxTasksPerOffer()) {
       log.info(
         s"Already scheduled the maximum number of ${data.ops.size} tasks on this offer. " +
           s"Increase with --${conf.maxTasksPerOffer.name}.")
       None
-    }
-    else if (launchTokens <= 0) {
+    } else if (launchTokens <= 0) {
       log.info(
         s"No launch tokens left for ${data.offer.getId.getValue}. " +
           s"Tune with --launch_tokens/launch_token_refresh_interval.")
       None
-    }
-    else {
+    } else {
       data.nextMatcherOpt
     }
 

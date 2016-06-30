@@ -20,9 +20,10 @@ import scala.concurrent.Future
 @Path("v2/eventSubscriptions")
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 @Consumes(Array(MediaType.APPLICATION_JSON))
-class EventSubscriptionsResource @Inject() (val config: MarathonConf,
-                                            val authenticator: Authenticator,
-                                            val authorizer: Authorizer) extends AuthResource {
+class EventSubscriptionsResource @Inject() (
+    val config: MarathonConf,
+    val authenticator: Authenticator,
+    val authorizer: Authorizer) extends AuthResource {
 
   //scalastyle:off null
 
@@ -41,7 +42,7 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf,
   @Timed
   def subscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
-      withAuthorization(UpdateResource, AuthorizedResource.Events) {
+      withAuthorization(ViewResource, AuthorizedResource.Events) {
         validateSubscriptionService()
         implicit val httpCallbackValidator = validator[String] { callback =>
           callback is urlIsValid
@@ -58,7 +59,7 @@ class EventSubscriptionsResource @Inject() (val config: MarathonConf,
   @Timed
   def unsubscribe(@Context req: HttpServletRequest, @QueryParam("callbackUrl") callbackUrl: String): Response =
     authenticated(req) { implicit identity =>
-      withAuthorization(UpdateResource, AuthorizedResource.Events) {
+      withAuthorization(ViewResource, AuthorizedResource.Events) {
         validateSubscriptionService()
         val future = service.handleSubscriptionEvent(Unsubscribe(req.getRemoteAddr, callbackUrl))
         ok(jsonString(eventToJson(result(future))))

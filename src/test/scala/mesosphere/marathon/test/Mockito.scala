@@ -18,7 +18,7 @@ trait Mockito extends MockitoSugar {
   def same[T](value: T) = org.mockito.Matchers.same(value)
   def verify[T](t: T, mode: VerificationMode = times(1)) = M.verify(t, mode)
   def times(num: Int) = M.times(num)
-  def timeout(millis: Int) = M.timeout(millis)
+  def timeout(millis: Int) = M.timeout(millis.toLong)
   def atLeastOnce = M.atLeastOnce()
   def atLeast(num: Int) = M.atLeast(num)
   def atMost(num: Int) = M.atMost(num)

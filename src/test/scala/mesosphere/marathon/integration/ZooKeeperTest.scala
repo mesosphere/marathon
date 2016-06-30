@@ -2,11 +2,10 @@ package mesosphere.marathon.integration
 
 import java.util
 
-import mesosphere.marathon.integration.facades.MarathonFacade
 import mesosphere.marathon.integration.setup._
 import org.apache.zookeeper.ZooDefs.Perms
-import org.apache.zookeeper.data.{ Id, ACL }
-import org.apache.zookeeper.{ ZooDefs, WatchedEvent, Watcher, ZooKeeper }
+import org.apache.zookeeper.data.{ ACL, Id }
+import org.apache.zookeeper.{ WatchedEvent, Watcher, ZooDefs, ZooKeeper }
 import org.scalatest.{ ConfigMap, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._

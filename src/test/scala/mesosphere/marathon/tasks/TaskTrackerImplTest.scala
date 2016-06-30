@@ -475,7 +475,8 @@ class TaskTrackerImplTest extends MarathonSpec with Matchers with GivenWhenThen 
   def shouldHaveTaskStatus(task: Task, stateOp: TaskStateOp.MesosUpdate) {
     assert(stateOp.status.mesosStatus.isDefined, "mesos status is None")
     assert(task.launched.isDefined)
-    assert(task.launched.get.status.mesosStatus.get == stateOp.status.mesosStatus.get,
+    assert(
+      task.launched.get.status.mesosStatus.get == stateOp.status.mesosStatus.get,
       s"Should have task status ${stateOp.status.mesosStatus.get}")
   }
 

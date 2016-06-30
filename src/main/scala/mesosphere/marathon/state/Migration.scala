@@ -74,7 +74,7 @@ class Migration @Inject() (
 
   def initializeStore(): Future[Unit] = store match {
     case manager: PersistentStoreManagement => manager.initialize()
-    case _: PersistentStore                 => Future.successful(())
+    case _: PersistentStore => Future.successful(())
   }
 
   def migrate(): StorageVersion = {
@@ -89,7 +89,7 @@ class Migration @Inject() (
       version
     }.recover {
       case ex: MigrationFailedException => throw ex
-      case NonFatal(ex)                 => throw new MigrationFailedException("MigrationFailed", ex)
+      case NonFatal(ex) => throw new MigrationFailedException("MigrationFailed", ex)
     }
 
     Await.result(result, Duration.Inf)
@@ -100,7 +100,7 @@ class Migration @Inject() (
   def currentStorageVersion: Future[StorageVersion] = {
     store.load(storageVersionName).map {
       case Some(variable) => StorageVersion.parseFrom(variable.bytes.toArray)
-      case None           => StorageVersions.current
+      case None => StorageVersions.current
     }
   }
 
@@ -108,7 +108,7 @@ class Migration @Inject() (
     val bytes = StorageVersions.current.toByteArray
     store.load(storageVersionName).flatMap {
       case Some(entity) => store.update(entity.withNewContent(bytes))
-      case None         => store.create(storageVersionName, bytes)
+      case None => store.create(storageVersionName, bytes)
     }.map{ _ => StorageVersions.current }
   }
 }
@@ -180,8 +180,7 @@ class MigrationTo0_11(groupRepository: GroupRepository, appRepository: AppReposi
     def loadApp(id: PathId, version: Timestamp): Future[Option[AppDefinition]] = {
       if (appInGroup.version == version) {
         Future.successful(Some(appInGroup))
-      }
-      else {
+      } else {
         appRepository.app(id, version)
       }
     }
@@ -220,13 +219,11 @@ class MigrationTo0_13(taskRepository: TaskRepository, store: PersistentStore) {
           val bytes = new Array[Byte](size)
           source.readFully(bytes)
           Some(MarathonTask.parseFrom(bytes))
-        }
-        catch {
+        } catch {
           case e: com.google.protobuf.InvalidProtocolBufferException =>
             None
         }
-      }
-      else {
+      } else {
         None
       }
     }
@@ -346,7 +343,7 @@ class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppReposi
         future.flatMap { _ =>
           groupRepository.group(id, version).flatMap {
             case Some(group) => groupRepository.store(id, group).map(_ => ())
-            case None        => Future.failed(new MigrationFailedException(s"Group $id:$version not found"))
+            case None => Future.failed(new MigrationFailedException(s"Group $id:$version not found"))
           }
         }
       }
@@ -359,7 +356,7 @@ class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppReposi
         future.flatMap { _ =>
           appRepository.app(appId, version).flatMap {
             case Some(app) => appRepository.store(app).map(_ => ())
-            case None      => Future.failed(new MigrationFailedException(s"App $appId:$version not found"))
+            case None => Future.failed(new MigrationFailedException(s"App $appId:$version not found"))
           }
         }
       }

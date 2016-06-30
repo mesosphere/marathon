@@ -56,10 +56,11 @@ object HttpEventActor {
   }
 }
 
-class HttpEventActor(conf: HttpEventConfiguration,
-                     subscribersKeeper: ActorRef,
-                     metrics: HttpEventActorMetrics,
-                     clock: Clock)
+class HttpEventActor(
+  conf: HttpEventConfiguration,
+  subscribersKeeper: ActorRef,
+  metrics: HttpEventActorMetrics,
+  clock: Clock)
     extends Actor with ActorLogging with PlayJsonSupport {
 
   implicit val timeout = conf.eventRequestTimeout
@@ -69,11 +70,11 @@ class HttpEventActor(conf: HttpEventConfiguration,
   var limiter = Map.empty[String, EventNotificationLimit].withDefaultValue(NoLimit)
 
   def receive: Receive = {
-    case event: MarathonEvent          => resolveSubscribersForEventAndBroadcast(event)
+    case event: MarathonEvent => resolveSubscribersForEventAndBroadcast(event)
     case Broadcast(event, subscribers) => broadcast(event, subscribers)
-    case NotificationSuccess(url)      => limiter += url -> NoLimit
-    case NotificationFailed(url)       => limiter += url -> limiter(url).nextFailed
-    case _                             => log.warning("Message not understood!")
+    case NotificationSuccess(url) => limiter += url -> NoLimit
+    case NotificationFailed(url) => limiter += url -> limiter(url).nextFailed
+    case _ => log.warning("Message not understood!")
   }
 
   def resolveSubscribersForEventAndBroadcast(event: MarathonEvent): Unit = {
