@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import java.io.{ IOException, FileInputStream }
+import java.io.FileInputStream
 
 import com.google.protobuf.ByteString
 import mesosphere.chaos.http.HttpConf
@@ -49,24 +49,16 @@ object MarathonSchedulerDriver {
     // set the authentication principal, if provided
     config.mesosAuthenticationPrincipal.get.foreach(frameworkInfoBuilder.setPrincipal)
 
-    val credential: Option[Credential] =
-      config.mesosAuthenticationPrincipal.get.map { principal =>
-        val credentialBuilder = Credential.newBuilder()
-          .setPrincipal(principal)
-
-        config.mesosAuthenticationSecretFile.get.foreach { secretFile =>
-          try {
-            val secretBytes = ByteString.readFrom(new FileInputStream(secretFile))
-            credentialBuilder.setSecret(secretBytes.toStringUtf8)
-          }
-          catch {
-            case cause: Throwable =>
-              throw new IOException(s"Error reading authentication secret from file [$secretFile]", cause)
-          }
-        }
-
-        credentialBuilder.build()
+    //set credentials only if principal and secret is set
+    val credential: Option[Credential] = {
+      for {
+        principal <- config.mesosAuthenticationPrincipal.get
+        secretFile <- config.mesosAuthenticationSecretFile.get
+      } yield {
+        val secretBytes = ByteString.readFrom(new FileInputStream(secretFile))
+        Credential.newBuilder().setPrincipal(principal).setSecret(secretBytes.toStringUtf8).build()
       }
+    }
 
     // Task Killing Behavior enables a dedicated task update (TASK_KILLING) from mesos before a task is killed.
     // In Marathon this task update is currently ignored.

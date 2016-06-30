@@ -269,15 +269,6 @@ class AppDefinitionValidatorTest extends MarathonSpec with Matchers with GivenWh
     assert(validate(container).isSuccess)
   }
 
-  test("valid docker volume, but cli parameter are not provided") {
-    AllConf.SuppliedOptionNames = Set.empty
-    val f = new Fixture
-    val container = f.validDockerContainer.copy(
-      volumes = Seq(f.validPersistentVolume)
-    )
-    assert(validate(container).isFailure)
-  }
-
   test("docker volume with missing containerPath is invalid") {
     val f = new Fixture
     val container = f.validDockerContainer.copy(

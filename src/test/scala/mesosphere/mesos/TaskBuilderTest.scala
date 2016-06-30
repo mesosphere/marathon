@@ -138,6 +138,67 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     discoveryInfo should equal(discoveryInfoProto)
   }
 
+  test("BuildIfMatches with port mapping with name, protocol and labels") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        executor = "//cmd",
+        container = Some(Container(
+          docker = Some(Docker(
+            network = Some(DockerInfo.Network.BRIDGE),
+            portMappings = Some(Seq(
+              PortMapping(
+                containerPort = 8080,
+                hostPort = 0,
+                servicePort = 9000,
+                protocol = "tcp",
+                name = Some("http"),
+                labels = Map("VIP" -> "127.0.0.1:8080")),
+              PortMapping(
+                containerPort = 8081,
+                hostPort = 0,
+                servicePort = 9001,
+                protocol = "udp",
+                name = Some("admin"),
+                labels = Map("VIP" -> "127.0.0.1:8081"))
+            ))
+          ))
+        )))
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+
+    val discoveryInfo = taskInfo.getDiscovery
+    val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
+      .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      .setName(taskInfo.getName)
+      .setPorts(
+        MesosProtos.Ports.newBuilder
+          .addPorts(
+            MesosProtos.Port.newBuilder.setName("http").setNumber(taskPorts(0)).setProtocol("tcp")
+              .setLabels(MesosProtos.Labels.newBuilder().addLabels(
+                MesosProtos.Label.newBuilder().setKey("VIP").setValue("127.0.0.1:8080")
+              ))
+          ).addPorts(
+              MesosProtos.Port.newBuilder.setName("admin").setNumber(taskPorts(1)).setProtocol("udp")
+                .setLabels(MesosProtos.Labels.newBuilder().addLabels(
+                  MesosProtos.Label.newBuilder().setKey("VIP").setValue("127.0.0.1:8081")
+                ))
+            )
+      ).build
+
+    TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
+    discoveryInfo should equal(discoveryInfoProto)
+  }
+
   test("BuildIfMatches works with duplicated resources") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000)
       .addResources(ScalarResource("cpus", 1))
@@ -244,6 +305,178 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val portsResource: Resource = resource("ports")
     assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
     assert(portsResource.getRole == "marathon")
+  }
+
+  test("build creates task for DOCKER container using named, external [DockerVolume] volumes") {
+    val offer = MarathonTestHelper.makeBasicOffer(
+      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
+    ).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1.0,
+        mem = 32.0,
+        executor = "//cmd",
+        portDefinitions = Nil,
+        container = Some(Container(
+          docker = Some(Docker()), // must have this to force docker container serialization
+          `type` = MesosProtos.ContainerInfo.Type.DOCKER,
+          volumes = Seq[Volume](
+            DockerVolume("/container/path", "namedFoo", MesosProtos.Volume.Mode.RW)
+          )
+        ))
+      )
+    )
+
+    val Some((taskInfo, _)) = task
+    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+    assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
+
+    // check protobuf construction, should be a ContainerInfo w/ volumes
+    def vol(name: String): Option[MesosProtos.Volume] = {
+      if (taskInfo.hasContainer) {
+        taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == name)
+      }
+      else None
+    }
+
+    assert(taskInfo.getContainer.getVolumesList.size > 0, "check that container has volumes declared")
+    assert(!taskInfo.getContainer.getDocker.hasVolumeDriver, "docker spec should not define a volume driver")
+    assert(vol("namedFoo").isDefined,
+      s"missing expected volume namedFoo, got instead: ${taskInfo.getContainer.getVolumesList}")
+  }
+
+  // TODO(jdef) test both dockerhostvol and persistent extvol in the same docker container
+
+  test("build creates task for DOCKER container using external [DockerVolume] volumes") {
+    val offer = MarathonTestHelper.makeBasicOffer(
+      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
+    ).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1.0,
+        mem = 32.0,
+        executor = "//cmd",
+        portDefinitions = Nil,
+        container = Some(Container(
+          `type` = MesosProtos.ContainerInfo.Type.DOCKER,
+          docker = Some(Docker()), // must have this to force docker container serialization
+          volumes = Seq[Volume](
+            ExternalVolume("/container/path", ExternalVolumeInfo(
+              name = "namedFoo",
+              provider = "dvdi",
+              options = Map[String, String]("dvdi/driver" -> "bar")
+            ), MesosProtos.Volume.Mode.RW),
+            ExternalVolume("/container/path2", ExternalVolumeInfo(
+              name = "namedEdc",
+              provider = "dvdi",
+              options = Map[String, String]("dvdi/driver" -> "ert")
+            ), MesosProtos.Volume.Mode.RO)
+          )
+        ))
+      )
+    )
+
+    val Some((taskInfo, _)) = task
+    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+    assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
+
+    // check protobuf construction, should be a ContainerInfo w/ volumes
+    def vol(name: String): Option[MesosProtos.Volume] = {
+      if (taskInfo.hasContainer) {
+        taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == name)
+      }
+      else None
+    }
+
+    assert(taskInfo.getContainer.getVolumesList.size > 0, "check that container has volumes declared")
+    assert(taskInfo.getContainer.getDocker.hasVolumeDriver, "docker spec should define a volume driver")
+    assert(taskInfo.getContainer.getDocker.getVolumeDriver == "ert", "docker spec should choose ert driver")
+    assert(vol("namedFoo").isDefined,
+      s"missing expected volume namedFoo, got instead: ${taskInfo.getContainer.getVolumesList}")
+    assert(vol("namedEdc").isDefined,
+      s"missing expected volume namedFoo, got instead: ${taskInfo.getContainer.getVolumesList}")
+  }
+
+  test("build creates task for MESOS container using named, external [ExternalVolume] volumes") {
+    val offer = MarathonTestHelper.makeBasicOffer(
+      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
+    ).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Int])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1.0,
+        mem = 32.0,
+        executor = "/qazwsx",
+        portDefinitions = Nil,
+        container = Some(Container(
+          `type` = MesosProtos.ContainerInfo.Type.MESOS,
+          volumes = Seq[Volume](
+            ExternalVolume("/container/path", ExternalVolumeInfo(
+              name = "namedFoo",
+              provider = "dvdi",
+              options = Map[String, String]("dvdi/driver" -> "bar")
+            ), MesosProtos.Volume.Mode.RW),
+            ExternalVolume("/container/path2", ExternalVolumeInfo(
+              size = Some(2L),
+              name = "namedEdc",
+              provider = "dvdi",
+              options = Map[String, String]("dvdi/driver" -> "ert")
+            ), MesosProtos.Volume.Mode.RW)
+          )
+        ))
+      )
+    )
+
+    val Some((taskInfo, _)) = task
+    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+    assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
+
+    def hasEnv(name: String, value: String): Boolean =
+      taskInfo.getExecutor.getCommand.hasEnvironment &&
+        taskInfo.getExecutor.getCommand.getEnvironment.getVariablesList.asScala.find{ ev =>
+          ev.getName == name && ev.getValue == value
+        }.isDefined
+
+    def missingEnv(name: String): Boolean =
+      taskInfo.getExecutor.getCommand.hasEnvironment &&
+        taskInfo.getExecutor.getCommand.getEnvironment.getVariablesList.asScala.find{ ev =>
+          ev.getName == name
+        }.isEmpty
+
+    taskInfo.hasContainer should be (false)
+    taskInfo.hasCommand should be (false)
+    taskInfo.getExecutor.hasContainer should be (true)
+    taskInfo.getExecutor.getContainer.hasMesos should be (true)
+
+    // check protobuf construction, should be a ContainerInfo w/ no volumes, w/ envvar
+    assert(taskInfo.getExecutor.getContainer.getVolumesList.isEmpty, "check that container has no volumes declared")
+    assert(hasEnv("DVDI_VOLUME_NAME", "namedFoo"),
+      s"missing expected command w/ envvar declaring volume namedFoo, got instead: ${taskInfo.getExecutor.getCommand}")
+    assert(hasEnv("DVDI_VOLUME_DRIVER", "bar"),
+      s"missing expected command w/ envvar declaring volume namedFoo, got instead: ${taskInfo.getExecutor.getCommand}")
+    assert(missingEnv("DVDI_VOLUME_OPTS"),
+      s"has unexpected command w/ envvar declaring volume namedFoo, got instead: ${taskInfo.getExecutor.getCommand}")
+
+    assert(hasEnv("DVDI_VOLUME_NAME1", "namedEdc"),
+      s"missing expected command w/ envvar declaring volume namedEdc, got instead: ${taskInfo.getExecutor.getCommand}")
+    assert(hasEnv("DVDI_VOLUME_DRIVER1", "ert"),
+      s"missing expected command w/ envvar declaring volume namedEdc, got instead: ${taskInfo.getExecutor.getCommand}")
+    assert(hasEnv("DVDI_VOLUME_OPTS1", "size=2"),
+      s"missing expected command w/ envvar declaring volume namedEdc, got instead: ${taskInfo.getExecutor.getCommand}")
+
+    assert(missingEnv("DVDI_VOLUME_NAME2"),
+      s"has unexpected command w/ envvar declaring volume namedFoo, got instead: ${taskInfo.getExecutor.getCommand}")
   }
 
   test("BuildIfMatchesWithLabels") {

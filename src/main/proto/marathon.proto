@@ -211,6 +211,14 @@ message Volume {
     required uint64 size = 1;
   }
 
+  // Defining properties of external volumes
+  message ExternalVolumeInfo {
+    optional uint64 size = 1;
+    required string name = 2;
+    required string provider = 3;
+    repeated mesos.Label options = 4;
+  }
+
   required mesos.Volume.Mode mode = 3;
 
   // Path pointing to a directory or file in the container. If the
@@ -230,8 +238,11 @@ message Volume {
   // filesystem which will be provisioned by Mesos.
   optional mesos.Image image = 4;
 
-  // Defines a Persistent Volume. In this case hostPath must not be set
+  // Defines a Persistent Volume; implies no hostPath or external.
   optional PersistentVolumeInfo persistent = 5;
+
+  // Defines an External Volume; implies no hostPath or persistent.
+  optional ExternalVolumeInfo external = 6;
 }
 
 message EventSubscribers {

@@ -243,12 +243,20 @@ trait ContainerFormats {
 
   implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = Json.format[PersistentVolumeInfo]
 
+  implicit lazy val ExternalVolumeInfoFormat: Format[ExternalVolumeInfo] = (
+    (__ \ "size").formatNullable[Long] ~
+    (__ \ "name").format[String] ~
+    (__ \ "provider").format[String] ~
+    (__ \ "options").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
+  )(ExternalVolumeInfo(_, _, _, _), unlift(ExternalVolumeInfo.unapply))
+
   implicit lazy val VolumeFormat: Format[Volume] = (
     (__ \ "containerPath").format[String] ~
     (__ \ "hostPath").formatNullable[String] ~
     (__ \ "mode").format[mesos.Volume.Mode] ~
-    (__ \ "persistent").formatNullable[PersistentVolumeInfo]
-  )(Volume(_, _, _, _), unlift(Volume.unapply))
+    (__ \ "persistent").formatNullable[PersistentVolumeInfo] ~
+    (__ \ "external").formatNullable[ExternalVolumeInfo]
+  )(Volume(_, _, _, _, _), unlift(Volume.unapply))
 
   implicit lazy val ContainerTypeFormat: Format[mesos.ContainerInfo.Type] =
     enumFormat(mesos.ContainerInfo.Type.valueOf, str => s"$str is not a valid container type")

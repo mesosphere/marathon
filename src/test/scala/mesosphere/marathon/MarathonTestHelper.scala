@@ -17,7 +17,7 @@ import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, MarathonStore, MarathonTaskState, PathId, PersistentVolume, PersistentVolumeInfo, Residency, TaskRepository, Timestamp, Volume }
+import mesosphere.marathon.state._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.{ FrameworkId, PersistentStore }
 import mesosphere.util.state.memory.InMemoryStore
@@ -548,7 +548,7 @@ object MarathonTestHelper {
 
   def mesosContainerWithPersistentVolume = Container(
     `type` = Mesos.ContainerInfo.Type.MESOS,
-    volumes = Seq[Volume](
+    volumes = Seq[mesosphere.marathon.state.Volume](
       PersistentVolume(
         containerPath = "persistent-volume",
         persistent = PersistentVolumeInfo(10), // must match persistentVolumeResources
@@ -570,13 +570,16 @@ object MarathonTestHelper {
     Mesos.ContainerStatus.newBuilder().addNetworkInfos(networkInfo).build
   }
 
-  def hostPorts(task: Task, hostPorts: Seq[Int]): Task = task match {
-    case launchedEphemeral: Task.LaunchedEphemeral         => launchedEphemeral.copy(hostPorts = hostPorts)
-    case launchedOnReservation: Task.LaunchedOnReservation => launchedOnReservation.copy(hostPorts = hostPorts)
-    case reserved: Task.Reserved                           => throw new scala.RuntimeException("Reserved task cannot have networking")
-  }
-
   object Implicits {
+    implicit class AppDefinitionImprovements(app: AppDefinition) {
+      def withPortDefinitions(portDefinitions: Seq[PortDefinition]): AppDefinition =
+        app.copy(portDefinitions = portDefinitions)
+
+      def withNoPortDefinitions(): AppDefinition = app.withPortDefinitions(Seq.empty)
+
+      def withIpAddress(ipAddress: IpAddress): AppDefinition = app.copy(ipAddress = Some(ipAddress))
+    }
+
     implicit class TaskImprovements(task: Task) {
       def withAgentInfo(update: Task.AgentInfo => Task.AgentInfo): Task = task match {
         case launchedEphemeral: Task.LaunchedEphemeral =>
