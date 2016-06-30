@@ -74,24 +74,39 @@ class LimitConcurrentRequestsFilterTest extends MarathonSpec with GivenWhenThen 
 
   test("GET requests are not throttled") {
     Given("A http filter chain")
-    val semaphore = new Semaphore(2)
-    semaphore.acquire(2)
-    val latch = new CountDownLatch(2)
+    val semaphore = new Semaphore(0)
     val request = mock[HttpServletRequest]
     request.getMethod returns "GET"
     val response = mock[HttpServletResponse]
     val chain = mock[FilterChain]
-    chain.doFilter(request, response) answers { args => semaphore.acquire(); latch.countDown() /* blocks*/ }
+    val requestsStarted = new CountDownLatch(2)
+    chain.doFilter(request, response) answers { args =>
+      requestsStarted.countDown()
+      semaphore.acquire() /* blocks*/
+    }
     val rf = new LimitConcurrentRequestsFilter(Some(1))
 
-    When("requests where made before the limit")
-    Future(rf.doFilter(request, response, chain))
-    Future(rf.doFilter(request, response, chain))
+    When("more requests were made than the limit allows")
+    val requestsFinished = new CountDownLatch(2)
+    Future {
+      rf.doFilter(request, response, chain)
+      requestsFinished.countDown()
+    }
+    Future {
+      rf.doFilter(request, response, chain)
+      requestsFinished.countDown()
+    }
+
+    Then("they were accepted at the same time")
+    requestsStarted.await()
+
+    And("the available permits remained unaffected")
     rf.semaphore.availablePermits() should be(1)
 
-    Then("The requests got answered")
+    And("both requests finish as expected")
     semaphore.release(2)
-    latch.await()
+    requestsFinished.await()
+
     verify(chain, times(2)).doFilter(request, response)
   }
 }
