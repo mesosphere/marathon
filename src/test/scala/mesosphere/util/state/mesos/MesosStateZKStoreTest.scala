@@ -9,7 +9,7 @@ import org.scalatest.{ ConfigMap, Matchers }
 
 import scala.concurrent.duration._
 
-class MesosStateStoreTest extends PersistentStoreTest with StartedZookeeper with Matchers {
+class MesosStateZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matchers {
 
   //
   // See PersistentStoreTests for general store tests
