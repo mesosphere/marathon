@@ -2,7 +2,7 @@ package mesosphere.marathon.integration
 
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import org.scalatest.{BeforeAndAfter, GivenWhenThen, Matchers}
 
 /**
   * Integration test to simulate the issues discovered a verizon where a network partition caused Marathon to be
