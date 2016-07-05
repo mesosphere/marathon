@@ -2,14 +2,18 @@
 
 from shakedown import *
 
+import pytest
+
 PACKAGE_NAME = 'marathon'
 DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
 
-
+@pytest.mark.sanity
 def test_install_marathon():
     """Install the Marathon package for DC/OS.
     """
+
+    # Install
     install_package_and_wait(PACKAGE_NAME)
     assert package_installed(PACKAGE_NAME), 'Package failed to install'
 
@@ -23,9 +27,19 @@ def test_install_marathon():
 
     assert found, 'Service did not register with DCOS'
 
-
-def test_uninstall_marathon():
-    """Uninstall the Marathon package for DC/OS.
-    """
+    #Uninstall
     uninstall_package_and_wait(PACKAGE_NAME)
     assert not package_installed(PACKAGE_NAME), 'Package failed to uninstall'
+
+    # Reinstall
+    install_package_and_wait(PACKAGE_NAME)
+    assert package_installed(PACKAGE_NAME), 'Package failed to reinstall'
+
+    try:
+        install_package(PACKAGE_NAME)
+    except Exception as e:
+        print("Exception raised")
+        pass
+    else:
+        # Exception is not raised -> exit code was 0
+        assert False, "Error: CLI returns 0 when asked to install Marathon"
