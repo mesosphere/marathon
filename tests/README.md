@@ -20,6 +20,6 @@ For version code of tests, the CI build is initiated with [jenkins/unit-integrat
 
 The system integration tests are integration tests with [DCOS](http://dcos.io) and verifies
 system integration behavior from a user perspective using DCOS as the context.   The tests are
-writen in python using [shakedown](https://github.com/dcos/shakedown) as the testing tool.
+written in python using [shakedown](https://github.com/dcos/shakedown) as the testing tool.
 
 The tests are written under the project [test/system](system/README.md).
