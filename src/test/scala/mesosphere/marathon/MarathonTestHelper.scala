@@ -535,16 +535,14 @@ object MarathonTestHelper {
       reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
   }
 
-  def mesosContainerWithPersistentVolume = Container(
-    `type` = Mesos.ContainerInfo.Type.MESOS,
+  def mesosContainerWithPersistentVolume = Container.Mesos(
     volumes = Seq[mesosphere.marathon.state.Volume](
       PersistentVolume(
         containerPath = "persistent-volume",
         persistent = PersistentVolumeInfo(10), // must match persistentVolumeResources
         mode = Mesos.Volume.Mode.RW
       )
-    ),
-    docker = None
+    )
   )
 
   def mesosIpAddress(ipAddress: String) = {
@@ -569,17 +567,19 @@ object MarathonTestHelper {
       def withIpAddress(ipAddress: IpAddress): AppDefinition = app.copy(ipAddress = Some(ipAddress))
 
       def withDockerNetwork(network: Mesos.ContainerInfo.DockerInfo.Network): AppDefinition = {
-        val container = app.container.getOrElse(Container())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(network = Some(network))
+        val docker = app.container.getOrElse(Container.Mesos()) match {
+          case docker: Docker => docker
+          case _ => Docker(image = "busybox")
+        }
 
-        app.copy(container = Some(container.copy(docker = Some(docker))))
+        app.copy(container = Some(docker.copy(network = Some(network))))
       }
 
       def withPortMapings(portMappings: Seq[PortMapping]): AppDefinition = {
-        val container = app.container.getOrElse(Container())
+        val container = app.container.getOrElse(Container.Mesos())
         val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(portMappings))
 
-        app.copy(container = Some(container.copy(docker = Some(docker))))
+        app.copy(container = Some(docker))
       }
     }
 

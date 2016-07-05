@@ -187,14 +187,14 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       def ifDVDIVolume(vtor: Validator[ExternalVolume]): Validator[ExternalVolume] = conditional(matchesProvider)(vtor)
 
-      def volumeValidator(`type`: ContainerInfo.Type) = `type` match {
-        case ContainerInfo.Type.MESOS => validMesosVolume
-        case ContainerInfo.Type.DOCKER => validDockerVolume
+      def volumeValidator(container: Container) = container match {
+        case _: Container.Mesos => validMesosVolume
+        case _: Container.Docker => validDockerVolume
       }
 
       validator[Container] { ct =>
         ct.volumes.collect { case ev: ExternalVolume => ev } as "volumes" is
-          every(ifDVDIVolume(volumeValidator(ct.`type`)))
+          every(ifDVDIVolume(volumeValidator(ct)))
       }
     }
 

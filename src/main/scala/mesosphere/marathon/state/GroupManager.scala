@@ -256,9 +256,7 @@ class GroupManager @Inject() (
             portMapping.copy(servicePort = servicePort)
         }
 
-        c.copy(
-          docker = Some(d.copy(portMappings = Some(portMappings)))
-        )
+        d.copy(portMappings = Some(portMappings))
       }
 
       app.copy(

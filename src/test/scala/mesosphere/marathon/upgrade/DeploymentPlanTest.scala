@@ -443,7 +443,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     def residentApp(id: String, volumes: Seq[PersistentVolume]): AppDefinition = {
       AppDefinition(
         id = PathId(id),
-        container = Some(Container(mesos.ContainerInfo.Type.MESOS, volumes)),
+        container = Some(Container.Mesos(volumes)),
         residency = Some(Residency(123, Protos.ResidencyDefinition.TaskLostBehavior.RELAUNCH_AFTER_TIMEOUT))
       )
     }

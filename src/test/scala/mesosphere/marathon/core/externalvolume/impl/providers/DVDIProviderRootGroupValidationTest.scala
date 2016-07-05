@@ -78,8 +78,7 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
         cmd = Some("sleep 123"),
         upgradeStrategy = UpgradeStrategy.forResidentTasks,
         container = Some(
-          Container(
-            `type` = MesosProtos.ContainerInfo.Type.MESOS,
+          Container.Mesos(
             volumes = Seq(
               ExternalVolume(
                 containerPath = "ignoreme",

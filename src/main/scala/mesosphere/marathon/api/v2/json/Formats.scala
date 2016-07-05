@@ -11,8 +11,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.event._
 import mesosphere.marathon.event.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
-import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -223,23 +221,23 @@ trait ContainerFormats {
   implicit lazy val DockerNetworkFormat: Format[DockerInfo.Network] =
     enumFormat(DockerInfo.Network.valueOf, str => s"$str is not a valid network type")
 
-  implicit lazy val PortMappingFormat: Format[Docker.PortMapping] = (
+  implicit lazy val PortMappingFormat: Format[Container.Docker.PortMapping] = (
     (__ \ "containerPort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
     (__ \ "hostPort").formatNullable[Int] ~
     (__ \ "servicePort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
     (__ \ "protocol").formatNullable[String].withDefault("tcp") ~
     (__ \ "name").formatNullable[String] ~
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
-  )(PortMapping(_, _, _, _, _, _), unlift(PortMapping.unapply))
+  )(Container.Docker.PortMapping(_, _, _, _, _, _), unlift(Container.Docker.PortMapping.unapply))
 
-  implicit lazy val DockerFormat: Format[Docker] = (
+  implicit lazy val DockerFormat: Format[Container.Mask.Docker] = (
     (__ \ "image").format[String] ~
     (__ \ "network").formatNullable[DockerInfo.Network] ~
-    (__ \ "portMappings").formatNullable[Seq[Docker.PortMapping]] ~
+    (__ \ "portMappings").formatNullable[Seq[Container.Docker.PortMapping]] ~
     (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
     (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
     (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-  )(Docker.withDefaultPortMappings(_, _, _, _, _, _), unlift(Docker.unapply))
+  )(Container.Mask.Docker.withDefaultPortMappings(_, _, _, _, _, _), unlift(Container.Mask.Docker.unapply))
 
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mde")
@@ -264,11 +262,20 @@ trait ContainerFormats {
   implicit lazy val ContainerTypeFormat: Format[mesos.ContainerInfo.Type] =
     enumFormat(mesos.ContainerInfo.Type.valueOf, str => s"$str is not a valid container type")
 
-  implicit lazy val ContainerFormat: Format[Container] = (
+  implicit lazy val ContainerMaskFormat: Format[Container.Mask] = (
     (__ \ "type").formatNullable[mesos.ContainerInfo.Type].withDefault(mesos.ContainerInfo.Type.DOCKER) ~
     (__ \ "volumes").formatNullable[Seq[Volume]].withDefault(Nil) ~
-    (__ \ "docker").formatNullable[Docker]
-  )(Container(_, _, _), unlift(Container.unapply))
+    (__ \ "docker").formatNullable[Container.Mask.Docker]
+  )(Container.Mask.apply, unlift(Container.Mask.unapply))
+
+  implicit lazy val ContainerFormat: Format[Container] = Format(
+    Reads.of[Container.Mask].map(_.toContainer()),
+    new Writes[Container] {
+      override def writes(container: Container): JsValue = {
+        ContainerMaskFormat.writes(Container.Mask.fromContainer(container))
+      }
+    }
+  )
 }
 
 trait IpAddressFormats {
@@ -766,7 +773,10 @@ trait AppAndGroupFormats {
     * made it optional (also with ip-per-container in mind) and we have to re-add it in cases where it makes sense.
     */
   private[this] def addHealthCheckPortIndexIfNecessary(app: AppDefinition): AppDefinition = {
-    val hasPortMappings = app.container.exists(_.docker.exists(_.portMappings.exists(_.nonEmpty)))
+    val hasPortMappings = app.container.exists(_ match {
+      case docker: Container.Docker => docker.portMappings.exists(_.nonEmpty)
+      case _ => false
+    })
     val portIndexesMakeSense = app.portDefinitions.nonEmpty || hasPortMappings
     app.copy(healthChecks = app.healthChecks.map { healthCheck =>
       def needsDefaultPortIndex =

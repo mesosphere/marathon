@@ -23,13 +23,7 @@ class DockerAppIntegrationTest
       val app = AppDefinition(
         id = testBasePath / "dockerapp",
         cmd = Some("sleep 600"),
-        container = Some(
-          Container(
-            docker = Some(
-              mesosphere.marathon.state.Container.Docker(
-                image = "busybox"
-              )))
-        ),
+        container = Some(Container.Docker(image = "busybox")),
         cpus = 0.2,
         mem = 16.0,
         instances = 1

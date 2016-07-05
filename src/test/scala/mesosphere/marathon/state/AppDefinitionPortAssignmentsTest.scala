@@ -102,13 +102,13 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
   test("portAssignments without IP-per-task using Docker BRIDGE network and no port mappings") {
     Given("An app using bridge network with no port mappings nor ports")
     val app = MarathonTestHelper.makeBasicApp().copy(
-      container = Some(Container(
-        docker = Some(Docker(
-          image = "mesosphere/marathon",
-          network = Some(Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq.empty))))
-      ),
-      portDefinitions = Seq.empty)
+      container = Some(Container.Docker(
+        image = "mesosphere/marathon",
+        network = Some(Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
+        portMappings = Some(Seq.empty)
+      )),
+      portDefinitions = Seq.empty
+    )
 
     Given("A task with a port")
     val task = MarathonTestHelper.mininimalTask(app.id)
