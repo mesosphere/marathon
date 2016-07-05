@@ -131,7 +131,7 @@ The username cannot contain a colon.*
 $ cd /path/to/marathon
 $ ./bin/start --master zk://localhost:2181/mesos \
                   --zk zk://localhost:2181/marathon \
-        --http_credentials "cptPicard:topSecretPa$$word" \
+        --http_credentials 'cptPicard:topSecretPa$$word' \
        --ssl_keystore_path /path/to/marathon.jks \
    --ssl_keystore_password $MARATHON_JKS_PASSWORD
 ```

@@ -65,13 +65,13 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
   test("direct HTTPS ping") {
     ProcessKeeper.startService(ForwarderService.createHelloApp(
       "--disable_http",
-      "--ssl_keystore_path", SSLContextTestUtil.keyStorePath,
+      "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
       "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
       "--https_address", "localhost",
       "--https_port", ports.head.toString))
 
     val pingURL = new URL(s"https://localhost:${ports.head}/ping")
-    val connection = SSLContextTestUtil.sslConnection(pingURL)
+    val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.selfSignedSSLContext)
     val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
     val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
     val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
@@ -80,25 +80,54 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
     assert(leader == s"https://localhost:${ports.head}")
   }
 
-  test("forwarding HTTPS ping") {
+  test("forwarding HTTPS ping with a self-signed cert") {
     // We cannot start two service in one process because of static variables in GuiceFilter
     ProcessKeeper.startService(ForwarderService.createHelloApp(
       "--disable_http",
-      "--ssl_keystore_path", SSLContextTestUtil.keyStorePath,
+      "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
       "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
       "--https_address", "localhost",
       "--https_port", ports.head.toString))
 
     ForwarderService.startForwarderProcess(
       forwardToPort = ports.head,
+      trustStorePath = None,
       "--disable_http",
-      "--ssl_keystore_path", SSLContextTestUtil.keyStorePath,
+      "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
       "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
       "--https_address", "localhost",
       "--https_port", ports(1).toString)
 
     val pingURL = new URL(s"https://localhost:${ports(1)}/ping")
-    val connection = SSLContextTestUtil.sslConnection(pingURL)
+    val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.selfSignedSSLContext)
+    val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
+    val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
+    val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
+    assert(response == "pong\n")
+    assert(via == s"1.1 localhost:${ports(1)}")
+    assert(leader == s"https://localhost:${ports.head}")
+  }
+
+  test("forwarding HTTPS ping with a ca signed cert") {
+    // We cannot start two service in one process because of static variables in GuiceFilter
+    ProcessKeeper.startService(ForwarderService.createHelloApp(
+      "--disable_http",
+      "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
+      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+      "--https_address", "localhost",
+      "--https_port", ports.head.toString))
+
+    ForwarderService.startForwarderProcess(
+      forwardToPort = ports.head,
+      trustStorePath = Some(SSLContextTestUtil.caTrustStorePath),
+      "--disable_http",
+      "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
+      "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
+      "--https_address", "localhost",
+      "--https_port", ports(1).toString)
+
+    val pingURL = new URL(s"https://localhost:${ports(1)}/ping")
+    val connection = SSLContextTestUtil.sslConnection(pingURL, SSLContextTestUtil.caSignedSSLContext)
     val via = connection.getHeaderField(JavaUrlConnectionRequestForwarder.HEADER_VIA)
     val leader = connection.getHeaderField(LeaderProxyFilter.HEADER_MARATHON_LEADER)
     val response = IO.using(connection.getInputStream)(IO.copyInputStreamToString)
@@ -154,12 +183,18 @@ class ForwardToLeaderIntegrationTest extends IntegrationFunSuite with BeforeAndA
   test("forwarding loop") {
     // We cannot start two service in one process because of static variables in GuiceFilter
     ForwarderService.startForwarderProcess(
-      forwardToPort = ports(1), "--http_port", ports.head.toString)
+      forwardToPort = ports(1),
+      trustStorePath = None,
+      "--http_port", ports.head.toString
+    )
+
     ProcessKeeper.startService(ForwarderService.createForwarder(
-      forwardToPort = ports.head, "--http_port", ports(1).toString))
+      forwardToPort = ports.head,
+      "--http_port", ports(1).toString)
+    )
+
     val appFacade = new AppMockFacade()
     val result = appFacade.ping("localhost", port = ports(1))
     assert(result.originalResponse.status.intValue == HttpStatus.SC_BAD_GATEWAY)
   }
-
 }
