@@ -30,7 +30,7 @@ If you are running Marathon within a [DC/OS cluster](https://dcos.io/get-started
 
 *requirePorts*: _requirePorts_ is a property that specifies whether Marathon should specifically look for specified ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to `BRIDGE` or `USER` mode networking.
 
-*servicePort*: A _service port_ is a port used to describe the port that a service should made available at. Marathon does not bind to the service ports specified but will ensure that you cannot have multiple applications that use the same service port running on the same host. Service ports are typically only used by external applications (e.g. HAProxy) to make the application available at the specified port. See [Service Discovery & Load Balancing](service-discovery-load-balancing.html) for more information.
+*servicePort*: A _service port_ is a port used to describe the port that a service should made available at. Marathon does not bind to the service ports specified but will ensure that it doesn't allocate the same port to multiple applications that use the same service port running on the same host. Service ports are typically only used by external applications (e.g. HAProxy) to make the application available at the specified port. See [Service Discovery & Load Balancing](service-discovery-load-balancing.html) for more information.
 
 ## Random Port Assignment
 
@@ -272,6 +272,8 @@ By default, Marathon will be creating service ports for each of these ports and 
 ```
 
 In this example, the host ports `$PORT0`, `$PORT1` and `$PORT3` remain randomly assigned. However, the service ports for this application are now `2001`, `2002` and `3000`. An external proxy, like HAProxy, should be configured to route from the service ports to the host ports.
+
+**Note:** If you do choose your own service port, you have to ensure yourself that it is unique across all of your applications.
 
 #### Referencing Ports
 
