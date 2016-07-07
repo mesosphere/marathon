@@ -26,6 +26,8 @@ object TaskTrackerActor {
   /** Query the current [[TaskTracker.AppTasks]] from the [[TaskTrackerActor]]. */
   private[impl] case object List
 
+  private[impl] case class Get(taskId: Task.Id)
+
   /** Forward an update operation to the child [[TaskUpdateActor]]. */
   private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Task.Id, taskStateOp: TaskStateOp)
 
@@ -131,6 +133,9 @@ private class TaskTrackerActor(
     LoggingReceive.withLabel("withTasks") {
       case TaskTrackerActor.List =>
         sender() ! appTasks
+
+      case TaskTrackerActor.Get(taskId) =>
+        sender() ! appTasks.task(taskId)
 
       case ForwardTaskOp(deadline, taskId, taskStateOp) =>
         val op = TaskOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)

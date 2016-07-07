@@ -11,12 +11,13 @@ import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager._
-import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor, UpgradeConfig }
-import org.apache.mesos.Protos.{ Status, TaskID, TaskState }
+import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, UpgradeConfig }
+import org.apache.mesos.Protos.{ Status, TaskState }
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
@@ -24,7 +25,7 @@ import scala.async.Async.{ async, await }
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
 
@@ -39,6 +40,7 @@ class MarathonSchedulerActor private (
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
@@ -157,13 +159,11 @@ class MarathonSchedulerActor private (
     case cmd @ Deploy(plan, force) =>
       deploy(sender(), cmd)
 
-    case cmd @ KillTasks(appId, taskIds) =>
+    case cmd @ KillTasks(appId, tasks) =>
       val origSender = sender()
       withLockFor(appId) {
-        val promise = Promise[Unit]()
-        context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, taskIds, config, promise))
         val res = async {
-          await(promise.future)
+          await(killService.killTasks(tasks, TaskKillReason.KillingTasksViaApi))
           val app = await(appRepository.currentVersion(appId))
           app.foreach(schedulerActions.scale(driver, _))
         }
@@ -338,6 +338,7 @@ object MarathonSchedulerActor {
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
@@ -352,6 +353,7 @@ object MarathonSchedulerActor {
       deploymentRepository,
       healthCheckManager,
       taskTracker,
+      killService,
       launchQueue,
       marathonSchedulerDriverHolder,
       electionService,
@@ -385,8 +387,8 @@ object MarathonSchedulerActor {
     def answer: Event = DeploymentStarted(plan)
   }
 
-  case class KillTasks(appId: PathId, taskIds: Iterable[Task.Id]) extends Command {
-    def answer: Event = TasksKilled(appId, taskIds)
+  case class KillTasks(appId: PathId, tasks: Iterable[Task]) extends Command {
+    def answer: Event = TasksKilled(appId, tasks.map(_.taskId))
   }
 
   case object RetrieveRunningDeployments
@@ -426,6 +428,7 @@ class SchedulerActions(
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
+    val killService: TaskKillService,
     config: MarathonConf)(implicit ec: ExecutionContext) {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -437,14 +440,18 @@ class SchedulerActions(
     scale(driver, app)
   }
 
-  def stopApp(driver: SchedulerDriver, app: AppDefinition): Future[_] = {
+  def stopApp(app: AppDefinition): Future[_] = {
     healthCheckManager.removeAllFor(app.id)
 
     log.info(s"Stopping app ${app.id}")
     taskTracker.appTasks(app.id).map { tasks =>
+      tasks.foreach { task =>
+        if (task.launchedMesosId.isDefined) {
+          log.info("Killing {}", task.taskId)
+          killService.killTask(task, TaskKillReason.DeletingApp)
+        }
+      }
       tasks.flatMap(_.launchedMesosId).foreach { taskId =>
-        log.info(s"Killing task [${taskId.getValue}]")
-        driver.killTask(taskId)
       }
       launchQueue.purge(app.id)
       launchQueue.resetDelay(app)
@@ -485,7 +492,7 @@ class SchedulerActions(
           )
           tasksByApp.appTasks(unknownAppId).foreach { orphanTask =>
             log.info(s"Killing ${orphanTask.taskId}")
-            driver.killTask(orphanTask.taskId.mesosTaskId)
+            killService.killTask(orphanTask, TaskKillReason.Orphaned)
           }
         }
 
@@ -556,9 +563,9 @@ class SchedulerActions(
         .filter(t => t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
         .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)
-      val taskIds: Iterable[TaskID] = toKill.flatMap(_.launchedMesosId)
-      log.info(s"Killing tasks: ${taskIds.map(_.getValue)}")
-      taskIds.foreach(driver.killTask)
+
+      log.info("Killing tasks {}", toKill.map(_.taskId))
+      killService.killTasks(toKill, TaskKillReason.ScalingApp)
     } else {
       log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")
     }

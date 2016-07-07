@@ -90,6 +90,12 @@ sealed trait Task {
     else
       Some(agentInfo.host)
   }
+
+  /**
+    * convenience function added so that components can fold over this instead of matching
+    * the type of task. Every Task should eventually have a version, then this can be removed.
+    */
+  def version: Option[Timestamp]
 }
 
 object Task {
@@ -160,6 +166,8 @@ object Task {
       case _: TaskStateOp.Reserve =>
         TaskStateChange.Failure("Reserve on LaunchedEphemeral is unexpected")
     }
+
+    override def version: Option[Timestamp] = Some(runSpecVersion)
   }
 
   object LaunchedEphemeral {
@@ -209,6 +217,8 @@ object Task {
       case _: TaskStateOp.MesosUpdate =>
         TaskStateChange.Failure("MesosUpdate on Reserved is unexpected")
     }
+
+    override def version: Option[Timestamp] = None // TODO also Reserved tasks have a version
   }
 
   case class LaunchedOnReservation(
@@ -289,6 +299,8 @@ object Task {
       case _: TaskStateOp.Revert =>
         TaskStateChange.Failure("Revert should not be handed over to a task instance")
     }
+
+    override def version: Option[Timestamp] = Some(runSpecVersion)
   }
 
   object LaunchedOnReservation {
