@@ -14,7 +14,6 @@ def test_install_marathon():
     """
 
     # Install
-    print("Installing...")
     install_package_and_wait(PACKAGE_NAME)
     assert package_installed(PACKAGE_NAME), 'Package failed to install'
 
@@ -27,12 +26,10 @@ def test_install_marathon():
         time.sleep(1)
 
     assert found, 'Service did not register with DCOS'
-    print("service found...")
 
     #Uninstall
     uninstall_package_and_wait(PACKAGE_NAME)
     assert not package_installed(PACKAGE_NAME), 'Package failed to uninstall'
-    print("service uninstalled...")
 
     # Reinstall
     install_package_and_wait(PACKAGE_NAME)
@@ -47,6 +44,7 @@ def test_install_marathon():
         # Exception is not raised -> exit code was 0
         assert False, "Error: CLI returns 0 when asked to install Marathon"
 
+def teardown_module(module):
     # pytest teardown do not seem to be working
     print("teardown...")
     uninstall_package(PACKAGE_NAME)
