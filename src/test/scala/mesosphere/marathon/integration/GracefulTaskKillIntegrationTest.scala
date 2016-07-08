@@ -18,7 +18,8 @@ class GracefulTaskKillIntegrationTest
   before(cleanUp())
 
   // this command simulates a 'long terminating' application
-  val appCommand: String = "trap \"sleep 20\" SIGTERM && sleep 100000"
+  // note: Integration test does not interpret symbolic names (SIGTERM=15), therefore signal 15 is used.
+  val appCommand: String = "trap \"sleep 20\" 15 && sleep 100000"
   val taskKillGracePeriod = 10.seconds
 
   test("create a 'long terminating' app with custom taskKillGracePeriod duration") {
