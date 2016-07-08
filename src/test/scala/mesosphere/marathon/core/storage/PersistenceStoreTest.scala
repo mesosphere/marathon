@@ -26,6 +26,15 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
     "list nothing at a random folder" in {
       store.ids(createId).runWith(Sink.seq).futureValue should equal(Nil)
     }
+    "keys lists all keys regardless of the nesting layer" in {
+      val tc = TestClass1("abc", 4)
+      store.create("list/1", tc).futureValue should be(Done)
+      store.create("list/1/2", tc).futureValue should be(Done)
+      store.create("list2/1/2/3", tc).futureValue should be(Done)
+      val all = store.keys().runWith(Sink.seq).futureValue.map(ir.fromStorageId)
+      all should contain theSameElementsAs Seq("list", "list/1", "list/1/2", "list2",
+        "list2/1", "list2/1/2", "list2/1/2/3")
+    }
     "create and then read an object" in {
       val tc = TestClass1("abc", 1)
       store.create("task-1", tc).futureValue should be(Done)

@@ -1,14 +1,13 @@
 package mesosphere.marathon.core.storage.impl.zk
 
 import akka.actor.Scheduler
-import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.core.storage.PersistenceStore
 import mesosphere.marathon.util.{ Retry, toRichFuture }
 import mesosphere.util.state.zk.{ Children, GetData, RichCuratorFramework }
 import org.apache.zookeeper.KeeperException
@@ -36,25 +35,70 @@ case class ZkId(id: String) extends AnyVal
 case class ZkSerialized(bytes: ByteString) extends AnyVal
 
 class ZkPersistenceStore(client: RichCuratorFramework)(implicit
-  ctx: ExecutionContext,
-  mat: ActorMaterializer,
+  override val ctx: ExecutionContext,
+  val mat: ActorMaterializer,
   scheduler: Scheduler)
     extends PersistenceStore[ZkId, ZkSerialized] with StrictLogging {
+
   private val retryOn: Retry.RetryOnFn = {
     case _: KeeperException.ConnectionLossException => true
     case _: KeeperException => false
     case NonFatal(_) => true
   }
 
-  override def ids[Id, V](parent: Id)(implicit ir: IdResolver[Id, ZkId, V, ZkSerialized]): Source[Id, NotUsed] = {
+  override protected def rawDelete(id: ZkId): Future[Done] =
+    Retry(s"ZkPersistenceStore::delete($id)", retryOn = retryOn) {
+      async {
+        await(client.delete(id.id).asTry) match {
+          case Success(_) | Failure(_: NoNodeException) => Done
+          case Failure(e: KeeperException) =>
+            throw new StoreCommandFailedException(s"Unable to delete $id", e)
+          case Failure(e) =>
+            throw e
+        }
+      }
+    }
+
+  override protected[storage] def rawGet(id: ZkId): Future[Option[ZkSerialized]] =
+    Retry(s"ZkPersistenceStore::get($id)", retryOn = retryOn) {
+      async {
+        val data = await(client.data(id.id).asTry)
+        data match {
+          case Success(GetData(_, _, bytes)) =>
+            Some(ZkSerialized(bytes))
+          case Failure(_: NoNodeException) =>
+            None
+          case Failure(e: KeeperException) =>
+            throw new StoreCommandFailedException(s"Unable to get $id", e)
+          case Failure(e) =>
+            throw e
+        }
+      }
+    }
+
+  override protected[storage] def keys(): Source[ZkId, NotUsed] = {
+    def keys(path: ZkId): Source[ZkId, NotUsed] = {
+      rawIds(path).flatMapConcat { child =>
+        val childId = ZkId(if (path.id == "/") s"/${child.id}" else s"${path.id}/${child.id}")
+        if (path.id != "/") {
+          Source.single(childId).concat(keys(childId))
+        } else {
+          keys(childId)
+        }
+      }
+    }
+    keys(ZkId("/"))
+  }
+
+  override protected def rawIds(parent: ZkId): Source[ZkId, NotUsed] = {
     val childrenFuture = Retry(s"ZkPersistenceStore::ids($parent)", retryOn = retryOn) {
       async {
-        val children = await(client.children(ir.toStorageId(parent).id).asTry)
+        val children = await(client.children(parent.id).asTry)
         children match {
           case Success(Children(_, _, nodes)) =>
-            nodes.map(zkPath => ir.fromStorageId(ZkId(zkPath)))
+            nodes.map(ZkId(_))
           case Failure(_: NoNodeException) =>
-            Seq.empty[Id]
+            Seq.empty[ZkId]
           case Failure(e: KeeperException) =>
             throw new StoreCommandFailedException(s"Unable to get children of: $parent", e)
           case Failure(e) =>
@@ -65,7 +109,7 @@ class ZkPersistenceStore(client: RichCuratorFramework)(implicit
     Source.fromFuture(childrenFuture).mapConcat(identity)
   }
 
-  override protected def set(k: ZkId, v: ZkSerialized): Future[Done] = {
+  override protected def rawSet(k: ZkId, v: ZkSerialized): Future[Done] = {
     Retry(s"ZkPersistenceStore::set($k)", retryOn = retryOn) {
       client.setData(k.id, v.bytes).map(_ => Done).recover {
         case e: KeeperException => throw new StoreCommandFailedException(s"Unable to update: ${k.id}", e)
@@ -73,7 +117,7 @@ class ZkPersistenceStore(client: RichCuratorFramework)(implicit
     }
   }
 
-  override protected def createRaw(k: ZkId, v: ZkSerialized): Future[Done] = {
+  override protected def rawCreate(k: ZkId, v: ZkSerialized): Future[Done] = {
     Retry(s"ZkPersistenceStore::create($k)", retryOn = retryOn) {
       client.create(
         k.id,
@@ -84,37 +128,4 @@ class ZkPersistenceStore(client: RichCuratorFramework)(implicit
         }
     }
   }
-
-  override def get[Id, V](k: Id)(implicit
-    ir: IdResolver[Id, ZkId, V, ZkSerialized],
-    um: Unmarshaller[ZkSerialized, V]): Future[Option[V]] =
-    Retry(s"ZkPersistenceStore::get($k)", retryOn = retryOn) {
-      async {
-        val data = await(client.data(ir.toStorageId(k).id).asTry)
-        data match {
-          case Success(GetData(_, _, bytes)) =>
-            Some(await(Unmarshal(ZkSerialized(bytes)).to[V]))
-          case Failure(_: NoNodeException) =>
-            None
-          case Failure(e: KeeperException) =>
-            throw new StoreCommandFailedException(s"Unable to get $k", e)
-          case Failure(e) =>
-            throw e
-        }
-      }
-    }
-
-  override def delete[Id, V](id: Id)(implicit ir: IdResolver[Id, ZkId, V, ZkSerialized]): Future[Done] =
-    Retry(s"ZkPersistenceStore::delete($id)", retryOn = retryOn) {
-      async {
-        val path = ir.toStorageId(id)
-        await(client.delete(path.id).asTry) match {
-          case Success(_) | Failure(_: NoNodeException) => Done
-          case Failure(e: KeeperException) =>
-            throw new StoreCommandFailedException(s"Unable to delete $id", e)
-          case Failure(e) =>
-            throw e
-        }
-      }
-    }
 }

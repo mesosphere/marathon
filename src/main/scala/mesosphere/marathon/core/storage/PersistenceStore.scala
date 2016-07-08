@@ -2,6 +2,7 @@ package mesosphere.marathon.core.storage
 
 import akka.http.scaladsl.marshalling.{ Marshal, Marshaller }
 import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.StoreCommandFailedException
@@ -99,27 +100,44 @@ trait IdResolver[Id, K, +V, +Serialized] {
   * @tparam Serialized The serialized format for the persistence store.
   */
 trait PersistenceStore[K, Serialized] {
+  implicit protected val mat: Materializer
+  implicit protected val ctx: ExecutionContext = ExecutionContext.global
+
   /**
     * Get a list of all immediate children under the given parent.
     */
-  def ids[Id, V](parent: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Source[Id, NotUsed]
+  def ids[Id, V](parent: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Source[Id, NotUsed] = {
+    rawIds(ir.toStorageId(parent)).map(ir.fromStorageId)
+  }
 
   /**
     * Get the data, if any, for the given primary id and value type.
+    *
     * @return A future representing the data at the given Id, if any exists.
     *         If there is an underlying storage problem, the future should fail with [[StoreCommandFailedException]]
     */
   def get[Id, V](id: Id)(implicit
     ir: IdResolver[Id, K, V, Serialized],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]]
+    um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
+
+    async {
+      await(rawGet(ir.toStorageId(id))) match {
+        case Some(v) =>
+          Some(await(um(v)))
+        case None =>
+          None
+      }
+    }
+  }
 
   /**
     * Create the value for the given Id, failing if it already exists
+    *
     * @return A Future that will complete once the value has been created at the given id, or fail with
     *         [[StoreCommandFailedException]] if either a value already exists at the given Id, or
     *         if there is an underlying storage problem
     */
-  final def create[Id, V](id: Id, v: V)(implicit
+  def create[Id, V](id: Id, v: V)(implicit
     ir: IdResolver[Id, K, V, Serialized],
     m: Marshaller[V, Serialized],
     um: Unmarshaller[Serialized, V]): Future[Done] = {
@@ -134,12 +152,13 @@ trait PersistenceStore[K, Serialized] {
     * Update the value at the given Id if and only if the 'change' method returns a [[scala.util.Try]], if
     * the try is successful, the value will be updated.
     * A value must already exist at the given id.
+    *
     * @return A Future that will complete with the previous value if there was already an
     *         existing value, even if the change
     *         callback fails.
     *         Any other condition should fail the future with [[StoreCommandFailedException]].
     */
-  final def update[Id, V](id: Id)(change: V => Try[V])(implicit
+  def update[Id, V](id: Id)(change: V => Try[V])(implicit
     ir: IdResolver[Id, K, V, Serialized],
     um: Unmarshaller[Serialized, V],
     m: Marshaller[V, Serialized]): Future[V] = {
@@ -153,28 +172,60 @@ trait PersistenceStore[K, Serialized] {
 
   /**
     * Delete the value at the given Id, idempotent
+    *
     * @return A future indicating whether the value was deleted (or simply didn't exist). Underlying storage issues
     *         will fail the future with [[StoreCommandFailedException]]
     */
-  def delete[Id, V](k: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Future[Done]
+  def delete[Id, V](k: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Future[Done] = {
+    rawDelete(ir.toStorageId(k))
+  }
+
+  /**
+    * @return A source of _all_ keys in the Persistence Store (which can be used by a
+    *         [[mesosphere.marathon.core.storage.impl.CachingPersistenceStore]] to populate the
+    *         cache completely on startup.
+    */
+  protected[storage] def keys(): Source[K, NotUsed]
+
+  /**
+    * Delete the value at the given id.
+    * @return A future that completes when the value was removed or didn't exist.
+    *         The future may fail with a [[StoreCommandFailedException]] if there is an underlying storage issue.
+    */
+  protected def rawDelete(id: K): Future[Done]
+
+  /**
+    * Get a list of all immediate children under the given parent.
+    */
+  protected def rawIds(parent: K): Source[K, NotUsed]
+
+  /**
+    * Get the data, if any, for the given primary id and value type.
+    *
+    * @return A future representing the data at the given Id, if any exists.
+    *         If there is an underlying storage problem, the future should fail with [[StoreCommandFailedException]]
+    */
+  protected[storage] def rawGet(id: K): Future[Option[Serialized]]
 
   /**
     * Set the value at the given id.
+    *
     * @return A future that completes when the value has been updated to the new value
     *         or fail with [[StoreCommandFailedException]] if there is an underlying storage issue or the value
     *         didn't exist.
     */
-  protected def set(id: K, v: Serialized): Future[Done]
+  protected def rawSet(id: K, v: Serialized): Future[Done]
 
   /**
     * Create the value at the given id.
+    *
     * @return A future that completes when the value has been associated with the Id
     *         or fail with [[StoreCommandFailedException]] if there is an underlying storage issue or the
     *         value already existed.
     */
-  protected def createRaw(id: K, v: Serialized): Future[Done]
+  protected def rawCreate(id: K, v: Serialized): Future[Done]
 
-  final private def createOrUpdate[Id, V](
+  private def createOrUpdate[Id, V](
     id: Id,
     change: Option[V] => Try[V])(implicit
     ir: IdResolver[Id, K, V, Serialized],
@@ -188,10 +239,10 @@ trait PersistenceStore[K, Serialized] {
         val serialized = await(Marshal(newValue).to[Serialized])
         old match {
           case Some(_) =>
-            await(set(path, serialized))
+            await(rawSet(path, serialized))
             old
           case None =>
-            await(createRaw(path, serialized))
+            await(rawCreate(path, serialized))
             old
         }
       case Failure(error: StoreCommandFailedException) =>
