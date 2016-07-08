@@ -41,7 +41,8 @@ class GracefulTaskKillIntegrationTest
     val taskKillSentTimestamp = System.currentTimeMillis()
     marathon.killTask(app.id, taskId).code should be (200)
 
-    waitForEventWith("status_update_event",
+    waitForEventWith(
+      "status_update_event",
       _.info("taskStatus") == "TASK_KILLED",
       maxWait = taskKillGracePeriod.plus(2.seconds))
 
@@ -49,7 +50,7 @@ class GracefulTaskKillIntegrationTest
     val waitedForTaskKilledEvent = (taskKilledReceivedTimestamp - taskKillSentTimestamp).milliseconds
 
     // the task_killed event should occur at least 10 seconds after sending it
-    waitedForTaskKilledEvent should be >= taskKillGracePeriod
+    waitedForTaskKilledEvent.toMillis should be >= taskKillGracePeriod.toMillis
   }
 
   test("create a 'short terminating' app with custom taskKillGracePeriod duration") {
@@ -72,7 +73,8 @@ class GracefulTaskKillIntegrationTest
     val taskKillSentTimestamp = System.currentTimeMillis()
     marathon.killTask(app.id, taskId).code should be (200)
 
-    waitForEventWith("status_update_event",
+    waitForEventWith(
+      "status_update_event",
       _.info("taskStatus") == "TASK_KILLED",
       maxWait = taskKillGracePeriod.plus(2.seconds))
 
@@ -81,9 +83,8 @@ class GracefulTaskKillIntegrationTest
 
     // the task_killed event should occur instantly or at least smaller as taskKillGracePeriod,
     // because the app terminates shortly
-    waitedForTaskKilledEvent should be < taskKillGracePeriod
+    waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis
   }
-
 
   def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)
 }
