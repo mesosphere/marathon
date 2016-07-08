@@ -7,7 +7,7 @@ import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.marathon.core.storage.PersistenceStore
+import mesosphere.marathon.core.storage.BasePersistenceStore
 import mesosphere.marathon.util.{ Retry, toRichFuture }
 import mesosphere.util.state.zk.{ Children, GetData, RichCuratorFramework }
 import org.apache.zookeeper.KeeperException
@@ -38,7 +38,7 @@ class ZkPersistenceStore(client: RichCuratorFramework)(implicit
   override val ctx: ExecutionContext,
   val mat: ActorMaterializer,
   scheduler: Scheduler)
-    extends PersistenceStore[ZkId, ZkSerialized] with StrictLogging {
+    extends BasePersistenceStore[ZkId, ZkSerialized] with StrictLogging {
 
   private val retryOn: Retry.RetryOnFn = {
     case _: KeeperException.ConnectionLossException => true
@@ -109,7 +109,7 @@ class ZkPersistenceStore(client: RichCuratorFramework)(implicit
     Source.fromFuture(childrenFuture).mapConcat(identity)
   }
 
-  override protected def rawSet(k: ZkId, v: ZkSerialized): Future[Done] = {
+  override protected[storage] def rawSet(k: ZkId, v: ZkSerialized): Future[Done] = {
     Retry(s"ZkPersistenceStore::set($k)", retryOn = retryOn) {
       client.setData(k.id, v.bytes).map(_ => Done).recover {
         case e: KeeperException => throw new StoreCommandFailedException(s"Unable to update: ${k.id}", e)
@@ -128,4 +128,6 @@ class ZkPersistenceStore(client: RichCuratorFramework)(implicit
         }
     }
   }
+
+  override def toString: String = s"ZkPersistenceStore($client)"
 }

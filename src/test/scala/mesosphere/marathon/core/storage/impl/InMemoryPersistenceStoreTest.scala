@@ -1,9 +1,9 @@
-package mesosphere.marathon.core.storage
+package mesosphere.marathon.core.storage.impl
 
 import java.util.UUID
 
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.impl.{InMemoryPersistenceStore, InMemoryStoreSerialization}
+import mesosphere.marathon.core.storage.PersistenceStoreTest
 
 class InMemoryPersistenceStoreTest extends AkkaUnitTest with PersistenceStoreTest
     with InMemoryStoreSerialization {

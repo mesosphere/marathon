@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.storage
+package mesosphere.marathon.core.storage.impl.zk
 
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
@@ -8,7 +8,7 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.impl.zk.{ ZkId, ZkPersistenceStore, ZkSerialized }
+import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStoreTest, TestClass1 }
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 
 trait TestClass1Implicits {

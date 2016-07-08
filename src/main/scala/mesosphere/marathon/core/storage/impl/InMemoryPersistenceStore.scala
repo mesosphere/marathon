@@ -6,7 +6,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.core.storage.{ BasePersistenceStore, IdResolver }
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
@@ -29,7 +29,7 @@ trait InMemoryStoreSerialization {
 }
 
 class InMemoryPersistenceStore(implicit protected val mat: ActorMaterializer)
-    extends PersistenceStore[RamId, Identity] {
+    extends BasePersistenceStore[RamId, Identity] {
   val entries = TrieMap[RamId, Identity]()
 
   override protected[storage] def keys(): Source[RamId, NotUsed] = {
@@ -57,7 +57,7 @@ class InMemoryPersistenceStore(implicit protected val mat: ActorMaterializer)
     Future.successful(entries.get(id))
   }
 
-  override protected def rawSet(id: RamId, v: Identity): Future[Done] = {
+  override protected[storage] def rawSet(id: RamId, v: Identity): Future[Done] = {
     if (entries.contains(id)) {
       entries.put(id, v)
       Future.successful(Done)
@@ -68,7 +68,7 @@ class InMemoryPersistenceStore(implicit protected val mat: ActorMaterializer)
 
   override protected def rawIds(parent: RamId): Source[RamId, NotUsed] = {
     Source(entries.keySet.withFilter(_.id.startsWith(parent.id)).map { key =>
-      val path = if (parent.id == "") key.id else key.id.replaceAll(s"${parent.id}/", "")
+      val path = if (parent.id == "") key.id else key.id.replaceAll(s"^(${parent.id})/", "")
       RamId(path.split("/").head)
     }(collection.breakOut))
   }

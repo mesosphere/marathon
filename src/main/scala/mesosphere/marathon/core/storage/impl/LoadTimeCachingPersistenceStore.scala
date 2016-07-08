@@ -1,19 +1,21 @@
 package mesosphere.marathon.core.storage.impl
 
-import akka.http.scaladsl.marshalling.Marshaller
-import akka.http.scaladsl.unmarshalling.Unmarshaller
+import java.io.NotActiveException
+
+import akka.http.scaladsl.marshalling.{ Marshal, Marshaller }
+import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{Done, NotUsed}
+import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.{PrePostDriverCallback, StoreCommandFailedException}
-import mesosphere.marathon.core.storage.{IdResolver, PersistenceStore}
+import mesosphere.marathon.{ PrePostDriverCallback, StoreCommandFailedException }
+import mesosphere.marathon.core.storage.{ BasePersistenceStore, IdResolver, PersistenceStore }
 import mesosphere.marathon.util.toRichFuture
 
-import scala.async.Async.{async, await}
+import scala.async.Async.{ async, await }
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.util.{ Failure, Success, Try }
 
 /**
   * A Write Ahead Cache of another persistence store that preloads the entire persistence store into memory before
@@ -28,21 +30,26 @@ import scala.util.{Failure, Success, Try}
   * @param store The store to cache
   * @param keyAsPath Conversion from the Persistence layer's key to a stringified path.
   * @param mat a materializer for akka streaming
+  * @param ctx The execution context for future chaining.
   * @tparam Serialized The serialized format for the persistence store.
   */
-class CachingPersistenceStore[K, Serialized](
-    store: PersistenceStore[K, Serialized],
+class LoadTimeCachingPersistenceStore[K, Serialized](
+    store: BasePersistenceStore[K, Serialized],
     keyAsPath: K => String,
-    pathAsKey: String => K)(
+    pathAsKey: String => K,
+    maxPreloadRequests: Int = 8)(
     implicit
-    override val mat: Materializer
+    mat: Materializer,
+    ctx: ExecutionContext
 ) extends PersistenceStore[K, Serialized] with StrictLogging with PrePostDriverCallback {
 
-  private[storage] val cache = Promise[TrieMap[String, Either[Serialized, Any]]]()
+  private[storage] var cache: Future[TrieMap[String, Either[Serialized, Any]]] = Future.failed(new NotActiveException())
 
   override def preDriverStarts: Future[Unit] = {
+    val promise = Promise[TrieMap[String, Either[Serialized, Any]]]()
+    cache = promise.future
     val storage = TrieMap[String, Either[Serialized, Any]]()
-    val future = store.keys().mapAsync(8) { key =>
+    val future = store.keys().mapAsync(maxPreloadRequests) { key =>
       store.rawGet(key).map(v => key -> v)
     }.runForeach {
       case (key, maybeSerialized) =>
@@ -52,22 +59,24 @@ class CachingPersistenceStore[K, Serialized](
           case None =>
         }
     }
-    cache.completeWith(future.map(_ => storage))
+    promise.completeWith(future.map(_ => storage))
     future.map(_ => ())
   }
 
-  override def postDriverTerminates: Future[Unit] = Future.successful(())
+  override def postDriverTerminates: Future[Unit] = {
+    cache = Future.failed(new NotActiveException())
+    Future.successful(())
+  }
 
   override def ids[Id, V](parent: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Source[Id, NotUsed] = {
     val future = async {
-      val cached = await(cache.future)
+      val cached = await(cache)
 
       val storageId = keyAsPath(ir.toStorageId(parent))
-      val result = cached.keySet.withFilter(_.startsWith(storageId)).map { key =>
-        val path = if (storageId == "") storageId else key.replaceAll(s"$storageId/", "")
+      cached.keySet.withFilter(_.startsWith(storageId)).map { key =>
+        val path = if (storageId == "") key else key.replaceAll(s"^($storageId/)", "")
         path.split("/").head
       }
-      result
     }
     Source.fromFuture(future).mapConcat(_.map(k => ir.fromStorageId(pathAsKey(k)))(collection.breakOut))
   }
@@ -75,11 +84,11 @@ class CachingPersistenceStore[K, Serialized](
   override def get[Id, V](id: Id)(implicit
     ir: IdResolver[Id, K, V, Serialized],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = async {
-    val cached = await(cache.future)
+    val cached = await(cache)
     val stored = cached.get(keyAsPath(ir.toStorageId(id)))
     stored match {
       case Some(Left(serialized)) =>
-        val deserialized = await(um(serialized))
+        val deserialized = await(Unmarshal(serialized).to[V])
         cached.put(keyAsPath(ir.toStorageId(id)), Right(deserialized))
         Some(deserialized)
       case Some(Right(deserialized)) =>
@@ -113,9 +122,14 @@ class CachingPersistenceStore[K, Serialized](
         case Some(old) =>
           change(old) match {
             case Success(newValue) =>
-              val serialized = await(m(newValue))
-              await(cache.future).put(keyAsPath(ir.toStorageId(id)), Right(serialized))
-              old
+              val serialized = await(Marshal(newValue).to[Serialized])
+              await(store.rawSet(ir.toStorageId(id), serialized).asTry) match {
+                case Success(x) =>
+                  await(cache).put(keyAsPath(ir.toStorageId(id)), Right(newValue))
+                  old
+                case Failure(x) =>
+                  throw x
+              }
             case Failure(e) =>
               old
           }
@@ -129,7 +143,7 @@ class CachingPersistenceStore[K, Serialized](
     async {
       await(store.delete(k).asTry) match {
         case Success(_) =>
-          await(cache.future).remove(keyAsPath(ir.toStorageId(k)))
+          await(cache).remove(keyAsPath(ir.toStorageId(k)))
           Done
         case Failure(e) =>
           throw e
@@ -137,22 +151,10 @@ class CachingPersistenceStore[K, Serialized](
     }
   }
 
-  override def toString: String = s"CachingPersistenceStore($store)"
-
-  // None of the raw methods need to be implemented.
-
-  override protected[storage] def rawGet(id: K): Future[Option[Serialized]] = ???
-
-  override protected def rawSet(id: K, v: Serialized): Future[Done] = ???
-
-  override protected def rawDelete(id: K): Future[Done] = ???
-
-  override protected def rawIds(parent: K): Source[K, NotUsed] = ???
-
-  override protected def rawCreate(id: K, v: Serialized): Future[Done] = ???
-
   override protected[storage] def keys(): Source[K, NotUsed] = {
     logger.warn(s"keys() called on a CachingPersistenceStore (which is what keys() is for), deferring to $store")
     store.keys()
   }
+
+  override def toString: String = s"LoadTimeCachingPersistenceStore($store)"
 }

@@ -129,6 +129,8 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
         future.fail(e)
     }
   }
+
+  override def toString: String = client.toString
 }
 
 object RichCuratorFramework {
