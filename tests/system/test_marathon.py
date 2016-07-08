@@ -47,6 +47,5 @@ def test_install_marathon():
 def teardown_module(module):
     # pytest teardown do not seem to be working
     print("teardown...")
-    uninstall_package(PACKAGE_NAME)
-    time.sleep(5)
+    uninstall_package_and_wait(PACKAGE_NAME)
     run_command_on_master("docker run mesosphere/janitor /janitor.py -z universe/marathon-user")
