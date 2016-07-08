@@ -1,4 +1,5 @@
 bin/run-tests-config.sh
+.cache
 .ensime*
 .idea
 *.iml
@@ -15,3 +16,4 @@ start.sh
 .DS_Store
 *.ipr
 *.iws
+__pycache__
