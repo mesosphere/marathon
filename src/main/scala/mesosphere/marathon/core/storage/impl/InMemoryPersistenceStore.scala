@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.storage.impl
+/*package mesosphere.marathon.core.storage.impl
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -84,3 +84,4 @@ class InMemoryPersistenceStore(implicit protected val mat: ActorMaterializer)
   }
 }
 
+*/

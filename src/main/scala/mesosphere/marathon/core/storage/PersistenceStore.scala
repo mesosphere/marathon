@@ -1,18 +1,13 @@
 package mesosphere.marathon.core.storage
 
-import akka.http.scaladsl.marshalling.{ Marshal, Marshaller }
-import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
-import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.util.CallerThreadExecutionContext
+import java.time.OffsetDateTime
 
-import scala.async.Async._
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.control.NonFatal
-import scala.util.{ Failure, Success, Try }
+import akka.http.scaladsl.marshalling.Marshaller
+import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.stream.scaladsl.Source
+import akka.{Done, NotUsed}
+
+import scala.concurrent.Future
 
 /**
   * Resolver for Marathon Internal Persistence IDs (by `Key Type`, `Value Type` and `Serialized Type`)
@@ -25,7 +20,8 @@ import scala.util.{ Failure, Success, Try }
   *   class A(val id: String) {}
   *   object A {
   *     implicit val zkIdResolver = new IdResolver[String, A, ByteString] = {
-  *       def toStorageId(id: String): String = id
+  *       def toStorageId(id: String, version: Option[OffsetDateTime]): String =
+  *         version.fold(id)(ts => id.${ts.toString})
   *       def fromStorageId(id: String): String = id
   *   }
   * }}}
@@ -39,13 +35,16 @@ trait IdResolver[Id, K, +V, +Serialized] {
   /**
     * Translate the marathon id into the given persisted format
     */
-  def toStorageId(id: Id): K
+  def toStorageId(id: Id, version: Option[OffsetDateTime]): K
 
   /**
     * Translate from the persisted format to the marathon id.
     */
   def fromStorageId(key: K): Id
 }
+
+case class VersionedId[Id](id: Id, version: OffsetDateTime)
+case class VersionedValue[Id, V](id: Id, value: V, version: OffsetDateTime)
 
 /**
   * Generic Persistence Store with flexible storage backends using Akka Marshalling Infrastructure.
@@ -63,9 +62,10 @@ trait IdResolver[Id, K, +V, +Serialized] {
   *   case class A(id: Int, name: String)
   *   object A {
   *     implicit val zkIdResolver = new IdResolver[Int, ZkId, A, ZkSerialized] {
-  *       def toStorageId(id: Int): ZkId =
-  *         ZkId("/A/" + id.toString) // note: scaladoc bug where string interpolation fails
-  *       def fromStorageId(key: ZkId): Int = key.value.replaceAll("/A/", "").toInt
+  *       def toStorageId(id: Int, version: Option[OffsetDateTime]): ZkId =
+  *         // note: scaladoc bug where string interpolation fails
+  *         ZkId("/A/" + id.toString + "$" + version.map(_.toString).getOrElse(""))
+  *       def fromStorageId(key: ZkId): Int = key.value.replaceAll("(^/A/)|(\\$.*$)", "").replaceAll(".toInt
   *     }
   *     implicit val zkMarshaller = Marshaller[A, ZkSerialized] =
   *       Marshaller.opaque { (a: A) =>
@@ -105,11 +105,17 @@ trait IdResolver[Id, K, +V, +Serialized] {
   */
 trait PersistenceStore[K, Serialized] {
   /**
-    * Get a list of all immediate children under the given parent.
+    * Get a list of all of the Ids of the given Value Types
     */
-  def ids[Id, V](parent: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Source[Id, NotUsed]
+  // TODO: def ids[]()(implicit ir: IdResolver[Id, K, V, Serialized]): Source[Id, NotUsed]
+
   /**
-    * Get the data, if any, for the given primary id and value type.
+    * Get a list of all versions for a given id.
+    */
+  def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Source[VersionedId[Id], NotUsed]
+
+  /**
+    * Get the current version of the data, if any, for the given primary id and value type.
     *
     * @return A future representing the data at the given Id, if any exists.
     *         If there is an underlying storage problem, the future should fail with [[StoreCommandFailedException]]
@@ -119,39 +125,52 @@ trait PersistenceStore[K, Serialized] {
     um: Unmarshaller[Serialized, V]): Future[Option[V]]
 
   /**
-    * Create the value for the given Id, failing if it already exists
+    * Get the version of the data at the given version, if any, for the given primary id and value type.
     *
-    * @return A Future that will complete once the value has been created at the given id, or fail with
+    * @return A future representing the data at the given Id, if any exists.
+    *         If there is an underlying storage problem, the future should fail with [[StoreCommandFailedException]]
+    */
+  def get[Id, V](id: Id, version: OffsetDateTime)(implicit
+                                                         ir: IdResolver[Id, K, V, Serialized],
+                                                  um: Unmarshaller[Serialized, V]): Future[Option[V]]
+
+  /**
+    * Store the new value at the given Id. If the value already exists, the existing value will be versioned
+    *
+    * @return A Future that will complete with the previous version of the value if it existed, or fail with
     *         [[StoreCommandFailedException]] if either a value already exists at the given Id, or
     *         if there is an underlying storage problem
     */
-  def create[Id, V](id: Id, v: V)(implicit
+  def store[Id, V](id: Id, v: V)(implicit
     ir: IdResolver[Id, K, V, Serialized],
-    m: Marshaller[V, Serialized],
-    um: Unmarshaller[Serialized, V]): Future[Done]
+    m: Marshaller[V, Serialized]): Future[Done]
 
   /**
-    * Update the value at the given Id if and only if the 'change' method returns a [[scala.util.Try]], if
-    * the try is successful, the value will be updated.
-    * A value must already exist at the given id.
+    * Store a new value at the given version. If the maximum number of versions has been reached,
+    * will delete the oldest versions. This method does not replace the current version.
     *
-    * @return A Future that will complete with the previous value if there was already an
-    *         existing value, even if the change
-    *         callback fails.
-    *         Any other condition should fail the future with [[StoreCommandFailedException]].
+    * @return A Future that will complete with the previous version of the value if it existed, or fail with
+    *         [[StoreCommandFailedException]] if either a value already exists at the given Id, or
+    *         if there is an underlying storage problem
     */
-  def update[Id, V](id: Id)(change: V => Try[V])(implicit
-    ir: IdResolver[Id, K, V, Serialized],
-    um: Unmarshaller[Serialized, V],
-    m: Marshaller[V, Serialized]): Future[V]
+  def store[Id, V](id: Id, v: V, version: OffsetDateTime)(
+                  implicit ir: IdResolver[Id, K, V, Serialized],
+                  m: Marshaller[V, Serialized]): Future[Done]
 
   /**
-    * Delete the value at the given Id, idempotent
+    * Delete the value at the given Id and version, idempotent
     *
     * @return A future indicating whether the value was deleted (or simply didn't exist). Underlying storage issues
     *         will fail the future with [[StoreCommandFailedException]]
     */
-  def delete[Id, V](k: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Future[Done]
+  def delete[Id, V](k: Id, version: OffsetDateTime)(implicit ir: IdResolver[Id, K, V, Serialized]): Future[Done]
+
+  /**
+    * Delete all of the versions of the given Id, idempotent
+    * @return A future indicating whether the value was deleted (or simply didn't exist). Underlying storage issues
+    *         will fail the future with [[StoreCommandFailedException]]
+    */
+  def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Future[Done]
 
   /**
     * @return A source of _all_ keys in the Persistence Store (which can be used by a
@@ -159,153 +178,4 @@ trait PersistenceStore[K, Serialized] {
     *         cache completely on startup.
     */
   protected[storage] def keys(): Source[K, NotUsed]
-}
-
-trait BasePersistenceStore[K, Serialized] extends PersistenceStore[K, Serialized] with StrictLogging {
-  implicit protected val mat: Materializer
-  implicit protected val ctx: ExecutionContext = ExecutionContext.global
-
-  /**
-    * Get a list of all immediate children under the given parent.
-    */
-  def ids[Id, V](parent: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Source[Id, NotUsed] = {
-    rawIds(ir.toStorageId(parent)).map(ir.fromStorageId)
-  }
-
-  /**
-    * Get the data, if any, for the given primary id and value type.
-    *
-    * @return A future representing the data at the given Id, if any exists.
-    *         If there is an underlying storage problem, the future should fail with [[StoreCommandFailedException]]
-    */
-  def get[Id, V](id: Id)(implicit
-    ir: IdResolver[Id, K, V, Serialized],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
-
-    async {
-      await(rawGet(ir.toStorageId(id))) match {
-        case Some(v) =>
-          Some(await(um(v)))
-        case None =>
-          None
-      }
-    }
-  }
-
-  /**
-    * Create the value for the given Id, failing if it already exists
-    *
-    * @return A Future that will complete once the value has been created at the given id, or fail with
-    *         [[StoreCommandFailedException]] if either a value already exists at the given Id, or
-    *         if there is an underlying storage problem
-    */
-  def create[Id, V](id: Id, v: V)(implicit
-    ir: IdResolver[Id, K, V, Serialized],
-    m: Marshaller[V, Serialized],
-    um: Unmarshaller[Serialized, V]): Future[Done] = {
-    createOrUpdate(id, (oldValue: Option[V]) => oldValue match {
-      case None => Success(v)
-      case Some(existing) =>
-        Failure(new StoreCommandFailedException(s"Unable to create $id as it already exists ($existing)"))
-    }).map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
-  }
-
-  /**
-    * Update the value at the given Id if and only if the 'change' method returns a [[scala.util.Try]], if
-    * the try is successful, the value will be updated.
-    * A value must already exist at the given id.
-    *
-    * @return A Future that will complete with the previous value if there was already an
-    *         existing value, even if the change
-    *         callback fails.
-    *         Any other condition should fail the future with [[StoreCommandFailedException]].
-    */
-  def update[Id, V](id: Id)(change: V => Try[V])(implicit
-    ir: IdResolver[Id, K, V, Serialized],
-    um: Unmarshaller[Serialized, V],
-    m: Marshaller[V, Serialized]): Future[V] = {
-    createOrUpdate(id, (oldValue: Option[V]) => oldValue match {
-      case Some(old) =>
-        change(old)
-      case None =>
-        Failure(new StoreCommandFailedException(s"Unable to update $id as it doesn't exist"))
-    }).map(_.get)(CallerThreadExecutionContext.callerThreadExecutionContext)
-  }
-
-  /**
-    * Delete the value at the given Id, idempotent
-    *
-    * @return A future indicating whether the value was deleted (or simply didn't exist). Underlying storage issues
-    *         will fail the future with [[StoreCommandFailedException]]
-    */
-  def delete[Id, V](k: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Future[Done] = {
-    rawDelete(ir.toStorageId(k))
-  }
-
-  /**
-    * Delete the value at the given id.
-    *
-    * @return A future that completes when the value was removed or didn't exist.
-    *         The future may fail with a [[StoreCommandFailedException]] if there is an underlying storage issue.
-    */
-  protected def rawDelete(id: K): Future[Done]
-
-  /**
-    * Get a list of all immediate children under the given parent.
-    */
-  protected def rawIds(parent: K): Source[K, NotUsed]
-
-  /**
-    * Create the value at the given id.
-    *
-    * @return A future that completes when the value has been associated with the Id
-    *         or fail with [[StoreCommandFailedException]] if there is an underlying storage issue or the
-    *         value already existed.
-    */
-  protected def rawCreate(id: K, v: Serialized): Future[Done]
-
-  /**
-    * Get the data, if any, for the given primary id and value type.
-    *
-    * @return A future representing the data at the given Id, if any exists.
-    *         If there is an underlying storage problem, the future should fail with [[StoreCommandFailedException]]
-    */
-  protected[storage] def rawGet(id: K): Future[Option[Serialized]]
-
-  /**
-    * Set the value at the given id.
-    *
-    * @return A future that completes when the value has been updated to the new value
-    *         or fail with [[StoreCommandFailedException]] if there is an underlying storage issue or the value
-    *         didn't exist.
-    */
-  protected[storage] def rawSet(id: K, v: Serialized): Future[Done]
-
-  private def createOrUpdate[Id, V](
-    id: Id,
-    change: Option[V] => Try[V])(implicit
-    ir: IdResolver[Id, K, V, Serialized],
-    m: Marshaller[V, Serialized],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]] = async {
-    val path = ir.toStorageId(id)
-    val old = await(get(id))
-    change(old) match {
-      case Success(newValue) =>
-        val serialized = await(Marshal(newValue).to[Serialized])
-        old match {
-          case Some(_) =>
-            await(rawSet(path, serialized))
-            old
-          case None =>
-            await(rawCreate(path, serialized))
-            old
-        }
-      case Failure(error: StoreCommandFailedException) =>
-        throw error
-      case Failure(NonFatal(error)) =>
-        // If change(old) returned a Failure with a non-StoreCommandFailed
-        logger.error(s"change($old) failed with an error, ignoring", error)
-        old
-    }
-  }
 }

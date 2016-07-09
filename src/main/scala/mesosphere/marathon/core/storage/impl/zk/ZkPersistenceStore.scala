@@ -1,44 +1,48 @@
 package mesosphere.marathon.core.storage.impl.zk
 
+import java.time.OffsetDateTime
+
 import akka.actor.Scheduler
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
+import com.google.protobuf.{Message, MessageLite}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.marathon.core.storage.BasePersistenceStore
-import mesosphere.marathon.util.{ Retry, toRichFuture }
-import mesosphere.util.state.zk.{ Children, GetData, RichCuratorFramework }
+import mesosphere.marathon.core.storage.VersionedId
+import mesosphere.marathon.core.storage.impl.BasePersistenceStore
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.util.{Retry, toRichFuture}
+import mesosphere.util.state.zk.{Children, GetData, RichCuratorFramework}
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.NoNodeException
+import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 
-import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.async.Async.{async, await}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
-/**
-  * Marker class for Zookeeper Ids
-  *
-  * @param id The id in directory format, must be absolute.
-  */
-case class ZkId(id: String) extends AnyVal
+case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
+  private val bucket = id.hashCode % 16
+  def path: String = version.fold(s"/$category/$bucket/$id") { v =>
+    s"/$category/$bucket/$id/versions/$v"
+  }
+}
 
-/**
-  * Marker class for Zookeeper values serialized as ByteStrings
-  * TODO: Consider using proto messages instead?
-  *
-  * @param bytes The proto serialized bytes.
-  */
-case class ZkSerialized(bytes: ByteString) extends AnyVal
+case class ZkSerialized(data: Either[ByteString, MessageLite]) {
+  val encoded: ByteString = ByteString(data.right.get.toByteArray)
+  def decoded[T <: MessageLite](builder: Message.Builder): T =
+    builder.mergeFrom(data.left.get.toArray).build().asInstanceOf[T]
+}
 
-class ZkPersistenceStore(client: RichCuratorFramework)(implicit
-  override val ctx: ExecutionContext,
-  val mat: ActorMaterializer,
-  scheduler: Scheduler)
-    extends BasePersistenceStore[ZkId, ZkSerialized] with StrictLogging {
+class ZkPersistenceStore(client: RichCuratorFramework, maxVersions: Int)(
+                        implicit mat: Materializer,
+                        ctx: ExecutionContext,
+                        scheduler: Scheduler,
+                        val metrics: Metrics
+) extends BasePersistenceStore[ZkId, ZkSerialized](maxVersions) with StrictLogging {
 
   private val retryOn: Retry.RetryOnFn = {
     case _: KeeperException.ConnectionLossException => true
@@ -46,88 +50,77 @@ class ZkPersistenceStore(client: RichCuratorFramework)(implicit
     case NonFatal(_) => true
   }
 
-  override protected def rawDelete(id: ZkId): Future[Done] =
-    Retry(s"ZkPersistenceStore::delete($id)", retryOn = retryOn) {
+  private def retry[T](name: String)(f: => Future[T]) = Retry(name, retryOn = retryOn)(f)
+
+  override protected def rawVersions(id: ZkId): Source[VersionedId[ZkId], NotUsed] = {
+    val key = id.copy(version = None)
+    val path = s"$key/versions"
+    val versions = retry(s"ZkPersistenceStore::versions($path)") {
       async {
-        await(client.delete(id.id).asTry) match {
-          case Success(_) | Failure(_: NoNodeException) => Done
-          case Failure(e: KeeperException) =>
-            throw new StoreCommandFailedException(s"Unable to delete $id", e)
+        await(client.children(path).asTry) match {
+          case Success(Children(_, _, nodes)) =>
+            nodes.map { path =>
+              val version = OffsetDateTime.parse(path)
+              VersionedId(key.copy(version = Some(version)), version)
+            }
+          case Failure(_: NoNodeException) =>
+            Seq.empty[VersionedId[ZkId]]
           case Failure(e) =>
             throw e
         }
       }
     }
 
-  override protected[storage] def rawGet(id: ZkId): Future[Option[ZkSerialized]] =
-    Retry(s"ZkPersistenceStore::get($id)", retryOn = retryOn) {
+    Source.fromFuture(versions).mapConcat(identity)
+  }
+
+  override protected def rawGet(k: ZkId): Future[Option[ZkSerialized]] = retry(s"ZkPersistenceStore::get($k)") {
       async {
-        val data = await(client.data(id.id).asTry)
-        data match {
+        await(client.data(k.path).asTry) match {
           case Success(GetData(_, _, bytes)) =>
-            Some(ZkSerialized(bytes))
+            Some(ZkSerialized(Left(bytes)))
           case Failure(_: NoNodeException) =>
             None
           case Failure(e: KeeperException) =>
-            throw new StoreCommandFailedException(s"Unable to get $id", e)
+            throw new StoreCommandFailedException(s"Unable to get $k", e)
           case Failure(e) =>
             throw e
         }
       }
     }
 
-  override protected[storage] def keys(): Source[ZkId, NotUsed] = {
-    def keys(path: ZkId): Source[ZkId, NotUsed] = {
-      rawIds(path).flatMapConcat { child =>
-        val childId = ZkId(if (path.id == "/") s"/${child.id}" else s"${path.id}/${child.id}")
-        if (path.id != "/") {
-          Source.single(childId).concat(keys(childId))
-        } else {
-          keys(childId)
-        }
-      }
-    }
-    keys(ZkId("/"))
-  }
-
-  override protected def rawIds(parent: ZkId): Source[ZkId, NotUsed] = {
-    val childrenFuture = Retry(s"ZkPersistenceStore::ids($parent)", retryOn = retryOn) {
+  override protected def rawDelete(k: ZkId, version: OffsetDateTime): Future[Done] =
+    retry(s"ZkPersistenceStore::delete($k, $version)") {
       async {
-        val children = await(client.children(parent.id).asTry)
-        children match {
-          case Success(Children(_, _, nodes)) =>
-            nodes.map(ZkId(_))
-          case Failure(_: NoNodeException) =>
-            Seq.empty[ZkId]
+        await(client.delete(k.path).asTry) match {
+          case Success(_) | Failure(_: NoNodeException) => Done
           case Failure(e: KeeperException) =>
-            throw new StoreCommandFailedException(s"Unable to get children of: $parent", e)
+            throw new StoreCommandFailedException(s"Unable to delete $k", e)
           case Failure(e) =>
             throw e
         }
       }
     }
-    Source.fromFuture(childrenFuture).mapConcat(identity)
-  }
 
-  override protected[storage] def rawSet(k: ZkId, v: ZkSerialized): Future[Done] = {
-    Retry(s"ZkPersistenceStore::set($k)", retryOn = retryOn) {
-      client.setData(k.id, v.bytes).map(_ => Done).recover {
-        case e: KeeperException => throw new StoreCommandFailedException(s"Unable to update: ${k.id}", e)
+  override protected def rawStore[V](k: ZkId, v: ZkSerialized): Future[Done] =
+    retry(s"ZkPersistenceStore::store($k, $v)") {
+      async {
+        await(client.create(k.path, creatingParentContainersIfNeeded = true).asTry) match {
+          case Success(_) | Failure(_: NodeExistsException) =>
+            await(client.setData(k.path, v.encoded))
+            Done
+          case Failure(e) =>
+            throw e
+        }
       }
     }
-  }
 
-  override protected def rawCreate(k: ZkId, v: ZkSerialized): Future[Done] = {
-    Retry(s"ZkPersistenceStore::create($k)", retryOn = retryOn) {
-      client.create(
-        k.id,
-        Some(v.bytes),
-        creatingParentContainersIfNeeded = true,
-        creatingParentsIfNeeded = true).map(_ => Done).recover {
-          case e: KeeperException => throw new StoreCommandFailedException(s"Unable to create: ${k.id}", e)
-        }
+  override protected def rawDeleteAll(k: ZkId): Future[Done] = {
+    val id = k.copy(version = None)
+    retry(s"ZkPersistenceStore::delete($id)") {
+      client.delete(k.path, guaranteed = true, deletingChildrenIfNeeded = true).map(_ => Done)
     }
   }
 
-  override def toString: String = s"ZkPersistenceStore($client)"
+  override protected[storage] def keys(): Source[ZkId, NotUsed] = ???
 }

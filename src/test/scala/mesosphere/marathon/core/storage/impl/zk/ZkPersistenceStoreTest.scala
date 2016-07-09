@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.storage.impl.zk
+/*package mesosphere.marathon.core.storage.impl.zk
 
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
@@ -21,7 +21,7 @@ trait TestClass1Implicits {
       bytes.putInt(strBytes.length)
       bytes.putBytes(strBytes)
       bytes.putInt(tc.int)
-      ZkSerialized(bytes.result())
+      ZkSerialized((bytes.result())
     }
 
   implicit val byteStringUnmarshaller: Unmarshaller[ZkSerialized, TestClass1] =
@@ -61,3 +61,4 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
   }
 }
 
+*/

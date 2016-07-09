@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.storage.impl
+/*package mesosphere.marathon.core.storage.impl
 
 import akka.http.scaladsl.marshalling.{ Marshal, Marshaller }
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -129,3 +129,4 @@ class LazyCachingPersistenceStore[K, Serialized](
 
   override def toString: String = s"LazyCachingPersistenceStore($store)"
 }
+*/
