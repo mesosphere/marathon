@@ -1,87 +1,62 @@
-/*package mesosphere.marathon.core.storage.impl
+package mesosphere.marathon.core.storage.impl
+
+import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
-import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.marathon.core.storage.{ BasePersistenceStore, IdResolver }
+import akka.{Done, NotUsed}
+import mesosphere.marathon.core.storage.VersionedId
+import mesosphere.marathon.metrics.Metrics
 
-import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 
-case class RamId(id: String)
+case class RamId(category: String, id: String, version: Option[OffsetDateTime])
 case class Identity(value: Any)
 
 trait InMemoryStoreSerialization {
-  implicit def idResolver[V]: IdResolver[String, RamId, V, Identity] =
-    new IdResolver[String, RamId, V, Identity] {
-      override def toStorageId(id: String): RamId = RamId(id)
-      override def fromStorageId(key: RamId): String = key.id
-    }
-
   implicit def marshaller[V]: Marshaller[V, Identity] = Marshaller.opaque { a: V => Identity(a) }
 
   implicit def unmarshaller[V]: Unmarshaller[Identity, V] =
     Unmarshaller.strict { a: Identity => a.value.asInstanceOf[V] }
 }
 
-class InMemoryPersistenceStore(implicit protected val mat: ActorMaterializer)
+class InMemoryPersistenceStore(implicit protected val mat: ActorMaterializer, protected val metrics: Metrics)
     extends BasePersistenceStore[RamId, Identity] {
   val entries = TrieMap[RamId, Identity]()
 
-  override protected[storage] def keys(): Source[RamId, NotUsed] = {
-    @tailrec def allPaths(path: String, remaining: List[String], all: List[String]): List[String] = {
-      val root = if (path.isEmpty) path else s"$path/"
-      remaining match {
-        case head :: tail =>
-          allPaths(s"$root$head", tail, s"$root$head" :: all)
-        case Nil =>
-          all
-      }
-    }
-    val keys = entries.keys.flatMap { key =>
-      allPaths("", key.id.split("/").toList, Nil)
-    }
-    Source(keys.map(RamId(_))(collection.breakOut))
-  }
+  override protected def rawIds(id: RamId): Source[RamId, NotUsed] =
+    Source(entries.keySet.filter(_.category == id.category).toVector)
 
-  override protected def rawDelete(id: RamId): Future[Done] = {
-    entries.remove(id)
+  override protected def rawGet(k: RamId): Future[Option[Identity]] =
+    Future.successful(entries.get(k))
+
+  override protected def rawDelete(k: RamId, version: OffsetDateTime): Future[Done] = {
+    entries.remove(k.copy(version = Some(version)))
     Future.successful(Done)
   }
 
-  override protected[storage] def rawGet(id: RamId): Future[Option[Identity]] = {
-    Future.successful(entries.get(id))
+  override protected def rawStore[V](k: RamId, v: Identity): Future[Done] = {
+    entries.put(k, v)
+    Future.successful(Done)
   }
 
-  override protected[storage] def rawSet(id: RamId, v: Identity): Future[Done] = {
-    if (entries.contains(id)) {
-      entries.put(id, v)
-      Future.successful(Done)
-    } else {
-      Future.failed(new StoreCommandFailedException(s"Attempted to set '${id.id}' = $v, but the entry didn't exist"))
-    }
+  override protected def rawVersions(id: RamId): Source[VersionedId[RamId], NotUsed] = {
+    val versions = entries.withFilter {
+      case (k, _) => k.category == id.category && k.id == id.id && k.version.isDefined
+    }.map { case (k, _) => VersionedId(id, id.version.get) }
+    Source(versions.toVector)
   }
 
-  override protected def rawIds(parent: RamId): Source[RamId, NotUsed] = {
-    Source(entries.keySet.withFilter(_.id.startsWith(parent.id)).map { key =>
-      val path = if (parent.id == "") key.id else key.id.replaceAll(s"^(${parent.id})/", "")
-      RamId(path.split("/").head)
-    }(collection.breakOut))
+  override protected def rawDeleteAll(k: RamId): Future[Done] = {
+    val toRemove = entries.keySet.filter(id => k.category == id.category && k.id == id.id)
+    toRemove.foreach(entries.remove)
+    Future.successful(Done)
   }
 
-  override protected def rawCreate(id: RamId, v: Identity): Future[Done] = {
-    if (entries.contains(id)) {
-      Future.failed(
-        new StoreCommandFailedException(s"Attempted to create '${id.id}' = $v, but the entry already exists"))
-    } else {
-      entries.put(id, v)
-      Future.successful(Done)
-    }
-  }
+  override protected[storage] def keys(): Source[RamId, NotUsed] =
+    Source(entries.keySet.filter(_.version.isEmpty).toVector)
 }
 
-*/

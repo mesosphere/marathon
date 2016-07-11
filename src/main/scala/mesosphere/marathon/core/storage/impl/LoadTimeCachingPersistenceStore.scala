@@ -1,4 +1,4 @@
-/*package mesosphere.marathon.core.storage.impl
+package mesosphere.marathon.core.storage.impl
 
 import java.io.NotActiveException
 
@@ -158,4 +158,3 @@ class LoadTimeCachingPersistenceStore[K, Serialized](
 
   override def toString: String = s"LoadTimeCachingPersistenceStore($store)"
 }
-*/

@@ -17,18 +17,22 @@ import scala.concurrent.{ExecutionContext, Future}
   * Persistence Store that handles all marshalling and unmarshalling, allowing
   * subclasses to focus on the raw formatted data.
   *
-  * @param maxVersions The maximum number of versions allowed.
   * @tparam K The persistence store's primary key type
   * @tparam Serialized The serialized format for the persistence store.
   */
-abstract class BasePersistenceStore[K, Serialized](maxVersions: Int,
-                                              clock: Clock = Clock.systemUTC())(
-                                                  implicit ctx: ExecutionContext,
-                                                  mat: Materializer
+abstract class BasePersistenceStore[K, Serialized](clock: Clock = Clock.systemUTC())(
+                                                   implicit ctx: ExecutionContext,
+                                                   mat: Materializer
 ) extends PersistenceStore[K, Serialized]
   with TimedPersistenceStore[K, Serialized] {
 
   private[this] lazy val lockManager = LockManager.create()
+
+  protected def rawIds(id: K): Source[K, NotUsed]
+
+  override def ids[Id, V]()(implicit ir: IdResolver[Id, K, V, Serialized]): Source[Id, NotUsed] = {
+    rawIds(ir.toStorageCategory).map(ir.fromStorageId)
+  }
 
   protected def rawVersions(id: K): Source[VersionedId[K], NotUsed]
 
@@ -82,7 +86,7 @@ abstract class BasePersistenceStore[K, Serialized](maxVersions: Int,
     }
   }
 
-  protected def deleteOld(k: K): Future[Done] = async {
+  protected def deleteOld(k: K, maxVersions: Int): Future[Done] = async {
     val versions = await(rawVersions(k).toMat(Sink.seq)(Keep.right).run()).sortBy(_.version.toEpochSecond)
     val numToDelete = maxVersions - versions.size
     val deletes = versions.take(numToDelete).map(v => rawDelete(v.id, v.version))
@@ -100,7 +104,7 @@ abstract class BasePersistenceStore[K, Serialized](maxVersions: Int,
       async {
         val serialized = await(Marshal(v).to[Serialized])
         await(rawStore(storageId, serialized))
-        await(deleteOld(storageId))
+        await(deleteOld(storageId, ir.maxVersions))
         Done
       }
     }

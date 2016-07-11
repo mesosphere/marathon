@@ -7,7 +7,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import com.google.protobuf.{Message, MessageLite}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.core.storage.VersionedId
@@ -18,8 +17,8 @@ import mesosphere.util.state.zk.{Children, GetData, RichCuratorFramework}
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 
-import scala.collection.immutable.Seq
 import scala.async.Async.{async, await}
+import scala.collection.immutable.Seq
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
@@ -31,18 +30,14 @@ case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
   }
 }
 
-case class ZkSerialized(data: Either[ByteString, MessageLite]) {
-  val encoded: ByteString = ByteString(data.right.get.toByteArray)
-  def decoded[T <: MessageLite](builder: Message.Builder): T =
-    builder.mergeFrom(data.left.get.toArray).build().asInstanceOf[T]
-}
+case class ZkSerialized(bytes: ByteString)
 
 class ZkPersistenceStore(client: RichCuratorFramework, maxVersions: Int)(
                         implicit mat: Materializer,
                         ctx: ExecutionContext,
                         scheduler: Scheduler,
                         val metrics: Metrics
-) extends BasePersistenceStore[ZkId, ZkSerialized](maxVersions) with StrictLogging {
+) extends BasePersistenceStore[ZkId, ZkSerialized]() with StrictLogging {
 
   private val retryOn: Retry.RetryOnFn = {
     case _: KeeperException.ConnectionLossException => true
@@ -52,9 +47,22 @@ class ZkPersistenceStore(client: RichCuratorFramework, maxVersions: Int)(
 
   private def retry[T](name: String)(f: => Future[T]) = Retry(name, retryOn = retryOn)(f)
 
+  override protected def rawIds(id: ZkId): Source[ZkId, NotUsed] = {
+    val childrenFuture = retry(s"ZkPersistenceStore::ids($id)") {
+      async {
+        val buckets = await(client.children(s"/${id.category}")).children
+        val children = await(Future.sequence(buckets.map(b => client.children(s"/${id.category}/$b").map(_.children))))
+        children.flatten.map { child =>
+          ZkId(id.category, child, None)
+        }
+      }
+    }
+    Source.fromFuture(childrenFuture).mapConcat(identity)
+  }
+
   override protected def rawVersions(id: ZkId): Source[VersionedId[ZkId], NotUsed] = {
     val key = id.copy(version = None)
-    val path = s"$key/versions"
+    val path = s"${key.path}/versions"
     val versions = retry(s"ZkPersistenceStore::versions($path)") {
       async {
         await(client.children(path).asTry) match {
@@ -78,7 +86,7 @@ class ZkPersistenceStore(client: RichCuratorFramework, maxVersions: Int)(
       async {
         await(client.data(k.path).asTry) match {
           case Success(GetData(_, _, bytes)) =>
-            Some(ZkSerialized(Left(bytes)))
+            Some(ZkSerialized(bytes))
           case Failure(_: NoNodeException) =>
             None
           case Failure(e: KeeperException) =>
@@ -107,7 +115,7 @@ class ZkPersistenceStore(client: RichCuratorFramework, maxVersions: Int)(
       async {
         await(client.create(k.path, creatingParentContainersIfNeeded = true).asTry) match {
           case Success(_) | Failure(_: NodeExistsException) =>
-            await(client.setData(k.path, v.encoded))
+            await(client.setData(k.path, v.bytes))
             Done
           case Failure(e) =>
             throw e
@@ -122,5 +130,14 @@ class ZkPersistenceStore(client: RichCuratorFramework, maxVersions: Int)(
     }
   }
 
-  override protected[storage] def keys(): Source[ZkId, NotUsed] = ???
+  override protected[storage] def keys(): Source[ZkId, NotUsed] = {
+    val sources = retry(s"ZkPersistenceStore::keys()") {
+      async {
+        val rootChildren = await(client.children("/").map(_.children)).map(c => ZkId(c, "", None))
+        val sources = rootChildren.map(rawIds)
+        sources.reduce(_.concat(_))
+      }
+    }
+    Source.fromFuture(sources).flatMapConcat(identity)
+  }
 }

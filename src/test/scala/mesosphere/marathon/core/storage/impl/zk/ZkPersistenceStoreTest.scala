@@ -1,44 +1,43 @@
-/*package mesosphere.marathon.core.storage.impl.zk
+package mesosphere.marathon.core.storage.impl.zk
 
-import java.nio.ByteOrder
-import java.nio.charset.StandardCharsets
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
+import com.codahale.metrics.MetricRegistry
+import com.google.protobuf.MessageLite
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStoreTest, TestClass1 }
+import mesosphere.marathon.core.storage._
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.metrics.Metrics
 
 trait TestClass1Implicits {
-  implicit val byteOrder = ByteOrder.BIG_ENDIAN
-
-  implicit val byteStringMarshaller: Marshaller[TestClass1, ZkSerialized] =
-    Marshaller.opaque { (tc: TestClass1) =>
-      val bytes = ByteString.newBuilder
-      val strBytes = tc.str.getBytes(StandardCharsets.UTF_8)
-      bytes.putInt(strBytes.length)
-      bytes.putBytes(strBytes)
-      bytes.putInt(tc.int)
-      ZkSerialized((bytes.result())
-    }
-
-  implicit val byteStringUnmarshaller: Unmarshaller[ZkSerialized, TestClass1] =
-    Unmarshaller.strict { (zk: ZkSerialized) =>
-      val it = zk.bytes.iterator
-      val strLen = it.getInt
-      val str = new String(it.getBytes(strLen), StandardCharsets.UTF_8)
-      TestClass1(str, it.getInt)
-    }
-
   implicit val zkIdResolver = new IdResolver[String, ZkId, TestClass1, ZkSerialized] {
-    override def fromStorageId(path: ZkId): String = {
-      path.id.replaceFirst("/test-class/", "")
+    override def fromStorageId(path: ZkId): String = path.id.replaceAll("_", "/")
+
+    override def toStorageId(id: String, version: Option[OffsetDateTime]): ZkId = {
+      ZkId(category = "test-class", id.replaceAll("/", "_"), version)
     }
 
-    override def toStorageId(id: String): ZkId = ZkId(if (id.nonEmpty) s"/test-class/$id" else "/test-class")
+    override def toStorageCategory: ZkId = ZkId("test-class", "", None)
+
+    override val maxVersions: Int = 2
   }
+
+  implicit def zkMarshal[Proto <: MessageLite,
+                         T <: MarathonState[Proto]]: Marshaller[MarathonState[Proto], ZkSerialized] =
+    Marshaller.opaque { (a: MarathonState[Proto]) =>
+      ZkSerialized(ByteString(a.toProto.toByteArray))
+    }
+
+  def zkUnmarshaller[Proto <: MessageLite,
+                     T <: MarathonState[Proto]](proto: MarathonProto[Proto, T]): Unmarshaller[ZkSerialized, T] =
+    Unmarshaller.strict { (a: ZkSerialized) => proto.fromProtoBytes(a.bytes) }
+
+  implicit def zkTc1Unmarshaller: Unmarshaller[ZkSerialized, TestClass1] =
+    zkUnmarshaller(new TestClass1.Builder)
 }
 
 class ZkPersistenceStoreTest extends AkkaUnitTest
@@ -53,7 +52,8 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
     val client = zkClient()
     val root = createId
     client.create(s"/$root").futureValue
-    new ZkPersistenceStore(client.usingNamespace(root))
+    implicit val metrics = new Metrics(new MetricRegistry)
+    new ZkPersistenceStore(client.usingNamespace(root), 5)
   }
 
   "ZookeeperPersistenceStore" should {
@@ -61,4 +61,3 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
   }
 }
 
-*/
