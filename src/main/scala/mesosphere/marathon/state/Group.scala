@@ -227,13 +227,13 @@ object Group {
       group.apps is every(AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base)))
       group is noAppsAndGroupsWithSameName
       (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
-      group is validPorts
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
     }
 
     // We do not want a "/value" prefix, therefore we do not create nested validators with validator[Group]
     // but chain the validators directly.
     doesNotExceedMaxApps and
+      validPorts and
       validNestedGroup(PathId.empty) and
       ExternalVolumes.validRootGroup()
   }
@@ -253,18 +253,19 @@ object Group {
   private def validPorts: Validator[Group] = {
     new Validator[Group] {
       override def apply(group: Group): Result = {
-        val groupViolations = group.apps.flatMap { app =>
-          val ruleViolations = app.container.flatMap(_.servicePorts).toSeq.flatMap { servicePorts =>
-            for {
-              existingApp <- group.transitiveApps.toList
-              if existingApp.id != app.id // in case of an update, do not compare the app against itself
-              existingServicePort <- existingApp.container.flatMap(_.portMappings).toList.flatten.map(_.servicePort)
-              if existingServicePort != 0 // ignore zero ports, which will be chosen at random
-              if servicePorts contains existingServicePort
-            } yield RuleViolation(app.id,
-              s"Requested service port $existingServicePort conflicts with a service port in app ${existingApp.id}",
-              None)
-          }
+        val groupViolations = group.transitiveApps.flatMap { app =>
+          val servicePorts = app.servicePorts.toSet
+
+          val ruleViolations = for {
+            existingApp <- group.transitiveApps
+            if existingApp.id != app.id // in case of an update, do not compare the app against itself
+            existingServicePort <- existingApp.servicePorts
+            if existingServicePort != 0 // ignore zero ports, which will be chosen at random
+            if servicePorts contains existingServicePort
+          } yield RuleViolation(
+            app.id,
+            s"Requested service port $existingServicePort conflicts with a service port in app ${existingApp.id}",
+            None)
 
           if (ruleViolations.isEmpty) None
           else Some(GroupViolation(app, "app contains conflicting ports", None, ruleViolations.toSet))
