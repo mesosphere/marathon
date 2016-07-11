@@ -25,6 +25,8 @@ def test_mom_with_network_failure():
     install_package_and_wait(PACKAGE_NAME)
     assert package_installed(PACKAGE_NAME), 'Package failed to install'
 
+    wait_for_service_url(DCOS_SERVICE_URL)
+
     # get MoM ip
     service_ips = get_service_ips(PACKAGE_NAME,"marathon-user")
     for mom_ip in service_ips:
@@ -88,6 +90,8 @@ def test_mom_with_network_failure_bounce_master():
     # Install MoM
     install_package_and_wait(PACKAGE_NAME)
     assert package_installed(PACKAGE_NAME), 'Package failed to install'
+
+    wait_for_service_url(DCOS_SERVICE_URL)
 
     # get MoM ip
     service_ips = get_service_ips(PACKAGE_NAME,"marathon-user")
@@ -157,7 +161,11 @@ def teardown_sleep():
     removeAppCurlCommand = "curl -X DELETE -H 'Authorization: token="  + TOKEN + "' " + DCOS_SERVICE_URL + "/v2/apps/sleep"
     run_command_on_master(removeAppCurlCommand)
     service_delay(15)
-    uninstall_package_and_wait(PACKAGE_NAME)
+    try:
+        uninstall_package_and_wait(PACKAGE_NAME)
+    except Exception as e:
+        print("Ignoring uninstall warning")
+
     run_command_on_master("docker run mesosphere/janitor /janitor.py -z universe/marathon-user")
 
 
@@ -212,6 +220,7 @@ def partition_agent(hostname):
     """Partition a node from all network traffic except for SSH and loopback"""
 
     copy_file_to_agent(hostname,"{}/net-services-agent.sh".format(python_test_script_dir()))
+    print ("partitioning {}".format(hostname))
     run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
 
 def reconnect_agent(hostname):
@@ -236,7 +245,7 @@ def wait_for_service_url(url,timeout_sec=120):
         try:
             response = http.get(url)
         except Exception as e:
-            print("Not available yet.")
+            print("")
 
         if response is None:
             time.sleep(5)
