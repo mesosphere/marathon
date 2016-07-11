@@ -268,8 +268,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     appRepo: AppRepository,
     groupRepo: GroupRepository,
     taskRepo: TaskRepository,
+    deploymentRepo: DeploymentRepository,
     metrics: Metrics): Migration = {
-    new Migration(store, appRepo, groupRepo, taskRepo, conf, metrics)
+    new Migration(store, appRepo, groupRepo, taskRepo, deploymentRepo, conf, metrics)
   }
 
   @Provides
@@ -375,7 +376,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) store: EntityStore[DeploymentPlan],
     conf: MarathonConf,
     metrics: Metrics): DeploymentRepository = {
-    new DeploymentRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+    new DeploymentRepository(store, metrics)
   }
 
   @Named(ModuleNames.STORE_DEPLOYMENT_PLAN)
