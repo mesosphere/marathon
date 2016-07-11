@@ -9,7 +9,6 @@ import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import org.apache.mesos.{ Protos => mesos }
 import play.api.data.validation.ValidationError
 import play.api.libs.json.{ JsPath, JsError, Json }
 
@@ -89,7 +88,7 @@ class AppUpdateTest extends MarathonSpec {
   }
 
   test("SerializationRoundtrip for empty definition") {
-    val update0 = AppUpdate(container = Some(Container.Empty))
+    val update0 = AppUpdate(container = Some(Container.Mesos()))
     JsonTestHelper.assertSerializationRoundtripWorks(update0)
   }
 
@@ -109,13 +108,10 @@ class AppUpdateTest extends MarathonSpec {
       backoff = Some(2.seconds),
       backoffFactor = Some(1.2),
       maxLaunchDelay = Some(1.minutes),
-      container = Some(
-        Container(
-          `type` = mesos.ContainerInfo.Type.DOCKER,
-          volumes = Nil,
-          docker = Some(Docker(image = "docker:///group/image"))
-        )
-      ),
+      container = Some(Docker(
+        volumes = Nil,
+        image = "docker:///group/image"
+      )),
       healthChecks = Some(Set[HealthCheck]()),
       taskKillGracePeriod = Some(2.seconds),
       dependencies = Some(Set[PathId]()),

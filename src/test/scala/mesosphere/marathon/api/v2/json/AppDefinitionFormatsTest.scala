@@ -274,7 +274,8 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.map(_.`type`.toString) should equal (Some("MESOS"))
+    appDef.container.isDefined
+    appDef.container.get shouldBe a[Container.Mesos]
   }
 
   test("FromJSON should parse ipAddress.networkName with DOCKER container w/o port mappings") {
@@ -295,7 +296,8 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.map(_.`type`.toString) should equal (Some("DOCKER"))
+    appDef.container.isDefined
+    appDef.container.get shouldBe a[Container.Docker]
     appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
   }
 
@@ -320,7 +322,8 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.map(_.`type`.toString) should equal (Some("DOCKER"))
+    appDef.container.isDefined
+    appDef.container.get shouldBe a[Container.Docker]
     appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
     appDef.container.flatMap(_.docker.flatMap(_.portMappings)) should equal (Some(Seq(
       Container.Docker.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))

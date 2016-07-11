@@ -380,7 +380,7 @@ case class AppDefinition(
     def fromPortMappings: Option[Seq[PortAssignment]] = {
       for {
         c <- container
-        pms <- c.portMappings
+        pms <- c.getPortMappings
         launched <- task.launched
         effectiveIpAddress <- task.effectiveIpAddress(this)
       } yield {
@@ -414,7 +414,7 @@ case class AppDefinition(
 
   def portNames: Seq[String] = {
     def fromDiscoveryInfo = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
-    def fromPortMappings = container.map(_.portMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
+    def fromPortMappings = container.map(_.getPortMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
     def fromPortDefinitions = portDefinitions.flatMap(_.name)
 
     if (networkModeBridge || networkModeUser) fromPortMappings
@@ -637,10 +637,10 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
 
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =
-    isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.") { app =>
+    isTrue("AppDefinition must either contain one of 'cmd' or 'args', and/or a non-Mesos 'container'.") { app =>
       val cmd = app.cmd.nonEmpty
       val args = app.args.nonEmpty
-      val container = app.container.exists(_ != Container.Empty)
+      val container = app.container.exists(!_.isInstanceOf[Container.Mesos])
       (cmd ^ args) || (!(cmd || args) && container)
     }
 

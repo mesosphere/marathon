@@ -26,105 +26,81 @@ class ContainerTest extends MarathonSpec with Matchers {
       DockerVolume("/etc/b", "/var/data/b", mesos.Volume.Mode.RW)
     )
 
-    lazy val container = Container(
-      `type` = mesos.ContainerInfo.Type.DOCKER,
+    lazy val container: Container = Container.Docker(
       volumes = volumes,
-      docker = Some(Container.Docker(image = "group/image"))
+      image = "group/image"
     )
 
-    lazy val container2 = Container(
-      `type` = mesos.ContainerInfo.Type.DOCKER,
+    lazy val container2: Container = Container.Docker(
       volumes = Nil,
-      docker = Some(
-        Container.Docker(
-          image = "group/image",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(
-              containerPort = 8080,
-              hostPort = Some(32001),
-              servicePort = 9000,
-              protocol = Container.Docker.PortMapping.TCP,
-              name = Some("http"),
-              labels = Map("foo" -> "bar")),
-            Container.Docker.PortMapping(
-              containerPort = 8081,
-              hostPort = Some(32002),
-              servicePort = 9001,
-              protocol = Container.Docker.PortMapping.UDP)
-          )
-          )
-        )
+      image = "group/image",
+      network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+      portMappings = Some(Seq(
+        Container.Docker.PortMapping(
+          containerPort = 8080,
+          hostPort = Some(32001),
+          servicePort = 9000,
+          protocol = Container.Docker.PortMapping.TCP,
+          name = Some("http"),
+          labels = Map("foo" -> "bar")),
+        Container.Docker.PortMapping(
+          containerPort = 8081,
+          hostPort = Some(32002),
+          servicePort = 9001,
+          protocol = Container.Docker.PortMapping.UDP)
+      ))
+    )
+
+    lazy val container3: Container = Container.Docker(
+      volumes = Nil,
+      image = "group/image",
+      network = Some(mesos.ContainerInfo.DockerInfo.Network.NONE),
+      privileged = true,
+      parameters = Seq(
+        Parameter("abc", "123"),
+        Parameter("def", "456")
       )
     )
 
-    lazy val container3 = Container(
-      `type` = mesos.ContainerInfo.Type.DOCKER,
+    lazy val container4: Container = Container.Docker(
       volumes = Nil,
-      docker = Some(
-        Container.Docker(
-          image = "group/image",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.NONE),
-          privileged = true,
-          parameters = Seq(
-            Parameter("abc", "123"),
-            Parameter("def", "456")
-          )
-        )
-      )
+      image = "group/image",
+      network = Some(mesos.ContainerInfo.DockerInfo.Network.NONE),
+      privileged = true,
+      parameters = Seq(
+        Parameter("abc", "123"),
+        Parameter("def", "456"),
+        Parameter("def", "789")
+      ),
+      forcePullImage = true
     )
 
-    lazy val container4 = Container(
-      `type` = mesos.ContainerInfo.Type.DOCKER,
+    lazy val container5: Container = Container.Docker(
       volumes = Nil,
-      docker = Some(
-        Container.Docker(
-          image = "group/image",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.NONE),
-          privileged = true,
-          parameters = Seq(
-            Parameter("abc", "123"),
-            Parameter("def", "456"),
-            Parameter("def", "789")
-          ),
-          forcePullImage = true
-        )
-      )
+      image = "group/image",
+      network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+      portMappings = Some(Seq(
+        Container.Docker.PortMapping(
+          containerPort = 8080,
+          hostPort = Some(32001),
+          servicePort = 9000,
+          protocol = "tcp,udp"),
+        Container.Docker.PortMapping(
+          containerPort = 8081,
+          hostPort = Some(32002),
+          servicePort = 9001,
+          protocol = "udp,tcp")
+      ))
     )
 
-    lazy val container5 = Container(
-      `type` = mesos.ContainerInfo.Type.DOCKER,
-      volumes = Nil,
-      docker = Some(
-        Container.Docker(
-          image = "group/image",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(
-              containerPort = 8080,
-              hostPort = Some(32001),
-              servicePort = 9000,
-              protocol = "tcp,udp"),
-            Container.Docker.PortMapping(
-              containerPort = 8081,
-              hostPort = Some(32002),
-              servicePort = 9001,
-              protocol = "udp,tcp")
-          ))
-        )
-      )
-    )
-
-    lazy val mesosContainerWithPersistentVolume = Container(
-      `type` = mesos.ContainerInfo.Type.MESOS,
+    lazy val mesosContainerWithPersistentVolume: Container = Container.Mesos(
       volumes = Seq[Volume](
         PersistentVolume(
           containerPath = "/local/container/",
           persistent = PersistentVolumeInfo(1024),
           mode = mesos.Volume.Mode.RW
         )
-      ),
-      docker = None
+      )
     )
 
     lazy val mesosContainerWithPersistentVolumeJsonStr =
@@ -263,7 +239,7 @@ class ContainerTest extends MarathonSpec with Matchers {
   }
 
   test("SerializationRoundtrip empty") {
-    val container1 = Container(`type` = mesos.ContainerInfo.Type.DOCKER)
+    val container1: Container = Container.Docker()
     JsonTestHelper.assertSerializationRoundtripWorks(container1)
   }
 

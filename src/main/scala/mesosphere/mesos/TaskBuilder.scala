@@ -7,7 +7,7 @@ import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefiniti
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{ AppDefinition, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
+import mesosphere.marathon.state.{ AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
 
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
@@ -184,7 +184,7 @@ class TaskBuilder(
     val portProtos = runSpec.ipAddress match {
       case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
       case _ =>
-        runSpec.container.flatMap(_.portMappings) match {
+        runSpec.container.flatMap(_.getPortMappings) match {
           case Some(portMappings) =>
             // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
             portMappings.zip(hostPorts).collect {
@@ -237,12 +237,12 @@ class TaskBuilder(
 
         val containerWithPortMappings = portMappings match {
           case None => c
-          case Some(newMappings) => c.copy(
-            docker = c.docker.map {
-              _.copy(portMappings = newMappings)
-            }
-          )
+          case Some(newMappings) => c match {
+            case docker: Container.Docker => docker.copy(portMappings = newMappings)
+            case _ => c
+          }
         }
+
         builder.mergeFrom(ContainerSerializer.toMesos(containerWithPortMappings))
       }
 
@@ -291,7 +291,7 @@ object TaskBuilder {
     val declaredPorts = {
       val containerPorts = for {
         c <- runSpec.container
-        pms <- c.portMappings
+        pms <- c.getPortMappings
       } yield pms.map(_.containerPort)
 
       containerPorts.getOrElse(runSpec.portNumbers)
@@ -299,7 +299,7 @@ object TaskBuilder {
     val portNames = {
       val containerPortNames = for {
         c <- runSpec.container
-        pms <- c.portMappings
+        pms <- c.getPortMappings
       } yield pms.map(_.name)
 
       containerPortNames.getOrElse(runSpec.portDefinitions.map(_.name))
