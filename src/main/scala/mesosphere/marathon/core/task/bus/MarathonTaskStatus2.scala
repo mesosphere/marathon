@@ -39,20 +39,19 @@ object MarathonTaskStatus2 {
         Lost(taskStatus)
       }
     }
+    val option = Some(taskStatus)
 
-    val matcher: Option[TaskStatus] => MarathonTaskStatus2 = taskStatus.getState match {
-      case TASK_ERROR => Error
-      case TASK_FAILED => Failed
-      case TASK_FINISHED => Finished
-      case TASK_KILLED => Killed
-      case TASK_KILLING => Killing
-      case TASK_LOST => transformLostMesosStatus
-      case TASK_RUNNING => Running
-      case TASK_STAGING => Staging
-      case TASK_STARTING => Starting
+    taskStatus.getState match {
+      case TASK_ERROR => Error(option)
+      case TASK_FAILED => Failed(option)
+      case TASK_FINISHED => Finished(option)
+      case TASK_KILLED => Killed(option)
+      case TASK_KILLING => Killing(option)
+      case TASK_LOST => transformLostMesosStatus(option)
+      case TASK_RUNNING => Running(option)
+      case TASK_STAGING => Staging(option)
+      case TASK_STARTING => Starting(option)
     }
-
-    matcher(Some(taskStatus))
   }
 
   // Marathon specific states
