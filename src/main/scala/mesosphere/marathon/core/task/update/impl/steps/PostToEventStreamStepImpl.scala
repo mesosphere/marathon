@@ -38,7 +38,7 @@ class PostToEventStreamStepImpl @Inject() (
       // case 2: Any TaskStateOp => update or expunge
       // In this case, we post the NEW state
       case TaskChanged(_, EffectiveTaskStateChange(task)) =>
-        postEvent(clock.now(), task.mesosStatus, task)
+        postEvent(clock.now(), task.taskStatus.mesosStatus, task)
 
       case _ =>
         log.debug("Ignoring noop for {}", taskChanged.taskId)

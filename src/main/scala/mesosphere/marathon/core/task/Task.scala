@@ -2,8 +2,9 @@ package mesosphere.marathon.core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.state.{ RunSpec, PathId, PersistentVolume, Timestamp }
-import org.apache.mesos.Protos.{ TaskState }
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus.Terminal
+import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
+import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
@@ -61,12 +62,15 @@ sealed trait Task {
 
   def runSpecId: PathId = taskId.runSpecId
 
+  def taskStatus: MarathonTaskStatus = MarathonTaskStatus.apply(mesosStatus.get)
+
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task
     taskId.mesosTaskId
   }
 
-  def mesosStatus: Option[MesosProtos.TaskStatus] = {
+  // TODO ju remove
+  private def mesosStatus: Option[MesosProtos.TaskStatus] = {
     launched.flatMap(_.status.mesosStatus).orElse {
       launchedMesosId.map { mesosId =>
         val taskStatusBuilder = MesosProtos.TaskStatus.newBuilder
@@ -120,8 +124,8 @@ object Task {
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(updatedStatus), now) =>
-        val updated = copy(status = status.copy(mesosStatus = updatedStatus.mesosStatus))
+      case TaskStateOp.MesosUpdate(_, terminal: Terminal, now) =>
+        val updated = copy(status = status.copy(mesosStatus = terminal.mesosStatus))
         TaskStateChange.Expunge(updated)
 
       // case 3: health or state updated
@@ -231,7 +235,7 @@ object Task {
 
       // case 2: terminal
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(_), now) =>
+      case TaskStateOp.MesosUpdate(_, _: Terminal, now) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,

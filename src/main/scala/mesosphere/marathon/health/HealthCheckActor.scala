@@ -4,11 +4,11 @@ import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.bus.MesosTaskStatus.TemporarilyUnreachable
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
+import mesosphere.marathon.core.task.bus.MarathonTaskStatus.Unreachable
 
 private[health] class HealthCheckActor(
     app: AppDefinition,
@@ -83,12 +83,12 @@ private[health] class HealthCheckActor(
     }
 
   def dispatchJobs(): Unit = {
-    import TemporarilyUnreachable.isUnreachable
-
     log.debug("Dispatching health check jobs to workers")
     taskTracker.appTasksSync(app.id).foreach { task =>
+
       task.launched.foreach { launched =>
-        if (launched.runSpecVersion == app.version && launched.hasStartedRunning && !isUnreachable(task)) {
+        if (launched.runSpecVersion == app.version && launched.hasStartedRunning &&
+          !task.taskStatus.isInstanceOf[Unreachable]) {
           log.debug("Dispatching health check job for {}", task.taskId)
           val worker: ActorRef = context.actorOf(workerProps)
           worker ! HealthCheckJob(app, task, launched, healthCheck)
@@ -108,8 +108,8 @@ private[health] class HealthCheckActor(
       )
 
       // kill the task, if it is reachable
-      task match {
-        case TemporarilyUnreachable(_) =>
+      task.taskStatus match {
+        case _: Unreachable =>
           val id = task.taskId
           log.warning(s"Task $id on host ${task.agentInfo.host} is temporarily unreachable. Performing no kill.")
         case _ =>

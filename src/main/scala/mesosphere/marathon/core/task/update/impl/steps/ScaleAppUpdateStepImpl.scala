@@ -29,10 +29,11 @@ class ScaleAppUpdateStepImpl @Inject() (
     val terminalOrExpungedTask: Option[Task] = {
       (taskChanged.stateOp, taskChanged.stateChange) match {
         // stateOp is a terminal MesosUpdate
-        case (TaskStateOp.MesosUpdate(task, MarathonTaskStatus.Terminal(_), _), _) => Some(task)
+        case (TaskStateOp.MesosUpdate(task, _: MarathonTaskStatus.Terminal, _), _) => Some(task)
 
+        // TODO ju<>me discuss about this
         // A Lost task that might come back wouldN#t be included in Terminal(_)
-        case (TaskStateOp.MesosUpdate(task, MarathonTaskStatus.Lost(_), _), _) => Some(task)
+        //        case (TaskStateOp.MesosUpdate(task, MarathonTaskStatus.Lost(_), _), _) => Some(task)
 
         // stateChange is an expunge (probably because we expunged a timeout reservation)
         case (_, TaskStateChange.Expunge(task)) => Some(task)
@@ -45,8 +46,9 @@ class ScaleAppUpdateStepImpl @Inject() (
     terminalOrExpungedTask.foreach { task =>
       val appId = task.taskId.runSpecId
       val taskId = task.taskId
-      val state = task.mesosStatus.fold(TaskState.TASK_STAGING)(_.getState)
-      val reason = task.mesosStatus.fold("")(status => if (status.hasReason) status.getReason.toString else "")
+      val state = task.taskStatus.mesosStatus.fold(TaskState.TASK_STAGING)(_.getState)
+      val reason = task.taskStatus.mesosStatus.fold("")(status =>
+        if (status.hasReason) status.getReason.toString else "")
       log.info(s"initiating a scale check for app [$appId] due to [$taskId] $state $reason")
       log.info("schedulerActor: {}", schedulerActor)
       schedulerActor ! ScaleApp(task.taskId.runSpecId)

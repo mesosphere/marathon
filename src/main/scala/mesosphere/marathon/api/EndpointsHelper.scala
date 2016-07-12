@@ -25,7 +25,7 @@ object EndpointsHelper {
 
       if (servicePorts.isEmpty) {
         sb.append(cleanId).append(delimiter).append(' ').append(delimiter)
-        for (task <- tasks if task.mesosStatus.exists(_.getState == TaskState.TASK_RUNNING)) {
+        for (task <- tasks if task.taskStatus.mesosStatus.exists(_.getState == TaskState.TASK_RUNNING)) {
           sb.append(task.agentInfo.host).append(' ')
         }
         sb.append('\n')
@@ -33,7 +33,7 @@ object EndpointsHelper {
         for ((port, i) <- servicePorts.zipWithIndex) {
           sb.append(cleanId).append(delimiter).append(port).append(delimiter)
 
-          for (task <- tasks if task.mesosStatus.exists(_.getState == TaskState.TASK_RUNNING)) {
+          for (task <- tasks if task.taskStatus.mesosStatus.exists(_.getState == TaskState.TASK_RUNNING)) {
             val taskPort = task.launched.flatMap(_.hostPorts.drop(i).headOption).getOrElse(0)
             sb.append(task.agentInfo.host).append(':').append(taskPort).append(delimiter)
           }
