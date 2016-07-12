@@ -1,16 +1,16 @@
 package mesosphere.marathon.integration.setup
 
-import java.nio.file.{ Files, Path }
+import java.nio.file.{Files, Path}
 import java.util.concurrent.Semaphore
 
-import mesosphere.marathon.test.zk.NoRetryPolicy
+import mesosphere.marathon.core.storage.impl.zk.NoRetryPolicy
 import mesosphere.util.PortAllocator
 import mesosphere.util.state.zk.RichCuratorFramework
 import org.apache.commons.io.FileUtils
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.CuratorFrameworkFactory
-import org.apache.zookeeper.server.{ ServerConfig, ZooKeeperServerMain }
-import org.scalatest.{ BeforeAndAfterAll, Suite }
+import org.apache.zookeeper.server.{ServerConfig, ZooKeeperServerMain}
+import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import scala.util.Try
 

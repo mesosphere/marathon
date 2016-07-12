@@ -13,6 +13,10 @@ import scala.util.{ Failure, Random, Success }
   * See also: https://www.awsarchitectureblog.com/2015/03/backoff.html
   */
 object Retry {
+  val DefaultMaxAttempts = 5
+  val DefaultMinDelay = 10.millis
+  val DefaultMaxDelay = 5.seconds
+
   type RetryOnFn = Throwable => Boolean
   val defaultRetry: RetryOnFn = NonFatal(_)
 
@@ -37,9 +41,9 @@ object Retry {
   // scalastyle:off magic.number
   def apply[T](
     name: String,
-    maxAttempts: Int = 5,
-    minDelay: FiniteDuration = 10.millis,
-    maxDelay: FiniteDuration = 1.second,
+    maxAttempts: Int = DefaultMaxAttempts,
+    minDelay: FiniteDuration = DefaultMinDelay,
+    maxDelay: FiniteDuration = DefaultMaxDelay,
     retryOn: RetryOnFn = defaultRetry)(f: => Future[T])(implicit
     scheduler: Scheduler,
     ctx: ExecutionContext): Future[T] = {

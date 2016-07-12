@@ -15,7 +15,7 @@ import java.time.OffsetDateTime
   * @tparam V The value type being stored
   * @tparam Serialized The serialized type of 'V' for the given [[PersistenceStore]].
   */
-trait IdResolver[Id, K, Category, V, +Serialized] {
+trait IdResolver[Id, K, Category, V, Serialized] {
   /**
     * Translate the marathon id into the given persisted format
     */

@@ -145,7 +145,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
 
   override def store[Id, V](id: Id, v: V, version: OffsetDateTime)(implicit
     ir: Resolver[Id, V],
-    m: Marshaller[V, Serialized]): Future[Done] =async {
+    m: Marshaller[V, Serialized]): Future[Done] = async {
     val (valueCache, idCache, _) = (await(this.cache), await(this.idCache), await(store.store(id, v, version)))
     valueCache.write { vc =>
       vc.putIfAbsent(ir.toStorageId(id, None), Right(v))

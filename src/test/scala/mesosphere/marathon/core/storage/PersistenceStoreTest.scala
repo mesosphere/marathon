@@ -19,7 +19,7 @@ object TestClass1 {
 }
 
 private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
-  def emptyPersistenceStore[K, C, Serialized](newStore: => PersistenceStore[K, C, Serialized])(
+  def basePersistenceStore[K, C, Serialized](newStore: => PersistenceStore[K, C, Serialized])(
     implicit
     ir: IdResolver[String, K, C, TestClass1, Serialized],
     m: Marshaller[TestClass1, Serialized],
@@ -36,6 +36,7 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
     "not fail if the key doesn't exist" in {
       val store = newStore
       store.get("task-1").futureValue should be('empty)
+      store.versions("task-1").runWith(Sink.seq).futureValue should be('empty)
     }
     "create and list an object" in {
       implicit val clock = new SettableClock()

@@ -29,10 +29,10 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
 
   "LazyCachingPersistenceStore" when {
     "backed by InMemoryPersistenceStore" should {
-      behave like emptyPersistenceStore(cachedInMemory)
+      behave like basePersistenceStore(cachedInMemory)
     }
     "backed by ZkPersistenceStore" should {
-      behave like emptyPersistenceStore(cachedZk)
+      behave like basePersistenceStore(cachedZk)
     }
     // TODO: Mock out the backing store.
   }
