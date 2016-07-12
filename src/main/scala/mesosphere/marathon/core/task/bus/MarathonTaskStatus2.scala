@@ -5,7 +5,7 @@ import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.Protos.TaskStatus.Reason._
 
 sealed trait MarathonTaskStatus2 {
-  // val garbage: Boolean
+  // val garbage: Boolean TODO
   protected def mesosStatus: Option[TaskStatus]
 }
 
