@@ -2,7 +2,6 @@ package mesosphere.marathon.api.serialization
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
 import org.apache.mesos
@@ -13,27 +12,51 @@ import scala.collection.immutable.Seq
 object ContainerSerializer {
   def toProto(container: Container): Protos.ExtendedContainerInfo = {
     val builder = Protos.ExtendedContainerInfo.newBuilder
-      .setType(container.`type`)
       .addAllVolumes(container.volumes.map(VolumeSerializer.toProto).asJava)
-    container.docker.foreach { d => builder.setDocker(DockerSerializer.toProto(d)) }
+
+    container match {
+      case _: Container.Mesos =>
+        builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
+      case docker: Container.Docker =>
+        builder.setType(mesos.Protos.ContainerInfo.Type.DOCKER)
+        builder.setDocker(DockerSerializer.toProto(docker))
+    }
+
     builder.build
   }
 
   def fromProto(proto: Protos.ExtendedContainerInfo): Container = {
-    val maybeDocker = if (proto.hasDocker) Some(DockerSerializer.fromProto(proto.getDocker)) else None
-    Container(
-      `type` = proto.getType,
-      volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
-      docker = maybeDocker
-    )
+    if (proto.hasDocker) {
+      val d = proto.getDocker
+      val pms = d.getPortMappingsList.asScala
+      Container.Docker(
+        volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
+        image = d.getImage,
+        network = if (d.hasNetwork) Some(d.getNetwork) else None,
+        portMappings = if (pms.isEmpty) None else Some(pms.map(PortMappingSerializer.fromProto).to[Seq]),
+        privileged = d.getPrivileged,
+        parameters = d.getParametersList.asScala.map(Parameter(_)).to[Seq],
+        forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
+      )
+    } else {
+      Container.Mesos(
+        volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq]
+      )
+    }
   }
 
   def toMesos(container: Container): mesos.Protos.ContainerInfo = {
-    val builder = mesos.Protos.ContainerInfo.newBuilder.setType(container.`type`)
+    val builder = mesos.Protos.ContainerInfo.newBuilder
 
-    // first set container.docker because the external volume provider might depend on it
-    // to set further values.
-    container.docker.foreach { d => builder.setDocker(DockerSerializer.toMesos(d)) }
+    // First set type-specific values (for Docker) because the external volume provider
+    // might depend on it to set further values (builder is passed down as arg below).
+    container match {
+      case _: Container.Mesos =>
+        builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
+      case docker: Container.Docker =>
+        builder.setType(mesos.Protos.ContainerInfo.Type.DOCKER)
+        builder.setDocker(DockerSerializer.toMesos(docker))
+    }
 
     container.volumes.foreach {
       case pv: PersistentVolume => // PersistentVolumes are handled differently
@@ -119,21 +142,6 @@ object DockerSerializer {
 
     builder.build
   }
-
-  def fromProto(proto: Protos.ExtendedContainerInfo.DockerInfo): Docker =
-    Docker(
-      image = proto.getImage,
-      network = if (proto.hasNetwork) Some(proto.getNetwork) else None,
-      portMappings = {
-      val pms = proto.getPortMappingsList.asScala
-
-      if (pms.isEmpty) None
-      else Some(pms.map(PortMappingSerializer.fromProto).to[Seq])
-    },
-      privileged = proto.getPrivileged,
-      parameters = proto.getParametersList.asScala.map(Parameter(_)).to[Seq],
-      forcePullImage = if (proto.hasForcePullImage) proto.getForcePullImage else false
-    )
 
   def toMesos(docker: Container.Docker): mesos.Protos.ContainerInfo.DockerInfo = {
     val builder = mesos.Protos.ContainerInfo.DockerInfo.newBuilder

@@ -119,7 +119,7 @@ case class AppUpdate(
     backoff = backoff.getOrElse(app.backoff),
     backoffFactor = backoffFactor.getOrElse(app.backoffFactor),
     maxLaunchDelay = maxLaunchDelay.getOrElse(app.maxLaunchDelay),
-    container = container.filterNot(_ == Container.Empty).orElse(app.container),
+    container = app.container,
     healthChecks = healthChecks.getOrElse(app.healthChecks),
     readinessChecks = readinessChecks.getOrElse(app.readinessChecks),
     dependencies = dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),

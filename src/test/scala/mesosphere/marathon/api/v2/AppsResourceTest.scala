@@ -144,9 +144,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
       portDefinitions = Seq.empty[PortDefinition],
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.MESOS
-      ))
+      container = Some(Container.Mesos())
     )
     val (body, plan) = prepareApp(app)
 
@@ -304,16 +302,14 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       id = PathId("/app"),
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+        image = "jdef/helpme",
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+        )
         ))
-      )),
+      ),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -341,16 +337,14 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val app = AppDefinition(
       id = PathId("/app"),
       cmd = Some("cmd"),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+        image = "jdef/helpme",
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         ))
-      )),
+      )
+      ),
       portDefinitions = Seq.empty
     )
 
@@ -373,11 +367,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val expected = AppInfo(
       app.copy(
         versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
-        container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+        container = Some(app.container.get.asInstanceOf[Container.Docker].copy(
           portMappings = Some(Seq(
             Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
           ))
-        ))))
+        ))
       ),
       maybeTasks = Some(immutable.Seq.empty),
       maybeCounts = Some(TaskCounts.zero),
@@ -397,16 +391,14 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+        image = "jdef/helpme",
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         ))
-      )),
+      )
+      ),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -432,13 +424,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
-          image = "jdef/helpme"
-        ))
-      )),
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
+        image = "jdef/helpme"
+      )
+      ),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -665,7 +655,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates a validation error for container.docker")
     response.getStatus should be(422)
-    response.getEntity.toString should include("/container/docker")
+    response.getEntity.toString should include("/docker")
     response.getEntity.toString should include("must not be empty")
   }
 
@@ -1016,7 +1006,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     Then("The return code indicates a validation error for container.docker")
     response.getStatus should be(422)
-    response.getEntity.toString should include("/container/docker")
+    response.getEntity.toString should include("/docker")
     response.getEntity.toString should include("must be empty")
   }
 
