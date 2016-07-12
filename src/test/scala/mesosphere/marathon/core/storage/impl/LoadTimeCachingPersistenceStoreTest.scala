@@ -1,53 +1,47 @@
-/*package mesosphere.marathon.core.storage.impl
+package mesosphere.marathon.core.storage.impl
 
 import java.util.UUID
 
+import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.PersistenceStoreTest
-import mesosphere.marathon.core.storage.impl.zk.{ TestClass1Implicits, ZkId, ZkPersistenceStore }
+import mesosphere.marathon.core.storage.impl.zk.{ TestClass1Implicits, ZkPersistenceStore }
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.metrics.Metrics
 
 class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
     with PersistenceStoreTest with ZookeeperServerTest with TestClass1Implicits
-    with InMemoryStoreSerialization {
-  val rootId = ""
-  def createId: String = s"${UUID.randomUUID().toString}"
+    with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
+  implicit val metrics = new Metrics(new MetricRegistry)
   implicit val scheduler = system.scheduler
 
   def zkStore: ZkPersistenceStore = {
     val client = zkClient()
-    val root = createId
+    val root = UUID.randomUUID().toString
     client.create(s"/$root").futureValue
     new ZkPersistenceStore(client.usingNamespace(root))
   }
 
-  val cachedInMemory = {
-    val store = new LoadTimeCachingPersistenceStore(
-      new InMemoryPersistenceStore(),
-      (ramId: RamId) => ramId.id,
-      (id: String) => RamId(id))
-    store.preDriverStarts
+  private def cachedInMemory = {
+    val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
+    store.preDriverStarts.futureValue
     store
   }
 
-  lazy val cachedZk = {
-    val store = new LoadTimeCachingPersistenceStore(
-      zkStore,
-      (zkId: ZkId) => zkId.id,
-      (id: String) => ZkId(id))
-    store.preDriverStarts
+  private def cachedZk = {
+    val store = new LoadTimeCachingPersistenceStore(zkStore)
+    store.preDriverStarts.futureValue
     store
   }
 
   "LoadTimeCachingPersistenceStore" when {
     "backed by InMemoryPersistenceStore" should {
-      behave like singleTypeStore(cachedInMemory)
+      behave like emptyPersistenceStore(cachedInMemory)
     }
     "backed by ZkPersistenceStore" should {
-      behave like singleTypeStore(cachedZk)
+      behave like emptyPersistenceStore(cachedZk)
     }
     // TODO: Mock out the backing store
   }
 }
-*/

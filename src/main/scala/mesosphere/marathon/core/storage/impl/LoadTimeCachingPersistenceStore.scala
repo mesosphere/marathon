@@ -1,21 +1,22 @@
 package mesosphere.marathon.core.storage.impl
 
 import java.io.NotActiveException
+import java.time.OffsetDateTime
 
-import akka.http.scaladsl.marshalling.{ Marshal, Marshaller }
+import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.{ PrePostDriverCallback, StoreCommandFailedException }
-import mesosphere.marathon.core.storage.{ BasePersistenceStore, IdResolver, PersistenceStore }
-import mesosphere.marathon.util.toRichFuture
+import mesosphere.marathon.PrePostDriverCallback
+import mesosphere.marathon.core.storage.{ CategorizedKey, PersistenceStore }
+import mesosphere.marathon.util.RwLock
 
 import scala.async.Async.{ async, await }
 import scala.collection.concurrent.TrieMap
+import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
-import scala.util.{ Failure, Success, Try }
 
 /**
   * A Write Ahead Cache of another persistence store that preloads the entire persistence store into memory before
@@ -28,130 +29,141 @@ import scala.util.{ Failure, Success, Try }
   * the cached data is actually stale.
   *
   * @param store The store to cache
-  * @param keyAsPath Conversion from the Persistence layer's key to a stringified path.
   * @param mat a materializer for akka streaming
   * @param ctx The execution context for future chaining.
   * @tparam Serialized The serialized format for the persistence store.
   */
-class LoadTimeCachingPersistenceStore[K, Serialized](
-    store: BasePersistenceStore[K, Serialized],
-    keyAsPath: K => String,
-    pathAsKey: String => K,
+class LoadTimeCachingPersistenceStore[K, Category, Serialized](
+    store: BasePersistenceStore[K, Category, Serialized],
     maxPreloadRequests: Int = 8)(
     implicit
     mat: Materializer,
     ctx: ExecutionContext
-) extends PersistenceStore[K, Serialized] with StrictLogging with PrePostDriverCallback {
+) extends PersistenceStore[K, Category, Serialized] with StrictLogging with PrePostDriverCallback {
 
-  private[storage] var cache: Future[TrieMap[String, Either[Serialized, Any]]] = Future.failed(new NotActiveException())
+  private[storage] var idCache: Future[RwLock[TrieMap[Category, Seq[K]]]] = Future.failed(new NotActiveException())
+  private[storage] var cache: Future[RwLock[TrieMap[K, Either[Serialized, Any]]]] =
+    Future.failed(new NotActiveException())
 
   override def preDriverStarts: Future[Unit] = {
-    val promise = Promise[TrieMap[String, Either[Serialized, Any]]]()
-    cache = promise.future
-    val storage = TrieMap[String, Either[Serialized, Any]]()
+    val cachePromise = Promise[RwLock[TrieMap[K, Either[Serialized, Any]]]]()
+    val idPromise = Promise[RwLock[TrieMap[Category, Seq[K]]]]()
+    idCache = idPromise.future
+    cache = cachePromise.future
+
+    val ids = TrieMap[Category, Seq[K]]()
+    val cached = TrieMap[K, Either[Serialized, Any]]()
+
     val future = store.keys().mapAsync(maxPreloadRequests) { key =>
-      store.rawGet(key).map(v => key -> v)
+      store.rawGet(key.key).map(v => key -> v)
     }.runForeach {
-      case (key, maybeSerialized) =>
-        maybeSerialized match {
-          case Some(v) =>
-            storage.put(keyAsPath(key), Left(v))
-          case None =>
-        }
+      case (categorized, value) =>
+        value.foreach(v => cached(categorized.key) = Left(v))
+        val children = ids.getOrElse(categorized.category, Nil)
+        ids.put(categorized.category, categorized.key +: children)
     }
-    promise.completeWith(future.map(_ => storage))
+    idPromise.completeWith(future.map(_ => RwLock(ids)))
+    cachePromise.completeWith(future.map(_ => RwLock(cached)))
     future.map(_ => ())
   }
 
   override def postDriverTerminates: Future[Unit] = {
     cache = Future.failed(new NotActiveException())
+    idCache = Future.failed(new NotActiveException())
     Future.successful(())
   }
 
-  override def ids[Id, V](parent: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Source[Id, NotUsed] = {
+  override def ids[Id, V]()(implicit ir: Resolver[Id, V]): Source[Id, NotUsed] = {
     val future = async {
-      val cached = await(cache)
-
-      val storageId = keyAsPath(ir.toStorageId(parent))
-      cached.keySet.withFilter(_.startsWith(storageId)).map { key =>
-        val path = if (storageId == "") key else key.replaceAll(s"^($storageId/)", "")
-        path.split("/").head
+      val cached = await(idCache)
+      cached.read { c =>
+        c.getOrElse(ir.category, Nil).map(ir.fromStorageId)
       }
     }
-    Source.fromFuture(future).mapConcat(_.map(k => ir.fromStorageId(pathAsKey(k)))(collection.breakOut))
+    Source.fromFuture(future).mapConcat(identity)
   }
 
-  override def get[Id, V](id: Id)(implicit
-    ir: IdResolver[Id, K, V, Serialized],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]] = async {
-    val cached = await(cache)
-    val stored = cached.get(keyAsPath(ir.toStorageId(id)))
-    stored match {
-      case Some(Left(serialized)) =>
-        val deserialized = await(Unmarshal(serialized).to[V])
-        cached.put(keyAsPath(ir.toStorageId(id)), Right(deserialized))
-        Some(deserialized)
-      case Some(Right(deserialized)) =>
-        Some(deserialized.asInstanceOf[V])
-      case None =>
-        None
+  override def deleteAll[Id, V](k: Id)(implicit ir: Resolver[Id, V]): Future[Done] = {
+    async {
+      val (cached, ids, _) = (await(cache), await(idCache), await(store.deleteAll(k)))
+      val storageId = ir.toStorageId(k, None)
+
+      cached.write { c =>
+        c.remove(storageId)
+
+        ids.write { i =>
+          val old = i.getOrElse(ir.category, Nil)
+          val children = old.filter(_ != storageId)
+          if (children.nonEmpty) {
+            i.put(ir.category, old.filter(_ != storageId))
+          } else {
+            i.remove(ir.category)
+          }
+        }
+      }
+      Done
     }
   }
 
-  override def create[Id, V](id: Id, v: V)(implicit
-    ir: IdResolver[Id, K, V, Serialized],
-    m: Marshaller[V, Serialized],
+  override def get[Id, V](id: Id)(implicit ir: Resolver[Id, V], um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
+    async {
+      val cached = await(cache)
+      val storageId = ir.toStorageId(id, None)
+      cached.read(_.get(storageId)) match {
+        case Some(Left(v)) =>
+          val deserialized = await(Unmarshal(v).to[V])
+          cached.write(_.put(storageId, Right(deserialized)))
+          Some(deserialized)
+        case Some(Right(v)) =>
+          Some(v.asInstanceOf[V])
+        case None =>
+          None
+      }
+    }
+  }
+
+  override def get[Id, V](id: Id, version: OffsetDateTime)(implicit
+    ir: Resolver[Id, V],
+    um: Unmarshaller[Serialized, V]): Future[Option[V]] =
+    store.get(id, version)
+
+  override def store[Id, V](id: Id, v: V)(implicit ir: Resolver[Id, V], m: Marshaller[V, Serialized],
     um: Unmarshaller[Serialized, V]): Future[Done] = {
     async {
-      await(store.create(id, v).asTry) match {
-        case Success(_) =>
-          await(cache.future).put(keyAsPath(ir.toStorageId(id)), Right(v))
+      val (cached, ids, _) = (await(cache), await(idCache), await(store.store(id, v)))
+      cached.write { c =>
+        ids.write { i =>
+          val storageId = ir.toStorageId(id, None)
+          c(storageId) = Right(v)
+          val old = i.getOrElse(ir.category, Nil)
+          i(ir.category) = storageId +: old
           Done
-        case Failure(e) =>
-          throw e
+        }
       }
     }
   }
 
-  override def update[Id, V](id: Id)(change: (V) => Try[V])(implicit
-    ir: IdResolver[Id, K, V, Serialized],
-    um: Unmarshaller[Serialized, V],
-    m: Marshaller[V, Serialized]): Future[V] = {
-    async {
-      await(get(id)) match {
-        case Some(old) =>
-          change(old) match {
-            case Success(newValue) =>
-              val serialized = await(Marshal(newValue).to[Serialized])
-              await(store.rawSet(ir.toStorageId(id), serialized).asTry) match {
-                case Success(x) =>
-                  await(cache).put(keyAsPath(ir.toStorageId(id)), Right(newValue))
-                  old
-                case Failure(x) =>
-                  throw x
-              }
-            case Failure(e) =>
-              old
-          }
-        case None =>
-          throw new StoreCommandFailedException(s"Unable to update $id as it doesn't exist")
+  override def store[Id, V](id: Id, v: V, version: OffsetDateTime)(implicit
+    ir: Resolver[Id, V],
+    m: Marshaller[V, Serialized]): Future[Done] =async {
+    val (valueCache, idCache, _) = (await(this.cache), await(this.idCache), await(store.store(id, v, version)))
+    valueCache.write { vc =>
+      vc.putIfAbsent(ir.toStorageId(id, None), Right(v))
+      idCache.write { idc =>
+        val old = idc.getOrElse(ir.category, Nil)
+        idc.put(ir.category, ir.toStorageId(id, None) +: old)
       }
     }
+    Done
   }
 
-  override def delete[Id, V](k: Id)(implicit ir: IdResolver[Id, K, V, Serialized]): Future[Done] = {
-    async {
-      await(store.delete(k).asTry) match {
-        case Success(_) =>
-          await(cache).remove(keyAsPath(ir.toStorageId(k)))
-          Done
-        case Failure(e) =>
-          throw e
-      }
-    }
-  }
+  override def versions[Id, V](id: Id)(implicit ir: Resolver[Id, V]): Source[OffsetDateTime, NotUsed] =
+    store.versions(id)
 
-  override protected[storage] def keys(): Source[K, NotUsed] = {
+  override def delete[Id, V](k: Id, version: OffsetDateTime)(implicit ir: Resolver[Id, V]): Future[Done] =
+    store.delete(k, version)
+
+  override protected[storage] def keys(): Source[CategorizedKey[Category, K], NotUsed] = {
     logger.warn(s"keys() called on a CachingPersistenceStore (which is what keys() is for), deferring to $store")
     store.keys()
   }

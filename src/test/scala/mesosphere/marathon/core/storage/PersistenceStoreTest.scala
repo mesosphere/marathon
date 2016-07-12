@@ -1,110 +1,114 @@
 package mesosphere.marathon.core.storage
 
+import java.time.{ Clock, OffsetDateTime }
+
 import akka.Done
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Sink
-import com.google.protobuf.{ByteString => GoogleByteString}
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.test.SettableClock
+import scala.concurrent.duration._
 
-case class TestClass1(str: String, int: Int)
+case class TestClass1(str: String, int: Int, version: OffsetDateTime)
+
+object TestClass1 {
+  def apply(str: String, int: Int)(implicit clock: Clock): TestClass1 = {
+    TestClass1(str, int, OffsetDateTime.now(clock))
+  }
+}
 
 private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
-  val rootId: String
-  def createId: String
-
-  def singleTypeStore[K, Serialized](store: => PersistenceStore[K, Serialized])(
+  def emptyPersistenceStore[K, C, Serialized](newStore: => PersistenceStore[K, C, Serialized])(
     implicit
-    ir: IdResolver[String, K, TestClass1, Serialized],
+    ir: IdResolver[String, K, C, TestClass1, Serialized],
     m: Marshaller[TestClass1, Serialized],
     um: Unmarshaller[Serialized, TestClass1]): Unit = {
 
-  /*  "list nothing at the root" in {
-      store.ids(rootId).runWith(Sink.seq).futureValue should equal(Nil)
+    "have no ids" in {
+      val store = newStore
+      store.ids().runWith(Sink.seq).futureValue should equal(Nil)
     }
-    "list nothing at a random folder" in {
-      store.ids(createId).runWith(Sink.seq).futureValue should equal(Nil)
+    "have no keys" in {
+      val store = newStore
+      store.keys().runWith(Sink.seq).futureValue should equal(Nil)
     }
-
-    "keys lists all keys regardless of the nesting layer" in {
-      val tc = TestClass1("abc", 4)
-      store.store("list/1", tc).futureValue should be(Done)
-      store.store("list/1/2", tc).futureValue should be(Done)
-      store.store("list2/1/2/3", tc).futureValue should be(Done)
-      val all = store.keys().runWith(Sink.seq).futureValue.map(ir.fromStorageId)
-      all should contain theSameElementsAs Seq("list", "list/1", "list/1/2", "list2",
-        "list2/1", "list2/1/2", "list2/1/2/3")
+    "not fail if the key doesn't exist" in {
+      val store = newStore
+      store.get("task-1").futureValue should be('empty)
     }
-*/
-    "create and then read an object" in {
+    "create and list an object" in {
+      implicit val clock = new SettableClock()
+      val store = newStore
       val tc = TestClass1("abc", 1)
       store.store("task-1", tc).futureValue should be(Done)
       store.get("task-1").futureValue.value should equal(tc)
-    }
-    "create an object at a nested path" in {
-      val tc = TestClass1("abc", 3)
-      store.store("nested/object", tc).futureValue should be(Done)
-      store.get("nested/object").futureValue.value should equal(tc)
-      store.ids().runWith(Sink.seq).futureValue should contain("nested/object")
-    }
-    "create two objects at a nested path" in {
-      val tc1 = TestClass1("a", 1)
-      val tc2 = TestClass1("b", 2)
-      store.store("nested-2/1", tc1).futureValue should be(Done)
-      store.store("nested-2/2", tc2).futureValue should be(Done)
-      store.ids().runWith(Sink.seq).futureValue should contain allOf("nested-2/1", "nested-2/2")
-      store.get("nested-2/1").futureValue.value should be(tc1)
-      store.get("nested-2/2").futureValue.value should be(tc2)
-    }
-    /*
-    "create then list an object" in {
-      val tc = TestClass1("abc", 2)
-      store.create("task-2", tc).futureValue should be(Done)
-      store.ids(rootId).runWith(Sink.seq).futureValue should contain("task-2")
-    }
-    "not allow an object to be created if it already exists" in {
-      val tc = TestClass1("abc", 3)
-      store.create("task-3", tc).futureValue should be(Done)
-      store.create("task-3", tc).failed.futureValue shouldBe a[StoreCommandFailedException]
-    }
-
-
-    "delete idempotently" in {
-      store.create("delete-me", TestClass1("def", 3)).futureValue should be(Done)
-      store.delete("delete-me").futureValue should be(Done)
-      store.delete("delete-me").futureValue should be(Done)
-      store.ids(rootId).runWith(Sink.seq).futureValue should not contain ("delete-me")
-    }
-    "delete at nested paths" in {
-      store.create("nested-delete/1", TestClass1("def", 4)).futureValue should be(Done)
-      store.create("nested-delete/2", TestClass1("ghi", 5)).futureValue should be(Done)
-      store.delete("nested-delete/1").futureValue should be(Done)
-      store.ids("nested-delete").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq("2")
+      store.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq("task-1")
     }
     "update an object" in {
-      val created = TestClass1("abc", 2)
-      val updated = TestClass1("def", 3)
-      store.create("update/1", created).futureValue should be(Done)
-      var calledWithTc = Option.empty[TestClass1]
-      store.update("update/1") { old: TestClass1 =>
-        calledWithTc = Option(old)
-        Success(updated)
-      }.futureValue should equal(created)
-      calledWithTc.value should equal(created)
-      store.get("update/1").futureValue.value should equal(updated)
+      implicit val clock = new SettableClock()
+      val store = newStore
+      val original = TestClass1("abc", 1)
+      clock.plus(1.minute)
+      val updated = TestClass1("def", 2)
+      store.store("task-1", original).futureValue should be(Done)
+      store.store("task-1", updated).futureValue should be(Done)
+      store.get("task-1").futureValue.value should equal(updated)
+      store.get("task-1", original.version).futureValue.value should equal(original)
+      store.versions("task-1").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(original.version)
     }
-    "not update an object that doesn't exist" in {
-      store.update("update/2") { old: TestClass1 =>
-        Success(TestClass1("abc", 3))
-      }.failed.futureValue shouldBe a[StoreCommandFailedException]
+    "delete idempontently" in {
+      implicit val clock = new SettableClock()
+      val store = newStore
+      store.deleteAll("task-1").futureValue should be(Done)
+      store.store("task-2", TestClass1("def", 2)).futureValue should be(Done)
+      store.deleteAll("task-2").futureValue should be(Done)
+      store.deleteAll("task-2").futureValue should be(Done)
     }
-    "not update an object if the callback returns a failure" in {
-      val tc = TestClass1("abc", 3)
-      store.create("update/3", tc).futureValue should be(Done)
-      store.update("update/3") { _: TestClass1 =>
-        Failure[TestClass1](new NotImplementedError)
-      }.futureValue should equal(tc)
-      store.get("update/3").futureValue.value should equal(tc)
-    }*/
+    "store the most recent N versions of the old values" in {
+      val clock = new SettableClock()
+      val versions = 0.to(ir.maxVersions).map { i =>
+        clock.plus(1.minute)
+        TestClass1("abc", i, OffsetDateTime.now(clock))
+      }
+      val store = newStore
+      versions.foreach { v =>
+        store.store("task", v).futureValue should be(Done)
+      }
+      clock.plus(1.hour)
+      store.store("task", TestClass1("def", 3, OffsetDateTime.now(clock))).futureValue should be(Done)
+      // it should have dropped one element.
+      val storedVersions = store.versions("task").runWith(Sink.seq).futureValue
+      storedVersions.size should equal(ir.maxVersions)
+      storedVersions should contain theSameElementsAs versions.tail.map(_.version)
+      versions.tail.foreach { v =>
+        store.get("task", v.version).futureValue.value should equal(v)
+      }
+    }
+    "allow storage of a value at a specific version even if the value doesn't exist in an unversioned slot" in {
+      val store = newStore
+      implicit val clock = new SettableClock()
+      val tc = TestClass1("abc", 1)
+      store.store("test", tc, tc.version).futureValue should be(Done)
+      store.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq("test")
+      store.get("test").futureValue.value should be(tc)
+      store.get("test", tc.version).futureValue.value should be(tc)
+      store.versions("test").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(tc.version)
+      store.delete("test", tc.version).futureValue should be(Done)
+      store.versions("test").runWith(Sink.seq).futureValue should be('empty)
+    }
+    "allow storage of a value at a specific version without replacing the existing one" in {
+      val store = newStore
+      implicit val clock = new SettableClock()
+      val tc = TestClass1("abc", 1)
+      val old = TestClass1("def", 2, OffsetDateTime.now(clock).minusHours(1))
+      store.store("test", tc).futureValue should be(Done)
+      store.store("test", old, old.version).futureValue should be(Done)
+      store.versions("test").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(old.version)
+      store.get("test").futureValue.value should equal(tc)
+      store.get("test", old.version).futureValue.value should equal(old)
+      store.deleteAll("test").futureValue should be(Done)
+      store.get("test").futureValue should be ('empty)
+    }
   }
 }

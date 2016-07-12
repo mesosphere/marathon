@@ -4,14 +4,14 @@ import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{Done, NotUsed}
-import mesosphere.marathon.core.storage.VersionedId
+import akka.{ Done, NotUsed }
+import mesosphere.marathon.core.storage.CategorizedKey
 import mesosphere.marathon.metrics.Metrics
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class RamId(category: String, id: String, version: Option[OffsetDateTime])
 case class Identity(value: Any)
@@ -23,14 +23,17 @@ trait InMemoryStoreSerialization {
     Unmarshaller.strict { a: Identity => a.value.asInstanceOf[V] }
 }
 
-class InMemoryPersistenceStore(implicit protected val mat: ActorMaterializer, protected val metrics: Metrics)
-    extends BasePersistenceStore[RamId, Identity] {
+class InMemoryPersistenceStore(implicit
+  protected val mat: Materializer,
+  protected val metrics: Metrics,
+  ctx: ExecutionContext)
+    extends BasePersistenceStore[RamId, String, Identity] {
   val entries = TrieMap[RamId, Identity]()
 
-  override protected def rawIds(id: RamId): Source[RamId, NotUsed] =
-    Source(entries.keySet.filter(_.category == id.category).toVector)
+  override protected def rawIds(category: String): Source[RamId, NotUsed] =
+    Source(entries.keySet.filter(id => id.category == category && id.version.isEmpty).toVector)
 
-  override protected def rawGet(k: RamId): Future[Option[Identity]] =
+  override protected[storage] def rawGet(k: RamId): Future[Option[Identity]] =
     Future.successful(entries.get(k))
 
   override protected def rawDelete(k: RamId, version: OffsetDateTime): Future[Done] = {
@@ -43,10 +46,10 @@ class InMemoryPersistenceStore(implicit protected val mat: ActorMaterializer, pr
     Future.successful(Done)
   }
 
-  override protected def rawVersions(id: RamId): Source[VersionedId[RamId], NotUsed] = {
+  override protected def rawVersions(id: RamId): Source[OffsetDateTime, NotUsed] = {
     val versions = entries.withFilter {
       case (k, _) => k.category == id.category && k.id == id.id && k.version.isDefined
-    }.map { case (k, _) => VersionedId(id, id.version.get) }
+    }.map { case (k, _) => k.version.get }
     Source(versions.toVector)
   }
 
@@ -56,7 +59,7 @@ class InMemoryPersistenceStore(implicit protected val mat: ActorMaterializer, pr
     Future.successful(Done)
   }
 
-  override protected[storage] def keys(): Source[RamId, NotUsed] =
-    Source(entries.keySet.filter(_.version.isEmpty).toVector)
+  override protected[storage] def keys(): Source[CategorizedKey[String, RamId], NotUsed] =
+    Source(entries.keySet.filter(_.version.isEmpty).map(id => CategorizedKey(id.category, id))(collection.breakOut))
 }
 

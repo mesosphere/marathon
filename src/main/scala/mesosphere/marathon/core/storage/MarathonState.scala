@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.storage
 
 import akka.util.ByteString
-import com.google.protobuf.{MessageLite, Parser}
+import com.google.protobuf.{ MessageLite, Parser }
 
 trait MarathonState[Proto <: MessageLite] {
   def toProto: Proto
