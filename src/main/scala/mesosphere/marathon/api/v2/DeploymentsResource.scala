@@ -8,8 +8,8 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
+import mesosphere.marathon.core.groupmanager.GroupManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
 import mesosphere.util.Logging
 

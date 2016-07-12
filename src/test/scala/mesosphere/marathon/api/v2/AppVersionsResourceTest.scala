@@ -1,7 +1,8 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.state.{ GroupManager, Timestamp, AppDefinition }
+import mesosphere.marathon.core.groupmanager.GroupManager
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }

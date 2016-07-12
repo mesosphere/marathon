@@ -4,6 +4,7 @@ import java.util.Collections
 
 import mesosphere.marathon._
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
+import mesosphere.marathon.core.groupmanager.GroupManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.health.HealthCheckManager

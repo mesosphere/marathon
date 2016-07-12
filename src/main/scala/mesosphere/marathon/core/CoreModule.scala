@@ -2,6 +2,7 @@ package mesosphere.marathon.core
 
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.election.ElectionModule
+import mesosphere.marathon.core.groupmanager.GroupManagerModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -28,4 +29,5 @@ trait CoreModule {
   def pluginModule: PluginModule
   def authModule: AuthModule
   def readinessModule: ReadinessModule
+  def groupManagerModule: GroupManagerModule
 }

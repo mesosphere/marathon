@@ -5,13 +5,14 @@ import javax.inject.Named
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import mesosphere.chaos.http.HttpConf
-import com.google.inject.{ Provider, Inject }
+import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.election._
+import mesosphere.marathon.core.groupmanager.GroupManagerModule
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
@@ -24,9 +25,11 @@ import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
+import mesosphere.marathon.state.{ AppRepository, GroupRepository, TaskRepository }
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, MarathonSchedulerService, ModuleNames }
+import mesosphere.util.CapConcurrentExecutions
 
 import scala.util.Random
 
@@ -50,6 +53,9 @@ class CoreModuleImpl @Inject() (
     taskRepository: TaskRepository,
     taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
     clock: Clock,
+    storage: StorageProvider,
+    scheduler: MarathonSchedulerService,
+    @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
     taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
 
   // INFRASTRUCTURE LAYER
@@ -151,6 +157,19 @@ class CoreModuleImpl @Inject() (
     actorSystem.eventStream,
     offersWanted,
     marathonSchedulerDriverHolder)
+
+  // GROUP MANAGER
+
+  override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
+    marathonConf,
+    leadershipModule,
+    serializeUpdates,
+    scheduler,
+    groupRepository,
+    appRepository,
+    storage,
+    eventStream,
+    metrics)
 
   // GREEDY INSTANTIATION
   //
