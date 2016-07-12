@@ -1,6 +1,5 @@
 package mesosphere.marathon.core.task.bus
 
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus2.{Gone, Unknown, Unreachable}
 import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.Protos.TaskStatus.Reason._
 
@@ -52,7 +51,6 @@ object MarathonTaskStatus2 {
       case TASK_STAGING => Staging
       case TASK_STARTING => Starting
     }
-
 
     matcher(Some(taskStatus))
   }
