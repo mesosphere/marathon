@@ -8,6 +8,7 @@ import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -16,8 +17,8 @@ import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.Container.Docker
-import mesosphere.marathon.state.Container.Docker.PortMapping
+import mesosphere.marathon.state.Container.DockerDocker
+import mesosphere.marathon.state.Container.DockerDocker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
@@ -157,15 +158,9 @@ object MarathonTestHelper {
   }
 
   def reservation(principal: String, labels: Map[String, String] = Map.empty): Mesos.Resource.ReservationInfo = {
-    val labelsBuilder = Mesos.Labels.newBuilder()
-    labels.foreach {
-      case (k, v) =>
-        labelsBuilder.addLabels(Mesos.Label.newBuilder().setKey(k).setValue(v))
-    }
-
     Mesos.Resource.ReservationInfo.newBuilder()
       .setPrincipal(principal)
-      .setLabels(labelsBuilder)
+      .setLabels(LabelsSerializer.toMesosLabelsBuilder(labels))
       .build()
   }
 
@@ -570,16 +565,16 @@ object MarathonTestHelper {
 
       def withDockerNetwork(network: Mesos.ContainerInfo.DockerInfo.Network): AppDefinition = {
         val docker = app.container.getOrElse(Container.Mesos()) match {
-          case docker: Docker => docker
-          case _ => Docker(image = "busybox")
+          case docker: DockerDocker => docker
+          case _ => DockerDocker(image = "busybox")
         }
 
         app.copy(container = Some(docker.copy(network = Some(network))))
       }
 
-      def withPortMappings(portMappings: Seq[PortMapping]): AppDefinition = {
+      def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
         val container = app.container.getOrElse(Container.Mesos())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(portMappings))
+        val docker = container.docker.getOrElse(DockerDocker(image = "busybox")).copy(portMappings = newPortMappings)
 
         app.copy(container = Some(docker))
       }

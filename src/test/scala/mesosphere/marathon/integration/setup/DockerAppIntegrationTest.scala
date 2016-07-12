@@ -23,7 +23,7 @@ class DockerAppIntegrationTest
       val app = AppDefinition(
         id = testBasePath / "dockerapp",
         cmd = Some("sleep 600"),
-        container = Some(Container.Docker(image = "busybox")),
+        container = Some(Container.DockerDocker(image = "busybox")),
         cpus = 0.2,
         mem = 16.0,
         instances = 1

@@ -208,15 +208,16 @@ class TaskBuilder(
   }
 
   protected def computeContainerInfo(hostPorts: Seq[Option[Int]]): Option[ContainerInfo] = {
-    if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) None
-    else {
+    if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) {
+      None
+    } else {
       val builder = ContainerInfo.newBuilder
 
       // Fill in Docker container details if necessary
       runSpec.container.foreach { c =>
-        val portMappings = c.docker.map { d =>
-          d.portMappings.map { pms =>
-            pms.zip(hostPorts).collect {
+        val containerWithPortMappings = c match {
+          case docker: Container.DockerDocker => docker.copy(portMappings =
+            docker.portMappings.zip(hostPorts).collect {
               case (mapping, Some(hport)) =>
                 // Use case: containerPort = 0 and hostPort = 0
                 //
@@ -232,15 +233,8 @@ class TaskBuilder(
                   mapping.copy(hostPort = Some(hport))
                 }
             }
-          }
-        }
-
-        val containerWithPortMappings = portMappings match {
-          case None => c
-          case Some(newMappings) => c match {
-            case docker: Container.Docker => docker.copy(portMappings = newMappings)
-            case _ => c
-          }
+          )
+          case _ => c
         }
 
         builder.mergeFrom(ContainerSerializer.toMesos(containerWithPortMappings))
@@ -264,9 +258,10 @@ class TaskBuilder(
       if (!builder.hasType)
         builder.setType(ContainerInfo.Type.MESOS)
 
-      if (builder.getType.equals(ContainerInfo.Type.MESOS)) {
-        builder.setMesos(ContainerInfo.MesosInfo.newBuilder()
-          .build())
+      if (builder.getType.equals(ContainerInfo.Type.MESOS) && !builder.hasMesos) {
+        // The comments in "mesos.proto" are fuzzy about whether a miranda MesosInfo
+        // is required, but we err on the safe side here and provide one
+        builder.setMesos(ContainerInfo.MesosInfo.newBuilder.build)
       }
       Some(builder.build)
     }

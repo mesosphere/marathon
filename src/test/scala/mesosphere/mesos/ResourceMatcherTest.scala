@@ -79,13 +79,13 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       mem = 128.0,
       disk = 0.0,
       portDefinitions = Nil,
-      container = Some(Container.Docker(
+      container = Some(Container.DockerDocker(
         image = "foo/bar",
         network = Some(ContainerInfo.DockerInfo.Network.BRIDGE),
-        portMappings = Some(Seq(
-          Container.Docker.PortMapping(31001, Some(0), 0, "tcp", Some("qax")),
-          Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
-        ))
+        portMappings = Seq(
+          Container.DockerDocker.PortMapping(31001, Some(0), 0, "tcp", Some("qax")),
+          Container.DockerDocker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
+        )
       ))
     )
 
@@ -109,14 +109,14 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       mem = 128.0,
       disk = 0.0,
       portDefinitions = Nil,
-      container = Some(Container.Docker(
+      container = Some(Container.DockerDocker(
         image = "foo/bar",
         network = Some(ContainerInfo.DockerInfo.Network.USER),
-        portMappings = Some(Seq(
-          Container.Docker.PortMapping(0, Some(0), 0, "tcp", Some("yas")),
-          Container.Docker.PortMapping(31001, None, 0, "tcp", Some("qax")),
-          Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
-        ))
+        portMappings = Seq(
+          Container.DockerDocker.PortMapping(0, Some(0), 0, "tcp", Some("yas")),
+          Container.DockerDocker.PortMapping(31001, None, 0, "tcp", Some("qax")),
+          Container.DockerDocker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
+        )
       ))
     )
 

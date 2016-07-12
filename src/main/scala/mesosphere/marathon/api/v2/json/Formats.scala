@@ -221,23 +221,36 @@ trait ContainerFormats {
   implicit lazy val DockerNetworkFormat: Format[DockerInfo.Network] =
     enumFormat(DockerInfo.Network.valueOf, str => s"$str is not a valid network type")
 
-  implicit lazy val PortMappingFormat: Format[Container.Docker.PortMapping] = (
+  implicit lazy val PortMappingFormat: Format[Container.DockerDocker.PortMapping] = (
     (__ \ "containerPort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
     (__ \ "hostPort").formatNullable[Int] ~
     (__ \ "servicePort").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~
     (__ \ "protocol").formatNullable[String].withDefault("tcp") ~
     (__ \ "name").formatNullable[String] ~
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
-  )(Container.Docker.PortMapping(_, _, _, _, _, _), unlift(Container.Docker.PortMapping.unapply))
+  )(Container.DockerDocker.PortMapping(_, _, _, _, _, _), unlift(Container.DockerDocker.PortMapping.unapply))
+
+  implicit lazy val CredentialFormat: Format[Container.Credential] = (
+    (__ \ "principal").format[String] ~
+    (__ \ "secret").formatNullable[String]
+  )(Container.Credential.apply, unlift(Container.Credential.unapply))
 
   implicit lazy val DockerFormat: Format[Container.Mask.Docker] = (
     (__ \ "image").format[String] ~
     (__ \ "network").formatNullable[DockerInfo.Network] ~
-    (__ \ "portMappings").formatNullable[Seq[Container.Docker.PortMapping]] ~
-    (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
-    (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
+    (__ \ "portMappings").formatNullable[Seq[Container.DockerDocker.PortMapping]] ~
+    (__ \ "privileged").formatNullable[Boolean] ~
+    (__ \ "parameters").formatNullable[Seq[Parameter]] ~
+    (__ \ "credential").formatNullable[Container.Credential] ~
     (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-  )(Container.Mask.Docker.withDefaultPortMappings(_, _, _, _, _, _), unlift(Container.Mask.Docker.unapply))
+  )(Container.Mask.Docker.withDefaultPortMappings(_, _, _, _, _, _, _), unlift(Container.Mask.Docker.unapply))
+
+  implicit lazy val AppCFormat: Format[Container.Mask.AppC] = (
+    (__ \ "image").format[String] ~
+    (__ \ "id").formatNullable[String] ~
+    (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
+    (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
+  )(Container.Mask.AppC.apply, unlift(Container.Mask.AppC.unapply))
 
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mde")
@@ -265,7 +278,8 @@ trait ContainerFormats {
   implicit lazy val ContainerMaskFormat: Format[Container.Mask] = (
     (__ \ "type").formatNullable[mesos.ContainerInfo.Type].withDefault(mesos.ContainerInfo.Type.DOCKER) ~
     (__ \ "volumes").formatNullable[Seq[Volume]].withDefault(Nil) ~
-    (__ \ "docker").formatNullable[Container.Mask.Docker]
+    (__ \ "docker").formatNullable[Container.Mask.Docker] ~
+    (__ \ "appc").formatNullable[Container.Mask.AppC]
   )(Container.Mask.apply, unlift(Container.Mask.unapply))
 
   implicit lazy val ContainerFormat: Format[Container] = Format(
@@ -774,7 +788,7 @@ trait AppAndGroupFormats {
     */
   private[this] def addHealthCheckPortIndexIfNecessary(app: AppDefinition): AppDefinition = {
     val hasPortMappings = app.container.exists(_ match {
-      case docker: Container.Docker => docker.portMappings.exists(_.nonEmpty)
+      case docker: Container.DockerDocker => docker.portMappings.nonEmpty
       case _ => false
     })
     val portIndexesMakeSense = app.portDefinitions.nonEmpty || hasPortMappings

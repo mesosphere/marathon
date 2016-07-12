@@ -248,15 +248,14 @@ class GroupManager @Inject() (
       // defined only if there are port mappings
       val newContainer: Option[Container] = for {
         c <- app.container
-        d <- c.docker
-        pms <- d.portMappings
+        d <- c.docker if !d.portMappings.isEmpty
       } yield {
-        val portMappings = pms.zip(servicePorts).map {
+        val newPortMappings = d.portMappings.zip(servicePorts).map {
           case (portMapping, servicePort) =>
             portMapping.copy(servicePort = servicePort)
         }
 
-        d.copy(portMappings = Some(portMappings))
+        d.copy(portMappings = newPortMappings)
       }
 
       app.copy(

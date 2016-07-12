@@ -1,7 +1,7 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.state.{ ResourceRole, RunSpec, Container }
-import mesosphere.marathon.state.Container.Docker.PortMapping
+import mesosphere.marathon.state.Container.DockerDocker.PortMapping
 import mesosphere.marathon.tasks.PortsMatcher.{ Request, RequestNone, PortWithRole }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos
@@ -41,12 +41,11 @@ class PortsMatcher(
   lazy val portsMatch: Option[PortsMatch] = portsWithRoles.map(PortsMatch(_))
 
   private[this] def portsWithRoles: Option[Seq[Option[PortWithRole]]] = {
-    val portMappings: Option[Seq[Container.Docker.PortMapping]] =
+    val portMappings: Option[Seq[Container.DockerDocker.PortMapping]] =
       for {
         c <- runSpec.container
-        d <- c.docker
-        pms <- d.portMappings if pms.nonEmpty
-      } yield pms
+        d <- c.docker if !d.portMappings.isEmpty
+      } yield d.portMappings
 
     (runSpec.portNumbers, portMappings) match {
       case (Nil, None) => // optimization for empty special case

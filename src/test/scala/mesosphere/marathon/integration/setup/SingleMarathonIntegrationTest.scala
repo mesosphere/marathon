@@ -227,7 +227,7 @@ trait SingleMarathonIntegrationTest
     AppDefinition(
       id = appId,
       cmd = cmd,
-      container = Some(Container.Docker(
+      container = Some(Container.DockerDocker(
         image = s"""marathon-buildbase:${sys.env.getOrElse("BUILD_ID", "test")}""",
         network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST),
         volumes = collection.immutable.Seq(
