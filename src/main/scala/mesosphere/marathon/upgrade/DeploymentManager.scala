@@ -63,9 +63,8 @@ class DeploymentManager(
             } else Seq(plan))
       }
 
-    case CancelAllDeployments =>
-      for ((_, DeploymentInfo(ref, _)) <- runningDeployments)
-        ref ! Cancel(new DeploymentCanceledException("The upgrade has been cancelled"))
+    case StopAllDeployments =>
+      for ((_, DeploymentInfo(ref, _)) <- runningDeployments) context.stop(ref)
       runningDeployments.clear()
       deploymentStatus.clear()
 
@@ -129,7 +128,7 @@ class DeploymentManager(
 object DeploymentManager {
   final case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
   final case class CancelDeployment(id: String)
-  case object CancelAllDeployments
+  case object StopAllDeployments
   final case class CancelConflictingDeployments(plan: DeploymentPlan)
 
   final case class DeploymentStepInfo(
