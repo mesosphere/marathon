@@ -8,8 +8,12 @@ PACKAGE_NAME = 'marathon'
 DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
 
+def setup_module(module):
+    # 1. verify test system requirements are met (number of nodes needed)
+    # 2. setup test
+
 @pytest.mark.sanity
-def test_install_marathon():
+def ignore_install_marathon():
     """Install the Marathon package for DC/OS.
     """
 
@@ -46,6 +50,9 @@ def test_install_marathon():
 
 def teardown_module(module):
     # pytest teardown do not seem to be working
-    print("teardown...")
-    uninstall_package_and_wait(PACKAGE_NAME)
+    try:
+        uninstall_package_and_wait(PACKAGE_NAME)
+    except Exception as e:
+        print("Ignoring uninstall warning")
+
     run_command_on_master("docker run mesosphere/janitor /janitor.py -z universe/marathon-user")

@@ -3,6 +3,8 @@
 The Marathon project has several styles of tests that are maintained with the project that include:
 
 * Unit Testing + Mocking
+* CI Integration Testing
+* Benchmark Testing
 * System Testing
 
 ##  Unit Testing
@@ -15,6 +17,26 @@ These tests are run for each pull request as part of CI builds and are maintaine
 [jenkins](https://velocity.mesosphere.com/service/velocity/view/Marathon/).
 
 For version code of tests, the CI build is initiated with [jenkins/unit-integration-tests.sh](../jenkins/unit-integration-tests.sh)
+
+## CI Integration Testing
+
+In order to invoke the CI Integration tests.  This test are longer running more exhaustive testing
+of marathon code with system mocks.
+
+```
+sbt integration:test
+```
+
+## Benchmark Testing
+
+In order to run the benchmark tests:
+
+```
+sbt bench:test
+```
+
+This tests can take significantly time to run and provide performance benchmarks on things like
+how long activities like saving to zk will take at different levels of scale.
 
 ## System Testing
 

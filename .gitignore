@@ -17,3 +17,4 @@ start.sh
 *.ipr
 *.iws
 __pycache__
+.history
