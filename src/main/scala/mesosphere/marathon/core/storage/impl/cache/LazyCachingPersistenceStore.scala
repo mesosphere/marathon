@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.storage.impl
+package mesosphere.marathon.core.storage.impl.cache
 
 import java.time.OffsetDateTime
 
@@ -8,6 +8,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{ Keep, Sink, Source }
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.storage.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.{ CategorizedKey, PersistenceStore }
 import mesosphere.marathon.util.RwLock
 
@@ -55,16 +56,14 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
       val storageId = ir.toStorageId(k, None)
       valueCache.write { vc =>
         vc.remove(storageId)
-
         idCache.write { c =>
-        val old = c.getOrElse(ir.category, Nil)
-        val children = old.filter(_ != storageId)
-        if (children.nonEmpty) {
-          c.put(ir.category, children)
-        } else {
-          c.remove(ir.category)
-        }
-
+          val old = c.getOrElse(ir.category, Nil)
+          val children = old.filter(_ != storageId)
+          if (children.nonEmpty) {
+            c.put(ir.category, children)
+          } else {
+            c.remove(ir.category)
+          }
         }
       }
       Done
@@ -117,7 +116,7 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
     m: Marshaller[V, Serialized]): Future[Done] = async {
     await(store.store(id, v, version))
     valueCache.write { vc =>
-        vc.putIfAbsent(ir.toStorageId(id, None), Some(v))
+      vc.putIfAbsent(ir.toStorageId(id, None), Some(v))
       idCache.write { idc =>
         val old = idc.getOrElse(ir.category, Nil)
         idc.put(ir.category, id +: old)

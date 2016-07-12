@@ -75,7 +75,8 @@ case class CategorizedKey[C, K](category: C, key: K)
   *  - Add the type conversions for serialized types, either to their companion object
   *    or within the impl package for your storage layer as appropriate.
   *
-  * @tparam K The persistence store's primary key type
+  * @tparam K The persistence store's primary key type.
+  * @tparam Category The persistence store's category type.
   * @tparam Serialized The serialized format for the persistence store.
   */
 trait PersistenceStore[K, Category, Serialized] {
@@ -155,7 +156,7 @@ trait PersistenceStore[K, Category, Serialized] {
 
   /**
     * @return A source of _all_ keys in the Persistence Store (which can be used by a
-    *         [[mesosphere.marathon.core.storage.impl.LoadTimeCachingPersistenceStore]] to populate the
+    *         [[LoadTimeCachingPersistenceStore]] to populate the
     *         cache completely on startup.
     */
   protected[storage] def keys(): Source[CategorizedKey[Category, K], NotUsed]

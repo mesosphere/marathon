@@ -37,12 +37,13 @@ case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
 case class ZkSerialized(bytes: ByteString)
 
 trait ZkSerialization {
-  implicit def zkMarshal[Proto <: MessageLite, T <: MarathonState[Proto]]: Marshaller[MarathonState[Proto], ZkSerialized] =
-    Marshaller.opaque { (a: MarathonState[Proto]) =>
+  implicit def zkMarshal[A <: MessageLite, B <: MarathonState[A]]: Marshaller[MarathonState[A], ZkSerialized] =
+    Marshaller.opaque { (a: MarathonState[A]) =>
       ZkSerialized(ByteString(a.toProto.toByteArray))
     }
 
-  def zkUnmarshaller[Proto <: MessageLite, T <: MarathonState[Proto]](proto: MarathonProto[Proto, T]): Unmarshaller[ZkSerialized, T] =
+  def zkUnmarshaller[A <: MessageLite, B <: MarathonState[A]](
+    proto: MarathonProto[A, B]): Unmarshaller[ZkSerialized, B] =
     Unmarshaller.strict { (a: ZkSerialized) => proto.fromProtoBytes(a.bytes) }
 }
 

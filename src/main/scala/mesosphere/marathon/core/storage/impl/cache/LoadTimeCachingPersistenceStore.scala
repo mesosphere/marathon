@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.storage.impl
+package mesosphere.marathon.core.storage.impl.cache
 
 import java.io.NotActiveException
 import java.time.OffsetDateTime
@@ -10,6 +10,7 @@ import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.PrePostDriverCallback
+import mesosphere.marathon.core.storage.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.{ CategorizedKey, PersistenceStore }
 import mesosphere.marathon.util.RwLock
 
@@ -42,6 +43,8 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
 ) extends PersistenceStore[K, Category, Serialized] with StrictLogging with PrePostDriverCallback {
 
   private[storage] var idCache: Future[RwLock[TrieMap[Category, Seq[K]]]] = Future.failed(new NotActiveException())
+  // When we pre-load the persistence store, we don't have an idResolver or an Unmarshaller, so we store the
+  // serialized form as a Left() until it is deserialized, in which case we store as a Right()
   private[storage] var cache: Future[RwLock[TrieMap[K, Either[Serialized, Any]]]] =
     Future.failed(new NotActiveException())
 
@@ -145,7 +148,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
 
   override def store[Id, V](id: Id, v: V, version: OffsetDateTime)(implicit
     ir: Resolver[Id, V],
-    m: Marshaller[V, Serialized]): Future[Done] =async {
+    m: Marshaller[V, Serialized]): Future[Done] = async {
     val (valueCache, idCache, _) = (await(this.cache), await(this.idCache), await(store.store(id, v, version)))
     valueCache.write { vc =>
       vc.putIfAbsent(ir.toStorageId(id, None), Right(v))
