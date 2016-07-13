@@ -23,11 +23,6 @@ def test_mom_with_network_failure():
     """Marathon on Marathon (MoM) tests for DC/OS with network failures simulated by
     knocking out ports
     """
-
-    ######
-    ## I've submitted some PRs to shakedown which will clean this test up significantly.
-    ## It current works and it is unclear how long it will take to update shakedown.
-    ######
     # Install MoM
     install_package_and_wait(PACKAGE_NAME)
     assert package_installed(PACKAGE_NAME), 'Package failed to install'
@@ -85,7 +80,7 @@ def test_mom_with_network_failure():
     current_sleep_task_id = json["app"]["tasks"][0]["id"]
 
     assert current_sleep_task_id == original_sleep_task_id, "Task ID shouldn't change"
-    teardown_sleep()
+    teardown_marathon_sleep()
 
 @pytest.mark.sanity
 def test_mom_with_network_failure_bounce_master():
@@ -153,14 +148,14 @@ def test_mom_with_network_failure_bounce_master():
     current_sleep_task_id = json["app"]["tasks"][0]["id"]
 
     assert current_sleep_task_id == original_sleep_task_id, "Task ID shouldn't change"
-    teardown_sleep()
+    teardown_marathon_sleep()
 
 def teardown_module(module):
     # pytest teardown do not seem to be working
     print("teardown...")
-    teardown_sleep()
+    teardown_marathon_sleep()
 
-def teardown_sleep():
+def teardown_marathon_sleep():
     removeAppCurlCommand = "curl -X DELETE -H 'Authorization: token="  + TOKEN + "' " + DCOS_SERVICE_URL + "/v2/apps/sleep"
     run_command_on_master(removeAppCurlCommand)
     service_delay(15)
@@ -169,7 +164,7 @@ def teardown_sleep():
     except Exception as e:
         print("Ignoring uninstall warning")
 
-    run_command_on_master("docker run mesosphere/janitor /janitor.py -z universe/marathon-user")
+    delete_zk_node("universe/marathon-user")
 
 
 ### we need in shakedown!!
@@ -224,11 +219,7 @@ def partition_agent(hostname):
 
     copy_file_to_agent(hostname,"{}/net-services-agent.sh".format(fixture_dir()))
     print ("partitioning {}".format(hostname))
-
-    try:
-        run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
-    except Exception as e:
-        print("Ignoring AttributeError: 'Channel' object has no attribute '_closed'")
+    run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
 
 def reconnect_agent(hostname):
     """Reconnect a node to cluster"""
@@ -267,7 +258,7 @@ def wait_for_task(service,task,timeout_sec=120):
 
     now = time.time()
     future = now + timeout_sec
-    time.sleep(60)
+    time.sleep(5)
 
     while now < future:
         response = None

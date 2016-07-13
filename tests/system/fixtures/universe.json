@@ -1,0 +1,46 @@
+/*
+  This is a pre-built marathon json to deploy a universe internal to a dcos cluster.
+  Universe Repository URL:  http://universe.marathon.mesos:8085/repo-1.7
+
+  In it the only marathon is replaced with the mesosphere/marathon:latest-dev and will
+  represent the latest version of marathon.
+*/
+{
+  "constraints": [
+    [
+      "hostname",
+      "UNIQUE"
+    ]
+  ],
+  "healthChecks": [
+    {
+      "timeoutSeconds": 5,
+      "protocol": "HTTP",
+      "portIndex": 0,
+      "path": "/repo-empty-v3.json",
+      "maxConsecutiveFailures": 3,
+      "intervalSeconds": 30,
+      "gracePeriodSeconds": 120
+    }
+  ],
+  "container": {
+    "volumes": [],
+    "docker": {
+      "portMappings": [
+        {
+          "protocol": "tcp",
+          "hostPort": 8085,
+          "containerPort": 80
+        }
+      ],
+      "image": "mesosphere/universe-server:marathon-0cfc8e2604eb54d6",
+      "network": "BRIDGE"
+    },
+    "type": "DOCKER"
+  },
+  "requirePorts": true,
+  "mem": 128,
+  "cpus": 0.25,
+  "instances": 1,
+  "id": "/universe"
+}

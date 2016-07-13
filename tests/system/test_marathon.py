@@ -9,7 +9,7 @@ DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
 
 @pytest.mark.sanity
-def ignore_install_marathon():
+def test_install_marathon():
     """Install the Marathon package for DC/OS.
     """
 
