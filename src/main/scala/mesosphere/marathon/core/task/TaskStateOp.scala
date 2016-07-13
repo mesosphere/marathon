@@ -47,6 +47,12 @@ object TaskStateOp {
     override def taskId: Id = task.taskId
   }
 
+  object MesosUpdate {
+    def apply(task: Task, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp): MesosUpdate = {
+      MesosUpdate(task, MarathonTaskStatus(mesosStatus), mesosStatus, now)
+    }
+  }
+
   case class ReservationTimeout(taskId: Task.Id) extends TaskStateOp
 
   /** Expunge a task whose TaskOp was rejected */
