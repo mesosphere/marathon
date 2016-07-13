@@ -17,7 +17,7 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
     val group = Group("g1".toPath, Set.empty)
     val future = Future.successful(group)
     val versionedKey = s"root:${group.version}"
-    val appRepo = mock[AppRepository]
+    val appRepo = mock[AppEntityRepository]
 
     when(store.store(versionedKey, group)).thenReturn(future)
     when(store.store("root", group)).thenReturn(future)

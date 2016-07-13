@@ -165,7 +165,9 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
     store.versions(id)
 
-  override def delete[Id, V](k: Id, version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
+  override def delete[Id, V](
+    k: Id,
+    version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
     store.delete(k, version)
 
   override protected[storage] def keys(): Source[CategorizedKey[Category, K], NotUsed] = {

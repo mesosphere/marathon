@@ -2,8 +2,10 @@ package mesosphere.marathon
 
 import java.util.concurrent.TimeoutException
 
+import akka.Done
 import akka.actor.{ ActorRef, Props }
 import akka.event.EventStream
+import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
@@ -32,7 +34,7 @@ import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.immutable.{ Seq, Set }
-import scala.concurrent.{ ExecutionContext, Promise, Future }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.concurrent.duration._
 
 class MarathonSchedulerActorTest extends MarathonActorSupport
@@ -60,7 +62,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
     val tasks = Iterable(MarathonTestHelper.runningTask("task_a"))
 
-    when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
+    when(repo.allPathIds()).thenReturn(Source.single(app.id))
     when(taskTracker.tasksByApp()(any[ExecutionContext])).thenReturn(
       Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks("nope".toPath, tasks)))
     )
@@ -86,7 +88,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val tasks = Iterable(MarathonTestHelper.runningTaskForApp(app.id))
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
-    when(repo.allPathIds()).thenReturn(Future.successful(Seq(app.id)))
+    when(repo.allPathIds()).thenReturn(Source.single(app.id))
     when(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
     when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks("nope".toPath, tasks)))
     when(taskTracker.appTasksSync("nope".toPath)).thenReturn(tasks)
@@ -139,7 +141,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       .thenReturn(Future.successful(Some(app)))
       .thenReturn(Future.successful(Some(app.copy(instances = 0))))
     when(taskTracker.countLaunchedAppTasksSync(app.id)).thenReturn(0)
-    when(repo.store(any)).thenReturn(Future.successful(app))
+    when(repo.store(any)).thenReturn(Future.successful(Done))
 
     val statusUpdateEvent = MesosStatusUpdateEvent(
       slaveId = "",
@@ -190,7 +192,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       .thenReturn(Future.successful(Some(app)))
       .thenReturn(Future.successful(Some(app.copy(instances = 0))))
     when(taskTracker.countLaunchedAppTasksSync(app.id)).thenReturn(0)
-    when(repo.store(any)).thenReturn(Future.successful(app))
+    when(repo.store(any)).thenReturn(Future.successful(Done))
 
     val statusUpdateEvent = MesosStatusUpdateEvent(
       slaveId = "", taskId = taskA.taskId, taskStatus = "TASK_KILLED", message = "", appId = app.id,
@@ -316,11 +318,11 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val plan = DeploymentPlan(Group.empty, group)
 
-    when(repo.store(any)).thenReturn(Future.successful(app))
+    when(repo.store(any)).thenReturn(Future.successful(Done))
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
     when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
     when(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
-    when(repo.expunge(app.id)).thenReturn(Future.successful(Nil))
+    when(repo.expunge(app.id)).thenReturn(Future.successful(Done))
 
     val schedulerActor = createActor()
     try {
@@ -395,10 +397,10 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val plan = DeploymentPlan(Group.empty, group)
 
-    when(repo.store(any)).thenReturn(Future.successful(app))
+    when(repo.store(any)).thenReturn(Future.successful(Done))
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
     when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
-    when(repo.expunge(app.id)).thenReturn(Future.successful(Nil))
+    when(repo.expunge(app.id)).thenReturn(Future.successful(Done))
 
     val schedulerActor = createActor()
     try {
@@ -422,10 +424,10 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     val plan = DeploymentPlan(Group.empty, group)
 
-    when(repo.store(any)).thenReturn(Future.successful(app))
+    when(repo.store(any)).thenReturn(Future.successful(Done))
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(None))
     when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
-    when(repo.expunge(app.id)).thenReturn(Future.successful(Nil))
+    when(repo.expunge(app.id)).thenReturn(Future.successful(Done))
 
     val schedulerActor = TestActorRef(
       MarathonSchedulerActor.props(
@@ -507,7 +509,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     verify(actions, times(3)).reconcileTasks(any)
   }
 
-  var repo: AppRepository = _
+  var repo: AppEntityRepository = _
   var groupRepo: GroupRepository = _
   var deploymentRepo: DeploymentRepository = _
   var hcManager: HealthCheckManager = _
@@ -531,7 +533,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     driver = mock[SchedulerDriver]
     holder = new MarathonSchedulerDriverHolder
     holder.driver = Some(driver)
-    repo = mock[AppRepository]
+    repo = mock[AppEntityRepository]
     groupRepo = mock[GroupRepository]
     deploymentRepo = mock[DeploymentRepository]
     hcManager = mock[HealthCheckManager]
@@ -557,7 +559,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     ))
     historyActorProps = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
     schedulerActions = ref => new SchedulerActions(
-      repo, groupRepo, hcManager, taskTracker, queue, new EventStream(system), ref, mock[MarathonConf])(system.dispatcher)
+      repo, groupRepo, hcManager, taskTracker, queue, new EventStream(system), ref, mock[MarathonConf])(system.dispatcher, mat)
 
     when(deploymentRepo.store(any)).thenAnswer(new Answer[Future[DeploymentPlan]] {
       override def answer(p1: InvocationOnMock): Future[DeploymentPlan] = {
@@ -567,7 +569,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
     when(deploymentRepo.expunge(any)).thenReturn(Future.successful(Seq(true)))
     when(deploymentRepo.all()).thenReturn(Future.successful(Nil))
-    when(repo.apps()).thenReturn(Future.successful(Nil))
+    when(repo.apps()).thenReturn(Source.empty)
     when(groupRepo.rootGroup()).thenReturn(Future.successful(None))
     when(queue.get(any[PathId])).thenReturn(None)
     when(taskTracker.countLaunchedAppTasksSync(any[PathId])).thenReturn(0)

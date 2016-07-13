@@ -7,6 +7,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
 
@@ -247,7 +248,7 @@ class EntityStoreCacheTest extends MarathonSpec with GivenWhenThen with Matchers
       onSuccess(updated)
       Future.successful(updated)
     }
-    override def names(): Future[Seq[String]] = Future.successful(map.keys.toSeq)
+    override def names(): Future[Seq[String]] = Future.successful(map.keys.toVector)
     override def expunge(key: String, onSuccess: () => Unit): Future[Boolean] = {
       map -= key
       onSuccess()

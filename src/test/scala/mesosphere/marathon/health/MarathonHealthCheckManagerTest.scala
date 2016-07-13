@@ -32,7 +32,7 @@ class MarathonHealthCheckManagerTest
   var taskTracker: TaskTracker = _
   var taskCreationHandler: TaskCreationHandler = _
   var stateOpProcessor: TaskStateOpProcessor = _
-  var appRepository: AppRepository = _
+  var appRepository: AppEntityRepository = _
   var eventStream: EventStream = _
 
   implicit var system: ActorSystem = _
@@ -61,7 +61,7 @@ class MarathonHealthCheckManagerTest
     taskCreationHandler = taskTrackerModule.taskCreationHandler
     stateOpProcessor = taskTrackerModule.stateOpProcessor
 
-    appRepository = new AppRepository(
+    appRepository = new AppEntityRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), "app:"),
       None,
       metrics)

@@ -5,7 +5,7 @@ import akka.testkit._
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.state.AppRepository
+import mesosphere.marathon.state.AppEntityRepository
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon._
@@ -34,7 +34,7 @@ class HealthCheckActorTest
     val appId = "/test".toPath
     val appVersion = Timestamp(1)
     val app = AppDefinition(id = appId)
-    val appRepository: AppRepository = mock[AppRepository]
+    val appRepository: AppEntityRepository = mock[AppEntityRepository]
 
     when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
 
@@ -82,7 +82,7 @@ class HealthCheckActorTest
     val appId = "/test".toPath
     val appVersion = Timestamp(1)
     val app = AppDefinition(id = appId)
-    val appRepository: AppRepository = mock[AppRepository]
+    val appRepository: AppEntityRepository = mock[AppEntityRepository]
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val driver = mock[SchedulerDriver]
     holder.driver = Some(driver)

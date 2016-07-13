@@ -10,7 +10,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ PathId, AppRepository, Group, Timestamp }
+import mesosphere.marathon.state.{ PathId, AppEntityRepository, Group, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, DeploymentCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
@@ -21,7 +21,7 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 class DeploymentManager(
-    appRepository: AppRepository,
+    appRepository: AppEntityRepository,
     taskTracker: TaskTracker,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
@@ -154,7 +154,7 @@ object DeploymentManager {
 
   //scalastyle:off
   def props(
-    appRepository: AppRepository,
+    appRepository: AppEntityRepository,
     taskTracker: TaskTracker,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,

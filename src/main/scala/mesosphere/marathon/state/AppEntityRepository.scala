@@ -1,8 +1,14 @@
 package mesosphere.marathon.state
 
-import mesosphere.marathon.metrics.Metrics
-import scala.concurrent.Future
+import java.time.OffsetDateTime
 
+import akka.{ Done, NotUsed }
+import akka.stream.scaladsl.Source
+import mesosphere.marathon.core.storage.repository.{ AppVersion, AppRepository => CoreAppRepository }
+import mesosphere.marathon.metrics.Metrics
+
+import scala.concurrent.Future
+import scala.async.Async.{ async, await }
 /**
   * This responsibility is in transit:
   *
@@ -16,18 +22,28 @@ import scala.concurrent.Future
   *
   * Until this plan is implemented, please think carefully when to use the app repository!
   */
-class AppRepository(
+class AppEntityRepository(
   val store: EntityStore[AppDefinition],
   val maxVersions: Option[Int] = None,
   val metrics: Metrics)
-    extends EntityRepository[AppDefinition] {
+    extends EntityRepository[AppDefinition] with CoreAppRepository {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def allPathIds(): Future[Iterable[PathId]] = allIds().map(_.map(PathId.fromSafePath))
+  def allPathIds(): Source[PathId, NotUsed] = {
+    val ids = async {
+      await(allIds()).map(PathId.fromSafePath)(collection.breakOut)
+    }
+    Source.fromFuture(ids).mapConcat(identity)
+  }
 
   def currentVersion(appId: PathId): Future[Option[AppDefinition]] = currentVersion(appId.safePath)
-  def listVersions(appId: PathId): Future[Iterable[Timestamp]] = listVersions(appId.safePath)
-  def expunge(appId: PathId): Future[Iterable[Boolean]] = expunge(appId.safePath)
+  def listVersions(appId: PathId): Source[OffsetDateTime, NotUsed] =
+    Source.fromFuture(listVersions(appId.safePath)).mapConcat(identity).map(_.toOffsetDateTime)
+
+  def expunge(appId: PathId): Future[Done] = expunge(appId.safePath).map(_ => Done)
+
+  def app(appId: PathId, version: OffsetDateTime): Future[Option[AppDefinition]] =
+    app(appId, Timestamp(version))
 
   /**
     * Returns the app with the supplied id and version.
@@ -38,18 +54,18 @@ class AppRepository(
   /**
     * Stores the supplied app, now the current version for that apps's id.
     */
-  def store(appDef: AppDefinition): Future[AppDefinition] =
-    storeWithVersion(appDef.id.safePath, appDef.version, appDef)
+  def store(appDef: AppDefinition): Future[Done] =
+    storeWithVersion(appDef.id.safePath, appDef.version, appDef).map(_ => Done)
 
   /**
     * Returns the current version for all apps.
     */
-  def apps(): Future[Iterable[AppDefinition]] = current()
+  def apps(): Source[AppDefinition, NotUsed] =
+    Source.fromFuture(current()).mapConcat(identity)
 
   /**
     * Returns a map from PathIds to current app timestamps.
     */
-  def currentAppVersions(): Future[Map[PathId, Timestamp]] =
-    for (as <- apps()) yield as.map { a => a.id -> a.version }.toMap
-
+  def currentAppVersions(): Source[AppVersion, NotUsed] =
+    apps().map(app => AppVersion(app.id, app.version.toOffsetDateTime))
 }

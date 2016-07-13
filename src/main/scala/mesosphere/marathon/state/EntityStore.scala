@@ -1,6 +1,7 @@
 package mesosphere.marathon.state
 
 import scala.concurrent.Future
+import scala.collection.immutable.Seq
 
 /**
   * The entity store is mostly syntactic sugar around the PersistentStore.

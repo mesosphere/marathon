@@ -8,7 +8,7 @@ import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
-import mesosphere.marathon.state.AppRepository
+import mesosphere.marathon.state.AppEntityRepository
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
@@ -18,7 +18,7 @@ import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll with Mockito with Matchers with GivenWhenThen {
 
   var probe: TestProbe = _
-  var repo: AppRepository = _
+  var repo: AppEntityRepository = _
   var queue: LaunchQueue = _
   var scheduler: MarathonScheduler = _
   var frameworkIdUtil: FrameworkIdUtil = _
@@ -30,7 +30,7 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
   var suicideFn: (Boolean) => Unit = { _ => () }
 
   before {
-    repo = mock[AppRepository]
+    repo = mock[AppEntityRepository]
     queue = mock[LaunchQueue]
     frameworkIdUtil = mock[FrameworkIdUtil]
     mesosLeaderInfo = new MutableMesosLeaderInfo

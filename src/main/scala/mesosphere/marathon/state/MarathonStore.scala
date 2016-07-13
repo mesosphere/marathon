@@ -8,6 +8,7 @@ import mesosphere.util.state.PersistentStore
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
+import scala.collection.immutable.Seq
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
@@ -75,7 +76,7 @@ class MarathonStore[S <: MarathonState[_, S]](
       .map {
         _.collect {
           case name: String if name startsWith prefix => name.replaceFirst(prefix, "")
-        }
+        }(collection.breakOut)
       }
       .recover(exceptionTransform(s"Could not list names for ${ct.runtimeClass.getSimpleName}"))
   }

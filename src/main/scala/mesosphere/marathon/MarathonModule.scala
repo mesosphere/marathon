@@ -8,6 +8,7 @@ import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
+import akka.stream.Materializer
 import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
@@ -169,7 +170,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Inject
   def provideSchedulerActor(
     system: ActorSystem,
-    appRepository: AppRepository,
+    appRepository: AppEntityRepository,
     groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
@@ -181,12 +182,13 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    taskFailureRepository: TaskFailureRepository): ActorRef = {
+    taskFailureRepository: TaskFailureRepository)(implicit mat: Materializer): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
     }
 
     import scala.concurrent.ExecutionContext.Implicits.global
+
     def createSchedulerActions(schedulerActor: ActorRef): SchedulerActions = {
       new SchedulerActions(
         appRepository,
@@ -264,10 +266,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Singleton
   def provideMigration(
     store: PersistentStore,
-    appRepo: AppRepository,
+    appRepo: AppEntityRepository,
     groupRepo: GroupRepository,
     taskRepo: TaskRepository,
-    metrics: Metrics): Migration = {
+    metrics: Metrics)(implicit mat: Materializer): Migration = {
     new Migration(store, appRepo, groupRepo, taskRepo, conf, metrics)
   }
 
@@ -296,7 +298,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
     scheduler: MarathonSchedulerService,
     groupRepo: GroupRepository,
-    appRepo: AppRepository,
+    appRepo: AppEntityRepository,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
     metrics: Metrics): GroupManager = {
@@ -347,15 +349,15 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Singleton
   def provideAppRepository(
     @Named(ModuleNames.STORE_APP) store: EntityStore[AppDefinition],
-    metrics: Metrics): AppRepository = {
-    new AppRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
+    metrics: Metrics): AppEntityRepository = {
+    new AppEntityRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
   }
 
   @Provides
   @Singleton
   def provideGroupRepository(
     @Named(ModuleNames.STORE_GROUP) store: EntityStore[Group],
-    appRepository: AppRepository,
+    appRepository: AppEntityRepository,
     metrics: Metrics): GroupRepository = {
     new GroupRepository(store, conf.zooKeeperMaxVersions.get, metrics)
   }

@@ -5,6 +5,7 @@ import java.util.concurrent.TimeoutException
 import akka.actor._
 import akka.event.{ EventStream, LoggingReceive }
 import akka.pattern.ask
+import akka.stream.Materializer
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.election.ElectionService
@@ -14,6 +15,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor, UpgradeConfig }
 import org.apache.mesos.Protos.{ Status, TaskID, TaskState }
@@ -35,7 +37,7 @@ class MarathonSchedulerActor private (
     createSchedulerActions: ActorRef => SchedulerActions,
     deploymentManagerProps: SchedulerActions => Props,
     historyActorProps: Props,
-    appRepository: AppRepository,
+    appRepository: AppEntityRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
@@ -334,7 +336,7 @@ object MarathonSchedulerActor {
     createSchedulerActions: ActorRef => SchedulerActions,
     deploymentManagerProps: SchedulerActions => Props,
     historyActorProps: Props,
-    appRepository: AppRepository,
+    appRepository: AppEntityRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
@@ -419,14 +421,14 @@ object MarathonSchedulerActor {
 }
 
 class SchedulerActions(
-    appRepository: AppRepository,
+    appRepository: AppEntityRepository,
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
-    config: MarathonConf)(implicit ec: ExecutionContext) {
+    config: MarathonConf)(implicit ec: ExecutionContext, mat: Materializer) {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -457,7 +459,7 @@ class SchedulerActions(
   }
 
   def scaleApps(): Future[Unit] = {
-    appRepository.allPathIds().map(_.toSet).andThen {
+    appRepository.allPathIds().runWith(Sink.set).andThen {
       case Success(appIds) => for (appId <- appIds) schedulerActor ! ScaleApp(appId)
       case Failure(t) => log.warn("Failed to get task names", t)
     }.map(_ => ())
@@ -472,7 +474,7 @@ class SchedulerActions(
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
-    appRepository.allPathIds().map(_.toSet).flatMap { appIds =>
+    appRepository.allPathIds().runWith(Sink.set).flatMap { appIds =>
       taskTracker.tasksByApp().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>
           tasksByApp.appTasks(appId).flatMap(_.mesosStatus)

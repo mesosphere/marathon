@@ -25,7 +25,7 @@ import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
+import mesosphere.marathon.state.{ GroupRepository, AppEntityRepository, TaskRepository }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
 
 import scala.util.Random
@@ -45,7 +45,7 @@ class CoreModuleImpl @Inject() (
     metrics: Metrics,
     actorSystem: ActorSystem,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    appRepository: AppRepository,
+    appRepository: AppEntityRepository,
     groupRepository: GroupRepository,
     taskRepository: TaskRepository,
     taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],

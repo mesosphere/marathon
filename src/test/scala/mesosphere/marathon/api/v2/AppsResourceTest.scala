@@ -1232,7 +1232,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   var appInfoService: AppInfoService = _
   var appsResource: AppsResource = _
   var auth: TestAuthFixture = _
-  var appRepository: AppRepository = _
+  var appRepository: AppEntityRepository = _
   var appTaskResource: AppTasksResource = _
   var groupRepository: GroupRepository = _
   var configArgs: Seq[String] = _
@@ -1267,7 +1267,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     taskFailureRepo = mock[TaskFailureRepository]
     appInfoService = mock[AppInfoService]
     groupManager = mock[GroupManager]
-    appRepository = mock[AppRepository]
+    appRepository = mock[AppEntityRepository]
     appTaskResource = mock[AppTasksResource]
     resetAppsResource
   }

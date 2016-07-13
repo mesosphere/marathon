@@ -212,7 +212,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
 
   class Fixture {
     lazy val groupManager = mock[GroupManager]
-    lazy val appRepo = mock[AppRepository]
+    lazy val appRepo = mock[AppEntityRepository]
     lazy val baseData = mock[AppInfoBaseData]
     def newBaseData(): AppInfoBaseData = baseData
     lazy val infoService = new DefaultInfoService(groupManager, appRepo, newBaseData)

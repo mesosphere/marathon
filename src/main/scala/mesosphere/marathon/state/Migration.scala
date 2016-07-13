@@ -3,27 +3,30 @@ package mesosphere.marathon.state
 import java.io.{ ByteArrayInputStream, ObjectInputStream }
 import javax.inject.Inject
 
+import akka.stream.Materializer
+import mesosphere.marathon.BuildInfo
+
 import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
-import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
+import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.{ MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
 import org.slf4j.LoggerFactory
 
-import scala.collection.SortedSet
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 
 class Migration @Inject() (
     store: PersistentStore,
-    appRepo: AppRepository,
+    appRepo: AppEntityRepository,
     groupRepo: GroupRepository,
     taskRepo: TaskRepository,
     config: MarathonConf,
-    metrics: Metrics) extends Logging {
+    metrics: Metrics)(implicit mat: Materializer) extends Logging {
 
   //scalastyle:off magic.number
 
@@ -118,7 +121,9 @@ class Migration @Inject() (
   * * Add version info to the AppDefinition by looking at all saved versions.
   * * Make the groupRepository the ultimate source of truth for the latest app version.
   */
-class MigrationTo0_11(groupRepository: GroupRepository, appRepository: AppRepository) {
+class MigrationTo0_11(
+  groupRepository: GroupRepository,
+    appRepository: AppEntityRepository)(implicit mat: Materializer) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrateApps(): Future[Unit] = {
@@ -128,8 +133,8 @@ class MigrationTo0_11(groupRepository: GroupRepository, appRepository: AppReposi
 
     for {
       rootGroup <- rootGroupFuture
-      appIdsFromAppRepo <- appIdsFuture
-      appIds = appIdsFromAppRepo.toSet ++ rootGroup.transitiveApps.map(_.id)
+      appIdsFromAppRepo <- appIdsFuture.runWith(Sink.set)
+      appIds = appIdsFromAppRepo ++ rootGroup.transitiveApps.map(_.id)
       _ = log.info(s"Discovered ${appIds.size} app IDs")
       appsWithVersions <- processApps(appIds, rootGroup)
       _ <- storeUpdatedAppsInRootGroup(rootGroup, appsWithVersions)
@@ -185,7 +190,7 @@ class MigrationTo0_11(groupRepository: GroupRepository, appRepository: AppReposi
       }
     }
 
-    val sortedVersions = appRepository.listVersions(id).map(_.to[SortedSet])
+    val sortedVersions = appRepository.listVersions(id).map(Timestamp(_)).runWith(Sink.sortedSet)
     sortedVersions.flatMap { sortedVersionsWithoutGroup =>
       val sortedVersions = sortedVersionsWithoutGroup ++ Seq(appInGroup.version)
       log.info(s"Add versionInfo to app [$id] for ${sortedVersions.size} versions")
@@ -196,7 +201,7 @@ class MigrationTo0_11(groupRepository: GroupRepository, appRepository: AppReposi
           maybeNextApp <- loadApp(id, nextVersion)
           withVersionInfo = addVersionInfoToVersioned(maybeLastApp, nextVersion, maybeNextApp)
           storedResult <- withVersionInfo
-            .map((newApp: AppDefinition) => appRepository.store(newApp).map(Some(_)))
+            .map((newApp: AppDefinition) => appRepository.store(newApp).map(_ => Some(newApp)))
             .getOrElse(maybeLastAppFuture)
         } yield storedResult
       }
@@ -308,7 +313,9 @@ class MigrationTo0_13(taskRepository: TaskRepository, store: PersistentStore) {
   * * Save all apps, the logic in [[AppDefinition.toProto]] will save the new portDefinitions and skip the deprecated
   *   ports
   */
-class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppRepository) {
+class MigrationTo0_16(
+    groupRepository: GroupRepository,
+    appRepository: AppEntityRepository)(implicit mat: Materializer) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrate(): Future[Unit] = {
@@ -351,7 +358,7 @@ class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppReposi
   }
 
   private[this] def updateAllAppVersions(appId: PathId): Future[Unit] = {
-    appRepository.listVersions(appId).map(d => d.toSeq.sorted).flatMap { sortedVersions =>
+    appRepository.listVersions(appId).runWith(Sink.seq).map(_.sorted).flatMap { sortedVersions =>
       sortedVersions.foldLeft(Future.successful(())) { (future, version) =>
         future.flatMap { _ =>
           appRepository.app(appId, version).flatMap {

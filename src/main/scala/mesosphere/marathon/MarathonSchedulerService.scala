@@ -6,6 +6,7 @@ import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.pattern.ask
+import akka.stream.Materializer
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.AbstractExecutionThreadService
@@ -15,7 +16,8 @@ import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, AppEntityRepository, Migration, PathId, Timestamp }
+import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.PromiseActor
@@ -55,12 +57,12 @@ class MarathonSchedulerService @Inject() (
   frameworkIdUtil: FrameworkIdUtil,
   electionService: ElectionService,
   prePostDriverCallbacks: Seq[PrePostDriverCallback],
-  appRepository: AppRepository,
+  appRepository: AppEntityRepository,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
   migration: Migration,
   @Named("schedulerActor") schedulerActor: ActorRef,
-  metrics: Metrics = new Metrics(new MetricRegistry))
+  metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer)
     extends AbstractExecutionThreadService with ElectionCandidate {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -114,7 +116,7 @@ class MarathonSchedulerService @Inject() (
     schedulerActor ! CancelDeployment(id)
 
   def listAppVersions(appId: PathId): Iterable[Timestamp] =
-    Await.result(appRepository.listVersions(appId), config.zkTimeoutDuration)
+    Await.result(appRepository.listVersions(appId).map(Timestamp(_)).runWith(Sink.seq), config.zkTimeoutDuration)
 
   def listRunningDeployments(): Future[Seq[DeploymentStepInfo]] =
     (schedulerActor ? RetrieveRunningDeployments)

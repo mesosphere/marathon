@@ -15,13 +15,14 @@ import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManage
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateChangeException, TaskStateOp }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppRepository, PathId, TaskRepository, Timestamp }
+import mesosphere.marathon.state.{ AppEntityRepository, PathId, TaskRepository, Timestamp }
 import mesosphere.marathon.test.{ CaptureLogEvents, MarathonActorSupport, Mockito }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Iterable
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -414,9 +415,9 @@ class TaskOpProcessorImplTest
     lazy val schedulerActorProvider = new Provider[ActorRef] {
       override def get(): ActorRef = schedulerActor.ref
     }
-    lazy val appRepository: AppRepository = mock[AppRepository]
-    lazy val appRepositoryProvider: Provider[AppRepository] = new Provider[AppRepository] {
-      override def get(): AppRepository = appRepository
+    lazy val appRepository: AppEntityRepository = mock[AppEntityRepository]
+    lazy val appRepositoryProvider: Provider[AppEntityRepository] = new Provider[AppEntityRepository] {
+      override def get(): AppEntityRepository = appRepository
     }
     lazy val launchQueue: LaunchQueue = mock[LaunchQueue]
     lazy val launchQueueProvider: Provider[LaunchQueue] = new Provider[LaunchQueue] {

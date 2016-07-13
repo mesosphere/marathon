@@ -15,7 +15,7 @@ class TaskLoaderImplTest
     val f = new Fixture
 
     Given("no tasks")
-    f.taskRepository.allIds() returns Future.successful(Iterable.empty)
+    f.taskRepository.allIds() returns Future.successful(Nil)
 
     When("loadTasks is called")
     val loaded = f.loader.loadTasks()
@@ -41,7 +41,7 @@ class TaskLoaderImplTest
     val app2task1 = MarathonTestHelper.mininimalTask(app2Id)
     val tasks = Iterable(app1task1, app1task2, app2task1)
 
-    f.taskRepository.allIds() returns Future.successful(tasks.map(_.taskId.idString))
+    f.taskRepository.allIds() returns Future.successful(tasks.map(_.taskId.idString)(collection.breakOut))
     for (task <- tasks) {
       f.taskRepository.task(task.taskId.idString) returns Future.successful(Some(TaskSerializer.toProto(task)))
     }

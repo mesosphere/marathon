@@ -4,6 +4,7 @@ import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 
 /**
@@ -45,7 +46,7 @@ class InMemoryStore(implicit val ec: ExecutionContext = ExecutionContext.Implici
     }
   }
 
-  override def allIds(): Future[Seq[ID]] = Future.successful(entities.keySet.toSeq)
+  override def allIds(): Future[Seq[ID]] = Future.successful(entities.keySet.toVector)
 }
 
 case class InMemoryEntity(id: String, version: Int, bytes: IndexedSeq[Byte] = Vector.empty) extends PersistentEntity {

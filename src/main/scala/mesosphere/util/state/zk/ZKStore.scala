@@ -19,6 +19,7 @@ import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
@@ -78,7 +79,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
 
   override def allIds(): Future[Seq[ID]] = {
     root.getChildren().asScala
-      .map(_.children.map(_.name))
+      .map(_.children.map(_.name)(collection.breakOut))
       .recover(exceptionTransform("Can not list all identifiers"))
   }
 
@@ -86,7 +87,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     val rootNode = this.root(parent)
 
     rootNode.getChildren().asScala
-      .map(_.children.map(_.name))
+      .map(_.children.map(_.name)(collection.breakOut))
       .recover(exceptionTransform(s"Can not list children of $parent"))
   }
 

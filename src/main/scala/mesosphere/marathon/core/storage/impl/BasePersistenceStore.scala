@@ -35,7 +35,8 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
 
   protected def rawVersions(id: K): Source[OffsetDateTime, NotUsed]
 
-  final override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] = {
+  final override def versions[Id, V](
+    id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] = {
     rawVersions(ir.toStorageId(id, None))
   }
 

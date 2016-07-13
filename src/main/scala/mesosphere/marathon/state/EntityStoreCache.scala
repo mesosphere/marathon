@@ -4,6 +4,7 @@ import mesosphere.marathon.PrePostDriverCallback
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 /**
@@ -56,7 +57,7 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
     }
 
   override def names(): Future[Seq[String]] = directOrCached(store.names()) { cache =>
-    Future.successful(cache.keySet.toSeq)
+    Future.successful(cache.keySet.toVector)
   }
 
   override def expunge(key: String, onSuccess: () => Unit = () => ()): Future[Boolean] =

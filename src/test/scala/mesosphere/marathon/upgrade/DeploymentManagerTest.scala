@@ -14,7 +14,7 @@ import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
+import mesosphere.marathon.state.{ AppDefinition, AppEntityRepository, Group, MarathonStore }
 import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment }
@@ -104,7 +104,7 @@ class DeploymentManagerTest
       AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore, config, metrics
     )
     val scheduler: SchedulerActions = mock[SchedulerActions]
-    val appRepo: AppRepository = new AppRepository(
+    val appRepo: AppEntityRepository = new AppEntityRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), prefix = "app:"),
       None,
       metrics

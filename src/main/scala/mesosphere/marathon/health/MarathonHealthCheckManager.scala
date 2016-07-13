@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
 import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, AppEntityRepository, PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, ZookeeperConf }
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
@@ -28,7 +28,7 @@ class MarathonHealthCheckManager @Inject() (
     driverHolderProvider: Provider[MarathonSchedulerDriverHolder],
     @Named(EventModule.busName) eventBus: EventStream,
     taskTrackerProvider: Provider[TaskTracker],
-    appRepository: AppRepository,
+    appRepository: AppEntityRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
 
   private[this] lazy val driverHolder = driverHolderProvider.get()

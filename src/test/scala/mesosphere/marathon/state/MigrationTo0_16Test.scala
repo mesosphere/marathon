@@ -1,14 +1,17 @@
 package mesosphere.marathon.state
 
+import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.{ Protos, MarathonSpec }
+import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.state.memory.InMemoryStore
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
+
 import scala.collection.JavaConverters._
 
-class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers {
+class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
   import mesosphere.FutureTestSupport._
 
   class Fixture {
@@ -18,7 +21,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
     lazy val groupRepo = new GroupRepository(groupStore, maxVersions = None, metrics)
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
-    lazy val appRepo = new AppRepository(appStore, maxVersions = None, metrics)
+    lazy val appRepo = new AppEntityRepository(appStore, maxVersions = None, metrics)
 
     lazy val migration = new MigrationTo0_16(groupRepository = groupRepo, appRepository = appRepo)
   }
@@ -37,7 +40,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     Then("only an empty root Group is created")
     val maybeGroup: Option[Group] = f.groupRepo.rootGroup().futureValue
     maybeGroup should be (None)
-    f.appRepo.allPathIds().futureValue should be('empty)
+    f.appRepo.allPathIds().runWith(Sink.seq).futureValue should be('empty)
   }
 
   test("an app and all its revisions are migrated") {
