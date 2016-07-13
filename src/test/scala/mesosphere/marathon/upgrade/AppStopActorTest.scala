@@ -96,7 +96,6 @@ class AppStopActorTest
     val tasks = Set(MarathonTestHelper.runningTask("task_a"), MarathonTestHelper.runningTask("task_b"))
 
     when(f.taskTracker.appTasksLaunchedSync(app.id)).thenReturn(tasks)
-
     val ref = f.stopActor(app, promise)
     watch(ref)
 

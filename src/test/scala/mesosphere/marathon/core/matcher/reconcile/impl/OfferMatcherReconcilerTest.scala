@@ -68,7 +68,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
 
     And("a bogus app")
     val app = AppDefinition(appId)
-    f.groupRepository.rootGroupOrEmpty() returns Future.successful(Group.empty.copy(apps = Set(app)))
+    f.groupRepository.rootGroupOrEmpty() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
     And("no tasks")
     f.taskTracker.tasksByApp()(any) returns Future.successful(TasksByApp.empty)
 
@@ -130,7 +130,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
 
     And("a matching bogus app")
     val app = AppDefinition(appId)
-    f.groupRepository.rootGroupOrEmpty() returns Future.successful(Group.empty.copy(apps = Set(app)))
+    f.groupRepository.rootGroupOrEmpty() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
     And("a matching bogus task")
     f.taskTracker.tasksByApp()(any) returns Future.successful(
       TasksByApp.forTasks(MarathonTestHelper.mininimalTask(taskId.idString))
