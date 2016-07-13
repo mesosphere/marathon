@@ -10,6 +10,7 @@ import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
@@ -1232,7 +1233,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   var appInfoService: AppInfoService = _
   var appsResource: AppsResource = _
   var auth: TestAuthFixture = _
-  var appRepository: AppEntityRepository = _
+  var appRepository: AppRepository = _
   var appTaskResource: AppTasksResource = _
   var groupRepository: GroupRepository = _
   var configArgs: Seq[String] = _
@@ -1267,7 +1268,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     taskFailureRepo = mock[TaskFailureRepository]
     appInfoService = mock[AppInfoService]
     groupManager = mock[GroupManager]
-    appRepository = mock[AppEntityRepository]
+    appRepository = mock[AppRepository]
     appTaskResource = mock[AppTasksResource]
     resetAppsResource
   }

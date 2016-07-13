@@ -18,7 +18,7 @@ case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
 
 case class ZkSerialized(bytes: ByteString)
 
-trait ZkSerialization {
+trait ZkStoreSerialization {
   val maxVersions = 25
 
   /** Anything that implements [[MarathonState]] is automatically marshalled. */
@@ -35,7 +35,7 @@ trait ZkSerialization {
   /** General id resolver for a key of Path.Id */
   private class ZkPathIdResolver[T <: MarathonState[_]](
     val category: String,
-    val maxVersions: Int = ZkSerialization.this.maxVersions)
+    val maxVersions: Int = ZkStoreSerialization.this.maxVersions)
       extends IdResolver[PathId, T, String, ZkId] {
     override def toStorageId(id: PathId, version: Option[OffsetDateTime]): ZkId =
       ZkId(category, id.path.mkString("_"), version)
@@ -48,4 +48,4 @@ trait ZkSerialization {
   implicit val zkAppDefUnmarshaller = zkUnmarshaller(AppDefinition)
 }
 
-object ZkSerialization extends ZkSerialization
+object ZkStoreSerialization extends ZkStoreSerialization

@@ -10,6 +10,7 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
@@ -37,7 +38,7 @@ class MarathonSchedulerActor private (
     createSchedulerActions: ActorRef => SchedulerActions,
     deploymentManagerProps: SchedulerActions => Props,
     historyActorProps: Props,
-    appRepository: AppEntityRepository,
+    appRepository: AppRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
@@ -336,7 +337,7 @@ object MarathonSchedulerActor {
     createSchedulerActions: ActorRef => SchedulerActions,
     deploymentManagerProps: SchedulerActions => Props,
     historyActorProps: Props,
-    appRepository: AppEntityRepository,
+    appRepository: AppRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
@@ -421,7 +422,7 @@ object MarathonSchedulerActor {
 }
 
 class SchedulerActions(
-    appRepository: AppEntityRepository,
+    appRepository: AppRepository,
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,

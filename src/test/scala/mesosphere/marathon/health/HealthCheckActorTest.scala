@@ -2,13 +2,12 @@ package mesosphere.marathon.health
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
+import mesosphere.marathon._
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.state.AppEntityRepository
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon._
 import mesosphere.util.CallerThreadExecutionContext
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when }
@@ -34,9 +33,9 @@ class HealthCheckActorTest
     val appId = "/test".toPath
     val appVersion = Timestamp(1)
     val app = AppDefinition(id = appId)
-    val appRepository: AppEntityRepository = mock[AppEntityRepository]
+    val appRepository: AppRepository = mock[AppRepository]
 
-    when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
+    when(appRepository.app(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
     when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.task))
 
@@ -82,11 +81,11 @@ class HealthCheckActorTest
     val appId = "/test".toPath
     val appVersion = Timestamp(1)
     val app = AppDefinition(id = appId)
-    val appRepository: AppEntityRepository = mock[AppEntityRepository]
+    val appRepository: AppRepository = mock[AppRepository]
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val driver = mock[SchedulerDriver]
     holder.driver = Some(driver)
-    when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
+    when(appRepository.app(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
     val taskId = "test_task.9876543"
     val scheduler: MarathonScheduler = mock[MarathonScheduler]

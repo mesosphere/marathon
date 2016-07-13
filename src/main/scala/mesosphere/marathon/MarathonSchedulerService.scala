@@ -13,10 +13,11 @@ import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, AppEntityRepository, Migration, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Migration, PathId, Timestamp }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -57,7 +58,7 @@ class MarathonSchedulerService @Inject() (
   frameworkIdUtil: FrameworkIdUtil,
   electionService: ElectionService,
   prePostDriverCallbacks: Seq[PrePostDriverCallback],
-  appRepository: AppEntityRepository,
+  appRepository: AppRepository,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
   migration: Migration,
@@ -128,7 +129,7 @@ class MarathonSchedulerService @Inject() (
       .map(_.plans)
 
   def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
-    Await.result(appRepository.app(appId, version), config.zkTimeoutDuration)
+    Await.result(appRepository.app(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
   }
 
   def killTasks(

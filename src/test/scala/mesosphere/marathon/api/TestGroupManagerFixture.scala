@@ -4,16 +4,17 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppEntityRepository, GroupManager, GroupRepository }
+import mesosphere.marathon.state.{ GroupManager, GroupRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.{ AllConf, MarathonConf, MarathonSchedulerService }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 
 class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
   val service = mock[MarathonSchedulerService]
-  val appRepository = mock[AppEntityRepository]
+  val appRepository = mock[AppRepository]
   val groupRepository = mock[GroupRepository]
   val eventBus = mock[EventStream]
   val provider = mock[StorageProvider]

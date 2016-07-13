@@ -19,6 +19,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
 import mesosphere.marathon.event.{ EventModule, HistoryActor }
@@ -170,7 +171,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Inject
   def provideSchedulerActor(
     system: ActorSystem,
-    appRepository: AppEntityRepository,
+    appRepository: AppRepository,
     groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
@@ -298,7 +299,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
     scheduler: MarathonSchedulerService,
     groupRepo: GroupRepository,
-    appRepo: AppEntityRepository,
+    appRepo: AppRepository,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
     metrics: Metrics): GroupManager = {
@@ -349,7 +350,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Singleton
   def provideAppRepository(
     @Named(ModuleNames.STORE_APP) store: EntityStore[AppDefinition],
-    metrics: Metrics): AppEntityRepository = {
+    metrics: Metrics): AppRepository = {
     new AppEntityRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
   }
 
@@ -357,7 +358,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Singleton
   def provideGroupRepository(
     @Named(ModuleNames.STORE_GROUP) store: EntityStore[Group],
-    appRepository: AppEntityRepository,
+    appRepository: AppRepository,
     metrics: Metrics): GroupRepository = {
     new GroupRepository(store, conf.zooKeeperMaxVersions.get, metrics)
   }

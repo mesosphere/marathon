@@ -12,6 +12,7 @@ import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
 import mesosphere.marathon._
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.util.CapConcurrentExecutions
 import org.slf4j.LoggerFactory
 
@@ -30,7 +31,7 @@ class GroupManager @Inject() (
     @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
     scheduler: MarathonSchedulerService,
     groupRepo: GroupRepository,
-    appRepo: AppEntityRepository,
+    appRepo: AppRepository,
     storage: StorageProvider,
     config: MarathonConf,
     @Named(EventModule.busName) eventBus: EventStream) extends PathFun {

@@ -9,10 +9,11 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppEntityRepository, MarathonStore, Migration }
+import mesosphere.marathon.state.{ MarathonStore, Migration }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
@@ -76,7 +77,7 @@ class MarathonSchedulerServiceTest
   private[this] var httpConfig: HttpConf = _
   private[this] var frameworkIdUtil: FrameworkIdUtil = _
   private[this] var electionService: ElectionService = _
-  private[this] var appRepository: AppEntityRepository = _
+  private[this] var appRepository: AppRepository = _
   private[this] var taskTracker: TaskTracker = _
   private[this] var scheduler: MarathonScheduler = _
   private[this] var migration: Migration = _
@@ -91,7 +92,7 @@ class MarathonSchedulerServiceTest
     httpConfig = mock[HttpConf]
     frameworkIdUtil = mock[FrameworkIdUtil]
     electionService = mock[ElectionService]
-    appRepository = mock[AppEntityRepository]
+    appRepository = mock[AppRepository]
     taskTracker = mock[TaskTracker]
     scheduler = mock[MarathonScheduler]
     migration = mock[Migration]

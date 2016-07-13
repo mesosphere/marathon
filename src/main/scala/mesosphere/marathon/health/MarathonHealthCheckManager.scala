@@ -8,11 +8,12 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Provider
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
 import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
-import mesosphere.marathon.state.{ AppDefinition, AppEntityRepository, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, ZookeeperConf }
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
@@ -28,7 +29,7 @@ class MarathonHealthCheckManager @Inject() (
     driverHolderProvider: Provider[MarathonSchedulerDriverHolder],
     @Named(EventModule.busName) eventBus: EventStream,
     taskTrackerProvider: Provider[TaskTracker],
-    appRepository: AppEntityRepository,
+    appRepository: AppRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
 
   private[this] lazy val driverHolder = driverHolderProvider.get()
@@ -141,7 +142,7 @@ class MarathonHealthCheckManager @Inject() (
         // reconcile all running versions of the current app
         val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
         val res: Iterator[Future[Unit]] = appVersionsWithoutHealthChecks.iterator map { version =>
-          appRepository.app(app.id, version) map {
+          appRepository.app(app.id, version.toOffsetDateTime) map {
             case None =>
               // FIXME: If the app version of the task is not available anymore, no health check is started.
               // We generated a new app version for every scale change. If maxVersions is configured, we

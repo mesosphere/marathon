@@ -13,6 +13,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
@@ -110,7 +111,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
-    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
+    when(repo.allPathIds()).thenReturn(Source.single(app.id))
     when(taskTracker.appTasksSync(app.id)).thenReturn(Iterable.empty[Task])
 
     when(repo.currentVersion(app.id)).thenReturn(Future.successful(Some(app)))
@@ -134,7 +135,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val taskA = MarathonTestHelper.stagedTaskForApp(app.id)
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
-    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
+    when(repo.allPathIds()).thenReturn(Source.single(app.id))
     when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA))
 
     when(repo.currentVersion(app.id))
@@ -185,7 +186,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val taskA = MarathonTestHelper.mininimalTask(app.id)
 
     when(queue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts))
-    when(repo.allIds()).thenReturn(Future.successful(Seq(app.id.toString)))
+    when(repo.allPathIds()).thenReturn(Source.single(app.id))
     when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable[Task](taskA))
 
     when(repo.currentVersion(app.id))
@@ -509,7 +510,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     verify(actions, times(3)).reconcileTasks(any)
   }
 
-  var repo: AppEntityRepository = _
+  var repo: AppRepository = _
   var groupRepo: GroupRepository = _
   var deploymentRepo: DeploymentRepository = _
   var hcManager: HealthCheckManager = _
@@ -533,7 +534,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     driver = mock[SchedulerDriver]
     holder = new MarathonSchedulerDriverHolder
     holder.driver = Some(driver)
-    repo = mock[AppEntityRepository]
+    repo = mock[AppRepository]
     groupRepo = mock[GroupRepository]
     deploymentRepo = mock[DeploymentRepository]
     hcManager = mock[HealthCheckManager]

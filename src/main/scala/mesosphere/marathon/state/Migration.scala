@@ -22,7 +22,7 @@ import scala.util.control.NonFatal
 
 class Migration @Inject() (
     store: PersistentStore,
-    appRepo: AppEntityRepository,
+    appRepo: AppEntityRepository, // Has to be the entity repository as the non-entity ones use a very different format
     groupRepo: GroupRepository,
     taskRepo: TaskRepository,
     config: MarathonConf,
@@ -122,7 +122,7 @@ class Migration @Inject() (
   * * Make the groupRepository the ultimate source of truth for the latest app version.
   */
 class MigrationTo0_11(
-  groupRepository: GroupRepository,
+    groupRepository: GroupRepository,
     appRepository: AppEntityRepository)(implicit mat: Materializer) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
