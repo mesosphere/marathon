@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.task.bus
+package mesosphere.marathon.core.task.state
 
 // TODO ju organize imports
 import org.apache.mesos.Protos.TaskStatus

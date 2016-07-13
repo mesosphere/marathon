@@ -3,25 +3,25 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.core.task.{Task, TaskStateOp}
+import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.tracker.{TaskStateOpProcessor, TaskTracker}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.state.{ PathId, TaskRepository }
+import mesosphere.marathon.state.{PathId, TaskRepository}
 import mesosphere.marathon.test.MarathonShutdownHookSupport
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.{ TaskStatus, TaskState }
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
 import org.mockito.Matchers.any
-import org.mockito.Mockito.{ reset, spy, times, verify }
+import org.mockito.Mockito.{reset, spy, times, verify}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{GivenWhenThen, Matchers}
 
 import scala.collection.immutable.Seq
 

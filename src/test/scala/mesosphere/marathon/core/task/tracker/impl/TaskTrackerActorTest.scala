@@ -1,18 +1,19 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import akka.actor.{ Actor, ActorRef, Props, Terminated }
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.actor.{Actor, ActorRef, Props, Terminated}
+import akka.testkit.{TestActorRef, TestProbe}
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.{ Task, TaskStateChange }
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerUpdateStepProcessor }
+import mesosphere.marathon.core.task.{Task, TaskStateChange}
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.tracker.{TaskTracker, TaskTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }
+import mesosphere.marathon.test.{MarathonActorSupport, Mockito}
+import org.scalatest.{FunSuiteLike, GivenWhenThen, Matchers}
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Most of the functionality is tested at a higher level in [[mesosphere.marathon.tasks.TaskTrackerImplTest]].

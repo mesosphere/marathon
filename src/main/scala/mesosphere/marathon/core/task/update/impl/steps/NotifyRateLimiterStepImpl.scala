@@ -2,8 +2,8 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.AppRepository

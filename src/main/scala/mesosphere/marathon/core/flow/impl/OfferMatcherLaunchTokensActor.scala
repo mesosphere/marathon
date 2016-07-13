@@ -5,7 +5,8 @@ import mesosphere.marathon.core.flow.LaunchTokenConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskChangeObservables }
+import mesosphere.marathon.core.task.bus.TaskChangeObservables
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import org.apache.mesos.Protos.TaskStatus
 import rx.lang.scala.{ Observable, Subscription }
 

@@ -3,20 +3,21 @@ package mesosphere.marathon.core.task.update.impl
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.tracker.{TaskStateOpProcessor, TaskTracker}
+import mesosphere.marathon.core.task.{Task, TaskStateChange, TaskStateOp}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.{MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper}
 import org.apache.mesos.Protos.TaskStatus
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{GivenWhenThen, Matchers}
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 
 class TaskStatusUpdateProcessorImplTest
     extends MarathonSpec with Mockito with ScalaFutures with GivenWhenThen with Matchers {

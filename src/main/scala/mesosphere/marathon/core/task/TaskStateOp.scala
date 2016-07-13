@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task
 
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.TaskStateChange.{ Expunge, Update }
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 
 import scala.collection.immutable.Seq

@@ -8,7 +8,7 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus.Unreachable
+import mesosphere.marathon.core.task.state.MarathonTaskStatus.Unreachable
 
 private[health] class HealthCheckActor(
     app: AppDefinition,

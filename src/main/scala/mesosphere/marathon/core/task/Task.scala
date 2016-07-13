@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus.Terminal
+import mesosphere.marathon.core.task.state.MarathonTaskStatus.Terminal
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.Protos.TaskState._

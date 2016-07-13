@@ -2,9 +2,10 @@ package mesosphere.marathon.core.task.bus
 
 import java.util.UUID
 
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.mesos.protos.TaskID
 import org.apache.mesos.Protos.TaskStatus.Reason
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
 
 object MarathonTaskStatusTestHelper {
   def mesosStatus(

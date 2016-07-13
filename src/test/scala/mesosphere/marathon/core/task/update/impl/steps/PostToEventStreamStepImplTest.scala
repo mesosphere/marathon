@@ -7,14 +7,15 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.event.{ MarathonEvent, MesosStatusUpdateEvent }
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
-import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.{Task, TaskStateOp}
+import mesosphere.marathon.event.{MarathonEvent, MesosStatusUpdateEvent}
+import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.test.{CaptureEvents, CaptureLogEvents}
+import org.apache.mesos.Protos.{SlaveID, TaskState, TaskStatus}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ BeforeAndAfterAll, FunSuite, GivenWhenThen, Matchers }
+import org.scalatest.{BeforeAndAfterAll, FunSuite, GivenWhenThen, Matchers}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await

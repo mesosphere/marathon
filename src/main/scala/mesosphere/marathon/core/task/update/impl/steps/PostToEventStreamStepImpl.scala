@@ -5,8 +5,8 @@ import javax.inject.Named
 import akka.event.EventStream
 import com.google.inject.Inject
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus.WithMesosStatus
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.task.state.MarathonTaskStatus.WithMesosStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ EffectiveTaskStateChange, Task, TaskStateOp }
 import mesosphere.marathon.event.{ EventModule, MesosStatusUpdateEvent }
