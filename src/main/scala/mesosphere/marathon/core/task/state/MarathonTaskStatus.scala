@@ -21,9 +21,7 @@ object MarathonTaskStatus {
 
   val WontComeBack: Set[TaskStatus.Reason] = TaskStatus.Reason.values().toSet.diff(MightComeBack)
 
-  trait Terminal {
-    def killed: Boolean = false
-  }
+  trait Terminal
 
   //scalastyle:off cyclomatic.complexity
   def apply(taskStatus: TaskStatus): MarathonTaskStatus = {
@@ -58,9 +56,7 @@ object MarathonTaskStatus {
   // FINISHED
   case object Finished extends MarathonTaskStatus with Terminal
   // KILLED
-  case object Killed extends MarathonTaskStatus with Terminal {
-    override def killed: Boolean = true
-  }
+  case object Killed extends MarathonTaskStatus with Terminal
   // KILLING
   case object Killing extends MarathonTaskStatus
   // LOST
