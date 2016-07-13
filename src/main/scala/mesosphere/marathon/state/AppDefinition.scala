@@ -575,7 +575,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.secrets is valid(Secret.secretsValidator)
     appDef.secrets is empty or featureEnabled(Features.SECRETS)
     appDef.env is valid(EnvVarValue.envValidator)
-    appDef must complyWithResourceRoleRules
+    appDef.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appDef.isResident))
     appDef must complyWithResidencyRules
     appDef must complyWithMigrationAPI
     appDef must complyWithSingleInstanceLabelRules
@@ -628,12 +628,6 @@ object AppDefinition extends GeneralPurposeCombinators {
   private val complyWithResidencyRules: Validator[AppDefinition] =
     isTrue("AppDefinition must contain persistent volumes and define residency") { app =>
       !(app.residency.isDefined ^ app.persistentVolumes.nonEmpty)
-    }
-
-  private val complyWithResourceRoleRules: Validator[AppDefinition] =
-    isTrue("""Resident apps may not define acceptedResourceRoles other than "*" (unreserved resources)""") { app =>
-      def hasResidencyCompatibleRoles = app.acceptedResourceRoles.fold(true)(_ == Set(ResourceRole.Unreserved))
-      !app.isResident || hasResidencyCompatibleRoles
     }
 
   private val containsCmdArgsOrContainer: Validator[AppDefinition] =
