@@ -63,4 +63,9 @@ trait HealthCheckManager {
     * Returns the health status of all tasks of the supplied app.
     */
   def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]]
+
+  /**
+    * Updated task status on mesos leader lose or marathon restart
+    */
+  def reconcile(taskStatus: TaskStatus): Unit
 }

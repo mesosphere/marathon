@@ -80,7 +80,8 @@ class MarathonHealthCheckManagerTest
       eventStream,
       taskTrackerProvider,
       appRepository,
-      config
+      config,
+      mock[TaskRepository]
     )
   }
 
