@@ -1,8 +1,6 @@
 package mesosphere.marathon.core.task.state
 
-// TODO ju organize imports
-import org.apache.mesos.Protos.TaskStatus
-import org.apache.mesos.Protos.TaskStatus.Reason._
+import org.apache.mesos
 
 // TODO ju handle garbage flag
 sealed trait MarathonTaskStatus
@@ -13,18 +11,20 @@ object MarathonTaskStatus {
   // If we're disconnected at the time of a TASK_LOST event, we will only get the update during
   // a reconciliation. In that case, the specific reason will be shadowed by REASON_RECONCILIATION.
   // Since we don't know the original reason, we need to assume that the task might come back.
-  val MightComeBack: Set[TaskStatus.Reason] = Set(
-    REASON_RECONCILIATION,
-    REASON_SLAVE_DISCONNECTED,
-    REASON_SLAVE_REMOVED
+  val MightComeBack: Set[mesos.Protos.TaskStatus.Reason] = Set(
+    mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION,
+    mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DISCONNECTED,
+    mesos.Protos.TaskStatus.Reason.REASON_SLAVE_REMOVED
   )
 
-  val WontComeBack: Set[TaskStatus.Reason] = TaskStatus.Reason.values().toSet.diff(MightComeBack)
+  val WontComeBack: Set[mesos.Protos.TaskStatus.Reason] = {
+    mesos.Protos.TaskStatus.Reason.values().toSet.diff(MightComeBack)
+  }
 
   trait Terminal
 
   //scalastyle:off cyclomatic.complexity
-  def apply(taskStatus: TaskStatus): MarathonTaskStatus = {
+  def apply(taskStatus: mesos.Protos.TaskStatus): MarathonTaskStatus = {
     taskStatus.getState match {
       case TASK_ERROR => Error
       case TASK_FAILED => Failed
@@ -32,8 +32,8 @@ object MarathonTaskStatus {
       case TASK_KILLED => Killed
       case TASK_KILLING => Killing
       case TASK_LOST => taskStatus.getReason match {
-        case state: TaskStatus.Reason if WontComeBack(state) => Gone
-        case state: TaskStatus.Reason if MightComeBack(taskStatus.getReason) => Unreachable
+        case state: mesos.Protos.TaskStatus.Reason if WontComeBack(state) => Gone
+        case state: mesos.Protos.TaskStatus.Reason if MightComeBack(taskStatus.getReason) => Unreachable
         case _ => Lost
       }
       case TASK_RUNNING => Running
