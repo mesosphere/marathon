@@ -9,17 +9,16 @@ import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.{Task, TaskStateOp}
-import mesosphere.marathon.core.task.tracker.{TaskCreationHandler, TaskStateOpProcessor, TaskTracker}
+import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{CaptureEvents, MarathonShutdownHookSupport}
+import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport }
 import mesosphere.util.Logging
 import mesosphere.util.state.memory.InMemoryStore
-import org.apache.mesos.{Protos => mesos}
+import org.apache.mesos.{ Protos => mesos }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.ScalaFutures
 
@@ -89,7 +88,7 @@ class MarathonHealthCheckManagerTest
 
     val taskStatus = MarathonTestHelper.runningTask(taskId.idString).launched.get.status.mesosStatus.get
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
-    val update = TaskStateOp.MesosUpdate(marathonTask, MarathonTaskStatus(taskStatus), clock.now())
+    val update = TaskStateOp.MesosUpdate(marathonTask, taskStatus, clock.now())
 
     taskCreationHandler.created(TaskStateOp.LaunchEphemeral(marathonTask)).futureValue
     stateOpProcessor.process(update).futureValue
@@ -134,7 +133,7 @@ class MarathonHealthCheckManagerTest
 
     val taskStatus = MarathonTestHelper.unhealthyTask(taskId.idString).launched.get.status.mesosStatus.get
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = app.version)
-    val update = TaskStateOp.MesosUpdate(marathonTask, MarathonTaskStatus(taskStatus), clock.now())
+    val update = TaskStateOp.MesosUpdate(marathonTask, taskStatus, clock.now())
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
@@ -245,7 +244,7 @@ class MarathonHealthCheckManagerTest
         healthChecks = healthChecks
       )).futureValue
       taskCreationHandler.created(TaskStateOp.LaunchEphemeral(task)).futureValue
-      val update = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(taskStatus(task)), clock.now())
+      val update = TaskStateOp.MesosUpdate(task, taskStatus(task), clock.now())
       stateOpProcessor.process(update).futureValue
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))

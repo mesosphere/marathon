@@ -3,14 +3,13 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.{TaskStateChange, TaskStateOp}
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{MarathonActorSupport, Mockito}
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
-import org.apache.mesos.Protos.{TaskID, TaskStatus}
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class TaskCreationHandlerAndUpdaterDelegateTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
@@ -116,7 +115,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(taskIdString)).buildPartial()
-    val stateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(update), now)
+    val stateOp = TaskStateOp.MesosUpdate(task, update, now)
 
     When("created is called")
     val statusUpdate = f.delegate.process(stateOp)
@@ -141,7 +140,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(taskId.mesosTaskId).buildPartial()
-    val stateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(update), now)
+    val stateOp = TaskStateOp.MesosUpdate(task, update, now)
 
     When("statusUpdate is called")
     val statusUpdate = f.delegate.process(stateOp)

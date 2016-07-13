@@ -1,7 +1,8 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatusTestHelper, MesosTaskStatus, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
@@ -72,7 +73,7 @@ class TaskStateOpResolverTest
     When("A MesosUpdate is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(TaskStateOp.MesosUpdate(
       task = f.existingTask,
-      status = MarathonTaskStatusTestHelper.running,
+      mesosStatus = MesosTaskStatusTestHelper.running,
       now = Timestamp(0))).futureValue
 
     Then("taskTracker.task is called")
@@ -86,7 +87,7 @@ class TaskStateOpResolverTest
   }
 
   for (
-    reason <- MesosTaskStatus.MightComeBack
+    reason <- MarathonTaskStatus.MightComeBack
   ) {
     test(s"a TASK_LOST update with $reason indicating a TemporarilyUnreachable task is mapped to an update") {
       val f = new Fixture
@@ -115,7 +116,7 @@ class TaskStateOpResolverTest
   }
 
   for (
-    reason <- MesosTaskStatus.WontComeBack
+    reason <- MarathonTaskStatus.WontComeBack
   ) {
     test(s"a TASK_LOST update with $reason indicating a task won't come back is mapped to an expunge") {
       val f = new Fixture
@@ -134,7 +135,7 @@ class TaskStateOpResolverTest
       stateChange shouldBe a[TaskStateChange.Expunge]
       val expectedState = f.existingTask.copy(
         status = f.existingTask.status.copy(
-          mesosStatus = stateOp.status.mesosStatus))
+          mesosStatus = Option(stateOp.mesosStatus)))
       stateChange shouldEqual TaskStateChange.Expunge(expectedState)
 
       And("there are no more interactions")
