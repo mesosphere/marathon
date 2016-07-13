@@ -1,6 +1,7 @@
 package mesosphere
 
 import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, BeforeAndAfterEach, Matchers, OptionValues, TryValues, WordSpec, WordSpecLike }
 
@@ -19,16 +20,18 @@ trait UnitTestLike extends WordSpecLike
   with OptionValues
   with TryValues
 
-trait UnitTest extends WordSpec with UnitTestLike
+abstract class UnitTest extends WordSpec with UnitTestLike
 
 trait AkkaUnitTestLike extends UnitTestLike with BeforeAndAfterAll {
-  protected def config: Config = ConfigFactory.load
-  implicit val system = ActorSystem(suiteName, config)
+  protected lazy val akkaConfig: Config = ConfigFactory.load
+  implicit lazy val system = ActorSystem(suiteName, akkaConfig)
+  implicit lazy val materializer = ActorMaterializer()
+  implicit lazy val ctx = system.dispatcher
 
-  abstract override def afterAll {
+  abstract override def afterAll() {
     Await.result(system.terminate(), Duration.Inf)
     super.afterAll
   }
 }
 
-trait AkkaUnitTest extends WordSpec with AkkaUnitTestLike
+abstract class AkkaUnitTest extends WordSpec with AkkaUnitTestLike

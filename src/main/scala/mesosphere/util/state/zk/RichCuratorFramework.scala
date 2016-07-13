@@ -2,8 +2,9 @@ package mesosphere.util.state.zk
 
 import akka.Done
 import akka.util.ByteString
-import org.apache.curator.framework.CuratorFramework
+import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.api.{ BackgroundPathable, Backgroundable, Pathable }
+import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.{ ACL, Stat }
 
@@ -22,6 +23,10 @@ import scala.util.control.NonFatal
   * @param client The underlying Curator client.
   */
 class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
+  def usingNamespace(namespace: String): RichCuratorFramework = {
+    new RichCuratorFramework(client.usingNamespace(namespace))
+  }
+
   // scalastyle:off maxParameters
   def create(
     path: String,
@@ -123,5 +128,15 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
       case NonFatal(e) =>
         future.fail(e)
     }
+  }
+
+  override def toString: String = client.toString
+}
+
+object RichCuratorFramework {
+  def apply(uri: String, retryPolicy: RetryPolicy): RichCuratorFramework = {
+    val c = CuratorFrameworkFactory.newClient(uri, retryPolicy)
+    c.start
+    new RichCuratorFramework(c)
   }
 }
