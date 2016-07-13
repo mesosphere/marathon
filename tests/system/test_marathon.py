@@ -8,10 +8,6 @@ PACKAGE_NAME = 'marathon'
 DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
 WAIT_TIME_IN_SECS = 300
 
-def setup_module(module):
-    # 1. verify test system requirements are met (number of nodes needed)
-    # 2. setup test
-
 @pytest.mark.sanity
 def ignore_install_marathon():
     """Install the Marathon package for DC/OS.
