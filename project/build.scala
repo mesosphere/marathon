@@ -324,7 +324,7 @@ object Dependency {
   val guava = "com.google.guava" % "guava" % V.Guava
   val mesosUtils = "mesosphere" %% "mesos-utils" % V.MesosUtils
   val jacksonCaseClass = "mesosphere" %% "jackson-case-class-module" % V.JacksonCCM
-  val mesos = "org.apache.mesos" % "mesos" % "0.28.1-extvol"
+  val mesos = "org.apache.mesos" % "mesos" % "0.28.1-extvol-13072016"
   val jerseyServlet =  "com.sun.jersey" % "jersey-servlet" % V.Jersey
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jerseyMultiPart =  "com.sun.jersey.contribs" % "jersey-multipart" % V.Jersey
