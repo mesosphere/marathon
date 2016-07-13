@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus.Terminal
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
 import org.apache.mesos.Protos.TaskState
@@ -70,7 +69,7 @@ sealed trait Task {
   }
 
   // TODO ju remove
-  private def mesosStatus: Option[MesosProtos.TaskStatus] = {
+  def mesosStatus: Option[MesosProtos.TaskStatus] = {
     launched.flatMap(_.status.mesosStatus).orElse {
       launchedMesosId.map { mesosId =>
         val taskStatusBuilder = MesosProtos.TaskStatus.newBuilder
@@ -116,21 +115,21 @@ object Task {
     //scalastyle:off cyclomatic.complexity method.length
     override def update(update: TaskStateOp): TaskStateChange = update match {
       // case 1: now running
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running(mesosStatus), now) if !hasStartedRunning =>
+      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
-            mesosStatus = mesosStatus))
+            mesosStatus = Option(mesosStatus)))
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
-      case TaskStateOp.MesosUpdate(_, terminal: Terminal, now) =>
-        val updated = copy(status = status.copy(mesosStatus = terminal.mesosStatus))
+      case TaskStateOp.MesosUpdate(_, _: MarathonTaskStatus.Terminal, mesosStatus, now) =>
+        val updated = copy(status = status.copy(mesosStatus = Option(mesosStatus)))
         TaskStateChange.Expunge(updated)
 
       // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(_, taskStatus, now) =>
-        updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus) match {
+      case TaskStateOp.MesosUpdate(_, _, mesosStatus, now) =>
+        updatedHealthOrState(status.mesosStatus, Option(mesosStatus)) match {
           case Some(newStatus) =>
             val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
             TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
@@ -226,16 +225,16 @@ object Task {
     //scalastyle:off cyclomatic.complexity method.length
     override def update(update: TaskStateOp): TaskStateChange = update match {
       // case 1: now running
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running(mesosStatus), now) if !hasStartedRunning =>
+      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
-            mesosStatus = mesosStatus))
+            mesosStatus = Option(mesosStatus)))
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
-      case TaskStateOp.MesosUpdate(_, _: Terminal, now) =>
+      case TaskStateOp.MesosUpdate(_, _: MarathonTaskStatus.Terminal, mesosStatus, now) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
@@ -244,8 +243,8 @@ object Task {
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(_, taskStatus, _) =>
-        updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus).map { newStatus =>
+      case TaskStateOp.MesosUpdate(_, _, mesosStatus, _) =>
+        updatedHealthOrState(status.mesosStatus, Option(mesosStatus)).map { newStatus =>
           val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
           TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
         } getOrElse {

@@ -42,7 +42,7 @@ class ExpungeOverdueLostTasksActor(
   }
 
   def expungeLostGCTask(task: Task): Unit = {
-    val timestamp = new DateTime(task.taskStatus.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
+    val timestamp = new DateTime(task.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
     log.warning(s"Task ${task.taskId} is lost since $timestamp and will be expunged.")
     val stateOp = TaskStateOp.ForceExpunge(task.taskId)
     stateOpProcessor.process(stateOp)
@@ -55,7 +55,7 @@ class ExpungeOverdueLostTasksActor(
         age > config.taskLostExpungeGC
       }
     }
-    tasks.values.flatMap(_.tasks.filter(task => isTimedOut(task.taskStatus.mesosStatus)))
+    tasks.values.flatMap(_.tasks.filter(task => isTimedOut(task.mesosStatus)))
   }
 }
 

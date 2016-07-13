@@ -11,7 +11,7 @@ private[bus] class TaskStatusEmitterImpl(internalTaskStatusEventStream: Internal
 
   override def publish(taskChanged: TaskChanged): Unit = {
     taskChanged.stateOp match {
-      case TaskStateOp.MesosUpdate(task, status, timestamp) =>
+      case TaskStateOp.MesosUpdate(task, marathonTaskStatus, mesosStatus, timestamp) =>
         log.debug("publishing update {}", taskChanged)
         internalTaskStatusEventStream.publish(taskChanged)
 

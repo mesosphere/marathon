@@ -45,7 +45,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
     taskTracker.task(taskId).flatMap {
       case Some(task) if task.launched.isDefined =>
-        val taskStateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(status), now)
+        val taskStateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(status), status, now)
         stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
       case maybeTask: Option[Task] if killWhenUnknownOrNotLaunched(status) =>

@@ -54,9 +54,8 @@ private class OfferMatcherLaunchTokensActor(
   private[this] def healthy(status: TaskStatus): Boolean = !status.hasHealthy || status.getHealthy
 
   override def receive: Receive = {
-    case TaskChanged(
-      TaskStateOp.MesosUpdate(
-        task, MarathonTaskStatus.Running(Some(mesosStatus)), timestamp), stateChange) if healthy(mesosStatus) =>
+    case TaskChanged(TaskStateOp.MesosUpdate(task, MarathonTaskStatus.Running, mesosStatus, timestamp), stateChange)
+      if healthy(mesosStatus) =>
 
       offerMatcherManager.addLaunchTokens(1)
   }

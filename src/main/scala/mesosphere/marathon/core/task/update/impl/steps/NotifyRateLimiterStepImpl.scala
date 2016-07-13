@@ -3,11 +3,10 @@ package mesosphere.marathon.core.task.update.impl.steps
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.state.MarathonTaskStatus.Terminal
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.AppRepository
-import org.apache.mesos.Protos
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.concurrent.Future
@@ -24,20 +23,9 @@ class NotifyRateLimiterStepImpl @Inject() (
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
     // if MesosUpdate and status terminal != killed
     taskChanged.stateOp match {
-      case TaskStateOp.MesosUpdate(task, TerminalNotKilled(status), _) =>
-        notifyRateLimiter(status, task)
+      case TaskStateOp.MesosUpdate(task, t: Terminal, mesosStatus, _) if !t.killed =>
+        notifyRateLimiter(mesosStatus, task)
       case _ => Future.successful(())
-    }
-  }
-
-  // it's only relevant for the rate limiter if we received a terminal Mesos Update that's not TASK_KILLED
-  private[this] object TerminalNotKilled {
-    def unapply(status: MarathonTaskStatus): Option[Protos.TaskStatus] = {
-      status match {
-        case terminal: MarathonTaskStatus.Terminal if !terminal.killed =>
-          status.mesosStatus
-        case _ => None
-      }
     }
   }
 

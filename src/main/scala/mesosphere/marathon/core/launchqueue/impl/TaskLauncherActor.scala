@@ -345,7 +345,8 @@ private class TaskLauncherActor(
       inProgress = tasksToLaunch > 0 || inFlightTaskOperations.nonEmpty,
       tasksLeftToLaunch = tasksToLaunch,
       finalTaskCount = tasksToLaunch + taskLaunchesInFlight + tasksLaunched,
-      tasksLost = tasksMap.values.count(_.taskStatus.mesosStatus.fold(false)(_.getState == Mesos.TaskState.TASK_LOST)),
+      // TODO ju replaceable with MarathonTaskState ?
+      tasksLost = tasksMap.values.count(_.mesosStatus.fold(false)(_.getState == Mesos.TaskState.TASK_LOST)),
       backOffUntil.getOrElse(clock.now())
     )
   }

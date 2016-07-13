@@ -475,7 +475,7 @@ class SchedulerActions(
     appRepository.allPathIds().map(_.toSet).flatMap { appIds =>
       taskTracker.tasksByApp().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>
-          tasksByApp.appTasks(appId).flatMap(_.taskStatus.mesosStatus)
+          tasksByApp.appTasks(appId).flatMap(_.mesosStatus)
         }
 
         (tasksByApp.allAppIdsWithTasks -- appIds).foreach { unknownAppId =>
@@ -527,8 +527,8 @@ class SchedulerActions(
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     import SchedulerActions._
 
-    def launchedNotLost(t: Task) =
-      t.launched.isDefined && t.taskStatus.mesosStatus.fold(false)(_.getState != TaskState.TASK_LOST)
+    // TODO ju replaceable with ```t.taskStatus.fold(false)(_ != Lost)``` ?
+    def launchedNotLost(t: Task) = t.launched.isDefined && t.mesosStatus.fold(false)(_.getState != TaskState.TASK_LOST)
 
     val launchedCount = taskTracker.countAppTasksSync(app.id, launchedNotLost)
     val targetCount = app.instances
@@ -553,7 +553,7 @@ class SchedulerActions(
       launchQueue.purge(app.id)
 
       val toKill = taskTracker.appTasksSync(app.id).toSeq
-        .filter(t => t.taskStatus.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
+        .filter(t => t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
         .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)
       val taskIds: Iterable[TaskID] = toKill.flatMap(_.launchedMesosId)
@@ -582,7 +582,8 @@ private[this] object SchedulerActions {
       case (Some(av), Some(bv)) => fn(av, bv)
       case _ => default
     }
-    opt(a.taskStatus.mesosStatus, b.taskStatus.mesosStatus, a.taskStatus.mesosStatus.isDefined) { (aStatus, bStatus) =>
+    // TODO ju replaceable with ```a.taskStatus, ...``` ?
+    opt(a.mesosStatus, b.mesosStatus, a.mesosStatus.isDefined) { (aStatus, bStatus) =>
       runningOrStaged(bStatus.getState) compareTo runningOrStaged(aStatus.getState) match {
         case 0 => opt(a.launched, b.launched, a.launched.isDefined) { (aLaunched, bLaunched) =>
           (aLaunched.status.stagedAt compareTo bLaunched.status.stagedAt) > 0

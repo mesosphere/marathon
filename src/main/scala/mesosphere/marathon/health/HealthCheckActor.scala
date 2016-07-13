@@ -87,8 +87,7 @@ private[health] class HealthCheckActor(
     taskTracker.appTasksSync(app.id).foreach { task =>
 
       task.launched.foreach { launched =>
-        if (launched.runSpecVersion == app.version && launched.hasStartedRunning &&
-          !task.taskStatus.isInstanceOf[Unreachable]) {
+        if (launched.runSpecVersion == app.version && launched.hasStartedRunning && task.taskStatus != Unreachable) {
           log.debug("Dispatching health check job for {}", task.taskId)
           val worker: ActorRef = context.actorOf(workerProps)
           worker ! HealthCheckJob(app, task, launched, healthCheck)
@@ -109,7 +108,7 @@ private[health] class HealthCheckActor(
 
       // kill the task, if it is reachable
       task.taskStatus match {
-        case _: Unreachable =>
+        case Unreachable =>
           val id = task.taskId
           log.warning(s"Task $id on host ${task.agentInfo.host} is temporarily unreachable. Performing no kill.")
         case _ =>
