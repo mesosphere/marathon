@@ -14,8 +14,6 @@ import mesosphere.marathon.metrics.Metrics
 class LazyCachingPersistenceStoreTest extends AkkaUnitTest
     with PersistenceStoreTest with ZkTestClass1Serialization with ZookeeperServerTest
     with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
-
-  implicit val scheduler = system.scheduler
   implicit val metrics = new Metrics(new MetricRegistry)
 
   private def cachedInMemory = new LazyCachingPersistenceStore(new InMemoryPersistenceStore())

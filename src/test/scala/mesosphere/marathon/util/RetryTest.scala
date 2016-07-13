@@ -12,8 +12,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 class RetryTest extends AkkaUnitTest {
-  implicit val scheduler = system.scheduler
-
   val retryFn: RetryOnFn = {
     case _: IllegalArgumentException => true
     case _ => false

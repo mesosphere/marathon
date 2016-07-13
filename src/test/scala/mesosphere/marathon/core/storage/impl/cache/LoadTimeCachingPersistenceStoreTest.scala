@@ -16,7 +16,6 @@ class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
     with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
   implicit val metrics = new Metrics(new MetricRegistry)
-  implicit val scheduler = system.scheduler
 
   def zkStore: ZkPersistenceStore = {
     val client = zkClient()

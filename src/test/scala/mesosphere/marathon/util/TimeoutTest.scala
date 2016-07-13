@@ -6,8 +6,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class TimeoutTest extends AkkaUnitTest {
-  implicit val scheduler = system.scheduler
-
   "Timeout" when {
     "async" should {
       "complete" in {

@@ -88,7 +88,8 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
 
   protected def deleteOld(k: K, maxVersions: Int): Future[Done] = async {
     val versions = await(rawVersions(k).toMat(Sink.seq)(Keep.right).run()).sortBy(_.toEpochSecond)
-    val numToDelete = versions.size - maxVersions
+    // we always store the current version (twice), once as a versioned node and once as the current one.
+    val numToDelete = versions.size - maxVersions - 1
     if (numToDelete > 0) {
       val deletes = versions.take(numToDelete).map(v => rawDelete(k, v))
       await(Future.sequence(deletes))
@@ -106,15 +107,9 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
     lockManager.executeSequentially(id.toString) {
       async {
         val serialized = await(Marshal(v).to[Serialized])
-        await(rawGet(storageId)) match {
-          case Some(oldValue) =>
-            val unmarshalled = await(Unmarshal(oldValue).to[V])
-            val versionedId = ir.toStorageId(id, Some(ir.version(unmarshalled)))
-            await(rawStore(versionedId, oldValue))
-          case None =>
-        }
-
-        await(rawStore(storageId, serialized))
+        val (_, _) = (
+          await(rawStore(storageId, serialized)),
+          await(rawStore(ir.toStorageId(id, Some(ir.version(v))), serialized)))
         await(deleteOld(storageId, ir.maxVersions))
         Done
       }

@@ -1,9 +1,15 @@
 package mesosphere.marathon.state
 
+import java.util.UUID
+
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.storage.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.core.storage.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.impl.{ AppInMemRepository, AppZkRepository }
+import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.util.state.memory.InMemoryStore
@@ -12,7 +18,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
 trait AppRepositoryTest { this: AkkaUnitTest =>
-  var metrics: Metrics = new Metrics(new MetricRegistry)
+  implicit val metrics: Metrics = new Metrics(new MetricRegistry)
 
   def basicTest(newRepo: => AppRepository): Unit = {
     "be able to store and retrieve an app" in {
@@ -38,6 +44,7 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
       repo.listVersions(path).runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(
         appDef.version.toOffsetDateTime,
         nextVersion.version.toOffsetDateTime)
+      repo.app(appDef.id, appDef.version.toOffsetDateTime).futureValue.value should be(appDef)
     }
     "be able to list multiple apps" in {
       val repo = newRepo
@@ -65,92 +72,51 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
 
       repo.apps().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(appDef1, appDef2)
     }
+    "should return all versions of a given app" in {
+      val repo = newRepo
+      val appDef1 = AppDefinition("app1".toRootPath)
+      val version1 = appDef1.copy(
+        versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(1)))
+      )
+      val version2 = appDef1.copy(
+        versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(2)))
+      )
+      val version3 = appDef1.copy(
+        versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(3)))
+      )
+      val appDef2 = AppDefinition("app2".toRootPath)
+      val allApps = Seq(appDef1, version1, version2, version3, appDef2)
+      allApps.foreach(repo.store(_).futureValue)
+      repo.listVersions(appDef1.id).runWith(Sink.seq).futureValue should contain theSameElementsAs
+        Seq(appDef1, version1, version2, version3).map(_.version.toOffsetDateTime)
+    }
+    "expunge should delete all versions of an app" in {
+      val repo = newRepo
+      val appDef1 = AppDefinition("app1".toRootPath)
+      val version1 = appDef1.copy(
+        versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(1)))
+      )
+      val version2 = appDef1.copy(
+        versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(2)))
+      )
+      val version3 = appDef1.copy(
+        versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(3)))
+      )
+      val appDef2 = AppDefinition("app2".toRootPath)
+      val allApps = Seq(appDef1, version1, version2, version3, appDef2)
+      allApps.foreach(repo.store(_).futureValue)
+
+      repo.expunge(appDef1.id).futureValue
+      repo.listVersions(appDef1.id).runWith(Sink.seq).futureValue should be('empty)
+      repo.currentVersion(appDef1.id).futureValue should be('empty)
+      repo.apps().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(appDef2)
+      repo.allPathIds().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(appDef2.id)
+    }
   }
-
-  /*
-
-
-  test("Apps") {
-    val store = mock[MarathonStore[AppDefinition]]
-
-
-    val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id}:${x.version}"))
-
-    when(store.names()).thenReturn(future)
-    when(store.fetch(appDef1.id.toString)).thenReturn(Future.successful(Some(appDef1)))
-    when(store.fetch(appDef2.id.toString)).thenReturn(Future.successful(Some(appDef2)))
-
-    val repo = new AppEntityRepository(store, None, metrics)
-    val res = repo.apps().runWith(Sink.seq)
-
-    assert(Seq(appDef1, appDef2) == Await.result(res, 5.seconds), "Should return only current versions")
-    verify(store).names()
-    verify(store).fetch(appDef1.id.toString)
-    verify(store).fetch(appDef2.id.toString)
-  }
-
-  test("ListVersions") {
-    val store = mock[MarathonStore[AppDefinition]]
-    val appDef1 = AppDefinition("app1".toRootPath)
-    val version1 = appDef1.copy(
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(1)))
-    )
-    val version2 = appDef1.copy(
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(2)))
-    )
-    val version3 = appDef1.copy(
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(3)))
-    )
-    val appDef2 = AppDefinition("app2".toRootPath)
-    val allApps = Seq(appDef1, version1, version2, version3, appDef2)
-
-    val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id.safePath}:${x.version}"))
-
-    when(store.names()).thenReturn(future)
-
-    val repo = new AppEntityRepository(store, None, metrics)
-    val res = repo.listVersions(appDef1.id).map(Timestamp(_)).runWith(Sink.seq)
-
-    val expected = Seq(appDef1.version, version1.version, version2.version, version3.version)
-    assert(expected == Await.result(res, 5.seconds), "Should return all versions of given app")
-    verify(store).names()
-  }
-
-  test("Expunge") {
-    val store = mock[MarathonStore[AppDefinition]]
-    val appDef1 = AppDefinition("app1".toRootPath)
-    val version1 = appDef1.copy(
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(1)))
-    )
-    val version2 = appDef1.copy(
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(2)))
-    )
-    val version3 = appDef1.copy(
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(appDef1.version.toDateTime.minusDays(3)))
-    )
-    val appDef2 = AppDefinition("app2".toRootPath)
-    val allApps = Seq(appDef1, version1, version2, version3, appDef2)
-
-    val future = Future.successful(Seq("app1", "app2") ++ allApps.map(x => s"${x.id.safePath}:${x.version}"))
-
-    when(store.names()).thenReturn(future)
-    when(store.expunge(any(), any())).thenReturn(Future.successful(true))
-
-    val repo = new AppEntityRepository(store, None, metrics)
-    Await.result(repo.expunge(appDef1.id), 5.seconds)
-
-    verify(store).names()
-    verify(store).expunge("app1", null) //the null is due to mockito and default arguments in scala
-    for {
-      app <- allApps
-      if app.id.toString == "app1"
-    } verify(store).expunge(s"${app.id}:${app.version}")
-  }
-  */
 }
 
 class AppEntityRepositoryTest extends AkkaUnitTest with AppRepositoryTest {
-  def newRepo = new AppEntityRepository(new MarathonStore[AppDefinition](
+  private def newRepo = new AppEntityRepository(new MarathonStore[AppDefinition](
     new InMemoryStore,
     metrics,
     () => AppDefinition(),
@@ -158,6 +124,29 @@ class AppEntityRepositoryTest extends AkkaUnitTest with AppRepositoryTest {
   ), Some(25), metrics)
 
   "AppEntityRepository" should {
+    behave like basicTest(newRepo)
+  }
+}
+
+class AppZkRepositoryTest extends AkkaUnitTest with AppRepositoryTest with ZookeeperServerTest {
+  private def defaultStore: ZkPersistenceStore = {
+    val client = zkClient()
+    val root = UUID.randomUUID().toString
+    client.create(s"/$root").futureValue
+    implicit val metrics = new Metrics(new MetricRegistry)
+    new ZkPersistenceStore(client.usingNamespace(root))
+  }
+  private def newRepo = new AppZkRepository(defaultStore, 25)
+
+  "AppZkRepository" should {
+    behave like basicTest(newRepo)
+  }
+}
+
+class AppInMemRepositoryTest extends AkkaUnitTest with AppRepositoryTest {
+  private def newRepo = new AppInMemRepository(new InMemoryPersistenceStore, 25)
+
+  "AppInMemRepositoryTest" should {
     behave like basicTest(newRepo)
   }
 }

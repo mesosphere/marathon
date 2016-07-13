@@ -55,8 +55,6 @@ trait ZkTestClass1Serialization {
 class ZkPersistenceStoreTest extends AkkaUnitTest
     with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization {
 
-  implicit val scheduler = system.scheduler
-
   def defaultStore: ZkPersistenceStore = {
     val client = zkClient()
     val root = UUID.randomUUID().toString

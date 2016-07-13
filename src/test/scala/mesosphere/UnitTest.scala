@@ -25,6 +25,7 @@ abstract class UnitTest extends WordSpec with UnitTestLike
 trait AkkaUnitTestLike extends UnitTestLike with BeforeAndAfterAll {
   protected lazy val akkaConfig: Config = ConfigFactory.load
   implicit lazy val system = ActorSystem(suiteName, akkaConfig)
+  implicit lazy val scheduler = system.scheduler
   implicit lazy val materializer = ActorMaterializer()
   implicit lazy val ctx = system.dispatcher
 

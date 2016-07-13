@@ -44,6 +44,7 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
       store.store("task-1", tc).futureValue should be(Done)
       store.get("task-1").futureValue.value should equal(tc)
       store.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq("task-1")
+      store.versions("task-1").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(tc.version)
     }
     "update an object" in {
       implicit val clock = new SettableClock()
@@ -55,7 +56,8 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
       store.store("task-1", updated).futureValue should be(Done)
       store.get("task-1").futureValue.value should equal(updated)
       store.get("task-1", original.version).futureValue.value should equal(original)
-      store.versions("task-1").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(original.version)
+      store.versions("task-1").runWith(Sink.seq).futureValue should contain theSameElementsAs
+        Seq(original.version, updated.version)
     }
     "delete idempontently" in {
       implicit val clock = new SettableClock()
@@ -76,11 +78,13 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         store.store("task", v).futureValue should be(Done)
       }
       clock.plus(1.hour)
-      store.store("task", TestClass1("def", 3, OffsetDateTime.now(clock))).futureValue should be(Done)
+      val newestVersion = TestClass1("def", 3, OffsetDateTime.now(clock))
+      store.store("task", newestVersion).futureValue should be(Done)
       // it should have dropped one element.
       val storedVersions = store.versions("task").runWith(Sink.seq).futureValue
-      storedVersions.size should equal(ir.maxVersions)
-      storedVersions should contain theSameElementsAs versions.tail.map(_.version)
+      // the current version is listed too.
+      storedVersions.size should equal(ir.maxVersions + 1)
+      storedVersions should contain theSameElementsAs newestVersion.version +: versions.tail.map(_.version)
       versions.tail.foreach { v =>
         store.get("task", v.version).futureValue.value should equal(v)
       }
@@ -104,7 +108,7 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
       val old = TestClass1("def", 2, OffsetDateTime.now(clock).minusHours(1))
       store.store("test", tc).futureValue should be(Done)
       store.store("test", old, old.version).futureValue should be(Done)
-      store.versions("test").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(old.version)
+      store.versions("test").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(tc.version, old.version)
       store.get("test").futureValue.value should equal(tc)
       store.get("test", old.version).futureValue.value should equal(old)
       store.deleteAll("test").futureValue should be(Done)
