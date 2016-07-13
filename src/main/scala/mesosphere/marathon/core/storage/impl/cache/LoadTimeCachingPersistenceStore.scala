@@ -11,7 +11,7 @@ import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.PrePostDriverCallback
 import mesosphere.marathon.core.storage.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.{ CategorizedKey, PersistenceStore }
+import mesosphere.marathon.core.storage.{ CategorizedKey, IdResolver, PersistenceStore }
 import mesosphere.marathon.util.RwLock
 
 import scala.async.Async.{ async, await }
@@ -76,7 +76,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     Future.successful(())
   }
 
-  override def ids[Id, V]()(implicit ir: Resolver[Id, V]): Source[Id, NotUsed] = {
+  override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
     val future = async {
       val cached = await(idCache)
       cached.read { c =>
@@ -86,7 +86,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     Source.fromFuture(future).mapConcat(identity)
   }
 
-  override def deleteAll[Id, V](k: Id)(implicit ir: Resolver[Id, V]): Future[Done] = {
+  override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     async {
       val (cached, ids, _) = (await(cache), await(idCache), await(store.deleteAll(k)))
       val storageId = ir.toStorageId(k, None)
@@ -108,7 +108,9 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     }
   }
 
-  override def get[Id, V](id: Id)(implicit ir: Resolver[Id, V], um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
+  override def get[Id, V](id: Id)(implicit
+    ir: IdResolver[Id, V, Category, K],
+    um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
     async {
       val cached = await(cache)
       val storageId = ir.toStorageId(id, None)
@@ -126,11 +128,11 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   }
 
   override def get[Id, V](id: Id, version: OffsetDateTime)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] =
     store.get(id, version)
 
-  override def store[Id, V](id: Id, v: V)(implicit ir: Resolver[Id, V], m: Marshaller[V, Serialized],
+  override def store[Id, V](id: Id, v: V)(implicit ir: IdResolver[Id, V, Category, K], m: Marshaller[V, Serialized],
     um: Unmarshaller[Serialized, V]): Future[Done] = {
     async {
       val (cached, ids, _) = (await(cache), await(idCache), await(store.store(id, v)))
@@ -147,7 +149,7 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   }
 
   override def store[Id, V](id: Id, v: V, version: OffsetDateTime)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = async {
     val (valueCache, idCache, _) = (await(this.cache), await(this.idCache), await(store.store(id, v, version)))
     valueCache.write { vc =>
@@ -160,10 +162,10 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     Done
   }
 
-  override def versions[Id, V](id: Id)(implicit ir: Resolver[Id, V]): Source[OffsetDateTime, NotUsed] =
+  override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
     store.versions(id)
 
-  override def delete[Id, V](k: Id, version: OffsetDateTime)(implicit ir: Resolver[Id, V]): Future[Done] =
+  override def delete[Id, V](k: Id, version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
     store.delete(k, version)
 
   override protected[storage] def keys(): Source[CategorizedKey[Category, K], NotUsed] = {

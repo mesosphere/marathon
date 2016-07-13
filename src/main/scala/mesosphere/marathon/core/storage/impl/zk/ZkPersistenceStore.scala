@@ -3,17 +3,13 @@ package mesosphere.marathon.core.storage.impl.zk
 import java.time.OffsetDateTime
 
 import akka.actor.Scheduler
-import akka.http.scaladsl.marshalling.Marshaller
-import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import akka.{ Done, NotUsed }
-import com.google.protobuf.MessageLite
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
+import mesosphere.marathon.core.storage.CategorizedKey
 import mesosphere.marathon.core.storage.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.{ CategorizedKey, MarathonProto, MarathonState }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.util.{ Retry, toRichFuture }
 import mesosphere.util.state.zk.{ Children, GetData, RichCuratorFramework }
@@ -26,26 +22,6 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
-
-case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
-  private val bucket = id.hashCode % 16
-  def path: String = version.fold(s"/$category/$bucket/$id") { v =>
-    s"/$category/$bucket/$id/versions/$v"
-  }
-}
-
-case class ZkSerialized(bytes: ByteString)
-
-trait ZkSerialization {
-  implicit def zkMarshal[A <: MessageLite, B <: MarathonState[A]]: Marshaller[MarathonState[A], ZkSerialized] =
-    Marshaller.opaque { (a: MarathonState[A]) =>
-      ZkSerialized(ByteString(a.toProto.toByteArray))
-    }
-
-  def zkUnmarshaller[A <: MessageLite, B <: MarathonState[A]](
-    proto: MarathonProto[A, B]): Unmarshaller[ZkSerialized, B] =
-    Unmarshaller.strict { (a: ZkSerialized) => proto.fromProtoBytes(a.bytes) }
-}
 
 class ZkPersistenceStore(val client: RichCuratorFramework)(
     implicit

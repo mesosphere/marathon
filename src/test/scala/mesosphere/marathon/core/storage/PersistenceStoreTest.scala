@@ -21,7 +21,7 @@ object TestClass1 {
 private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
   def emptyPersistenceStore[K, C, Serialized](newStore: => PersistenceStore[K, C, Serialized])(
     implicit
-    ir: IdResolver[String, K, C, TestClass1, Serialized],
+    ir: IdResolver[String, TestClass1, C, K],
     m: Marshaller[TestClass1, Serialized],
     um: Unmarshaller[Serialized, TestClass1]): Unit = {
 

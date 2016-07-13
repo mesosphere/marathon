@@ -9,7 +9,7 @@ import akka.stream.scaladsl.{ Keep, Sink, Source }
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.{ CategorizedKey, PersistenceStore }
+import mesosphere.marathon.core.storage.{ CategorizedKey, IdResolver, PersistenceStore }
 import mesosphere.marathon.util.RwLock
 
 import scala.async.Async.{ async, await }
@@ -34,7 +34,7 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
   private[storage] val idCache = RwLock(TrieMap[Category, Seq[Any]]())
   private[storage] val valueCache = RwLock(TrieMap[K, Option[Any]]())
 
-  override def ids[Id, V]()(implicit ir: Resolver[Id, V]): Source[Id, NotUsed] = {
+  override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
     val storeId = ir.category
     idCache.read { ids =>
       if (ids.contains(storeId)) {
@@ -50,7 +50,7 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
     }
   }
 
-  override def deleteAll[Id, V](k: Id)(implicit ir: Resolver[Id, V]): Future[Done] = {
+  override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     async {
       await(store.deleteAll(k))
       val storageId = ir.toStorageId(k, None)
@@ -71,7 +71,7 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
   }
 
   override def get[Id, V](id: Id)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
     val storageId = ir.toStorageId(id, None)
     val cached = valueCache.read(_.get(storageId))
@@ -88,12 +88,12 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
   }
 
   override def get[Id, V](id: Id, version: OffsetDateTime)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] =
     store.get(id, version)
 
   override def store[Id, V](id: Id, v: V)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized],
     um: Unmarshaller[Serialized, V]): Future[Done] = {
     async {
@@ -112,7 +112,7 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
   }
 
   override def store[Id, V](id: Id, v: V, version: OffsetDateTime)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = async {
     await(store.store(id, v, version))
     valueCache.write { vc =>
@@ -125,12 +125,12 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
     Done
   }
 
-  override def versions[Id, V](id: Id)(implicit ir: Resolver[Id, V]): Source[OffsetDateTime, NotUsed] =
+  override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
     store.versions(id)
 
   override def delete[Id, V](
     k: Id,
-    version: OffsetDateTime)(implicit ir: Resolver[Id, V]): Future[Done] =
+    version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
     store.delete(k, version)
 
   override protected[storage] def keys(): Source[CategorizedKey[Category, K], NotUsed] = {

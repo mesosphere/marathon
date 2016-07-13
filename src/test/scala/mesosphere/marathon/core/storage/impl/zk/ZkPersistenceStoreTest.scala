@@ -14,19 +14,15 @@ import mesosphere.marathon.core.storage._
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 
-trait TestClass1Implicits {
-  implicit val zkIdResolver = new IdResolver[String, ZkId, String, TestClass1, ZkSerialized] {
+trait ZkTestClass1Serialization {
+  implicit object ZkTestClass1Resolver extends IdResolver[String, TestClass1, String, ZkId] {
     override def fromStorageId(path: ZkId): String = path.id.replaceAll("_", "/")
-
     override def toStorageId(id: String, version: Option[OffsetDateTime]): ZkId = {
       ZkId(category = "test-class", id.replaceAll("/", "_"), version)
     }
-
     override val category: String = "test-class"
-
     override val maxVersions: Int = 2
-
-    override def version(tc: TestClass1) = tc.version
+    override def version(tc: TestClass1): OffsetDateTime = tc.version
   }
 
   implicit val byteOrder = ByteOrder.BIG_ENDIAN
@@ -57,7 +53,7 @@ trait TestClass1Implicits {
 }
 
 class ZkPersistenceStoreTest extends AkkaUnitTest
-    with PersistenceStoreTest with ZookeeperServerTest with TestClass1Implicits {
+    with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization {
 
   implicit val scheduler = system.scheduler
 

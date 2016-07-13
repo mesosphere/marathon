@@ -5,17 +5,14 @@ import java.util.UUID
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.PersistenceStoreTest
-import mesosphere.marathon.core.storage.impl.zk.{ TestClass1Implicits, ZkPersistenceStore }
-import mesosphere.marathon.core.storage.impl.{
-  InMemoryPersistenceStore,
-  InMemoryStoreSerialization,
-  InMemoryTestClass1Serialization
-}
+import mesosphere.marathon.core.storage.impl.InMemoryTestClass1Serialization
+import mesosphere.marathon.core.storage.impl.memory.{ InMemoryPersistenceStore, InMemoryStoreSerialization }
+import mesosphere.marathon.core.storage.impl.zk.{ ZkTestClass1Serialization, ZkPersistenceStore }
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 
 class LazyCachingPersistenceStoreTest extends AkkaUnitTest
-    with PersistenceStoreTest with TestClass1Implicits with ZookeeperServerTest
+    with PersistenceStoreTest with ZkTestClass1Serialization with ZookeeperServerTest
     with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
   implicit val scheduler = system.scheduler

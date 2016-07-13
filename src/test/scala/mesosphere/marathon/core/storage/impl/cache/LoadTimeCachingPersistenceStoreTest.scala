@@ -5,13 +5,14 @@ import java.util.UUID
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.PersistenceStoreTest
-import mesosphere.marathon.core.storage.impl.zk.{ TestClass1Implicits, ZkPersistenceStore }
-import mesosphere.marathon.core.storage.impl.{ InMemoryPersistenceStore, InMemoryStoreSerialization, InMemoryTestClass1Serialization }
+import mesosphere.marathon.core.storage.impl.InMemoryTestClass1Serialization
+import mesosphere.marathon.core.storage.impl.memory.{ InMemoryPersistenceStore, InMemoryStoreSerialization }
+import mesosphere.marathon.core.storage.impl.zk.{ ZkPersistenceStore, ZkTestClass1Serialization }
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 
 class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
-    with PersistenceStoreTest with ZookeeperServerTest with TestClass1Implicits
+    with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization
     with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
   implicit val metrics = new Metrics(new MetricRegistry)

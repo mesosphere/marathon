@@ -80,17 +80,15 @@ case class CategorizedKey[C, K](category: C, key: K)
   * @tparam Serialized The serialized format for the persistence store.
   */
 trait PersistenceStore[K, Category, Serialized] {
-  type Resolver[Id, V] = IdResolver[Id, K, Category, V, Serialized]
-
   /**
     * Get a list of all of the Ids of the given Value Types
     */
-  def ids[Id, V]()(implicit ir: Resolver[Id, V]): Source[Id, NotUsed]
+  def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed]
 
   /**
     * Get a list of all versions for a given id.
     */
-  def versions[Id, V](id: Id)(implicit ir: Resolver[Id, V]): Source[OffsetDateTime, NotUsed]
+  def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed]
 
   /**
     * Get the current version of the data, if any, for the given primary id and value type.
@@ -99,7 +97,9 @@ trait PersistenceStore[K, Category, Serialized] {
     *         If there is an underlying storage problem, the future should fail with
     *         [[mesosphere.marathon.StoreCommandFailedException]]
     */
-  def get[Id, V](id: Id)(implicit ir: Resolver[Id, V], um: Unmarshaller[Serialized, V]): Future[Option[V]]
+  def get[Id, V](id: Id)(implicit
+    ir: IdResolver[Id, V, Category, K],
+    um: Unmarshaller[Serialized, V]): Future[Option[V]]
 
   /**
     * Get the version of the data at the given version, if any, for the given primary id and value type.
@@ -111,7 +111,7 @@ trait PersistenceStore[K, Category, Serialized] {
   def get[Id, V](
     id: Id,
     version: OffsetDateTime)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]]
 
   /**
@@ -122,7 +122,7 @@ trait PersistenceStore[K, Category, Serialized] {
     *         if there is an underlying storage problem
     */
   def store[Id, V](id: Id, v: V)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized],
     um: Unmarshaller[Serialized, V]): Future[Done]
 
@@ -136,7 +136,7 @@ trait PersistenceStore[K, Category, Serialized] {
     */
   def store[Id, V](id: Id, v: V, version: OffsetDateTime)(
     implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done]
 
   /**
@@ -145,18 +145,18 @@ trait PersistenceStore[K, Category, Serialized] {
     * @return A future indicating whether the value was deleted (or simply didn't exist). Underlying storage issues
     *         will fail the future with [[mesosphere.marathon.StoreCommandFailedException]]
     */
-  def delete[Id, V](k: Id, version: OffsetDateTime)(implicit ir: Resolver[Id, V]): Future[Done]
+  def delete[Id, V](k: Id, version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done]
 
   /**
     * Delete all of the versions of the given Id, idempotent
     * @return A future indicating whether the value was deleted (or simply didn't exist). Underlying storage issues
     *         will fail the future with [[mesosphere.marathon.StoreCommandFailedException]]
     */
-  def deleteAll[Id, V](k: Id)(implicit ir: Resolver[Id, V]): Future[Done]
+  def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done]
 
   /**
     * @return A source of _all_ keys in the Persistence Store (which can be used by a
-    *         [[LoadTimeCachingPersistenceStore]] to populate the
+    *         [[mesosphere.marathon.core.storage.impl.cache.LoadTimeCachingPersistenceStore]] to populate the
     *         cache completely on startup.
     */
   protected[storage] def keys(): Source[CategorizedKey[Category, K], NotUsed]

@@ -7,7 +7,7 @@ import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.stream.Materializer
 import akka.stream.scaladsl.{ Keep, Sink, Source }
 import akka.{ Done, NotUsed }
-import mesosphere.marathon.core.storage.PersistenceStore
+import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStore }
 import mesosphere.util.LockManager
 
 import scala.async.Async.{ async, await }
@@ -29,13 +29,13 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
 
   protected def rawIds(id: Category): Source[K, NotUsed]
 
-  override def ids[Id, V]()(implicit ir: Resolver[Id, V]): Source[Id, NotUsed] = {
+  override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
     rawIds(ir.category).map(ir.fromStorageId)
   }
 
   protected def rawVersions(id: K): Source[OffsetDateTime, NotUsed]
 
-  final override def versions[Id, V](id: Id)(implicit ir: Resolver[Id, V]): Source[OffsetDateTime, NotUsed] = {
+  final override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] = {
     rawVersions(ir.toStorageId(id, None))
   }
 
@@ -43,7 +43,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
 
   override def delete[Id, V](
     k: Id,
-    version: OffsetDateTime)(implicit ir: Resolver[Id, V]): Future[Done] = {
+    version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     val storageId = ir.toStorageId(k, Some(version))
     lockManager.executeSequentially(k.toString) {
       rawDelete(ir.toStorageId(k, Some(version)), version)
@@ -52,7 +52,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
 
   protected def rawDeleteAll(k: K): Future[Done]
 
-  final override def deleteAll[Id, V](k: Id)(implicit ir: Resolver[Id, V]): Future[Done] = {
+  final override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     val storageId = ir.toStorageId(k, None)
     lockManager.executeSequentially(k.toString) {
       rawDeleteAll(ir.toStorageId(k, None))
@@ -62,7 +62,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
   protected[storage] def rawGet(k: K): Future[Option[Serialized]]
 
   override def get[Id, V](id: Id)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = async {
     val storageId = ir.toStorageId(id, None)
     await(rawGet(storageId)) match {
@@ -74,7 +74,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
   }
 
   override def get[Id, V](id: Id, version: OffsetDateTime)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = async {
     val storageId = ir.toStorageId(id, Some(version))
     await(rawGet(storageId)) match {
@@ -98,7 +98,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
   protected def rawStore[V](k: K, v: Serialized): Future[Done]
 
   override def store[Id, V](id: Id, v: V)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized],
     um: Unmarshaller[Serialized, V]): Future[Done] = {
     val storageId = ir.toStorageId(id, None)
@@ -122,7 +122,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
 
   override def store[Id, V](id: Id, v: V,
     version: OffsetDateTime)(implicit
-    ir: Resolver[Id, V],
+    ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = {
 
     val storageId = ir.toStorageId(id, Some(version))
