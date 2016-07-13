@@ -224,7 +224,11 @@ def partition_agent(hostname):
 
     copy_file_to_agent(hostname,"{}/net-services-agent.sh".format(fixture_dir()))
     print ("partitioning {}".format(hostname))
-    run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
+
+    try:
+        run_command_on_agent(hostname, 'sh net-services-agent.sh fail')
+    except Exception as e:
+        print("Ignoring AttributeError: 'Channel' object has no attribute '_closed'")
 
 def reconnect_agent(hostname):
     """Reconnect a node to cluster"""
