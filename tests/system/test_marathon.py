@@ -38,7 +38,6 @@ def test_install_marathon():
     try:
         install_package(PACKAGE_NAME)
     except Exception as e:
-        print("Exception raised")
         pass
     else:
         # Exception is not raised -> exit code was 0
@@ -49,6 +48,6 @@ def teardown_module(module):
     try:
         uninstall_package_and_wait(PACKAGE_NAME)
     except Exception as e:
-        print("Ignoring uninstall warning")
+        pass
 
     run_command_on_master("docker run mesosphere/janitor /janitor.py -z universe/marathon-user")

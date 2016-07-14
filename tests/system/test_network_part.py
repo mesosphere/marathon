@@ -162,7 +162,7 @@ def teardown_marathon_sleep():
     try:
         uninstall_package_and_wait(PACKAGE_NAME)
     except Exception as e:
-        print("Ignoring uninstall warning")
+        pass
 
     delete_zk_node("universe/marathon-user")
 
@@ -243,7 +243,7 @@ def wait_for_service_url(url,timeout_sec=120):
         try:
             response = http.get(url)
         except Exception as e:
-            print("")
+            pass
 
         if response is None:
             time.sleep(5)
@@ -265,7 +265,7 @@ def wait_for_task(service,task,timeout_sec=120):
         try:
             response = get_service_task(service, task)
         except Exception as e:
-            print("")
+            pass
 
         if response is None:
             time.sleep(5)
