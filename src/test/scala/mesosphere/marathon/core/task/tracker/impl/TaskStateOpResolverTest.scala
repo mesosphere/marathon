@@ -107,7 +107,7 @@ class TaskStateOpResolverTest
 
       And("the new state should have the correct status")
       val update: TaskStateChange.Update = stateChange.asInstanceOf[TaskStateChange.Update]
-      MarathonTaskStatus.mightBeLost() should contain (update.newState.taskStatus)
+      MarathonTaskStatus.mightBeLost should contain (update.newState.taskStatus)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()

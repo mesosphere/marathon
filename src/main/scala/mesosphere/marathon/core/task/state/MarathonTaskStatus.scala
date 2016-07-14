@@ -3,10 +3,20 @@ package mesosphere.marathon.core.task.state
 import org.apache.mesos
 
 // TODO ju handle garbage flag
-sealed trait MarathonTaskStatus
+sealed trait MarathonTaskStatus {
+  def toMesosStateName: String = "TASK_" + toString.toUpperCase
+}
 
 object MarathonTaskStatus {
   import org.apache.mesos.Protos.TaskState._
+
+  def fromMesosStateName(mesosStateName: String): Option[MarathonTaskStatus] = {
+    val filtered = all.filter(_.toMesosStateName == mesosStateName)
+    filtered.size match {
+      case 1 => Some(filtered.head)
+      case 0 => None
+    }
+  }
 
   // If we're disconnected at the time of a TASK_LOST event, we will only get the update during
   // a reconciliation. In that case, the specific reason will be shadowed by REASON_RECONCILIATION.
@@ -48,7 +58,10 @@ object MarathonTaskStatus {
     *
     * @return list of possible mappings of the mesos.Protos.TaskStatus.TASK_LOST
     */
-  def mightBeLost(): Set[MarathonTaskStatus] = Set(Gone, Unreachable, Lost)
+  lazy val mightBeLost: Set[MarathonTaskStatus] = Set(Gone, Unreachable, Lost)
+
+  lazy val all: Set[MarathonTaskStatus] = Set(Reserved, Created, Error, Failed, Finished, Killed, Killing, Lost, //
+    Running, Staging, Starting, Unreachable, Gone, Unknown)
 
   // Marathon specific states
   // RESERVED

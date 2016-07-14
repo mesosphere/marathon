@@ -9,7 +9,6 @@ import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -45,8 +44,7 @@ class ScaleAppUpdateStepImpl @Inject() (
     terminalOrExpungedTask.foreach { task =>
       val appId = task.taskId.runSpecId
       val taskId = task.taskId
-      // // TODO ju replaceable with MarathonTaskState ?
-      val state = task.mesosStatus.fold(TaskState.TASK_STAGING)(_.getState)
+      val state = task.taskStatus.toMesosStateName
       val reason = task.mesosStatus.fold("")(status =>
         if (status.hasReason) status.getReason.toString else "")
       log.info(s"initiating a scale check for app [$appId] due to [$taskId] $state $reason")
