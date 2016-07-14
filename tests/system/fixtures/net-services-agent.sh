@@ -5,8 +5,7 @@ then
   echo "net services down"
   #drop standard mesos traffic
   sudo iptables -A OUTPUT -m comment --comment "remove_me" -p tcp --destination-port 5050 -j DROP
-  sudo iptables -A OUTPUT -m comment --comment "remove_me" -p tcp --destination-port 5150 -j DROP
-  # sudo iptables -A OUTPUT -m comment --comment "remove_me" -p tcp --destination-port 80 -j DROP
+  sudo iptables -A OUTPUT -m comment --comment "remove_me" -p tcp --destination-port 5051 -j DROP
   sudo iptables -A OUTPUT -m comment --comment "remove_me" -p tcp --destination-port 2181 -j DROP
 
 else
