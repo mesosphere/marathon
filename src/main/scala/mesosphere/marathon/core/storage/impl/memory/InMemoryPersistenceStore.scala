@@ -5,8 +5,7 @@ import java.time.OffsetDateTime
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
-import mesosphere.marathon.core.storage.CategorizedKey
-import mesosphere.marathon.core.storage.impl.BasePersistenceStore
+import mesosphere.marathon.core.storage.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.metrics.Metrics
 
 import scala.collection.concurrent.TrieMap
@@ -48,6 +47,6 @@ class InMemoryPersistenceStore(implicit
     Future.successful(Done)
   }
 
-  override protected[storage] def keys(): Source[CategorizedKey[String, RamId], NotUsed] =
+  override protected[storage] def allKeys(): Source[CategorizedKey[String, RamId], NotUsed] =
     Source(entries.keySet.filter(_.version.isEmpty).map(id => CategorizedKey(id.category, id))(collection.breakOut))
 }

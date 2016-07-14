@@ -40,7 +40,7 @@ class SchedulerActionsTest
     val f = new Fixture
     val app = AppDefinition(id = PathId("/myapp"))
 
-    f.repo.expunge(app.id) returns Future.successful(Done)
+    f.repo.delete(app.id) returns Future.successful(Done)
     f.taskTracker.appTasks(eq(app.id))(any) returns Future.successful(Iterable.empty[Task])
 
     f.scheduler.stopApp(mock[SchedulerDriver], app).futureValue(1.second)
@@ -64,7 +64,7 @@ class SchedulerActionsTest
 
     val tasks = Set(runningTask, stagedTask, stagedTaskWithSlaveId)
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(AppTasks.forTasks(app.id, tasks)))
-    f.repo.allPathIds() returns Source.single(app.id)
+    f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
@@ -80,7 +80,7 @@ class SchedulerActionsTest
     val f = new Fixture
 
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.empty)
-    f.repo.allPathIds() returns Source.empty
+    f.repo.ids() returns Source.empty
 
     f.scheduler.reconcileTasks(f.driver).futureValue
 
@@ -103,7 +103,7 @@ class SchedulerActionsTest
     val tasksOfOrphanedApp = AppTasks.forTasks(orphanedApp.id, Iterable(orphanedTask))
 
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(tasksOfApp, tasksOfOrphanedApp))
-    f.repo.allPathIds() returns Source.single(app.id)
+    f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 

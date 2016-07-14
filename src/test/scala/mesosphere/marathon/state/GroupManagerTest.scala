@@ -340,13 +340,13 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
     when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(Some(group)))
     when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
-    when(f.appRepo.expunge(any())).thenReturn(Future.successful(Done))
+    when(f.appRepo.delete(any())).thenReturn(Future.successful(Done))
     when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupEmpty))
 
     Await.result(f.manager.update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
     verify(f.groupRepo).store(GroupRepository.zkRootName, groupEmpty)
-    verify(f.appRepo).expunge(app.id)
+    verify(f.appRepo).delete(app.id)
   }
 
   def manager(servicePortsRange: Range) = {

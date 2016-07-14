@@ -2,13 +2,11 @@ package mesosphere.marathon.state
 
 import java.util.regex.Pattern
 
-import com.google.protobuf.Parser
 import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
-import mesosphere.marathon.Protos.{ Constraint, ServiceDefinition }
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.core.storage.MarathonProto
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 // scalastyle:on
@@ -425,9 +423,7 @@ case class AppDefinition(
   }
 }
 
-object AppDefinition extends GeneralPurposeCombinators with MarathonProto[Protos.ServiceDefinition, AppDefinition] {
-
-  override protected def parser: Parser[ServiceDefinition] = Protos.ServiceDefinition.PARSER
+object AppDefinition extends GeneralPurposeCombinators {
 
   sealed trait VersionInfo {
     def version: Timestamp

@@ -43,8 +43,8 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.store.allIds() returns Future.successful(Seq.empty)
     f.store.initialize() returns Future.successful(())
     f.store.load(any) returns Future.successful(None)
-    f.appRepo.apps() returns Source.empty
-    f.appRepo.allPathIds() returns Source.empty
+    f.appRepo.all() returns Source.empty
+    f.appRepo.ids() returns Source.empty
     f.groupRepo.group("root") returns Future.successful(None)
 
     f.migration.migrate()
@@ -62,8 +62,8 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.store.allIds() returns Future.successful(Seq.empty)
     f.store.initialize() returns Future.successful(())
     f.store.load(any) returns Future.successful(None)
-    f.appRepo.apps() returns Source.empty
-    f.appRepo.allPathIds() returns Source.empty
+    f.appRepo.all() returns Source.empty
+    f.appRepo.ids() returns Source.empty
     f.groupRepo.group("root") returns Future.successful(None)
     f.groupRepo.listVersions(any) returns Future.successful(Seq.empty)
 

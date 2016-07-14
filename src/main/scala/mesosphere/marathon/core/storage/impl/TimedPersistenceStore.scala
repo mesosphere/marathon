@@ -30,8 +30,7 @@ trait TimedPersistenceStore[K, Category, Serialized] extends StateMetrics {
 
   override def store[Id, V](id: Id, v: V)(implicit
     ir: IdResolver[Id, V, Category, K],
-    m: Marshaller[V, Serialized],
-    um: Unmarshaller[Serialized, V]): Future[Done] =
+    m: Marshaller[V, Serialized]): Future[Done] =
     timedWrite(self.store(id, v))
 
   override def store[Id, V](id: Id, v: V,

@@ -8,13 +8,12 @@ import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.marathon.core.storage.CategorizedKey
-import mesosphere.marathon.core.storage.impl.BasePersistenceStore
+import mesosphere.marathon.core.storage.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.util.{ Retry, toRichFuture }
 import mesosphere.util.state.zk.{ Children, GetData, RichCuratorFramework }
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.NoNodeException
+import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.apache.zookeeper.data.Stat
 
 import scala.async.Async.{ async, await }
@@ -55,8 +54,8 @@ class ZkPersistenceStore(val client: RichCuratorFramework)(
   }
 
   override protected def rawVersions(id: ZkId): Source[OffsetDateTime, NotUsed] = {
-    val key = id.copy(version = None)
-    val path = s"${key.path}/versions"
+    val unversioned = id.copy(version = None)
+    val path = s"${unversioned.path}/versions"
     val versions = retry(s"ZkPersistenceStore::versions($path)") {
       async {
         await(client.children(path).asTry) match {
@@ -77,64 +76,76 @@ class ZkPersistenceStore(val client: RichCuratorFramework)(
     Source.fromFuture(versions).mapConcat(identity)
   }
 
-  override protected[storage] def rawGet(k: ZkId): Future[Option[ZkSerialized]] =
-    retry(s"ZkPersistenceStore::get($k)") {
+  override protected[storage] def rawGet(id: ZkId): Future[Option[ZkSerialized]] =
+    retry(s"ZkPersistenceStore::get($id)") {
       async {
-        await(client.data(k.path).asTry) match {
+        await(client.data(id.path).asTry) match {
           case Success(GetData(_, _, bytes)) =>
             Some(ZkSerialized(bytes))
           case Failure(_: NoNodeException) =>
             None
           case Failure(e: KeeperException) =>
-            throw new StoreCommandFailedException(s"Unable to get $k", e)
+            throw new StoreCommandFailedException(s"Unable to get $id", e)
           case Failure(e) =>
             throw e
         }
       }
     }
 
-  override protected def rawDelete(k: ZkId, version: OffsetDateTime): Future[Done] =
-    retry(s"ZkPersistenceStore::delete($k, $version)") {
+  override protected def rawDelete(id: ZkId, version: OffsetDateTime): Future[Done] =
+    retry(s"ZkPersistenceStore::delete($id, $version)") {
       async {
-        await(client.delete(k.copy(version = Some(version)).path).asTry) match {
+        await(client.delete(id.copy(version = Some(version)).path).asTry) match {
           case Success(_) | Failure(_: NoNodeException) => Done
           case Failure(e: KeeperException) =>
-            throw new StoreCommandFailedException(s"Unable to delete $k", e)
+            throw new StoreCommandFailedException(s"Unable to delete $id", e)
           case Failure(e) =>
             throw e
         }
       }
     }
 
-  override protected def rawStore[V](k: ZkId, v: ZkSerialized): Future[Done] =
-    retry(s"ZkPersistenceStore::store($k, $v)") {
+  override protected def rawStore[V](id: ZkId, v: ZkSerialized): Future[Done] = {
+    retry(s"ZkPersistenceStore::store($id, $v)") {
       async {
-        await(client.setData(k.path, v.bytes).asTry) match {
+        await(client.setData(id.path, v.bytes).asTry) match {
           case Success(_) =>
             Done
           case Failure(_: NoNodeException) =>
-            await(client.create(k.path, creatingParentContainersIfNeeded = true))
-            await(client.setData(k.path, v.bytes))
-            Done
+            await(client.create(id.path, creatingParentContainersIfNeeded = true, data = Some(v.bytes)).asTry) match {
+              case Success(_) =>
+                Done
+              case Failure(e: NodeExistsException) =>
+                // it could have been created by another call too... (e.g. creatingParentContainers if needed could
+                // have created the node when creating the parent's, e.g. the version was created first)
+                await(client.setData(id.path, v.bytes))
+                Done
+              case Failure(e: KeeperException) =>
+                throw new StoreCommandFailedException(s"Unable to store $id", e)
+              case Failure(e) =>
+                throw e
+            }
+
           case Failure(e: KeeperException) =>
-            throw new StoreCommandFailedException(s"Unable to store $k", e)
+            throw new StoreCommandFailedException(s"Unable to store $id", e)
           case Failure(e) =>
             throw e
         }
       }
     }
+  }
 
-  override protected def rawDeleteAll(k: ZkId): Future[Done] = {
-    val id = k.copy(version = None)
-    retry(s"ZkPersistenceStore::delete($id)") {
-      client.delete(k.path, guaranteed = true, deletingChildrenIfNeeded = true).map(_ => Done).recover {
+  override protected def rawDeleteAll(id: ZkId): Future[Done] = {
+    val unversionedId = id.copy(version = None)
+    retry(s"ZkPersistenceStore::delete($unversionedId)") {
+      client.delete(unversionedId.path, guaranteed = true, deletingChildrenIfNeeded = true).map(_ => Done).recover {
         case _: NoNodeException =>
           Done
       }
     }
   }
 
-  override protected[storage] def keys(): Source[CategorizedKey[String, ZkId], NotUsed] = {
+  override protected[storage] def allKeys(): Source[CategorizedKey[String, ZkId], NotUsed] = {
     val sources = retry(s"ZkPersistenceStore::keys()") {
       async {
         val rootChildren = await(client.children("/").map(_.children))

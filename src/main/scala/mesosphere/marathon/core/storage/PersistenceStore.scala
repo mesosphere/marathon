@@ -9,8 +9,6 @@ import akka.{ Done, NotUsed }
 
 import scala.concurrent.Future
 
-case class CategorizedKey[C, K](category: C, key: K)
-
 /**
   * Generic Persistence Store with flexible storage backends using Akka Marshalling Infrastructure.
   *
@@ -123,12 +121,15 @@ trait PersistenceStore[K, Category, Serialized] {
     */
   def store[Id, V](id: Id, v: V)(implicit
     ir: IdResolver[Id, V, Category, K],
-    m: Marshaller[V, Serialized],
-    um: Unmarshaller[Serialized, V]): Future[Done]
+    m: Marshaller[V, Serialized]): Future[Done]
 
   /**
     * Store a new value at the given version. If the maximum number of versions has been reached,
-    * will delete the oldest versions. This method does not replace the current version.
+    * will delete the oldest versions. If there is no current version, the value will become the current
+    * version, otherwise, will not replace the current version even if this version is newer.
+    *
+    * @todo Does the above actually make sense? Should we allow an object to have versions without
+    *       actually having a current version?
     *
     * @return A Future that will complete with the previous version of the value if it existed, or fail with
     *         [[mesosphere.marathon.StoreCommandFailedException]] if either a value already exists at the given Id, or
@@ -153,11 +154,4 @@ trait PersistenceStore[K, Category, Serialized] {
     *         will fail the future with [[mesosphere.marathon.StoreCommandFailedException]]
     */
   def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done]
-
-  /**
-    * @return A source of _all_ keys in the Persistence Store (which can be used by a
-    *         [[mesosphere.marathon.core.storage.impl.cache.LoadTimeCachingPersistenceStore]] to populate the
-    *         cache completely on startup.
-    */
-  protected[storage] def keys(): Source[CategorizedKey[Category, K], NotUsed]
 }

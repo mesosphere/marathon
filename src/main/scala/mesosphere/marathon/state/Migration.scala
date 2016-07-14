@@ -129,7 +129,7 @@ class MigrationTo0_11(
   def migrateApps(): Future[Unit] = {
     log.info("Start 0.11 migration")
     val rootGroupFuture = groupRepository.rootGroup().map(_.getOrElse(Group.empty))
-    val appIdsFuture = appRepository.allPathIds()
+    val appIdsFuture = appRepository.ids()
 
     for {
       rootGroup <- rootGroupFuture
@@ -159,7 +159,7 @@ class MigrationTo0_11(
             addVersionInfo(appId, appInGroup).map(storedApps ++ _)
           case None =>
             log.warn(s"App [$appId] will be expunged because it is not contained in the group data")
-            appRepository.expunge(appId).map(_ => storedApps)
+            appRepository.delete(appId).map(_ => storedApps)
         }
       }
     }
@@ -190,7 +190,7 @@ class MigrationTo0_11(
       }
     }
 
-    val sortedVersions = appRepository.listVersions(id).map(Timestamp(_)).runWith(Sink.sortedSet)
+    val sortedVersions = appRepository.versions(id).map(Timestamp(_)).runWith(Sink.sortedSet)
     sortedVersions.flatMap { sortedVersionsWithoutGroup =>
       val sortedVersions = sortedVersionsWithoutGroup ++ Seq(appInGroup.version)
       log.info(s"Add versionInfo to app [$id] for ${sortedVersions.size} versions")
@@ -358,10 +358,10 @@ class MigrationTo0_16(
   }
 
   private[this] def updateAllAppVersions(appId: PathId): Future[Unit] = {
-    appRepository.listVersions(appId).runWith(Sink.seq).map(_.sorted).flatMap { sortedVersions =>
+    appRepository.versions(appId).runWith(Sink.seq).map(_.sorted).flatMap { sortedVersions =>
       sortedVersions.foldLeft(Future.successful(())) { (future, version) =>
         future.flatMap { _ =>
-          appRepository.app(appId, version).flatMap {
+          appRepository.get(appId, version).flatMap {
             case Some(app) => appRepository.store(app).map(_ => ())
             case None => Future.failed(new MigrationFailedException(s"App $appId:$version not found"))
           }

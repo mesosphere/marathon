@@ -11,8 +11,8 @@ import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.PrePostDriverCallback
 import mesosphere.marathon.core.storage.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.{ CategorizedKey, IdResolver, PersistenceStore }
-import mesosphere.marathon.util.RwLock
+import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStore }
+import mesosphere.util.LockManager
 
 import scala.async.Async.{ async, await }
 import scala.collection.concurrent.TrieMap
@@ -42,22 +42,23 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     ctx: ExecutionContext
 ) extends PersistenceStore[K, Category, Serialized] with StrictLogging with PrePostDriverCallback {
 
-  private[storage] var idCache: Future[RwLock[TrieMap[Category, Seq[K]]]] = Future.failed(new NotActiveException())
+  private val lockManager = LockManager.create()
+  private[storage] var idCache: Future[TrieMap[Category, Seq[K]]] = Future.failed(new NotActiveException())
   // When we pre-load the persistence store, we don't have an idResolver or an Unmarshaller, so we store the
   // serialized form as a Left() until it is deserialized, in which case we store as a Right()
-  private[storage] var cache: Future[RwLock[TrieMap[K, Either[Serialized, Any]]]] =
+  private[storage] var valueCache: Future[TrieMap[K, Either[Serialized, Any]]] =
     Future.failed(new NotActiveException())
 
   override def preDriverStarts: Future[Unit] = {
-    val cachePromise = Promise[RwLock[TrieMap[K, Either[Serialized, Any]]]]()
-    val idPromise = Promise[RwLock[TrieMap[Category, Seq[K]]]]()
+    val cachePromise = Promise[TrieMap[K, Either[Serialized, Any]]]()
+    val idPromise = Promise[TrieMap[Category, Seq[K]]]()
     idCache = idPromise.future
-    cache = cachePromise.future
+    valueCache = cachePromise.future
 
-    val ids = TrieMap[Category, Seq[K]]()
-    val cached = TrieMap[K, Either[Serialized, Any]]()
+    val ids = TrieMap.empty[Category, Seq[K]]
+    val cached = TrieMap.empty[K, Either[Serialized, Any]]
 
-    val future = store.keys().mapAsync(maxPreloadRequests) { key =>
+    val future = store.allKeys().mapAsync(maxPreloadRequests) { key =>
       store.rawGet(key.key).map(v => key -> v)
     }.runForeach {
       case (categorized, value) =>
@@ -65,64 +66,66 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
         val children = ids.getOrElse(categorized.category, Nil)
         ids.put(categorized.category, categorized.key +: children)
     }
-    idPromise.completeWith(future.map(_ => RwLock(ids)))
-    cachePromise.completeWith(future.map(_ => RwLock(cached)))
+    idPromise.completeWith(future.map(_ => ids))
+    cachePromise.completeWith(future.map(_ => cached))
     future.map(_ => ())
   }
 
   override def postDriverTerminates: Future[Unit] = {
-    cache = Future.failed(new NotActiveException())
+    valueCache = Future.failed(new NotActiveException())
     idCache = Future.failed(new NotActiveException())
     Future.successful(())
   }
 
   override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
-    val future = async {
-      val cached = await(idCache)
-      cached.read { c =>
-        c.getOrElse(ir.category, Nil).map(ir.fromStorageId)
+    val category = ir.category
+    val future = lockManager.executeSequentially(category.toString) {
+      async {
+        await(idCache).getOrElse(category, Nil).map(ir.fromStorageId)
       }
     }
     Source.fromFuture(future).mapConcat(identity)
   }
 
   override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
-    async {
-      val (cached, ids, _) = (await(cache), await(idCache), await(store.deleteAll(k)))
-      val storageId = ir.toStorageId(k, None)
-
-      cached.write { c =>
-        c.remove(storageId)
-
-        ids.write { i =>
-          val old = i.getOrElse(ir.category, Nil)
+    val storageId = ir.toStorageId(k, None)
+    val category = ir.category
+    lockManager.executeSequentially(category.toString) {
+      lockManager.executeSequentially(storageId.toString) {
+        async {
+          val deleteFuture = store.deleteAll(k)
+          val (cached, ids, _) = (await(valueCache), await(idCache), await(deleteFuture))
+          cached.remove(storageId)
+          val old = ids.getOrElse(category, Nil)
           val children = old.filter(_ != storageId)
           if (children.nonEmpty) {
-            i.put(ir.category, old.filter(_ != storageId))
+            ids.put(category, old.filter(_ != storageId))
           } else {
-            i.remove(ir.category)
+            ids.remove(category)
           }
+          Done
         }
       }
-      Done
     }
   }
 
   override def get[Id, V](id: Id)(implicit
     ir: IdResolver[Id, V, Category, K],
     um: Unmarshaller[Serialized, V]): Future[Option[V]] = {
-    async {
-      val cached = await(cache)
-      val storageId = ir.toStorageId(id, None)
-      cached.read(_.get(storageId)) match {
-        case Some(Left(v)) =>
-          val deserialized = await(Unmarshal(v).to[V])
-          cached.write(_.put(storageId, Right(deserialized)))
-          Some(deserialized)
-        case Some(Right(v)) =>
-          Some(v.asInstanceOf[V])
-        case None =>
-          None
+    val storageId = ir.toStorageId(id, None)
+    lockManager.executeSequentially(storageId.toString) {
+      async {
+        val cached = await(valueCache)
+        cached.get(storageId) match {
+          case Some(Left(v)) =>
+            val deserialized = await(Unmarshal(v).to[V])
+            cached.put(storageId, Right(deserialized))
+            Some(deserialized)
+          case Some(Right(v)) =>
+            Some(v.asInstanceOf[V])
+          case None =>
+            None
+        }
       }
     }
   }
@@ -132,16 +135,19 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     um: Unmarshaller[Serialized, V]): Future[Option[V]] =
     store.get(id, version)
 
-  override def store[Id, V](id: Id, v: V)(implicit ir: IdResolver[Id, V, Category, K], m: Marshaller[V, Serialized],
-    um: Unmarshaller[Serialized, V]): Future[Done] = {
-    async {
-      val (cached, ids, _) = (await(cache), await(idCache), await(store.store(id, v)))
-      cached.write { c =>
-        ids.write { i =>
-          val storageId = ir.toStorageId(id, None)
-          c(storageId) = Right(v)
-          val old = i.getOrElse(ir.category, Nil)
-          i(ir.category) = storageId +: old
+  override def store[Id, V](id: Id, v: V)(implicit
+    ir: IdResolver[Id, V, Category, K],
+    m: Marshaller[V, Serialized]): Future[Done] = {
+    val category = ir.category
+    val storageId = ir.toStorageId(id, None)
+    lockManager.executeSequentially(category.toString) {
+      lockManager.executeSequentially(storageId.toString) {
+        async {
+          val storeFuture = store.store(id, v)
+          val (cached, ids, _) = (await(valueCache), await(idCache), await(storeFuture))
+          cached(storageId) = Right(v)
+          val old = ids.getOrElse(ir.category, Nil)
+          ids(category) = storageId +: old
           Done
         }
       }
@@ -150,16 +156,21 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
 
   override def store[Id, V](id: Id, v: V, version: OffsetDateTime)(implicit
     ir: IdResolver[Id, V, Category, K],
-    m: Marshaller[V, Serialized]): Future[Done] = async {
-    val (valueCache, idCache, _) = (await(this.cache), await(this.idCache), await(store.store(id, v, version)))
-    valueCache.write { vc =>
-      vc.putIfAbsent(ir.toStorageId(id, None), Right(v))
-      idCache.write { idc =>
-        val old = idc.getOrElse(ir.category, Nil)
-        idc.put(ir.category, ir.toStorageId(id, None) +: old)
+    m: Marshaller[V, Serialized]): Future[Done] = {
+    val category = ir.category
+    val storageId = ir.toStorageId(id, None)
+    lockManager.executeSequentially(category.toString) {
+      lockManager.executeSequentially(storageId.toString) {
+        async {
+          val storeFuture = store.store(id, v, version)
+          val (valueCache, idCache, _) = (await(this.valueCache), await(this.idCache), await(storeFuture))
+          valueCache.putIfAbsent(storageId, Right(v))
+          val old = idCache.getOrElse(category, Nil)
+          idCache.put(category, storageId +: old)
+          Done
+        }
       }
     }
-    Done
   }
 
   override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
@@ -169,11 +180,6 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     k: Id,
     version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
     store.delete(k, version)
-
-  override protected[storage] def keys(): Source[CategorizedKey[Category, K], NotUsed] = {
-    logger.warn(s"keys() called on a CachingPersistenceStore (which is what keys() is for), deferring to $store")
-    store.keys()
-  }
 
   override def toString: String = s"LoadTimeCachingPersistenceStore($store)"
 }

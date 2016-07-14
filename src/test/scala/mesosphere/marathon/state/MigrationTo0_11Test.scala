@@ -41,7 +41,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     Then("only an empty root Group is created")
     val maybeGroup: Option[Group] = f.groupRepo.rootGroup().futureValue
     maybeGroup.map(_.copy(version = emptyGroup.version)) should be (Some(emptyGroup))
-    f.appRepo.allPathIds().runWith(Sink.seq).futureValue should be('empty)
+    f.appRepo.ids().runWith(Sink.seq).futureValue should be('empty)
   }
 
   test("if an app only exists in the appRepo, it is expunged") {
@@ -55,7 +55,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     Then("only an empty root Group is created")
     val maybeGroup: Option[Group] = Await.result(f.groupRepo.rootGroup(), 3.seconds)
     maybeGroup.map(_.copy(version = emptyGroup.version)) should be (Some(emptyGroup))
-    f.appRepo.allPathIds().runWith(Sink.seq).futureValue should be('empty)
+    f.appRepo.ids().runWith(Sink.seq).futureValue should be('empty)
   }
 
   test("if an app only exists in the groupRepo, it is created in the appRepo") {
@@ -78,9 +78,9 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     maybeGroup should be (Some(groupWithApp.copy(apps = Set(appWithFullVersion))))
 
     And("the same app has been stored in the appRepo")
-    f.appRepo.allPathIds().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
-    f.appRepo.currentVersion(PathId("/test")).futureValue should be(Some(appWithFullVersion))
-    f.appRepo.listVersions(PathId("/test")).runWith(Sink.seq).futureValue should have size (1)
+    f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
+    f.appRepo.get(PathId("/test")).futureValue should be(Some(appWithFullVersion))
+    f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (1)
   }
 
   private[this] def onlyVersion(ts: Long) = AppDefinition.VersionInfo.OnlyVersion(Timestamp(ts))
@@ -113,9 +113,9 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     maybeGroup should be (Some(groupWithApp.copy(apps = Set(correctedAppV3))))
 
     And("the same app has been stored in the appRepo")
-    f.appRepo.allPathIds().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
-    f.appRepo.currentVersion(PathId("/test")).futureValue should be(Some(correctedAppV3))
-    f.appRepo.listVersions(PathId("/test")).runWith(Sink.seq).futureValue should have size (3)
+    f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
+    f.appRepo.get(PathId("/test")).futureValue should be(Some(correctedAppV3))
+    f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (3)
     f.appRepo.app(PathId("/test"), correctedAppV1.version).futureValue should be(Some(correctedAppV1))
     f.appRepo.app(PathId("/test"), correctedAppV2.version).futureValue should be(Some(correctedAppV2))
     f.appRepo.app(PathId("/test"), correctedAppV3.version).futureValue should be(Some(correctedAppV3))
@@ -151,9 +151,9 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     maybeGroup should be (Some(groupWithApp.copy(apps = Set(correctedAppV3))))
 
     And("the same app has been stored in the appRepo")
-    f.appRepo.allPathIds().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
-    f.appRepo.currentVersion(PathId("/test")).futureValue should be(Some(correctedAppV3))
-    f.appRepo.listVersions(PathId("/test")).runWith(Sink.seq).futureValue should have size (3)
+    f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
+    f.appRepo.get(PathId("/test")).futureValue should be(Some(correctedAppV3))
+    f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (3)
     f.appRepo.app(PathId("/test"), correctedAppV1.version).futureValue should be(Some(correctedAppV1))
     f.appRepo.app(PathId("/test"), correctedAppV2.version).futureValue should be(Some(correctedAppV2))
     f.appRepo.app(PathId("/test"), correctedAppV3.version).futureValue should be(Some(correctedAppV3))

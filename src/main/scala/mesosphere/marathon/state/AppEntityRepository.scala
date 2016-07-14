@@ -17,20 +17,20 @@ class AppEntityRepository(
     extends EntityRepository[AppDefinition] with AppRepository {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def allPathIds(): Source[PathId, NotUsed] = {
+  def ids(): Source[PathId, NotUsed] = {
     val ids = async {
       await(allIds()).map(PathId.fromSafePath)(collection.breakOut)
     }
     Source.fromFuture(ids).mapConcat(identity)
   }
 
-  def currentVersion(appId: PathId): Future[Option[AppDefinition]] = currentVersion(appId.safePath)
-  def listVersions(appId: PathId): Source[OffsetDateTime, NotUsed] =
+  def get(appId: PathId): Future[Option[AppDefinition]] = currentVersion(appId.safePath)
+  def versions(appId: PathId): Source[OffsetDateTime, NotUsed] =
     Source.fromFuture(listVersions(appId.safePath)).mapConcat(identity).map(_.toOffsetDateTime)
 
-  def expunge(appId: PathId): Future[Done] = expunge(appId.safePath).map(_ => Done)
+  def delete(appId: PathId): Future[Done] = expunge(appId.safePath).map(_ => Done)
 
-  def app(appId: PathId, version: OffsetDateTime): Future[Option[AppDefinition]] =
+  def get(appId: PathId, version: OffsetDateTime): Future[Option[AppDefinition]] =
     app(appId, Timestamp(version))
 
   def app(appId: PathId, version: Timestamp): Future[Option[AppDefinition]] =
@@ -39,6 +39,6 @@ class AppEntityRepository(
   def store(appDef: AppDefinition): Future[Done] =
     storeWithVersion(appDef.id.safePath, appDef.version, appDef).map(_ => Done)
 
-  def apps(): Source[AppDefinition, NotUsed] =
+  def all(): Source[AppDefinition, NotUsed] =
     Source.fromFuture(current()).mapConcat(identity)
 }

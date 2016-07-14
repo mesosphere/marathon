@@ -36,13 +36,7 @@ class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
     store
   }
 
-  "LoadTimeCachingPersistenceStore" when {
-    "backed by InMemoryPersistenceStore" should {
-      behave like emptyPersistenceStore(cachedInMemory)
-    }
-    "backed by ZkPersistenceStore" should {
-      behave like emptyPersistenceStore(cachedZk)
-    }
-    // TODO: Mock out the backing store
-  }
+  behave like basicPersistenceStore("LoadTime(InMemory)", cachedInMemory)
+  behave like basicPersistenceStore("LoadTime(Zk)", cachedZk)
+  // TODO: Mock out the backing store
 }

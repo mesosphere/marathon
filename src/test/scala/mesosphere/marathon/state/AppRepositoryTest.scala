@@ -29,7 +29,7 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
       val appDef = AppDefinition(id = path, versionInfo = AppDefinition.VersionInfo.forNewConfig(timestamp))
 
       repo.store(appDef).futureValue
-      repo.currentVersion(appDef.id).futureValue.value should equal(appDef)
+      repo.get(appDef.id).futureValue.value should equal(appDef)
     }
     "be able to update an app and keep the old version" in {
       val repo = newRepo
@@ -40,17 +40,17 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
       repo.store(appDef).futureValue
       repo.store(nextVersion).futureValue
 
-      repo.currentVersion(path).futureValue.value should equal(nextVersion)
-      repo.listVersions(path).runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(
+      repo.get(path).futureValue.value should equal(nextVersion)
+      repo.versions(path).runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(
         appDef.version.toOffsetDateTime,
         nextVersion.version.toOffsetDateTime)
-      repo.app(appDef.id, appDef.version.toOffsetDateTime).futureValue.value should be(appDef)
+      repo.get(appDef.id, appDef.version.toOffsetDateTime).futureValue.value should be(appDef)
     }
     "be able to list multiple apps" in {
       val repo = newRepo
       val apps = Seq(AppDefinition(id = "app1".toRootPath), AppDefinition(id = "app2".toRootPath))
       Future.sequence(apps.map(repo.store)).futureValue
-      repo.allPathIds().runWith(Sink.seq).futureValue should contain theSameElementsAs
+      repo.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs
         Seq("/app1".toRootPath, "/app2".toRootPath)
     }
     "list the current versions of the apps" in {
@@ -70,7 +70,7 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
       repo.store(appDef1).futureValue
       repo.store(appDef2).futureValue
 
-      repo.apps().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(appDef1, appDef2)
+      repo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(appDef1, appDef2)
     }
     "should return all versions of a given app" in {
       val repo = newRepo
@@ -87,7 +87,7 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
       val appDef2 = AppDefinition("app2".toRootPath)
       val allApps = Seq(appDef1, version1, version2, version3, appDef2)
       allApps.foreach(repo.store(_).futureValue)
-      repo.listVersions(appDef1.id).runWith(Sink.seq).futureValue should contain theSameElementsAs
+      repo.versions(appDef1.id).runWith(Sink.seq).futureValue should contain theSameElementsAs
         Seq(appDef1, version1, version2, version3).map(_.version.toOffsetDateTime)
     }
     "expunge should delete all versions of an app" in {
@@ -106,11 +106,11 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
       val allApps = Seq(appDef1, version1, version2, version3, appDef2)
       allApps.foreach(repo.store(_).futureValue)
 
-      repo.expunge(appDef1.id).futureValue
-      repo.listVersions(appDef1.id).runWith(Sink.seq).futureValue should be('empty)
-      repo.currentVersion(appDef1.id).futureValue should be('empty)
-      repo.apps().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(appDef2)
-      repo.allPathIds().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(appDef2.id)
+      repo.delete(appDef1.id).futureValue
+      repo.versions(appDef1.id).runWith(Sink.seq).futureValue should be('empty)
+      repo.get(appDef1.id).futureValue should be('empty)
+      repo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(appDef2)
+      repo.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(appDef2.id)
     }
   }
 }

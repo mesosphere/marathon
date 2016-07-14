@@ -148,7 +148,7 @@ class GroupManager @Inject() (
             log.info(s"[$currentId] expunging app")
             // this means that destroyed apps are immediately gone -- even if there are still tasks running for
             // this app. We should improve this in the future.
-            appRepo.expunge(currentId).map (_ => ())
+            appRepo.delete(currentId).map (_ => ())
         }
       }
     }

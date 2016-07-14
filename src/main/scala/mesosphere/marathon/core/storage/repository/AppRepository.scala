@@ -8,8 +8,6 @@ import mesosphere.marathon.state.{ AppDefinition, PathId }
 
 import scala.concurrent.Future
 
-case class AppVersion(appId: PathId, version: OffsetDateTime)
-
 /**
   * This responsibility is in transit:
   *
@@ -24,24 +22,24 @@ case class AppVersion(appId: PathId, version: OffsetDateTime)
   * Until this plan is implemented, please think carefully when to use the app repository!
   */
 trait AppRepository {
-  def allPathIds(): Source[PathId, NotUsed]
+  def ids(): Source[PathId, NotUsed]
 
-  def currentVersion(appId: PathId): Future[Option[AppDefinition]]
+  def get(appId: PathId): Future[Option[AppDefinition]]
 
   /**
     * List all of the versions of the given app
     */
-  def listVersions(appId: PathId): Source[OffsetDateTime, NotUsed]
+  def versions(appId: PathId): Source[OffsetDateTime, NotUsed]
 
   /**
     * Delete all versions of the given app.
     */
-  def expunge(appId: PathId): Future[Done]
+  def delete(appId: PathId): Future[Done]
 
   /**
     * Returns the app with the supplied id and version.
     */
-  def app(appId: PathId, version: OffsetDateTime): Future[Option[AppDefinition]]
+  def get(appId: PathId, version: OffsetDateTime): Future[Option[AppDefinition]]
 
   /**
     * Stores the supplied app, now the current version for that apps's id.
@@ -51,11 +49,5 @@ trait AppRepository {
   /**
     * Returns the current version for all apps.
     */
-  def apps(): Source[AppDefinition, NotUsed]
-
-  /**
-    * Returns a map from PathIds to current app timestamps.
-    */
-  def currentAppVersions(): Source[AppVersion, NotUsed] =
-    apps().map(app => AppVersion(app.id, app.version.toOffsetDateTime))
+  def all(): Source[AppDefinition, NotUsed]
 }

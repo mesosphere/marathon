@@ -117,7 +117,7 @@ class MarathonHealthCheckManager @Inject() (
     }
 
   override def reconcileWith(appId: PathId): Future[Unit] =
-    appRepository.currentVersion(appId) flatMap {
+    appRepository.get(appId) flatMap {
       case None => Future(())
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
@@ -142,7 +142,7 @@ class MarathonHealthCheckManager @Inject() (
         // reconcile all running versions of the current app
         val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
         val res: Iterator[Future[Unit]] = appVersionsWithoutHealthChecks.iterator map { version =>
-          appRepository.app(app.id, version.toOffsetDateTime) map {
+          appRepository.get(app.id, version.toOffsetDateTime) map {
             case None =>
               // FIXME: If the app version of the task is not available anymore, no health check is started.
               // We generated a new app version for every scale change. If maxVersions is configured, we

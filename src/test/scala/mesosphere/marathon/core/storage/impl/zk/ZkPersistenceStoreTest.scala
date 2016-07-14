@@ -63,8 +63,6 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
     new ZkPersistenceStore(client.usingNamespace(root))
   }
 
-  "ZookeeperPersistenceStore" should {
-    behave like emptyPersistenceStore(defaultStore)
-  }
+  behave like basicPersistenceStore("ZookeeperPersistenceStore", defaultStore)
 }
 

@@ -117,7 +117,7 @@ class MarathonSchedulerService @Inject() (
     schedulerActor ! CancelDeployment(id)
 
   def listAppVersions(appId: PathId): Iterable[Timestamp] =
-    Await.result(appRepository.listVersions(appId).map(Timestamp(_)).runWith(Sink.seq), config.zkTimeoutDuration)
+    Await.result(appRepository.versions(appId).map(Timestamp(_)).runWith(Sink.seq), config.zkTimeoutDuration)
 
   def listRunningDeployments(): Future[Seq[DeploymentStepInfo]] =
     (schedulerActor ? RetrieveRunningDeployments)
@@ -129,7 +129,7 @@ class MarathonSchedulerService @Inject() (
       .map(_.plans)
 
   def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
-    Await.result(appRepository.app(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
+    Await.result(appRepository.get(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
   }
 
   def killTasks(

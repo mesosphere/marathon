@@ -5,47 +5,48 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
-import com.google.protobuf.MessageLite
-import mesosphere.marathon.core.storage.{ IdResolver, MarathonProto, MarathonState }
+import mesosphere.marathon.Protos.ServiceDefinition
+import mesosphere.marathon.core.storage.IdResolver
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
-  private val bucket = id.hashCode % 16
-  def path: String = version.fold(s"/$category/$bucket/$id") { v =>
-    s"/$category/$bucket/$id/versions/$v"
+  private val bucket = math.abs(id.hashCode % 16)
+  def path: String = version.fold(f"/$category/$bucket%x/$id") { v =>
+    f"/$category/$bucket%x/$id/versions/$v"
   }
 }
 
 case class ZkSerialized(bytes: ByteString)
 
 trait ZkStoreSerialization {
-  val maxVersions = 25
-
-  /** Anything that implements [[MarathonState]] is automatically marshalled. */
-  implicit def zkMarshal[A <: MessageLite, B <: MarathonState[A]]: Marshaller[MarathonState[A], ZkSerialized] =
-    Marshaller.opaque { (a: MarathonState[A]) =>
-      ZkSerialized(ByteString(a.toProto.toByteArray))
-    }
-
-  /** Anything that implements [[MarathonState]] can be unmarshalled, provided the [[MarathonProto]] */
-  private def zkUnmarshaller[A <: MessageLite, B <: MarathonState[A]](
-    proto: MarathonProto[A, B]): Unmarshaller[ZkSerialized, B] =
-    Unmarshaller.strict { (a: ZkSerialized) => proto.fromProtoBytes(a.bytes) }
+  val DefaultMaxVersions = 25
 
   /** General id resolver for a key of Path.Id */
-  private class ZkPathIdResolver[T <: MarathonState[_]](
+  private class ZkPathIdResolver[T](
     val category: String,
-    val maxVersions: Int = ZkStoreSerialization.this.maxVersions)
+    val maxVersions: Int = DefaultMaxVersions,
+    getVersion: (T) => OffsetDateTime)
       extends IdResolver[PathId, T, String, ZkId] {
     override def toStorageId(id: PathId, version: Option[OffsetDateTime]): ZkId =
       ZkId(category, id.path.mkString("_"), version)
     override def fromStorageId(key: ZkId): PathId = PathId(key.id.split("_").toList, absolute = true)
-    override def version(v: T): OffsetDateTime = v.version.toOffsetDateTime
+    override def version(v: T): OffsetDateTime = getVersion(v)
   }
 
-  implicit val zkAppDefResolver: IdResolver[PathId, AppDefinition, String, ZkId] =
-    new ZkPathIdResolver[AppDefinition]("apps", maxVersions)
-  implicit val zkAppDefUnmarshaller = zkUnmarshaller(AppDefinition)
+  def appDefResolver(maxVersions: Int): IdResolver[PathId, AppDefinition, String, ZkId] =
+    new ZkPathIdResolver[AppDefinition]("apps", maxVersions, _.version.toOffsetDateTime)
+  implicit val appDefResolver: IdResolver[PathId, AppDefinition, String, ZkId] =
+    appDefResolver(DefaultMaxVersions)
+
+  implicit val appDefMarshaller: Marshaller[AppDefinition, ZkSerialized] =
+    Marshaller.opaque(appDef => ZkSerialized(ByteString(appDef.toProtoByteArray)))
+
+  implicit val appDefUnmarshaller: Unmarshaller[ZkSerialized, AppDefinition] =
+    Unmarshaller.strict {
+      case ZkSerialized(byteString) =>
+        val proto = ServiceDefinition.PARSER.parseFrom(byteString.toArray)
+        AppDefinition.fromProto(proto)
+    }
 }
 
 object ZkStoreSerialization extends ZkStoreSerialization

@@ -27,13 +27,7 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
 
   private def cachedZk = new LazyCachingPersistenceStore(zkStore)
 
-  "LazyCachingPersistenceStore" when {
-    "backed by InMemoryPersistenceStore" should {
-      behave like emptyPersistenceStore(cachedInMemory)
-    }
-    "backed by ZkPersistenceStore" should {
-      behave like emptyPersistenceStore(cachedZk)
-    }
-    // TODO: Mock out the backing store.
-  }
+  behave like basicPersistenceStore("LazyCache(InMemory)", cachedInMemory)
+  behave like basicPersistenceStore("LazyCache(Zk)", cachedZk)
+  // TODO: Mock out the backing store.
 }

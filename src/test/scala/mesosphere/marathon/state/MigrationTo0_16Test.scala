@@ -40,7 +40,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     Then("only an empty root Group is created")
     val maybeGroup: Option[Group] = f.groupRepo.rootGroup().futureValue
     maybeGroup should be (None)
-    f.appRepo.allPathIds().runWith(Sink.seq).futureValue should be('empty)
+    f.appRepo.ids().runWith(Sink.seq).futureValue should be('empty)
   }
 
   test("an app and all its revisions are migrated") {

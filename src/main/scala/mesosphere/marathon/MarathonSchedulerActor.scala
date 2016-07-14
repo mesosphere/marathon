@@ -167,7 +167,7 @@ class MarathonSchedulerActor private (
         context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, taskIds, config, promise))
         val res = async {
           await(promise.future)
-          val app = await(appRepository.currentVersion(appId))
+          val app = await(appRepository.get(appId))
           app.foreach(schedulerActions.scale(driver, _))
         }
 
@@ -460,7 +460,7 @@ class SchedulerActions(
   }
 
   def scaleApps(): Future[Unit] = {
-    appRepository.allPathIds().runWith(Sink.set).andThen {
+    appRepository.ids().runWith(Sink.set).andThen {
       case Success(appIds) => for (appId <- appIds) schedulerActor ! ScaleApp(appId)
       case Failure(t) => log.warn("Failed to get task names", t)
     }.map(_ => ())
@@ -475,7 +475,7 @@ class SchedulerActions(
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
-    appRepository.allPathIds().runWith(Sink.set).flatMap { appIds =>
+    appRepository.ids().runWith(Sink.set).flatMap { appIds =>
       taskTracker.tasksByApp().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>
           tasksByApp.appTasks(appId).flatMap(_.mesosStatus)
@@ -573,7 +573,7 @@ class SchedulerActions(
   }
 
   def currentAppVersion(appId: PathId): Future[Option[AppDefinition]] =
-    appRepository.currentVersion(appId)
+    appRepository.get(appId)
 }
 
 private[this] object SchedulerActions {
