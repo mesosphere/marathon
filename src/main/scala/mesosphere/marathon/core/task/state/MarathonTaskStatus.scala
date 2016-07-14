@@ -68,6 +68,8 @@ object MarathonTaskStatus {
   // KILLING
   case object Killing extends MarathonTaskStatus
   // LOST
+  // Note: At the moment there is no `mesos native` distinguish between `Lost`, `Unreachable`, `Gone` and `Unknown`
+  // tl;dr: don't use Lost
   case object Lost extends MarathonTaskStatus with Terminal
   // RUNNING
   case object Running extends MarathonTaskStatus
