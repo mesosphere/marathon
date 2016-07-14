@@ -2,8 +2,7 @@ package mesosphere.marathon.event.http
 
 import akka.actor._
 import com.google.inject.Inject
-import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.event.LocalLeadershipEvent
+import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.event.http.HttpEventStreamActor._
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }

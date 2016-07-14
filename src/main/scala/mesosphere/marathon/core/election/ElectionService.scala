@@ -40,7 +40,7 @@ trait ElectionService {
     * Subscribe to leadership change events.
     *
     * The given actorRef will initally get the current state via the appropriate
-    * [[mesosphere.marathon.event.LocalLeadershipEvent]] message and will
+    * [[LocalLeadershipEvent]] message and will
     * be informed of changes after that.
     */
   def subscribe(self: ActorRef)
@@ -66,3 +66,10 @@ trait ElectionCandidate {
   def startLeadership(): Unit
 }
 
+/** Local leadership events. They are not delivered via the event endpoints. */
+sealed trait LocalLeadershipEvent
+
+object LocalLeadershipEvent {
+  case object ElectedAsLeader extends LocalLeadershipEvent
+  case object Standby extends LocalLeadershipEvent
+}

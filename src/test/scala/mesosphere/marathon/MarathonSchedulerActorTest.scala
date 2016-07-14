@@ -7,7 +7,7 @@ import akka.event.EventStream
 import akka.testkit._
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -32,7 +32,7 @@ import org.mockito.stubbing.Answer
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.immutable.{ Seq, Set }
-import scala.concurrent.{ ExecutionContext, Promise, Future }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.concurrent.duration._
 
 class MarathonSchedulerActorTest extends MarathonActorSupport
