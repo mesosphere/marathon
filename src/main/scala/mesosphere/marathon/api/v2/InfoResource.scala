@@ -90,6 +90,7 @@ class InfoResource @Inject() (
         jsonObjString(
           "name" -> BuildInfo.name,
           "version" -> BuildInfo.version,
+          "buildref" -> BuildInfo.buildref,
           "elected" -> electionService.isLeader,
           "leader" -> electionService.leaderHostPort,
           "frameworkId" -> schedulerService.frameworkId.map(_.getValue),

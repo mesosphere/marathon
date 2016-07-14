@@ -12,6 +12,7 @@ import sbtbuildinfo.{ BuildInfoKey, BuildInfoPlugin }
 import sbtrelease.ReleasePlugin.autoImport._
 import sbtrelease.ReleaseStateTransformations._
 import sbtrelease._
+import scala.util.Try
 
 import scalariform.formatter.preferences._
 
@@ -46,7 +47,12 @@ object MarathonBuild extends Build {
         unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
         libraryDependencies ++= Dependencies.root,
         parallelExecution in Test := false,
-        buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
+        buildInfoKeys := Seq[BuildInfoKey](
+          name, version, scalaVersion,
+          BuildInfoKey.action("buildref") {
+            val suffix = Try(Process("git diff --shortstat").lines.headOption.map(_ => "-dev")).toOption.flatten.getOrElse("")
+            Try(Process("git rev-parse HEAD").lines.headOption).toOption.flatten.getOrElse("unknown") + suffix
+          }),
         buildInfoPackage := "mesosphere.marathon",
         fork in Test := true
       )
