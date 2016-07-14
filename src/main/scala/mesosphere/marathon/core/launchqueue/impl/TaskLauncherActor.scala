@@ -14,6 +14,7 @@ import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNot
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskStateChange }
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
@@ -345,8 +346,7 @@ private class TaskLauncherActor(
       inProgress = tasksToLaunch > 0 || inFlightTaskOperations.nonEmpty,
       tasksLeftToLaunch = tasksToLaunch,
       finalTaskCount = tasksToLaunch + taskLaunchesInFlight + tasksLaunched,
-      // TODO ju replaceable with MarathonTaskState ?
-      tasksLost = tasksMap.values.count(_.mesosStatus.fold(false)(_.getState == Mesos.TaskState.TASK_LOST)),
+      tasksLost = tasksMap.values.count(value => MarathonTaskStatus.mightBeLost().contains(value.taskStatus)),
       backOffUntil.getOrElse(clock.now())
     )
   }

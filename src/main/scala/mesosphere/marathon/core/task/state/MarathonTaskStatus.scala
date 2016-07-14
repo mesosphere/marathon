@@ -42,6 +42,14 @@ object MarathonTaskStatus {
     }
   }
 
+  /**
+    * (Temporarily) mapping of mesos.Protos.TaskStatus.TASK_LOST to MarathonTaskStatus.
+    * Should be removed as soon as `Gone`, `Unreachable` and `Lost` are native Mesos task states.
+    *
+    * @return list of possible mappings of the mesos.Protos.TaskStatus.TASK_LOST
+    */
+  def mightBeLost(): List[MarathonTaskStatus] = List(Gone, Unreachable, Lost)
+
   // Marathon specific states
   // RESERVED
   case object Reserved extends MarathonTaskStatus
