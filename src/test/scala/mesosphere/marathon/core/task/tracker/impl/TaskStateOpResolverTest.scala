@@ -1,16 +1,16 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
+import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
-import mesosphere.marathon.core.task.{Task, TaskStateChange, TaskStateOp}
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{FunSuite, GivenWhenThen, Matchers}
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -107,7 +107,6 @@ class TaskStateOpResolverTest
 
       And("the new state should have the correct status")
       val update: TaskStateChange.Update = stateChange.asInstanceOf[TaskStateChange.Update]
-      update.newState.taskStatus should not be null
       MarathonTaskStatus.mightBeLost() should contain (update.newState.taskStatus)
 
       And("there are no more interactions")

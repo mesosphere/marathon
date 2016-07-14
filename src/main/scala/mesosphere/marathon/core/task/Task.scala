@@ -61,7 +61,7 @@ sealed trait Task {
 
   def runSpecId: PathId = taskId.runSpecId
 
-  def taskStatus: MarathonTaskStatus = MarathonTaskStatus.apply(mesosStatus.get)
+  lazy val taskStatus: MarathonTaskStatus = MarathonTaskStatus.apply(mesosStatus.get)
 
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task

@@ -48,7 +48,7 @@ object MarathonTaskStatus {
     *
     * @return list of possible mappings of the mesos.Protos.TaskStatus.TASK_LOST
     */
-  def mightBeLost(): List[MarathonTaskStatus] = List(Gone, Unreachable, Lost)
+  def mightBeLost(): Set[MarathonTaskStatus] = Set(Gone, Unreachable, Lost)
 
   // Marathon specific states
   // RESERVED

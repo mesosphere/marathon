@@ -29,11 +29,10 @@ class ScaleAppUpdateStepImpl @Inject() (
     val terminalOrExpungedTask: Option[Task] = {
       (taskChanged.stateOp, taskChanged.stateChange) match {
         // stateOp is a terminal MesosUpdate
-        case (TaskStateOp.MesosUpdate(task, _: MarathonTaskStatus.Terminal, mesosStatus, _), _) => Some(task)
+        case (TaskStateOp.MesosUpdate(task, _: MarathonTaskStatus.Terminal, _, _), _) => Some(task)
 
-        // TODO ju<>me discuss about this
         // A Lost task that might come back wouldN#t be included in Terminal(_)
-        //        case (TaskStateOp.MesosUpdate(task, MarathonTaskStatus.Lost(_), _), _) => Some(task)
+        case (TaskStateOp.MesosUpdate(task, MarathonTaskStatus.Unreachable, _, _), _) => Some(task)
 
         // stateChange is an expunge (probably because we expunged a timeout reservation)
         case (_, TaskStateChange.Expunge(task)) => Some(task)
