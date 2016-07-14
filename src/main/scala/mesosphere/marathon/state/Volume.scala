@@ -2,13 +2,17 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
+import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.{ Features, Protos }
 import mesosphere.marathon.api.v2.Validation.oneOf
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import org.apache.mesos.Protos.Volume.Mode
+import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.{ Protos => Mesos }
 import scala.collection.JavaConverters._
+import scala.util.Try
+import java.util.regex.Pattern
 
 sealed trait Volume {
   def containerPath: String
@@ -111,14 +115,81 @@ object DockerVolume {
   }
 }
 
-case class PersistentVolumeInfo(size: Long)
+sealed trait DiskType
+object DiskType {
+  case object Root extends DiskType {
+    override def toString: String = "root"
+  }
+
+  case object Path extends DiskType {
+    override def toString: String = "path"
+  }
+
+  case object Mount extends DiskType {
+    override def toString: String = "mount"
+  }
+
+  val all = Root :: Path :: Mount :: Nil
+
+  def fromMesosType(o: Option[Source.Type]): DiskType =
+    o match {
+      case None                    => DiskType.Root
+      case Some(Source.Type.MOUNT) => DiskType.Mount
+      case Some(Source.Type.PATH)  => DiskType.Path
+      case Some(other)             => throw new RuntimeException(s"unknown mesos disk type: ${other}")
+    }
+}
+
+case class PersistentVolumeInfo(
+  size: Long,
+  `type`: DiskType = DiskType.Root,
+  constraints: Set[Constraint] = Set.empty)
 
 object PersistentVolumeInfo {
+  import scala.collection.JavaConversions._
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
-    new PersistentVolumeInfo(pvi.getSize)
+    new PersistentVolumeInfo(
+      size = pvi.getSize,
+      `type` = DiskType.fromMesosType(if (pvi.hasType) Some(pvi.getType) else None),
+      constraints = pvi.getConstraintsList.toSet
+    )
 
+  private val complyWithVolumeConstraintRules: Validator[Constraint] = new Validator[Constraint] {
+    import Constraint.Operator._
+    override def apply(c: Constraint): Result = {
+      if (!c.hasField || !c.hasOperator) {
+        Failure(Set(RuleViolation(c, "Missing field and operator", None)))
+      }
+      else if (c.getField != "path") {
+        Failure(Set(RuleViolation(c, "Unsupported field", Some(c.getField))))
+      }
+      else {
+        c.getOperator match {
+          case LIKE | UNLIKE =>
+            if (c.hasValue) {
+              Try(Pattern.compile(c.getValue)) match {
+                case util.Success(_) =>
+                  Success
+                case util.Failure(e) =>
+                  Failure(Set(RuleViolation(
+                    c,
+                    "Invalid regular expression",
+                    Some(s"${c.getValue}\n${e.getMessage}"))))
+              }
+            }
+            else {
+              Failure(Set(RuleViolation(c, "A regular expression value must be provided", None)))
+            }
+          case _ =>
+            Failure(Set(
+              RuleViolation(c, "Operator must be one of LIKE, UNLIKE", None)))
+        }
+      }
+    }
+  }
   implicit val validPersistentVolumeInfo = validator[PersistentVolumeInfo] { info =>
     info.size should be > 0L
+    info.constraints.each must complyWithVolumeConstraintRules
   }
 }
 
