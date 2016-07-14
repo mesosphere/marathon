@@ -10,6 +10,7 @@ import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
@@ -527,8 +528,7 @@ class SchedulerActions(
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     import SchedulerActions._
 
-    // TODO ju replaceable with ```t.taskStatus.fold(false)(_ != Lost)``` ?
-    def launchedNotLost(t: Task) = t.launched.isDefined && t.mesosStatus.fold(false)(_.getState != TaskState.TASK_LOST)
+    def launchedNotLost(t: Task) = t.launched.isDefined && t.taskStatus != MarathonTaskStatus.Lost
 
     val launchedCount = taskTracker.countAppTasksSync(app.id, launchedNotLost)
     val targetCount = app.instances
