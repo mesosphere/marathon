@@ -276,6 +276,8 @@ message Volume {
   // Defining properties of persistent volumes
   message PersistentVolumeInfo {
     required uint64 size = 1;
+    optional mesos.Resource.DiskInfo.Source.Type type = 2;
+    repeated Constraint constraints = 3;
   }
 
   // Defining properties of external volumes

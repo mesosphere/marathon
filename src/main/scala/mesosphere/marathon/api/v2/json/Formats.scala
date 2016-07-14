@@ -239,7 +239,32 @@ trait ContainerFormats {
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mde")
 
-  implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = Json.format[PersistentVolumeInfo]
+  implicit lazy val DiskTypeFormat = new Format[DiskType] {
+    // override def
+    override def reads(json: JsValue): JsResult[DiskType] = {
+      json.asOpt[String] match {
+        case None | Some("root") => JsSuccess(DiskType.Root)
+        case Some("path") => JsSuccess(DiskType.Path)
+        case Some("mount") => JsSuccess(DiskType.Mount)
+        case Some(otherwise) =>
+          JsError(s"No such disk type: ${otherwise}")
+      }
+    }
+    override def writes(persistentVolumeType: DiskType): JsValue = JsString(
+      persistentVolumeType match {
+        case DiskType.Root => "root"
+        case DiskType.Path => "path"
+        case DiskType.Mount => "mount"
+      }
+    )
+  }
+
+  implicit lazy val PersistentVolumeInfoReader: Reads[PersistentVolumeInfo] =
+    ((__ \ "size").read[Long] ~
+      (__ \ "type").readNullable[DiskType].withDefault(DiskType.Root) ~
+      (__ \ "constraints").readNullable[Set[Constraint]].withDefault(Set.empty))(
+        PersistentVolumeInfo(_, _, _))
+  implicit lazy val PersistentVolumeInfoWriter: Writes[PersistentVolumeInfo] = Json.writes[PersistentVolumeInfo]
 
   implicit lazy val ExternalVolumeInfoFormat: Format[ExternalVolumeInfo] = (
     (__ \ "size").formatNullable[Long] ~

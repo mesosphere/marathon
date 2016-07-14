@@ -162,10 +162,12 @@ class TaskOpFactoryImpl(
     offer: Mesos.Offer,
     resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
 
-    val localVolumes: Iterable[Task.LocalVolume] = RunSpec.persistentVolumes.map { volume =>
-      Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume)
-    }
-    val persistentVolumeIds = localVolumes.map(_.id)
+    val localVolumes: Iterable[(Option[Mesos.Resource.DiskInfo.Source], Task.LocalVolume)] =
+      resourceMatch.localVolumes.map {
+        case (source, volume) =>
+          (source, Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume))
+      }
+    val persistentVolumeIds = localVolumes.map { case (_, localVolume) => localVolume.id }
     val now = clock.now()
     val timeout = Task.Reservation.Timeout(
       initiated = now,

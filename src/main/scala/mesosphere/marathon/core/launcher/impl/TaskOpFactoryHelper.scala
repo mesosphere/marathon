@@ -35,17 +35,24 @@ class TaskOpFactoryHelper(
     TaskOp.Launch(taskInfo, newTask, Some(oldTask), createOperations)
   }
 
+  /**
+    * Returns a set of operations to reserve ALL resources (cpu, mem, ports, disk, etc.) and then create persistent
+    * volumes against them as needed
+    */
   def reserveAndCreateVolumes(
     frameworkId: FrameworkId,
     newTask: TaskStateOp.Reserve,
     resources: Iterable[Mesos.Resource],
-    localVolumes: Iterable[LocalVolume],
+    localVolumes: Iterable[(Option[Mesos.Resource.DiskInfo.Source], LocalVolume)],
     oldTask: Option[Task] = None): TaskOp.ReserveAndCreateVolumes = {
 
     def createOperations = Seq(
       offerOperationFactory.reserve(frameworkId, newTask.taskId, resources),
-      offerOperationFactory.createVolumes(frameworkId, newTask.taskId, localVolumes))
+      offerOperationFactory.createVolumes(
+        frameworkId,
+        newTask.taskId,
+        localVolumes))
 
-    TaskOp.ReserveAndCreateVolumes(newTask, resources, localVolumes, createOperations)
+    TaskOp.ReserveAndCreateVolumes(newTask, resources, createOperations)
   }
 }

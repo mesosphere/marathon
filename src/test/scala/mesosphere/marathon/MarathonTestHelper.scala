@@ -6,7 +6,8 @@ import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
-import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.Protos.{ Constraint, MarathonTask }
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
@@ -122,6 +123,22 @@ object MarathonTestHelper {
     offerBuilder
   }
 
+  def pathSource(path: String): Mesos.Resource.DiskInfo.Source = {
+    Mesos.Resource.DiskInfo.Source.newBuilder.
+      setType(Mesos.Resource.DiskInfo.Source.Type.PATH).
+      setPath(Mesos.Resource.DiskInfo.Source.Path.newBuilder.
+        setRoot(path)).
+      build
+  }
+
+  def pathDisk(path: String): Mesos.Resource.DiskInfo = {
+    // val source = Mesos.Resource.DiskInfo.sour
+    Mesos.Resource.DiskInfo.newBuilder.
+      setSource(
+        pathSource(path)).
+        build
+  }
+
   def scalarResource(
     name: String, d: Double, role: String = ResourceRole.Unreserved,
     reservation: Option[ReservationInfo] = None, disk: Option[DiskInfo] = None): Mesos.Resource = {
@@ -163,6 +180,14 @@ object MarathonTestHelper {
       .setPrincipal(principal)
       .setLabels(LabelsSerializer.toMesosLabelsBuilder(labels))
       .build()
+  }
+
+  def constraint(field: String, operator: String, value: Option[String]): Constraint = {
+    val b = Constraint.newBuilder.
+      setField(field).
+      setOperator(Operator.valueOf(operator))
+    value.foreach(b.setValue)
+    b.build
   }
 
   def reservedDisk(id: String, size: Double = 4096, role: String = ResourceRole.Unreserved,

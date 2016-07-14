@@ -63,35 +63,38 @@ class OfferOperationFactory(
   def createVolumes(
     frameworkId: FrameworkId,
     taskId: Task.Id,
-    localVolumes: Iterable[LocalVolume]): Mesos.Offer.Operation = {
+    localVolumes: Iterable[(Option[Mesos.Resource.DiskInfo.Source], LocalVolume)]): Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
 
-    val volumes: Iterable[Mesos.Resource] = localVolumes.map { vol =>
-      val disk = {
-        val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)
-        principalOpt.foreach(persistence.setPrincipal)
+    val volumes: Iterable[Mesos.Resource] = localVolumes.map {
+      case (source, vol) =>
+        val disk = {
+          val persistence = Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(vol.id.idString)
+          principalOpt.foreach(persistence.setPrincipal)
 
-        val volume = Mesos.Volume.newBuilder()
-          .setContainerPath(vol.persistentVolume.containerPath)
-          .setMode(vol.persistentVolume.mode)
+          val volume = Mesos.Volume.newBuilder()
+            .setContainerPath(vol.persistentVolume.containerPath)
+            .setMode(vol.persistentVolume.mode)
 
-        Mesos.Resource.DiskInfo.newBuilder()
-          .setPersistence(persistence)
-          .setVolume(volume)
-      }
+          val builder = Mesos.Resource.DiskInfo.newBuilder()
+            .setPersistence(persistence)
+            .setVolume(volume)
+          source.foreach(builder.setSource(_))
+          builder
+        }
 
-      val reservation = Mesos.Resource.ReservationInfo.newBuilder()
-        .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
-      principalOpt.foreach(reservation.setPrincipal)
+        val reservation = Mesos.Resource.ReservationInfo.newBuilder()
+          .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
+        principalOpt.foreach(reservation.setPrincipal)
 
-      Mesos.Resource.newBuilder()
-        .setName("disk")
-        .setType(Mesos.Value.Type.SCALAR)
-        .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
-        .setRole(role)
-        .setReservation(reservation)
-        .setDisk(disk)
-        .build()
+        Mesos.Resource.newBuilder()
+          .setName("disk")
+          .setType(Mesos.Value.Type.SCALAR)
+          .setScalar(Mesos.Value.Scalar.newBuilder().setValue(vol.persistentVolume.persistent.size.toDouble).build())
+          .setRole(role)
+          .setReservation(reservation)
+          .setDisk(disk)
+          .build()
     }
 
     val create = Mesos.Offer.Operation.Create.newBuilder()
