@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.core.storage.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.util.{ Retry, toRichFuture }
+import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
 import mesosphere.util.state.zk.{ Children, GetData, RichCuratorFramework }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
@@ -22,21 +22,21 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
-class ZkPersistenceStore(val client: RichCuratorFramework)(
+class ZkPersistenceStore(val client: RichCuratorFramework, maxConcurrent: Int = 8)(
     implicit
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler,
     val metrics: Metrics
 ) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
-
+  private val limitRequests = WorkQueue(maxConcurrent)
   private val retryOn: Retry.RetryOnFn = {
     case _: KeeperException.ConnectionLossException => true
     case _: KeeperException => false
     case NonFatal(_) => true
   }
 
-  private def retry[T](name: String)(f: => Future[T]) = Retry(name, retryOn = retryOn)(f)
+  private def retry[T](name: String)(f: => Future[T]) = Retry(name, retryOn = retryOn)(limitRequests(f))
 
   override protected def rawIds(category: String): Source[ZkId, NotUsed] = {
     val childrenFuture = retry(s"ZkPersistenceStore::ids($category)") {
@@ -44,7 +44,12 @@ class ZkPersistenceStore(val client: RichCuratorFramework)(
         val buckets = await(client.children(s"/$category").recover {
           case _: NoNodeException => Children(category, new Stat(), Nil)
         }).children
-        val children = await(Future.sequence(buckets.map(b => client.children(s"/$category/$b").map(_.children))))
+        val childFutures = buckets.map { bucket =>
+          retry(s"ZkPersistenceStore::ids($category/$bucket)") {
+            client.children(s"/$category/$bucket").map(_.children)
+          }
+        }
+        val children = await(Future.sequence(childFutures))
         children.flatten.map { child =>
           ZkId(category, child, None)
         }
@@ -112,13 +117,15 @@ class ZkPersistenceStore(val client: RichCuratorFramework)(
           case Success(_) =>
             Done
           case Failure(_: NoNodeException) =>
-            await(client.create(id.path, creatingParentContainersIfNeeded = true, data = Some(v.bytes)).asTry) match {
+            await(limitRequests(client.create(
+              id.path,
+              creatingParentContainersIfNeeded = true, data = Some(v.bytes))).asTry) match {
               case Success(_) =>
                 Done
               case Failure(e: NodeExistsException) =>
                 // it could have been created by another call too... (e.g. creatingParentContainers if needed could
                 // have created the node when creating the parent's, e.g. the version was created first)
-                await(client.setData(id.path, v.bytes))
+                await(limitRequests(client.setData(id.path, v.bytes)))
                 Done
               case Failure(e: KeeperException) =>
                 throw new StoreCommandFailedException(s"Unable to store $id", e)
