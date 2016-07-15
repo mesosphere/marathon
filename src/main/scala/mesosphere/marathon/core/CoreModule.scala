@@ -1,12 +1,14 @@
 package mesosphere.marathon.core
 
 import mesosphere.marathon.core.auth.AuthModule
+import mesosphere.marathon.core.base.ActorsModule
 import mesosphere.marathon.core.election.ElectionModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.readiness.ReadinessModule
+import mesosphere.marathon.core.storage.StorageModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
@@ -18,6 +20,7 @@ import mesosphere.marathon.core.task.tracker.TaskTrackerModule
   * (as long as we have them).
   */
 trait CoreModule {
+  def actorsModule: ActorsModule
   def electionModule: ElectionModule
   def leadershipModule: LeadershipModule
   def taskBusModule: TaskBusModule
@@ -28,4 +31,5 @@ trait CoreModule {
   def pluginModule: PluginModule
   def authModule: AuthModule
   def readinessModule: ReadinessModule
+  def storageModule: StorageModule
 }

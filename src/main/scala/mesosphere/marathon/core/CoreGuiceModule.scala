@@ -3,35 +3,29 @@ package mesosphere.marathon.core
 import javax.inject.Named
 
 import akka.actor.ActorRefFactory
-import com.google.inject.name.Names
+import akka.stream.Materializer
 import com.google.inject._
+import com.google.inject.name.Names
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
+import mesosphere.marathon.core.appinfo.{AppInfoModule, AppInfoService, GroupInfoService}
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
-import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
+import mesosphere.marathon.core.leadership.{LeadershipCoordinator, LeadershipModule}
+import mesosphere.marathon.core.plugin.{PluginDefinitions, PluginManager}
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskChangeObservables }
+import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.task.bus.{TaskChangeObservables, TaskStatusEmitter}
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.task.update.impl.steps.{
-  ContinueOnErrorStep,
-  NotifyHealthCheckManagerStepImpl,
-  NotifyLaunchQueueStepImpl,
-  NotifyRateLimiterStepImpl,
-  PostToEventStreamStepImpl,
-  ScaleAppUpdateStepImpl,
-  TaskStatusEmitterPublishStepImpl
-}
-import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
-import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
+import mesosphere.marathon.core.task.tracker.{TaskCreationHandler, TaskStateOpProcessor, TaskTracker}
+import mesosphere.marathon.core.task.update.impl.steps.{ContinueOnErrorStep, NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl}
+import mesosphere.marathon.core.task.update.impl.{TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor}
+import mesosphere.marathon.core.task.update.{TaskStatusUpdateProcessor, TaskUpdateStep}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.plugin.http.HttpRequestHandler
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.util.{CapConcurrentExecutions, CapConcurrentExecutionsMetrics}
 
 /**
   * Provides the glue between guice and the core modules.
@@ -99,6 +93,14 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def readinessCheckExecutor(coreModule: CoreModule): ReadinessCheckExecutor = coreModule.readinessModule.readinessCheckExecutor //scalastyle:ignore
+
+  @Provides
+  @Singleton
+  def materializer(coreModule: CoreModule): Materializer = coreModule.actorsModule.materializer
+
+  @Provides
+  @Singleton
+  def appRepository(coreModule: CoreModule): AppRepository = coreModule.storageModule.appRepository
 
   @Provides @Singleton
   def taskStatusUpdateSteps(

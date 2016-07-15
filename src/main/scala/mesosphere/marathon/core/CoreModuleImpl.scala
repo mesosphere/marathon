@@ -4,10 +4,10 @@ import javax.inject.Named
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import com.google.inject.{ Inject, Provider }
+import com.google.inject.{Inject, Provider}
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.auth.AuthModule
-import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
+import mesosphere.marathon.core.base.{ActorsModule, Clock, ShutdownHooks}
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.launcher.LauncherModule
@@ -18,16 +18,17 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
 import mesosphere.marathon.core.matcher.reconcile.OfferMatcherReconciliationModule
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.readiness.ReadinessModule
-import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.StorageModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
-import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
+import mesosphere.marathon.core.task.update.{TaskStatusUpdateProcessor, TaskUpdateStep}
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ GroupRepository, TaskRepository }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
+import mesosphere.marathon.state.{GroupRepository, TaskRepository}
+import mesosphere.marathon.{MarathonConf, MarathonSchedulerDriverHolder, ModuleNames}
 
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 /**
@@ -45,7 +46,6 @@ class CoreModuleImpl @Inject() (
     metrics: Metrics,
     actorSystem: ActorSystem,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    appRepository: AppRepository,
     groupRepository: GroupRepository,
     taskRepository: TaskRepository,
     taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
@@ -56,7 +56,7 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val random = Random
   private[this] lazy val shutdownHookModule = ShutdownHooks()
-  private[this] lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
+  override lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
   override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory, electionModule.service)
   override lazy val electionModule = new ElectionModule(
@@ -75,6 +75,8 @@ class CoreModuleImpl @Inject() (
   override lazy val taskTrackerModule =
     new TaskTrackerModule(clock, metrics, marathonConf, leadershipModule, taskRepository, taskStatusUpdateSteps)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
+  override lazy val storageModule = StorageModule(marathonConf,
+    metrics, actorsModule.materializer, ExecutionContext.global, actorSystem.scheduler)
 
   // READINESS CHECKS
   lazy val readinessModule = new ReadinessModule(actorSystem)

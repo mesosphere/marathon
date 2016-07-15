@@ -349,17 +349,16 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   @Provides
   @Singleton
-  def provideAppRepository(
+  def provideAppEntityRepository(
     @Named(ModuleNames.STORE_APP) store: EntityStore[AppDefinition],
-    metrics: Metrics): AppRepository = {
-    new AppEntityRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
+    metrics: Metrics): AppEntityRepository = {
+      new AppEntityRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
   }
 
   @Provides
   @Singleton
   def provideGroupRepository(
     @Named(ModuleNames.STORE_GROUP) store: EntityStore[Group],
-    appRepository: AppRepository,
     metrics: Metrics): GroupRepository = {
     new GroupRepository(store, conf.zooKeeperMaxVersions.get, metrics)
   }
