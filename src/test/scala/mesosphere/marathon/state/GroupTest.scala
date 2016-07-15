@@ -5,6 +5,9 @@ import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
+import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.state.Container.Docker.PortMapping
+import org.apache.mesos.Protos
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
@@ -219,6 +222,27 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
         .message should be ("Groups and Applications may not have the same identifier.")
     }
 
+    it("validates that there are no service ports conflicts") {
+      import MarathonTestHelper.Implicits._
+
+      Given("a group with duplicated service ports")
+      val appFoo = AppDefinition(id = "/foo/app".toRootPath).withPortMappings(
+        Seq(PortMapping(hostPort = Some(0), containerPort = 0, servicePort = 123))
+      ).withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.BRIDGE)
+      val groupFoo = Group(id = "/foo".toRootPath, apps = Set(appFoo))
+
+      val appBar = appFoo.copy(id = "/bar/app".toRootPath)
+      val groupBar = Group(id = "/bar".toRootPath, apps = Set(appBar))
+
+      val root = Group.empty.copy(groups = Set(groupFoo, groupBar))
+
+      When("validating the root group")
+      val result = validate(root)(Group.validRootGroup(maxApps = None))
+
+      Then("the validation returns an errror")
+      ValidationHelper.getAllRuleConstrains(result).head.message should include ("conflicts with a service port")
+    }
+
     it("can marshal and unmarshal from to protos") {
       Given("a group with subgroups")
       val now = Timestamp(11)
@@ -362,14 +386,15 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
     it("detects a cyclic dependency graph") {
       Given("a group with cyclic dependencies")
-      val current: Group = Group("/test".toPath, groups = Set(
-        Group("/test/database".toPath, groups = Set(
-          Group("/test/database/mongo".toPath, Set(AppDefinition("/test/database/mongo/m1".toPath, dependencies = Set("/test/service".toPath))))
-        )),
-        Group("/test/service".toPath, groups = Set(
-          Group("/test/service/service1".toPath, Set(AppDefinition("/test/service/service1/srv1".toPath, dependencies = Set("/test/database".toPath))))
-        ))
-      ))
+      val current: Group = Group.empty.copy(groups = Set(
+        Group("/test".toPath, groups = Set(
+          Group("/test/database".toPath, groups = Set(
+            Group("/test/database/mongo".toPath, Set(AppDefinition("/test/database/mongo/m1".toPath, dependencies = Set("/test/service".toPath))))
+          )),
+          Group("/test/service".toPath, groups = Set(
+            Group("/test/service/service1".toPath, Set(AppDefinition("/test/service/service1/srv1".toPath, dependencies = Set("/test/database".toPath))))
+          ))
+        ))))
 
       Then("the cycle is detected")
       current.hasNonCyclicDependencies should equal(false)

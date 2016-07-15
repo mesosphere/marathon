@@ -181,6 +181,7 @@ Across all installations Marathon is managing applications on more than 100,000 
 * [Motus](http://www.motus.com/)
 * [Notonthehighstreet](http://www.notonthehighstreet.com/)
 * [OpenTable](http://www.opentable.com/)
+* [Opera](https://www.opera.com)
 * [Orbitz](http://www.orbitz.com/)
 * [Otto](https://www.otto.de/)
 * [OVH](https://ovh.com/)

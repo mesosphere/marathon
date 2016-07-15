@@ -8,6 +8,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import mesosphere.util.state.memory.InMemoryEntity
 import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
@@ -120,6 +121,14 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     val appRepo = mock[AppEntityRepository]
     val groupRepo = mock[GroupRepository]
     val config = mock[MarathonConf]
+    val deploymentRepo = new DeploymentRepository(
+      new MarathonStore[DeploymentPlan](
+        store = store,
+        metrics = metrics,
+        newState = () => DeploymentPlan.empty,
+        prefix = "deployment:"),
+      metrics
+    )
     val taskRepo = new TaskRepository(
       new MarathonStore[MarathonTaskState](
         store = store,
@@ -128,6 +137,14 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
         prefix = "task:"),
       metrics
     )
-    val migration = new Migration(store, appRepo, groupRepo, taskRepo, config, new Metrics(new MetricRegistry))
+    val migration = new Migration(
+      store,
+      appRepo,
+      groupRepo,
+      taskRepo,
+      deploymentRepo,
+      config,
+      new Metrics(new MetricRegistry)
+    )
   }
 }

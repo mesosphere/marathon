@@ -25,6 +25,7 @@ class Migration @Inject() (
     appRepo: AppEntityRepository, // Has to be the entity repository as the non-entity ones use a very different format
     groupRepo: GroupRepository,
     taskRepo: TaskRepository,
+    deploymentRepo: DeploymentRepository,
     config: MarathonConf,
     metrics: Metrics)(implicit mat: Materializer) extends Logging {
 
@@ -55,6 +56,11 @@ class Migration @Inject() (
     StorageVersions(0, 16, 0) -> { () =>
       new MigrationTo0_16(groupRepo, appRepo).migrate().recover {
         case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.16", e)
+      }
+    },
+    StorageVersions(1, 2, 0) -> { () =>
+      new MigrationTo1_2(deploymentRepo).migrate().recover {
+        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.2", e)
       }
     }
   )
@@ -367,6 +373,28 @@ class MigrationTo0_16(
           }
         }
       }
+    }
+  }
+}
+
+/**
+  * Removes all deployment version nodes from ZK
+  */
+class MigrationTo1_2(deploymentRepository: DeploymentRepository) {
+  private[this] val log = LoggerFactory.getLogger(getClass)
+
+  def migrate(): Future[Unit] = {
+    log.info("Start 1.2 migration")
+
+    deploymentRepository.store.names().map(_.filter(deploymentRepository.isVersionKey)).flatMap { versionNodes =>
+      versionNodes.foldLeft(Future.successful(())) { (future, versionNode) =>
+        future.flatMap { _ =>
+          deploymentRepository.store.expunge(versionNode).map(_ => ())
+        }
+      }
+    }.flatMap { Unit =>
+      log.info("Finished 1.2 migration")
+      Future.successful(())
     }
   }
 }

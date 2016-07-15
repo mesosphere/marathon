@@ -104,7 +104,7 @@ class MarathonSchedulerActor private (
     case LocalLeadershipEvent.Standby =>
       log.info("Suspending scheduler actor")
       healthCheckManager.removeAll()
-      deploymentManager ! CancelAllDeployments
+      deploymentManager ! StopAllDeployments
       lockedApps = Set.empty
       context.become(suspended)
 

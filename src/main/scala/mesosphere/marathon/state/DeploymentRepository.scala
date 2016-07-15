@@ -7,14 +7,14 @@ import scala.concurrent.Future
 
 class DeploymentRepository(
   val store: EntityStore[DeploymentPlan],
-  val maxVersions: Option[Int] = None,
   val metrics: Metrics)
     extends EntityRepository[DeploymentPlan] with StateMetrics {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def store(plan: DeploymentPlan): Future[DeploymentPlan] =
-    storeWithVersion(plan.id, plan.version, plan)
+  override val maxVersions = None
+
+  def store(plan: DeploymentPlan): Future[DeploymentPlan] = storeByName(plan.id, plan)
 
   def all(): Future[Seq[DeploymentPlan]] = {
     allIds().flatMap { ids =>

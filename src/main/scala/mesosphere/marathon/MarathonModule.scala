@@ -270,8 +270,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     appRepo: AppEntityRepository,
     groupRepo: GroupRepository,
     taskRepo: TaskRepository,
+    deploymentRepository: DeploymentRepository,
     metrics: Metrics)(implicit mat: Materializer): Migration = {
-    new Migration(store, appRepo, groupRepo, taskRepo, conf, metrics)
+    new Migration(store, appRepo, groupRepo, taskRepo, deploymentRepository, conf, metrics)
   }
 
   @Provides
@@ -377,7 +378,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) store: EntityStore[DeploymentPlan],
     conf: MarathonConf,
     metrics: Metrics): DeploymentRepository = {
-    new DeploymentRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+    new DeploymentRepository(store, metrics)
   }
 
   @Named(ModuleNames.STORE_DEPLOYMENT_PLAN)

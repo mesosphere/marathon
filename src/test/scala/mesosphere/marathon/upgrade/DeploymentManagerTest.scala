@@ -18,11 +18,13 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, AppEntityRepository, Group, MarathonStore }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
-import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment }
+import mesosphere.marathon.upgrade.DeploymentManager.{ StopAllDeployments, CancelDeployment, DeploymentFailed, PerformDeployment }
 import mesosphere.marathon.{ MarathonConf, MarathonTestHelper, SchedulerActions }
 import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
 import scala.concurrent.Await
@@ -35,6 +37,7 @@ class DeploymentManagerTest
     with BeforeAndAfter
     with BeforeAndAfterAll
     with Mockito
+    with Eventually
     with ImplicitSender {
 
   test("deploy") {
@@ -91,6 +94,24 @@ class DeploymentManagerTest
 
     expectMsgType[DeploymentFailed]
   }
+
+  test("Stop All Deployments") {
+    val f = new Fixture
+    val manager = f.deploymentManager()
+    implicit val timeout = Timeout(1.minute)
+
+    val app1 = AppDefinition("app1".toRootPath)
+    val app2 = AppDefinition("app2".toRootPath)
+    val oldGroup = Group("/".toRootPath)
+    manager ! PerformDeployment(f.driver, DeploymentPlan(oldGroup, Group("/".toRootPath, Set(app1))))
+    manager ! PerformDeployment(f.driver, DeploymentPlan(oldGroup, Group("/".toRootPath, Set(app2))))
+    eventually(manager.underlyingActor.runningDeployments should have size 2)
+
+    manager ! StopAllDeployments
+    eventually(manager.underlyingActor.runningDeployments should have size 0)
+  }
+
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(3, Seconds))
 
   class Fixture {
 
