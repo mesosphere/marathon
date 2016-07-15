@@ -4,14 +4,16 @@ import java.nio.file.{ Files, Path }
 import java.util.concurrent.Semaphore
 
 import mesosphere.marathon.test.zk.NoRetryPolicy
+import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
 import mesosphere.util.state.zk.RichCuratorFramework
 import org.apache.commons.io.FileUtils
 import org.apache.curator.RetryPolicy
-import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
 import org.apache.zookeeper.server.{ ServerConfig, ZooKeeperServerMain }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 
+import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 /**
@@ -83,9 +85,10 @@ object ZookeeperServer {
 
 trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite =>
   val zkServer = ZookeeperServer(autoStart = false)
-
+  private val clients = Lock(ListBuffer.empty[CuratorFramework])
   def zkClient(retryPolicy: RetryPolicy = NoRetryPolicy): RichCuratorFramework = {
     val client = CuratorFrameworkFactory.newClient(zkServer.connectUri, retryPolicy)
+    clients(_ += client)
     client.start()
     client
   }
@@ -97,6 +100,10 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite =>
 
   abstract override def afterAll(): Unit = {
     zkServer.close()
+    clients { c =>
+      c.foreach(_.close())
+      c.clear()
+    }
     super.afterAll()
   }
 }
