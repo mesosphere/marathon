@@ -1,51 +1,13 @@
-package mesosphere.marathon.event
+package mesosphere.marathon.core.event
 
-import javax.inject.Named
-
-import akka.actor.ActorSystem
-import akka.event.EventStream
-import com.google.inject.{ AbstractModule, Inject, Provides, Singleton }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import org.rogach.scallop.ScallopConf
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 
 //scalastyle:off number.of.types
-
-trait EventSubscriber[C <: ScallopConf, M <: AbstractModule] {
-  def configuration(): Class[C]
-  def module(): Option[Class[M]]
-}
-
-//TODO(FL): Wire this up such that events are optional.
-trait EventConfiguration extends ScallopConf {
-
-  lazy val eventSubscriber = opt[String](
-    "event_subscriber",
-    descr = "The event subscription module to use. E.g. http_callback.",
-    required = false,
-    noshort = true)
-}
-
-class EventModule(conf: EventConfiguration) extends AbstractModule {
-
-  val log = LoggerFactory.getLogger(getClass.getName)
-  def configure() {}
-
-  @Named(EventModule.busName)
-  @Provides
-  @Singleton
-  @Inject
-  def provideEventBus(system: ActorSystem): EventStream = system.eventStream
-}
-
-object EventModule {
-  final val busName = "events"
-}
 
 sealed trait MarathonEvent {
   val eventType: String

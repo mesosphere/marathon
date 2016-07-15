@@ -1,7 +1,8 @@
-package mesosphere.marathon.event
+package mesosphere.marathon.core.event.impl.history
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
+import mesosphere.marathon.core.event.{ AppTerminatedEvent, MesosStatusUpdateEvent, UnhealthyTaskKillEvent }
 import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository }
 
 class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepository)

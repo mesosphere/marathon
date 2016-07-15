@@ -1,9 +1,9 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.stream
 
 import akka.actor._
 import com.google.inject.Inject
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
-import mesosphere.marathon.event.http.HttpEventStreamActor._
+import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.slf4j.LoggerFactory
@@ -35,7 +35,7 @@ class HttpEventStreamActor(
   handleStreamProps: HttpEventStreamHandle => Props)
     extends Actor {
   //map from handle to actor
-  private[http] var streamHandleActors = Map.empty[HttpEventStreamHandle, ActorRef]
+  private[impl] var streamHandleActors = Map.empty[HttpEventStreamHandle, ActorRef]
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   override def preStart(): Unit = {

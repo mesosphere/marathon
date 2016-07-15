@@ -4,7 +4,7 @@ import akka.actor.{ ActorLogging, ActorRef, Actor }
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentManager.ReadinessCheckUpdate
 import mesosphere.marathon.upgrade.ReadinessBehavior.{ ReadinessCheckSubscriptionKey, ScheduleReadinessCheckFor }

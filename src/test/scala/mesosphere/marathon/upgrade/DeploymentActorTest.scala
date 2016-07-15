@@ -7,7 +7,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state._

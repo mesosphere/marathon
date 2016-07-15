@@ -7,7 +7,7 @@ import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.event.http.HttpEventStreamServlet
+import mesosphere.marathon.core.event.impl.stream.HttpEventStreamServlet
 import mesosphere.marathon.io.SSLContextUtil
 
 /**

@@ -2,30 +2,23 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
-import akka.actor.ActorRefFactory
-import com.google.inject.name.Names
+import akka.actor.{ ActorRef, ActorRefFactory, Props }
 import com.google.inject._
-import mesosphere.marathon.MarathonConf
+import com.google.inject.name.Names
+import mesosphere.marathon.{ MarathonConf, ModuleNames }
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.event.impl.http.HttpCallbackSubscriptionService
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskChangeObservables }
+import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.task.update.impl.steps.{
-  ContinueOnErrorStep,
-  NotifyHealthCheckManagerStepImpl,
-  NotifyLaunchQueueStepImpl,
-  NotifyRateLimiterStepImpl,
-  PostToEventStreamStepImpl,
-  ScaleAppUpdateStepImpl,
-  TaskStatusEmitterPublishStepImpl
-}
+import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.metrics.Metrics
@@ -165,4 +158,15 @@ class CoreGuiceModule extends AbstractModule {
       maxQueued = config.internalMaxQueuedStatusUpdates()
     )
   }
+
+  @Provides @Singleton
+  def httpCallbackSubscriptionService(coreModule: CoreModule): Option[HttpCallbackSubscriptionService] = {
+    coreModule.eventModule.httpCallbackSubscriptionService
+  }
+
+  @Provides @Singleton @Named(ModuleNames.HISTORY_ACTOR_PROPS)
+  def historyActor(coreModule: CoreModule): Props = coreModule.eventModule.historyActorProps
+
+  @Provides @Singleton @Named(ModuleNames.HTTP_EVENT_STREAM)
+  def httpEventStreamActor(coreModule: CoreModule): ActorRef = coreModule.eventModule.httpEventStreamActor
 }

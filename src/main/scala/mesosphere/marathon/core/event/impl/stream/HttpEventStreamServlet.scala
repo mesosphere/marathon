@@ -1,4 +1,4 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.stream
 
 import java.util.UUID
 import javax.inject.{ Inject, Named }
@@ -6,7 +6,7 @@ import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }
 
 import akka.actor.ActorRef
 import mesosphere.marathon.api.RequestFacade
-import mesosphere.marathon.event.http.HttpEventStreamActor._
+import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
 import mesosphere.marathon.{ MarathonConf, ModuleNames }

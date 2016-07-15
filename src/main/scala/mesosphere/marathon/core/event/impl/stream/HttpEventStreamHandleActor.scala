@@ -1,4 +1,4 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.stream
 
 import java.io.EOFException
 
@@ -6,8 +6,8 @@ import akka.actor.{ Actor, ActorLogging, Status }
 import akka.event.EventStream
 import akka.pattern.pipe
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.event.http.HttpEventStreamHandleActor.WorkDone
-import mesosphere.marathon.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent }
+import mesosphere.marathon.core.event.impl.stream.HttpEventStreamHandleActor._
+import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent }
 import mesosphere.util.ThreadPoolContext
 import play.api.libs.json.Json
 
@@ -19,7 +19,7 @@ class HttpEventStreamHandleActor(
     stream: EventStream,
     maxOutStanding: Int) extends Actor with ActorLogging {
 
-  private[http] var outstanding = List.empty[MarathonEvent]
+  private[impl] var outstanding = List.empty[MarathonEvent]
 
   override def preStart(): Unit = {
     stream.subscribe(self, classOf[MarathonEvent])

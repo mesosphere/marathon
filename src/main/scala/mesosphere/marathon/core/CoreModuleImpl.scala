@@ -4,14 +4,16 @@ import javax.inject.Named
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
+import com.google.inject.{ Inject, Provider }
 import mesosphere.chaos.http.HttpConf
-import com.google.inject.{ Provider, Inject }
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
+import mesosphere.marathon.core.election._
+import mesosphere.marathon.core.event.EventModule
+import mesosphere.marathon.core.event.impl.http.EventSubscribers
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
-import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
@@ -21,11 +23,9 @@ import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
-import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.event.EventModule
-import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
+import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
+import mesosphere.marathon.state._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
 
 import scala.util.Random
@@ -39,7 +39,7 @@ import scala.util.Random
 class CoreModuleImpl @Inject() (
     // external dependencies still wired by guice
     marathonConf: MarathonConf,
-    @Named(EventModule.busName) eventStream: EventStream,
+    eventStream: EventStream,
     httpConf: HttpConf,
     @Named(ModuleNames.HOST_PORT) hostPort: String,
     metrics: Metrics,
@@ -48,9 +48,12 @@ class CoreModuleImpl @Inject() (
     appRepository: AppRepository,
     groupRepository: GroupRepository,
     taskRepository: TaskRepository,
+    taskFailureRepository: TaskFailureRepository,
     taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
     clock: Clock,
-    taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
+    taskStatusUpdateSteps: Seq[TaskUpdateStep],
+    @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) eventSubscribersStore: EntityStore[EventSubscribers])
+  extends CoreModule {
 
   // INFRASTRUCTURE LAYER
 
@@ -152,6 +155,12 @@ class CoreModuleImpl @Inject() (
     offersWanted,
     marathonSchedulerDriverHolder)
 
+  // EVENT
+
+  override lazy val eventModule: EventModule = new EventModule(
+    eventStream, actorSystem, marathonConf, metrics, clock, eventSubscribersStore, taskFailureRepository,
+    electionModule.service)
+
   // GREEDY INSTANTIATION
   //
   // Greedily instantiate everything.
@@ -162,6 +171,7 @@ class CoreModuleImpl @Inject() (
   // is created. Changing the wiring order for this feels wrong since it is nicer if it
   // follows architectural logic. Therefore we instantiate them here explicitly.
 
+  eventModule
   taskJobsModule.handleOverdueTasks(
     taskTrackerModule.taskTracker,
     taskTrackerModule.taskReservationTimeoutHandler,

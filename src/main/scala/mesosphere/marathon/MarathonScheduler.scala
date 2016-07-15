@@ -1,13 +1,13 @@
 package mesosphere.marathon
 
-import javax.inject.{ Inject, Named }
+import javax.inject.Inject
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import mesosphere.marathon.core.base.{ CurrentRuntime, Clock }
+import mesosphere.marathon.core.base.{ Clock, CurrentRuntime }
+import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.event._
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
@@ -21,7 +21,7 @@ trait SchedulerCallbacks {
 }
 
 class MarathonScheduler @Inject() (
-    @Named(EventModule.busName) eventBus: EventStream,
+    eventBus: EventStream,
     clock: Clock,
     offerProcessor: OfferProcessor,
     taskStatusProcessor: TaskStatusUpdateProcessor,

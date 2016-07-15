@@ -6,7 +6,7 @@ import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent }
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._

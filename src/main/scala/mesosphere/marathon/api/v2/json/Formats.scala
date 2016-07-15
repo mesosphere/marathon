@@ -8,8 +8,8 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.event._
-import mesosphere.marathon.event.http.EventSubscribers
+import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.event.impl.http.EventSubscribers
 import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping

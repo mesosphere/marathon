@@ -1,26 +1,24 @@
-package mesosphere.marathon.event.http
-
-import javax.inject.Inject
+package mesosphere.marathon.core.event.impl.http
 
 import akka.actor._
 import akka.pattern.ask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.event._
-import mesosphere.marathon.event.http.HttpEventActor._
-import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
+import mesosphere.marathon.core.event.impl.http.HttpEventActor._
+import mesosphere.marathon.core.event.impl.http.SubscribersKeeperActor.GetSubscribers
+import mesosphere.marathon.core.event.{ EventConf, MarathonEvent }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import spray.client.pipelining.{ sendReceive, _ }
 import spray.http.{ HttpRequest, HttpResponse }
 import spray.httpx.PlayJsonSupport
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success, Try }
 
 /**
-  * This actor subscribes to the event bus and distributes every event to all http callback listener.
+  * This actor subscribes to the event bus and distributes every event to all http callback listeners.
   * The list of active subscriptions is handled in the subscribersKeeper.
   * If a callback handler can not be reached or is slow, an exponential backoff is applied.
   */
@@ -40,7 +38,7 @@ object HttpEventActor {
 
   private case class Broadcast(event: MarathonEvent, subscribers: EventSubscribers)
 
-  class HttpEventActorMetrics @Inject() (metrics: Metrics) {
+  class HttpEventActorMetrics(metrics: Metrics) {
     private val pre = MetricPrefixes.SERVICE
     private val clazz = classOf[HttpEventActor]
     // the number of requests that are open without response
@@ -57,7 +55,7 @@ object HttpEventActor {
 }
 
 class HttpEventActor(
-  conf: HttpEventConfiguration,
+  conf: EventConf,
   subscribersKeeper: ActorRef,
   metrics: HttpEventActorMetrics,
   clock: Clock)

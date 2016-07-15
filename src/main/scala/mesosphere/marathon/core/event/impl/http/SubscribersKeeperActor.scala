@@ -1,9 +1,9 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.http
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.pattern.pipe
-import mesosphere.marathon.event.http.SubscribersKeeperActor._
-import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe, Unsubscribe }
+import mesosphere.marathon.core.event.impl.http.SubscribersKeeperActor._
+import mesosphere.marathon.core.event.{ MarathonSubscriptionEvent, Subscribe, Unsubscribe }
 import mesosphere.marathon.state.EntityStore
 
 import scala.concurrent.Future

@@ -1,4 +1,4 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.http
 
 import mesosphere.marathon.Protos
 import mesosphere.marathon.state.{ MarathonState, Timestamp }

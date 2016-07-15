@@ -5,8 +5,8 @@ import java.util.Date
 
 import akka.actor.ActorSystem
 import mesosphere.marathon.api.v2.json.{ AppUpdate, GroupUpdate }
-import mesosphere.marathon.event.http.EventSubscribers
-import mesosphere.marathon.event.{ Subscribe, Unsubscribe }
+import mesosphere.marathon.core.event.impl.http.EventSubscribers
+import mesosphere.marathon.core.event.{ Subscribe, Unsubscribe }
 import mesosphere.marathon.integration.setup.{ RestResult, SprayHttpResponse }
 import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory

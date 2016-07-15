@@ -1,17 +1,17 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.http
 
-import mesosphere.marathon.event._
-import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
 import akka.actor.ActorRef
-import akka.pattern.ask
 import akka.event.EventStream
-import javax.inject.{ Named, Inject }
+import akka.pattern.ask
+import mesosphere.marathon.core.event.impl.http.SubscribersKeeperActor.GetSubscribers
+import mesosphere.marathon.core.event.{ EventConf, _ }
+
 import scala.concurrent.Future
 
-class HttpCallbackSubscriptionService @Inject() (
-    @Named(HttpEventModule.SubscribersKeeperActor) val subscribersKeeper: ActorRef,
-    @Named(EventModule.busName) eventBus: EventStream,
-    conf: HttpEventConfiguration) {
+class HttpCallbackSubscriptionService(
+    val subscribersKeeper: ActorRef,
+    eventBus: EventStream,
+    conf: EventConf) {
 
   import scala.concurrent.ExecutionContext.Implicits.global
   implicit val timeout = conf.eventRequestTimeout
