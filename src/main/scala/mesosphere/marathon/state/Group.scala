@@ -148,6 +148,7 @@ case class Group(
   }
 
   lazy val dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
+    require(id.isRoot)
     val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
     for (app <- transitiveApps)
       graph.addVertex(app)
@@ -226,7 +227,7 @@ object Group {
       group.id is validPathWithBase(base)
       group.apps is every(AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base)))
       group is noAppsAndGroupsWithSameName
-      (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
+      group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
       group is validPorts
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
     }
@@ -245,10 +246,8 @@ object Group {
       clashingIds.isEmpty
     }
 
-  private def noCyclicDependencies(group: Group): Validator[Set[PathId]] =
-    isTrue("Dependency graph has cyclic dependencies.") { _ =>
-      group.hasNonCyclicDependencies
-    }
+  private def noCyclicDependencies: Validator[Group] =
+    isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
 
   private def validPorts: Validator[Group] = {
     new Validator[Group] {
