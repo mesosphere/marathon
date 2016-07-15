@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.core.storage.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.util.{ Retry, WorkQueue, toRichFuture }
+import mesosphere.marathon.util.{ Retry, Timeout, WorkQueue, toRichFuture }
 import mesosphere.util.state.zk.{ Children, GetData, RichCuratorFramework }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
@@ -18,11 +18,12 @@ import org.apache.zookeeper.data.Stat
 
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
-class ZkPersistenceStore(val client: RichCuratorFramework, maxConcurrent: Int = 8)(
+class ZkPersistenceStore(val client: RichCuratorFramework, timeout: Duration, maxConcurrent: Int = 8)(
     implicit
     mat: Materializer,
     ctx: ExecutionContext,
@@ -36,7 +37,12 @@ class ZkPersistenceStore(val client: RichCuratorFramework, maxConcurrent: Int = 
     case NonFatal(_) => true
   }
 
-  private def retry[T](name: String)(f: => Future[T]) = Retry(name, retryOn = retryOn)(limitRequests(f))
+  private def retry[T](name: String)(f: => Future[T]) =
+    Timeout(timeout) {
+      Retry(name, retryOn = retryOn) {
+        limitRequests(f)
+      }
+    }
 
   override protected def rawIds(category: String): Source[ZkId, NotUsed] = {
     val childrenFuture = retry(s"ZkPersistenceStore::ids($category)") {

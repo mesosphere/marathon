@@ -11,6 +11,8 @@ import mesosphere.marathon.core.storage.impl.zk.{ ZkPersistenceStore, ZkTestClas
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 
+import scala.concurrent.duration.Duration
+
 class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
     with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization
     with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
@@ -21,7 +23,7 @@ class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
     val client = zkClient()
     val root = UUID.randomUUID().toString
     client.create(s"/$root").futureValue
-    new ZkPersistenceStore(client.usingNamespace(root))
+    new ZkPersistenceStore(client.usingNamespace(root), Duration.Inf)
   }
 
   private def cachedInMemory = {

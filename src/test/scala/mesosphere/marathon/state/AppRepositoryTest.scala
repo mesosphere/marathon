@@ -16,6 +16,7 @@ import mesosphere.util.state.memory.InMemoryStore
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 trait AppRepositoryTest { this: AkkaUnitTest =>
   implicit val metrics: Metrics = new Metrics(new MetricRegistry)
@@ -134,7 +135,7 @@ class AppZkRepositoryTest extends AkkaUnitTest with AppRepositoryTest with Zooke
     val root = UUID.randomUUID().toString
     client.create(s"/$root").futureValue
     implicit val metrics = new Metrics(new MetricRegistry)
-    new ZkPersistenceStore(client.usingNamespace(root))
+    new ZkPersistenceStore(client.usingNamespace(root), Duration.Inf)
   }
   private def newRepo = new AppZkRepository(defaultStore, 25)
 

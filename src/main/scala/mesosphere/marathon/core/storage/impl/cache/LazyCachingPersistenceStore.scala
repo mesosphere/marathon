@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{ Keep, Sink, Source }
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
@@ -28,7 +28,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   */
 class LazyCachingPersistenceStore[K, Category, Serialized](
     store: BasePersistenceStore[K, Category, Serialized])(implicit
-  mat: ActorMaterializer,
+    mat: Materializer,
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
   val lockManager = LockManager.create()

@@ -134,6 +134,7 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
 }
 
 object RichCuratorFramework {
+  def apply(client: CuratorFramework): RichCuratorFramework = new RichCuratorFramework(client)
   def apply(uri: String, retryPolicy: RetryPolicy): RichCuratorFramework = {
     val c = CuratorFrameworkFactory.newClient(uri, retryPolicy)
     c.start
