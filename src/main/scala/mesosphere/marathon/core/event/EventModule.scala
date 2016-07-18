@@ -6,13 +6,12 @@ import akka.pattern.ask
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.history.impl.HistoryActor
-import mesosphere.marathon.core.event.http.{ EventSubscribers, HttpCallbackSubscriptionService }
 import mesosphere.marathon.core.event.http.impl._
+import mesosphere.marathon.core.event.http.{ EventSubscribers, HttpCallbackSubscriptionService }
 import mesosphere.marathon.core.event.stream.impl._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.state.{ EntityStore, TaskFailureRepository }
+import mesosphere.marathon.state.EntityStore
 import org.eclipse.jetty.servlets.EventSourceServlet
 import org.slf4j.LoggerFactory
 
@@ -25,7 +24,6 @@ class EventModule(
     metrics: Metrics,
     clock: Clock,
     eventSubscribersStore: EntityStore[EventSubscribers],
-    taskFailureRepository: TaskFailureRepository,
     electionService: ElectionService,
     authenticator: Authenticator,
     authorizer: Authorizer) {
@@ -72,8 +70,6 @@ class EventModule(
     if (httpCallbacksEnabled) new ActorHttpCallbackSubscriptionService(subscribersKeeperActor, eventBus, conf)
     else NoopHttpCallbackSubscriptionService
   }
-
-  lazy val historyActorProps: Props = Props(new HistoryActor(eventBus, taskFailureRepository))
 
   lazy val httpEventStreamActor: ActorRef = {
     val outstanding = conf.eventStreamMaxOutstandingMessages()

@@ -166,7 +166,7 @@ class CoreGuiceModule extends AbstractModule {
   }
 
   @Provides @Singleton @Named(ModuleNames.HISTORY_ACTOR_PROPS)
-  def historyActor(coreModule: CoreModule): Props = coreModule.eventModule.historyActorProps
+  def historyActor(coreModule: CoreModule): Props = coreModule.historyModule.historyActorProps
 
   @Provides @Singleton
   def httpEventStreamActor(coreModule: CoreModule): ActorRef = coreModule.eventModule.httpEventStreamActor

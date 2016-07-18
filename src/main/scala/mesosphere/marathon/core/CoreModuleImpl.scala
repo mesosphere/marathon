@@ -12,6 +12,7 @@ import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.EventModule
 import mesosphere.marathon.core.event.http.EventSubscribers
 import mesosphere.marathon.core.flow.FlowModule
+import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -158,8 +159,12 @@ class CoreModuleImpl @Inject() (
   // EVENT
 
   override lazy val eventModule: EventModule = new EventModule(
-    eventStream, actorSystem, marathonConf, metrics, clock, eventSubscribersStore, taskFailureRepository,
-    electionModule.service, authModule.authenticator, authModule.authorizer)
+    eventStream, actorSystem, marathonConf, metrics, clock, eventSubscribersStore, electionModule.service,
+    authModule.authenticator, authModule.authorizer)
+
+  // HISTORY
+
+  override lazy val historyModule: HistoryModule = new HistoryModule(eventStream, actorSystem, taskFailureRepository)
 
   // GREEDY INSTANTIATION
   //
@@ -171,7 +176,6 @@ class CoreModuleImpl @Inject() (
   // is created. Changing the wiring order for this feels wrong since it is nicer if it
   // follows architectural logic. Therefore we instantiate them here explicitly.
 
-  eventModule
   taskJobsModule.handleOverdueTasks(
     taskTrackerModule.taskTracker,
     taskTrackerModule.taskReservationTimeoutHandler,
@@ -182,4 +186,6 @@ class CoreModuleImpl @Inject() (
   offerMatcherManagerModule
   launcherModule
   offerMatcherReconcilerModule.start()
+  eventModule
+  historyModule
 }
