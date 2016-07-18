@@ -1,3 +1,7 @@
+## Changes from 0.14.2 to 0.14.3
+
+Updated Mesos to 0.26.2 which fixes a memory leak in libmesos.
+
 ## Changes from 0.13.0 to 0.14.0
 
 ### Recommended Mesos version is 0.26.0
