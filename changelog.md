@@ -1,3 +1,7 @@
+## Changes from 0.15.5 to 0.15.6
+
+Updated Mesos to 0.26.2 which fixes a memory leak in libmesos.
+
 ## Changes from 0.15.4 to 0.15.5
 
 ### Fixed issues
