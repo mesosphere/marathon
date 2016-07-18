@@ -119,11 +119,7 @@ object ClassicZk {
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
       enableCache = config.bool("enable-cache", true),
       sessionTimeout = config.duration("session-timeout", 10.seconds),
-      zkHosts = {
-        val hosts = config.stringList("hosts")
-        if (hosts.nonEmpty) hosts.mkString(",")
-        else "localhost:2181"
-      },
+      zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
       zkPath = config.string("path", "marathon"),
       username = config.optionalString("username"),
       password = config.optionalString("password"),
@@ -165,11 +161,7 @@ object MesosZk {
     MesosZk(
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
       enableCache = config.bool("enable-cache", true),
-      zkHosts = {
-        val hosts = config.stringList("hosts")
-        if (hosts.nonEmpty) hosts.mkString(",")
-        else "localhost:2181"
-      },
+      zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
       zkPath = config.string("path", "marathon"),
       timeout = config.duration("timeout", 10.seconds)
     )
@@ -273,11 +265,7 @@ object NewZk {
       sessionTimeout = config.optionalDuration("session-timeout"),
       connectionTimeout = config.optionalDuration("connect-timeout"),
       timeout = config.duration("timeout", 10.seconds),
-      zkHosts = {
-        val hosts = config.stringList("hosts")
-        if (hosts.nonEmpty) hosts.mkString(",")
-        else "localhost:2181"
-      },
+      zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
       zkPath = config.string("path", "marathon"),
       username = config.optionalString("username"),
       password = config.optionalString("password"),
