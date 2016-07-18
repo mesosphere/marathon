@@ -18,7 +18,7 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
     f.taskFailureRepo.store(PathId("/some/app"), taskFailure).futureValue
 
     And("fetch it")
-    val readFailure = f.taskFailureRepo.current(PathId("/some/app")).futureValue
+    val readFailure = f.taskFailureRepo.get(PathId("/some/app")).futureValue
 
     Then("the resulting failure is the one we stored")
     readFailure should be(Some(taskFailure))
@@ -36,7 +36,7 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
     f.taskFailureRepo.store(PathId("/some/app"), anotherTaskFailure).futureValue
 
     And("fetch it")
-    val readFailure = f.taskFailureRepo.current(PathId("/some/app")).futureValue
+    val readFailure = f.taskFailureRepo.get(PathId("/some/app")).futureValue
 
     Then("the resulting failure is the one we stored LAST")
     readFailure should be(Some(anotherTaskFailure))
@@ -50,10 +50,10 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
     f.taskFailureRepo.store(PathId("/some/app"), taskFailure).futureValue
 
     And("expunge it again")
-    f.taskFailureRepo.expunge(PathId("/some/app")).futureValue
+    f.taskFailureRepo.delete(PathId("/some/app")).futureValue
 
     And("fetch it")
-    val readFailure = f.taskFailureRepo.current(PathId("/some/app")).futureValue
+    val readFailure = f.taskFailureRepo.get(PathId("/some/app")).futureValue
 
     Then("the result is None")
     readFailure should be(None)
@@ -69,6 +69,6 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
     )
     lazy val metricRegistry = new MetricRegistry
     lazy val metrics = new Metrics(metricRegistry)
-    lazy val taskFailureRepo = new TaskFailureRepository(entityStore, maxVersions = Some(1), metrics)
+    lazy val taskFailureRepo = new TaskFailureEntityRepository(entityStore, maxVersions = Some(1), metrics)
   }
 }

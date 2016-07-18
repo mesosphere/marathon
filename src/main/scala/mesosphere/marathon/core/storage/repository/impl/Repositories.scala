@@ -2,7 +2,9 @@ package mesosphere.marathon.core.storage.repository.impl
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
+import mesosphere.marathon.core.storage.repository.TaskFailureRepository
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.TaskFailure
 // scalastyle:off
 import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, Repository, TaskRepository, VersionedRepository }
 // scalastyle:on
@@ -27,3 +29,9 @@ class DeploymentRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C,
   marshaller: Marshaller[DeploymentPlan, S],
   unmarshaller: Unmarshaller[S, DeploymentPlan])
     extends Repository[String, DeploymentPlan, K, C, S](persistenceStore) with DeploymentRepository
+
+class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
+                                        implicit ir: IdResolver[PathId, TaskFailure, C, K],
+                                        marshaller: Marshaller[TaskFailure, S],
+                                        unmarshaller: Unmarshaller[S, TaskFailure]
+) extends VersionedRepository[PathId, TaskFailure, K, C, S](persistenceStore) with TaskFailureRepository

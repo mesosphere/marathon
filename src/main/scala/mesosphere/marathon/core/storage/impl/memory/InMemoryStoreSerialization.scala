@@ -6,7 +6,7 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.core.storage.IdResolver
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{AppDefinition, PathId, TaskFailure}
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 case class RamId(category: String, id: String, version: Option[OffsetDateTime])
@@ -54,6 +54,9 @@ trait InMemoryStoreSerialization {
       override val maxVersions: Int = 0
       override def version(v: DeploymentPlan): OffsetDateTime = OffsetDateTime.MIN
     }
+
+  def taskFailureResolver(maxVersions: Int): IdResolver[PathId, TaskFailure, String, RamId] =
+    new InMemPathIdResolver[TaskFailure]("taskfailure", maxVersions, _.version.toOffsetDateTime)
 }
 
 object InMemoryStoreSerialization extends InMemoryStoreSerialization

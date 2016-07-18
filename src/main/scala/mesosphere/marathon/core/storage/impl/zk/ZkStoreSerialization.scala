@@ -5,11 +5,12 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
-import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
+import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.{DeploymentPlanDefinition, MarathonTask, ServiceDefinition}
 import mesosphere.marathon.core.storage.IdResolver
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.{AppDefinition, PathId, TaskFailure}
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
@@ -83,6 +84,18 @@ trait ZkStoreSerialization {
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
         DeploymentPlan.fromProto(DeploymentPlanDefinition.parseFrom(byteString.toArray))
+    }
+
+  def taskFailureResolver(maxVersions: Int): IdResolver[PathId, TaskFailure, String, ZkId] =
+    new ZkPathIdResolver[TaskFailure]("taskFailures", maxVersions, _.version.toOffsetDateTime)
+
+  implicit val taskFailureMarshaller: Marshaller[TaskFailure, ZkSerialized] =
+    Marshaller.opaque(failure => ZkSerialized(ByteString(failure.toProtoByteArray)))
+
+  implicit val taskFailureUnmarshaller: Unmarshaller[ZkSerialized, TaskFailure] =
+    Unmarshaller.strict {
+      case ZkSerialized(byteString) =>
+        TaskFailure(Protos.TaskFailure.parseFrom(byteString.toArray))
     }
 }
 

@@ -3,9 +3,10 @@ package mesosphere.marathon.event
 import akka.actor.{ ActorRef, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.storage.repository.TaskFailureRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ TaskFailure, TaskFailureRepository, Timestamp }
+import mesosphere.marathon.state.{ TaskFailure, Timestamp }
 import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
 import org.mockito.Matchers.any

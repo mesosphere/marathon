@@ -2,16 +2,21 @@ package mesosphere.marathon.core.storage
 
 import java.util.UUID
 
-import akka.actor.{ ActorRefFactory, Scheduler }
+// scalastyle:off
+import akka.actor.{ActorRefFactory, Scheduler}
 import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.storage.repository.{ AppRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, TaskFailureRepository, TaskRepository}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, AppEntityRepository, MarathonTaskState, TaskEntityRepository }
+import mesosphere.marathon.state.{AppDefinition, AppEntityRepository, DeploymentEntityRepository, MarathonTaskState, PathId, TaskEntityRepository, TaskFailure, TaskFailureEntityRepository}
+import mesosphere.marathon.upgrade.DeploymentPlan
+import org.apache.mesos.Protos.TaskID
+import org.apache.mesos.Protos.TaskState
 
 import scala.concurrent.ExecutionContext
+// scalastyle:on
 
 /**
   * Provides the repositories for all persistable entities.
@@ -19,6 +24,8 @@ import scala.concurrent.ExecutionContext
 trait StorageModule {
   def appRepository: AppRepository
   def taskRepository: TaskRepository
+  def deploymentRepository: DeploymentRepository
+  def taskFailureRepository: TaskFailureRepository
 }
 
 object StorageModule {
@@ -43,21 +50,38 @@ object StorageModule {
         val taskRepository = new TaskEntityRepository(l.entityStore(
           TaskEntityRepository.storePrefix,
           () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())), metrics)
-        StorageModuleImpl(appRepository, taskRepository)
+        val deploymentRepository = new DeploymentEntityRepository(l.entityStore(
+          "deployment:",
+          () => DeploymentPlan.empty
+        ), metrics)
+        val taskFailureRepository = new TaskFailureEntityRepository(l.entityStore(
+          "taskFailure:",
+          () => TaskFailure(
+            PathId.empty,
+            TaskID.newBuilder().setValue("").build,
+            TaskState.TASK_STAGING
+          )
+        ), Some(1), metrics)
+
+        StorageModuleImpl(appRepository, taskRepository, deploymentRepository, taskFailureRepository)
       case zk: NewZk =>
         val store = zk.store
-        val appRepository = AppRepository.zkRepository(store, zk.maxVersions)
-        val taskRepository = TaskRepository.zkRepository(store)
-        StorageModuleImpl(appRepository, taskRepository)
+        StorageModuleImpl(AppRepository.zkRepository(store, zk.maxVersions),
+          TaskRepository.zkRepository(store),
+          DeploymentRepository.zkRepository(store),
+          TaskFailureRepository.zkRepository(store))
       case mem: NewInMem =>
         val store = mem.store
-        val appRepository = AppRepository.inMemRepository(store, mem.maxVersions)
-        val taskRepository = TaskRepository.inMemRepository(store)
-        StorageModuleImpl(appRepository, taskRepository)
+        StorageModuleImpl(AppRepository.inMemRepository(store, mem.maxVersions),
+          TaskRepository.inMemRepository(store),
+          DeploymentRepository.inMemRepository(store),
+          TaskFailureRepository.inMemRepository(store))
     }
   }
 }
 
 private[storage] case class StorageModuleImpl(
   appRepository: AppRepository,
-  taskRepository: TaskRepository) extends StorageModule
+  taskRepository: TaskRepository,
+  deploymentRepository: DeploymentRepository,
+  taskFailureRepository: TaskFailureRepository) extends StorageModule

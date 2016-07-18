@@ -3,7 +3,7 @@ package mesosphere.marathon
 import java.util.concurrent.TimeoutException
 
 import akka.Done
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ ActorRef, Props }
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.testkit._
@@ -13,7 +13,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository}
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
@@ -32,11 +32,11 @@ import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.scalatest.{BeforeAndAfterAll, Matchers}
+import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.immutable.Set
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 class MarathonSchedulerActorTest extends MarathonActorSupport
     with MarathonSpec

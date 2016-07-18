@@ -19,7 +19,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
 import mesosphere.marathon.event.{ EventModule, HistoryActor }
@@ -343,8 +343,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Singleton
   def provideTaskFailureRepository(
     @Named(ModuleNames.STORE_TASK_FAILURES) store: EntityStore[TaskFailure],
-    metrics: Metrics): TaskFailureRepository = {
-    new TaskFailureRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+    metrics: Metrics): TaskFailureEntityRepository = {
+    new TaskFailureEntityRepository(store, conf.zooKeeperMaxVersions.get, metrics)
   }
 
   @Provides
