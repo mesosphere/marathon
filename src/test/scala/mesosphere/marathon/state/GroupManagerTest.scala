@@ -46,7 +46,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       capMetrics,
       system,
       s"serializeGroupUpdates${actorId.incrementAndGet()}",
-      maxParallel = 1,
+      maxConcurrent = 1,
       maxQueued = 10
     )
 

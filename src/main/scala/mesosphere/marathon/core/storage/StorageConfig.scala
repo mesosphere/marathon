@@ -3,7 +3,7 @@ package mesosphere.marathon.core.storage
 import java.util
 import java.util.concurrent.TimeUnit
 
-import akka.actor.Scheduler
+import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.{ Config, ConfigMemorySize }
 import mesosphere.marathon.MarathonConf
@@ -102,16 +102,16 @@ case class ClassicZk(
 object ClassicZk {
   def apply(config: MarathonConf): ClassicZk =
     ClassicZk(
-      maxVersions = config.zooKeeperMaxVersions.get.get,
-      enableCache = config.storeCache.get.get,
+      maxVersions = config.zooKeeperMaxVersions(),
+      enableCache = config.storeCache(),
       sessionTimeout = config.zkSessionTimeoutDuration,
       zkHosts = config.zkHosts,
       zkPath = config.zkPath,
       username = config.zkUsername,
       password = config.zkPassword,
       retries = 3,
-      enableCompression = config.zooKeeperCompressionEnabled.get.get,
-      compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold.get.get))
+      enableCompression = config.zooKeeperCompressionEnabled(),
+      compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold()))
 
   def apply(config: Config): ClassicZk = {
     // scalastyle:off
@@ -184,10 +184,10 @@ sealed trait PersistenceStorageConfig[K, C, S] extends StorageConfig {
   val maxVersions: Int
   val cacheType: CacheType
   protected def leafStore(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler): BasePersistenceStore[K, C, S]
+    scheduler: Scheduler, actorRefFactory: ActorRefFactory): BasePersistenceStore[K, C, S]
 
   def store(implicit metrics: Metrics, mat: Materializer,
-    ctx: ExecutionContext, scheduler: Scheduler): PersistenceStore[K, C, S] = {
+    ctx: ExecutionContext, scheduler: Scheduler, actorRefFactory: ActorRefFactory): PersistenceStore[K, C, S] = {
     cacheType match {
       case NoCaching => leafStore
       case LazyCaching => new LazyCachingPersistenceStore[K, C, S](leafStore)
@@ -208,6 +208,7 @@ case class NewZk(
     enableCompression: Boolean,
     retryConfig: RetryConfig,
     maxConcurrent: Int,
+    maxOutstanding: Int,
     maxVersions: Int) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
 
   lazy val client: RichCuratorFramework = {
@@ -237,15 +238,15 @@ case class NewZk(
   }
 
   protected def leafStore(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler): BasePersistenceStore[ZkId, String, ZkSerialized] =
-    new ZkPersistenceStore(client, timeout, maxConcurrent)
+    scheduler: Scheduler, actorRefFactory: ActorRefFactory): BasePersistenceStore[ZkId, String, ZkSerialized] =
+    new ZkPersistenceStore(client, timeout, maxConcurrent, maxOutstanding)
 
 }
 
 object NewZk {
   def apply(conf: MarathonConf): NewZk =
     NewZk(
-      cacheType = if (conf.storeCache.get.get) LazyCaching else NoCaching,
+      cacheType = if (conf.storeCache()) LazyCaching else NoCaching,
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
       connectionTimeout = None,
       timeout = conf.zkTimeoutDuration,
@@ -256,6 +257,7 @@ object NewZk {
       enableCompression = conf.zooKeeperCompressionEnabled.get.get,
       retryConfig = RetryConfig(),
       maxConcurrent = 8,
+      maxOutstanding = 1024, // scalastyle:off magic.number
       maxVersions = conf.zooKeeperMaxVersions.get.get
     )
 
@@ -272,6 +274,7 @@ object NewZk {
       enableCompression = config.bool("enable-compression", true),
       retryConfig = RetryConfig(config),
       maxConcurrent = config.int("max-concurrent-requests", 8),
+      maxOutstanding = config.int("max-concurrent-outstanding", 1024), // scalastyle:off magic.number
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions)
     )
 }
@@ -280,13 +283,13 @@ case class NewInMem(maxVersions: Int) extends PersistenceStorageConfig[RamId, St
   override val cacheType: CacheType = NoCaching
 
   protected def leafStore(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler): BasePersistenceStore[RamId, String, Identity] =
+    scheduler: Scheduler, actorRefFactory: ActorRefFactory): BasePersistenceStore[RamId, String, Identity] =
     new InMemoryPersistenceStore()
 }
 
 object NewInMem {
   def apply(conf: MarathonConf): NewInMem =
-    NewInMem(conf.zooKeeperMaxVersions.get.get)
+    NewInMem(conf.zooKeeperMaxVersions())
 
   def apply(conf: Config): NewInMem =
     NewInMem(conf.int("max-versions", StorageConfig.DefaultMaxVersions))
@@ -295,7 +298,7 @@ object NewInMem {
 object StorageConfig {
   val DefaultMaxVersions = 25
   def apply(conf: MarathonConf): StorageConfig = {
-    conf.internalStoreBackend.get.get match {
+    conf.internalStoreBackend() match {
       case "zk" => ClassicZk(conf)
       case "mesos_zk" => MesosZk(conf)
       case "mem" => ClassicInMem(conf)

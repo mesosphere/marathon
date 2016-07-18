@@ -31,7 +31,7 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
     capMetrics,
     system,
     s"serializeGroupUpdates${actorId.incrementAndGet()}",
-    maxParallel = 1,
+    maxConcurrent = 1,
     maxQueued = 10
   )
 

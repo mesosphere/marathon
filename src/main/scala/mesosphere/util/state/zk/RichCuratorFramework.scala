@@ -130,14 +130,15 @@ class RichCuratorFramework(val client: CuratorFramework) extends AnyVal {
     }
   }
 
-  override def toString: String = client.toString
+  override def toString: String =
+    s"CuratorFramework(${client.getZookeeperClient.getCurrentConnectionString}/${client.getNamespace})"
 }
 
 object RichCuratorFramework {
   def apply(client: CuratorFramework): RichCuratorFramework = new RichCuratorFramework(client)
   def apply(uri: String, retryPolicy: RetryPolicy): RichCuratorFramework = {
     val c = CuratorFrameworkFactory.newClient(uri, retryPolicy)
-    c.start
+    c.start()
     new RichCuratorFramework(c)
   }
 }

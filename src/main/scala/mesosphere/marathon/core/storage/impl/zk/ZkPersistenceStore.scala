@@ -2,7 +2,7 @@ package mesosphere.marathon.core.storage.impl.zk
 
 import java.time.OffsetDateTime
 
-import akka.actor.Scheduler
+import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
@@ -10,8 +10,9 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.core.storage.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.util.{ Retry, Timeout, WorkQueue, toRichFuture }
+import mesosphere.marathon.util.{ Retry, Timeout, toRichFuture }
 import mesosphere.util.state.zk.{ Children, GetData, RichCuratorFramework }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.apache.zookeeper.data.Stat
@@ -23,14 +24,26 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Success }
 
-class ZkPersistenceStore(val client: RichCuratorFramework, timeout: Duration, maxConcurrent: Int = 8)(
+class ZkPersistenceStore(
+    val client: RichCuratorFramework,
+    timeout: Duration,
+    maxConcurrent: Int = 8,
+    maxQueued: Int = 100 // scalastyle:off magic.number
+)(
     implicit
     mat: Materializer,
+    actorRefFactory: ActorRefFactory,
     ctx: ExecutionContext,
     scheduler: Scheduler,
     val metrics: Metrics
 ) extends BasePersistenceStore[ZkId, String, ZkSerialized]() with StrictLogging {
-  private val limitRequests = WorkQueue(maxConcurrent)
+  private val limitRequests = CapConcurrentExecutions(
+    CapConcurrentExecutionsMetrics(metrics, getClass),
+    actorRefFactory,
+    s"ZkPersistenceStore_$client".replaceAll("\\(|\\)|/", "_"),
+    maxConcurrent = maxConcurrent,
+    maxQueued = maxQueued)
+
   private val retryOn: Retry.RetryOnFn = {
     case _: KeeperException.ConnectionLossException => true
     case _: KeeperException => false

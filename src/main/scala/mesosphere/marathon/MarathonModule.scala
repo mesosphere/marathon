@@ -289,7 +289,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
       capMetrics,
       actorRefFactory,
       "serializeGroupUpdates",
-      maxParallel = 1,
+      maxConcurrent = 1,
       maxQueued = conf.internalMaxQueuedRootGroupUpdates()
     )
   }

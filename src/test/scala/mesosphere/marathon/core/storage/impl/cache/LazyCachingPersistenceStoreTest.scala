@@ -16,11 +16,15 @@ import scala.concurrent.duration.Duration
 class LazyCachingPersistenceStoreTest extends AkkaUnitTest
     with PersistenceStoreTest with ZkTestClass1Serialization with ZookeeperServerTest
     with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
-  implicit val metrics = new Metrics(new MetricRegistry)
 
-  private def cachedInMemory = new LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+  private def cachedInMemory = {
+    implicit val metrics = new Metrics(new MetricRegistry)
+    new LazyCachingPersistenceStore(new InMemoryPersistenceStore())
+  }
 
   def zkStore: ZkPersistenceStore = {
+    implicit val metrics = new Metrics(new MetricRegistry)
+
     val client = zkClient()
     val root = UUID.randomUUID().toString
     client.create(s"/$root").futureValue

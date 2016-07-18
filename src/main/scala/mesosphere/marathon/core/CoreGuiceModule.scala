@@ -19,6 +19,8 @@ import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
+
+import scala.concurrent.ExecutionContext
 // scalastyle:off
 import mesosphere.marathon.core.task.update.impl.steps.{ ContinueOnErrorStep, NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
 // scalastyle:on
@@ -165,8 +167,8 @@ class CoreGuiceModule extends AbstractModule {
       capMetrics,
       actorRefFactory,
       "serializeTaskStatusUpdates",
-      maxParallel = config.internalMaxParallelStatusUpdates(),
+      maxConcurrent = config.internalMaxParallelStatusUpdates(),
       maxQueued = config.internalMaxQueuedStatusUpdates()
-    )
+    )(ExecutionContext.global)
   }
 }

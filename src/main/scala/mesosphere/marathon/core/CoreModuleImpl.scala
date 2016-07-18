@@ -77,7 +77,11 @@ class CoreModuleImpl @Inject() (
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
   override lazy val storageModule = StorageModule(
     marathonConf,
-    metrics, actorsModule.materializer, ExecutionContext.global, actorSystem.scheduler)
+    metrics,
+    actorsModule.materializer,
+    ExecutionContext.global,
+    actorSystem.scheduler,
+    actorSystem)
 
   // READINESS CHECKS
   lazy val readinessModule = new ReadinessModule(actorSystem)

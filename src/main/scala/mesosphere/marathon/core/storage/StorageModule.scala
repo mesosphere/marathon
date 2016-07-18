@@ -2,7 +2,7 @@ package mesosphere.marathon.core.storage
 
 import java.util.UUID
 
-import akka.actor.Scheduler
+import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.MarathonConf
@@ -23,15 +23,15 @@ trait StorageModule {
 
 object StorageModule {
   def apply(conf: MarathonConf, metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler): StorageModule =
-    apply(StorageConfig(conf))(metrics, mat, ctx, scheduler)
+    scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule =
+    apply(StorageConfig(conf))(metrics, mat, ctx, scheduler, actorRefFactory)
 
-  def apply(config: Config, metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler): StorageModule =
-    apply(StorageConfig(config))(metrics, mat, ctx, scheduler)
+  def apply(config: Config)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
+    scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule =
+    apply(StorageConfig(config))
 
   def apply(config: StorageConfig)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler): StorageModule = {
+    scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
 
     config match {
       case l: LegacyStorageConfig =>
@@ -45,12 +45,12 @@ object StorageModule {
           () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())), metrics)
         StorageModuleImpl(appRepository, taskRepository)
       case zk: NewZk =>
-        val store = zk.store(metrics, mat, ctx, scheduler)
+        val store = zk.store
         val appRepository = AppRepository.zkRepository(store, zk.maxVersions)
         val taskRepository = TaskRepository.zkRepository(store)
         StorageModuleImpl(appRepository, taskRepository)
       case mem: NewInMem =>
-        val store = mem.store(metrics, mat, ctx, scheduler)
+        val store = mem.store
         val appRepository = AppRepository.inMemRepository(store, mem.maxVersions)
         val taskRepository = TaskRepository.inMemRepository(store)
         StorageModuleImpl(appRepository, taskRepository)
