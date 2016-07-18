@@ -105,7 +105,7 @@ class HealthCheckActorTest
 
     val task = MarathonTestHelper.runningTask("test_task.9876543", appVersion = appVersion)
     val lostTask = MarathonTestHelper.mininimalLostTask(appId)
-    val unreachableTask = MarathonTestHelper.mininimalUnreachableTask(appId)
+    val unreachableTask = MarathonTestHelper.minimalUnreachableTask(appId)
 
     def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
       Props(
