@@ -16,6 +16,9 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
 
+/**
+  * Exposes everything necessary to provide an internal event stream, an HTTP events stream and HTTP event callbacks.
+  */
 class EventModule(
     eventBus: EventStream,
     actorSystem: ActorSystem,
