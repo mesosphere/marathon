@@ -8,7 +8,7 @@ import com.google.inject.name.Names
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.http.HttpCallbackSubscriptionService
+import mesosphere.marathon.core.event.HttpCallbackSubscriptionService
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }

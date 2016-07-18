@@ -1,13 +1,12 @@
-package mesosphere.marathon.core.event.http.impl
+package mesosphere.marathon.core.event.impl.callback
 
 import akka.actor._
 import akka.pattern.ask
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.event.http.EventSubscribers
-import mesosphere.marathon.core.event.http.impl.HttpEventActor._
-import mesosphere.marathon.core.event.http.impl.SubscribersKeeperActor._
-import mesosphere.marathon.core.event.{ EventConf, MarathonEvent }
+import mesosphere.marathon.core.event.impl.callback.HttpEventActor._
+import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import spray.client.pipelining.{ sendReceive, _ }
 import spray.http.{ HttpRequest, HttpResponse }

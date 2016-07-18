@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.event.stream.impl
+package mesosphere.marathon.core.event.impl.stream
 
 import java.io.EOFException
 import java.util.concurrent.CountDownLatch

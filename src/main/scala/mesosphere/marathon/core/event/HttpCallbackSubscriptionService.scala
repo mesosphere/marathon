@@ -1,6 +1,4 @@
-package mesosphere.marathon.core.event.http
-
-import mesosphere.marathon.core.event.{ MarathonEvent, MarathonSubscriptionEvent }
+package mesosphere.marathon.core.event
 
 import scala.concurrent.Future
 

@@ -1,12 +1,10 @@
-package mesosphere.marathon.core.event.http.impl
+package mesosphere.marathon.core.event.impl.callback
 
 import akka.actor.{ Actor, ActorLogging }
 import akka.pattern.pipe
-import mesosphere.marathon.core.event.http.EventSubscribers
-import mesosphere.marathon.core.event.http.impl.SubscribersKeeperActor._
-import mesosphere.marathon.core.event.{ MarathonSubscriptionEvent, Subscribe, Unsubscribe }
+import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor._
+import mesosphere.marathon.core.event.{ EventSubscribers, MarathonSubscriptionEvent, Subscribe, Unsubscribe }
 import mesosphere.marathon.state.EntityStore
-
 import scala.concurrent.Future
 
 class SubscribersKeeperActor(val store: EntityStore[EventSubscribers]) extends Actor with ActorLogging {

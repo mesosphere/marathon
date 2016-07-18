@@ -9,8 +9,7 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.election._
-import mesosphere.marathon.core.event.EventModule
-import mesosphere.marathon.core.event.http.EventSubscribers
+import mesosphere.marathon.core.event.{ EventModule, EventSubscribers }
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule

@@ -6,9 +6,8 @@ import akka.pattern.ask
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.http.impl._
-import mesosphere.marathon.core.event.http.{ EventSubscribers, HttpCallbackSubscriptionService }
-import mesosphere.marathon.core.event.stream.impl._
+import mesosphere.marathon.core.event.impl.callback._
+import mesosphere.marathon.core.event.impl.stream._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.state.EntityStore

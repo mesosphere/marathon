@@ -1,10 +1,9 @@
-package mesosphere.marathon.core.event.http.impl
+package mesosphere.marathon.core.event.impl.callback
 
 import akka.actor.ActorRef
 import akka.event.EventStream
 import akka.pattern.ask
-import mesosphere.marathon.core.event.http.{ EventSubscribers, HttpCallbackSubscriptionService }
-import mesosphere.marathon.core.event.http.impl.SubscribersKeeperActor.GetSubscribers
+import SubscribersKeeperActor.GetSubscribers
 import mesosphere.marathon.core.event.{ EventConf, _ }
 
 import scala.concurrent.Future

@@ -1,15 +1,15 @@
-package mesosphere.marathon.core.event.stream.impl
+package mesosphere.marathon.core.event.impl.stream
 
 import akka.actor.{ Props, Terminated }
 import akka.event.EventStream
-import akka.testkit.{ TestActorRef, _ }
+import akka.testkit._
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
-import mesosphere.marathon.core.event.stream.impl.HttpEventStreamActor._
+import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test._
-import org.mockito.Mockito.{ verify, verifyNoMoreInteractions, when => call }
+import org.mockito.Mockito.{ when => call, _ }
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 

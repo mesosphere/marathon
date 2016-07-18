@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.event.http.impl
+package mesosphere.marathon.core.event.impl.callback
 
 import akka.actor.{ Actor, ActorSystem, Props }
 import akka.testkit.{ EventFilter, TestActorRef }
@@ -7,10 +7,9 @@ import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.event.http.EventSubscribers
-import mesosphere.marathon.core.event.http.impl.HttpEventActor.EventNotificationLimit
-import mesosphere.marathon.core.event.http.impl.SubscribersKeeperActor.GetSubscribers
-import mesosphere.marathon.core.event.{ EventConf, EventStreamAttached }
+import mesosphere.marathon.core.event.impl.callback.HttpEventActor.EventNotificationLimit
+import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
+import mesosphere.marathon.core.event.{ EventConf, EventStreamAttached, EventSubscribers }
 import mesosphere.marathon.integration.setup.WaitTestSupport.waitUntil
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.Mockito

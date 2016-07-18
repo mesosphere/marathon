@@ -1,8 +1,7 @@
-package mesosphere.marathon.core.event.http.impl
+package mesosphere.marathon.core.event.impl.callback
 
 import mesosphere.marathon.BadRequestException
-import mesosphere.marathon.core.event.http.{ EventSubscribers, HttpCallbackSubscriptionService }
-import mesosphere.marathon.core.event.{ MarathonEvent, MarathonSubscriptionEvent }
+import mesosphere.marathon.core.event._
 
 import scala.concurrent.Future
 

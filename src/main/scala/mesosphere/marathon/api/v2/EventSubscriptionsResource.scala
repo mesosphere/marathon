@@ -11,8 +11,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.Validation.urlIsValid
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.core.event.http.HttpCallbackSubscriptionService
-import mesosphere.marathon.core.event.{ MarathonEvent, Subscribe, Unsubscribe }
+import mesosphere.marathon.core.event.{ HttpCallbackSubscriptionService, MarathonEvent, Subscribe, Unsubscribe }
 import mesosphere.marathon.plugin.auth._
 
 import scala.concurrent.Future

@@ -16,7 +16,7 @@ import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.http.EventSubscribers
+import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
