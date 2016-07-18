@@ -78,7 +78,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.store(appV1).futureValue
     f.appRepo.store(appV2).futureValue
 
-    val groupWithApp = emptyGroup.copy(apps = Set(appV2), version = Timestamp(2))
+    val groupWithApp = emptyGroup.copy(apps = Map(appV2.id -> appV2), version = Timestamp(2))
     f.groupRepo.store(f.groupRepo.zkRootName, groupWithApp).futureValue
 
     When("migrating")

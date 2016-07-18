@@ -64,7 +64,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
     val app: AppDefinition = AppDefinition(PathId("/test"), versionInfo = versionInfo)
     val groupWithApp = emptyGroup.copy(
-      apps = Set(app),
+      apps = Map(app.id -> app),
       version = versionInfo.version
     )
     f.groupRepo.store(f.groupRepo.zkRootName, groupWithApp).futureValue
@@ -75,7 +75,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     Then("the versionInfo has been updated in the group")
     val maybeGroup: Option[Group] = Await.result(f.groupRepo.rootGroup(), 3.seconds)
     val appWithFullVersion = app.copy(versionInfo = app.versionInfo.withConfigChange(app.version))
-    maybeGroup should be (Some(groupWithApp.copy(apps = Set(appWithFullVersion))))
+    maybeGroup should be (Some(groupWithApp.copy(apps = Map(appWithFullVersion.id -> appWithFullVersion))))
 
     And("the same app has been stored in the appRepo")
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
@@ -96,7 +96,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
 
     val appV3Scaling = AppDefinition(PathId("/test"), cmd = Some("sleep 2"), instances = 1, versionInfo = onlyVersion(3))
     val groupWithApp = emptyGroup.copy(
-      apps = Set(appV3Scaling),
+      apps = Map(appV3Scaling.id -> appV3Scaling),
       version = Timestamp(3)
     )
     f.groupRepo.store(f.groupRepo.zkRootName, groupWithApp).futureValue
@@ -110,7 +110,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     val correctedAppV3 = appV3Scaling.copy(versionInfo = correctedAppV2.versionInfo.withScaleOrRestartChange(appV3Scaling.version))
 
     val maybeGroup: Option[Group] = f.groupRepo.rootGroup().futureValue
-    maybeGroup should be (Some(groupWithApp.copy(apps = Set(correctedAppV3))))
+    maybeGroup should be (Some(groupWithApp.copy(apps = Map(correctedAppV3.id -> correctedAppV3))))
 
     And("the same app has been stored in the appRepo")
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
@@ -134,7 +134,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.store(appV3Scaling).futureValue
 
     val groupWithApp = emptyGroup.copy(
-      apps = Set(appV3Scaling),
+      apps = Map(appV3Scaling.id -> appV3Scaling),
       version = Timestamp(3)
     )
     f.groupRepo.store(f.groupRepo.zkRootName, groupWithApp).futureValue
@@ -148,7 +148,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     val correctedAppV3 = appV3Scaling.copy(versionInfo = correctedAppV2.versionInfo.withScaleOrRestartChange(appV3Scaling.version))
 
     val maybeGroup: Option[Group] = f.groupRepo.rootGroup().futureValue
-    maybeGroup should be (Some(groupWithApp.copy(apps = Set(correctedAppV3))))
+    maybeGroup should be (Some(groupWithApp.copy(apps = Map(correctedAppV3.id -> correctedAppV3))))
 
     And("the same app has been stored in the appRepo")
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))

@@ -80,8 +80,7 @@ The first thing you need to decide is the protocol of your health check:
   performed. One of "HTTP"/"TCP"/"COMMAND".
 
 HTTP/TCP health checks are executed by Marathon and thus test the reachability from
-the current Marathon leader. COMMAND health checks are locally executed by Mesos on
-the agent running the corresponding task.
+the current Marathon leader. COMMAND health checks are executed by Mesos in the container of the corresponding task.
 
 Options applicable to every protocol:
 

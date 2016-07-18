@@ -130,7 +130,7 @@ object MarathonBuild extends Build {
     scalacOptions in Compile ++= Seq(
       "-encoding", "UTF-8",
       "-target:jvm-1.8",
-      "-deprecation",
+      "-deprecation:false", // FIXME (gkleiman): reenable deprecation after Mesos 1.0.0-rc2 deprecations are handled
       "-feature",
       "-unchecked",
       "-Xlog-reflective-calls",
@@ -298,6 +298,7 @@ object Dependencies {
     curatorFramework % "compile",
     java8Compat % "compile",
     scalaLogging % "compile",
+    logstash % "compile",
 
     // test
     Test.diffson % "test",
@@ -314,7 +315,8 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.8.7"
     val Guava = "19.0"
-    val MesosUtils = "1.0.0-rc1"
+    // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
+    val MesosUtils = "1.0.0-rc2"
     val Akka = "2.4.7"
     val AsyncAwait = "0.9.6-RC2"
     val Spray = "1.3.3"
@@ -336,6 +338,7 @@ object Dependency {
     val Graphite = "3.1.2"
     val DataDog = "1.1.5"
     val Logback = "1.1.3"
+    val Logstash = "4.7"
     val WixAccord = "0.5"
     val Curator = "2.10.0"
     val Java8Compat = "0.8.0-RC1"
@@ -381,6 +384,7 @@ object Dependency {
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
   val graphite = "io.dropwizard.metrics" % "metrics-graphite" % V.Graphite
   val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
+  val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
   val curator = "org.apache.curator" % "curator-recipes" % V.Curator
   val curatorClient = "org.apache.curator" % "curator-client" % V.Curator

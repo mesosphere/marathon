@@ -47,7 +47,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
   test("RecoversDeploymentsAndReconcilesHealthChecksOnStart") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    when(groupRepo.rootGroup()).thenReturn(Future.successful(Some(Group.apply(PathId.empty, apps = Set(app)))))
+    when(groupRepo.rootGroup()).thenReturn(Future.successful(Some(Group.apply(PathId.empty, apps = Map(app.id -> app)))))
 
     val schedulerActor = createActor()
     try {
@@ -230,14 +230,14 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       upgradeStrategy = UpgradeStrategy(0.5),
       versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
     )
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app))))
+    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
     val appNew = app.copy(
       cmd = Some("cmd new"),
       versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
     )
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(appNew))))
+    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, Nil, Timestamp.now())
 
@@ -269,8 +269,8 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
     )
     val taskA = MarathonTestHelper.runningTaskForApp(app.id)
-    val origGroup = Group(PathId("/foo/bar"), Set(app))
-    val targetGroup = Group(PathId("/foo/bar"), Set())
+    val origGroup = Group(PathId("/foo/bar"), Map(app.id -> app))
+    val targetGroup = Group(PathId("/foo/bar"), Map())
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
@@ -315,7 +315,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       upgradeStrategy = UpgradeStrategy(0.5),
       versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
     )
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app))))
+    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
     val plan = DeploymentPlan(Group.empty, group)
 
@@ -351,7 +351,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       upgradeStrategy = UpgradeStrategy(0.5),
       versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
     )
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app))))
+    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
     val plan = DeploymentPlan(Group.empty, group)
 
@@ -394,7 +394,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
   test("Forced deployment") {
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app))))
+    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
     val plan = DeploymentPlan(Group.empty, group)
 
@@ -421,7 +421,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
   test("Cancellation timeout") {
     val app = AppDefinition(id = PathId("app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
-    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app))))
+    val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
     val plan = DeploymentPlan(Group.empty, group)
 

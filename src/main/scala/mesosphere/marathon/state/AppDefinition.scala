@@ -425,6 +425,8 @@ case class AppDefinition(
 
 object AppDefinition extends GeneralPurposeCombinators {
 
+  type AppKey = PathId
+
   sealed trait VersionInfo {
     def version: Timestamp
     def lastConfigChangeVersion: Timestamp
