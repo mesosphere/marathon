@@ -149,8 +149,8 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val f = new Fixture
     Given("One related and one unrelated deployment")
     val emptyGroup = Group.empty
-    val relatedDeployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Set(app)))
-    val unrelatedDeployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Set(other)))
+    val relatedDeployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Map(app.id -> app)))
+    val unrelatedDeployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Map(other.id -> other)))
     f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
       DeploymentStepInfo(relatedDeployment, DeploymentStep(Seq.empty), 1),
       DeploymentStepInfo(unrelatedDeployment, DeploymentStep(Seq.empty), 1)
@@ -197,7 +197,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val f = new Fixture
     Given("One related and one unrelated deployment")
     val emptyGroup = Group.empty
-    val deployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Set(app)))
+    val deployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Map(app.id -> app)))
     val taskId: Task.Id = Task.Id.forRunSpec(app.id)
     val result = ReadinessCheckResult("foo", taskId, ready = false, None)
     f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](

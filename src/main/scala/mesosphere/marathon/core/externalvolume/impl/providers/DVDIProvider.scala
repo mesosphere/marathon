@@ -134,7 +134,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       }
 
       def groupValid: Validator[Group] = validator[Group] { group =>
-        group.apps is every(appValid)
+        group.apps.values as "apps" is every(appValid)
         group.groups is every(groupValid)
       }
 

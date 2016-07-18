@@ -59,7 +59,8 @@ object SSLContextUtil {
       override def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {
         try {
           keyStoreTrustManager.checkClientTrusted(chain, authType)
-        } catch {
+        }
+        catch {
           case e: CertificateException => systemTrustManager.checkClientTrusted(chain, authType)
         }
       }
@@ -67,7 +68,8 @@ object SSLContextUtil {
       override def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {
         try {
           keyStoreTrustManager.checkServerTrusted(chain, authType)
-        } catch {
+        }
+        catch {
           case e: CertificateException => systemTrustManager.checkServerTrusted(chain, authType)
         }
       }
