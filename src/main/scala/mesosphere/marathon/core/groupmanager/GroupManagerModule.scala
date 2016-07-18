@@ -1,11 +1,13 @@
 package mesosphere.marathon.core.groupmanager
 
+import javax.inject.Provider
+
 import akka.actor.ActorRef
 import akka.event.EventStream
 import com.codahale.metrics.Gauge
 import mesosphere.marathon.core.groupmanager.impl.{ GroupManagerActor, GroupManagerDelegate }
 import mesosphere.marathon.core.leadership.LeadershipModule
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ DeploymentService, MarathonConf }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppRepository, GroupRepository }
@@ -20,7 +22,7 @@ class GroupManagerModule(
     config: MarathonConf,
     leadershipModule: LeadershipModule,
     serializeUpdates: CapConcurrentExecutions,
-    scheduler: MarathonSchedulerService,
+    scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
     appRepo: AppRepository,
     storage: StorageProvider,

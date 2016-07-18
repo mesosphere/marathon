@@ -28,7 +28,7 @@ import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppRepository, GroupRepository, TaskRepository }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, MarathonSchedulerService, ModuleNames }
+import mesosphere.marathon._
 import mesosphere.util.CapConcurrentExecutions
 
 import scala.util.Random
@@ -54,7 +54,7 @@ class CoreModuleImpl @Inject() (
     taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
     clock: Clock,
     storage: StorageProvider,
-    scheduler: MarathonSchedulerService,
+    scheduler: Provider[DeploymentService],
     @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
     taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
 

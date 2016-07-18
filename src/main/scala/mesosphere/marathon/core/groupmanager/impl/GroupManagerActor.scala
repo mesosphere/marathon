@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.groupmanager.impl
 
 import java.net.URL
+import javax.inject.Provider
 
 import akka.actor.{ Actor, ActorLogging, Props }
 import akka.event.EventStream
@@ -23,7 +24,7 @@ import scala.util.{ Failure, Success }
 private[groupmanager] object GroupManagerActor {
   def props(
     serializeUpdates: CapConcurrentExecutions,
-    scheduler: MarathonSchedulerService,
+    scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
     appRepo: AppRepository,
     storage: StorageProvider,
@@ -42,7 +43,9 @@ private[groupmanager] object GroupManagerActor {
 
 private[impl] class GroupManagerActor(
     serializeUpdates: CapConcurrentExecutions,
-    scheduler: MarathonSchedulerService,
+    // a Provider has to be used to resolve a cyclic dependency between CoreModule and MarathonModule.
+    // Once MarathonSchedulerService is in CoreModule, the Provider could be removed
+    schedulerProvider: Provider[DeploymentService],
     groupRepo: GroupRepository,
     appRepo: AppRepository,
     storage: StorageProvider,
@@ -52,6 +55,12 @@ private[impl] class GroupManagerActor(
   import context.dispatcher
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
+  private var scheduler: DeploymentService = _
+
+  override def preStart(): Unit = {
+    super.preStart()
+    scheduler = schedulerProvider.get()
+  }
 
   override def receive: Receive = {
     Seq(

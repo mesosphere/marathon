@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.groupmanager.impl
 
 import java.util.concurrent.atomic.AtomicInteger
+import javax.inject.Provider
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
@@ -349,9 +350,13 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
       maxQueued = 10
     )
 
+    val schedulerProvider = new Provider[DeploymentService] {
+      override def get() = scheduler
+    }
+
     val props = GroupManagerActor.props(
       serializeExecutions(),
-      scheduler,
+      schedulerProvider,
       groupRepo,
       appRepo,
       provider,

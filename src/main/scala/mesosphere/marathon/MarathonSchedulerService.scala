@@ -46,6 +46,20 @@ trait PrePostDriverCallback {
 }
 
 /**
+  * DeploymentService provides methods to deploy plans.
+  */
+trait DeploymentService {
+  /**
+    * Deploy a plan.
+    * @param plan the plan to deploy.
+    * @param force only one deployment can be applied at a time. With this flag
+    *              one can control, to stop a current deployment and start a new one.
+    * @return a failed future if the deployment failed.
+    */
+  def deploy(plan: DeploymentPlan, force: Boolean = false): Future[Unit]
+}
+
+/**
   * Wrapper class for the scheduler
   */
 class MarathonSchedulerService @Inject() (
@@ -61,7 +75,7 @@ class MarathonSchedulerService @Inject() (
   migration: Migration,
   @Named("schedulerActor") schedulerActor: ActorRef,
   metrics: Metrics = new Metrics(new MetricRegistry))
-    extends AbstractExecutionThreadService with ElectionCandidate {
+    extends AbstractExecutionThreadService with ElectionCandidate with DeploymentService {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
