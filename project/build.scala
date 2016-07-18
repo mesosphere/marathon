@@ -296,6 +296,7 @@ object Dependencies {
     curatorClient % "compile",
     curatorFramework % "compile",
     java8Compat % "compile",
+    logstash % "compile",
 
     // test
     Test.diffson % "test",
@@ -335,6 +336,7 @@ object Dependency {
     val Graphite = "3.1.2"
     val DataDog = "1.1.5"
     val Logback = "1.1.3"
+    val Logstash = "4.7"
     val WixAccord = "0.5"
     val Curator = "2.10.0"
     val Java8Compat = "0.8.0-RC1"
@@ -378,6 +380,7 @@ object Dependency {
   val marathonApiConsole = "mesosphere.marathon" % "api-console" % V.MarathonApiConsole
   val graphite = "io.dropwizard.metrics" % "metrics-graphite" % V.Graphite
   val datadog = "org.coursera" % "dropwizard-metrics-datadog" % V.DataDog exclude("ch.qos.logback", "logback-classic")
+  val logstash = "net.logstash.logback" % "logstash-logback-encoder" % V.Logstash
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
   val curator = "org.apache.curator" % "curator-recipes" % V.Curator
   val curatorClient = "org.apache.curator" % "curator-client" % V.Curator
