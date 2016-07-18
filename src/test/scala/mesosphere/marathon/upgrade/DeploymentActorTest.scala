@@ -41,13 +41,19 @@ class DeploymentActorTest
     val app2 = AppDefinition(id = PathId("/app2"), cmd = Some("cmd"), instances = 1)
     val app3 = AppDefinition(id = PathId("/app3"), cmd = Some("cmd"), instances = 1)
     val app4 = AppDefinition(id = PathId("/app4"), cmd = Some("cmd"))
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app1, app2, app4))))
+    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(
+      app1.id -> app1,
+      app2.id -> app2,
+      app4.id -> app4))))
 
     val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
     val app1New = app1.copy(instances = 1, versionInfo = version2)
     val app2New = app2.copy(instances = 2, cmd = Some("otherCmd"), versionInfo = version2)
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app1New, app2New, app3))))
+    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(
+      app1New.id -> app1New,
+      app2New.id -> app2New,
+      app3.id -> app3))))
 
     // setting started at to 0 to make sure this survives
     val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app1.version, startedAt = 0)
@@ -117,12 +123,12 @@ class DeploymentActorTest
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 2)
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app))))
+    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
     val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
     val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(appNew))))
+    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
     val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app.version, startedAt = 0)
     val task1_2 = MarathonTestHelper.runningTask("task1_2", appVersion = app.version, startedAt = 1000)
@@ -169,11 +175,11 @@ class DeploymentActorTest
     val receiverProbe = TestProbe()
 
     val app = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 0)
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app))))
+    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
     val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
     val appNew = app.copy(cmd = Some("cmd new"), versionInfo = version2)
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(appNew))))
+    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
 
     val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -193,12 +199,12 @@ class DeploymentActorTest
     val managerProbe = TestProbe()
     val receiverProbe = TestProbe()
     val app1 = AppDefinition(id = PathId("/app1"), cmd = Some("cmd"), instances = 3)
-    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app1))))
+    val origGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1.id -> app1))))
 
     val version2 = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
     val app1New = app1.copy(instances = 2, versionInfo = version2)
 
-    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Set(app1New))))
+    val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app1New.id -> app1New))))
 
     val task1_1 = MarathonTestHelper.runningTask("task1_1", appVersion = app1.version, startedAt = 0)
     val task1_2 = MarathonTestHelper.runningTask("task1_2", appVersion = app1.version, startedAt = 500)
