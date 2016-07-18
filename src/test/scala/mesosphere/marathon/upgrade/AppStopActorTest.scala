@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.Props
 import akka.testkit.TestActorRef
-import mesosphere.marathon.core.event.impl.history.HistoryActor
+import mesosphere.marathon.core.event.history.impl.HistoryActor
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, MesosStatusUpdateEvent }

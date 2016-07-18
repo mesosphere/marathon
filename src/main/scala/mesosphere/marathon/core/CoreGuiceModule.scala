@@ -5,11 +5,10 @@ import javax.inject.Named
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
 import com.google.inject._
 import com.google.inject.name.Names
-import mesosphere.marathon.{ MarathonConf, ModuleNames }
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.impl.http.HttpCallbackSubscriptionService
+import mesosphere.marathon.core.event.http.HttpCallbackSubscriptionService
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
@@ -24,7 +23,9 @@ import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpd
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.plugin.http.HttpRequestHandler
+import mesosphere.marathon.{ MarathonConf, ModuleNames }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import org.eclipse.jetty.servlets.EventSourceServlet
 
 /**
   * Provides the glue between guice and the core modules.
@@ -160,13 +161,16 @@ class CoreGuiceModule extends AbstractModule {
   }
 
   @Provides @Singleton
-  def httpCallbackSubscriptionService(coreModule: CoreModule): Option[HttpCallbackSubscriptionService] = {
+  def httpCallbackSubscriptionService(coreModule: CoreModule): HttpCallbackSubscriptionService = {
     coreModule.eventModule.httpCallbackSubscriptionService
   }
 
   @Provides @Singleton @Named(ModuleNames.HISTORY_ACTOR_PROPS)
   def historyActor(coreModule: CoreModule): Props = coreModule.eventModule.historyActorProps
 
-  @Provides @Singleton @Named(ModuleNames.HTTP_EVENT_STREAM)
+  @Provides @Singleton
   def httpEventStreamActor(coreModule: CoreModule): ActorRef = coreModule.eventModule.httpEventStreamActor
+
+  @Provides @Singleton
+  def httpEventStreamServlet(coreModule: CoreModule): EventSourceServlet = coreModule.eventModule.httpEventStreamServlet
 }

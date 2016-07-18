@@ -7,8 +7,8 @@ import com.google.inject.servlet.ServletModule
 import com.google.inject.{ Provides, Scopes, Singleton }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.event.impl.stream.HttpEventStreamServlet
 import mesosphere.marathon.io.SSLContextUtil
+import org.eclipse.jetty.servlets.EventSourceServlet
 
 /**
   * Setup the dependencies for the LeaderProxyFilter.
@@ -62,8 +62,7 @@ class MarathonRestModule extends BaseRestModule {
     bind(classOf[CacheDisablingFilter]).asEagerSingleton()
     filter("/*").through(classOf[CacheDisablingFilter])
 
-    bind(classOf[HttpEventStreamServlet]).asEagerSingleton()
-    serve("/v2/events").`with`(classOf[HttpEventStreamServlet])
+    serve("/v2/events").`with`(classOf[EventSourceServlet])
 
     bind(classOf[WebJarServlet]).in(Scopes.SINGLETON)
     serve("/", "/ui", "/ui/*", "/help", "/api-console", "/api-console/*").`with`(classOf[WebJarServlet])

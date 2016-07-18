@@ -3,13 +3,17 @@ package mesosphere.marathon.core.event
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
 import akka.pattern.ask
+import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.impl.history.HistoryActor
-import mesosphere.marathon.core.event.impl.http._
-import mesosphere.marathon.core.event.impl.stream._
+import mesosphere.marathon.core.event.history.impl.HistoryActor
+import mesosphere.marathon.core.event.http.{ EventSubscribers, HttpCallbackSubscriptionService }
+import mesosphere.marathon.core.event.http.impl._
+import mesosphere.marathon.core.event.stream.impl._
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.state.{ EntityStore, TaskFailureRepository }
+import org.eclipse.jetty.servlets.EventSourceServlet
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
@@ -17,12 +21,14 @@ import scala.concurrent.ExecutionContext
 class EventModule(
     eventBus: EventStream,
     actorSystem: ActorSystem,
-    conf: EventConf,
+    conf: MarathonConf,
     metrics: Metrics,
     clock: Clock,
     eventSubscribersStore: EntityStore[EventSubscribers],
     taskFailureRepository: TaskFailureRepository,
-    electionService: ElectionService) {
+    electionService: ElectionService,
+    authenticator: Authenticator,
+    authorizer: Authorizer) {
   val log = LoggerFactory.getLogger(getClass.getName)
 
   private lazy val httpCallbacksEnabled: Boolean = {
@@ -62,9 +68,9 @@ class EventModule(
     actor
   }
 
-  lazy val httpCallbackSubscriptionService: Option[HttpCallbackSubscriptionService] = {
-    if (httpCallbacksEnabled) Some(new HttpCallbackSubscriptionService(subscribersKeeperActor, eventBus, conf))
-    else None
+  lazy val httpCallbackSubscriptionService: HttpCallbackSubscriptionService = {
+    if (httpCallbacksEnabled) new ActorHttpCallbackSubscriptionService(subscribersKeeperActor, eventBus, conf)
+    else NoopHttpCallbackSubscriptionService
   }
 
   lazy val historyActorProps: Props = Props(new HistoryActor(eventBus, taskFailureRepository))
@@ -86,4 +92,7 @@ class EventModule(
     )
   }
 
+  lazy val httpEventStreamServlet: EventSourceServlet = {
+    new HttpEventStreamServlet(httpEventStreamActor, conf, authenticator, authorizer)
+  }
 }

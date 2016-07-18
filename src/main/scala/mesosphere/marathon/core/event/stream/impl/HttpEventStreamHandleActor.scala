@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.event.impl.stream
+package mesosphere.marathon.core.event.stream.impl
 
 import java.io.EOFException
 
@@ -6,7 +6,7 @@ import akka.actor.{ Actor, ActorLogging, Status }
 import akka.event.EventStream
 import akka.pattern.pipe
 import mesosphere.marathon.api.v2.json.Formats._
-import mesosphere.marathon.core.event.impl.stream.HttpEventStreamHandleActor._
+import mesosphere.marathon.core.event.stream.impl.HttpEventStreamHandleActor.WorkDone
 import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, MarathonEvent }
 import mesosphere.util.ThreadPoolContext
 import play.api.libs.json.Json

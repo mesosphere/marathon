@@ -10,7 +10,7 @@ import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.EventModule
-import mesosphere.marathon.core.event.impl.http.EventSubscribers
+import mesosphere.marathon.core.event.http.EventSubscribers
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -37,23 +37,23 @@ import scala.util.Random
   * [[CoreGuiceModule]] exports some dependencies back to guice.
   */
 class CoreModuleImpl @Inject() (
-    // external dependencies still wired by guice
-    marathonConf: MarathonConf,
-    eventStream: EventStream,
-    httpConf: HttpConf,
-    @Named(ModuleNames.HOST_PORT) hostPort: String,
-    metrics: Metrics,
-    actorSystem: ActorSystem,
-    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    appRepository: AppRepository,
-    groupRepository: GroupRepository,
-    taskRepository: TaskRepository,
-    taskFailureRepository: TaskFailureRepository,
-    taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
-    clock: Clock,
-    taskStatusUpdateSteps: Seq[TaskUpdateStep],
-    @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) eventSubscribersStore: EntityStore[EventSubscribers])
-  extends CoreModule {
+  // external dependencies still wired by guice
+  marathonConf: MarathonConf,
+  eventStream: EventStream,
+  httpConf: HttpConf,
+  @Named(ModuleNames.HOST_PORT) hostPort: String,
+  metrics: Metrics,
+  actorSystem: ActorSystem,
+  marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+  appRepository: AppRepository,
+  groupRepository: GroupRepository,
+  taskRepository: TaskRepository,
+  taskFailureRepository: TaskFailureRepository,
+  taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
+  clock: Clock,
+  taskStatusUpdateSteps: Seq[TaskUpdateStep],
+  @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) eventSubscribersStore: EntityStore[EventSubscribers])
+    extends CoreModule {
 
   // INFRASTRUCTURE LAYER
 
@@ -159,7 +159,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val eventModule: EventModule = new EventModule(
     eventStream, actorSystem, marathonConf, metrics, clock, eventSubscribersStore, taskFailureRepository,
-    electionModule.service)
+    electionModule.service, authModule.authenticator, authModule.authorizer)
 
   // GREEDY INSTANTIATION
   //

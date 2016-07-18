@@ -2,7 +2,7 @@ package mesosphere.marathon.api.v2
 
 import mesosphere.marathon._
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.core.event.impl.http.HttpCallbackSubscriptionService
+import mesosphere.marathon.core.event.http.HttpCallbackSubscriptionService
 import mesosphere.marathon.test.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -58,7 +58,7 @@ class EventSubscriptionsResourceTest extends MarathonSpec with Matchers with Moc
     val auth = new TestAuthFixture
     val config = mock[MarathonConf]
     val subscriptionService = mock[HttpCallbackSubscriptionService]
-    def eventResource() = new EventSubscriptionsResource(config, auth.auth, auth.auth, Some(subscriptionService))
+    def eventResource() = new EventSubscriptionsResource(config, auth.auth, auth.auth, subscriptionService)
   }
 }
 

@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.event.impl.stream
+package mesosphere.marathon.core.event.stream.impl
 
 import javax.servlet.http.HttpServletResponse
 

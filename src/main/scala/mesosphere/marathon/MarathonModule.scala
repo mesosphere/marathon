@@ -16,7 +16,7 @@ import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.impl.http.EventSubscribers
+import mesosphere.marathon.core.event.http.EventSubscribers
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -44,7 +44,6 @@ object ModuleNames {
 
   final val SERVER_SET_PATH = "SERVER_SET_PATH"
   final val SERIALIZE_GROUP_UPDATES = "SERIALIZE_GROUP_UPDATES"
-  final val HTTP_EVENT_STREAM = "HTTP_EVENT_STREAM"
   final val HISTORY_ACTOR_PROPS = "HISTORY_ACTOR_PROPS"
 
   final val STORE_APP = "AppStore"
