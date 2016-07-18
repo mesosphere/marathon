@@ -346,7 +346,7 @@ private class TaskLauncherActor(
       inProgress = tasksToLaunch > 0 || inFlightTaskOperations.nonEmpty,
       tasksLeftToLaunch = tasksToLaunch,
       finalTaskCount = tasksToLaunch + taskLaunchesInFlight + tasksLaunched,
-      tasksLost = tasksMap.values.count(value => MarathonTaskStatus.mightBeLost.contains(value.taskStatus)),
+      tasksLost = tasksMap.values.count(value => value.mightBeLost),
       backOffUntil.getOrElse(clock.now())
     )
   }

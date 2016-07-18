@@ -8,7 +8,6 @@ import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
-import mesosphere.marathon.core.task.state.MarathonTaskStatus.Unreachable
 
 private[health] class HealthCheckActor(
     app: AppDefinition,
@@ -87,7 +86,7 @@ private[health] class HealthCheckActor(
     taskTracker.appTasksSync(app.id).foreach { task =>
 
       task.launched.foreach { launched =>
-        if (launched.runSpecVersion == app.version && launched.hasStartedRunning && task.taskStatus != Unreachable) {
+        if (launched.runSpecVersion == app.version && launched.hasStartedRunning && !task.isUnreachable) {
           log.debug("Dispatching health check job for {}", task.taskId)
           val worker: ActorRef = context.actorOf(workerProps)
           worker ! HealthCheckJob(app, task, launched, healthCheck)
@@ -107,26 +106,25 @@ private[health] class HealthCheckActor(
       )
 
       // kill the task, if it is reachable
-      task.taskStatus match {
-        case Unreachable =>
-          val id = task.taskId
-          log.warning(s"Task $id on host ${task.agentInfo.host} is temporarily unreachable. Performing no kill.")
-        case _ =>
-          marathonSchedulerDriverHolder.driver.foreach { driver =>
-            log.warning(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
-            eventBus.publish(
-              UnhealthyTaskKillEvent(
-                appId = task.runSpecId,
-                taskId = task.taskId,
-                version = app.version,
-                reason = health.lastFailureCause.getOrElse("unknown"),
-                host = task.agentInfo.host,
-                slaveId = task.agentInfo.agentId,
-                timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
-              )
+      if (task.isUnreachable) {
+        val id = task.taskId
+        log.warning(s"Task $id on host ${task.agentInfo.host} is temporarily unreachable. Performing no kill.")
+      } else {
+        marathonSchedulerDriverHolder.driver.foreach { driver =>
+          log.warning(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
+          eventBus.publish(
+            UnhealthyTaskKillEvent(
+              appId = task.runSpecId,
+              taskId = task.taskId,
+              version = app.version,
+              reason = health.lastFailureCause.getOrElse("unknown"),
+              host = task.agentInfo.host,
+              slaveId = task.agentInfo.agentId,
+              timestamp = health.lastFailure.getOrElse(Timestamp.now()).toString
             )
-            driver.killTask(task.taskId.mesosTaskId)
-          }
+          )
+          driver.killTask(task.taskId.mesosTaskId)
+        }
       }
     }
   }

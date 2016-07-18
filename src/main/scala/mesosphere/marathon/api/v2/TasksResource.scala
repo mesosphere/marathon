@@ -70,7 +70,7 @@ class TasksResource @Inject() (
       (appId, task) <- tasks
       app <- appIdsToApps(appId)
       if isAuthorized(ViewRunSpec, app)
-      if statusSet.isEmpty || statusSet(task.taskStatus)
+      if statusSet.isEmpty || statusSet(task.status.taskStatus)
     } yield {
       EnrichedTask(
         appId,

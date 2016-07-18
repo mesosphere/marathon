@@ -61,7 +61,7 @@ sealed trait Task {
 
   def runSpecId: PathId = taskId.runSpecId
 
-  lazy val taskStatus: MarathonTaskStatus = MarathonTaskStatus.apply(mesosStatus.get)
+  def status: Task.Status
 
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task
@@ -172,7 +172,8 @@ object Task {
   case class Reserved(
       taskId: Task.Id,
       agentInfo: AgentInfo,
-      reservation: Reservation) extends Task {
+      reservation: Reservation,
+      status: Status) extends Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
@@ -234,11 +235,17 @@ object Task {
 
       // case 2: terminal
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
-      case TaskStateOp.MesosUpdate(_, _: MarathonTaskStatus.Terminal, mesosStatus, now) =>
+      case TaskStateOp.MesosUpdate(task, _: MarathonTaskStatus.Terminal, mesosStatus, now) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
-          reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None))
+          reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
+          status = Task.Status(
+            stagedAt = task.status.stagedAt,
+            startedAt = task.status.startedAt,
+            mesosStatus = Option(mesosStatus),
+            MarathonTaskStatus.Reserved
+          )
         )
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
@@ -439,7 +446,8 @@ object Task {
   case class Status(
     stagedAt: Timestamp,
     startedAt: Option[Timestamp] = None,
-    mesosStatus: Option[MesosProtos.TaskStatus] = None)
+    mesosStatus: Option[MesosProtos.TaskStatus] = None,
+    taskStatus: MarathonTaskStatus)
 
   object Terminated {
     def isTerminated(state: TaskState): Boolean = state match {
@@ -458,6 +466,29 @@ object Task {
           mesosStatus.getContainerStatus.getNetworkInfosList.asScala.flatMap(_.getIpAddressesList.asScala).toList
         )
       else None
+    }
+  }
+
+  implicit class TaskStatusComparison(val task: Task) extends AnyVal {
+    def isReserved: Boolean = compareTo(MarathonTaskStatus.Reserved)
+    def isCreated: Boolean = compareTo(MarathonTaskStatus.Created)
+    def isError: Boolean = compareTo(MarathonTaskStatus.Error)
+    def isFailed: Boolean = compareTo(MarathonTaskStatus.Failed)
+    def isFinished: Boolean = compareTo(MarathonTaskStatus.Finished)
+    def isKilled: Boolean = compareTo(MarathonTaskStatus.Killed)
+    def isKilling: Boolean = compareTo(MarathonTaskStatus.Killing)
+    def isLost: Boolean = compareTo(MarathonTaskStatus.Lost)
+    def isRunning: Boolean = compareTo(MarathonTaskStatus.Running)
+    def isStaging: Boolean = compareTo(MarathonTaskStatus.Staging)
+    def isStarting: Boolean = compareTo(MarathonTaskStatus.Starting)
+    def isUnreachable: Boolean = compareTo(MarathonTaskStatus.Unreachable)
+    def isGone: Boolean = compareTo(MarathonTaskStatus.Gone)
+    def isUnknown: Boolean = compareTo(MarathonTaskStatus.Unknown)
+
+    def mightBeLost: Boolean = MarathonTaskStatus.mightBeLost.contains(task.status.taskStatus)
+
+    private def compareTo(marathonTaskStatus: MarathonTaskStatus): Boolean = {
+      task.status.taskStatus == marathonTaskStatus
     }
   }
 }

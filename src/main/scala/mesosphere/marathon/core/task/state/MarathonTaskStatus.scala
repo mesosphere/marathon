@@ -10,12 +10,8 @@ sealed trait MarathonTaskStatus {
 object MarathonTaskStatus {
   import org.apache.mesos.Protos.TaskState._
 
-  def fromMesosStateName(mesosStateName: String): Option[MarathonTaskStatus] = {
-    val filtered = all.filter(_.toMesosStateName == mesosStateName)
-    filtered.size match {
-      case 1 => Some(filtered.head)
-      case 0 => None
-    }
+  def fromMesosStateName(mesosStateName: String): Option[MarathonTaskStatus] = all.collectFirst {
+    case status: MarathonTaskStatus if status.toMesosStateName == mesosStateName => status
   }
 
   // If we're disconnected at the time of a TASK_LOST event, we will only get the update during
