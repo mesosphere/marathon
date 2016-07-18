@@ -115,7 +115,7 @@ object MarathonBuild extends Build {
     scalacOptions in Compile ++= Seq(
       "-encoding", "UTF-8",
       "-target:jvm-1.8",
-      "-deprecation",
+      "-deprecation:false", // FIXME (gkleiman): reenable deprecation after Mesos 1.0.0-rc2 deprecations are handled
       "-feature",
       "-unchecked",
       "-Xlog-reflective-calls",
@@ -287,7 +287,8 @@ object Dependency {
     // runtime deps versions
     val Chaos = "0.8.7"
     val Guava = "18.0"
-    val MesosUtils = "1.0.0-rc1"
+    // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
+    val MesosUtils = "1.0.0-rc2"
     val Akka = "2.3.15"
     val AsyncAwait = "0.9.6-RC2"
     val Spray = "1.3.2"
