@@ -14,7 +14,7 @@ import scala.util.{ Failure, Try }
 
 /**
   * Allows capping parallel executions of methods which return `scala.concurrent.Future`s.
-  * Only `maxParallel` concurrent executions are allowed.
+  * Only `maxConcurrent` concurrent executions are allowed.
   *
   * The methods will be executed on the provided executionContext.
   *

@@ -23,11 +23,10 @@ private[tracker] class TaskLoaderImpl(repo: TaskRepository)(implicit val mat: Ma
       tasks <- Future.sequence(names.map(repo.get)).map(_.flatten)
     } yield {
       log.info(s"Loaded ${tasks.size} tasks")
-      val deserializedTasks = tasks.map(TaskSerializer.fromProto)
-      val tasksByApp = deserializedTasks.groupBy(_.taskId.runSpecId)
-      val map = tasksByApp.iterator.map {
+      val tasksByApp = tasks.groupBy(_.taskId.runSpecId)
+      val map = tasksByApp.map {
         case (appId, appTasks) => appId -> TaskTracker.AppTasks.forTasks(appId, appTasks)
-      }.toMap
+      }
       TaskTracker.TasksByApp.of(map)
     }
   }

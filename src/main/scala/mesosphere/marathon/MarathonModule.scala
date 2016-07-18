@@ -19,7 +19,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
 import mesosphere.marathon.event.{ EventModule, HistoryActor }
@@ -270,7 +270,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     appRepo: AppEntityRepository,
     groupRepo: GroupRepository,
     taskRepo: TaskEntityRepository,
-    deploymentRepository: DeploymentRepository,
+    deploymentRepository: DeploymentEntityRepository,
     metrics: Metrics)(implicit mat: Materializer): Migration = {
     new Migration(store, appRepo, groupRepo, taskRepo, deploymentRepository, conf, metrics)
   }
@@ -373,11 +373,11 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   @Provides
   @Singleton
-  def provideDeploymentRepository(
+  def provideDeploymentEntityRepository(
     @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) store: EntityStore[DeploymentPlan],
     conf: MarathonConf,
-    metrics: Metrics): DeploymentRepository = {
-    new DeploymentRepository(store, metrics)
+    metrics: Metrics): DeploymentEntityRepository = {
+    new DeploymentEntityRepository(store, metrics)
   }
 
   @Named(ModuleNames.STORE_DEPLOYMENT_PLAN)

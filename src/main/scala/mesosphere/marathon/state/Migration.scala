@@ -5,6 +5,7 @@ import javax.inject.Inject
 
 import akka.stream.Materializer
 import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.stream.Sink
@@ -24,7 +25,7 @@ class Migration @Inject() (
     appRepo: AppEntityRepository,
     groupRepo: GroupRepository,
     taskRepo: TaskEntityRepository,
-    deploymentRepo: DeploymentRepository,
+    deploymentRepo: DeploymentEntityRepository,
     config: MarathonConf,
     metrics: Metrics)(implicit mat: Materializer) extends Logging {
 
@@ -273,7 +274,7 @@ class MigrationTo0_13(taskRepository: TaskEntityRepository, store: PersistentSto
   // task:my-app.13cb0cbe-b959-11e5-bb6d-5e099c92de61
   private[state] def migrateKey(legacyKey: String): Future[Unit] = {
     fetchLegacyTask(legacyKey).flatMap {
-      case Some(task) => taskRepository.store(task).flatMap { _ =>
+      case Some(task) => taskRepository.store(TaskSerializer.fromProto(task)).flatMap { _ =>
         entityStore.expunge(legacyKey).map(_ => ())
       }
       case _ => Future.failed[Unit](new RuntimeException(s"Unable to load entity with key = $legacyKey"))
@@ -379,7 +380,7 @@ class MigrationTo0_16(
 /**
   * Removes all deployment version nodes from ZK
   */
-class MigrationTo1_2(deploymentRepository: DeploymentRepository) {
+class MigrationTo1_2(deploymentRepository: DeploymentEntityRepository) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrate(): Future[Unit] = {

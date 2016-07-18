@@ -36,7 +36,9 @@ class AppEntityRepository(
   def app(appId: PathId, version: Timestamp): Future[Option[AppDefinition]] =
     entity(appId.safePath, version)
 
-  def store(appDef: AppDefinition): Future[Done] =
+  def store(id: PathId, appDefinition: AppDefinition): Future[Done] = store(appDefinition)
+
+  override def store(appDef: AppDefinition): Future[Done] =
     storeWithVersion(appDef.id.safePath, appDef.version, appDef).map(_ => Done)
 
   def all(): Source[AppDefinition, NotUsed] =

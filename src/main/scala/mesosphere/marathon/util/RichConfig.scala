@@ -11,7 +11,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
 
 /**
-  * Extensions to [[Config]] to support scala types and optionals.
+  * Extensions to [[com.typesafe.config.Config]] to support scala types and optionals.
   */
 // scalastyle:off
 class RichConfig(val config: Config) extends AnyVal {

@@ -10,7 +10,7 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
@@ -35,19 +35,20 @@ class LockingFailedException(msg: String) extends Exception(msg)
 
 // scalastyle:off parameter.number
 class MarathonSchedulerActor private (
-    createSchedulerActions: ActorRef => SchedulerActions,
-    deploymentManagerProps: SchedulerActions => Props,
-    historyActorProps: Props,
-    appRepository: AppRepository,
-    deploymentRepository: DeploymentRepository,
-    healthCheckManager: HealthCheckManager,
-    taskTracker: TaskTracker,
-    launchQueue: LaunchQueue,
-    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    electionService: ElectionService,
-    eventBus: EventStream,
-    config: UpgradeConfig,
-    cancellationTimeout: FiniteDuration = 1.minute) extends Actor with ActorLogging with Stash {
+  createSchedulerActions: ActorRef => SchedulerActions,
+  deploymentManagerProps: SchedulerActions => Props,
+  historyActorProps: Props,
+  appRepository: AppRepository,
+  deploymentRepository: DeploymentRepository,
+  healthCheckManager: HealthCheckManager,
+  taskTracker: TaskTracker,
+  launchQueue: LaunchQueue,
+  marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+  electionService: ElectionService,
+  eventBus: EventStream,
+  config: UpgradeConfig,
+  cancellationTimeout: FiniteDuration = 1.minute)(implicit mat: Materializer)
+    extends Actor with ActorLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
 
@@ -74,7 +75,7 @@ class MarathonSchedulerActor private (
   def suspended: Receive = LoggingReceive.withLabel("suspended"){
     case LocalLeadershipEvent.ElectedAsLeader =>
       log.info("Starting scheduler actor")
-      deploymentRepository.all() onComplete {
+      deploymentRepository.all().runWith(Sink.seq).onComplete {
         case Success(deployments) => self ! RecoverDeployments(deployments)
         case Failure(_) => self ! RecoverDeployments(Nil)
       }
@@ -309,7 +310,7 @@ class MarathonSchedulerActor private (
   }
 
   def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Unit = {
-    deploymentRepository.store(plan).foreach { _ =>
+    deploymentRepository.store(plan).foreach { done =>
       deploymentManager ! PerformDeployment(driver, plan)
     }
   }
@@ -317,7 +318,7 @@ class MarathonSchedulerActor private (
   def deploymentSuccess(plan: DeploymentPlan): Future[Unit] = {
     log.info(s"Deployment of ${plan.target.id} successful")
     eventBus.publish(DeploymentSuccess(plan.id, plan))
-    deploymentRepository.expunge(plan.id).map(_ => ())
+    deploymentRepository.delete(plan.id).map(_ => ())
   }
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Future[Unit] = {
@@ -325,7 +326,7 @@ class MarathonSchedulerActor private (
     plan.affectedApplicationIds.foreach(appId => launchQueue.purge(appId))
     eventBus.publish(DeploymentFailed(plan.id, plan))
     if (reason.isInstanceOf[DeploymentCanceledException]) {
-      deploymentRepository.expunge(plan.id).map(_ => ())
+      deploymentRepository.delete(plan.id).map(_ => ())
     } else {
       Future.successful(())
     }
@@ -346,7 +347,7 @@ object MarathonSchedulerActor {
     electionService: ElectionService,
     eventBus: EventStream,
     config: UpgradeConfig,
-    cancellationTimeout: FiniteDuration = 1.minute): Props = {
+    cancellationTimeout: FiniteDuration = 1.minute)(implicit mat: Materializer): Props = {
     Props(new MarathonSchedulerActor(
       createSchedulerActions,
       deploymentManagerProps,

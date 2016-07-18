@@ -96,7 +96,7 @@ private[tracker] class TaskOpProcessorImpl(
       case change: TaskStateChange.Expunge =>
         // Used for task termination or as a result from a UpdateStatus action.
         // The expunge is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        tasks.delete(op.taskId.idString).map { _ => TaskTrackerActor.Ack(op.sender, change) }
+        tasks.delete(op.taskId).map { _ => TaskTrackerActor.Ack(op.sender, change) }
           .recoverWith(tryToRecover(op)(expectedState = None, oldState = Some(change.task)))
           .flatMap { case ack: TaskTrackerActor.Ack => notifyTaskTrackerActor(op, ack) }
 
@@ -116,10 +116,9 @@ private[tracker] class TaskOpProcessorImpl(
       case change: TaskStateChange.Update =>
         // Used for a create or as a result from a UpdateStatus action.
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        val marathonTask = TaskSerializer.toProto(change.newState)
-        tasks.store(marathonTask).map { _ => TaskTrackerActor.Ack(op.sender, change) }
+        tasks.store(change.newState).map { _ => TaskTrackerActor.Ack(op.sender, change) }
           .recoverWith(tryToRecover(op)(expectedState = Some(change.newState), oldState = change.oldState))
-          .flatMap { case ack: TaskTrackerActor.Ack => notifyTaskTrackerActor(op, ack) }
+          .flatMap { ack => notifyTaskTrackerActor(op, ack) }
     }
   }
 
@@ -159,11 +158,10 @@ private[tracker] class TaskOpProcessorImpl(
 
       log.warn(s"${op.taskId} of app [${op.taskId.runSpecId}]: try to recover from failed ${op.stateOp}", cause)
 
-      tasks.get(op.taskId.idString).map {
-        case Some(taskProto) =>
-          val task = TaskSerializer.fromProto(taskProto)
+      tasks.get(op.taskId).map {
+        case Some(task) =>
           val stateChange = TaskStateChange.Update(task, oldState)
-          ack(Some(taskProto), stateChange)
+          ack(Some(TaskSerializer.toProto(task)), stateChange)
         case None =>
           val stateChange = oldState match {
             case Some(oldTask) => TaskStateChange.Expunge(oldTask)

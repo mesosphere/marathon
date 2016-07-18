@@ -4,17 +4,16 @@ import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.storage.IdResolver
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.upgrade.DeploymentPlan
 
 case class RamId(category: String, id: String, version: Option[OffsetDateTime])
 
 case class Identity(value: Any)
 
 trait InMemoryStoreSerialization {
-  val DefaultMaxVersions = 25
-
   implicit def marshaller[V]: Marshaller[V, Identity] = Marshaller.opaque { a: V => Identity(a) }
 
   implicit def unmarshaller[V]: Unmarshaller[Identity, V] =
@@ -22,7 +21,7 @@ trait InMemoryStoreSerialization {
 
   private class InMemPathIdResolver[T](
     val category: String,
-    val maxVersions: Int = DefaultMaxVersions,
+    val maxVersions: Int,
     getVersion: T => OffsetDateTime)
       extends IdResolver[PathId, T, String, RamId] {
     override def toStorageId(id: PathId, version: Option[OffsetDateTime]): RamId =
@@ -36,18 +35,24 @@ trait InMemoryStoreSerialization {
   def appDefResolver(maxVersions: Int): IdResolver[PathId, AppDefinition, String, RamId] =
     new InMemPathIdResolver[AppDefinition]("app", maxVersions, _.version.toOffsetDateTime)
 
-  implicit val appDefResolver: IdResolver[PathId, AppDefinition, String, RamId] =
-    appDefResolver(DefaultMaxVersions)
+  implicit val taskResolver: IdResolver[Task.Id, Task, String, RamId] =
+    new IdResolver[Task.Id, Task, String, RamId] {
+      override def toStorageId(id: Task.Id, version: Option[OffsetDateTime]): RamId =
+        RamId(category, id.idString, version)
+      override val category: String = "task"
+      override def fromStorageId(key: RamId): Task.Id = Task.Id(key.id)
+      override val maxVersions: Int = 0
+      override def version(v: Task): OffsetDateTime = OffsetDateTime.MIN
+    }
 
-  implicit def taskResolver: IdResolver[String, MarathonTask, String, RamId] =
-    new IdResolver[String, MarathonTask, String, RamId] {
+  implicit val deploymentResolver: IdResolver[String, DeploymentPlan, String, RamId] =
+    new IdResolver[String, DeploymentPlan, String, RamId] {
       override def toStorageId(id: String, version: Option[OffsetDateTime]): RamId =
         RamId(category, id, version)
-      override val category: String = "task"
+      override val category: String = "deployment"
       override def fromStorageId(key: RamId): String = key.id
       override val maxVersions: Int = 0
-      // tasks are not versioned.
-      override def version(v: MarathonTask): OffsetDateTime = OffsetDateTime.MIN
+      override def version(v: DeploymentPlan): OffsetDateTime = OffsetDateTime.MIN
     }
 }
 

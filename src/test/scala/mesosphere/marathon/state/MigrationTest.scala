@@ -121,7 +121,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     val appRepo = mock[AppEntityRepository]
     val groupRepo = mock[GroupRepository]
     val config = mock[MarathonConf]
-    val deploymentRepo = new DeploymentRepository(
+    val deploymentRepo = new DeploymentEntityRepository(
       new MarathonStore[DeploymentPlan](
         store = store,
         metrics = metrics,

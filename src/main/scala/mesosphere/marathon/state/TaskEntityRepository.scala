@@ -1,11 +1,14 @@
 package mesosphere.marathon.state
 
-import akka.{ Done, NotUsed }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import mesosphere.marathon.Protos.MarathonTask
+import akka.{ Done, NotUsed }
 import mesosphere.marathon.core.storage.repository.TaskRepository
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.Task.Id
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.util.CallerThreadExecutionContext
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -17,21 +20,22 @@ class TaskEntityRepository(
 
   val maxVersions = None
 
-  def get(key: String): Future[Option[MarathonTask]] = currentVersion(key).map {
-    case Some(taskState) => Some(taskState.toProto)
+  def get(id: Id): Future[Option[Task]] = currentVersion(id.idString).map {
+    case Some(taskState) => Some(TaskSerializer.fromProto(taskState.toProto))
     case _ => None
   }
 
-  def store(task: MarathonTask): Future[Done] = {
-    this.store.store(task.getId, MarathonTaskState(task)).map(_ => Done)
-  }
+  def store(id: Id, task: Task): Future[Done] =
+    storeByName(id.idString, MarathonTaskState(TaskSerializer.toProto(task)))
+      .map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
 
-  def ids(): Source[String, NotUsed] = Source.fromFuture(allIds()).mapConcat(identity)
+  override def delete(id: Id): Future[Done] =
+    expunge(id.idString).map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
 
-  def all(): Source[MarathonTask, NotUsed] =
-    ids().mapAsync(Int.MaxValue)(get).filter(_.isDefined).map(_.get)
+  def ids(): Source[Task.Id, NotUsed] = Source.fromFuture(allIds()).mapConcat(identity).map(Task.Id(_))
 
-  def delete(id: String): Future[Done] = expunge(id).map(_ => Done)
+  def all(): Source[Task, NotUsed] =
+    Source.fromFuture(current()).mapConcat(identity).map(state => TaskSerializer.fromProto(state.toProto))
 }
 
 object TaskEntityRepository {

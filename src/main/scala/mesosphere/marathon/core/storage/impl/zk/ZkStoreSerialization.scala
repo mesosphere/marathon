@@ -5,9 +5,12 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
-import mesosphere.marathon.Protos.{ MarathonTask, ServiceDefinition }
+import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
 import mesosphere.marathon.core.storage.IdResolver
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.upgrade.DeploymentPlan
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
   private val bucket = math.abs(id.hashCode % ZkStoreSerialization.HashBucketSize)
@@ -19,12 +22,10 @@ case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
 case class ZkSerialized(bytes: ByteString)
 
 trait ZkStoreSerialization {
-  val DefaultMaxVersions = 25
-
   /** General id resolver for a key of Path.Id */
   private class ZkPathIdResolver[T](
     val category: String,
-    val maxVersions: Int = DefaultMaxVersions,
+    val maxVersions: Int,
     getVersion: (T) => OffsetDateTime)
       extends IdResolver[PathId, T, String, ZkId] {
     override def toStorageId(id: PathId, version: Option[OffsetDateTime]): ZkId =
@@ -35,8 +36,6 @@ trait ZkStoreSerialization {
 
   def appDefResolver(maxVersions: Int): IdResolver[PathId, AppDefinition, String, ZkId] =
     new ZkPathIdResolver[AppDefinition]("apps", maxVersions, _.version.toOffsetDateTime)
-  implicit val appDefResolver: IdResolver[PathId, AppDefinition, String, ZkId] =
-    appDefResolver(DefaultMaxVersions)
 
   implicit val appDefMarshaller: Marshaller[AppDefinition, ZkSerialized] =
     Marshaller.opaque(appDef => ZkSerialized(ByteString(appDef.toProtoByteArray)))
@@ -48,24 +47,42 @@ trait ZkStoreSerialization {
         AppDefinition.fromProto(proto)
     }
 
-  implicit def taskResolver: IdResolver[String, MarathonTask, String, ZkId] =
-    new IdResolver[String, MarathonTask, String, ZkId] {
-      override def toStorageId(id: String, version: Option[OffsetDateTime]): ZkId =
-        ZkId(category, id, version)
+  implicit val taskResolver: IdResolver[Task.Id, Task, String, ZkId] =
+    new IdResolver[Task.Id, Task, String, ZkId] {
+      override def toStorageId(id: Task.Id, version: Option[OffsetDateTime]): ZkId =
+        ZkId(category, id.idString, version)
       override val category: String = "task"
-      override def fromStorageId(key: ZkId): String = key.id
+      override def fromStorageId(key: ZkId): Task.Id = Task.Id(key.id)
       override val maxVersions: Int = 0
-      // tasks are not versioned.
-      override def version(v: MarathonTask): OffsetDateTime = OffsetDateTime.MIN
+      override def version(v: Task): OffsetDateTime = OffsetDateTime.MIN
     }
 
-  implicit val taskMarshaller: Marshaller[MarathonTask, ZkSerialized] =
-    Marshaller.opaque(task => ZkSerialized(ByteString(task.toByteArray)))
+  implicit val taskMarshaller: Marshaller[Task, ZkSerialized] =
+    Marshaller.opaque(task => ZkSerialized(ByteString(TaskSerializer.toProto(task).toByteArray)))
 
-  implicit val taskUnmarshaller: Unmarshaller[ZkSerialized, MarathonTask] =
+  implicit val taskUnmarshaller: Unmarshaller[ZkSerialized, Task] =
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
-        MarathonTask.PARSER.parseFrom(byteString.toArray)
+        TaskSerializer.fromProto(MarathonTask.parseFrom(byteString.toArray))
+    }
+
+  implicit val deploymentResolver: IdResolver[String, DeploymentPlan, String, ZkId] =
+    new IdResolver[String, DeploymentPlan, String, ZkId] {
+      override def toStorageId(id: String, version: Option[OffsetDateTime]): ZkId =
+        ZkId(category, id, version)
+      override val category: String = "deployment"
+      override def fromStorageId(key: ZkId): String = key.id
+      override val maxVersions: Int = 0
+      override def version(v: DeploymentPlan): OffsetDateTime = OffsetDateTime.MIN
+    }
+
+  implicit val deploymentMarshaller: Marshaller[DeploymentPlan, ZkSerialized] =
+    Marshaller.opaque(plan => ZkSerialized(ByteString(plan.toProtoByteArray)))
+
+  implicit val deploymentUnmarshaller: Unmarshaller[ZkSerialized, DeploymentPlan] =
+    Unmarshaller.strict {
+      case ZkSerialized(byteString) =>
+        DeploymentPlan.fromProto(DeploymentPlanDefinition.parseFrom(byteString.toArray))
     }
 }
 

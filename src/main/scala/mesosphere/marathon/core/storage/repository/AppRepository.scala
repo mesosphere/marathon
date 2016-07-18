@@ -45,10 +45,12 @@ trait AppRepository {
     */
   def get(appId: PathId, version: OffsetDateTime): Future[Option[AppDefinition]]
 
+  def store(id: PathId, appDef: AppDefinition): Future[Done]
+
   /**
     * Stores the supplied app, now the current version for that apps's id.
     */
-  def store(appDef: AppDefinition): Future[Done]
+  def store(appDef: AppDefinition): Future[Done] = store(appDef.id, appDef)
 
   /**
     * Returns the current version for all apps.
@@ -58,18 +60,15 @@ trait AppRepository {
 
 object AppRepository {
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized], maxVersions: Int): AppRepository = {
-    new AppRepositoryImpl(persistenceStore)(
-      ZkStoreSerialization.appDefResolver(maxVersions),
-      ZkStoreSerialization.appDefMarshaller,
-      ZkStoreSerialization.appDefUnmarshaller
-    )
+    import ZkStoreSerialization._
+    implicit def idResolver = appDefResolver(maxVersions)
+
+    new AppRepositoryImpl(persistenceStore)
   }
 
   def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity], maxVersions: Int): AppRepository = {
-    new AppRepositoryImpl(persistenceStore)(
-      InMemoryStoreSerialization.appDefResolver(maxVersions),
-      InMemoryStoreSerialization.marshaller,
-      InMemoryStoreSerialization.unmarshaller
-    )
+    import InMemoryStoreSerialization._
+    implicit def idResolver = appDefResolver(maxVersions)
+    new AppRepositoryImpl(persistenceStore)
   }
 }

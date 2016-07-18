@@ -44,9 +44,9 @@ class TaskLoaderImplTest
     val app2task1 = MarathonTestHelper.mininimalTask(app2Id)
     val tasks = Iterable(app1task1, app1task2, app2task1)
 
-    f.taskRepository.ids() returns Source(tasks.map(_.taskId.idString)(collection.breakOut))
+    f.taskRepository.ids() returns Source(tasks.map(_.taskId)(collection.breakOut))
     for (task <- tasks) {
-      f.taskRepository.get(task.taskId.idString) returns Future.successful(Some(TaskSerializer.toProto(task)))
+      f.taskRepository.get(task.taskId) returns Future.successful(Some(task))
     }
 
     When("loadTasks is called")
