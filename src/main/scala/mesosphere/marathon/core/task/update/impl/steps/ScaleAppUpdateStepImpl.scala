@@ -44,7 +44,7 @@ class ScaleAppUpdateStepImpl @Inject() (
     terminalOrExpungedTask.foreach { task =>
       val appId = task.taskId.runSpecId
       val taskId = task.taskId
-      val state = task.taskStatus.toMesosStateName
+      val state = task.status.taskStatus.toMesosStateName
       val reason = task.mesosStatus.fold("")(status =>
         if (status.hasReason) status.getReason.toString else "")
       log.info(s"initiating a scale check for app [$appId] due to [$taskId] $state $reason")
