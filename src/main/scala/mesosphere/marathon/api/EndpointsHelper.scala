@@ -1,6 +1,5 @@
 package mesosphere.marathon.api
 
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.AppDefinition
 

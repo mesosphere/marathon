@@ -14,7 +14,6 @@ import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNot
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.{ Task, TaskStateChange }
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
