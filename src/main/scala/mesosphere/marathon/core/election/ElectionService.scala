@@ -40,8 +40,7 @@ trait ElectionService {
     * Subscribe to leadership change events.
     *
     * The given actorRef will initally get the current state via the appropriate
-    * [[LocalLeadershipEvent]] message and will
-    * be informed of changes after that.
+    * [[LocalLeadershipEvent]] message and will be informed of changes after that.
     */
   def subscribe(self: ActorRef)
   /** Unsubscribe to any leadership change events to this actor ref. */
