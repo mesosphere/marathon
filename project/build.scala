@@ -117,7 +117,7 @@ object MarathonBuild extends Build {
     testScalaStyle := {
       org.scalastyle.sbt.ScalastylePlugin.scalastyle.in(Compile).toTask("").value
     },
-    (test in Test) <<= (test in Test) dependsOn testScalaStyle
+    (compile in Test) <<= (compile in Test) dependsOn testScalaStyle
   )
 
   lazy val IntegrationTest = config("integration") extend Test

@@ -4,13 +4,11 @@ import java.io.{ ByteArrayInputStream, ObjectInputStream }
 import javax.inject.Inject
 
 import akka.stream.Materializer
-import mesosphere.marathon.BuildInfo
-
 import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.{ MarathonConf, MigrationFailedException }
+import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
 import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
 import org.slf4j.LoggerFactory
@@ -20,11 +18,12 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 
+// TODO: Need the entity repositories to migrate into the new repositories...
 class Migration @Inject() (
     store: PersistentStore,
-    appRepo: AppEntityRepository, // Has to be the entity repository as the non-entity ones use a very different format
+    appRepo: AppEntityRepository,
     groupRepo: GroupRepository,
-    taskRepo: TaskRepository,
+    taskRepo: TaskEntityRepository,
     deploymentRepo: DeploymentRepository,
     config: MarathonConf,
     metrics: Metrics)(implicit mat: Materializer) extends Logging {
@@ -216,7 +215,7 @@ class MigrationTo0_11(
   }
 }
 
-class MigrationTo0_13(taskRepository: TaskRepository, store: PersistentStore) {
+class MigrationTo0_13(taskRepository: TaskEntityRepository, store: PersistentStore) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   val entityStore = taskRepository.store

@@ -8,7 +8,6 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.storage.repository.AppRepository
-import mesosphere.marathon.core.storage.repository.impl.{ AppInMemRepository, AppZkRepository }
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
@@ -137,7 +136,7 @@ class AppZkRepositoryTest extends AkkaUnitTest with AppRepositoryTest with Zooke
     implicit val metrics = new Metrics(new MetricRegistry)
     new ZkPersistenceStore(client.usingNamespace(root), Duration.Inf)
   }
-  private def newRepo = new AppZkRepository(defaultStore, 25)
+  private def newRepo = AppRepository.zkRepository(defaultStore, 25)
 
   "AppZkRepository" should {
     behave like basicTest(newRepo)
@@ -145,7 +144,7 @@ class AppZkRepositoryTest extends AkkaUnitTest with AppRepositoryTest with Zooke
 }
 
 class AppInMemRepositoryTest extends AkkaUnitTest with AppRepositoryTest {
-  private def newRepo = new AppInMemRepository(new InMemoryPersistenceStore, 25)
+  private def newRepo = AppRepository.inMemRepository(new InMemoryPersistenceStore, 25)
 
   "AppInMemRepositoryTest" should {
     behave like basicTest(newRepo)

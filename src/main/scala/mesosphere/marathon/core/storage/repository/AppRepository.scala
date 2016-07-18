@@ -4,6 +4,10 @@ import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
+import mesosphere.marathon.core.storage.PersistenceStore
+import mesosphere.marathon.core.storage.impl.memory.{ Identity, InMemoryStoreSerialization, RamId }
+import mesosphere.marathon.core.storage.impl.zk.{ ZkId, ZkSerialized, ZkStoreSerialization }
+import mesosphere.marathon.core.storage.repository.impl.AppRepositoryImpl
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 
 import scala.concurrent.Future
@@ -50,4 +54,22 @@ trait AppRepository {
     * Returns the current version for all apps.
     */
   def all(): Source[AppDefinition, NotUsed]
+}
+
+object AppRepository {
+  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized], maxVersions: Int): AppRepository = {
+    new AppRepositoryImpl(persistenceStore)(
+      ZkStoreSerialization.appDefResolver(maxVersions),
+      ZkStoreSerialization.appDefMarshaller,
+      ZkStoreSerialization.appDefUnmarshaller
+    )
+  }
+
+  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity], maxVersions: Int): AppRepository = {
+    new AppRepositoryImpl(persistenceStore)(
+      InMemoryStoreSerialization.appDefResolver(maxVersions),
+      InMemoryStoreSerialization.marshaller,
+      InMemoryStoreSerialization.unmarshaller
+    )
+  }
 }

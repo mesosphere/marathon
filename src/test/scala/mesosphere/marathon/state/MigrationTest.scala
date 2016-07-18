@@ -129,7 +129,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
         prefix = "deployment:"),
       metrics
     )
-    val taskRepo = new TaskRepository(
+    val taskRepo = new TaskEntityRepository(
       new MarathonStore[MarathonTaskState](
         store = store,
         metrics = metrics,

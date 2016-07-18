@@ -5,12 +5,12 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
-import mesosphere.marathon.Protos.ServiceDefinition
+import mesosphere.marathon.Protos.{ MarathonTask, ServiceDefinition }
 import mesosphere.marathon.core.storage.IdResolver
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
-  private val bucket = math.abs(id.hashCode % 16)
+  private val bucket = math.abs(id.hashCode % ZkStoreSerialization.HashBucketSize)
   def path: String = version.fold(f"/$category/$bucket%x/$id") { v =>
     f"/$category/$bucket%x/$id/versions/$v"
   }
@@ -47,6 +47,28 @@ trait ZkStoreSerialization {
         val proto = ServiceDefinition.PARSER.parseFrom(byteString.toArray)
         AppDefinition.fromProto(proto)
     }
+
+  implicit def taskResolver: IdResolver[String, MarathonTask, String, ZkId] =
+    new IdResolver[String, MarathonTask, String, ZkId] {
+      override def toStorageId(id: String, version: Option[OffsetDateTime]): ZkId =
+        ZkId(category, id, version)
+      override val category: String = "task"
+      override def fromStorageId(key: ZkId): String = key.id
+      override val maxVersions: Int = 0
+      // tasks are not versioned.
+      override def version(v: MarathonTask): OffsetDateTime = OffsetDateTime.MIN
+    }
+
+  implicit val taskMarshaller: Marshaller[MarathonTask, ZkSerialized] =
+    Marshaller.opaque(task => ZkSerialized(ByteString(task.toByteArray)))
+
+  implicit val taskUnmarshaller: Unmarshaller[ZkSerialized, MarathonTask] =
+    Unmarshaller.strict {
+      case ZkSerialized(byteString) =>
+        MarathonTask.PARSER.parseFrom(byteString.toArray)
+    }
 }
 
-object ZkStoreSerialization extends ZkStoreSerialization
+object ZkStoreSerialization extends ZkStoreSerialization {
+  val HashBucketSize = 16
+}

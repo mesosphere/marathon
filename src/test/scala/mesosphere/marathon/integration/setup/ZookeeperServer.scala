@@ -98,11 +98,11 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite =>
   }
 
   abstract override def afterAll(): Unit = {
-    zkServer.close()
     clients { c =>
       c.foreach(_.close())
       c.clear()
     }
+    zkServer.close()
     super.afterAll()
   }
 }

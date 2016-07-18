@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.storage.IdResolver
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 
@@ -37,6 +38,17 @@ trait InMemoryStoreSerialization {
 
   implicit val appDefResolver: IdResolver[PathId, AppDefinition, String, RamId] =
     appDefResolver(DefaultMaxVersions)
+
+  implicit def taskResolver: IdResolver[String, MarathonTask, String, RamId] =
+    new IdResolver[String, MarathonTask, String, RamId] {
+      override def toStorageId(id: String, version: Option[OffsetDateTime]): RamId =
+        RamId(category, id, version)
+      override val category: String = "task"
+      override def fromStorageId(key: RamId): String = key.id
+      override val maxVersions: Int = 0
+      // tasks are not versioned.
+      override def version(v: MarathonTask): OffsetDateTime = OffsetDateTime.MIN
+    }
 }
 
 object InMemoryStoreSerialization extends InMemoryStoreSerialization

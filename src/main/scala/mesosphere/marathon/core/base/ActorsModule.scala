@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.base
 
-import akka.actor.{ActorRefFactory, ActorSystem}
+import akka.actor.{ ActorRefFactory, ActorSystem }
 import akka.stream.ActorMaterializer
 import org.slf4j.LoggerFactory
 

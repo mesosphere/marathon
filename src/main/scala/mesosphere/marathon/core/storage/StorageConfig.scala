@@ -5,22 +5,22 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.Scheduler
 import akka.stream.Materializer
-import com.typesafe.config.{Config, ConfigMemorySize}
+import com.typesafe.config.{ Config, ConfigMemorySize }
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.storage.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
-import mesosphere.marathon.core.storage.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
-import mesosphere.marathon.core.storage.impl.zk.{ZkId, ZkPersistenceStore, ZkSerialized}
+import mesosphere.marathon.core.storage.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
+import mesosphere.marathon.core.storage.impl.zk.{ ZkId, ZkPersistenceStore, ZkSerialized }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{EntityStore, EntityStoreCache, MarathonState, MarathonStore}
-import mesosphere.marathon.util.{RetryConfig, toRichConfig}
+import mesosphere.marathon.state.{ EntityStore, EntityStoreCache, MarathonState, MarathonStore }
+import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
 import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
-import mesosphere.util.state.zk.{CompressionConf, NoRetryPolicy, RichCuratorFramework, ZKStore}
+import mesosphere.util.state.zk.{ CompressionConf, NoRetryPolicy, RichCuratorFramework, ZKStore }
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
-import org.apache.curator.framework.{AuthInfo, CuratorFrameworkFactory}
+import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
@@ -28,7 +28,7 @@ import org.apache.zookeeper.data.ACL
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration.{ Duration, _ }
 import scala.reflect.ClassTag
 
 sealed trait StorageConfig
@@ -59,7 +59,7 @@ object ClassicInMem {
 }
 
 case class ClassicZk(
-  maxVersions: Int,
+    maxVersions: Int,
     enableCache: Boolean,
     sessionTimeout: Duration,
     zkHosts: String,
@@ -75,7 +75,7 @@ case class ClassicZk(
   }
   protected def store: PersistentStore = {
     import com.twitter.util.JavaTimer
-    import com.twitter.zk.{AuthInfo, NativeConnector, ZkClient}
+    import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 
     val authInfo = (username, password) match {
       case (Some(user), Some(pass)) => Some(AuthInfo.digest(user, pass))
@@ -132,7 +132,7 @@ object ClassicZk {
 }
 
 case class MesosZk(
-  maxVersions: Int,
+    maxVersions: Int,
     enableCache: Boolean,
     zkHosts: String,
     zkPath: String,
@@ -174,8 +174,8 @@ case object LazyCaching extends CacheType
 
 object CacheType {
   def apply(str: String): CacheType = str.toLowerCase match {
-    case s if s.startsWith("eager") => EagerCaching
-    case s if s.startsWith("lazy") => LazyCaching
+    case str: String if str.startsWith("eager") => EagerCaching
+    case str: String if str.startsWith("lazy") => LazyCaching
     case _ => NoCaching
   }
 }
@@ -187,7 +187,7 @@ sealed trait PersistenceStorageConfig[K, C, S] extends StorageConfig {
     scheduler: Scheduler): BasePersistenceStore[K, C, S]
 
   def store(implicit metrics: Metrics, mat: Materializer,
-            ctx: ExecutionContext, scheduler: Scheduler): PersistenceStore[K, C, S] = {
+    ctx: ExecutionContext, scheduler: Scheduler): PersistenceStore[K, C, S] = {
     cacheType match {
       case NoCaching => leafStore
       case LazyCaching => new LazyCachingPersistenceStore[K, C, S](leafStore)
@@ -197,18 +197,18 @@ sealed trait PersistenceStorageConfig[K, C, S] extends StorageConfig {
 }
 
 case class NewZk(
-                  cacheType: CacheType,
-                  sessionTimeout: Option[Duration],
-                  connectionTimeout: Option[Duration],
-                  timeout: Duration,
-                  zkHosts: String,
-                  zkPath: String,
-                  username: Option[String],
-                  password: Option[String],
-                  enableCompression: Boolean,
-                  retryConfig: RetryConfig,
-                  maxConcurrent: Int,
-                  maxVersions: Int) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
+    cacheType: CacheType,
+    sessionTimeout: Option[Duration],
+    connectionTimeout: Option[Duration],
+    timeout: Duration,
+    zkHosts: String,
+    zkPath: String,
+    username: Option[String],
+    password: Option[String],
+    enableCompression: Boolean,
+    retryConfig: RetryConfig,
+    maxConcurrent: Int,
+    maxVersions: Int) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
 
   lazy val client: RichCuratorFramework = {
     val builder = CuratorFrameworkFactory.builder()

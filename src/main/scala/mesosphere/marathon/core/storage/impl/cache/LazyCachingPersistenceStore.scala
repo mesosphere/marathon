@@ -28,7 +28,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   */
 class LazyCachingPersistenceStore[K, Category, Serialized](
     store: BasePersistenceStore[K, Category, Serialized])(implicit
-    mat: Materializer,
+  mat: Materializer,
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 
   val lockManager = LockManager.create()

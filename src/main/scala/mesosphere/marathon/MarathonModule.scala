@@ -269,7 +269,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     store: PersistentStore,
     appRepo: AppEntityRepository,
     groupRepo: GroupRepository,
-    taskRepo: TaskRepository,
+    taskRepo: TaskEntityRepository,
     deploymentRepository: DeploymentRepository,
     metrics: Metrics)(implicit mat: Materializer): Migration = {
     new Migration(store, appRepo, groupRepo, taskRepo, deploymentRepository, conf, metrics)
@@ -352,7 +352,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   def provideAppEntityRepository(
     @Named(ModuleNames.STORE_APP) store: EntityStore[AppDefinition],
     metrics: Metrics): AppEntityRepository = {
-      new AppEntityRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
+    new AppEntityRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
   }
 
   @Provides
@@ -365,10 +365,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   @Provides
   @Singleton
-  def provideTaskRepository(
+  def provideTaskEntityRepository(
     @Named(ModuleNames.STORE_TASK) store: EntityStore[MarathonTaskState],
-    metrics: Metrics): TaskRepository = {
-    new TaskRepository(store, metrics)
+    metrics: Metrics)(implicit mat: Materializer): TaskEntityRepository = {
+    new TaskEntityRepository(store, metrics)
   }
 
   @Provides

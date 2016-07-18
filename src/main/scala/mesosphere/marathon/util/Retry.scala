@@ -8,9 +8,10 @@ import scala.concurrent.{ ExecutionContext, Future, Promise, blocking => blockin
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Random, Success }
 
-case class RetryConfig(maxAttempts: Int = Retry.DefaultMaxAttempts,
-                       minDelay: Duration = Retry.DefaultMinDelay,
-                       maxDelay: Duration = Retry.DefaultMaxDelay)
+case class RetryConfig(
+  maxAttempts: Int = Retry.DefaultMaxAttempts,
+  minDelay: Duration = Retry.DefaultMinDelay,
+  maxDelay: Duration = Retry.DefaultMaxDelay)
 
 object RetryConfig {
   def apply(config: Config): RetryConfig = {
