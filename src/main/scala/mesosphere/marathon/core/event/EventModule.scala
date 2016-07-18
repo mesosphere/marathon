@@ -28,17 +28,6 @@ class EventModule(
     authorizer: Authorizer) {
   val log = LoggerFactory.getLogger(getClass.getName)
 
-  private lazy val httpCallbacksEnabled: Boolean = {
-    conf.eventSubscriber.get match {
-      case Some("http_callback") =>
-        log.info("Using HttpCallbackEventSubscriber for event notification")
-        true
-      case _ =>
-        log.info("Event notification disabled.")
-        false
-    }
-  }
-
   private[this] lazy val statusUpdateActor: ActorRef =
     actorSystem.actorOf(Props(
       new HttpEventActor(conf, subscribersKeeperActor, new HttpEventActor.HttpEventActorMetrics(metrics), clock))
@@ -66,8 +55,13 @@ class EventModule(
   }
 
   lazy val httpCallbackSubscriptionService: HttpCallbackSubscriptionService = {
-    if (httpCallbacksEnabled) new ActorHttpCallbackSubscriptionService(subscribersKeeperActor, eventBus, conf)
-    else NoopHttpCallbackSubscriptionService
+    if (conf.httpCallbacksEnabled) {
+      log.info("Using HttpCallbackEventSubscriber for event notification")
+      new ActorHttpCallbackSubscriptionService(subscribersKeeperActor, eventBus, conf)
+    } else {
+      log.info("Event notification disabled.")
+      NoopHttpCallbackSubscriptionService
+    }
   }
 
   lazy val httpEventStreamActor: ActorRef = {
