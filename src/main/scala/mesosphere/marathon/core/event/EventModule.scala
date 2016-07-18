@@ -3,7 +3,6 @@ package mesosphere.marathon.core.event
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.event.EventStream
 import akka.pattern.ask
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.impl.callback._
@@ -22,7 +21,7 @@ import scala.concurrent.ExecutionContext
 class EventModule(
     eventBus: EventStream,
     actorSystem: ActorSystem,
-    conf: MarathonConf,
+    conf: EventConf,
     metrics: Metrics,
     clock: Clock,
     eventSubscribersStore: EntityStore[EventSubscribers],

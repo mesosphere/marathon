@@ -57,4 +57,6 @@ trait EventConf extends ScallopConf {
   def slowConsumerDuration: FiniteDuration = httpEventCallbackSlowConsumerTimeout().millis
 
   def eventRequestTimeout: Timeout = Timeout(httpEventRequestTimeout(), TimeUnit.MILLISECONDS)
+
+  def zkTimeoutDuration: FiniteDuration
 }

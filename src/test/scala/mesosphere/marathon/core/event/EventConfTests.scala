@@ -3,6 +3,8 @@ package mesosphere.marathon.core.event
 import mesosphere.marathon.MarathonSpec
 import org.rogach.scallop.ScallopConf
 
+import scala.concurrent.duration.FiniteDuration
+
 class EventConfTests extends MarathonSpec {
   test("--http_endpoints accepts just one endpoint") {
     val conf = makeEventConf(
@@ -33,6 +35,8 @@ class EventConfTests extends MarathonSpec {
       // scallop will trigger sys exit
       override protected def onError(e: Throwable): Unit = throw e
       verify()
+
+      override def zkTimeoutDuration: FiniteDuration = ???
     }
   }
 }

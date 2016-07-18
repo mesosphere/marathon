@@ -4,8 +4,8 @@ import java.util.UUID
 import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }
 
 import akka.actor.ActorRef
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.RequestFacade
+import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
@@ -38,7 +38,7 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
   */
 class HttpEventStreamServlet(
   streamActor: ActorRef,
-  conf: MarathonConf,
+  conf: EventConf,
   val authenticator: Authenticator,
   val authorizer: Authorizer)
     extends EventSourceServlet {
