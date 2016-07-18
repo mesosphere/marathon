@@ -2,10 +2,11 @@ package mesosphere.marathon.core.launcher.impl
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.launcher.{ TaskOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher, TaskOp }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -112,7 +113,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       val taskStateOp = TaskStateOp.LaunchOnReservation(
         taskId = dummyTask.taskId,
         runSpecVersion = clock.now(),
-        status = Task.Status(clock.now()),
+        status = Task.Status(clock.now(), taskStatus = MarathonTaskStatus.Running),
         hostPorts = Seq.empty)
       val launch = f.launchWithOldTask(
         task,
@@ -160,7 +161,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task))))
+      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, marathonTaskStatus = MarathonTaskStatus.Running))))
 
     val offerProcessor = createProcessor()
 

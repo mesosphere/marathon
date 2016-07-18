@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.health.Health
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.Mockito
@@ -182,7 +183,8 @@ class Fixture {
     status = Task.Status(
       stagedAt = Timestamp(1),
       startedAt = None,
-      mesosStatus = None
+      mesosStatus = None,
+      taskStatus = MarathonTaskStatus.Running
     ),
     hostPorts = Seq.empty
   )

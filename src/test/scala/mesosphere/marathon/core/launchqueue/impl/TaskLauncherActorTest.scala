@@ -424,7 +424,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val taskId = Task.Id.forRunSpec(app.id)
     val task = MarathonTestHelper.makeOneCPUTask(taskId.idString).build()
     val marathonTask = MarathonTestHelper.mininimalTask(task.getTaskId.getValue).copy(
-      runSpecVersion = app.version, status = Task.Status(app.version, None, None), hostPorts = Seq.empty)
+      runSpecVersion = app.version, status = Task.Status(app.version, None, None, taskStatus = MarathonTaskStatus.Running), hostPorts = Seq.empty)
   }
 
   private[this] implicit val timeout: Timeout = 3.seconds

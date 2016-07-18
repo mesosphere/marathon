@@ -51,7 +51,7 @@ class TaskStateOpResolverTest
     val stateChange = f.stateOpResolver.resolve(TaskStateOp.LaunchOnReservation(
       taskId = f.notExistingTaskId,
       runSpecVersion = Timestamp(0),
-      status = Task.Status(Timestamp(0)),
+      status = Task.Status(Timestamp(0), taskStatus = MarathonTaskStatus.Running),
       hostPorts = Seq.empty)).futureValue
 
     Then("taskTracker.task is called")
@@ -107,7 +107,7 @@ class TaskStateOpResolverTest
 
       And("the new state should have the correct status")
       val update: TaskStateChange.Update = stateChange.asInstanceOf[TaskStateChange.Update]
-      MarathonTaskStatus.mightBeLost should contain (update.newState.taskStatus)
+      update.newState.mightBeLost should be (true)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -134,7 +134,12 @@ class TaskStateOpResolverTest
       stateChange shouldBe a[TaskStateChange.Expunge]
       val expectedState = f.existingTask.copy(
         status = f.existingTask.status.copy(
-          mesosStatus = Option(stateOp.mesosStatus)))
+          mesosStatus = Option(stateOp.mesosStatus),
+          taskStatus = reason match {
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatus.WontComeBack(reason) => MarathonTaskStatus.Gone
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatus.MightComeBack(reason) => MarathonTaskStatus.Unreachable
+            case _ => MarathonTaskStatus.Lost
+          }))
       stateChange shouldEqual TaskStateChange.Expunge(expectedState)
 
       And("there are no more interactions")
@@ -235,7 +240,7 @@ class TaskStateOpResolverTest
     val stateOpResolver = new TaskStateOpResolver(taskTracker)
 
     val appId = PathId("/app")
-    val existingTask = MarathonTestHelper.mininimalTask(appId)
+    val existingTask = MarathonTestHelper.mininimalTask(Task.Id.forRunSpec(appId).idString, Timestamp.now(), None, MarathonTaskStatus.Running)
     val existingReservedTask = MarathonTestHelper.residentReservedTask(appId)
     val notExistingTaskId = Task.Id.forRunSpec(appId)
     val existingLostTask = MarathonTestHelper.mininimalLostTask(appId)

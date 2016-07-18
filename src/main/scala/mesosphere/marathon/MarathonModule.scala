@@ -429,7 +429,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
       store,
       metrics,
       prefix = "task:",
-      newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())
+      newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString)
+      .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Created).build())
     )
   }
 

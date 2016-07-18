@@ -123,15 +123,19 @@ object Task {
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
-      case TaskStateOp.MesosUpdate(_, _: MarathonTaskStatus.Terminal, mesosStatus, now) =>
-        val updated = copy(status = status.copy(mesosStatus = Option(mesosStatus)))
+      case TaskStateOp.MesosUpdate(_, taskStatus: MarathonTaskStatus.Terminal, mesosStatus, now) =>
+        val updated = copy(status = status.copy(
+          mesosStatus = Option(mesosStatus),
+          taskStatus = taskStatus))
         TaskStateChange.Expunge(updated)
 
       // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(_, _, mesosStatus, now) =>
+      case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, now) =>
         updatedHealthOrState(status.mesosStatus, Option(mesosStatus)) match {
           case Some(newStatus) =>
-            val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
+            val updatedTask = copy(status = status.copy(
+              mesosStatus = Some(newStatus),
+              taskStatus = taskStatus))
             TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
           case None =>
             log.debug("Ignoring status update for {}. Status did not change.", taskId)
@@ -180,8 +184,8 @@ object Task {
     override def launched: Option[Launched] = None
 
     override def update(update: TaskStateOp): TaskStateChange = update match {
-      case TaskStateOp.LaunchOnReservation(_, runSpecVersion, status, hostPorts) =>
-        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, status, hostPorts, reservation)
+      case TaskStateOp.LaunchOnReservation(_, runSpecVersion, taskStatus, hostPorts) =>
+        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       case _: TaskStateOp.ReservationTimeout =>
@@ -230,12 +234,13 @@ object Task {
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
-            mesosStatus = Option(mesosStatus)))
+            mesosStatus = Option(mesosStatus),
+            taskStatus = MarathonTaskStatus.Running))
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
-      case TaskStateOp.MesosUpdate(task, _: MarathonTaskStatus.Terminal, mesosStatus, now) =>
+      case TaskStateOp.MesosUpdate(task, taskStatus: MarathonTaskStatus.Terminal, mesosStatus, now) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
@@ -244,15 +249,17 @@ object Task {
             stagedAt = task.status.stagedAt,
             startedAt = task.status.startedAt,
             mesosStatus = Option(mesosStatus),
-            MarathonTaskStatus.Reserved
+            taskStatus = taskStatus
           )
         )
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(_, _, mesosStatus, _) =>
+      case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, _) =>
         updatedHealthOrState(status.mesosStatus, Option(mesosStatus)).map { newStatus =>
-          val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
+          val updatedTask = copy(status = status.copy(
+            mesosStatus = Some(newStatus),
+            taskStatus = taskStatus))
           TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
         } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
