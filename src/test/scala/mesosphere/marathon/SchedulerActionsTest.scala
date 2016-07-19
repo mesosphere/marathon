@@ -6,21 +6,21 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
-import mesosphere.marathon.core.storage.repository.{AppRepository, GroupRepository}
+import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.TaskTracker.{AppTasks, TasksByApp}
+import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.test.{MarathonActorSupport, Mockito}
+import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.Implicits.taskIDToProto
-import org.apache.mesos.Protos.{TaskID, TaskState, TaskStatus}
+import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
-import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
-import org.scalatest.time.{Millis, Span}
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
+import org.scalatest.time.{ Millis, Span }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq

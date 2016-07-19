@@ -1,11 +1,12 @@
-package mesosphere.marathon.state
+package mesosphere.marathon.core.storage.repository.impl.legacy.store
 
-import scala.concurrent.Future
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 
 /**
   * The entity store is mostly syntactic sugar around the PersistentStore.
   * The main idea is to handle serializing/deserializing of specific entities.
+  *
   * @tparam T the specific type of entities that are handled by this specific store.
   */
 trait EntityStore[T] {

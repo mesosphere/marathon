@@ -1,6 +1,7 @@
-package mesosphere.marathon.state
+package mesosphere.marathon.core.storage.repository.impl.legacy.store
 
 import mesosphere.marathon.PrePostDriverCallback
+import mesosphere.marathon.state.{ MarathonState, VersionedEntry }
 import org.slf4j.LoggerFactory
 
 import scala.collection.concurrent.TrieMap
@@ -24,7 +25,7 @@ class EntityStoreCache[T <: MarathonState[_, T]](store: EntityStore[T])
     extends EntityStore[T] with PrePostDriverCallback with VersionedEntry {
 
   @volatile
-  private[state] var cacheOpt: Option[TrieMap[String, Option[T]]] = None
+  private[legacy] var cacheOpt: Option[TrieMap[String, Option[T]]] = None
   import scala.concurrent.ExecutionContext.Implicits.global
   private[this] val log = LoggerFactory.getLogger(getClass)
 

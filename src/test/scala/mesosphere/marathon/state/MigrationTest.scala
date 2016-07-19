@@ -1,20 +1,23 @@
 package mesosphere.marathon.state
 
+import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.Done
 import akka.stream.scaladsl.Source
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository}
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.test.{MarathonActorSupport, Mockito}
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ MarathonConf, MarathonSpec }
+import mesosphere.marathon.{MarathonConf, MarathonSpec}
 import mesosphere.util.state.memory.InMemoryEntity
-import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
+import mesosphere.util.state.{PersistentEntity, PersistentStore, PersistentStoreManagement}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{GivenWhenThen, Matchers}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -67,7 +70,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.appRepo.all() returns Source.empty
     f.appRepo.ids() returns Source.empty
     f.groupRepo.root() returns Future.successful(Group.empty)
-    f.groupRepo.listVersions(any) returns Future.successful(Seq.empty)
+    f.groupRepo.rootVersions() returns Source.empty[OffsetDateTime]
 
     val result = f.migration.applyMigrationSteps(StorageVersions(0, 8, 0)).futureValue
     result should not be 'empty
@@ -127,17 +130,14 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
         store = store,
         metrics = metrics,
         newState = () => DeploymentPlan.empty,
-        prefix = "deployment:"),
-      metrics
-    )
+        prefix = "deployment:"))(metrics = metrics)
     val taskRepo = new TaskEntityRepository(
       new MarathonStore[MarathonTaskState](
         store = store,
         metrics = metrics,
         newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
-        prefix = "task:"),
-      metrics
-    )
+        prefix = "task:")
+    )(metrics = metrics)
     val migration = new Migration(
       store,
       appRepo,

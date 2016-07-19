@@ -1,6 +1,7 @@
 package mesosphere.util.state
 
-import mesosphere.marathon.state.{ Timestamp, EntityStore, MarathonState }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
+import mesosphere.marathon.state.{ MarathonState, Timestamp }
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.FrameworkID
 import org.slf4j.LoggerFactory

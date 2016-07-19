@@ -51,7 +51,7 @@ class GroupManager @Inject() (
     */
   def versions(id: PathId): Future[Iterable[Timestamp]] = {
     groupRepo.rootVersions().runWith(Sink.seq).flatMap { versions =>
-      Future.sequence(versions.map(groupRepo.versionedRoot)).map {
+      Future.sequence(versions.map(groupRepo.rootVersion)).map {
         _.collect {
           case Some(group) if group.group(id).isDefined => group.version
         }
@@ -75,7 +75,7 @@ class GroupManager @Inject() (
     * @return the group if it is found, otherwise None
     */
   def group(id: PathId, version: Timestamp): Future[Option[Group]] = {
-    groupRepo.versionedRoot(version.toOffsetDateTime).map {
+    groupRepo.rootVersion(version.toOffsetDateTime).map {
       _.flatMap(_.findGroup(_.id == id))
     }
   }

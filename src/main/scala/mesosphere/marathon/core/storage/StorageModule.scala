@@ -1,19 +1,19 @@
 package mesosphere.marathon.core.storage
 
+// scalastyle:off
 import java.util.UUID
 
-// scalastyle:off
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
 import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, AppEntityRepository, DeploymentEntityRepository, MarathonTaskState, PathId, TaskEntityRepository, TaskFailure, TaskFailureEntityRepository }
+import mesosphere.marathon.state.{ AppDefinition, MarathonTaskState, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
-import org.apache.mesos.Protos.TaskID
-import org.apache.mesos.Protos.TaskState
+import org.apache.mesos.Protos.{ TaskID, TaskState }
 
 import scala.concurrent.ExecutionContext
 // scalastyle:on
@@ -44,16 +44,15 @@ object StorageModule {
       case l: LegacyStorageConfig =>
         val appRepository = new AppEntityRepository(
           l.entityStore("app:", () => AppDefinition.apply()),
-          Some(l.maxVersions),
-          metrics
+          l.maxVersions
         )
         val taskRepository = new TaskEntityRepository(l.entityStore(
           TaskEntityRepository.storePrefix,
-          () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())), metrics)
+          () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())))
         val deploymentRepository = new DeploymentEntityRepository(l.entityStore(
           "deployment:",
           () => DeploymentPlan.empty
-        ), metrics)
+        ))
         val taskFailureRepository = new TaskFailureEntityRepository(l.entityStore(
           "taskFailure:",
           () => TaskFailure(
@@ -61,7 +60,7 @@ object StorageModule {
             TaskID.newBuilder().setValue("").build,
             TaskState.TASK_STAGING
           )
-        ), Some(1), metrics)
+        ), 1)
 
         StorageModuleImpl(appRepository, taskRepository, deploymentRepository, taskFailureRepository)
       case zk: CuratorZk =>

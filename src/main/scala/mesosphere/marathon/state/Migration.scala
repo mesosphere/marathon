@@ -1,23 +1,26 @@
 package mesosphere.marathon.state
 
-import java.io.{ ByteArrayInputStream, ObjectInputStream }
+// scalastyle:off
+import java.io.{ByteArrayInputStream, ObjectInputStream}
 import javax.inject.Inject
 
 import akka.stream.Materializer
-import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
+import mesosphere.marathon.Protos.{MarathonTask, StorageVersion}
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository}
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
+import mesosphere.marathon.{BuildInfo, MarathonConf, MigrationFailedException}
 import mesosphere.util.Logging
-import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
+import mesosphere.util.state.{PersistentStore, PersistentStoreManagement}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
+// scalastyle:on
 
 // TODO: Need the entity repositories to migrate into the new repositories...
 class Migration @Inject() (
@@ -192,7 +195,7 @@ class MigrationTo0_11(
       if (appInGroup.version == version) {
         Future.successful(Some(appInGroup))
       } else {
-        appRepository.app(id, version)
+        appRepository.getVersion(id, version.toOffsetDateTime)
       }
     }
 
@@ -350,24 +353,27 @@ class MigrationTo0_16(
   }
 
   private[this] def updateAllGroupVersions(): Future[Unit] = {
+    /*
     groupRepository.rootVersions().runWith(Sink.seq).map(d => d.sorted).flatMap { sortedVersions =>
       sortedVersions.foldLeft(Future.successful(())) { (future, version) =>
         future.flatMap { _ =>
-          groupRepository.versionedRoot(version).flatMap {
-            case Some(group) => groupRepository.storeRootVersion(group, version).map(_ => ())
+          groupRepository.rootVersions().runWith(Sink.seq).flatMap { version =>
+            case Some(group) => groupRepository.storeRootVersion(group).map(_ => ())
             case None => Future.failed(new MigrationFailedException(s"Root Group $version not found"))
           }
         }
       }
     }
+    */
+    ???
   }
 
   private[this] def updateAllAppVersions(appId: PathId): Future[Unit] = {
     appRepository.versions(appId).runWith(Sink.seq).map(_.sorted).flatMap { sortedVersions =>
       sortedVersions.foldLeft(Future.successful(())) { (future, version) =>
         future.flatMap { _ =>
-          appRepository.get(appId, version).flatMap {
-            case Some(app) => appRepository.store(app).map(_ => ())
+          appRepository.getVersion(appId, version).flatMap {
+            case Some(app) => appRepository.storeVersion(app).map(_ => ())
             case None => Future.failed(new MigrationFailedException(s"App $appId:$version not found"))
           }
         }
@@ -384,7 +390,7 @@ class MigrationTo1_2(deploymentRepository: DeploymentEntityRepository) {
 
   def migrate(): Future[Unit] = {
     log.info("Start 1.2 migration")
-
+    /* TODO: jason
     deploymentRepository.store.names().map(_.filter(deploymentRepository.isVersionKey)).flatMap { versionNodes =>
       versionNodes.foldLeft(Future.successful(())) { (future, versionNode) =>
         future.flatMap { _ =>
@@ -395,6 +401,9 @@ class MigrationTo1_2(deploymentRepository: DeploymentEntityRepository) {
       log.info("Finished 1.2 migration")
       Future.successful(())
     }
+  }
+  */
+    Future.successful(())
   }
 }
 

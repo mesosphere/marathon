@@ -14,32 +14,35 @@ import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.util.JavaTimer
-import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
+import com.twitter.zk.{AuthInfo, NativeConnector, ZkClient}
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{EntityStore, EntityStoreCache, MarathonStore}
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository}
+import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository}
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
-import mesosphere.marathon.event.{ EventModule, HistoryActor }
-import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
+import mesosphere.marathon.event.{EventModule, HistoryActor}
+import mesosphere.marathon.health.{HealthCheckManager, MarathonHealthCheckManager}
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
+import mesosphere.marathon.upgrade.{DeploymentManager, DeploymentPlan}
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
-import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
-import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore, _ }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.util.state.zk.{CompressionConf, ZKStore}
+import mesosphere.util.state.{FrameworkId, FrameworkIdUtil, PersistentStore, _}
+import mesosphere.util.{CapConcurrentExecutions, CapConcurrentExecutionsMetrics}
 import org.apache.mesos.state.ZooKeeperState
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 // scalastyle:on
@@ -108,7 +111,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     @Named(ModuleNames.STORE_FRAMEWORK_ID) frameworkId: EntityStore[FrameworkId],
     @Named(ModuleNames.STORE_TASK_FAILURES) taskFailure: EntityStore[TaskFailure],
     @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) subscribers: EntityStore[EventSubscribers],
-    @Named(ModuleNames.STORE_TASK) task: EntityStore[MarathonTaskState]): Seq[PrePostDriverCallback] = {
+    @Named(ModuleNames.STORE_TASK) task: EntityStore[Task]): Seq[PrePostDriverCallback] = {
     Seq(app, group, deployment, frameworkId, taskFailure, task, subscribers).collect {
       case l: PrePostDriverCallback => l
     }
@@ -344,17 +347,16 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Provides
   @Singleton
   def provideTaskFailureRepository(
-    @Named(ModuleNames.STORE_TASK_FAILURES) store: EntityStore[TaskFailure],
-    metrics: Metrics): TaskFailureEntityRepository = {
-    new TaskFailureEntityRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+    @Named(ModuleNames.STORE_TASK_FAILURES) store: EntityStore[TaskFailure]
+  )(implicit metrics: Metrics): TaskFailureEntityRepository = {
+    new TaskFailureEntityRepository(store, conf.zooKeeperMaxVersions.get.getOrElse(2))
   }
 
   @Provides
   @Singleton
   def provideAppEntityRepository(
-    @Named(ModuleNames.STORE_APP) store: EntityStore[AppDefinition],
-    metrics: Metrics): AppEntityRepository = {
-    new AppEntityRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
+    @Named(ModuleNames.STORE_APP) store: EntityStore[AppDefinition])(implicit metrics: Metrics): AppEntityRepository = {
+    new AppEntityRepository(store, maxVersions = conf.zooKeeperMaxVersions.get.getOrElse(25))
   }
 
   @Provides
@@ -362,24 +364,23 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   def provideGroupEntityRepository(
     @Named(ModuleNames.STORE_GROUP) store: EntityStore[Group],
     metrics: Metrics): GroupEntityRepository = {
-    new GroupEntityRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+    new GroupEntityRepository(store, conf.zooKeeperMaxVersions.get.getOrElse(25))(metrics = metrics)
   }
 
   @Provides
   @Singleton
   def provideTaskEntityRepository(
-    @Named(ModuleNames.STORE_TASK) store: EntityStore[MarathonTaskState],
-    metrics: Metrics)(implicit mat: Materializer): TaskEntityRepository = {
-    new TaskEntityRepository(store, metrics)
+    @Named(ModuleNames.STORE_TASK) store: EntityStore[MarathonTaskState]
+  )(implicit metrics: Metrics, mat: Materializer): TaskEntityRepository = {
+    new TaskEntityRepository(store)
   }
 
   @Provides
   @Singleton
   def provideDeploymentEntityRepository(
     @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) store: EntityStore[DeploymentPlan],
-    conf: MarathonConf,
-    metrics: Metrics): DeploymentEntityRepository = {
-    new DeploymentEntityRepository(store, metrics)
+    conf: MarathonConf)(implicit ctx: ExecutionContext, metrics: Metrics): DeploymentEntityRepository = {
+    new DeploymentEntityRepository(store)
   }
 
   @Named(ModuleNames.STORE_DEPLOYMENT_PLAN)

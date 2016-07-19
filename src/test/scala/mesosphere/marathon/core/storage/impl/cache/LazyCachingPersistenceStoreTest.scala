@@ -22,13 +22,14 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
     new LazyCachingPersistenceStore(new InMemoryPersistenceStore())
   }
 
+  lazy val rootZkClient = zkClient()
+
   def zkStore: ZkPersistenceStore = {
     implicit val metrics = new Metrics(new MetricRegistry)
 
-    val client = zkClient()
     val root = UUID.randomUUID().toString
-    client.create(s"/$root").futureValue
-    new ZkPersistenceStore(client.usingNamespace(root), Duration.Inf, 8)
+    rootZkClient.create(s"/$root").futureValue
+    new ZkPersistenceStore(rootZkClient.usingNamespace(root), Duration.Inf, 8)
   }
 
   private def cachedZk = new LazyCachingPersistenceStore(zkStore)

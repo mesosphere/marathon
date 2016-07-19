@@ -17,13 +17,13 @@ class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
     with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization
     with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
 
+  lazy val rootZkClient = zkClient()
   def zkStore: ZkPersistenceStore = {
     implicit val metrics = new Metrics(new MetricRegistry)
 
-    val client = zkClient()
     val root = UUID.randomUUID().toString
-    client.create(s"/$root").futureValue
-    new ZkPersistenceStore(client.usingNamespace(root), Duration.Inf)
+    rootZkClient.create(s"/$root").futureValue
+    new ZkPersistenceStore(rootZkClient.usingNamespace(root), Duration.Inf)
   }
 
   private def cachedInMemory = {

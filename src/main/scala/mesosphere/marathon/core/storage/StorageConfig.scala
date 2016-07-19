@@ -10,8 +10,9 @@ import mesosphere.marathon.core.storage.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
 import mesosphere.marathon.core.storage.impl.zk.{ ZkId, ZkPersistenceStore, ZkSerialized }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ EntityStore, EntityStoreCache, MarathonStore }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ EntityStore, EntityStoreCache, MarathonState, MarathonStore }
+import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
 import mesosphere.marathon.{ MarathonConf, ZookeeperConf }
 import mesosphere.util.state.PersistentStore

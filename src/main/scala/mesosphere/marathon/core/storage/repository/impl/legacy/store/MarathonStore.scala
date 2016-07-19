@@ -1,14 +1,15 @@
-package mesosphere.marathon.state
+package mesosphere.marathon.core.storage.repository.impl.legacy.store
 
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.metrics.Metrics.Histogram
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.state.MarathonState
 import mesosphere.util.LockManager
 import mesosphere.util.state.PersistentStore
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 

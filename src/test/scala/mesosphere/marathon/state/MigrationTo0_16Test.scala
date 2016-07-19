@@ -2,14 +2,17 @@ package mesosphere.marathon.state
 
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{ MarathonSpec, Protos }
+import mesosphere.marathon.{MarathonSpec, Protos}
 import mesosphere.util.state.memory.InMemoryStore
-import org.scalatest.time.{ Seconds, Span }
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{GivenWhenThen, Matchers}
 
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext
 
 class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
   import mesosphere.FutureTestSupport._
@@ -19,9 +22,9 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     lazy val store = new InMemoryStore()
 
     lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
-    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = None, metrics)
+    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = 0)(metrics = metrics)
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
-    lazy val appRepo = new AppEntityRepository(appStore, maxVersions = None, metrics)
+    lazy val appRepo = new AppEntityRepository(appStore, maxVersions = 0)(ExecutionContext.global, metrics)
 
     lazy val migration = new MigrationTo0_16(groupRepository = groupRepo, appRepository = appRepo)
   }
@@ -39,7 +42,9 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
 
     Then("only an empty root Group is created")
     val group = f.groupRepo.root().futureValue
-    group should be (Group.empty)
+    group.groups should be('empty)
+    group.apps should be('empty)
+    group.dependencies should be('empty)
     f.appRepo.ids().runWith(Sink.seq).futureValue should be('empty)
   }
 
@@ -47,7 +52,8 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     val f = new Fixture
 
     def appProtoInNewFormatAsserts(proto: Protos.ServiceDefinition) = {
-      assert(Seq(1000, 1001) == proto.getPortDefinitionsList.asScala.map(_.getNumber), proto.toString)
+      val ports = proto.getPortDefinitionsList.asScala.map(_.getNumber)
+      assert(Seq(1000, 1001) == ports, ports)
       assert(proto.getPortsCount == 0)
     }
 
@@ -64,7 +70,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     def groupProtoIsInNewFormat(version: Option[Long]): Unit = {
       def fetchGroupProto(version: Option[Long]): Protos.GroupDefinition = {
         val suffix = version.map { version => s":${Timestamp(version)}" }.getOrElse("")
-        val entity = f.store.load(s"group:root$suffix").futureValue.get
+        val entity = f.store.load(s"group:${GroupEntityRepository.ZkRootName}$suffix").futureValue.get
         Protos.GroupDefinition.parseFrom(entity.bytes.toArray)
       }
 

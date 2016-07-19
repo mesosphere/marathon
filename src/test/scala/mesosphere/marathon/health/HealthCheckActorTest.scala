@@ -35,7 +35,7 @@ class HealthCheckActorTest
     val app = AppDefinition(id = appId)
     val appRepository: AppRepository = mock[AppRepository]
 
-    when(appRepository.get(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
+    when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
     when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.task))
 
@@ -85,7 +85,7 @@ class HealthCheckActorTest
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val driver = mock[SchedulerDriver]
     holder.driver = Some(driver)
-    when(appRepository.get(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
+    when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
     val taskId = "test_task.9876543"
     val scheduler: MarathonScheduler = mock[MarathonScheduler]

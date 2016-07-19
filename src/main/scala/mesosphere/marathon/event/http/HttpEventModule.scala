@@ -10,8 +10,8 @@ import com.google.inject.{ AbstractModule, Provides, Scopes }
 import mesosphere.marathon.ModuleNames.STORE_EVENT_SUBSCRIBERS
 import mesosphere.marathon.api.v2.Validation.urlIsValid
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
 import mesosphere.marathon.event.{ MarathonSubscriptionEvent, Subscribe }
-import mesosphere.marathon.state.EntityStore
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
 

@@ -2,12 +2,16 @@ package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.state.memory.InMemoryStore
-import org.scalatest.time.{ Seconds, Span }
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{GivenWhenThen, Matchers}
+
+import scala.concurrent.ExecutionContext
 
 class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
   import mesosphere.FutureTestSupport._
@@ -17,9 +21,9 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     lazy val store = new InMemoryStore()
 
     lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
-    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = None, metrics)
+    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = 0)(metrics = metrics)
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
-    lazy val appRepo = new AppEntityRepository(appStore, maxVersions = None, metrics)
+    lazy val appRepo = new AppEntityRepository(appStore, maxVersions = 0)(ExecutionContext.global, metrics)
 
     lazy val migration = new MigrationTo0_11(groupRepository = groupRepo, appRepository = appRepo)
   }
@@ -113,9 +117,9 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
     f.appRepo.get(PathId("/test")).futureValue should be(Some(correctedAppV3))
     f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (3)
-    f.appRepo.app(PathId("/test"), correctedAppV1.version).futureValue should be(Some(correctedAppV1))
-    f.appRepo.app(PathId("/test"), correctedAppV2.version).futureValue should be(Some(correctedAppV2))
-    f.appRepo.app(PathId("/test"), correctedAppV3.version).futureValue should be(Some(correctedAppV3))
+    f.appRepo.getVersion(PathId("/test"), correctedAppV1.version.toOffsetDateTime).futureValue should be(Some(correctedAppV1))
+    f.appRepo.getVersion(PathId("/test"), correctedAppV2.version.toOffsetDateTime).futureValue should be(Some(correctedAppV2))
+    f.appRepo.getVersion(PathId("/test"), correctedAppV3.version.toOffsetDateTime).futureValue should be(Some(correctedAppV3))
   }
 
   test("if an app has revisions in the appRepo and the latest in the groupRepo, they are combined correctly") {
@@ -151,8 +155,8 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.ids().runWith(Sink.seq).futureValue should be(Seq(PathId("/test")))
     f.appRepo.get(PathId("/test")).futureValue should be(Some(correctedAppV3))
     f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (3)
-    f.appRepo.app(PathId("/test"), correctedAppV1.version).futureValue should be(Some(correctedAppV1))
-    f.appRepo.app(PathId("/test"), correctedAppV2.version).futureValue should be(Some(correctedAppV2))
-    f.appRepo.app(PathId("/test"), correctedAppV3.version).futureValue should be(Some(correctedAppV3))
+    f.appRepo.getVersion(PathId("/test"), correctedAppV1.version.toOffsetDateTime).futureValue should be(Some(correctedAppV1))
+    f.appRepo.getVersion(PathId("/test"), correctedAppV2.version.toOffsetDateTime).futureValue should be(Some(correctedAppV2))
+    f.appRepo.getVersion(PathId("/test"), correctedAppV3.version.toOffsetDateTime).futureValue should be(Some(correctedAppV3))
   }
 }

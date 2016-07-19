@@ -8,13 +8,15 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.AppEntityRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.util.state.memory.InMemoryStore
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
 
 trait AppRepositoryTest { this: AkkaUnitTest =>
@@ -44,12 +46,12 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
       repo.versions(path).runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(
         appDef.version.toOffsetDateTime,
         nextVersion.version.toOffsetDateTime)
-      repo.get(appDef.id, appDef.version.toOffsetDateTime).futureValue.value should be(appDef)
+      repo.getVersion(appDef.id, appDef.version.toOffsetDateTime).futureValue.value should be(appDef)
     }
     "be able to list multiple apps" in {
       val repo = newRepo
       val apps = Seq(AppDefinition(id = "app1".toRootPath), AppDefinition(id = "app2".toRootPath))
-      Future.sequence(apps.map(repo.store)).futureValue
+      Future.sequence(apps.map(app => repo.store(app))).futureValue
       repo.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs
         Seq("/app1".toRootPath, "/app2".toRootPath)
     }
@@ -86,7 +88,7 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
       )
       val appDef2 = AppDefinition("app2".toRootPath)
       val allApps = Seq(appDef1, version1, version2, version3, appDef2)
-      allApps.foreach(repo.store(_).futureValue)
+      allApps.foreach(app => repo.store(app).futureValue)
       repo.versions(appDef1.id).runWith(Sink.seq).futureValue should contain theSameElementsAs
         Seq(appDef1, version1, version2, version3).map(_.version.toOffsetDateTime)
     }
@@ -104,7 +106,7 @@ trait AppRepositoryTest { this: AkkaUnitTest =>
       )
       val appDef2 = AppDefinition("app2".toRootPath)
       val allApps = Seq(appDef1, version1, version2, version3, appDef2)
-      allApps.foreach(repo.store(_).futureValue)
+      allApps.foreach(app => repo.store(app).futureValue)
 
       repo.delete(appDef1.id).futureValue
       repo.versions(appDef1.id).runWith(Sink.seq).futureValue should be('empty)
@@ -121,7 +123,7 @@ class AppEntityRepositoryTest extends AkkaUnitTest with AppRepositoryTest {
     metrics,
     () => AppDefinition(),
     prefix = "app:"
-  ), Some(25), metrics)
+  ), 25)(ExecutionContext.global, metrics)
 
   "AppEntityRepository" should {
     behave like basicTest(newRepo)
@@ -129,12 +131,12 @@ class AppEntityRepositoryTest extends AkkaUnitTest with AppRepositoryTest {
 }
 
 class AppZkRepositoryTest extends AkkaUnitTest with AppRepositoryTest with ZookeeperServerTest {
+  lazy val rootClient = zkClient()
   private def defaultStore: ZkPersistenceStore = {
-    val client = zkClient()
     val root = UUID.randomUUID().toString
-    client.create(s"/$root").futureValue
+    rootClient.create(s"/$root").futureValue
     implicit val metrics = new Metrics(new MetricRegistry)
-    new ZkPersistenceStore(client.usingNamespace(root), Duration.Inf)
+    new ZkPersistenceStore(rootClient.usingNamespace(root), Duration.Inf)
   }
   private def newRepo = AppRepository.zkRepository(defaultStore, 25)
 

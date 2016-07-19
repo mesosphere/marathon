@@ -68,8 +68,8 @@ class AppStopActorTest
     expectTerminated(ref)
 
     watch(historyRef)
-    verify(f.taskFailureRepository, times(1)).store(app.id, taskFailureA)
-    verify(f.taskFailureRepository, times(1)).store(app.id, taskFailureB)
+    verify(f.taskFailureRepository, times(1)).store(taskFailureA)
+    verify(f.taskFailureRepository, times(1)).store(taskFailureB)
 
     verify(f.taskFailureRepository, times(1)).delete(app.id)
   }

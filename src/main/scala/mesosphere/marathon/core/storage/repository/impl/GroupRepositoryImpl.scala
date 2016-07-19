@@ -5,15 +5,15 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Source
-import akka.{Done, NotUsed}
+import akka.{ Done, NotUsed }
 import mesosphere.marathon.core.storage.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
-import mesosphere.marathon.core.storage.repository.{AppRepository, GroupRepository, VersionedRepository}
-import mesosphere.marathon.core.storage.{IdResolver, PersistenceStore}
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
+import mesosphere.marathon.core.storage.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
+import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 
-import scala.async.Async.{async, await}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.async.Async.{ async, await }
+import scala.concurrent.{ ExecutionContext, Future }
 
 private[storage] case class StoredGroup(
     id: PathId,
@@ -24,7 +24,7 @@ private[storage] case class StoredGroup(
   def resolve(
     groupRepository: GroupRepository,
     appRepository: AppRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
-    val appFutures = appIds.map { case (appId, appVersion) => appRepository.get(appId, appVersion) }
+    val appFutures = appIds.map { case (appId, appVersion) => appRepository.getVersion(appId, appVersion) }
     val groupFutures = storedGroups.map(_.resolve(groupRepository, appRepository))
 
     val apps: Map[PathId, AppDefinition] = await(Future.sequence(appFutures)).collect {
@@ -73,7 +73,7 @@ class StoredGroupRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C
       case s: LoadTimeCachingPersistenceStore[K, C, S] => leafStore(s.store)
       case s: LazyCachingPersistenceStore[K, C, S] => leafStore(s.store)
     }
-    new VersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore))
+    new PersistenceStoreVersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
   }
 
   override def root(): Future[Group] = async {
@@ -89,8 +89,8 @@ class StoredGroupRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =
     storedRepo.versions(RootId)
 
-  override def versionedRoot(version: OffsetDateTime): Future[Option[Group]] = async {
-    val unresolved = await(storedRepo.get(RootId, version))
+  override def rootVersion(version: OffsetDateTime): Future[Option[Group]] = async {
+    val unresolved = await(storedRepo.getVersion(RootId, version))
     unresolved.map(_.resolve(this, appRepository)) match {
       case Some(group) =>
         Some(await(group))
@@ -102,13 +102,13 @@ class StoredGroupRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C
   override def storeRoot(group: Group): Future[Done] = async {
     val storeApps = group.apps.values.map(appRepository.store)
     await(Future.sequence(storeApps))
-    await(storedRepo.store(RootId, StoredGroup(group)))
+    await(storedRepo.store(StoredGroup(group)))
   }
 
-  override def storeRootVersion(group: Group, version: OffsetDateTime): Future[Done] = async {
-    val storeApps = group.apps.values.map(app => appRepository.store(app.id, app, app.version.toOffsetDateTime))
+  override def storeRootVersion(group: Group): Future[Done] = async {
+    val storeApps = group.apps.values.map(appRepository.storeVersion)
     await(Future.sequence(storeApps))
-    await(storedRepo.store(RootId, StoredGroup(group), version))
+    await(storedRepo.storeVersion(StoredGroup(group)))
   }
 }
 

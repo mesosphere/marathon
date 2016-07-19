@@ -12,6 +12,8 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.core.task.update.TaskUpdateStep
@@ -308,9 +310,8 @@ object MarathonTestHelper {
         store = store,
         metrics = metrics,
         newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
-        prefix = TaskEntityRepository.storePrefix),
-      metrics
-    )
+        prefix = TaskEntityRepository.storePrefix)
+    )(metrics = metrics)
     val updateSteps = Seq.empty[TaskUpdateStep]
 
     new TaskTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo, updateSteps) {

@@ -129,7 +129,7 @@ class MarathonSchedulerService @Inject() (
       .map(_.plans)
 
   def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
-    Await.result(appRepository.get(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
+    Await.result(appRepository.getVersion(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
   }
 
   def killTasks(

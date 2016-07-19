@@ -1,10 +1,11 @@
-package mesosphere.marathon.state
+package mesosphere.marathon.core.storage.repository.impl.legacy.store
 
-import mesosphere.marathon.Protos.MarathonApp
-import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, Protos }
-import org.scalatest.concurrent.ScalaFutures
+import mesosphere.marathon.Protos.MarathonApp
+import mesosphere.marathon.state.{ MarathonState, Timestamp }
+import mesosphere.marathon.test.Mockito
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import org.scalatest.concurrent.ScalaFutures
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Seq
