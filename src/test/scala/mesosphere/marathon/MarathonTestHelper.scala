@@ -352,20 +352,31 @@ object MarathonTestHelper {
     )
   }
 
-  def mininimalLostTask(appId: PathId): Task.LaunchedEphemeral = {
+  def mininimalLostTask(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Lost): Task.LaunchedEphemeral = {
     val taskId = Task.Id.forRunSpec(appId)
     val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION))
     mininimalTask(
       taskId = taskId.idString,
       now = clock.now(),
       mesosStatus = Some(status),
-      marathonTaskStatus = MarathonTaskStatus.Lost
+      marathonTaskStatus = marathonTaskStatus
     )
   }
 
-  def minimalUnreachableTask(appId: PathId): Task.LaunchedEphemeral = {
+  def minimalUnreachableTask(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Unreachable): Task.LaunchedEphemeral = {
     val lostTask = mininimalLostTask(appId)
-    lostTask.copy(status = lostTask.status.copy(taskStatus = MarathonTaskStatus.Unreachable))
+    lostTask.copy(status = lostTask.status.copy(taskStatus = marathonTaskStatus))
+  }
+
+  def minimalRunning(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Running): Task.LaunchedEphemeral = {
+    val taskId = Task.Id.forRunSpec(appId)
+    val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_RUNNING, maybeHealth = Option(true))
+    mininimalTask(
+      taskId = taskId.idString,
+      now = clock.now(),
+      mesosStatus = Some(status),
+      marathonTaskStatus = marathonTaskStatus
+    )
   }
 
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
