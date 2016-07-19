@@ -13,6 +13,7 @@ import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 case class Group(
     id: PathId,
@@ -254,26 +255,58 @@ object Group {
   private def validPorts: Validator[Group] = {
     new Validator[Group] {
       override def apply(group: Group): Result = {
-        val groupViolations = group.transitiveApps.flatMap { app =>
-          val servicePorts = app.servicePorts.toSet
+        // Each service port should be unique across a cluster. We
+        // want to report conflicts if the same service port is used
+        // by multiple apps.
+        // We construct the mapping servicePort <- Set[AppKey]. This
+        // allows us to report any service port that has more than 1
+        // application using the same port.
 
-          val ruleViolations = for {
-            existingApp <- group.transitiveApps
-            if existingApp.id != app.id // in case of an update, do not compare the app against itself
-            existingServicePort <- existingApp.servicePorts
-            if existingServicePort != 0 // ignore zero ports, which will be chosen at random
-            if servicePorts contains existingServicePort
-          } yield RuleViolation(
-            app.id,
-            s"Requested service port $existingServicePort conflicts with a service port in app ${existingApp.id}",
-            None)
+        // We keep track of the total number of ports to support an
+        // early exit condition.
+        var ports: Int = 0
+        var merged =
+          new mutable.HashMap[Int, mutable.Set[AppDefinition.AppKey]] with mutable.MultiMap[Int, AppDefinition.AppKey]
 
-          if (ruleViolations.isEmpty) None
-          else Some(GroupViolation(app, "app contains conflicting ports", None, ruleViolations.toSet))
+        // Add each servicePort <- Application to the map.
+        for (app <- group.transitiveApps) {
+          for (port <- app.servicePorts) {
+            // We ignore randomly assigned ports identified by `0`.
+            if (port != 0) {
+              ports += 1
+              merged.addBinding(port, app.id)
+            }
+          }
         }
 
-        if (groupViolations.isEmpty) Success
-        else Failure(groupViolations.toSet)
+        // If the total number of unique ports is equal to the number
+        // of requested ports then we know there are no conflicts.
+        if (merged.size == ports) {
+          Success
+        } else {
+          // Otherwise we find all ports that have more than 1 app
+          // interested in them.
+          var groupViolations = Set.empty[RuleViolation]
+          for ((port, apps) <- merged) {
+            if (apps.size > 1) {
+              for (app <- apps; otherApp <- apps) {
+                // We report all conflicts (e.g. A -> B, and B -> A,
+                // but not A -> A or B -> B).
+                // TODO(jmlvanre): Consider only reporting a single
+                // error that lists all the apps conflicting with this
+                // port.
+                if (app != otherApp) {
+                  groupViolations += RuleViolation(
+                    app,
+                    s"Requested service port ${port} conflicts with a service port in app ${otherApp}",
+                    None)
+                }
+              }
+            }
+          }
+
+          Failure(groupViolations.toSet)
+        }
       }
     }
   }
