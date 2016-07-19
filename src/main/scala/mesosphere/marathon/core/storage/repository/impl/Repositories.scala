@@ -36,3 +36,4 @@ class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C
   marshaller: Marshaller[TaskFailure, S],
   unmarshaller: Unmarshaller[S, TaskFailure]
 ) extends VersionedRepository[PathId, TaskFailure, K, C, S](persistenceStore) with TaskFailureRepository
+

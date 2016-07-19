@@ -3,14 +3,15 @@ package mesosphere.marathon.state
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.metrics.Metrics
-import scala.concurrent.{ Await, Future }
-import scala.concurrent.duration._
+import mesosphere.marathon.state.PathId._
 import org.mockito.Mockito._
 import org.scalatest.Matchers
-import scala.language.postfixOps
-import PathId._
+import org.scalatest.concurrent.ScalaFutures
 
-class GroupRepositoryTest extends MarathonSpec with Matchers {
+import scala.concurrent.Future
+
+// TODO(jason): This test should use an actual store.
+class GroupRepositoryTest extends MarathonSpec with Matchers with ScalaFutures {
 
   test("Store canary strategy") {
     val store = mock[MarathonStore[Group]]
@@ -23,10 +24,9 @@ class GroupRepositoryTest extends MarathonSpec with Matchers {
     when(store.store("root", group)).thenReturn(future)
 
     val metrics = new Metrics(new MetricRegistry)
-    val repo = new GroupRepository(store, None, metrics)
-    val res = repo.store("root", group)
+    val repo = new GroupEntityRepository(store, None, metrics)
+    val res = repo.storeRoot(group)
 
-    assert(group == Await.result(res, 5 seconds), "Should return the correct Group")
     verify(store).store(versionedKey, group)
     verify(store).store(s"root", group)
   }

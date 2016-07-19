@@ -2,6 +2,7 @@ package mesosphere.marathon.state
 
 import java.util.UUID
 
+import akka.Done
 import akka.stream.scaladsl.Source
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.MarathonTask
@@ -36,8 +37,8 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
   test("migration calls initialization") {
     val f = new Fixture
 
-    f.groupRepo.rootGroup() returns Future.successful(None)
-    f.groupRepo.store(any, any) returns Future.successful(Group.empty)
+    f.groupRepo.root() returns Future.successful(Group.empty)
+    f.groupRepo.storeRoot(any) returns Future.successful(Done)
     f.store.load("internal:storage:version") returns Future.successful(None)
     f.store.create(any, any) returns Future.successful(mock[PersistentEntity])
     f.store.update(any) returns Future.successful(mock[PersistentEntity])
@@ -46,7 +47,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.store.load(any) returns Future.successful(None)
     f.appRepo.all() returns Source.empty
     f.appRepo.ids() returns Source.empty
-    f.groupRepo.group("root") returns Future.successful(None)
+    f.groupRepo.root() returns Future.successful(Group.empty)
 
     f.migration.migrate()
     verify(f.store, atLeastOnce).initialize()
@@ -55,8 +56,8 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
   test("migration is executed sequentially") {
     val f = new Fixture
 
-    f.groupRepo.rootGroup() returns Future.successful(None)
-    f.groupRepo.store(any, any) returns Future.successful(Group.empty)
+    f.groupRepo.root() returns Future.successful(Group.empty)
+    f.groupRepo.storeRoot(any) returns Future.successful(Done)
     f.store.load("internal:storage:version") returns Future.successful(None)
     f.store.create(any, any) returns Future.successful(mock[PersistentEntity])
     f.store.update(any) returns Future.successful(mock[PersistentEntity])
@@ -65,7 +66,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.store.load(any) returns Future.successful(None)
     f.appRepo.all() returns Source.empty
     f.appRepo.ids() returns Source.empty
-    f.groupRepo.group("root") returns Future.successful(None)
+    f.groupRepo.root() returns Future.successful(Group.empty)
     f.groupRepo.listVersions(any) returns Future.successful(Seq.empty)
 
     val result = f.migration.applyMigrationSteps(StorageVersions(0, 8, 0)).futureValue
@@ -93,8 +94,8 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     val f = new Fixture
     val minVersion = f.migration.minSupportedStorageVersion
 
-    f.groupRepo.rootGroup() returns Future.successful(None)
-    f.groupRepo.store(any, any) returns Future.successful(Group.empty)
+    f.groupRepo.root() returns Future.successful(Group.empty)
+    f.groupRepo.storeRoot(any) returns Future.successful(Done)
 
     f.store.load("internal:storage:version") returns Future.successful(Some(InMemoryEntity(
       id = "internal:storage:version", version = 0, bytes = minVersion.toByteArray)))
@@ -119,7 +120,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     val metrics = new Metrics(new MetricRegistry)
     val store = mock[StoreWithManagement]
     val appRepo = mock[AppEntityRepository]
-    val groupRepo = mock[GroupRepository]
+    val groupRepo = mock[GroupEntityRepository]
     val config = mock[MarathonConf]
     val deploymentRepo = new DeploymentEntityRepository(
       new MarathonStore[DeploymentPlan](

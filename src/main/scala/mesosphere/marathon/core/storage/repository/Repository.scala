@@ -10,7 +10,7 @@ import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStore }
 
 import scala.concurrent.Future
 
-abstract class Repository[Id, V, K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
+class Repository[Id, V, K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
   ir: IdResolver[Id, V, C, K],
     marshaller: Marshaller[V, S],
     unmarshaller: Unmarshaller[S, V]) {
@@ -22,7 +22,7 @@ abstract class Repository[Id, V, K, C, S](persistenceStore: PersistenceStore[K, 
   def all(): Source[V, NotUsed] = ids().mapAsync(Int.MaxValue)(get).filter(_.isDefined).map(_.get)
 }
 
-abstract class VersionedRepository[Id, V, K, C, S](
+class VersionedRepository[Id, V, K, C, S](
     persistenceStore: PersistenceStore[K, C, S])(implicit
   ir: IdResolver[Id, V, C, K],
     marshaller: Marshaller[V, S],

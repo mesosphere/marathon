@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+// scalastyle:off
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
@@ -19,7 +20,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
 import mesosphere.marathon.event.{ EventModule, HistoryActor }
@@ -41,6 +42,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.Await
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
+// scalastyle:on
 
 object ModuleNames {
   final val HOST_PORT = "HOST_PORT"
@@ -268,7 +270,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   def provideMigration(
     store: PersistentStore,
     appRepo: AppEntityRepository,
-    groupRepo: GroupRepository,
+    groupRepo: GroupEntityRepository,
     taskRepo: TaskEntityRepository,
     deploymentRepository: DeploymentEntityRepository,
     metrics: Metrics)(implicit mat: Materializer): Migration = {
@@ -303,7 +305,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     appRepo: AppRepository,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
-    metrics: Metrics): GroupManager = {
+    metrics: Metrics)(implicit mat: Materializer): GroupManager = {
     val groupManager: GroupManager = new GroupManager(
       serializeUpdates,
       scheduler,
@@ -357,10 +359,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   @Provides
   @Singleton
-  def provideGroupRepository(
+  def provideGroupEntityRepository(
     @Named(ModuleNames.STORE_GROUP) store: EntityStore[Group],
-    metrics: Metrics): GroupRepository = {
-    new GroupRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+    metrics: Metrics): GroupEntityRepository = {
+    new GroupEntityRepository(store, conf.zooKeeperMaxVersions.get, metrics)
   }
 
   @Provides

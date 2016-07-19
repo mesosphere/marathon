@@ -10,7 +10,7 @@ import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
@@ -506,8 +506,8 @@ class SchedulerActions(
 
   def reconcileHealthChecks(): Unit = {
     async {
-      val group = await(groupRepository.rootGroup())
-      val apps = group.map(_.transitiveApps).getOrElse(Set.empty)
+      val group = await(groupRepository.root())
+      val apps = group.transitiveApps
       apps.foreach(app => healthCheckManager.reconcileWith(app.id))
     }
   }

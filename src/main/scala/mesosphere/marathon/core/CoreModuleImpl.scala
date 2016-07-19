@@ -19,13 +19,13 @@ import mesosphere.marathon.core.matcher.reconcile.OfferMatcherReconciliationModu
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.storage.StorageModule
+import mesosphere.marathon.core.storage.repository.GroupRepository
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.event.EventModule
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.GroupRepository
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
 
 import scala.concurrent.ExecutionContext

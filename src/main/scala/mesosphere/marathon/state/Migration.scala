@@ -23,7 +23,7 @@ import scala.util.control.NonFatal
 class Migration @Inject() (
     store: PersistentStore,
     appRepo: AppEntityRepository,
-    groupRepo: GroupRepository,
+    groupRepo: GroupEntityRepository,
     taskRepo: TaskEntityRepository,
     deploymentRepo: DeploymentEntityRepository,
     config: MarathonConf,
@@ -128,13 +128,13 @@ class Migration @Inject() (
   * * Make the groupRepository the ultimate source of truth for the latest app version.
   */
 class MigrationTo0_11(
-    groupRepository: GroupRepository,
+    groupRepository: GroupEntityRepository,
     appRepository: AppEntityRepository)(implicit mat: Materializer) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrateApps(): Future[Unit] = {
     log.info("Start 0.11 migration")
-    val rootGroupFuture = groupRepository.rootGroup().map(_.getOrElse(Group.empty))
+    val rootGroupFuture = groupRepository.root()
     val appIdsFuture = appRepository.ids()
 
     for {
@@ -153,7 +153,7 @@ class MigrationTo0_11(
     val updatedGroup = updatedApps.foldLeft(rootGroup){ (updatedGroup, updatedApp) =>
       updatedGroup.updateApp(updatedApp.id, _ => updatedApp, updatedApp.version)
     }
-    groupRepository.store(groupRepository.zkRootName, updatedGroup).map(_ => ())
+    groupRepository.storeRoot(updatedGroup).map(_ => ())
   }
 
   private[this] def processApps(appIds: Iterable[PathId], rootGroup: Group): Future[Vector[AppDefinition]] = {
@@ -320,13 +320,13 @@ class MigrationTo0_13(taskRepository: TaskEntityRepository, store: PersistentSto
   *   ports
   */
 class MigrationTo0_16(
-    groupRepository: GroupRepository,
+    groupRepository: GroupEntityRepository,
     appRepository: AppEntityRepository)(implicit mat: Materializer) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrate(): Future[Unit] = {
     log.info("Start 0.16 migration")
-    val rootGroupFuture = groupRepository.rootGroup().map(_.getOrElse(Group.empty))
+    val rootGroupFuture = groupRepository.root()
 
     for {
       rootGroup <- rootGroupFuture
@@ -350,13 +350,12 @@ class MigrationTo0_16(
   }
 
   private[this] def updateAllGroupVersions(): Future[Unit] = {
-    val id = groupRepository.zkRootName
-    groupRepository.listVersions(id).map(d => d.toSeq.sorted).flatMap { sortedVersions =>
+    groupRepository.rootVersions().runWith(Sink.seq).map(d => d.sorted).flatMap { sortedVersions =>
       sortedVersions.foldLeft(Future.successful(())) { (future, version) =>
         future.flatMap { _ =>
-          groupRepository.group(id, version).flatMap {
-            case Some(group) => groupRepository.store(id, group).map(_ => ())
-            case None => Future.failed(new MigrationFailedException(s"Group $id:$version not found"))
+          groupRepository.versionedRoot(version).flatMap {
+            case Some(group) => groupRepository.storeRootVersion(group, version).map(_ => ())
+            case None => Future.failed(new MigrationFailedException(s"Root Group $version not found"))
           }
         }
       }

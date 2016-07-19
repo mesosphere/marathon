@@ -27,7 +27,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   * @tparam Serialized The serialized format for the persistence store.
   */
 class LazyCachingPersistenceStore[K, Category, Serialized](
-    store: BasePersistenceStore[K, Category, Serialized])(implicit
+    private[storage] val store: BasePersistenceStore[K, Category, Serialized])(implicit
   mat: Materializer,
     ctx: ExecutionContext) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
 

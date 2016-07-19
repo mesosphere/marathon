@@ -13,17 +13,8 @@ import mesosphere.marathon.state.{ AppDefinition, PathId }
 import scala.concurrent.Future
 
 /**
-  * This responsibility is in transit:
-  *
-  * Current state:
-  * - all applications are stored as part of the root group in the group repository for every user intended change
-  * - all applications are stored again in the app repository, if the deployment of that application starts
-  *
-  * Future plan:
-  * - the applications should be always loaded via the groupManager or groupRepository.
-  * - the app repository is used to store versions of the application
-  *
-  * Until this plan is implemented, please think carefully when to use the app repository!
+  * This repository should only be used by the group manager, otherwise inconsistencies may
+  * exist where a historical group may refer to a version of an app that no longer exists.
   */
 trait AppRepository {
   def ids(): Source[PathId, NotUsed]
@@ -47,10 +38,15 @@ trait AppRepository {
 
   def store(id: PathId, appDef: AppDefinition): Future[Done]
 
+  def store(id: PathId, appDef: AppDefinition, version: OffsetDateTime): Future[Done]
+
   /**
     * Stores the supplied app, now the current version for that apps's id.
     */
   def store(appDef: AppDefinition): Future[Done] = store(appDef.id, appDef)
+
+  def store(appDef: AppDefinition, version: OffsetDateTime): Future[Done] =
+    store(appDef.id, appDef, appDef.version.toOffsetDateTime)
 
   /**
     * Returns the current version for all apps.

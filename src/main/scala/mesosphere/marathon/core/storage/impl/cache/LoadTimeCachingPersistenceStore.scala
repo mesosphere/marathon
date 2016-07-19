@@ -35,7 +35,7 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
   * @tparam Serialized The serialized format for the persistence store.
   */
 class LoadTimeCachingPersistenceStore[K, Category, Serialized](
-    store: BasePersistenceStore[K, Category, Serialized],
+    private[storage] val store: BasePersistenceStore[K, Category, Serialized],
     maxPreloadRequests: Int = 8)(
     implicit
     mat: Materializer,

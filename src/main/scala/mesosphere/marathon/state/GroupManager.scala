@@ -4,15 +4,17 @@ import java.net.URL
 import javax.inject.{ Inject, Named }
 
 import akka.event.EventStream
+import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import com.google.inject.Singleton
+import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
-import mesosphere.marathon._
-import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.util.CapConcurrentExecutions
 import org.slf4j.LoggerFactory
 
@@ -34,13 +36,12 @@ class GroupManager @Inject() (
     appRepo: AppRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    @Named(EventModule.busName) eventBus: EventStream) extends PathFun {
+    @Named(EventModule.busName) eventBus: EventStream)(implicit mat: Materializer) extends PathFun {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
-  private[this] val zkName = groupRepo.zkRootName
 
   def rootGroup(): Future[Group] = {
-    groupRepo.group(zkName).map(_.getOrElse(Group.empty))
+    groupRepo.root()
   }
 
   /**
@@ -49,8 +50,8 @@ class GroupManager @Inject() (
     * @return the list of versions of this object.
     */
   def versions(id: PathId): Future[Iterable[Timestamp]] = {
-    groupRepo.listVersions(zkName).flatMap { versions =>
-      Future.sequence(versions.map(groupRepo.group(zkName, _))).map {
+    groupRepo.rootVersions().runWith(Sink.seq).flatMap { versions =>
+      Future.sequence(versions.map(groupRepo.versionedRoot)).map {
         _.collect {
           case Some(group) if group.group(id).isDefined => group.version
         }
@@ -74,7 +75,7 @@ class GroupManager @Inject() (
     * @return the group if it is found, otherwise None
     */
   def group(id: PathId, version: Timestamp): Future[Option[Group]] = {
-    groupRepo.group(zkName, version).map {
+    groupRepo.versionedRoot(version.toOffsetDateTime).map {
       _.flatMap(_.findGroup(_.id == id))
     }
   }
@@ -163,7 +164,7 @@ class GroupManager @Inject() (
       _ = log.info(s"Computed new deployment plan:\n$plan")
       _ <- scheduler.deploy(plan, force)
       _ <- storeUpdatedApps(plan)
-      _ <- groupRepo.store(zkName, plan.target)
+      _ <- groupRepo.storeRoot(plan.target)
       _ = log.info(s"Updated groups/apps according to deployment plan ${plan.id}")
     } yield plan
 

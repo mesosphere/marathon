@@ -13,7 +13,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event._
@@ -47,7 +47,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
   test("RecoversDeploymentsAndReconcilesHealthChecksOnStart") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    when(groupRepo.rootGroup()).thenReturn(Future.successful(Some(Group.apply(PathId.empty, apps = Map(app.id -> app)))))
+    when(groupRepo.root()).thenReturn(Future.successful(Group(PathId.empty, apps = Map(app.id -> app))))
 
     val schedulerActor = createActor()
     try {
@@ -567,7 +567,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(deploymentRepo.delete(any)).thenReturn(Future.successful(Done))
     when(deploymentRepo.all()).thenReturn(Source.empty)
     when(repo.all()).thenReturn(Source.empty)
-    when(groupRepo.rootGroup()).thenReturn(Future.successful(None))
+    when(groupRepo.root()).thenReturn(Future.successful(Group.empty))
     when(queue.get(any[PathId])).thenReturn(None)
     when(taskTracker.countLaunchedAppTasksSync(any[PathId])).thenReturn(0)
     when(conf.killBatchCycle).thenReturn(1.seconds)

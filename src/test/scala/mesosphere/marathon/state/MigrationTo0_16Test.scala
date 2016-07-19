@@ -2,9 +2,9 @@ package mesosphere.marathon.state
 
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.util.state.memory.InMemoryStore
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -19,7 +19,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     lazy val store = new InMemoryStore()
 
     lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
-    lazy val groupRepo = new GroupRepository(groupStore, maxVersions = None, metrics)
+    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = None, metrics)
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
     lazy val appRepo = new AppEntityRepository(appStore, maxVersions = None, metrics)
 
@@ -38,8 +38,8 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.migration.migrate().futureValue
 
     Then("only an empty root Group is created")
-    val maybeGroup: Option[Group] = f.groupRepo.rootGroup().futureValue
-    maybeGroup should be (None)
+    val group = f.groupRepo.root().futureValue
+    group should be (Group.empty)
     f.appRepo.ids().runWith(Sink.seq).futureValue should be('empty)
   }
 
@@ -79,7 +79,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.store(appV2).futureValue
 
     val groupWithApp = emptyGroup.copy(apps = Map(appV2.id -> appV2), version = Timestamp(2))
-    f.groupRepo.store(f.groupRepo.zkRootName, groupWithApp).futureValue
+    f.groupRepo.storeRoot(groupWithApp).futureValue
 
     When("migrating")
     f.migration.migrate().futureValue
