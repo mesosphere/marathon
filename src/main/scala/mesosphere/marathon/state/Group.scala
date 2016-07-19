@@ -254,24 +254,30 @@ object Group {
   private def validPorts: Validator[Group] = {
     new Validator[Group] {
       override def apply(group: Group): Result = {
-        val groupViolations = group.transitiveApps.flatMap { app =>
-          val servicePorts = app.servicePorts.toSet
-
-          val ruleViolations = for {
-            existingApp <- group.transitiveApps
-            if existingApp.id != app.id // in case of an update, do not compare the app against itself
-            existingServicePort <- existingApp.servicePorts
-            if existingServicePort != 0 // ignore zero ports, which will be chosen at random
-            if servicePorts contains existingServicePort
-          } yield RuleViolation(
-            app.id,
-            s"Requested service port $existingServicePort conflicts with a service port in app ${existingApp.id}",
-            None)
-
-          if (ruleViolations.isEmpty) None
-          else Some(GroupViolation(app, "app contains conflicting ports", None, ruleViolations.toSet))
+        val allApps = group.transitiveApps.toList
+        val servicePortsById: Map[PathId, Set[Int]] = {
+          allApps.map(app => app.id -> app.servicePorts.toSet)(collection.breakOut)
         }
 
+        def checkApp(app: AppDefinition, rest: List[AppDefinition]): Seq[RuleViolation] = {
+          val appPorts = servicePortsById(app.id)
+          for {
+            otherApp <- rest
+            otherAppServicePorts = servicePortsById(otherApp.id)
+            port <- otherAppServicePorts if port != 0 && appPorts.contains(port) // ignore random ports (port==0)
+          } yield RuleViolation(
+            app.id,
+            s"Requested service port $port conflicts with a service port in app ${otherApp.id}",
+            None)
+        }
+
+        def checkApps(apps: List[AppDefinition]): Seq[RuleViolation] = apps match {
+          case Nil => Seq.empty
+          case last :: Nil => Seq.empty
+          case head :: rest => checkApp(head, rest) ++ checkApps(rest)
+        }
+
+        val groupViolations = checkApps(allApps)
         if (groupViolations.isEmpty) Success
         else Failure(groupViolations.toSet)
       }
