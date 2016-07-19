@@ -1,26 +1,23 @@
 package mesosphere.util.state.zk
 
+// scalastyle:off
 import java.util.UUID
 
 import com.fasterxml.uuid.impl.UUIDUtil
 import com.google.protobuf.{ ByteString, InvalidProtocolBufferException }
 import com.twitter.util.{ Future => TWFuture }
 import com.twitter.zk.{ ZNode, ZkClient }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ PersistentEntity, PersistentStore, PersistentStoreManagement, PersistentStoreWithNestedPathsSupport }
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.{ Protos, StoreCommandFailedException }
 import mesosphere.util.state.zk.ZKStore._
-import mesosphere.util.state.{
-  PersistentEntity,
-  PersistentStore,
-  PersistentStoreManagement,
-  PersistentStoreWithNestedPathsSupport
-}
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future, Promise }
+// scalastyle:on
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
 

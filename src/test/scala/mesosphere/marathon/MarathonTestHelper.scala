@@ -13,7 +13,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ MarathonStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.core.task.update.TaskUpdateStep
@@ -25,7 +25,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.memory.InMemoryStore
-import mesosphere.util.state.{ FrameworkId, PersistentStore }
+import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }

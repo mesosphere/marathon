@@ -2,14 +2,14 @@ package mesosphere.marathon.state
 
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, GroupEntityRepository }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{MarathonSpec, Protos}
+import mesosphere.marathon.{ MarathonSpec, Protos }
 import mesosphere.util.state.memory.InMemoryStore
-import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext

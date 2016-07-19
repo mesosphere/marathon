@@ -14,35 +14,35 @@ import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.util.JavaTimer
-import com.twitter.zk.{AuthInfo, NativeConnector, ZkClient}
+import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{EntityStore, EntityStoreCache, MarathonStore}
-import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository}
-import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository}
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ EntityStore, EntityStoreCache, MarathonStore, PersistentStore }
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
-import mesosphere.marathon.event.{EventModule, HistoryActor}
-import mesosphere.marathon.health.{HealthCheckManager, MarathonHealthCheckManager}
+import mesosphere.marathon.event.{ EventModule, HistoryActor }
+import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.upgrade.{DeploymentManager, DeploymentPlan}
+import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
-import mesosphere.util.state.zk.{CompressionConf, ZKStore}
-import mesosphere.util.state.{FrameworkId, FrameworkIdUtil, PersistentStore, _}
-import mesosphere.util.{CapConcurrentExecutions, CapConcurrentExecutionsMetrics}
+import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
+import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, _ }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.mesos.state.ZooKeeperState
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{ Await, ExecutionContext }
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 // scalastyle:on

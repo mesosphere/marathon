@@ -2,7 +2,7 @@ package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, GroupEntityRepository }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._

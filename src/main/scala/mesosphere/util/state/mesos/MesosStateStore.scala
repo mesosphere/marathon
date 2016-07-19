@@ -1,8 +1,8 @@
 package mesosphere.util.state.mesos
 
 import mesosphere.marathon.StoreCommandFailedException
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ PersistentEntity, PersistentStore }
 import mesosphere.util.BackToTheFuture.Timeout
-import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 import org.apache.mesos.state.{ State, Variable }
 import org.slf4j.LoggerFactory
 

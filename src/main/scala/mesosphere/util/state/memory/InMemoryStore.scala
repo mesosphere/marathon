@@ -1,7 +1,7 @@
 package mesosphere.util.state.memory
 
 import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.util.state.{ PersistentEntity, PersistentStore }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ PersistentEntity, PersistentStore }
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Seq

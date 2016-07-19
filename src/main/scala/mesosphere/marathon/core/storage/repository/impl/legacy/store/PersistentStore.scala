@@ -1,7 +1,7 @@
-package mesosphere.util.state
+package mesosphere.marathon.core.storage.repository.impl.legacy.store
 
-import scala.concurrent.Future
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 
 /**
   * An Entity that is provided and can be changed by the related store.

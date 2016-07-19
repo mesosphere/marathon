@@ -5,6 +5,7 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.core.storage.IdResolver
+import mesosphere.marathon.core.storage.repository.impl.StoredGroup
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -57,6 +58,9 @@ trait InMemoryStoreSerialization {
 
   def taskFailureResolver(maxVersions: Int): IdResolver[PathId, TaskFailure, String, RamId] =
     new InMemPathIdResolver[TaskFailure]("taskfailure", maxVersions, _.version.toOffsetDateTime)
+
+  def groupResolver(maxVersions: Int): IdResolver[PathId, StoredGroup, String, RamId] =
+    new InMemPathIdResolver[StoredGroup]("group", maxVersions, _.version)
 }
 
 object InMemoryStoreSerialization extends InMemoryStoreSerialization

@@ -6,15 +6,15 @@ import java.util.UUID
 import com.codahale.metrics.MetricRegistry
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.FutureTestSupport._
-import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ MarathonStore, PersistentEntity, PersistentStore }
+import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.util.state.FrameworkId
 import mesosphere.util.state.memory.InMemoryStore
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -188,8 +188,6 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
 }
 
 import java.io._
-
-import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 
 import scala.concurrent.Future
 

@@ -5,7 +5,6 @@ import mesosphere.marathon.metrics.Metrics.Histogram
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.MarathonState
 import mesosphere.util.LockManager
-import mesosphere.util.state.PersistentStore
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq

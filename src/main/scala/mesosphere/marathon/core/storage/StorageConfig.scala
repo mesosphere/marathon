@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.storage
 
+// scalastyle:off
 import java.util
 import java.util.concurrent.TimeUnit
 
@@ -10,12 +11,11 @@ import mesosphere.marathon.core.storage.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
 import mesosphere.marathon.core.storage.impl.zk.{ ZkId, ZkPersistenceStore, ZkSerialized }
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ EntityStore, EntityStoreCache, MarathonStore }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ EntityStore, EntityStoreCache, MarathonStore, PersistentStore }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
 import mesosphere.marathon.{ MarathonConf, ZookeeperConf }
-import mesosphere.util.state.PersistentStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.{ CompressionConf, NoRetryPolicy, RichCuratorFramework, ZKStore }
 import org.apache.curator.framework.api.ACLProvider
@@ -30,6 +30,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ Duration, _ }
 import scala.reflect.ClassTag
+// scalastyle:on
 
 sealed trait StorageConfig
 sealed trait LegacyStorageConfig extends StorageConfig {

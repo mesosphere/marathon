@@ -5,22 +5,22 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.Done
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, GroupEntityRepository }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException, _}
-import mesosphere.util.{CapConcurrentExecutions, CapConcurrentExecutionsMetrics}
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException, _ }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.mockito.Matchers.any
-import org.mockito.Mockito.{times, verify, when}
+import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Matchers
 import org.scalatest.mock.MockitoSugar
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Matchers with MarathonSpec {
 

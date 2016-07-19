@@ -2,12 +2,11 @@ package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ MarathonStore, PersistentEntity, PersistentStore }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.{ MarathonConf, MarathonSpec, StoreCommandFailedException }
 import mesosphere.util.state.memory.InMemoryStore
-import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf

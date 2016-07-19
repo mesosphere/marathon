@@ -8,10 +8,10 @@ import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, MarathonTaskState, PathId, TaskFailure }
+import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.Protos.{ TaskID, TaskState }
 
@@ -22,10 +22,12 @@ import scala.concurrent.ExecutionContext
   * Provides the repositories for all persistable entities.
   */
 trait StorageModule {
+  // Should generally only be used by GroupManager/GroupRepository (at least store)
   def appRepository: AppRepository
   def taskRepository: TaskRepository
   def deploymentRepository: DeploymentRepository
   def taskFailureRepository: TaskFailureRepository
+  def groupRepository: GroupRepository
 }
 
 object StorageModule {
@@ -42,18 +44,18 @@ object StorageModule {
 
     config match {
       case l: LegacyStorageConfig =>
-        val appRepository = new AppEntityRepository(
+        val appRepository = AppRepository.legacyRepository(
           l.entityStore("app:", () => AppDefinition.apply()),
           l.maxVersions
         )
-        val taskRepository = new TaskEntityRepository(l.entityStore(
+        val taskRepository = TaskRepository.legacyRepository(l.entityStore(
           TaskEntityRepository.storePrefix,
           () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build())))
-        val deploymentRepository = new DeploymentEntityRepository(l.entityStore(
+        val deploymentRepository = DeploymentRepository.legacyRepository(l.entityStore(
           "deployment:",
           () => DeploymentPlan.empty
         ))
-        val taskFailureRepository = new TaskFailureEntityRepository(l.entityStore(
+        val taskFailureRepository = TaskFailureRepository.legacyRepository(l.entityStore(
           "taskFailure:",
           () => TaskFailure(
             PathId.empty,
@@ -61,22 +63,30 @@ object StorageModule {
             TaskState.TASK_STAGING
           )
         ), 1)
+        val groupRepository = GroupRepository.legacyRepository(l.entityStore(
+          "group:",
+          () => Group.empty
+        ), l.maxVersions)
 
-        StorageModuleImpl(appRepository, taskRepository, deploymentRepository, taskFailureRepository)
+        StorageModuleImpl(appRepository, taskRepository, deploymentRepository, taskFailureRepository, groupRepository)
       case zk: CuratorZk =>
         val store = zk.store
+        val appRepo = AppRepository.zkRepository(store, zk.maxVersions)
         StorageModuleImpl(
-          AppRepository.zkRepository(store, zk.maxVersions),
+          appRepo,
           TaskRepository.zkRepository(store),
           DeploymentRepository.zkRepository(store),
-          TaskFailureRepository.zkRepository(store))
+          TaskFailureRepository.zkRepository(store),
+          GroupRepository.zkRepository(store, appRepo, zk.maxVersions))
       case mem: InMem =>
         val store = mem.store
+        val appRepo = AppRepository.inMemRepository(store, mem.maxVersions)
         StorageModuleImpl(
-          AppRepository.inMemRepository(store, mem.maxVersions),
+          appRepo,
           TaskRepository.inMemRepository(store),
           DeploymentRepository.inMemRepository(store),
-          TaskFailureRepository.inMemRepository(store))
+          TaskFailureRepository.inMemRepository(store),
+          GroupRepository.inMemRepository(store, appRepo, mem.maxVersions))
     }
   }
 }
@@ -85,4 +95,5 @@ private[storage] case class StorageModuleImpl(
   appRepository: AppRepository,
   taskRepository: TaskRepository,
   deploymentRepository: DeploymentRepository,
-  taskFailureRepository: TaskFailureRepository) extends StorageModule
+  taskFailureRepository: TaskFailureRepository,
+  groupRepository: GroupRepository) extends StorageModule

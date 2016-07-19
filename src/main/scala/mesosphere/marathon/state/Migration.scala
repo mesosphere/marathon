@@ -1,24 +1,24 @@
 package mesosphere.marathon.state
 
 // scalastyle:off
-import java.io.{ByteArrayInputStream, ObjectInputStream}
+import java.io.{ ByteArrayInputStream, ObjectInputStream }
 import javax.inject.Inject
 
 import akka.stream.Materializer
-import mesosphere.marathon.Protos.{MarathonTask, StorageVersion}
-import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository}
+import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ PersistentStore, PersistentStoreManagement }
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository }
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.{BuildInfo, MarathonConf, MigrationFailedException}
+import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
-import mesosphere.util.state.{PersistentStore, PersistentStoreManagement}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 // scalastyle:on
 

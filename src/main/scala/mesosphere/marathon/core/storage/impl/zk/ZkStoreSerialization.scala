@@ -8,6 +8,7 @@ import akka.util.ByteString
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
 import mesosphere.marathon.core.storage.IdResolver
+import mesosphere.marathon.core.storage.repository.impl.StoredGroup
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
@@ -96,6 +97,18 @@ trait ZkStoreSerialization {
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
         TaskFailure(Protos.TaskFailure.parseFrom(byteString.toArray))
+    }
+
+  def groupIdResolver(maxVersions: Int): IdResolver[PathId, StoredGroup, String, ZkId] =
+    new ZkPathIdResolver[StoredGroup]("group", maxVersions, _.version)
+
+  implicit val groupMarshaller: Marshaller[StoredGroup, ZkSerialized] =
+    Marshaller.opaque(group => ZkSerialized(ByteString(group.toProto.toByteArray)))
+
+  implicit val groupUnmarshaller: Unmarshaller[ZkSerialized, StoredGroup] =
+    Unmarshaller.strict {
+      case ZkSerialized(byteString) =>
+        StoredGroup(Protos.StoredGroup.parseFrom(byteString.toArray))
     }
 }
 

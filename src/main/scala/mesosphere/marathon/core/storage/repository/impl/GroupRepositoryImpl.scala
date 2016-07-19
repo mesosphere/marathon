@@ -1,11 +1,13 @@
 package mesosphere.marathon.core.storage.repository.impl
 
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
+import mesosphere.marathon.Protos
 import mesosphere.marathon.core.storage.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
@@ -14,6 +16,7 @@ import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.collection.JavaConverters._
 
 private[storage] case class StoredGroup(
     id: PathId,
@@ -42,9 +45,31 @@ private[storage] case class StoredGroup(
       version = Timestamp(version)
     )
   }
+
+  def toProto: Protos.StoredGroup = {
+    import StoredGroup.DateFormat
+
+    val apps = appIds.map {
+      case (app, appVersion) =>
+        Protos.StoredGroup.AppReference.newBuilder()
+          .setId(app.safePath)
+          .setVersion(DateFormat.format(appVersion))
+          .build()
+    }
+
+    Protos.StoredGroup.newBuilder
+      .setId(id.safePath)
+      .addAllAppIds(apps.asJava)
+      .addAllGroups(storedGroups.map(_.toProto).asJava)
+      .addAllDependencies(dependencies.map(_.safePath).asJava)
+      .setVersion(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(version))
+      .build()
+  }
 }
 
 object StoredGroup {
+  val DateFormat = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+
   def apply(group: Group): StoredGroup =
     StoredGroup(
       id = group.id,
@@ -52,6 +77,22 @@ object StoredGroup {
       storedGroups = group.groups.map(StoredGroup(_))(collection.breakOut),
       dependencies = group.dependencies,
       version = group.version.toOffsetDateTime)
+
+  def apply(proto: Protos.StoredGroup): StoredGroup = {
+    val apps: Map[PathId, OffsetDateTime] = proto.getAppIdsList.asScala.map { appId =>
+      PathId.fromSafePath(appId.getId()) -> OffsetDateTime.parse(appId.getVersion, DateFormat)
+    }(collection.breakOut)
+
+    val groups = proto.getGroupsList.asScala.map(StoredGroup(_))
+
+    StoredGroup(
+      id = PathId.fromSafePath(proto.getId),
+      appIds = apps,
+      storedGroups = groups,
+      dependencies = proto.getDependenciesList.asScala.map(PathId.fromSafePath)(collection.breakOut),
+      version = OffsetDateTime.parse(proto.getVersion, DateFormat)
+    )
+  }
 }
 
 class StoredGroupRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S], appRepository: AppRepository)(
