@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
 import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, TaskRepository, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, ZookeeperConf }
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
@@ -29,7 +29,9 @@ class MarathonHealthCheckManager @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
     taskTrackerProvider: Provider[TaskTracker],
     appRepository: AppRepository,
-    zkConf: ZookeeperConf) extends HealthCheckManager {
+    zkConf: ZookeeperConf,
+    taskRepository: TaskRepository
+) extends HealthCheckManager {
 
   private[this] lazy val driverHolder = driverHolderProvider.get()
   private[this] lazy val taskTracker = taskTrackerProvider.get()
@@ -230,6 +232,14 @@ class MarathonHealthCheckManager @Inject() (
         }
       }
     }
+
+  override def reconcile(taskStatus: TaskStatus): Unit = {
+    if (taskStatus.getReason == TaskStatus.Reason.REASON_RECONCILIATION) {
+      taskRepository.task(taskStatus.getTaskId.getValue).onSuccess({ case Some(task) =>
+        update(taskStatus, Timestamp.apply(task.getVersion))
+      })
+    }
+  }
 
   protected[this] def deactivate(healthCheck: ActiveHealthCheck): Unit =
     appHealthChecks.writeLock { _ => system stop healthCheck.actor }

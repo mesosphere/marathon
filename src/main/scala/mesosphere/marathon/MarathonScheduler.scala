@@ -8,6 +8,7 @@ import mesosphere.marathon.core.base.{ CurrentRuntime, Clock }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.event._
+import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
@@ -29,7 +30,8 @@ class MarathonScheduler @Inject() (
     mesosLeaderInfo: MesosLeaderInfo,
     system: ActorSystem,
     config: MarathonConf,
-    schedulerCallbacks: SchedulerCallbacks) extends Scheduler {
+    schedulerCallbacks: SchedulerCallbacks,
+    healthCheckManager: HealthCheckManager) extends Scheduler {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
@@ -71,7 +73,7 @@ class MarathonScheduler @Inject() (
   override def statusUpdate(driver: SchedulerDriver, status: TaskStatus): Unit = {
     log.info("Received status update for task %s: %s (%s)"
       .format(status.getTaskId.getValue, status.getState, status.getMessage))
-
+    healthCheckManager.reconcile(status)
     taskStatusProcessor.publish(status).onFailure {
       case NonFatal(e) =>
         log.error(s"while processing task status update $status", e)
