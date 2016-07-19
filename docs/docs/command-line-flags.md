@@ -336,3 +336,5 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * <span class="label label-default">v0.13.0</span> `--[disable_]tracing` (Optional. Default: disabled):
     Enable tracing for all service method calls.
     Log a trace message around the execution of every service method.
+* <span class="label label-default">v1.2.0</span> `--logstash` (Optional. Default: disabled):
+    Report logs over the network in JSON format as defined by the given endpoint in `(udp|tcp|ssl)://<host>:<port>` format.

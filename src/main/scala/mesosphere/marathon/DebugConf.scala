@@ -1,11 +1,15 @@
 package mesosphere.marathon
 
+import java.net.URI
 import javax.inject.Provider
 
-import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.{ AsyncAppender, Level, LoggerContext }
+import ch.qos.logback.core.net.ssl.SSLConfiguration
 import com.google.inject.AbstractModule
 import com.google.inject.matcher.{ AbstractMatcher, Matchers }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import net.logstash.logback.appender._
+import net.logstash.logback.composite.loggingevent.ArgumentsJsonProvider
 import org.aopalliance.intercept.{ MethodInterceptor, MethodInvocation }
 import org.rogach.scallop.ScallopConf
 import org.slf4j.{ Logger, LoggerFactory }
@@ -49,6 +53,12 @@ trait DebugConf extends ScallopConf {
   lazy val logLevel = opt[String](
     "logging_level",
     descr = "Set logging level to one of: off, error, warn, info, debug, trace, all",
+    noshort = true
+  )
+
+  lazy val logstash = opt[URI](
+    "logstash",
+    descr = "Logs destination URI in format (udp|tcp|ssl)://<host>:<port>",
     noshort = true
   )
 }
@@ -97,6 +107,10 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
       rootLogger.setLevel(level)
     }
 
+    conf.logstash.get.foreach {
+      configureLogstash
+    }
+
     //add behaviors
     val metricsProvider = getProvider(classOf[Metrics])
 
@@ -105,5 +119,49 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
 
     val behaviors = (tracingBehavior :: metricsBehavior :: Nil).flatten
     if (behaviors.nonEmpty) bindInterceptor(MarathonMatcher, Matchers.any(), behaviors: _*)
+  }
+
+  private def configureLogstash(destination: URI) {
+    val context = LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext]
+
+    val encoder = new net.logstash.logback.encoder.LogstashEncoder()
+    encoder.setContext(context)
+    encoder.addProvider(new ArgumentsJsonProvider())
+    encoder.start()
+
+    val logstashAppender = destination.getScheme match {
+      case "udp" =>
+        val appender = new LogstashSocketAppender
+        appender.setName("logstash_udp_appender")
+        appender.setHost(destination.getHost)
+        appender.setPort(destination.getPort)
+        appender
+      case "tcp" =>
+        val appender = new LogstashTcpSocketAppender
+        appender.setName("logstash_tcp_appender")
+        appender.addDestination(s"${destination.getHost}:${destination.getPort}")
+        appender.setEncoder(encoder)
+        appender
+      case "ssl" =>
+        val appender = new LogstashTcpSocketAppender
+        appender.setName("logstash_ssl_appender")
+        appender.addDestination(s"${destination.getHost}:${destination.getPort}")
+        appender.setEncoder(encoder)
+        appender.setSsl(new SSLConfiguration)
+        appender
+      case scheme: String => throw new IllegalArgumentException(s"$scheme is not supported. Use tcp, udp or ssl")
+    }
+
+    logstashAppender.setContext(context)
+    logstashAppender.start()
+
+    val asyncAppender = new AsyncAppender()
+    asyncAppender.setName("async_logstash_appender")
+    asyncAppender.addAppender(logstashAppender)
+    asyncAppender.setContext(context)
+    asyncAppender.start()
+
+    val logger = context.getLogger(Logger.ROOT_LOGGER_NAME)
+    logger.addAppender(asyncAppender)
   }
 }

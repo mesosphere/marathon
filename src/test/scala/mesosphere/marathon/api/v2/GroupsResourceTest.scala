@@ -96,7 +96,8 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("access without authorization is denied if the resource exists") {
     Given("A real group manager with one app")
     useRealGroupManager()
-    val group = Group(PathId.empty, apps = Set(AppDefinition("/a".toRootPath)))
+    val app = AppDefinition("/a".toRootPath)
+    val group = Group(PathId.empty, apps = Map(app.id -> app))
     groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
     groupRepository.rootGroup returns Future.successful(Some(group))
 
@@ -201,7 +202,8 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("Creation of a group with same path as an existing app should be prohibited (fixes #3385)") {
     Given("A real group manager with one app")
     useRealGroupManager()
-    val group = Group("/group".toRootPath, apps = Set(AppDefinition("/group/app".toRootPath)))
+    val app = AppDefinition("/group/app".toRootPath)
+    val group = Group("/group".toRootPath, apps = Map(app.id -> app))
     groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
     groupRepository.rootGroup returns Future.successful(Some(group))
 

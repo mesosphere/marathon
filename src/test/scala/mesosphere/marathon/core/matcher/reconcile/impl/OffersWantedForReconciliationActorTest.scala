@@ -62,7 +62,7 @@ class OffersWantedForReconciliationActorTest
     When("the deployment for a resident app stops")
     val valAfterDeploymentStepSuccess = f.futureOffersWanted()
     val app = AppDefinition(PathId("/resident"), residency = Some(Residency.default))
-    val plan = DeploymentPlan(original = Group.empty.copy(apps = Set(app)), target = Group.empty)
+    val plan = DeploymentPlan(original = Group.empty.copy(apps = Map(app.id -> app)), target = Group.empty)
     f.eventStream.publish(DeploymentStepSuccess(plan = plan, currentStep = plan.steps.head))
 
     Then("there is interest for offers")

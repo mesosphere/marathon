@@ -18,7 +18,8 @@ class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Match
     Given("An unauthenticated request")
     auth.authenticated = false
     val req = auth.request
-    val targetGroup = Group.empty.copy(apps = Set(AppDefinition(PathId("/test"))))
+    val app = AppDefinition(PathId("/test"))
+    val targetGroup = Group.empty.copy(apps = Map(app.id -> app))
     val deployment = DeploymentStepInfo(DeploymentPlan(Group.empty, targetGroup), DeploymentStep(Seq.empty), 1)
     service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
@@ -38,7 +39,8 @@ class DeploymentsResourceTest extends MarathonSpec with GivenWhenThen with Match
     auth.authenticated = true
     auth.authorized = false
     val req = auth.request
-    val targetGroup = Group.empty.copy(apps = Set(AppDefinition(PathId("/test"))))
+    val app = AppDefinition(PathId("/test"))
+    val targetGroup = Group.empty.copy(apps = Map(app.id -> app))
     val deployment = DeploymentStepInfo(DeploymentPlan(Group.empty, targetGroup), DeploymentStep(Seq.empty), 1)
     service.listRunningDeployments() returns Future.successful(Seq(deployment))
 

@@ -16,7 +16,7 @@ import scala.collection.JavaConversions._
 
 case class Group(
     id: PathId,
-    apps: Set[AppDefinition] = defaultApps,
+    apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
     groups: Set[Group] = defaultGroups,
     dependencies: Set[PathId] = defaultDependencies,
     version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] with IGroup {
@@ -25,10 +25,11 @@ case class Group(
   override def mergeFromProto(bytes: Array[Byte]): Group = Group.fromProto(GroupDefinition.parseFrom(bytes))
 
   override def toProto: GroupDefinition = {
+    import collection.JavaConverters._
     GroupDefinition.newBuilder
       .setId(id.toString)
       .setVersion(version.toString)
-      .addAllApps(apps.map(_.toProto))
+      .addAllApps(apps.values.map(_.toProto).asJava)
       .addAllGroups(groups.map(_.toProto))
       .addAllDependencies(dependencies.map(_.toString))
       .build()
@@ -42,7 +43,7 @@ case class Group(
     if (fn(this)) Some(this) else in(groups.toList)
   }
 
-  def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.find(_.id == appId))
+  def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.get(appId))
 
   def group(gid: PathId): Option[Group] = {
     if (id == gid) Some(this) else {
@@ -54,7 +55,7 @@ case class Group(
   def updateApp(path: PathId, fn: Option[AppDefinition] => AppDefinition, timestamp: Timestamp): Group = {
     val groupId = path.parent
     makeGroup(groupId).update(timestamp) { group =>
-      if (group.id == groupId) group.putApplication(fn(group.apps.find(_.id == path))) else group
+      if (group.id == groupId) group.putApplication(fn(group.apps.get(path))) else group
     }
   }
 
@@ -65,7 +66,7 @@ case class Group(
   }
 
   def updateApps(timestamp: Timestamp = Timestamp.now())(fn: AppDefinition => AppDefinition): Group = {
-    update(timestamp) { group => group.copy(apps = group.apps.map(fn)) }
+    update(timestamp) { group => group.copy(apps = group.apps.mapValues(fn)) }
   }
 
   def update(timestamp: Timestamp = Timestamp.now())(fn: Group => Group): Group = {
@@ -96,7 +97,7 @@ case class Group(
       // replace it. Otherwise do not replace it. Validation will catch conflicting app/group IDs later.
       groups = groups.filter { group => group.id != appDef.id || group.containsApps },
       // replace potentially existing app definition
-      apps = apps.filter(_.id != appDef.id) + appDef
+      apps = apps + (appDef.id -> appDef)
     )
   }
 
@@ -105,7 +106,7 @@ case class Group(
     *
     * Use together with [[mesosphere.marathon.state.Group!.update(timestamp*]].
     */
-  def removeApplication(appId: PathId): Group = copy(apps = apps.filter(_.id != appId))
+  def removeApplication(appId: PathId): Group = copy(apps = apps - appId)
 
   def makeGroup(gid: PathId): Group = {
     if (gid.isEmpty) this //group already exists
@@ -116,7 +117,7 @@ case class Group(
     }
   }
 
-  lazy val transitiveApps: Set[AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
+  lazy val transitiveApps: Set[AppDefinition] = this.apps.values.toSet ++ groups.flatMap(_.transitiveApps)
 
   lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
@@ -138,7 +139,7 @@ case class Group(
     //app->group/app dependencies
     for {
       group <- transitiveAppGroups
-      app <- group.apps
+      app <- group.apps.values
       dependencyId <- app.dependencies
       dependentApp = transitiveApps.find(_.id == dependencyId).map(a => Set(a))
       dependentGroup = allGroups.find(_.id == dependencyId).map(_.transitiveApps)
@@ -148,6 +149,7 @@ case class Group(
   }
 
   def dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
+    require(id.isRoot)
     val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
     for (app <- transitiveApps)
       graph.addVertex(app)
@@ -172,7 +174,7 @@ case class Group(
 
   def withNormalizedVersion: Group = copy(version = Timestamp(0))
 
-  def withoutChildren: Group = copy(apps = Set.empty, groups = Set.empty)
+  def withoutChildren: Group = copy(apps = Map.empty, groups = Set.empty)
 
   /**
     * Identify an other group as the same, if id and version is the same.
@@ -199,14 +201,14 @@ object Group {
   def fromProto(msg: GroupDefinition): Group = {
     Group(
       id = msg.getId.toPath,
-      apps = msg.getAppsList.map(AppDefinition.fromProto).toSet,
+      apps = msg.getAppsList.map(AppDefinition.fromProto).map { app => app.id -> app }(collection.breakOut),
       groups = msg.getGroupsList.map(fromProto).toSet,
       dependencies = msg.getDependenciesList.map(PathId.apply).toSet,
       version = Timestamp(msg.getVersion)
     )
   }
 
-  def defaultApps: Set[AppDefinition] = Set.empty
+  def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
   def defaultGroups: Set[Group] = Set.empty
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
@@ -225,9 +227,9 @@ object Group {
 
     def validNestedGroup(base: PathId): Validator[Group] = validator[Group] { group =>
       group.id is validPathWithBase(base)
-      group.apps is every(AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base)))
+      group.apps.values as "apps" is every(AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base)))
       group is noAppsAndGroupsWithSameName
-      (group.id.isRoot is false) or (group.dependencies is noCyclicDependencies(group))
+      group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
     }
 
@@ -242,14 +244,12 @@ object Group {
   private def noAppsAndGroupsWithSameName: Validator[Group] =
     isTrue(s"Groups and Applications may not have the same identifier.") { group =>
       val groupIds = group.groups.map(_.id)
-      val clashingIds = group.apps.map(_.id).intersect(groupIds)
+      val clashingIds = groupIds.intersect(group.apps.keySet)
       clashingIds.isEmpty
     }
 
-  private def noCyclicDependencies(group: Group): Validator[Set[PathId]] =
-    isTrue("Dependency graph has cyclic dependencies.") { _ =>
-      group.hasNonCyclicDependencies
-    }
+  private def noCyclicDependencies: Validator[Group] =
+    isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
 
   private def validPorts: Validator[Group] = {
     new Validator[Group] {

@@ -32,10 +32,13 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   val actorId = new AtomicInteger(0)
 
   test("Assign dynamic app ports") {
-    val group = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0)),
-      AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(1, 2, 3)),
-      AppDefinition("/app3".toPath, portDefinitions = PortDefinitions(0, 2, 0))
+    val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
+    val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(1, 2, 3))
+    val app3 = AppDefinition("/app3".toPath, portDefinitions = PortDefinitions(0, 2, 0))
+    val group = Group(PathId.empty, Map(
+      app1.id -> app1,
+      app2.id -> app2,
+      app3.id -> app3
     ))
     val servicePortsRange = 10 to 20
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
@@ -59,9 +62,8 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
         ))
       ))
     )
-    val group = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, portDefinitions = Seq(), container = Some(container))
-    ))
+    val app = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = Some(container))
+    val group = Group(PathId.empty, Map(app.id -> app))
     val servicePortsRange = 10 to 14
     val updatedGroup = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
     val updatedApp = updatedGroup.transitiveApps.head
@@ -93,9 +95,11 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
         ))
       ))
     ))
-    val group = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1),
-      AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2)
+    val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
+    val app2 = AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2)
+    val group = Group(PathId.empty, Map(
+      app1.id -> app1,
+      app2.id -> app2
     ))
     val servicePortsRange = 10 to 12
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
@@ -127,12 +131,12 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
         ))
       ))
     ))
-    val fromGroup = Group(PathId.empty, Set(
-      AppDefinition("/bridgemodeapp".toPath, container = bridgeModeContainer)
-    ))
-    val toGroup = Group(PathId.empty, Set(
-      AppDefinition("/bridgmodeeapp".toPath, container = bridgeModeContainer),
-      AppDefinition("/usermodeapp".toPath, container = userModeContainer)
+    val bridgeModeApp = AppDefinition("/bridgemodeapp".toPath, container = bridgeModeContainer)
+    val userModeApp = AppDefinition("/usermodeapp".toPath, container = userModeContainer)
+    val fromGroup = Group(PathId.empty, Map(bridgeModeApp.id -> bridgeModeApp))
+    val toGroup = Group(PathId.empty, Map(
+      bridgeModeApp.id -> bridgeModeApp,
+      userModeApp.id -> userModeApp
     ))
 
     val servicePortsRange = 0 until 12
@@ -160,9 +164,8 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
         ))
       ))
     ))
-    val group = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
-    ))
+    val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1)
+    val group = Group(PathId.empty, Map(app1.id -> app1))
     val servicePortsRange = 10 to 11
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
     update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
@@ -172,8 +175,10 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
 
   //regression for #2743
   test("Reassign dynamic service ports specified in the container") {
-    val from = Group(PathId.empty, Set(AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))))
-    val to = Group(PathId.empty, Set(AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 0, 11))))
+    val app = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))
+    val updatedApp = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 0, 11))
+    val from = Group(PathId.empty, Map(app.id -> app))
+    val to = Group(PathId.empty, Map(updatedApp.id -> updatedApp))
     val update = manager(10 to 20).assignDynamicServicePorts(from, to)
     update.app("/app1".toPath).get.portNumbers should be(Seq(10, 12, 11))
   }
@@ -193,18 +198,19 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
         ))
       ))
     )
-    val group = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, container = Some(container))
-    ))
+    val app1 = AppDefinition("/app1".toPath, container = Some(container))
+    val group = Group(PathId.empty, Map(app1.id -> app1))
     val update = manager(90 to 900).assignDynamicServicePorts(Group.empty, group)
     update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
     update.transitiveApps.flatMap(_.portNumbers) should equal (Set(80, 81))
   }
 
   test("Already taken ports will not be used") {
-    val group = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0)),
-      AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 2, 0))
+    val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
+    val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 2, 0))
+    val group = Group(PathId.empty, Map(
+      app1.id -> app1,
+      app2.id -> app2
     ))
     val servicePortsRange = 10 to 20
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
@@ -214,9 +220,8 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
 
   // Regression test for #2868
   test("Don't assign duplicated service ports") {
-    val group = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 10))
-    ))
+    val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 10))
+    val group = Group(PathId.empty, Map(app1.id -> app1))
     val update = manager(10 to 20).assignDynamicServicePorts(Group.empty, group)
 
     val assignedPorts: Set[Int] = update.transitiveApps.flatMap(_.portNumbers)
@@ -224,13 +229,11 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   }
 
   test("Assign unique service ports also when adding a dynamic service port to an app") {
-    val originalGroup = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))
-    ))
+    val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(10, 11))
+    val originalGroup = Group(PathId.empty, Map(app1.id -> app1))
 
-    val updatedGroup = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
-    ))
+    val updatedApp1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
+    val updatedGroup = Group(PathId.empty, Map(updatedApp1.id -> updatedApp1))
     val result = manager(10 to 20).assignDynamicServicePorts(originalGroup, updatedGroup)
 
     val assignedPorts: Set[Int] = result.transitiveApps.flatMap(_.portNumbers)
@@ -238,9 +241,11 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   }
 
   test("If there are not enough ports, a PortExhausted exception is thrown") {
-    val group = Group(PathId.empty, Set(
-      AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0)),
-      AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 0, 0))
+    val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
+    val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 0, 0))
+    val group = Group(PathId.empty, Map(
+      app1.id -> app1,
+      app2.id -> app2
     ))
     val ex = intercept[PortRangeExhaustedException] {
       manager(10 to 14).assignDynamicServicePorts(Group.empty, group)
@@ -258,23 +263,23 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
       ))
     )
 
-    val group = Group(PathId.empty, Set(
-      AppDefinition(
-        id = "/app1".toPath,
-        container = Some(container)
-      )
-    ))
+    val app1 = AppDefinition(
+      id = "/app1".toPath,
+      container = Some(container)
+    )
+    val group = Group(PathId.empty, Map(app1.id -> app1))
 
     val result = manager(10 to 15).assignDynamicServicePorts(Group.empty, group)
     result.apps.size should be(1)
-    val app = result.apps.head
+    val app = result.apps.head._2
     app.container should be (Some(container))
   }
 
   test("Don't store invalid groups") {
     val f = new Fixture
 
-    val group = Group(PathId.empty, Set(AppDefinition("/app1".toPath)), Set(Group("/group1".toPath)))
+    val app1 = AppDefinition("/app1".toPath)
+    val group = Group(PathId.empty, Map(app1.id -> app1), Set(Group("/group1".toPath)))
 
     when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
     when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
@@ -290,12 +295,13 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val f = new Fixture
 
     val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
-    val group = Group(PathId.empty, Set(app)).copy(version = Timestamp(1))
+    val group = Group(PathId.empty, Map(app.id -> app)).copy(version = Timestamp(1))
     when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
     when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
     when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
     val appWithVersionInfo = app.copy(versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1)))
-    val groupWithVersionInfo = Group(PathId.empty, Set(appWithVersionInfo)).copy(version = Timestamp(1))
+    val groupWithVersionInfo = Group(PathId.empty, Map(
+      appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))
     when(f.appRepo.store(any())).thenReturn(Future.successful(appWithVersionInfo))
     when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupWithVersionInfo))
 
@@ -309,8 +315,8 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val f = new Fixture
 
     val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
-    val group = Group(PathId.empty, Set(app)).copy(version = Timestamp(1))
-    val groupEmpty = group.copy(apps = Set(), version = Timestamp(2))
+    val group = Group(PathId.empty, Map(app.id -> app)).copy(version = Timestamp(1))
+    val groupEmpty = group.copy(apps = Map(), version = Timestamp(2))
     when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
     when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(Some(group)))
     when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
