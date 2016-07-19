@@ -49,6 +49,8 @@ case class AppDefinition(
 
   disk: Double = AppDefinition.DefaultDisk,
 
+  gpus: Int = AppDefinition.DefaultGpus,
+
   executor: String = AppDefinition.DefaultExecutor,
 
   constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
@@ -121,6 +123,8 @@ case class AppDefinition(
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
+    // TODO (Yubo): Change hard-coded "gpus" to "Resource.GPUS" after mesos-util has GPU resource type support.
+    val gpusResource = ScalarResource("gpus", gpus.toDouble)
     val appLabels = labels.map {
       case (key, value) =>
         mesos.Parameter.newBuilder
@@ -143,6 +147,7 @@ case class AppDefinition(
       .addResources(cpusResource)
       .addResources(memResource)
       .addResources(diskResource)
+      .addResources(gpusResource)
       .addAllHealthChecks(healthChecks.map(_.toProto).asJava)
       .setUpgradeStrategy(upgradeStrategy.toProto)
       .addAllDependencies(dependencies.map(_.toString).asJava)
@@ -247,6 +252,8 @@ case class AppDefinition(
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
+      // TODO (Yubo): Change hard-coded "gpus" to "Resource.GPUS" after mesos-util has GPU resource type support.
+      gpus = resourcesMap.getOrElse("gpus", this.gpus.toDouble).toInt,
       env = envMap ++ envRefs,
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
@@ -307,6 +314,7 @@ case class AppDefinition(
         cpus != to.cpus ||
         mem != to.mem ||
         disk != to.disk ||
+        gpus != to.gpus ||
         executor != to.executor ||
         constraints != to.constraints ||
         fetch != to.fetch ||
@@ -507,6 +515,8 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultDisk: Double = 0.0
 
+  val DefaultGpus: Int = 0
+
   val DefaultExecutor: String = ""
 
   val DefaultConstraints: Set[Constraint] = Set.empty
@@ -574,6 +584,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.cpus should be >= 0.0
     appDef.instances should be >= 0
     appDef.disk should be >= 0.0
+    appDef.gpus should be >= 0
     appDef.secrets is valid(Secret.secretsValidator)
     appDef.secrets is empty or featureEnabled(Features.SECRETS)
     appDef.env is valid(EnvVarValue.envValidator)
@@ -756,6 +767,7 @@ object AppDefinition extends GeneralPurposeCombinators {
         from.cpus == to.cpus &&
           from.mem == to.mem &&
           from.disk == to.disk &&
+          from.gpus == to.gpus &&
           from.portDefinitions == to.portDefinitions
       }
 

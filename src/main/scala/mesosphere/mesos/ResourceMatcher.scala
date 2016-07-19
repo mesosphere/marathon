@@ -144,7 +144,9 @@ object ResourceMatcher {
     val scalarMatchResults = Iterable(
       scalarResourceMatch(Resource.CPUS, runSpec.cpus, ScalarMatchResult.Scope.NoneDisk),
       scalarResourceMatch(Resource.MEM, runSpec.mem, ScalarMatchResult.Scope.NoneDisk),
-      diskMatch
+      diskMatch,
+      // TODO (Yubo): Change hard-coded "gpus" to "Resource.GPUS" after mesos-util has GPU resource type support.
+      scalarResourceMatch("gpus", runSpec.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)
     ).filter(_.requiredValue != 0)
 
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
