@@ -1,20 +1,23 @@
 package mesosphere.marathon.state
 
-import java.io.{ ByteArrayInputStream, ObjectInputStream }
+import java.io.{ByteArrayInputStream, ObjectInputStream}
 import javax.inject.Inject
 
-import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
+import mesosphere.marathon.Protos.{MarathonTask, StorageVersion}
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.tracker.impl.MarathonTaskStatusSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
-import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
+import mesosphere.marathon.{BuildInfo, MarathonConf, MigrationFailedException}
 import mesosphere.util.Logging
+
 import scala.concurrent.ExecutionContext.Implicits.global
-import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
+import mesosphere.util.state.{PersistentStore, PersistentStoreManagement}
 import org.slf4j.LoggerFactory
 
 import scala.collection.SortedSet
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 
 class Migration @Inject() (
@@ -56,7 +59,7 @@ class Migration @Inject() (
       }
     },
     StorageVersions(1, 2, 0) -> { () =>
-      new MigrationTo1_2(deploymentRepo).migrate().recover {
+      new MigrationTo1_2(deploymentRepo, taskRepo).migrate().recover {
         case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.2", e)
       }
     }
@@ -371,21 +374,47 @@ class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppReposi
 }
 
 /**
-  * Removes all deployment version nodes from ZK
+  * Implements the following migration logic:
+  * * Removes all deployment version nodes from ZK
+  * * Adds calculated MarathonTaskStatus to stored tasks
   */
-class MigrationTo1_2(deploymentRepository: DeploymentRepository) {
+class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository: TaskRepository) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrate(): Future[Unit] = {
     log.info("Start 1.2 migration")
 
-    deploymentRepository.store.names().map(_.filter(deploymentRepository.isVersionKey)).flatMap { versionNodes =>
+    val deploymentMigrationFuture = deploymentRepository.store.names()
+      .map(_.filter(deploymentRepository.isVersionKey)).flatMap { versionNodes =>
       versionNodes.foldLeft(Future.successful(())) { (future, versionNode) =>
         future.flatMap { _ =>
           deploymentRepository.store.expunge(versionNode).map(_ => ())
         }
       }
-    }.flatMap { Unit =>
+    }
+
+    def loadAndMigrateTasks(id: String): Future[MarathonTask] = {
+      taskRepository.task(id).flatMap {
+        case Some(entity) =>
+          val updatedEntity = entity.toBuilder
+            .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(MarathonTaskStatus(entity.getStatus)))
+            .build()
+          taskRepository.store(updatedEntity)
+        case None => Future.failed(new MigrationFailedException(s"Inconsistency in the task store detected, " +
+          s"task with id $id not found, but delivered in allIds()."))
+      }
+    }
+
+    val migratedTasks = for {
+      _ <- deploymentMigrationFuture
+      ids <- taskRepository.allIds()
+      tasks <- {
+        log.info(s"Discovered ${ids.size} tasks for status migration")
+        Future.sequence(ids.map(loadAndMigrateTasks))
+      }
+    } yield tasks
+
+    migratedTasks.flatMap { task =>
       log.info("Finished 1.2 migration")
       Future.successful(())
     }

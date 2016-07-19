@@ -1,12 +1,12 @@
 package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.memory.InMemoryStore
-import org.scalatest.time.{ Seconds, Span }
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{GivenWhenThen, Matchers}
 
 class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
   import mesosphere.FutureTestSupport._
@@ -20,8 +20,14 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
       newState = () => DeploymentPlan.empty,
       prefix = "deployment:"
     )
+    lazy val taskStore = new MarathonStore[MarathonTaskState](
+      store = store,
+      metrics = metrics,
+      newState = () => MarathonTaskState(MarathonTestHelper.createdMarathonTask),
+      prefix = "task:")
+    lazy val taskRepo = new TaskRepository(taskStore, metrics)
     lazy val deploymentRepo = new DeploymentRepository(deploymentStore, metrics)
-    lazy val migration = new MigrationTo1_2(deploymentRepo)
+    lazy val migration = new MigrationTo1_2(deploymentRepo, taskRepo)
   }
 
   implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(1, Seconds))
@@ -41,6 +47,10 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
     Then("the deployment version nodes are removed, all other nodes are kept")
     val nodeNames: Seq[String] = f.store.allIds().futureValue
     nodeNames should contain theSameElementsAs Seq("deployment:fcabfa75-7756-4bc8-94b3-c9d5b2abd38c", "foo:bar")
+  }
+
+  test("should migrate tasks and add calculated MarathonTaskStatus to stored tasks") {
+    // TODO ju
   }
 
 }
