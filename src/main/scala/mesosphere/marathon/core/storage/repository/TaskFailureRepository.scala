@@ -2,13 +2,13 @@ package mesosphere.marathon.core.storage.repository
 
 import java.time.OffsetDateTime
 
-import akka.{Done, NotUsed}
+import akka.{ Done, NotUsed }
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.core.storage.PersistenceStore
-import mesosphere.marathon.core.storage.impl.memory.{Identity, RamId, InMemoryStoreSerialization}
-import mesosphere.marathon.core.storage.impl.zk.{ZkId, ZkSerialized, ZkStoreSerialization}
+import mesosphere.marathon.core.storage.impl.memory.{ Identity, RamId, InMemoryStoreSerialization }
+import mesosphere.marathon.core.storage.impl.zk.{ ZkId, ZkSerialized, ZkStoreSerialization }
 import mesosphere.marathon.core.storage.repository.impl.TaskFailureRepositoryImpl
-import mesosphere.marathon.state.{PathId, TaskFailure}
+import mesosphere.marathon.state.{ PathId, TaskFailure }
 
 import scala.concurrent.Future
 

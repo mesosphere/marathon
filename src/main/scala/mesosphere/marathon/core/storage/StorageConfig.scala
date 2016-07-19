@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.{ Config, ConfigMemorySize }
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.storage.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
@@ -14,8 +13,8 @@ import mesosphere.marathon.core.storage.impl.zk.{ ZkId, ZkPersistenceStore, ZkSe
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ EntityStore, EntityStoreCache, MarathonState, MarathonStore }
 import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
+import mesosphere.marathon.{ MarathonConf, ZookeeperConf }
 import mesosphere.util.state.PersistentStore
-import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.{ CompressionConf, NoRetryPolicy, RichCuratorFramework, ZKStore }
 import org.apache.curator.framework.api.ACLProvider
@@ -45,20 +44,7 @@ sealed trait LegacyStorageConfig extends StorageConfig {
   }
 }
 
-case class ClassicInMem(maxVersions: Int) extends LegacyStorageConfig {
-  def store: PersistentStore = new InMemoryStore()
-  val enableCache: Boolean = false
-}
-
-object ClassicInMem {
-  def apply(config: MarathonConf): ClassicInMem =
-    ClassicInMem(maxVersions = config.zooKeeperMaxVersions.get.get)
-
-  def apply(config: Config): ClassicInMem =
-    ClassicInMem(maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions))
-}
-
-case class ClassicZk(
+case class TwitterZk(
     maxVersions: Int,
     enableCache: Boolean,
     sessionTimeout: Duration,
@@ -99,11 +85,11 @@ case class ClassicZk(
   }
 }
 
-object ClassicZk {
-  def apply(config: MarathonConf): ClassicZk =
-    ClassicZk(
+object TwitterZk {
+  def apply(cache: Boolean, config: ZookeeperConf): TwitterZk =
+    TwitterZk(
       maxVersions = config.zooKeeperMaxVersions(),
-      enableCache = config.storeCache(),
+      enableCache = cache,
       sessionTimeout = config.zkSessionTimeoutDuration,
       zkHosts = config.zkHosts,
       zkPath = config.zkPath,
@@ -113,9 +99,9 @@ object ClassicZk {
       enableCompression = config.zooKeeperCompressionEnabled(),
       compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold()))
 
-  def apply(config: Config): ClassicZk = {
+  def apply(config: Config): TwitterZk = {
     // scalastyle:off
-    ClassicZk(
+    TwitterZk(
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
       enableCache = config.bool("enable-cache", true),
       sessionTimeout = config.duration("session-timeout", 10.seconds),
@@ -149,10 +135,10 @@ case class MesosZk(
 }
 
 object MesosZk {
-  def apply(config: MarathonConf): MesosZk =
+  def apply(cache: Boolean, config: ZookeeperConf): MesosZk =
     MesosZk(
-      maxVersions = config.zooKeeperMaxVersions.get.get,
-      enableCache = config.storeCache.get.get,
+      maxVersions = config.zooKeeperMaxVersions(),
+      enableCache = cache,
       zkHosts = config.zkHosts,
       zkPath = config.zkPath,
       timeout = config.zkTimeoutDuration)
@@ -196,7 +182,7 @@ sealed trait PersistenceStorageConfig[K, C, S] extends StorageConfig {
   }
 }
 
-case class NewZk(
+case class CuratorZk(
     cacheType: CacheType,
     sessionTimeout: Option[Duration],
     connectionTimeout: Option[Duration],
@@ -243,10 +229,10 @@ case class NewZk(
 
 }
 
-object NewZk {
-  def apply(conf: MarathonConf): NewZk =
-    NewZk(
-      cacheType = if (conf.storeCache()) LazyCaching else NoCaching,
+object CuratorZk {
+  def apply(cache: Boolean, conf: ZookeeperConf): CuratorZk =
+    CuratorZk(
+      cacheType = if (cache) LazyCaching else NoCaching,
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
       connectionTimeout = None,
       timeout = conf.zkTimeoutDuration,
@@ -261,8 +247,8 @@ object NewZk {
       maxVersions = conf.zooKeeperMaxVersions.get.get
     )
 
-  def apply(config: Config): NewZk =
-    NewZk(
+  def apply(config: Config): CuratorZk =
+    CuratorZk(
       cacheType = CacheType(config.string("cache-type", "lazy")),
       sessionTimeout = config.optionalDuration("session-timeout"),
       connectionTimeout = config.optionalDuration("connect-timeout"),
@@ -279,7 +265,7 @@ object NewZk {
     )
 }
 
-case class NewInMem(maxVersions: Int) extends PersistenceStorageConfig[RamId, String, Identity] {
+case class InMem(maxVersions: Int) extends PersistenceStorageConfig[RamId, String, Identity] {
   override val cacheType: CacheType = NoCaching
 
   protected def leafStore(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
@@ -287,33 +273,31 @@ case class NewInMem(maxVersions: Int) extends PersistenceStorageConfig[RamId, St
     new InMemoryPersistenceStore()
 }
 
-object NewInMem {
-  def apply(conf: MarathonConf): NewInMem =
-    NewInMem(conf.zooKeeperMaxVersions())
+object InMem {
+  def apply(conf: ZookeeperConf): InMem =
+    InMem(conf.zooKeeperMaxVersions())
 
-  def apply(conf: Config): NewInMem =
-    NewInMem(conf.int("max-versions", StorageConfig.DefaultMaxVersions))
+  def apply(conf: Config): InMem =
+    InMem(conf.int("max-versions", StorageConfig.DefaultMaxVersions))
 }
 
 object StorageConfig {
   val DefaultMaxVersions = 25
   def apply(conf: MarathonConf): StorageConfig = {
     conf.internalStoreBackend() match {
-      case "zk" => ClassicZk(conf)
-      case "mesos_zk" => MesosZk(conf)
-      case "mem" => ClassicInMem(conf)
-      case "new_zk" => NewZk(conf)
-      case "new_mem" => NewInMem(conf)
+      case "zk" => TwitterZk(conf.storeCache(), conf)
+      case "mesos_zk" => MesosZk(conf.storeCache(), conf)
+      case "mem" => InMem(conf)
+      case "zk2" => CuratorZk(conf.storeCache(), conf)
     }
   }
 
   def apply(conf: Config): StorageConfig = {
     conf.string("storage-type", "zk") match {
-      case "zk" => ClassicZk(conf)
+      case "zk" => TwitterZk(conf)
       case "mesos_zk" => MesosZk(conf)
-      case "mem" => ClassicInMem(conf)
-      case "new_zk" => NewZk(conf)
-      case "new_mem" => NewInMem(conf)
+      case "mem" => InMem(conf)
+      case "zk2" => CuratorZk(conf)
     }
   }
 }

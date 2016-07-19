@@ -3,14 +3,14 @@ package mesosphere.marathon.core.storage
 import java.util.UUID
 
 // scalastyle:off
-import akka.actor.{ActorRefFactory, Scheduler}
+import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, TaskFailureRepository, TaskRepository}
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, AppEntityRepository, DeploymentEntityRepository, MarathonTaskState, PathId, TaskEntityRepository, TaskFailure, TaskFailureEntityRepository}
+import mesosphere.marathon.state.{ AppDefinition, AppEntityRepository, DeploymentEntityRepository, MarathonTaskState, PathId, TaskEntityRepository, TaskFailure, TaskFailureEntityRepository }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.Protos.TaskState
@@ -64,15 +64,17 @@ object StorageModule {
         ), Some(1), metrics)
 
         StorageModuleImpl(appRepository, taskRepository, deploymentRepository, taskFailureRepository)
-      case zk: NewZk =>
+      case zk: CuratorZk =>
         val store = zk.store
-        StorageModuleImpl(AppRepository.zkRepository(store, zk.maxVersions),
+        StorageModuleImpl(
+          AppRepository.zkRepository(store, zk.maxVersions),
           TaskRepository.zkRepository(store),
           DeploymentRepository.zkRepository(store),
           TaskFailureRepository.zkRepository(store))
-      case mem: NewInMem =>
+      case mem: InMem =>
         val store = mem.store
-        StorageModuleImpl(AppRepository.inMemRepository(store, mem.maxVersions),
+        StorageModuleImpl(
+          AppRepository.inMemRepository(store, mem.maxVersions),
           TaskRepository.inMemRepository(store),
           DeploymentRepository.inMemRepository(store),
           TaskFailureRepository.inMemRepository(store))

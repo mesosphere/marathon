@@ -31,7 +31,8 @@ class DeploymentRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C,
     extends Repository[String, DeploymentPlan, K, C, S](persistenceStore) with DeploymentRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
-                                        implicit ir: IdResolver[PathId, TaskFailure, C, K],
-                                        marshaller: Marshaller[TaskFailure, S],
-                                        unmarshaller: Unmarshaller[S, TaskFailure]
+  implicit
+  ir: IdResolver[PathId, TaskFailure, C, K],
+  marshaller: Marshaller[TaskFailure, S],
+  unmarshaller: Unmarshaller[S, TaskFailure]
 ) extends VersionedRepository[PathId, TaskFailure, K, C, S](persistenceStore) with TaskFailureRepository

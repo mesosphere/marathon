@@ -6,7 +6,7 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.core.storage.IdResolver
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{AppDefinition, PathId, TaskFailure}
+import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 case class RamId(category: String, id: String, version: Option[OffsetDateTime])

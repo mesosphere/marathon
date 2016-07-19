@@ -7,18 +7,18 @@ import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
 import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.core.appinfo.{AppInfoModule, AppInfoService, GroupInfoService}
+import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.leadership.{LeadershipCoordinator, LeadershipModule}
-import mesosphere.marathon.core.plugin.{PluginDefinitions, PluginManager}
+import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
+import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, TaskFailureRepository}
-import mesosphere.marathon.core.task.bus.{TaskChangeObservables, TaskStatusEmitter}
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository }
+import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
-import mesosphere.marathon.core.task.tracker.{TaskCreationHandler, TaskStateOpProcessor, TaskTracker}
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
 
 import scala.concurrent.ExecutionContext
 // scalastyle:off

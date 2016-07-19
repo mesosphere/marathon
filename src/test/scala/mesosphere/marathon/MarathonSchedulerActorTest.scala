@@ -430,7 +430,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(taskTracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable.empty[Task])
     when(repo.delete(app.id)).thenReturn(Future.successful(Done))
 
-    val schedulerActor = TestActorRef(
+    val schedulerActor = system.actorOf(
       MarathonSchedulerActor.props(
         schedulerActions,
         deploymentManagerProps,
@@ -447,6 +447,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
         cancellationTimeout = 0.seconds
       )
     )
+
     try {
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
@@ -597,5 +598,4 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     system.stop(ref)
     expectTerminated(ref)
   }
-
 }
