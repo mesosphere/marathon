@@ -16,11 +16,10 @@ import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.http._
-import mesosphere.marathon.event.{ EventModule, HistoryActor }
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
@@ -45,7 +44,7 @@ object ModuleNames {
 
   final val SERVER_SET_PATH = "SERVER_SET_PATH"
   final val SERIALIZE_GROUP_UPDATES = "SERIALIZE_GROUP_UPDATES"
-  final val HTTP_EVENT_STREAM = "HTTP_EVENT_STREAM"
+  final val HISTORY_ACTOR_PROPS = "HISTORY_ACTOR_PROPS"
 
   final val STORE_APP = "AppStore"
   final val STORE_TASK_FAILURES = "TaskFailureStore"
@@ -58,8 +57,6 @@ object ModuleNames {
 
 class MarathonModule(conf: MarathonConf, http: HttpConf)
     extends AbstractModule {
-
-  //scalastyle:off magic.number
 
   val log = LoggerFactory.getLogger(getClass.getName)
 
@@ -76,14 +73,13 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
     bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
-    bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).asEagerSingleton()
+    bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).in(Scopes.SINGLETON)
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.SERVER_SET_PATH))
       .toInstance(conf.zooKeeperServerSetPath)
 
     bind(classOf[Metrics]).in(Scopes.SINGLETON)
-    bind(classOf[HttpEventStreamActorMetrics]).in(Scopes.SINGLETON)
   }
 
   @Provides
@@ -108,21 +104,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     Seq(app, group, deployment, frameworkId, taskFailure, task, subscribers).collect {
       case l: PrePostDriverCallback => l
     }
-  }
-
-  @Named(ModuleNames.HTTP_EVENT_STREAM)
-  @Provides
-  @Singleton
-  def provideHttpEventStreamActor(
-    system: ActorSystem,
-    electionService: ElectionService,
-    @Named(EventModule.busName) eventBus: EventStream,
-    metrics: HttpEventStreamActorMetrics): ActorRef = {
-    val outstanding = conf.eventStreamMaxOutstandingMessages.get.getOrElse(50)
-    def handleStreamProps(handle: HttpEventStreamHandle): Props =
-      Props(new HttpEventStreamHandleActor(handle, eventBus, outstanding))
-
-    system.actorOf(Props(new HttpEventStreamActor(electionService, metrics, handleStreamProps)), "HttpEventStream")
   }
 
   @Provides
@@ -179,9 +160,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     driverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
     storage: StorageProvider,
-    @Named(EventModule.busName) eventBus: EventStream,
+    eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    taskFailureRepository: TaskFailureRepository): ActorRef = {
+    taskFailureRepository: TaskFailureRepository,
+    @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
     }
@@ -214,8 +196,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         )
       )
     }
-
-    val historyActorProps = Props(new HistoryActor(eventBus, taskFailureRepository))
 
     system.actorOf(
       MarathonSchedulerActor.props(
@@ -299,7 +279,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     groupRepo: GroupRepository,
     appRepo: AppRepository,
     storage: StorageProvider,
-    @Named(EventModule.busName) eventBus: EventStream,
+    eventBus: EventStream,
     metrics: Metrics): GroupManager = {
     val groupManager: GroupManager = new GroupManager(
       serializeUpdates,
@@ -439,6 +419,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   def provideEventSubscribersStore(store: PersistentStore, metrics: Metrics): EntityStore[EventSubscribers] = {
     entityStore(store, metrics, "events:", () => new EventSubscribers(Set.empty[String]))
   }
+
+  @Provides
+  @Singleton
+  def provideEventBus(actorSystem: ActorSystem): EventStream = actorSystem.eventStream
 
   private[this] def entityStore[T <: mesosphere.marathon.state.MarathonState[_, T]](
     store: PersistentStore,

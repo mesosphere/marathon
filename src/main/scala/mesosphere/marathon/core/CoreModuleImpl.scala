@@ -4,14 +4,16 @@ import javax.inject.Named
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
+import com.google.inject.{ Inject, Provider }
 import mesosphere.chaos.http.HttpConf
-import com.google.inject.{ Provider, Inject }
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
+import mesosphere.marathon.core.election._
+import mesosphere.marathon.core.event.{ EventModule, EventSubscribers }
 import mesosphere.marathon.core.flow.FlowModule
+import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
-import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
@@ -21,11 +23,9 @@ import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
-import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.event.EventModule
-import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
+import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ GroupRepository, AppRepository, TaskRepository }
+import mesosphere.marathon.state._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
 
 import scala.util.Random
@@ -37,20 +37,23 @@ import scala.util.Random
   * [[CoreGuiceModule]] exports some dependencies back to guice.
   */
 class CoreModuleImpl @Inject() (
-    // external dependencies still wired by guice
-    marathonConf: MarathonConf,
-    @Named(EventModule.busName) eventStream: EventStream,
-    httpConf: HttpConf,
-    @Named(ModuleNames.HOST_PORT) hostPort: String,
-    metrics: Metrics,
-    actorSystem: ActorSystem,
-    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    appRepository: AppRepository,
-    groupRepository: GroupRepository,
-    taskRepository: TaskRepository,
-    taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
-    clock: Clock,
-    taskStatusUpdateSteps: Seq[TaskUpdateStep]) extends CoreModule {
+  // external dependencies still wired by guice
+  marathonConf: MarathonConf,
+  eventStream: EventStream,
+  httpConf: HttpConf,
+  @Named(ModuleNames.HOST_PORT) hostPort: String,
+  metrics: Metrics,
+  actorSystem: ActorSystem,
+  marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+  appRepository: AppRepository,
+  groupRepository: GroupRepository,
+  taskRepository: TaskRepository,
+  taskFailureRepository: TaskFailureRepository,
+  taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
+  clock: Clock,
+  taskStatusUpdateSteps: Seq[TaskUpdateStep],
+  @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) eventSubscribersStore: EntityStore[EventSubscribers])
+    extends CoreModule {
 
   // INFRASTRUCTURE LAYER
 
@@ -152,6 +155,16 @@ class CoreModuleImpl @Inject() (
     offersWanted,
     marathonSchedulerDriverHolder)
 
+  // EVENT
+
+  override lazy val eventModule: EventModule = new EventModule(
+    eventStream, actorSystem, marathonConf, metrics, clock, eventSubscribersStore, electionModule.service,
+    authModule.authenticator, authModule.authorizer)
+
+  // HISTORY
+
+  override lazy val historyModule: HistoryModule = new HistoryModule(eventStream, actorSystem, taskFailureRepository)
+
   // GREEDY INSTANTIATION
   //
   // Greedily instantiate everything.
@@ -172,4 +185,6 @@ class CoreModuleImpl @Inject() (
   offerMatcherManagerModule
   launcherModule
   offerMatcherReconcilerModule.start()
+  eventModule
+  historyModule
 }
