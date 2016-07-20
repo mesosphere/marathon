@@ -54,7 +54,7 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
 
   protected def rawDelete(k: K, version: OffsetDateTime): Future[Done]
 
-  override def delete[Id, V](
+  override def deleteVersion[Id, V](
     k: Id,
     version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     lockManager.executeSequentially(k.toString) {
@@ -67,6 +67,14 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
   final override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     lockManager.executeSequentially(k.toString) {
       rawDeleteAll(ir.toStorageId(k, None))
+    }
+  }
+
+  protected def rawDeleteCurrent(k: K): Future[Done]
+
+  override def deleteCurrent[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
+    lockManager.executeSequentially(k.toString) {
+      rawDeleteCurrent(ir.toStorageId(k, None))
     }
   }
 

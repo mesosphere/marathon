@@ -6,6 +6,7 @@ import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityReposi
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.test.MarathonActorSupport
 import org.mockito.Mockito._
 import org.scalatest.Matchers
 import org.scalatest.concurrent.ScalaFutures
@@ -13,7 +14,7 @@ import org.scalatest.concurrent.ScalaFutures
 import scala.concurrent.Future
 
 // TODO(jason): This test should use an actual store.
-class GroupRepositoryTest extends MarathonSpec with Matchers with ScalaFutures {
+class GroupRepositoryTest extends MarathonSpec with Matchers with ScalaFutures with MarathonActorSupport {
 
   test("Store canary strategy") {
     val store = mock[MarathonStore[Group]]
@@ -24,9 +25,9 @@ class GroupRepositoryTest extends MarathonSpec with Matchers with ScalaFutures {
 
     when(store.store(GroupEntityRepository.ZkRootName.safePath, group)).thenReturn(future)
 
-    val metrics = new Metrics(new MetricRegistry)
-    val repo = new GroupEntityRepository(store, 0)(metrics = metrics)
-    val res = repo.storeRoot(group)
+    implicit val metrics = new Metrics(new MetricRegistry)
+    val repo = new GroupEntityRepository(store, 0, appRepo)
+    val res = repo.storeRoot(group, Nil, Nil)
 
     verify(store).store(GroupEntityRepository.ZkRootName.safePath, group)
   }

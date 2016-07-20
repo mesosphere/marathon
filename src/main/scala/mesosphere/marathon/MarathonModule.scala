@@ -22,7 +22,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, EntityStoreCache, InMemoryStore, MarathonStore, MesosStateStore, PersistentStore, ZKStore }
 import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
@@ -173,7 +173,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Inject
   def provideSchedulerActor(
     system: ActorSystem,
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     groupRepository: GroupRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
@@ -302,7 +302,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
     scheduler: MarathonSchedulerService,
     groupRepo: GroupRepository,
-    appRepo: AppRepository,
+    appRepo: ReadOnlyAppRepository,
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
     metrics: Metrics)(implicit mat: Materializer): GroupManager = {
@@ -360,8 +360,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Singleton
   def provideGroupEntityRepository(
     @Named(ModuleNames.STORE_GROUP) store: EntityStore[Group],
-    metrics: Metrics): GroupEntityRepository = {
-    new GroupEntityRepository(store, conf.zooKeeperMaxVersions.get.getOrElse(25))(metrics = metrics)
+    appRepository: AppRepository)(implicit mat: Materializer, metrics: Metrics): GroupEntityRepository = {
+    new GroupEntityRepository(store, conf.zooKeeperMaxVersions.get.getOrElse(25), appRepository)
   }
 
   @Provides

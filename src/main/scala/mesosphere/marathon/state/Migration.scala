@@ -156,7 +156,7 @@ class MigrationTo0_11(
     val updatedGroup = updatedApps.foldLeft(rootGroup){ (updatedGroup, updatedApp) =>
       updatedGroup.updateApp(updatedApp.id, _ => updatedApp, updatedApp.version)
     }
-    groupRepository.storeRoot(updatedGroup).map(_ => ())
+    groupRepository.storeRoot(updatedGroup, Nil, Nil).map(_ => ())
   }
 
   private[this] def processApps(appIds: Iterable[PathId], rootGroup: Group): Future[Vector[AppDefinition]] = {

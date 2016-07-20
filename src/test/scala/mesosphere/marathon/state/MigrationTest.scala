@@ -39,7 +39,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     val f = new Fixture
 
     f.groupRepo.root() returns Future.successful(Group.empty)
-    f.groupRepo.storeRoot(any) returns Future.successful(Done)
+    f.groupRepo.storeRoot(any, any, any) returns Future.successful(Done)
     f.store.load("internal:storage:version") returns Future.successful(None)
     f.store.create(any, any) returns Future.successful(mock[PersistentEntity])
     f.store.update(any) returns Future.successful(mock[PersistentEntity])
@@ -58,7 +58,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     val f = new Fixture
 
     f.groupRepo.root() returns Future.successful(Group.empty)
-    f.groupRepo.storeRoot(any) returns Future.successful(Done)
+    f.groupRepo.storeRoot(any, any, any) returns Future.successful(Done)
     f.store.load("internal:storage:version") returns Future.successful(None)
     f.store.create(any, any) returns Future.successful(mock[PersistentEntity])
     f.store.update(any) returns Future.successful(mock[PersistentEntity])
@@ -96,7 +96,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     val minVersion = f.migration.minSupportedStorageVersion
 
     f.groupRepo.root() returns Future.successful(Group.empty)
-    f.groupRepo.storeRoot(any) returns Future.successful(Done)
+    f.groupRepo.storeRoot(any, any, any) returns Future.successful(Done)
 
     f.store.load("internal:storage:version") returns Future.successful(Some(InMemoryEntity(
       id = "internal:storage:version", version = 0, bytes = minVersion.toByteArray)))

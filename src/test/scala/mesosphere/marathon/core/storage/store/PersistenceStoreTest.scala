@@ -104,7 +104,7 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         store.get("test").futureValue.value should be(tc)
         store.get("test", tc.version).futureValue.value should be(tc)
         store.versions("test").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(tc.version)
-        store.delete("test", tc.version).futureValue should be(Done)
+        store.deleteVersion("test", tc.version).futureValue should be(Done)
         store.versions("test").runWith(Sink.seq).futureValue should be('empty)
       }
       "allow storage of a value at a specific version without replacing the existing one" in {

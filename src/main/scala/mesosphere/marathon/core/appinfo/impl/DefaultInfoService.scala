@@ -1,18 +1,18 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
-import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
 import scala.collection.immutable.Seq
 import scala.collection.mutable
+import scala.concurrent.Future
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService {
   import scala.concurrent.ExecutionContext.Implicits.global
 

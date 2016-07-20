@@ -141,12 +141,17 @@ trait PersistenceStore[K, Category, Serialized] {
     m: Marshaller[V, Serialized]): Future[Done]
 
   /**
+    * Delete the value at the given id. Does not remove historical versions.
+    */
+  def deleteCurrent[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done]
+
+  /**
     * Delete the value at the given Id and version, idempotent
     *
     * @return A future indicating whether the value was deleted (or simply didn't exist). Underlying storage issues
     *         will fail the future with [[mesosphere.marathon.StoreCommandFailedException]]
     */
-  def delete[Id, V](k: Id, version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done]
+  def deleteVersion[Id, V](k: Id, version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done]
 
   /**
     * Delete all of the versions of the given Id, idempotent

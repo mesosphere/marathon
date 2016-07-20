@@ -16,13 +16,13 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
   import mesosphere.FutureTestSupport._
 
   class Fixture {
-    lazy val metrics = new Metrics(new MetricRegistry)
+    implicit lazy val metrics = new Metrics(new MetricRegistry)
     lazy val store = new InMemoryStore()
-
-    lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
-    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = 0)(metrics = metrics)
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
     lazy val appRepo = new AppEntityRepository(appStore, maxVersions = 0)(ExecutionContext.global, metrics)
+
+    lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
+    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = 0, appRepo)
 
     lazy val migration = new MigrationTo0_11(groupRepository = groupRepo, appRepository = appRepo)
   }
@@ -67,7 +67,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
       apps = Map(app.id -> app),
       version = versionInfo.version
     )
-    f.groupRepo.storeRoot(groupWithApp).futureValue
+    f.groupRepo.storeRoot(groupWithApp, Nil, Nil).futureValue
 
     When("migrating")
     f.migration.migrateApps().futureValue
@@ -99,7 +99,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
       apps = Map(appV3Scaling.id -> appV3Scaling),
       version = Timestamp(3)
     )
-    f.groupRepo.storeRoot(groupWithApp).futureValue
+    f.groupRepo.storeRoot(groupWithApp, Nil, Nil).futureValue
 
     When("migrating")
     f.migration.migrateApps().futureValue
@@ -137,7 +137,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
       apps = Map(appV3Scaling.id -> appV3Scaling),
       version = Timestamp(3)
     )
-    f.groupRepo.storeRoot(groupWithApp).futureValue
+    f.groupRepo.storeRoot(groupWithApp, Nil, Nil).futureValue
 
     When("migrating")
     f.migration.migrateApps().futureValue

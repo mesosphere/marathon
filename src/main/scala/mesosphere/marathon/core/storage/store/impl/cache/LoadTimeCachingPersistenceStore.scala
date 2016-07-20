@@ -87,13 +87,15 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     Source.fromFuture(future).mapConcat(identity)
   }
 
-  override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
+  private def deleteCurrentOrAll[Id, V](
+    k: Id,
+    delete: () => Future[Done])(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     val storageId = ir.toStorageId(k, None)
     val category = ir.category
     lockManager.executeSequentially(category.toString) {
       lockManager.executeSequentially(storageId.toString) {
         async {
-          val deleteFuture = store.deleteAll(k)
+          val deleteFuture = delete()
           val (cached, ids, _) = (await(valueCache), await(idCache), await(deleteFuture))
           cached.remove(storageId)
           val old = ids.getOrElse(category, Nil)
@@ -107,6 +109,14 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
         }
       }
     }
+  }
+
+  override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
+    deleteCurrentOrAll(k, () => store.deleteAll(k))
+  }
+
+  override def deleteCurrent[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
+    deleteCurrentOrAll(k, () => store.deleteCurrent(k))
   }
 
   override def get[Id, V](id: Id)(implicit
@@ -176,10 +186,10 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
     store.versions(id)
 
-  override def delete[Id, V](
+  override def deleteVersion[Id, V](
     k: Id,
     version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
-    store.delete(k, version)
+    store.deleteVersion(k, version)
 
   override def toString: String = s"LoadTimeCachingPersistenceStore($store)"
 }

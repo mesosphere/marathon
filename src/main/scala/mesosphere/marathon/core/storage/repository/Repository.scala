@@ -3,6 +3,7 @@ package mesosphere.marathon.core.storage.repository
 // scalastyle:off
 import java.time.OffsetDateTime
 
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryStoreSerialization, RamId }
@@ -16,41 +17,69 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
+import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 // scalastyle:on
 
-trait Repository[Id, T] {
+/**
+  * A Repository of values (T) identified uniquely by (Id)
+  */
+trait ReadOnlyRepository[Id, T] {
   def ids(): Source[Id, NotUsed]
   def all(): Source[T, NotUsed]
   def get(id: Id): Future[Option[T]]
-  def delete(id: Id): Future[Done]
-  def store(v: T): Future[Done]
 }
 
-trait VersionedRepository[Id, T] extends Repository[Id, T] {
+/**
+  * @inheritdoc
+  * Additionally allows for storage and deletion
+  */
+trait Repository[Id, T] extends ReadOnlyRepository[Id, T] {
+  def store(v: T): Future[Done]
+  def delete(id: Id): Future[Done]
+}
+
+/**
+  * @inheritdoc
+  * Additionally allows for reading versions from the repository
+  */
+trait ReadOnlyVersionedRepository[Id, T] extends ReadOnlyRepository[Id, T] {
   def versions(id: Id): Source[OffsetDateTime, NotUsed]
   def getVersion(id: Id, version: OffsetDateTime): Future[Option[T]]
+}
+
+/**
+  * @inheritdoc
+  * Allows writing versions to the repository.
+  */
+trait VersionedRepository[Id, T] extends ReadOnlyVersionedRepository[Id, T] with Repository[Id, T] {
   def storeVersion(v: T): Future[Done]
+  // Removes _only_ the current value, leaving all history in place.
+  def deleteCurrent(id: Id): Future[Done]
 }
 
 trait GroupRepository {
   def root(): Future[Group]
   def rootVersions(): Source[OffsetDateTime, NotUsed]
   def rootVersion(version: OffsetDateTime): Future[Option[Group]]
-  def storeRoot(group: Group): Future[Done]
-  def storeRootVersion(group: Group): Future[Done]
+  def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done]
 }
 
 object GroupRepository {
   def legacyRepository(
     store: EntityStore[Group],
-    maxVersions: Int)(implicit ctx: ExecutionContext, metrics: Metrics): GroupEntityRepository = {
-    new GroupEntityRepository(store, maxVersions)
+    maxVersions: Int,
+    appRepository: AppRepository)(implicit
+    ctx: ExecutionContext,
+    metrics: Metrics): GroupEntityRepository = {
+    new GroupEntityRepository(store, maxVersions, appRepository)
   }
 
   def zkRepository(
     store: PersistenceStore[ZkId, String, ZkSerialized],
-    appRepository: AppRepository, maxVersions: Int)(implicit ctx: ExecutionContext): GroupRepository = {
+    appRepository: AppRepository, maxVersions: Int)(implicit
+    ctx: ExecutionContext,
+    mat: Materializer): GroupRepository = {
     import ZkStoreSerialization._
     implicit val idResolver = groupIdResolver(maxVersions)
     new StoredGroupRepositoryImpl(store, appRepository)
@@ -59,14 +88,15 @@ object GroupRepository {
   def inMemRepository(
     store: PersistenceStore[RamId, String, Identity],
     appRepository: AppRepository,
-    maxVersions: Int)(implicit ctx: ExecutionContext): GroupRepository = {
+    maxVersions: Int)(implicit ctx: ExecutionContext, mat: Materializer): GroupRepository = {
     import InMemoryStoreSerialization._
     implicit val idResolver = groupResolver(maxVersions)
     new StoredGroupRepositoryImpl(store, appRepository)
   }
 }
 
-trait AppRepository extends VersionedRepository[PathId, AppDefinition]
+trait ReadOnlyAppRepository extends ReadOnlyVersionedRepository[PathId, AppDefinition]
+trait AppRepository extends VersionedRepository[PathId, AppDefinition] with ReadOnlyAppRepository
 
 object AppRepository {
   def legacyRepository(

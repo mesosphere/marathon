@@ -313,7 +313,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       Await.result(f.manager.update(group.id, _ => group), 3.seconds)
     }.printStackTrace()
 
-    verify(f.groupRepo, times(0)).storeRoot(any())
+    verify(f.groupRepo, times(0)).storeRoot(any(), any(), any())
   }
 
   test("Store new apps with correct version infos in groupRepo and appRepo") {
@@ -328,11 +328,11 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     val groupWithVersionInfo = Group(PathId.empty, Map(
       appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))
     when(f.appRepo.store(any())).thenReturn(Future.successful(Done))
-    when(f.groupRepo.storeRoot(any())).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRoot(any(), any(), any())).thenReturn(Future.successful(Done))
 
     Await.result(f.manager.update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).storeRoot(groupWithVersionInfo)
+    verify(f.groupRepo).storeRoot(groupWithVersionInfo, any(), any())
   }
 
   test("Expunge removed apps from appRepo") {
@@ -344,11 +344,11 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     when(f.groupRepo.root()).thenReturn(Future.successful(group))
     when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
     when(f.appRepo.delete(any())).thenReturn(Future.successful(Done))
-    when(f.groupRepo.storeRoot(any())).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRoot(any(), any(), any())).thenReturn(Future.successful(Done))
 
     Await.result(f.manager.update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).storeRoot(groupEmpty)
+    verify(f.groupRepo).storeRoot(groupEmpty, any(), any())
     verify(f.appRepo).delete(app.id)
   }
 

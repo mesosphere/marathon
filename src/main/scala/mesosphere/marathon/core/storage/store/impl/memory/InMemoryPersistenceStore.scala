@@ -41,6 +41,11 @@ class InMemoryPersistenceStore(implicit
     Source(versions.toVector)
   }
 
+  override protected def rawDeleteCurrent(k: RamId): Future[Done] = {
+    entries.remove(k)
+    Future.successful(Done)
+  }
+
   override protected def rawDeleteAll(k: RamId): Future[Done] = {
     val toRemove = entries.keySet.filter(id => k.category == id.category && k.id == id.id)
     toRemove.foreach(entries.remove)

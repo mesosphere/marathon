@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos
@@ -17,6 +18,7 @@ import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 
 import scala.async.Async.{ async, await }
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 // scalastyle:on
 
@@ -90,19 +92,22 @@ object StoredGroup {
     StoredGroup(
       id = PathId.fromSafePath(proto.getId),
       appIds = apps,
-      storedGroups = groups,
+      storedGroups = groups.toVector,
       dependencies = proto.getDependenciesList.asScala.map(PathId.fromSafePath)(collection.breakOut),
       version = OffsetDateTime.parse(proto.getVersion, DateFormat)
     )
   }
 }
 
-class StoredGroupRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S], appRepository: AppRepository)(
+class StoredGroupRepositoryImpl[K, C, S](
+    persistenceStore: PersistenceStore[K, C, S],
+    protected val appRepository: AppRepository)(
     implicit
     ir: IdResolver[PathId, StoredGroup, C, K],
     marshaller: Marshaller[StoredGroup, S],
     unmarshaller: Unmarshaller[S, StoredGroup],
-    ctx: ExecutionContext
+    val ctx: ExecutionContext,
+    val mat: Materializer
 ) extends GroupRepository {
   import StoredGroupRepositoryImpl._
 
@@ -142,16 +147,34 @@ class StoredGroupRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C
     }
   }
 
-  override def storeRoot(group: Group): Future[Done] = async {
-    val storeApps = group.apps.values.map(appRepository.store)
-    await(Future.sequence(storeApps))
-    await(storedRepo.store(StoredGroup(group)))
-  }
-
-  override def storeRootVersion(group: Group): Future[Done] = async {
-    val storeApps = group.apps.values.map(appRepository.storeVersion)
-    await(Future.sequence(storeApps))
-    await(storedRepo.storeVersion(StoredGroup(group)))
+  /**
+    * @inheritdoc
+    * @todo We need to eventually garbage collect as we will accumulate apps/appVersions that neither
+    * the root nor any historical group references.
+    *
+    * When should we run the garbage collection? We should probably not block root updates, but instead have
+    * a kind of "prepareGC"/"commitGC" phase so that a root update will invalidate the GC and start it over.
+    * If in the process of a prepare, storeRoot is called, we should cancel the current prepareGC and start
+    * it again.
+    *
+    * This may be as simple as "get all of the app ids" and compare them to the appIds that are in a group.
+    * If no group has the appId, delete it. We probably don't actually need to delete app versions that are no longer
+    * in use as there is some group still referring to some version of the app, so eventually it will be deleted once
+    * it is no longer in actual usage.
+    *
+    * The garbage collection does not need to run as part of storeRoot (which would likely slow it down by quite
+    * a bit), instead, we should run it out of band (triggered by a storeRoot) and use the prepare/commit/cancellable
+    * described above.
+    */
+  override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] = {
+    async {
+      val storeAppFutures = updatedApps.map(appRepository.store)
+      val deleteAppFutures = deletedApps.map(appRepository.deleteCurrent)
+      val storedGroup = StoredGroup(group)
+      await(Future.sequence(storeAppFutures))
+      await(Future.sequence(deleteAppFutures))
+      await(storedRepo.store(storedGroup))
+    }
   }
 }
 

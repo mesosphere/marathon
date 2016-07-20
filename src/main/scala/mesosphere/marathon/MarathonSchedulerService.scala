@@ -13,7 +13,7 @@ import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
-import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
@@ -58,7 +58,7 @@ class MarathonSchedulerService @Inject() (
   frameworkIdUtil: FrameworkIdUtil,
   electionService: ElectionService,
   prePostDriverCallbacks: Seq[PrePostDriverCallback],
-  appRepository: AppRepository,
+  appRepository: ReadOnlyAppRepository,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
   migration: Migration,

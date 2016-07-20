@@ -39,8 +39,11 @@ trait TimedPersistenceStore[K, Category, Serialized] extends StateMetrics {
     m: Marshaller[V, Serialized]): Future[Done] =
     timedWrite(self.store(id, v, version))
 
-  override def delete[Id, V](
+  override def deleteCurrent[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
+    timedWrite(self.deleteCurrent(k))
+
+  override def deleteVersion[Id, V](
     k: Id,
     version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
-    timedWrite(self.delete(k, version))
+    timedWrite(self.deleteVersion(k, version))
 }

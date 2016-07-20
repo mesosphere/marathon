@@ -17,13 +17,14 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
   import mesosphere.FutureTestSupport._
 
   class Fixture {
-    lazy val metrics = new Metrics(new MetricRegistry)
+    implicit lazy val metrics = new Metrics(new MetricRegistry)
     lazy val store = new InMemoryStore()
 
-    lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
-    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = 0)(metrics = metrics)
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
     lazy val appRepo = new AppEntityRepository(appStore, maxVersions = 0)(ExecutionContext.global, metrics)
+
+    lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
+    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = 0, appRepo)
 
     lazy val migration = new MigrationTo0_16(groupRepository = groupRepo, appRepository = appRepo)
   }
@@ -84,7 +85,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.store(appV2).futureValue
 
     val groupWithApp = emptyGroup.copy(apps = Map(appV2.id -> appV2), version = Timestamp(2))
-    f.groupRepo.storeRoot(groupWithApp).futureValue
+    f.groupRepo.storeRoot(groupWithApp, Nil, Nil).futureValue
 
     When("migrating")
     f.migration.migrate().futureValue

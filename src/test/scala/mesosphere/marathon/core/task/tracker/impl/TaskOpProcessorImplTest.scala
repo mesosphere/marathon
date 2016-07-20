@@ -9,7 +9,7 @@ import com.google.inject.Provider
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.storage.repository.{ AppRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, ReadOnlyAppRepository, TaskRepository }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, MarathonTaskStatusTestHelper, TaskStatusEmitter }
 import mesosphere.marathon.core.task.tracker.TaskUpdater
@@ -417,7 +417,7 @@ class TaskOpProcessorImplTest
       override def get(): ActorRef = schedulerActor.ref
     }
     lazy val appRepository: AppRepository = mock[AppRepository]
-    lazy val appRepositoryProvider: Provider[AppRepository] = new Provider[AppRepository] {
+    lazy val appRepositoryProvider: Provider[ReadOnlyAppRepository] = new Provider[ReadOnlyAppRepository] {
       override def get(): AppRepository = appRepository
     }
     lazy val launchQueue: LaunchQueue = mock[LaunchQueue]

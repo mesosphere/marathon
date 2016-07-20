@@ -9,7 +9,7 @@ import com.typesafe.config.Config
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -22,8 +22,7 @@ import scala.concurrent.ExecutionContext
   * Provides the repositories for all persistable entities.
   */
 trait StorageModule {
-  // Should generally only be used by GroupManager/GroupRepository (at least store)
-  def appRepository: AppRepository
+  def appRepository: ReadOnlyAppRepository
   def taskRepository: TaskRepository
   def deploymentRepository: DeploymentRepository
   def taskFailureRepository: TaskFailureRepository
@@ -66,7 +65,7 @@ object StorageModule {
         val groupRepository = GroupRepository.legacyRepository(l.entityStore(
           "group:",
           () => Group.empty
-        ), l.maxVersions)
+        ), l.maxVersions, appRepository)
 
         StorageModuleImpl(appRepository, taskRepository, deploymentRepository, taskFailureRepository, groupRepository)
       case zk: CuratorZk =>

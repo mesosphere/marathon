@@ -5,6 +5,7 @@ import java.time.OffsetDateTime
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.StoreCommandFailedException
@@ -104,7 +105,11 @@ class ZkPersistenceStore(
       async {
         await(client.data(id.path).asTry) match {
           case Success(GetData(_, _, bytes)) =>
-            Some(ZkSerialized(bytes))
+            if (bytes.nonEmpty) {
+              Some(ZkSerialized(bytes))
+            } else {
+              None
+            }
           case Failure(_: NoNodeException) =>
             None
           case Failure(e: KeeperException) =>
@@ -127,6 +132,20 @@ class ZkPersistenceStore(
         }
       }
     }
+
+  override protected def rawDeleteCurrent(id: ZkId): Future[Done] = {
+    retry(s"ZkPersistenceStore::deleteCurrent($id)") {
+      async {
+        await(client.setData(id.path, data = ByteString()).asTry) match {
+          case Success(_) | Failure(_: NoNodeException) => Done
+          case Failure(e: KeeperException) =>
+            throw new StoreCommandFailedException(s"Unable to delete current $id", e)
+          case Failure(e) =>
+            throw e
+        }
+      }
+    }
+  }
 
   override protected def rawStore[V](id: ZkId, v: ZkSerialized): Future[Done] = {
     retry(s"ZkPersistenceStore::store($id, $v)") {

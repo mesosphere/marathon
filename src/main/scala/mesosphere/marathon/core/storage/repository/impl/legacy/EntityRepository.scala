@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
@@ -25,7 +25,8 @@ private[legacy] class LegacyEntityRepository[Id, T <: MarathonState[_, T]](
     stringToId: (String) => Id,
     valueId: (T) => Id)(implicit
   ctx: ExecutionContext,
-    val metrics: Metrics) extends StateMetrics with VersionedEntry {
+    val metrics: Metrics) extends StateMetrics with Repository[Id, T] {
+  import VersionedEntry.noVersionKey
 
   def ids(): Source[Id, NotUsed] = {
     val idFuture = store.names().map(_.collect {
@@ -67,7 +68,9 @@ private[legacy] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
   valueId: (T) => Id)(implicit
   ctx: ExecutionContext,
   metrics: Metrics)
-    extends LegacyEntityRepository[Id, T](store, idToString, stringToId, valueId) {
+    extends LegacyEntityRepository[Id, T](store, idToString, stringToId, valueId) with VersionedRepository[Id, T] {
+
+  import VersionedEntry._
 
   private def listVersions(id: String): Future[Seq[Timestamp]] = timedRead {
     val prefix = versionKeyPrefix(id)
@@ -94,6 +97,17 @@ private[legacy] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
         }
         val currentDeleteResult = store.expunge(idString)
         Future.sequence(currentDeleteResult +: versionsDeleteResult.toVector).map(_ => Done)
+      }
+    }
+  }
+
+  override def deleteCurrent(id: Id): Future[Done] = {
+    timedWrite {
+      val idString = idToString(id)
+      if (noVersionKey(idString)) {
+        store.expunge(idString).map(_ => Done)
+      } else {
+        Future.failed(new IllegalArgumentException(s"$idString is a versioned id."))
       }
     }
   }

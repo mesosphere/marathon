@@ -51,13 +51,15 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
     Source.fromFuture(idsFuture).mapConcat(identity)
   }
 
-  override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
+  private def deleteCurrentOrAll[Id, V](
+    k: Id,
+    delete: () => Future[Done])(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
     val category = ir.category
     val storageId = ir.toStorageId(k, None)
     lockManager.executeSequentially(ir.category.toString) {
       lockManager.executeSequentially(storageId.toString) {
         async {
-          await(store.deleteAll(k))
+          await(delete())
           valueCache.remove(storageId)
           val old = idCache.getOrElse(category, Nil)
           val children = old.filter(_ != storageId)
@@ -70,6 +72,13 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
         }
       }
     }
+  }
+
+  override def deleteCurrent[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
+    deleteCurrentOrAll(k, () => store.deleteCurrent(k))
+  }
+  override def deleteAll[Id, V](k: Id)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] = {
+    deleteCurrentOrAll(k, () => store.deleteAll(k))
   }
 
   override def get[Id, V](id: Id)(implicit
@@ -135,10 +144,10 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
   override def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed] =
     store.versions(id)
 
-  override def delete[Id, V](
+  override def deleteVersion[Id, V](
     k: Id,
     version: OffsetDateTime)(implicit ir: IdResolver[Id, V, Category, K]): Future[Done] =
-    store.delete(k, version)
+    store.deleteVersion(k, version)
 
   override def toString: String = s"LazyCachingPersistenceStore($store)"
 }

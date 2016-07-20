@@ -8,7 +8,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Provider
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
@@ -29,7 +29,7 @@ class MarathonHealthCheckManager @Inject() (
     driverHolderProvider: Provider[MarathonSchedulerDriverHolder],
     @Named(EventModule.busName) eventBus: EventStream,
     taskTrackerProvider: Provider[TaskTracker],
-    appRepository: Provider[AppRepository],
+    appRepository: Provider[ReadOnlyAppRepository],
     zkConf: ZookeeperConf) extends HealthCheckManager {
 
   private[this] lazy val driverHolder = driverHolderProvider.get()

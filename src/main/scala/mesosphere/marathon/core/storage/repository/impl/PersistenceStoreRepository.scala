@@ -47,4 +47,7 @@ class PersistenceStoreVersionedRepository[Id, V, K, C, S](
 
   override def storeVersion(v: V): Future[Done] =
     persistenceStore.store(extractId(v), v, extractVersion(v))
+
+  override def deleteCurrent(id: Id): Future[Done] =
+    persistenceStore.deleteCurrent(id)
 }
