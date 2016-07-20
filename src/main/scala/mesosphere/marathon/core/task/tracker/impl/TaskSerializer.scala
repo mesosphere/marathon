@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{LocalVolumeId, Reservation}
+import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.{Protos, SerializationFailedException}
-import org.apache.mesos.{Protos => MesosProtos}
+import mesosphere.marathon.{ Protos, SerializationFailedException }
+import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
   * Converts between [[Task]] objects and their serialized representation MarathonTask.
@@ -123,7 +123,10 @@ object TaskSerializer {
       builder.addAllPorts(hostPorts.map(Integer.valueOf).asJava)
     }
     def setMarathonTaskStatus(marathonTaskStatus: MarathonTaskStatus): Unit = {
-      builder.setMarathonTaskStatus(Protos.MarathonTask.MarathonTaskStatus.valueOf(marathonTaskStatus.toString))
+      //scalastyle:off null
+      if (marathonTaskStatus != null) {
+        builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus))
+      }
     }
 
     setId(task.taskId)
@@ -149,16 +152,18 @@ object TaskSerializer {
 object MarathonTaskStatusSerializer {
   def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): MarathonTaskStatus = {
     val result = MarathonTaskStatus.all.collectFirst {
-      case status: MarathonTaskStatus if status.toString == proto.toString => status
+      case status: MarathonTaskStatus if status.toString == "" + proto => status
     }
-    result.getOrElse(throw new SerializationFailedException(s"Unable to parse $proto"))
+    // TODO ju<>me discuss
+    result.orNull
   }
 
   def toProto(marathonTaskStatus: MarathonTaskStatus): Protos.MarathonTask.MarathonTaskStatus = {
     val result = Protos.MarathonTask.MarathonTaskStatus.values().collectFirst {
-      case status: Protos.MarathonTask.MarathonTaskStatus if status.toString == marathonTaskStatus.toString => status
+      case status: Protos.MarathonTask.MarathonTaskStatus if status.toString == "" + marathonTaskStatus => status
     }
-    result.getOrElse(throw new SerializationFailedException(s"Unable to serialize $marathonTaskStatus"))
+    // TODO ju<>me discuss
+    result.orNull
   }
 }
 

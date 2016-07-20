@@ -13049,11 +13049,11 @@ public final class Protos {
     mesosphere.marathon.Protos.MarathonTask.ReservationOrBuilder getReservationOrBuilder();
 
     /**
-     * <code>required .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
      */
     boolean hasMarathonTaskStatus();
     /**
-     * <code>required .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
      */
     mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus getMarathonTaskStatus();
   }
@@ -15966,13 +15966,13 @@ public final class Protos {
     public static final int MARATHONTASKSTATUS_FIELD_NUMBER = 13;
     private mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus marathonTaskStatus_;
     /**
-     * <code>required .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
      */
     public boolean hasMarathonTaskStatus() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
     /**
-     * <code>required .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
+     * <code>optional .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
      */
     public mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus getMarathonTaskStatus() {
       return marathonTaskStatus_;
@@ -16000,10 +16000,6 @@ public final class Protos {
       if (isInitialized == 0) return false;
 
       if (!hasId()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasMarathonTaskStatus()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -16579,10 +16575,6 @@ public final class Protos {
 
       public final boolean isInitialized() {
         if (!hasId()) {
-          
-          return false;
-        }
-        if (!hasMarathonTaskStatus()) {
           
           return false;
         }
@@ -18204,19 +18196,19 @@ public final class Protos {
 
       private mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus marathonTaskStatus_ = mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved;
       /**
-       * <code>required .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
+       * <code>optional .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
        */
       public boolean hasMarathonTaskStatus() {
         return ((bitField0_ & 0x00001000) == 0x00001000);
       }
       /**
-       * <code>required .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
+       * <code>optional .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
        */
       public mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus getMarathonTaskStatus() {
         return marathonTaskStatus_;
       }
       /**
-       * <code>required .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
+       * <code>optional .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
        */
       public Builder setMarathonTaskStatus(mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus value) {
         if (value == null) {
@@ -18228,7 +18220,7 @@ public final class Protos {
         return this;
       }
       /**
-       * <code>required .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
+       * <code>optional .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
        */
       public Builder clearMarathonTaskStatus() {
         bitField0_ = (bitField0_ & ~0x00001000);
@@ -36236,7 +36228,7 @@ public final class Protos {
       "orks\030\013 \003(\0132\022.mesos.NetworkInfo\022B\n\013reserv" +
       "ation\030\014 \001(\0132-.mesosphere.marathon.Marath" +
       "onTask.Reservation\022P\n\022marathonTaskStatus",
-      "\030\r \002(\01624.mesosphere.marathon.MarathonTas" +
+      "\030\r \001(\01624.mesosphere.marathon.MarathonTas" +
       "k.MarathonTaskStatus\032\231\004\n\013Reservation\022\030\n\020" +
       "local_volume_ids\030\001 \003(\t\022B\n\005state\030\002 \002(\01323." +
       "mesosphere.marathon.MarathonTask.Reserva" +
