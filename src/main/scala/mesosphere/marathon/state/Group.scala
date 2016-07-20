@@ -148,7 +148,7 @@ case class Group(
     result
   }
 
-  def dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
+  lazy val dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
     require(id.isRoot)
     val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
     for (app <- transitiveApps)
