@@ -135,7 +135,8 @@ object PersistentVolume {
   implicit val validPersistentVolume = validator[PersistentVolume] { vol =>
     vol.containerPath is notEmpty
     vol.containerPath is notOneOf(DotPaths: _*)
-    vol.containerPath should matchRegexFully(NoSlashesPattern)
+    vol.containerPath should
+      new MatchesRegexWithMessage(NoSlashesPattern.pattern, false, "containerPath must not contain \"/\"")
     vol.persistent is valid
     vol.mode is equalTo(Mode.RW)
   }

@@ -1,8 +1,10 @@
 package mesosphere.marathon.api.v2
 
 import java.net._
+import java.util.regex.Pattern
 
 import com.wix.accord._
+import com.wix.accord.ViolationBuilder._
 import mesosphere.marathon.{ AllConf, ValidationFailedException }
 import mesosphere.marathon.state.FetchUri
 import org.slf4j.LoggerFactory
@@ -280,4 +282,14 @@ object Validation {
       validator(t)
     }
   }
+
+  /**
+    * A validator that succeeds only if the provided string matches the specified pattern.
+    *
+    * Initially took from com.wix.accord.combinators.StringCombinators to enhance validationMessage feature
+    */
+  class MatchesRegexWithMessage(pattern: Pattern, partialMatchAllowed: Boolean = true, validationMessage: String)
+    extends NullSafeValidator[String](
+      v => if (partialMatchAllowed) pattern.matcher(v).find() else pattern.matcher(v).matches(),
+      v => v -> validationMessage)
 }

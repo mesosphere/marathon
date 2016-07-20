@@ -2,9 +2,9 @@ package mesosphere.mesos
 
 import com.wix.accord._
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.{PersistentVolume, PersistentVolumeInfo, Volume}
+import mesosphere.marathon.state.{ PersistentVolume, PersistentVolumeInfo, Volume }
 import mesosphere.marathon.test.Mockito
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.{ GivenWhenThen, Matchers }
 import org.apache.mesos
 
 class PersistentVolumeValidationTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
@@ -32,7 +32,7 @@ class PersistentVolumeValidationTest extends MarathonSpec with GivenWhenThen wit
     validation.isSuccess should be (false)
     validation match {
       case Failure(violations) =>
-        violations should contain (RuleViolation("/path", "must fully match regular expression '^[^/]*$'", Some("containerPath")))
+        violations should contain (RuleViolation("/path", "containerPath must not contain \"/\"", Some("containerPath")))
       case Success =>
         fail("validation should fail!")
     }
