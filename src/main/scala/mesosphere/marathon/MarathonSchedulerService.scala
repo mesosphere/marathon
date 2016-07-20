@@ -1,25 +1,26 @@
 package mesosphere.marathon
 
 import java.util.concurrent.CountDownLatch
-import java.util.{ Timer, TimerTask }
-import javax.inject.{ Inject, Named }
+import java.util.{Timer, TimerTask}
+import javax.inject.{Inject, Named}
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
+import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.migration.Migration
 import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Migration, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
+import mesosphere.marathon.upgrade.DeploymentManager.{CancelDeployment, DeploymentStepInfo}
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.PromiseActor
 import mesosphere.util.state.FrameworkIdUtil
@@ -29,7 +30,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future, TimeoutException }
+import scala.concurrent.{Await, Future, TimeoutException}
 import scala.util.Failure
 
 /**

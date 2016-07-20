@@ -1,72 +1,74 @@
-package mesosphere.marathon.state
+package mesosphere.marathon.core.storage.migration
 
 // scalastyle:off
-import java.io.{ ByteArrayInputStream, ObjectInputStream }
-import javax.inject.Inject
+import java.io.{ByteArrayInputStream, ObjectInputStream}
 
 import akka.stream.Materializer
-import mesosphere.marathon.Protos.{ MarathonTask, StorageVersion }
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ PersistentStore, PersistentStoreManagement }
-import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository }
+import mesosphere.marathon.Protos.{MarathonTask, StorageVersion}
+import mesosphere.marathon.core.storage.LegacyStorageConfig
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{PersistentStore, PersistentStoreManagement}
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository}
+import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository, TaskRepository}
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.StorageVersions._
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
 import mesosphere.marathon.stream.Sink
-import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
+import mesosphere.marathon.{BuildInfo, MigrationFailedException}
 import mesosphere.util.Logging
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 // scalastyle:on
 
-// TODO: Need the entity repositories to migrate into the new repositories...
-class Migration @Inject() (
-    store: PersistentStore,
-    appRepo: AppEntityRepository,
-    groupRepo: GroupEntityRepository,
-    taskRepo: TaskEntityRepository,
-    deploymentRepo: DeploymentEntityRepository,
-    config: MarathonConf,
-    metrics: Metrics)(implicit mat: Materializer) extends Logging {
+class Migration(
+    config: Option[LegacyStorageConfig],
+    persistentStore: Option[PersistentStore],
+    appRepository: AppRepository,
+    groupRepository: GroupRepository,
+    deploymentRepository: DeploymentRepository,
+    taskRepo: TaskRepository,
+    taskFailureRepo: TaskFailureRepository)(implicit mat: Materializer, metrics: Metrics) extends Logging {
 
   //scalastyle:off magic.number
 
   type MigrationAction = (StorageVersion, () => Future[Any])
 
-  private[state] val minSupportedStorageVersion = StorageVersions(0, 3, 0)
+  private[migration] val minSupportedStorageVersion = StorageVersions(0, 3, 0)
 
   /**
     * All the migrations, that have to be applied.
     * They get applied after the master has been elected.
     */
-  def migrations: List[MigrationAction] = List(
-    StorageVersions(0, 7, 0) -> { () =>
-      Future.failed(new IllegalStateException("migration from 0.7.x not supported anymore"))
-    },
-    StorageVersions(0, 11, 0) -> { () =>
-      new MigrationTo0_11(groupRepo, appRepo).migrateApps().recover {
-        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.11", e)
+  def migrations: List[MigrationAction] = {
+    List(
+      StorageVersions(0, 7, 0) -> { () =>
+        Future.failed(new IllegalStateException("migration from 0.7.x not supported anymore"))
+      },
+      StorageVersions(0, 11, 0) -> { () =>
+        new MigrationTo0_11(groupRepo, appRepo).migrateApps().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.11", e)
+        }
+      },
+      StorageVersions(0, 13, 0) -> { () =>
+        new MigrationTo0_13(taskRepo, store).migrate().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.13", e)
+        }
+      },
+      StorageVersions(0, 16, 0) -> { () =>
+        new MigrationTo0_16(groupRepo, appRepo).migrate().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.16", e)
+        }
+      },
+      StorageVersions(1, 2, 0) -> { () =>
+        new MigrationTo1_2(deploymentRepo).migrate().recover {
+          case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.2", e)
+        }
       }
-    },
-    StorageVersions(0, 13, 0) -> { () =>
-      new MigrationTo0_13(taskRepo, store).migrate().recover {
-        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.13", e)
-      }
-    },
-    StorageVersions(0, 16, 0) -> { () =>
-      new MigrationTo0_16(groupRepo, appRepo).migrate().recover {
-        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 0.16", e)
-      }
-    },
-    StorageVersions(1, 2, 0) -> { () =>
-      new MigrationTo1_2(deploymentRepo).migrate().recover {
-        case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.2", e)
-      }
-    }
-  )
+    )
+  }
 
   def applyMigrationSteps(from: StorageVersion): Future[List[StorageVersion]] = {
     if (from < minSupportedStorageVersion && from.nonEmpty) {

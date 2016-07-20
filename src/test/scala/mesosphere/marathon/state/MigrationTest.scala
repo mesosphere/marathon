@@ -7,15 +7,16 @@ import akka.Done
 import akka.stream.scaladsl.Source
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryEntity, MarathonStore, PersistentEntity, PersistentStore, PersistentStoreManagement }
-import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository }
+import mesosphere.marathon.core.storage.migration.{Migration, StorageVersions}
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryEntity, MarathonStore, PersistentEntity, PersistentStore, PersistentStoreManagement}
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.StorageVersions._
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.core.storage.migration.StorageVersions._
+import mesosphere.marathon.test.{MarathonActorSupport, Mockito}
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ MarathonConf, MarathonSpec }
+import mesosphere.marathon.{MarathonConf, MarathonSpec}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{GivenWhenThen, Matchers}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future

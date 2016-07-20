@@ -87,6 +87,8 @@ case class TwitterZk(
 }
 
 object TwitterZk {
+  val StoreName = "legacy_zk"
+
   def apply(cache: Boolean, config: ZookeeperConf): TwitterZk =
     TwitterZk(
       maxVersions = config.zooKeeperMaxVersions(),
@@ -136,6 +138,8 @@ case class MesosZk(
 }
 
 object MesosZk {
+  val StoreName = "mesos_zk"
+
   def apply(cache: Boolean, config: ZookeeperConf): MesosZk =
     MesosZk(
       maxVersions = config.zooKeeperMaxVersions(),
@@ -231,6 +235,7 @@ case class CuratorZk(
 }
 
 object CuratorZk {
+  val StoreName = "zk"
   def apply(cache: Boolean, conf: ZookeeperConf): CuratorZk =
     CuratorZk(
       cacheType = if (cache) LazyCaching else NoCaching,
@@ -275,6 +280,8 @@ case class InMem(maxVersions: Int) extends PersistenceStorageConfig[RamId, Strin
 }
 
 object InMem {
+  val StoreName = "mem"
+
   def apply(conf: ZookeeperConf): InMem =
     InMem(conf.zooKeeperMaxVersions())
 
@@ -286,19 +293,19 @@ object StorageConfig {
   val DefaultMaxVersions = 25
   def apply(conf: MarathonConf): StorageConfig = {
     conf.internalStoreBackend() match {
-      case "zk" => TwitterZk(conf.storeCache(), conf)
-      case "mesos_zk" => MesosZk(conf.storeCache(), conf)
-      case "mem" => InMem(conf)
-      case "zk2" => CuratorZk(conf.storeCache(), conf)
+      case TwitterZk.StoreName => TwitterZk(conf.storeCache(), conf)
+      case MesosZk.StoreName => MesosZk(conf.storeCache(), conf)
+      case InMem.StoreName => InMem(conf)
+      case CuratorZk.StoreName => CuratorZk(conf.storeCache(), conf)
     }
   }
 
   def apply(conf: Config): StorageConfig = {
     conf.string("storage-type", "zk") match {
-      case "zk" => TwitterZk(conf)
-      case "mesos_zk" => MesosZk(conf)
-      case "mem" => InMem(conf)
-      case "zk2" => CuratorZk(conf)
+      case TwitterZk.StoreName => TwitterZk(conf)
+      case MesosZk.StoreName => MesosZk(conf)
+      case InMem.StoreName => InMem(conf)
+      case CuratorZk.StoreName => CuratorZk(conf)
     }
   }
 }

@@ -1,6 +1,6 @@
 package mesosphere.marathon
 
-import java.util.{ Timer, TimerTask }
+import java.util.{Timer, TimerTask}
 
 import akka.actor.ActorRef
 import akka.testkit.TestProbe
@@ -9,22 +9,22 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.migration.Migration
 import mesosphere.marathon.core.storage.repository.AppRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryStore, MarathonStore}
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.Migration
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
-import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
-import org.mockito.Matchers.{ any, eq => mockEq }
+import mesosphere.util.state.{FrameworkId, FrameworkIdUtil}
+import org.apache.mesos.{SchedulerDriver, Protos => mesos}
+import org.mockito.Matchers.{any, eq => mockEq}
 import org.mockito.Mockito
-import org.mockito.Mockito.{ times, verify, when }
+import org.mockito.Mockito.{times, verify, when}
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.rogach.scallop.ScallopOption
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{BeforeAndAfterAll, Matchers}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
