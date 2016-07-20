@@ -7,7 +7,7 @@ import akka.event.EventStream
 import com.google.inject.Singleton
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
+import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
@@ -33,7 +33,7 @@ class GroupManager @Inject() (
     appRepo: AppRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    @Named(EventModule.busName) eventBus: EventStream) extends PathFun {
+    eventBus: EventStream) extends PathFun {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
   private[this] val zkName = groupRepo.zkRootName

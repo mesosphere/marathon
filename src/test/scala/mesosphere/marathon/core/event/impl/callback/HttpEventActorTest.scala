@@ -1,4 +1,4 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.callback
 
 import akka.actor.{ Actor, ActorSystem, Props }
 import akka.testkit.{ EventFilter, TestActorRef }
@@ -6,10 +6,10 @@ import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.base.{ ConstantClock, Clock }
-import mesosphere.marathon.event.EventStreamAttached
-import mesosphere.marathon.event.http.HttpEventActor.EventNotificationLimit
-import mesosphere.marathon.event.http.SubscribersKeeperActor.GetSubscribers
+import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.event.impl.callback.HttpEventActor.EventNotificationLimit
+import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor.GetSubscribers
+import mesosphere.marathon.core.event.{ EventConf, EventStreamAttached, EventSubscribers }
 import mesosphere.marathon.integration.setup.WaitTestSupport.waitUntil
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.Mockito
@@ -95,7 +95,7 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
   }
 
   var clock: ConstantClock = _
-  var conf: HttpEventConfiguration = _
+  var conf: EventConf = _
   var response: HttpResponse = _
   var statusCode: StatusCode = _
   var responseAction = () => response
@@ -109,7 +109,7 @@ class HttpEventActorTest extends MarathonSpec with Mockito with GivenWhenThen wi
     )
     clock = ConstantClock()
     val duration: FiniteDuration = 10.seconds
-    conf = mock[HttpEventConfiguration]
+    conf = mock[EventConf]
     conf.slowConsumerDuration returns duration
     conf.eventRequestTimeout returns Timeout(duration)
     statusCode = mock[StatusCode]

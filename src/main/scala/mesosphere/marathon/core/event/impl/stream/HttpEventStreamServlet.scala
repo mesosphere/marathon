@@ -1,15 +1,14 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.stream
 
 import java.util.UUID
-import javax.inject.{ Inject, Named }
 import javax.servlet.http.{ Cookie, HttpServletRequest, HttpServletResponse }
 
 import akka.actor.ActorRef
 import mesosphere.marathon.api.RequestFacade
-import mesosphere.marathon.event.http.HttpEventStreamActor._
+import mesosphere.marathon.core.event.EventConf
+import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpResponse
-import mesosphere.marathon.{ MarathonConf, ModuleNames }
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.eclipse.jetty.servlets.{ EventSource, EventSourceServlet }
 
@@ -37,9 +36,9 @@ class HttpEventSSEHandle(request: HttpServletRequest, emitter: Emitter) extends 
 /**
   * Handle a server side event client stream by delegating events to the stream actor.
   */
-class HttpEventStreamServlet @Inject() (
-  @Named(ModuleNames.HTTP_EVENT_STREAM) streamActor: ActorRef,
-  conf: MarathonConf,
+class HttpEventStreamServlet(
+  streamActor: ActorRef,
+  conf: EventConf,
   val authenticator: Authenticator,
   val authorizer: Authorizer)
     extends EventSourceServlet {

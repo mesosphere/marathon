@@ -1,13 +1,12 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.stream
 
-import akka.actor.{ Terminated, ActorSystem, Props }
+import akka.actor.{ Terminated, Props }
 import akka.event.EventStream
 import akka.testkit._
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.event.LocalLeadershipEvent
-import mesosphere.marathon.event.http.HttpEventStreamActor.{ HttpEventStreamConnectionClosed, HttpEventStreamConnectionOpen }
+import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
 import org.mockito.Mockito.{ when => call, verify, verifyNoMoreInteractions }

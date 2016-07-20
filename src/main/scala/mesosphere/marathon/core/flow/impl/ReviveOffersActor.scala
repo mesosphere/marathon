@@ -6,7 +6,7 @@ import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.flow.impl.ReviveOffersActor.OffersWanted
-import mesosphere.marathon.event.{ SchedulerReregisteredEvent, SchedulerRegisteredEvent }
+import mesosphere.marathon.core.event.{ SchedulerReregisteredEvent, SchedulerRegisteredEvent }
 import mesosphere.marathon.state.Timestamp
 import rx.lang.scala.{ Observable, Subscription }
 import scala.annotation.tailrec

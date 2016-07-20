@@ -1,6 +1,6 @@
 package mesosphere.marathon.health
 
-import javax.inject.{ Inject, Named }
+import javax.inject.Inject
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
@@ -10,7 +10,7 @@ import com.google.inject.Provider
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ AddHealthCheck, EventModule, RemoveHealthCheck }
+import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, ZookeeperConf }
@@ -26,7 +26,7 @@ import scala.concurrent.{ Await, Future }
 class MarathonHealthCheckManager @Inject() (
     system: ActorSystem,
     driverHolderProvider: Provider[MarathonSchedulerDriverHolder],
-    @Named(EventModule.busName) eventBus: EventStream,
+    eventBus: EventStream,
     taskTrackerProvider: Provider[TaskTracker],
     appRepository: AppRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
