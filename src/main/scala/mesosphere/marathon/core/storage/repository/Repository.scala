@@ -2,23 +2,26 @@ package mesosphere.marathon.core.storage.repository
 
 // scalastyle:off
 import java.time.OffsetDateTime
+import java.util.UUID
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
-import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryStoreSerialization, RamId }
-import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized, ZkStoreSerialization }
+import akka.{Done, NotUsed}
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryStoreSerialization, RamId}
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized, ZkStoreSerialization}
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
-import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
-import mesosphere.marathon.core.storage.repository.impl.{ AppRepositoryImpl, DeploymentRepositoryImpl, StoredGroupRepositoryImpl, TaskFailureRepositoryImpl, TaskRepositoryImpl }
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository}
+import mesosphere.marathon.core.storage.repository.impl.{AppRepositoryImpl, DeploymentRepositoryImpl, StoredGroupRepositoryImpl, TaskFailureRepositoryImpl, TaskRepositoryImpl}
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, PathId, TaskFailure }
+import mesosphere.marathon.state.{AppDefinition, Group, MarathonTaskState, PathId, TaskFailure}
 import mesosphere.marathon.upgrade.DeploymentPlan
+import org.apache.mesos.Protos.{TaskID, TaskState}
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 // scalastyle:on
 
 /**
@@ -67,12 +70,13 @@ trait GroupRepository {
 
 object GroupRepository {
   def legacyRepository(
-    store: EntityStore[Group],
+    store: (String, () => Group) => EntityStore[Group],
     maxVersions: Int,
     appRepository: AppRepository)(implicit
     ctx: ExecutionContext,
     metrics: Metrics): GroupEntityRepository = {
-    new GroupEntityRepository(store, maxVersions, appRepository)
+    val entityStore = store("group:", () => Group.empty)
+    new GroupEntityRepository(entityStore, maxVersions, appRepository)
   }
 
   def zkRepository(
@@ -100,9 +104,10 @@ trait AppRepository extends VersionedRepository[PathId, AppDefinition] with Read
 
 object AppRepository {
   def legacyRepository(
-    store: EntityStore[AppDefinition],
+    store: (String, () => AppDefinition) => EntityStore[AppDefinition],
     maxVersions: Int)(implicit ctx: ExecutionContext, metrics: Metrics): AppEntityRepository = {
-    new AppEntityRepository(store, maxVersions)
+    val entityStore = store("app:", () => AppDefinition.apply())
+    new AppEntityRepository(entityStore, maxVersions)
   }
 
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized], maxVersions: Int): AppRepository = {
@@ -122,10 +127,11 @@ object AppRepository {
 trait DeploymentRepository extends Repository[String, DeploymentPlan]
 
 object DeploymentRepository {
-  def legacyRepository(store: EntityStore[DeploymentPlan])(implicit
+  def legacyRepository(store: (String, () => DeploymentPlan) => EntityStore[DeploymentPlan])(implicit
     ctx: ExecutionContext,
     metrics: Metrics): DeploymentEntityRepository = {
-    new DeploymentEntityRepository(store)
+    val entityStore = store("deployment:", () => DeploymentPlan.empty)
+    new DeploymentEntityRepository(entityStore)
   }
 
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): DeploymentRepository = {
@@ -147,10 +153,12 @@ trait TaskRepository extends Repository[Task.Id, Task] {
 
 object TaskRepository {
   def legacyRepository(
-    store: EntityStore[MarathonTaskState])(implicit
+    store: (String, () => MarathonTaskState) => EntityStore[MarathonTaskState])(implicit
     ctx: ExecutionContext,
     metrics: Metrics): TaskEntityRepository = {
-    new TaskEntityRepository(store)
+    val entityStore = store(TaskEntityRepository.storePrefix,
+      () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()))
+    new TaskEntityRepository(entityStore)
   }
 
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): TaskRepository = {
@@ -168,9 +176,15 @@ trait TaskFailureRepository extends VersionedRepository[PathId, TaskFailure]
 
 object TaskFailureRepository {
   def legacyRepository(
-    entityStore: EntityStore[TaskFailure],
-    maxVersions: Int)(implicit ctx: ExecutionContext, metrics: Metrics): TaskFailureEntityRepository = {
-    new TaskFailureEntityRepository(entityStore, maxVersions)
+    store: (String, () => TaskFailure) => EntityStore[TaskFailure])(implicit
+                                                                    ctx: ExecutionContext,
+                                                                    metrics: Metrics): TaskFailureEntityRepository = {
+    val entityStore = store("taskFailure:", () => TaskFailure(
+      PathId.empty,
+      TaskID.newBuilder().setValue("").build,
+      TaskState.TASK_STAGING
+    ))
+    new TaskFailureEntityRepository(entityStore, 1)
   }
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): TaskFailureRepository = {
     import ZkStoreSerialization._

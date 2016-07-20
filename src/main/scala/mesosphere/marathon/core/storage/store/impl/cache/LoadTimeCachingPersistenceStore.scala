@@ -4,20 +4,21 @@ import java.io.NotActiveException
 import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
-import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
+import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.PrePostDriverCallback
+import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.util.LockManager
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 /**
   * A Write Ahead Cache of another persistence store that preloads the entire persistence store into memory before
@@ -48,6 +49,11 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
   // serialized form as a Left() until it is deserialized, in which case we store as a Right()
   private[store] var valueCache: Future[TrieMap[K, Either[Serialized, Any]]] =
     Future.failed(new NotActiveException())
+
+  override private[storage] def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
+
+  override private[storage] def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
+    store.setStorageVersion(storageVersion)
 
   override def preDriverStarts: Future[Unit] = {
     val cachePromise = Promise[TrieMap[K, Either[Serialized, Any]]]()

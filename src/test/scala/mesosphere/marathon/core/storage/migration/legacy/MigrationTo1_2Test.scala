@@ -1,8 +1,7 @@
-package mesosphere.marathon.state
+/*package mesosphere.marathon.core.storage.migration.legacy
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.storage.migration.MigrationTo1_2
 import mesosphere.marathon.core.storage.repository.impl.legacy.DeploymentEntityRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryStore, MarathonStore}
 import mesosphere.marathon.metrics.Metrics
@@ -46,3 +45,4 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
   }
 
 }
+*/

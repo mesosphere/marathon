@@ -33,7 +33,7 @@ import scala.reflect.ClassTag
 
 sealed trait StorageConfig
 sealed trait LegacyStorageConfig extends StorageConfig {
-  protected def store: PersistentStore
+  protected[storage] def store: PersistentStore
   val maxVersions: Int
   val enableCache: Boolean
 
@@ -60,7 +60,8 @@ case class TwitterZk(
   private val sessionTimeoutTw = {
     com.twitter.util.Duration(sessionTimeout.toMillis, TimeUnit.MILLISECONDS)
   }
-  protected def store: PersistentStore = {
+
+  protected[storage] lazy val store: PersistentStore = {
     import com.twitter.util.JavaTimer
     import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 

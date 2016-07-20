@@ -1,5 +1,7 @@
 package mesosphere.marathon.core.storage.repository.impl.legacy.store
 
+import akka.Done
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
@@ -92,6 +94,11 @@ trait PersistentStoreManagement {
     * @return A future to indicate when the initialization logic is finished.
     */
   def initialize(): Future[Unit]
+
+  /**
+    * Release any resources used by the store.
+    */
+  def close(): Future[Done] = Future.successful(Done)
 }
 
 trait PersistentStoreWithNestedPathsSupport extends PersistentStore {

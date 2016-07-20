@@ -1,11 +1,11 @@
-package mesosphere.marathon.state
+/*package mesosphere.marathon.core.storage.migration.legacy
 
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.storage.migration.MigrationTo0_16
-import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryStore, MarathonStore}
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, PortDefinitions, Timestamp}
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{MarathonSpec, Protos}
 import org.scalatest.time.{Seconds, Span}
@@ -133,3 +133,4 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     }
   }
 }
+*/

@@ -19,7 +19,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 // scalastyle:on
 
-private[legacy] class LegacyEntityRepository[Id, T <: MarathonState[_, T]](
+private[storage] class LegacyEntityRepository[Id, T <: MarathonState[_, T]](
     store: EntityStore[T],
     idToString: (Id) => String,
     stringToId: (String) => Id,
@@ -60,7 +60,7 @@ private[legacy] class LegacyEntityRepository[Id, T <: MarathonState[_, T]](
     }
 }
 
-private[legacy] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
+private[storage] class LegacyVersionedRepository[Id, T <: MarathonState[_, T]](
   store: EntityStore[T],
   maxVersions: Int,
   idToString: (Id) => String,
@@ -148,7 +148,7 @@ class AppEntityRepository(
   _.safePath,
   PathId.fromSafePath, _.id) with AppRepository
 
-class DeploymentEntityRepository(store: EntityStore[DeploymentPlan])(implicit
+class DeploymentEntityRepository(private[storage] val store: EntityStore[DeploymentPlan])(implicit
   ctx: ExecutionContext = ExecutionContext.global,
   metrics: Metrics)
     extends LegacyEntityRepository[String, DeploymentPlan](store, identity, identity, _.id) with DeploymentRepository

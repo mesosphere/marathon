@@ -1,4 +1,4 @@
-package mesosphere.marathon.state
+/*package mesosphere.marathon.core.storage.migration.legacy
 
 import java.io.StreamCorruptedException
 import java.util.UUID
@@ -7,12 +7,12 @@ import com.codahale.metrics.MetricRegistry
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.storage.migration.MigrationTo0_13
 import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryStore, MarathonStore, PersistentEntity, PersistentStore}
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
+import mesosphere.marathon.state.{MarathonTaskState, PathId}
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
@@ -217,3 +217,4 @@ private[state] class LegacyTaskStore(store: PersistentStore) {
   }
 
 }
+*/

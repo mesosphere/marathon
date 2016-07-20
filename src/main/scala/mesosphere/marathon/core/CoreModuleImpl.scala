@@ -76,7 +76,7 @@ class CoreModuleImpl @Inject() (
       storageModule.taskRepository, taskStatusUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
   override lazy val storageModule = StorageModule(
-    marathonConf,
+    marathonConf)(
     metrics,
     actorsModule.materializer,
     ExecutionContext.global,

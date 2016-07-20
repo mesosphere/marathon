@@ -3,18 +3,19 @@ package mesosphere.marathon.core.storage.repository.impl.legacy.store
 // scalastyle:off
 import java.util.UUID
 
+import akka.Done
 import com.fasterxml.uuid.impl.UUIDUtil
-import com.google.protobuf.{ ByteString, InvalidProtocolBufferException }
-import com.twitter.util.{ Future => TWFuture }
-import com.twitter.zk.{ ZNode, ZkClient }
+import com.google.protobuf.{ByteString, InvalidProtocolBufferException}
+import com.twitter.util.{Future => TWFuture}
+import com.twitter.zk.{ZNode, ZkClient}
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.{ Protos, StoreCommandFailedException }
+import mesosphere.marathon.{Protos, StoreCommandFailedException}
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
+import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 // scalastyle:on
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
@@ -120,6 +121,10 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   override def initialize(): Future[Unit] = createPath(root).map(_ => ())
 
   override def createPath(path: String): Future[Unit] = createPath(root(path)).map(_ => ())
+
+  override def close(): Future[Done] = {
+    client.release().asScala.recover { case _ => Done}.flatMap(_ => super.close())
+  }
 }
 
 case class ZKEntity(node: ZNode, data: ZKData, version: Option[Int] = None) extends PersistentEntity {

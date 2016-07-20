@@ -2,27 +2,29 @@ package mesosphere.marathon.core.storage.store.impl.zk
 
 import java.time.OffsetDateTime
 
-import akka.actor.{ ActorRefFactory, Scheduler }
+import akka.actor.{ActorRefFactory, Scheduler}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.StoreCommandFailedException
-import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
+import mesosphere.marathon.core.storage.migration.Migration
+import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.util.{ Retry, Timeout, toRichFuture }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.marathon.util.{Retry, Timeout, toRichFuture}
+import mesosphere.util.{CapConcurrentExecutions, CapConcurrentExecutionsMetrics}
 import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
+import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 import org.apache.zookeeper.data.Stat
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class ZkPersistenceStore(
     val client: RichCuratorFramework,
@@ -56,6 +58,41 @@ class ZkPersistenceStore(
         limitRequests(f)
       }
     }
+
+  override private[storage] def storageVersion(): Future[Option[StorageVersion]] =
+    retry("ZkPersistenceStore::storageVersion") {
+      async {
+        await(client.data(s"/${Migration.StorageVersionName}").asTry) match {
+          case Success(GetData(_, _, byteString)) =>
+            Some(StorageVersion.parseFrom(byteString.toArray))
+          case Failure(_: NoNodeException) =>
+            None
+          case Failure(e: KeeperException) =>
+            throw new StoreCommandFailedException("Unable to get version", e)
+          case Failure(e) =>
+            throw e
+        }
+      }
+    }
+
+  /** Update the version of the storage */
+  override private[storage] def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
+  retry(s"ZkPersistenceStore::setStorageVersion($storageVersion)") {
+    async {
+      val path = s"/${Migration.StorageVersionName}"
+      val data = ByteString(storageVersion.toByteArray)
+      await(client.setData(path, data).asTry) match {
+        case Success(_) => Done
+        case Failure(_: NoNodeException) =>
+          await(client.create(path, data = Some(data)))
+          Done
+        case Failure(e: KeeperException) =>
+          throw new StoreCommandFailedException(s"Unable to update storage version $storageVersion", e)
+        case Failure(e) =>
+          throw e
+      }
+    }
+  }
 
   override protected def rawIds(category: String): Source[ZkId, NotUsed] = {
     val childrenFuture = retry(s"ZkPersistenceStore::ids($category)") {

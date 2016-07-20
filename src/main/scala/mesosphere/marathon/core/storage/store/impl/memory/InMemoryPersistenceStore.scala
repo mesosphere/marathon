@@ -4,12 +4,15 @@ import java.time.OffsetDateTime
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
-import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
+import akka.{Done, NotUsed}
+import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.core.storage.migration.StorageVersions
+import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.util.Lock
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 class InMemoryPersistenceStore(implicit
   protected val mat: Materializer,
@@ -17,6 +20,16 @@ class InMemoryPersistenceStore(implicit
   ctx: ExecutionContext)
     extends BasePersistenceStore[RamId, String, Identity] {
   val entries = TrieMap[RamId, Identity]()
+  val version = Lock(StorageVersions.current.toBuilder)
+
+  override private[storage] def storageVersion(): Future[Option[StorageVersion]] = {
+    Future.successful(Some(version(_.build())))
+  }
+
+  override private[storage] def setStorageVersion(storageVersion: StorageVersion): Future[Done] = {
+    version(_.mergeFrom(storageVersion))
+    Future.successful(Done)
+  }
 
   override protected def rawIds(category: String): Source[RamId, NotUsed] =
     Source(entries.keySet.filter(id => id.category == category && id.version.isEmpty).toVector)

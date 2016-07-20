@@ -1,11 +1,11 @@
-package mesosphere.marathon.state
+/*package mesosphere.marathon.core.storage.migration.legacy
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.storage.migration.MigrationTo0_11
-import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryStore, MarathonStore}
+import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.MarathonActorSupport
 import org.scalatest.time.{Seconds, Span}
@@ -160,3 +160,4 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.getVersion(PathId("/test"), correctedAppV3.version.toOffsetDateTime).futureValue should be(Some(correctedAppV3))
   }
 }
+*/

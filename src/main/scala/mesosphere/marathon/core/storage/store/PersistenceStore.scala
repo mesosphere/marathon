@@ -5,7 +5,8 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
+import mesosphere.marathon.Protos.StorageVersion
 
 import scala.concurrent.Future
 
@@ -87,6 +88,12 @@ trait PersistenceStore[K, Category, Serialized] {
     * Get a list of all versions for a given id.
     */
   def versions[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K]): Source[OffsetDateTime, NotUsed]
+
+  /** Get the current version of the storage */
+  private[storage] def storageVersion(): Future[Option[StorageVersion]]
+
+  /** Update the version of the storage */
+  private[storage] def setStorageVersion(storageVersion: StorageVersion): Future[Done]
 
   /**
     * Get the current version of the data, if any, for the given primary id and value type.

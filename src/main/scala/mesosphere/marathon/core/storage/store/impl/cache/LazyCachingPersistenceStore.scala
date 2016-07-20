@@ -5,17 +5,18 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Keep, Sink, Source }
-import akka.{ Done, NotUsed }
+import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.util.LockManager
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * A Write Ahead Cache of another persistence store that lazily loads values into the cache.
@@ -34,6 +35,11 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
   val lockManager = LockManager.create()
   private[store] val idCache = TrieMap.empty[Category, Seq[Any]]
   private[store] val valueCache = TrieMap.empty[K, Option[Any]]
+
+  override private[storage] def storageVersion(): Future[Option[StorageVersion]] = store.storageVersion()
+
+  override private[storage] def setStorageVersion(storageVersion: StorageVersion): Future[Done] =
+    store.setStorageVersion(storageVersion)
 
   override def ids[Id, V]()(implicit ir: IdResolver[Id, V, Category, K]): Source[Id, NotUsed] = {
     val category = ir.category
