@@ -1584,7 +1584,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     )
 
     val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
-    val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+    val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None, None)
     val runningTasks = Set.empty[Task]
     val task = builder.buildIfMatches(offer, runningTasks)
 
@@ -1611,7 +1611,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       MarathonTestHelper.defaultConfig(
         mesosRole = mesosRole,
         acceptedResourceRoles = acceptedResourceRoles,
-        envVarsPrefix = envVarsPrefix), None)
+        envVarsPrefix = envVarsPrefix), None, None)
 
     builder.buildIfMatches(offer, Iterable.empty)
   }

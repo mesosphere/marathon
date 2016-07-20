@@ -30,8 +30,8 @@ class InMemRejectOfferCollectorTest extends FunSuiteLike with GivenWhenThen with
     val appId = PathId("test")
     collector.addRejection(appId, RejectionReason(
       Set(
-      NoMatch("cpu", 2, 1, ScalarMatchResult.Scope.NoneDisk),
-      NoMatch("ram", 2, 1, ScalarMatchResult.Scope.NoneDisk)),
+        NoMatch("cpu", 2, 1, ScalarMatchResult.Scope.NoneDisk),
+        NoMatch("ram", 2, 1, ScalarMatchResult.Scope.NoneDisk)),
       Set(makeConstraint("jdk", Constraint.Operator.LIKE, "\\[6-7\\]"))))
 
     collector.addRejection(appId, RejectionReason(Set(NoMatch("ram", 2, 1, ScalarMatchResult.Scope.NoneDisk)), Set()))

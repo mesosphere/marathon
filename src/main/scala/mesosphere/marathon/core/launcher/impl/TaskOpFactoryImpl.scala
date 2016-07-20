@@ -48,24 +48,25 @@ class TaskOpFactoryImpl @Inject() (
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc), Some(rejectionCollector)).buildIfMatches(offer, tasks.values).map {
-      case (taskInfo, ports) =>
-        val task = Task.LaunchedEphemeral(
-          taskId = Task.Id(taskInfo.getTaskId),
-          agentInfo = Task.AgentInfo(
-            host = offer.getHostname,
-            agentId = Some(offer.getSlaveId.getValue),
-            attributes = offer.getAttributesList.asScala
-          ),
-          runSpecVersion = runSpec.version,
-          status = Task.Status(
-            stagedAt = clock.now()
-          ),
-          hostPorts = ports.flatten
-        )
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc), Some(rejectionCollector))
+      .buildIfMatches(offer, tasks.values).map {
+        case (taskInfo, ports) =>
+          val task = Task.LaunchedEphemeral(
+            taskId = Task.Id(taskInfo.getTaskId),
+            agentInfo = Task.AgentInfo(
+              host = offer.getHostname,
+              agentId = Some(offer.getSlaveId.getValue),
+              attributes = offer.getAttributesList.asScala
+            ),
+            runSpecVersion = runSpec.version,
+            status = Task.Status(
+              stagedAt = clock.now()
+            ),
+            hostPorts = ports.flatten
+          )
 
-        taskOperationFactory.launchEphemeral(taskInfo, task)
-    }
+          taskOperationFactory.launchEphemeral(taskInfo, task)
+      }
   }
 
   private[this] def inferForResidents(request: TaskOpFactory.Request): Option[TaskOp] = {
