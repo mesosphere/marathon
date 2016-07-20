@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.groupmanager.impl
+package mesosphere.marathon.core.group.impl
 
 import java.net.URL
 import javax.inject.Provider
@@ -22,7 +22,7 @@ import scala.collection.mutable
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
-private[groupmanager] object GroupManagerActor {
+private[group] object GroupManagerActor {
   sealed trait Request
 
   case class GetAppWithId(id: PathId) extends Request

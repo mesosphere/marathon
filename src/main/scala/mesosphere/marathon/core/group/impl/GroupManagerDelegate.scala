@@ -1,9 +1,9 @@
-package mesosphere.marathon.core.groupmanager.impl
+package mesosphere.marathon.core.group.impl
 
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import mesosphere.marathon.core.groupmanager.{ GroupManager, GroupManagerConfig }
+import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -11,7 +11,7 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-private[groupmanager] class GroupManagerDelegate(
+private[group] class GroupManagerDelegate(
     config: GroupManagerConfig,
     actorRef: ActorRef) extends GroupManager {
 

@@ -9,7 +9,7 @@ import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture, Te
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.groupmanager.GroupManager
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager

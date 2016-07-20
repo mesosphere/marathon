@@ -9,7 +9,7 @@ import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupIn
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.HttpCallbackSubscriptionService
-import mesosphere.marathon.core.groupmanager.GroupManager
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }

@@ -3,7 +3,7 @@ package mesosphere.marathon.api
 import javax.inject.Inject
 
 import com.twitter.util.NonFatal
-import mesosphere.marathon.core.groupmanager.GroupManager
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }

@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.groupmanager.impl
+package mesosphere.marathon.core.group.impl
 
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Provider
@@ -15,7 +15,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
 import mesosphere.marathon._
-import mesosphere.marathon.core.groupmanager.GroupManager
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ times, verify, when }

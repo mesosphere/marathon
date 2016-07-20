@@ -14,7 +14,7 @@ import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
-import mesosphere.marathon.core.groupmanager.GroupManagerModule
+import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule

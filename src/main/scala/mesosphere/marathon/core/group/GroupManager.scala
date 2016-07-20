@@ -1,4 +1,4 @@
-package mesosphere.marathon.core.groupmanager
+package mesosphere.marathon.core.group
 
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }

@@ -7,7 +7,7 @@ import javax.ws.rs.core.{ Context, MediaType, Response }
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.core.groupmanager.GroupManager
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, ViewRunSpec }
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp

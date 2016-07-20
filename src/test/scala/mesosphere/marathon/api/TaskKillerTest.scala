@@ -1,7 +1,7 @@
 package mesosphere.marathon.api
 
 import mesosphere.marathon._
-import mesosphere.marathon.core.groupmanager.GroupManager
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }

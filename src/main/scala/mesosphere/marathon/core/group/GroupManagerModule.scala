@@ -1,11 +1,11 @@
-package mesosphere.marathon.core.groupmanager
+package mesosphere.marathon.core.group
 
 import javax.inject.Provider
 
 import akka.actor.ActorRef
 import akka.event.EventStream
 import com.codahale.metrics.Gauge
-import mesosphere.marathon.core.groupmanager.impl.{ GroupManagerActor, GroupManagerDelegate }
+import mesosphere.marathon.core.group.impl.{ GroupManagerActor, GroupManagerDelegate }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.{ DeploymentService, MarathonConf }
 import mesosphere.marathon.io.storage.StorageProvider

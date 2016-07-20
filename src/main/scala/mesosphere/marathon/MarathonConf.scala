@@ -3,7 +3,7 @@ package mesosphere.marathon
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
-import mesosphere.marathon.core.groupmanager.GroupManagerConfig
+import mesosphere.marathon.core.group.GroupManagerConfig
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig

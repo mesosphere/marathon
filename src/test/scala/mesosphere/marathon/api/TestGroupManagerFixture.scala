@@ -5,7 +5,7 @@ import javax.inject.Provider
 
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.groupmanager.{ GroupManager, GroupManagerModule }
+import mesosphere.marathon.core.group.{ GroupManager, GroupManagerModule }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
