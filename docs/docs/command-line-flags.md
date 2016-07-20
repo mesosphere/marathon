@@ -159,6 +159,12 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations
 * <span class="label label-default">v0.15.4</span> `--task_lost_expunge_interval` (Optional. Default: 1 hour):
     This is the length of time in milliseconds, for lost task gc operations.
+* `--mesos_heartbeat_interval` (Optional. Default: 15 seconds):
+    (milliseconds) in the absence of receiving a message from the mesos master during a time window of this duration,
+    attempt to coerce mesos into communicating with marathon.
+* `--mesos_heartbeat_failure_threshold` (Optional. Default: 5):
+    after missing this number of expected communications from the mesos master, infer that marathon has become
+    disconnected from the master.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
