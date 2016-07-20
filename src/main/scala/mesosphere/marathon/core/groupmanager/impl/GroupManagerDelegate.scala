@@ -15,7 +15,7 @@ private[groupmanager] class GroupManagerDelegate(
     config: GroupManagerConfig,
     actorRef: ActorRef) extends GroupManager {
 
-  override def rootGroup(): Future[Group] = askGroupManagerActor(GroupManagerDelegate.RootGroup).mapTo[Group]
+  override def rootGroup(): Future[Group] = askGroupManagerActor(GroupManagerActor.GetRootGroup).mapTo[Group]
 
   /**
     * Update application with given identifier and update function.
@@ -35,7 +35,7 @@ private[groupmanager] class GroupManagerDelegate(
     force: Boolean,
     toKill: Iterable[Task]): Future[DeploymentPlan] =
     askGroupManagerActor(
-      GroupManagerDelegate.Upgrade(
+      GroupManagerActor.GetUpgrade(
         appId.parent,
         _.updateApp(appId, fn, version),
         version,
@@ -65,7 +65,7 @@ private[groupmanager] class GroupManagerDelegate(
     force: Boolean,
     toKill: Map[PathId, Iterable[Task]]): Future[DeploymentPlan] =
     askGroupManagerActor(
-      GroupManagerDelegate.Upgrade(
+      GroupManagerActor.GetUpgrade(
         gid,
         _.update(gid, fn, version),
         version,
@@ -81,7 +81,7 @@ private[groupmanager] class GroupManagerDelegate(
     * @return the list of versions of this object.
     */
   override def versions(id: PathId): Future[Iterable[Timestamp]] =
-    askGroupManagerActor(GroupManagerDelegate.Versions(id)).mapTo[Iterable[Timestamp]]
+    askGroupManagerActor(GroupManagerActor.GetAllVersions(id)).mapTo[Iterable[Timestamp]]
 
   /**
     * Get a specific group by its id.
@@ -90,7 +90,7 @@ private[groupmanager] class GroupManagerDelegate(
     * @return the group if it is found, otherwise None
     */
   override def group(id: PathId): Future[Option[Group]] =
-    askGroupManagerActor(GroupManagerDelegate.GroupWithId(id)).mapTo[Option[Group]]
+    askGroupManagerActor(GroupManagerActor.GetGroupWithId(id)).mapTo[Option[Group]]
 
   /**
     * Get a specific group with a specific version.
@@ -100,7 +100,7 @@ private[groupmanager] class GroupManagerDelegate(
     * @return the group if it is found, otherwise None
     */
   override def group(id: PathId, version: Timestamp): Future[Option[Group]] =
-    askGroupManagerActor(GroupManagerDelegate.GroupWithVersion(id, version)).mapTo[Option[Group]]
+    askGroupManagerActor(GroupManagerActor.GetGroupWithVersion(id, version)).mapTo[Option[Group]]
 
   /**
     * Get a specific app definition by its id.
@@ -109,7 +109,7 @@ private[groupmanager] class GroupManagerDelegate(
     * @return the app uf ut is found, otherwise false
     */
   override def app(id: PathId): Future[Option[AppDefinition]] =
-    askGroupManagerActor(GroupManagerDelegate.App(id)).mapTo[Option[AppDefinition]]
+    askGroupManagerActor(GroupManagerActor.GetAppWithId(id)).mapTo[Option[AppDefinition]]
 
   private[this] def askGroupManagerActor[T](
     message: T,
@@ -119,27 +119,4 @@ private[groupmanager] class GroupManagerDelegate(
     val answerFuture = actorRef ? message
     answerFuture
   }
-}
-
-private[impl] object GroupManagerDelegate {
-
-  sealed trait Request
-
-  case class App(id: PathId) extends Request
-
-  case class GroupWithId(id: PathId) extends Request
-
-  case class GroupWithVersion(id: PathId, version: Timestamp) extends Request
-
-  case object RootGroup extends Request
-
-  case class Upgrade(
-    gid: PathId,
-    change: Group => Group,
-    version: Timestamp = Timestamp.now(),
-    force: Boolean = false,
-    toKill: Map[PathId, Iterable[Task]] = Map.empty) extends Request
-
-  case class Versions(id: PathId) extends Request
-
 }

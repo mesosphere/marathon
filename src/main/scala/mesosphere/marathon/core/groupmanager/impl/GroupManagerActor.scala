@@ -9,6 +9,7 @@ import akka.pattern.pipe
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinition, _ }
@@ -22,6 +23,25 @@ import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
 private[groupmanager] object GroupManagerActor {
+  sealed trait Request
+
+  case class GetAppWithId(id: PathId) extends Request
+
+  case class GetGroupWithId(id: PathId) extends Request
+
+  case class GetGroupWithVersion(id: PathId, version: Timestamp) extends Request
+
+  case object GetRootGroup extends Request
+
+  case class GetUpgrade(
+    gid: PathId,
+    change: Group => Group,
+    version: Timestamp = Timestamp.now(),
+    force: Boolean = false,
+    toKill: Map[PathId, Iterable[Task]] = Map.empty) extends Request
+
+  case class GetAllVersions(id: PathId) extends Request
+
   def props(
     serializeUpdates: CapConcurrentExecutions,
     scheduler: Provider[DeploymentService],
@@ -51,7 +71,7 @@ private[impl] class GroupManagerActor(
     storage: StorageProvider,
     config: MarathonConf,
     eventBus: EventStream) extends Actor with ActorLogging with PathFun {
-  import GroupManagerDelegate._
+  import GroupManagerActor._
   import context.dispatcher
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
@@ -63,96 +83,93 @@ private[impl] class GroupManagerActor(
   }
 
   override def receive: Receive = {
-    Seq(
-      receiveApp,
-      receiveRootGroup,
-      receiveGroupWithId,
-      receiveGroupWithVersion,
-      receiveUpgrade,
-      receiveVersions
-    ).reduce(_.orElse[Any, Unit](_))
+    case GetAppWithId(id) => getApp(id).pipeTo(sender())
+    case GetRootGroup => getRootGroup.pipeTo(sender())
+    case GetGroupWithId(id) => getGroupWithId(id).pipeTo(sender())
+    case GetGroupWithVersion(id, version) => getGroupWithVersion(id, version).pipeTo(sender())
+    case GetUpgrade(gid, change, version, force, toKill) =>
+      getUpgrade(gid, change, version, force, toKill).pipeTo(sender())
+    case GetAllVersions(id) => getVersions(id).pipeTo(sender())
   }
 
-  private[this] def rootGroup(): Future[Group] = groupRepo.group(groupRepo.zkRootName).map(_.getOrElse(Group.empty))
-
-  private[this] def receiveApp: Receive = {
-    case App(id) =>
-      rootGroup().map(_.app(id)).pipeTo(sender())
+  private[this] def getApp(id: PathId): Future[Option[AppDefinition]] = {
+    getRootGroup().map(_.app(id))
   }
 
-  private[this] def receiveRootGroup: Receive = {
-    case RootGroup => rootGroup().pipeTo(sender())
+  private[this] def getRootGroup(): Future[Group] = {
+    groupRepo.group(groupRepo.zkRootName).map(_.getOrElse(Group.empty))
   }
 
-  private[this] def receiveGroupWithId: Receive = {
-    case GroupWithId(id) =>
-      rootGroup().map(_.findGroup(_.id == id)).pipeTo(sender())
+  private[this] def getGroupWithId(id: PathId): Future[Option[Group]] = {
+    getRootGroup().map(_.findGroup(_.id == id))
   }
 
-  private[this] def receiveGroupWithVersion: Receive = {
-    case GroupWithVersion(id, version) =>
-      groupRepo.group(groupRepo.zkRootName, version).map {
-        _.flatMap(_.findGroup(_.id == id))
-      }.pipeTo(sender())
+  private[this] def getGroupWithVersion(id: PathId, version: Timestamp): Future[Option[Group]] = {
+    groupRepo.group(groupRepo.zkRootName, version).map {
+      _.flatMap(_.findGroup(_.id == id))
+    }
   }
 
-  private[this] def receiveUpgrade: Receive = {
-    case Upgrade(gid, change, version, force, toKill) =>
-      serializeUpdates {
-        log.info(s"Upgrade group id:$gid version:$version with force:$force")
+  private[this] def getUpgrade(
+    gid: PathId,
+    change: Group => Group,
+    version: Timestamp,
+    force: Boolean,
+    toKill: Map[PathId, Iterable[Task]]): Future[DeploymentPlan] = {
+    serializeUpdates {
+      log.info(s"Upgrade group id:$gid version:$version with force:$force")
 
-        def storeUpdatedApps(plan: DeploymentPlan): Future[Unit] = {
-          plan.affectedApplicationIds.foldLeft(Future.successful(())) { (savedFuture, currentId) =>
-            plan.target.app(currentId) match {
-              case Some(newApp) =>
-                log.info(s"[${newApp.id}] storing new app version ${newApp.version}")
-                appRepo.store(newApp).map(_ => ())
-              case None =>
-                log.info(s"[$currentId] expunging app")
-                // this means that destroyed apps are immediately gone -- even if there are still tasks running for
-                // this app. We should improve this in the future.
-                appRepo.expunge(currentId).map(_ => ())
-            }
+      def storeUpdatedApps(plan: DeploymentPlan): Future[Unit] = {
+        plan.affectedApplicationIds.foldLeft(Future.successful(())) { (savedFuture, currentId) =>
+          plan.target.app(currentId) match {
+            case Some(newApp) =>
+              log.info(s"[${newApp.id}] storing new app version ${newApp.version}")
+              appRepo.store(newApp).map(_ => ())
+            case None =>
+              log.info(s"[$currentId] expunging app")
+              // this means that destroyed apps are immediately gone -- even if there are still tasks running for
+              // this app. We should improve this in the future.
+              appRepo.expunge(currentId).map(_ => ())
           }
         }
+      }
 
-        val deployment = for {
-          from <- rootGroup()
-          (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
-          to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
-          _ = validateOrThrow(to)(Group.validRootGroup(config.maxApps.get))
-          plan = DeploymentPlan(from, to, resolve, version, toKill)
-          _ = validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator(config))
-          _ = log.info(s"Computed new deployment plan:\n$plan")
-          _ <- scheduler.deploy(plan, force)
-          _ <- storeUpdatedApps(plan)
-          _ <- groupRepo.store(groupRepo.zkRootName, plan.target)
-          _ = log.info(s"Updated groups/apps according to deployment plan ${plan.id}")
-        } yield plan
+      val deployment = for {
+        from <- getRootGroup()
+        (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
+        to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
+        _ = validateOrThrow(to)(Group.validRootGroup(config.maxApps.get))
+        plan = DeploymentPlan(from, to, resolve, version, toKill)
+        _ = validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator(config))
+        _ = log.info(s"Computed new deployment plan:\n$plan")
+        _ <- scheduler.deploy(plan, force)
+        _ <- storeUpdatedApps(plan)
+        _ <- groupRepo.store(groupRepo.zkRootName, plan.target)
+        _ = log.info(s"Updated groups/apps according to deployment plan ${plan.id}")
+      } yield plan
 
-        deployment.onComplete {
-          case Success(plan) =>
-            log.info(s"Deployment acknowledged. Waiting to get processed:\n$plan")
-            eventBus.publish(GroupChangeSuccess(gid, version.toString))
-          case Failure(ex: AccessDeniedException) =>
-          // If the request was not authorized, we should not publish an event
-          case Failure(ex) =>
-            log.warn(s"Deployment failed for change: $version", ex)
-            eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
-        }
-        deployment
-      }.pipeTo(sender())
+      deployment.onComplete {
+        case Success(plan) =>
+          log.info(s"Deployment acknowledged. Waiting to get processed:\n$plan")
+          eventBus.publish(GroupChangeSuccess(gid, version.toString))
+        case Failure(ex: AccessDeniedException) =>
+        // If the request was not authorized, we should not publish an event
+        case Failure(ex) =>
+          log.warn(s"Deployment failed for change: $version", ex)
+          eventBus.publish(GroupChangeFailed(gid, version.toString, ex.getMessage))
+      }
+      deployment
+    }
   }
 
-  private[this] def receiveVersions: Receive = {
-    case Versions(id) =>
-      groupRepo.listVersions(groupRepo.zkRootName).flatMap { versions =>
-        Future.sequence(versions.map(groupRepo.group(groupRepo.zkRootName, _))).map {
-          _.collect {
-            case Some(group) if group.group(id).isDefined => group.version
-          }
+  private[this] def getVersions(id: PathId): Future[Iterable[Timestamp]] = {
+    groupRepo.listVersions(groupRepo.zkRootName).flatMap { versions =>
+      Future.sequence(versions.map(groupRepo.group(groupRepo.zkRootName, _))).map {
+        _.collect {
+          case Some(group) if group.group(id).isDefined => group.version
         }
-      }.pipeTo(sender())
+      }
+    }
   }
 
   private[this] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {

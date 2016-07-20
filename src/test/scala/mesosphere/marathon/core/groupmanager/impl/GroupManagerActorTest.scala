@@ -391,7 +391,7 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   private def update(
     gid: PathId,
     fn: (Group) => Group,
-    version: Timestamp = Timestamp.now()) = GroupManagerDelegate.Upgrade(
+    version: Timestamp = Timestamp.now()) = GroupManagerActor.GetUpgrade(
     gid,
     _.update(gid, fn, version),
     version,
