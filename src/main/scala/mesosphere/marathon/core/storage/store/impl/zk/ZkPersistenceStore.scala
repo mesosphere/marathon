@@ -79,13 +79,13 @@ class ZkPersistenceStore(
 
   override protected def rawVersions(id: ZkId): Source[OffsetDateTime, NotUsed] = {
     val unversioned = id.copy(version = None)
-    val path = s"${unversioned.path}/versions"
+    val path = unversioned.path
     val versions = retry(s"ZkPersistenceStore::versions($path)") {
       async {
         await(client.children(path).asTry) match {
           case Success(Children(_, _, nodes)) =>
             nodes.map { path =>
-              OffsetDateTime.parse(path)
+              OffsetDateTime.parse(path, ZkId.DateFormat)
             }
           case Failure(_: NoNodeException) =>
             Seq.empty
@@ -96,7 +96,6 @@ class ZkPersistenceStore(
         }
       }
     }
-
     Source.fromFuture(versions).mapConcat(identity)
   }
 
