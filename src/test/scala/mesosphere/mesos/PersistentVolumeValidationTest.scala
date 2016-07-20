@@ -34,7 +34,7 @@ class PersistentVolumeValidationTest extends MarathonSpec with GivenWhenThen wit
       case Failure(violations) =>
         violations should contain (RuleViolation("/path", "must fully match regular expression '^[^/]*$'", Some("containerPath")))
       case Success =>
-        println("success")
+        fail("validation should fail!")
     }
   }
 }
