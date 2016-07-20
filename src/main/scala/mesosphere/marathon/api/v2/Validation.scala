@@ -5,7 +5,7 @@ import java.util.regex.Pattern
 
 import com.wix.accord._
 import com.wix.accord.ViolationBuilder._
-import mesosphere.marathon.{AllConf, ValidationFailedException}
+import mesosphere.marathon.{ AllConf, ValidationFailedException }
 import mesosphere.marathon.state.FetchUri
 import org.slf4j.LoggerFactory
 import play.api.libs.json._
