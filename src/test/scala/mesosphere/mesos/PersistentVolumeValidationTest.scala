@@ -17,6 +17,8 @@ class PersistentVolumeValidationTest extends MarathonSpec with GivenWhenThen wit
     When("The volume is created and validation succeeded")
     volume should not be null
     val validation = Volume.validVolume(volume)
+
+    Then("A validation exists with no error message")
     validation.isSuccess should be (true)
   }
 
@@ -30,6 +32,8 @@ class PersistentVolumeValidationTest extends MarathonSpec with GivenWhenThen wit
     volume.containerPath should be (path)
     val validation = Volume.validVolume(volume)
     validation.isSuccess should be (false)
+
+    Then("A validation exists with a readable error message")
     validation match {
       case Failure(violations) =>
         violations should contain (RuleViolation("/path", "containerPath must not contain \"/\"", Some("containerPath")))
