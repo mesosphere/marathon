@@ -269,14 +269,13 @@ object Group {
           new mutable.HashMap[Int, mutable.Set[AppDefinition.AppKey]] with mutable.MultiMap[Int, AppDefinition.AppKey]
 
         // Add each servicePort <- Application to the map.
-        for (app <- group.transitiveApps) {
-          for (port <- app.servicePorts) {
-            // We ignore randomly assigned ports identified by `0`.
-            if (port != 0) {
-              ports += 1
-              merged.addBinding(port, app.id)
-            }
-          }
+        for {
+          app <- group.transitiveApps
+          // We ignore randomly assigned ports identified by `0`.
+          port <- app.servicePorts if port != 0
+        } {
+          ports += 1
+          merged.addBinding(port, app.id)
         }
 
         // If the total number of unique ports is equal to the number
@@ -286,26 +285,18 @@ object Group {
         } else {
           // Otherwise we find all ports that have more than 1 app
           // interested in them.
-          var groupViolations = Set.empty[RuleViolation]
-          for ((port, apps) <- merged) {
-            if (apps.size > 1) {
-              for (app <- apps; otherApp <- apps) {
-                // We report all conflicts (e.g. A -> B, and B -> A,
-                // but not A -> A or B -> B).
-                // TODO(jmlvanre): Consider only reporting a single
-                // error that lists all the apps conflicting with this
-                // port.
-                if (app != otherApp) {
-                  groupViolations += RuleViolation(
-                    app,
-                    s"Requested service port ${port} conflicts with a service port in app ${otherApp}",
-                    None)
-                }
-              }
-            }
-          }
 
-          Failure(groupViolations.toSet)
+          // We report all the conflicting apps along with which other
+          // apps they conflict with.
+          val violations = for {
+            (port, apps) <- merged if apps.size > 1
+            app <- apps
+          } yield RuleViolation(
+            app,
+            s"Requested service port $port is used by more than 1 app: ${apps.mkString(", ")}",
+            None)
+
+          Failure(violations.toSet)
         }
       }
     }

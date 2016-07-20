@@ -256,7 +256,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       val result = validate(root)(Group.validRootGroup(maxApps = None))
 
       Then("the validation returns an errror")
-      ValidationHelper.getAllRuleConstrains(result).head.message should include ("conflicts with a service port")
+      ValidationHelper.getAllRuleConstrains(result).head.message should include ("used by more than 1 app")
     }
 
     it("can marshal and unmarshal from to protos") {
