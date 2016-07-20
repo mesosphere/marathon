@@ -41,8 +41,7 @@ class InMemRejectOfferCollector(windowSize: Integer = RejectOfferCollector.Defau
       if (actual.data.isFull) {
         val toRemove = actual.data.nextValue
         actual.stats.delete(createResourcesId(toRemove.unmatches, toRemove.constraints))
-      }
-      else {
+      } else {
         actual.count += 1
       }
 

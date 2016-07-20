@@ -102,8 +102,8 @@ class TaskOpFactoryImpl @Inject() (
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
             offer, runSpec, tasksToConsiderForConstraints.values,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels,
-            Some(rejectionCollector))
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels),
+            Some(rejectionCollector)
           )
 
         matchingReservedResourcesWithoutVolumes.flatMap { otherResourcesMatch =>
@@ -145,14 +145,14 @@ class TaskOpFactoryImpl @Inject() (
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc), Some(rejectionCollector))
       .build(offer, resourceMatch, volumeMatch) map {
-      case (taskInfo, ports) =>
-        val taskStateOp = TaskStateOp.LaunchOnReservation(
-          task.taskId,
-          runSpecVersion = spec.version,
-          status = Task.Status(
-            stagedAt = clock.now()
-          ),
-          hostPorts = ports.flatten)
+        case (taskInfo, ports) =>
+          val taskStateOp = TaskStateOp.LaunchOnReservation(
+            task.taskId,
+            runSpecVersion = spec.version,
+            status = Task.Status(
+              stagedAt = clock.now()
+            ),
+            hostPorts = ports.flatten)
 
           taskOperationFactory.launchOnReservation(taskInfo, taskStateOp, task)
       }

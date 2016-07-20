@@ -151,9 +151,10 @@ object ResourceMatcher {
 
     def portsMatchOpt: Option[PortsMatch] = new PortsMatcher(runSpec, offer, selector).portsMatch
 
-   def rejectedConstraints = {
-      lazy val tasks = runningTasks.filter(_.launched.exists(_.appVersion >= app.versionInfo.lastConfigChangeVersion))
-      val badConstraints = app.constraints.filterNot { constraint =>
+    def rejectedConstraints = {
+      lazy val tasks =
+        runningTasks.filter(_.launched.exists(_.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion))
+      val badConstraints = runSpec.constraints.filterNot { constraint =>
         Constraints.meetsConstraint(tasks, offer, constraint)
       }
 
@@ -170,10 +171,10 @@ object ResourceMatcher {
     if (scalarMatchResults.forall(_.matches) && rejectedConstraints.isEmpty) {
       for {
         portsMatch <- portsMatchOpt
-        if meetsAllConstraints
       } yield ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch)
     } else {
-      rejectCollectorOpt.map(_.addRejection(app.id,
+      rejectCollectorOpt.map(_.addRejection(
+        runSpec.id,
         new RejectionReason(scalarMatchResults.collect { case m: NoMatch => m }.toSet, rejectedConstraints)))
       None
     }

@@ -27,6 +27,7 @@ import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpd
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
+import mesosphere.mesos.RejectOfferCollector
 
 import scala.util.Random
 
@@ -52,6 +53,7 @@ class CoreModuleImpl @Inject() (
   taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
   clock: Clock,
   taskStatusUpdateSteps: Seq[TaskUpdateStep],
+  rejectionCollector: RejectOfferCollector,
   @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) eventSubscribersStore: EntityStore[EventSubscribers])
     extends CoreModule {
 
@@ -114,6 +116,7 @@ class CoreModuleImpl @Inject() (
       offerMatcherReconcilerModule.offerMatcherReconciler,
       offerMatcherManagerModule.globalOfferMatcher
     ),
+    rejectionCollector,
     pluginModule.pluginManager
   )
 

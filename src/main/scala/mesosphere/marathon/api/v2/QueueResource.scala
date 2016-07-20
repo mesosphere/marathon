@@ -64,12 +64,14 @@ class QueueResource @Inject() (
 
   @GET
   @Path("""{appId:.+}/stats""")
-  def offerStats(@PathParam("appId") id: String,
-                 @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  def offerStats(
+    @PathParam("appId") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val appId = id.toRootPath
     val result = rejectOfferCollector.getStatsFor(appId)
     val allKeys = result.stats.allKeys.map(k => (k, Json.toJsFieldJsValueWrapper("" + result.stats.count(k))))
-    ok(Json.obj("count" -> result.count,
+    ok(Json.obj(
+      "count" -> result.count,
       "details" -> Json.obj(allKeys.toSeq: _*)).toString())
   }
 }

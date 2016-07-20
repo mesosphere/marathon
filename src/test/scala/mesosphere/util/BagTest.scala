@@ -1,6 +1,6 @@
 package mesosphere.util
 
-import org.scalatest.{ Matchers, WordSpecLike, FunSuite }
+import org.scalatest.{ Matchers, WordSpecLike }
 
 class BagTest extends WordSpecLike with Matchers {
 

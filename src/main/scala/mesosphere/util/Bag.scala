@@ -17,12 +17,10 @@ class Bag[T](val map: mutable.Map[T, Int] = mutable.Map[T, Int]().withDefaultVal
     if (actualVal > count) {
       map += key -> (actualVal - count)
       true
-    }
-    else if (actualVal == count) {
+    } else if (actualVal == count) {
       map.remove(key)
       true
-    }
-    else {
+    } else {
       false
     }
   }

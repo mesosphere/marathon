@@ -5,16 +5,13 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state.{ AppDefinition, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
-
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
 import org.slf4j.LoggerFactory
-import play.api.libs.json.Json
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq

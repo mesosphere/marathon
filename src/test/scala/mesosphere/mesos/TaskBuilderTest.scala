@@ -992,8 +992,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val t2 = makeSampleTask(app.id, "rackid", "3")
     val s = Set(t1, t2)
 
-    val builder = new TaskBuilder(app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None)
+    val builder = new TaskBuilder(
+      app,
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None, None)
 
     val task = builder.buildIfMatches(offer, s)
 
@@ -1015,8 +1016,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     var runningTasks = Set.empty[Task]
 
-    val builder = new TaskBuilder(app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None)
+    val builder = new TaskBuilder(
+      app,
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None, None)
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
@@ -1066,8 +1068,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     var runningTasks = Set.empty[Task]
 
-    val builder = new TaskBuilder(app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None)
+    val builder = new TaskBuilder(
+      app,
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None, None)
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
