@@ -3,7 +3,7 @@ package mesosphere.util.state.memory
 import mesosphere.util.state.PersistentStoreTest
 import org.scalatest.Matchers
 import mesosphere.FutureTestSupport._
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.PersistentStore
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryEntity, InMemoryStore, PersistentStore }
 
 class InMemoryStoreTest extends PersistentStoreTest with Matchers {
 

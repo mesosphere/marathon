@@ -7,7 +7,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
-import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 
 import scala.concurrent.Future
 

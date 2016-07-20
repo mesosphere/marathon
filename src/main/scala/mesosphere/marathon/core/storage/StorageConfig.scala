@@ -7,17 +7,16 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.{ Config, ConfigMemorySize }
-import mesosphere.marathon.core.storage.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
-import mesosphere.marathon.core.storage.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
-import mesosphere.marathon.core.storage.impl.zk.{ ZkId, ZkPersistenceStore, ZkSerialized }
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ EntityStore, EntityStoreCache, MarathonStore, PersistentStore }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, EntityStoreCache, MarathonStore, MesosStateStore, PersistentStore, ZKStore }
+import mesosphere.marathon.core.storage.store.PersistenceStore
+import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
+import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
 import mesosphere.marathon.{ MarathonConf, ZookeeperConf }
-import mesosphere.util.state.mesos.MesosStateStore
-import mesosphere.util.state.zk.{ CompressionConf, NoRetryPolicy, RichCuratorFramework, ZKStore }
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
 import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }

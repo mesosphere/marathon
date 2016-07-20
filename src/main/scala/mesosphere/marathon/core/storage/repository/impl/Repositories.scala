@@ -3,12 +3,12 @@ package mesosphere.marathon.core.storage.repository.impl
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.core.storage.repository.TaskFailureRepository
+import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.TaskFailure
 // scalastyle:off
 import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskRepository }
 // scalastyle:on
-import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.upgrade.DeploymentPlan
 

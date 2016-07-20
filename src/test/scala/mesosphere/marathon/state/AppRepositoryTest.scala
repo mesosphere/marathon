@@ -5,15 +5,14 @@ import java.util.UUID
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.impl.zk.ZkPersistenceStore
+import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.AppEntityRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.util.state.memory.InMemoryStore
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }

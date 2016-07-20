@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.storage.repository.impl
 
+// scalastyle:off
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
@@ -8,15 +9,16 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos
-import mesosphere.marathon.core.storage.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
-import mesosphere.marathon.core.storage.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 
 import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.JavaConverters._
+import scala.concurrent.{ ExecutionContext, Future }
+// scalastyle:on
 
 private[storage] case class StoredGroup(
     id: PathId,
