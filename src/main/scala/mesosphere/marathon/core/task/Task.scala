@@ -485,6 +485,7 @@ object Task {
     def isKilled: Boolean = compareTo(MarathonTaskStatus.Killed)
     def isKilling: Boolean = compareTo(MarathonTaskStatus.Killing)
     def isLost: Boolean = compareTo(MarathonTaskStatus.Lost)
+    def isMesosLost: Boolean = isLost || isGone || isUnreachable
     def isRunning: Boolean = compareTo(MarathonTaskStatus.Running)
     def isStaging: Boolean = compareTo(MarathonTaskStatus.Staging)
     def isStarting: Boolean = compareTo(MarathonTaskStatus.Starting)
