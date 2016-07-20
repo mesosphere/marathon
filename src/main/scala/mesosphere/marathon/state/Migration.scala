@@ -414,7 +414,7 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
       }
     } yield tasks
 
-    migratedTasks.flatMap { task =>
+    migratedTasks.flatMap { tasks =>
       log.info("Finished 1.2 migration")
       Future.successful(())
     }
