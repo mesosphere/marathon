@@ -2,13 +2,14 @@ package mesosphere.marathon.state
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import akka.Done
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.util.{ CapConcurrentExecutionsMetrics, CapConcurrentExecutions }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
 import mesosphere.marathon._
 import org.mockito.Matchers.any
@@ -27,7 +28,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
 
   class Fixture {
     lazy val scheduler = mock[MarathonSchedulerService]
-    lazy val appRepo = mock[AppRepository]
+    lazy val appRepo = mock[AppEntityRepository]
     lazy val groupRepo = mock[GroupRepository]
     lazy val eventBus = mock[EventStream]
     lazy val provider = mock[StorageProvider]
@@ -45,7 +46,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       capMetrics,
       system,
       s"serializeGroupUpdates${actorId.incrementAndGet()}",
-      maxParallel = 1,
+      maxConcurrent = 1,
       maxQueued = 10
     )
 
@@ -325,9 +326,10 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
     when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
     val appWithVersionInfo = app.copy(versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1)))
+
     val groupWithVersionInfo = Group(PathId.empty, Map(
       appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))
-    when(f.appRepo.store(any())).thenReturn(Future.successful(appWithVersionInfo))
+    when(f.appRepo.store(any())).thenReturn(Future.successful(Done))
     when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupWithVersionInfo))
 
     Await.result(f.manager.update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
@@ -345,13 +347,13 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
     when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(Some(group)))
     when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
-    when(f.appRepo.expunge(any())).thenReturn(Future.successful(Seq(true)))
+    when(f.appRepo.delete(any())).thenReturn(Future.successful(Done))
     when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupEmpty))
 
     Await.result(f.manager.update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
     verify(f.groupRepo).store(GroupRepository.zkRootName, groupEmpty)
-    verify(f.appRepo).expunge(app.id)
+    verify(f.appRepo).delete(app.id)
   }
 
   def manager(servicePortsRange: Range) = {

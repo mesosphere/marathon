@@ -4,9 +4,8 @@ import java.nio.file.Files
 
 import mesosphere.marathon.benchmarks.Benchmark
 import mesosphere.marathon.integration.setup.ProcessKeeper
-import mesosphere.marathon.test.zk.NoRetryPolicy
 import mesosphere.util.PortAllocator
-import mesosphere.util.state.zk.RichCuratorFramework
+import mesosphere.util.state.zk.{ NoRetryPolicy, RichCuratorFramework }
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.scalameter.api._

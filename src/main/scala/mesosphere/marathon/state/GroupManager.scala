@@ -12,6 +12,7 @@ import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
 import mesosphere.marathon._
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.util.CapConcurrentExecutions
 import org.slf4j.LoggerFactory
 
@@ -147,7 +148,7 @@ class GroupManager @Inject() (
             log.info(s"[$currentId] expunging app")
             // this means that destroyed apps are immediately gone -- even if there are still tasks running for
             // this app. We should improve this in the future.
-            appRepo.expunge(currentId).map (_ => ())
+            appRepo.delete(currentId).map (_ => ())
         }
       }
     }

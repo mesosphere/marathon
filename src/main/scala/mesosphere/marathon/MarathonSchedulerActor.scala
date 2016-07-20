@@ -5,15 +5,18 @@ import java.util.concurrent.TimeoutException
 import akka.actor._
 import akka.event.{ EventStream, LoggingReceive }
 import akka.pattern.ask
+import akka.stream.Materializer
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
+import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, TaskKillActor, UpgradeConfig }
 import org.apache.mesos.Protos.{ Status, TaskID, TaskState }
@@ -32,19 +35,20 @@ class LockingFailedException(msg: String) extends Exception(msg)
 
 // scalastyle:off parameter.number
 class MarathonSchedulerActor private (
-    createSchedulerActions: ActorRef => SchedulerActions,
-    deploymentManagerProps: SchedulerActions => Props,
-    historyActorProps: Props,
-    appRepository: AppRepository,
-    deploymentRepository: DeploymentRepository,
-    healthCheckManager: HealthCheckManager,
-    taskTracker: TaskTracker,
-    launchQueue: LaunchQueue,
-    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-    electionService: ElectionService,
-    eventBus: EventStream,
-    config: UpgradeConfig,
-    cancellationTimeout: FiniteDuration = 1.minute) extends Actor with ActorLogging with Stash {
+  createSchedulerActions: ActorRef => SchedulerActions,
+  deploymentManagerProps: SchedulerActions => Props,
+  historyActorProps: Props,
+  appRepository: AppRepository,
+  deploymentRepository: DeploymentRepository,
+  healthCheckManager: HealthCheckManager,
+  taskTracker: TaskTracker,
+  launchQueue: LaunchQueue,
+  marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
+  electionService: ElectionService,
+  eventBus: EventStream,
+  config: UpgradeConfig,
+  cancellationTimeout: FiniteDuration = 1.minute)(implicit mat: Materializer)
+    extends Actor with ActorLogging with Stash {
   import context.dispatcher
   import mesosphere.marathon.MarathonSchedulerActor._
 
@@ -71,7 +75,7 @@ class MarathonSchedulerActor private (
   def suspended: Receive = LoggingReceive.withLabel("suspended"){
     case LocalLeadershipEvent.ElectedAsLeader =>
       log.info("Starting scheduler actor")
-      deploymentRepository.all() onComplete {
+      deploymentRepository.all().runWith(Sink.seq).onComplete {
         case Success(deployments) => self ! RecoverDeployments(deployments)
         case Failure(_) => self ! RecoverDeployments(Nil)
       }
@@ -164,7 +168,7 @@ class MarathonSchedulerActor private (
         context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, taskIds, config, promise))
         val res = async {
           await(promise.future)
-          val app = await(appRepository.currentVersion(appId))
+          val app = await(appRepository.get(appId))
           app.foreach(schedulerActions.scale(driver, _))
         }
 
@@ -306,7 +310,7 @@ class MarathonSchedulerActor private (
   }
 
   def deploy(driver: SchedulerDriver, plan: DeploymentPlan): Unit = {
-    deploymentRepository.store(plan).foreach { _ =>
+    deploymentRepository.store(plan).foreach { done =>
       deploymentManager ! PerformDeployment(driver, plan)
     }
   }
@@ -314,7 +318,7 @@ class MarathonSchedulerActor private (
   def deploymentSuccess(plan: DeploymentPlan): Future[Unit] = {
     log.info(s"Deployment of ${plan.target.id} successful")
     eventBus.publish(DeploymentSuccess(plan.id, plan))
-    deploymentRepository.expunge(plan.id).map(_ => ())
+    deploymentRepository.delete(plan.id).map(_ => ())
   }
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Future[Unit] = {
@@ -322,7 +326,7 @@ class MarathonSchedulerActor private (
     plan.affectedApplicationIds.foreach(appId => launchQueue.purge(appId))
     eventBus.publish(DeploymentFailed(plan.id, plan))
     if (reason.isInstanceOf[DeploymentCanceledException]) {
-      deploymentRepository.expunge(plan.id).map(_ => ())
+      deploymentRepository.delete(plan.id).map(_ => ())
     } else {
       Future.successful(())
     }
@@ -343,7 +347,7 @@ object MarathonSchedulerActor {
     electionService: ElectionService,
     eventBus: EventStream,
     config: UpgradeConfig,
-    cancellationTimeout: FiniteDuration = 1.minute): Props = {
+    cancellationTimeout: FiniteDuration = 1.minute)(implicit mat: Materializer): Props = {
     Props(new MarathonSchedulerActor(
       createSchedulerActions,
       deploymentManagerProps,
@@ -426,7 +430,7 @@ class SchedulerActions(
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
-    config: MarathonConf)(implicit ec: ExecutionContext) {
+    config: MarathonConf)(implicit ec: ExecutionContext, mat: Materializer) {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 
@@ -457,7 +461,7 @@ class SchedulerActions(
   }
 
   def scaleApps(): Future[Unit] = {
-    appRepository.allPathIds().map(_.toSet).andThen {
+    appRepository.ids().runWith(Sink.set).andThen {
       case Success(appIds) => for (appId <- appIds) schedulerActor ! ScaleApp(appId)
       case Failure(t) => log.warn("Failed to get task names", t)
     }.map(_ => ())
@@ -472,7 +476,7 @@ class SchedulerActions(
     * @param driver scheduler driver
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
-    appRepository.allPathIds().map(_.toSet).flatMap { appIds =>
+    appRepository.ids().runWith(Sink.set).flatMap { appIds =>
       taskTracker.tasksByApp().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>
           tasksByApp.appTasks(appId).flatMap(_.mesosStatus)
@@ -570,7 +574,7 @@ class SchedulerActions(
   }
 
   def currentAppVersion(appId: PathId): Future[Option[AppDefinition]] =
-    appRepository.currentVersion(appId)
+    appRepository.get(appId)
 }
 
 private[this] object SchedulerActions {

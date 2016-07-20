@@ -8,6 +8,7 @@ import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
+import akka.stream.Materializer
 import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
@@ -18,6 +19,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.http._
 import mesosphere.marathon.event.{ EventModule, HistoryActor }
@@ -181,12 +183,13 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     storage: StorageProvider,
     @Named(EventModule.busName) eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    taskFailureRepository: TaskFailureRepository): ActorRef = {
+    taskFailureRepository: TaskFailureRepository)(implicit mat: Materializer): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
     }
 
     import scala.concurrent.ExecutionContext.Implicits.global
+
     def createSchedulerActions(schedulerActor: ActorRef): SchedulerActions = {
       new SchedulerActions(
         appRepository,
@@ -264,12 +267,12 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Singleton
   def provideMigration(
     store: PersistentStore,
-    appRepo: AppRepository,
+    appRepo: AppEntityRepository,
     groupRepo: GroupRepository,
-    taskRepo: TaskRepository,
-    deploymentRepo: DeploymentRepository,
-    metrics: Metrics): Migration = {
-    new Migration(store, appRepo, groupRepo, taskRepo, deploymentRepo, conf, metrics)
+    taskRepo: TaskEntityRepository,
+    deploymentRepository: DeploymentEntityRepository,
+    metrics: Metrics)(implicit mat: Materializer): Migration = {
+    new Migration(store, appRepo, groupRepo, taskRepo, deploymentRepository, conf, metrics)
   }
 
   @Provides
@@ -286,7 +289,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
       capMetrics,
       actorRefFactory,
       "serializeGroupUpdates",
-      maxParallel = 1,
+      maxConcurrent = 1,
       maxQueued = conf.internalMaxQueuedRootGroupUpdates()
     )
   }
@@ -340,42 +343,41 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Singleton
   def provideTaskFailureRepository(
     @Named(ModuleNames.STORE_TASK_FAILURES) store: EntityStore[TaskFailure],
-    metrics: Metrics): TaskFailureRepository = {
-    new TaskFailureRepository(store, conf.zooKeeperMaxVersions.get, metrics)
+    metrics: Metrics): TaskFailureEntityRepository = {
+    new TaskFailureEntityRepository(store, conf.zooKeeperMaxVersions.get, metrics)
   }
 
   @Provides
   @Singleton
-  def provideAppRepository(
+  def provideAppEntityRepository(
     @Named(ModuleNames.STORE_APP) store: EntityStore[AppDefinition],
-    metrics: Metrics): AppRepository = {
-    new AppRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
+    metrics: Metrics): AppEntityRepository = {
+    new AppEntityRepository(store, maxVersions = conf.zooKeeperMaxVersions.get, metrics)
   }
 
   @Provides
   @Singleton
   def provideGroupRepository(
     @Named(ModuleNames.STORE_GROUP) store: EntityStore[Group],
-    appRepository: AppRepository,
     metrics: Metrics): GroupRepository = {
     new GroupRepository(store, conf.zooKeeperMaxVersions.get, metrics)
   }
 
   @Provides
   @Singleton
-  def provideTaskRepository(
+  def provideTaskEntityRepository(
     @Named(ModuleNames.STORE_TASK) store: EntityStore[MarathonTaskState],
-    metrics: Metrics): TaskRepository = {
-    new TaskRepository(store, metrics)
+    metrics: Metrics)(implicit mat: Materializer): TaskEntityRepository = {
+    new TaskEntityRepository(store, metrics)
   }
 
   @Provides
   @Singleton
-  def provideDeploymentRepository(
+  def provideDeploymentEntityRepository(
     @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) store: EntityStore[DeploymentPlan],
     conf: MarathonConf,
-    metrics: Metrics): DeploymentRepository = {
-    new DeploymentRepository(store, metrics)
+    metrics: Metrics): DeploymentEntityRepository = {
+    new DeploymentEntityRepository(store, metrics)
   }
 
   @Named(ModuleNames.STORE_DEPLOYMENT_PLAN)

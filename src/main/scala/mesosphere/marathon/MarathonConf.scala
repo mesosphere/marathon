@@ -291,9 +291,9 @@ trait MarathonConf
   //Internal settings, that are not intended for external use
   lazy val internalStoreBackend = opt[String](
     "internal_store_backend",
-    descr = "The backend storage system to use. One of zk, mesos_zk, mem.",
+    descr = "The backend storage system to use. One of zk, mesos_zk, mem, zk2 (experimental)",
     hidden = true,
-    validate = Set("zk", "mesos_zk", "mem").contains,
+    validate = Set("zk", "mesos_zk", "mem", "zk2").contains,
     default = Some("zk")
   )
 

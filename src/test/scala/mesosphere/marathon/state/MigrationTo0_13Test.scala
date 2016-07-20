@@ -7,40 +7,42 @@ import com.codahale.metrics.MetricRegistry
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
+import mesosphere.marathon.stream.Sink
+import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.state.FrameworkId
 import mesosphere.util.state.memory.InMemoryStore
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers {
+class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with GivenWhenThen with Matchers {
 
   test("migrate tasks in zk") {
     val f = new Fixture
     Given("some tasks that are stored in old path style")
     val appId = "/test/app1".toRootPath
-    val task1 = TaskSerializer.toProto(MarathonTestHelper.mininimalTask(appId))
-    val task2 = TaskSerializer.toProto(MarathonTestHelper.mininimalTask(appId))
-    f.legacyTaskStore.store(appId, task1).futureValue
-    f.legacyTaskStore.store(appId, task2).futureValue
+    val task1 = MarathonTestHelper.mininimalTask(appId)
+    val task2 = MarathonTestHelper.mininimalTask(appId)
+    val task1Proto = TaskSerializer.toProto(task1)
+    val task2Proto = TaskSerializer.toProto(task2)
+    f.legacyTaskStore.store(appId, task1Proto).futureValue
+    f.legacyTaskStore.store(appId, task2Proto).futureValue
     val names = f.entityStore.names().futureValue
     names should have size 2
-    names should contain (appId.safePath + ":" + task1.getId)
-    names should contain (appId.safePath + ":" + task2.getId)
+    names should contain (appId.safePath + ":" + task1Proto.getId)
+    names should contain (appId.safePath + ":" + task2Proto.getId)
 
     When("we run the migration")
     f.migration.migrateTasks().futureValue
 
     Then("the tasks are stored in paths without duplicated appId")
-    val taskKeys = f.taskRepo.tasksKeys(appId).futureValue
+    val taskKeys = f.taskRepo.tasksKeys(appId).runWith(Sink.seq).futureValue
 
-    taskKeys should have size 2
-    taskKeys should contain (task1.getId)
-    taskKeys should not contain f.legacyStoreKey(appId, task1.getId)
-    taskKeys should contain (task2.getId)
-    taskKeys should not contain f.legacyStoreKey(appId, task2.getId)
+    taskKeys should contain theSameElementsAs Seq(task1.taskId, task2.taskId)
+    taskKeys.map(_.toString) should not contain f.legacyStoreKey(appId, task1Proto.getId)
+    taskKeys.map(_.toString) should not contain f.legacyStoreKey(appId, task2Proto.getId)
   }
 
   test("Migrating a migrated task throws an Exception") {
@@ -63,35 +65,35 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     val f = new Fixture
     Given("some tasks that are stored in old path style")
     val appId = "/test/app1".toRootPath
-    val task1 = TaskSerializer.toProto(MarathonTestHelper.mininimalTask(appId))
-    f.legacyTaskStore.store(appId, task1).futureValue
+    val task1 = MarathonTestHelper.mininimalTask(appId)
+    val task1Proto = TaskSerializer.toProto(task1)
+    f.legacyTaskStore.store(appId, task1Proto).futureValue
     val names = f.entityStore.names().futureValue
     names should have size 1
-    names should contain (appId.safePath + ":" + task1.getId)
+    names should contain (appId.safePath + ":" + task1Proto.getId)
 
     When("we run the migration")
     f.migration.migrateTasks().futureValue
 
     Then("the tasks are stored in paths without duplicated appId")
-    val taskKeys1 = f.taskRepo.tasksKeys(appId).futureValue
+    val taskKeys1 = f.taskRepo.tasksKeys(appId).runWith(Sink.seq).futureValue
 
     taskKeys1 should have size 1
 
     When("we add another task in old format")
-    val task2 = TaskSerializer.toProto(MarathonTestHelper.mininimalTask(appId))
-    f.legacyTaskStore.store(appId, task2).futureValue
-    f.entityStore.names().futureValue should contain (appId.safePath + ":" + task2.getId)
+    val task2 = MarathonTestHelper.mininimalTask(appId)
+    val task2Proto = TaskSerializer.toProto(task2)
+    f.legacyTaskStore.store(appId, task2Proto).futureValue
+    f.entityStore.names().futureValue should contain (appId.safePath + ":" + task2Proto.getId)
 
     And("we run the migration again")
     f.migration.migrateTasks().futureValue
 
     Then("Only the second task is considered and the first one does not crash the migration")
-    val taskKeys2 = f.taskRepo.tasksKeys(appId).futureValue
-    taskKeys2 should have size 2
-    taskKeys2 should contain (task1.getId)
-    taskKeys2 should not contain f.legacyStoreKey(appId, task1.getId)
-    taskKeys2 should contain (task2.getId)
-    taskKeys2 should not contain f.legacyStoreKey(appId, task2.getId)
+    val taskKeys2 = f.taskRepo.tasksKeys(appId).runWith(Sink.seq).futureValue
+    taskKeys2 should contain theSameElementsAs Seq(task1.taskId, task2.taskId)
+    taskKeys2.map(_.toString) should not contain f.legacyStoreKey(appId, task1Proto.getId)
+    taskKeys2.map(_.toString) should not contain f.legacyStoreKey(appId, task2Proto.getId)
   }
 
   test("migrating frameworkId to framework:id") {
@@ -159,10 +161,10 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
       store = state,
       metrics = metrics,
       newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
-      prefix = TaskRepository.storePrefix)
+      prefix = TaskEntityRepository.storePrefix)
     lazy val taskRepo = {
       val metrics = new Metrics(new MetricRegistry)
-      new TaskRepository(entityStore, metrics)
+      new TaskEntityRepository(entityStore, metrics)
     }
     lazy val frameworkIdStore = new MarathonStore[FrameworkId](
       store = state,

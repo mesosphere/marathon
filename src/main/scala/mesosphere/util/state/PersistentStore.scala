@@ -1,6 +1,7 @@
 package mesosphere.util.state
 
 import scala.concurrent.Future
+import scala.collection.immutable.Seq
 
 /**
   * An Entity that is provided and can be changed by the related store.

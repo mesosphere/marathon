@@ -1,11 +1,27 @@
 package mesosphere.marathon.util
 
 import akka.actor.Scheduler
+import com.typesafe.config.Config
 
 import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.concurrent.{ ExecutionContext, Future, Promise, blocking => blockingCall }
 import scala.util.control.NonFatal
 import scala.util.{ Failure, Random, Success }
+
+case class RetryConfig(
+  maxAttempts: Int = Retry.DefaultMaxAttempts,
+  minDelay: Duration = Retry.DefaultMinDelay,
+  maxDelay: Duration = Retry.DefaultMaxDelay)
+
+object RetryConfig {
+  def apply(config: Config): RetryConfig = {
+    RetryConfig(
+      config.int("max-attempts", default = Retry.DefaultMaxAttempts),
+      config.duration("min-delay", default = Retry.DefaultMinDelay),
+      config.duration("max-delay", default = Retry.DefaultMaxDelay)
+    )
+  }
+}
 
 /**
   * Functional transforms to retry methods using a form of Exponential Backoff with jitter.
@@ -13,6 +29,10 @@ import scala.util.{ Failure, Random, Success }
   * See also: https://www.awsarchitectureblog.com/2015/03/backoff.html
   */
 object Retry {
+  val DefaultMaxAttempts = 5
+  val DefaultMinDelay = 10.millis
+  val DefaultMaxDelay = 1.second
+
   type RetryOnFn = Throwable => Boolean
   val defaultRetry: RetryOnFn = NonFatal(_)
 
@@ -37,9 +57,9 @@ object Retry {
   // scalastyle:off magic.number
   def apply[T](
     name: String,
-    maxAttempts: Int = 5,
-    minDelay: FiniteDuration = 10.millis,
-    maxDelay: FiniteDuration = 1.second,
+    maxAttempts: Int = DefaultMaxAttempts,
+    minDelay: Duration = DefaultMinDelay,
+    maxDelay: Duration = DefaultMaxDelay,
     retryOn: RetryOnFn = defaultRetry)(f: => Future[T])(implicit
     scheduler: Scheduler,
     ctx: ExecutionContext): Future[T] = {

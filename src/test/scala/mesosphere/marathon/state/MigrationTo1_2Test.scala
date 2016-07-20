@@ -20,7 +20,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
       newState = () => DeploymentPlan.empty,
       prefix = "deployment:"
     )
-    lazy val deploymentRepo = new DeploymentRepository(deploymentStore, metrics)
+    lazy val deploymentRepo = new DeploymentEntityRepository(deploymentStore, metrics)
     lazy val migration = new MigrationTo1_2(deploymentRepo)
   }
 

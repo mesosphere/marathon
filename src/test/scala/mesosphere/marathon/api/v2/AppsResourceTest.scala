@@ -10,6 +10,7 @@ import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.storage.repository.{ AppRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion

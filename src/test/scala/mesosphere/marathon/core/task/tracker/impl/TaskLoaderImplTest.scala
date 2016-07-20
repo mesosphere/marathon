@@ -1,27 +1,30 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import akka.stream.scaladsl.Source
+import mesosphere.marathon.core.storage.repository.TaskRepository
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
-import mesosphere.marathon.state.{ PathId, TaskRepository }
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.state.PathId
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 
 class TaskLoaderImplTest
-    extends FunSuite with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
+    extends FunSuite with MarathonSpec with Mockito with GivenWhenThen
+    with ScalaFutures with Matchers with MarathonActorSupport {
   test("loading no tasks") {
     val f = new Fixture
 
     Given("no tasks")
-    f.taskRepository.allIds() returns Future.successful(Iterable.empty)
+    f.taskRepository.ids() returns Source.empty
 
     When("loadTasks is called")
     val loaded = f.loader.loadTasks()
 
-    Then("taskRepository.allIds gets called")
-    verify(f.taskRepository).allIds()
+    Then("taskRepository.ids gets called")
+    verify(f.taskRepository).ids()
 
     And("our data is empty")
     loaded.futureValue.allTasks should be(empty)
@@ -41,9 +44,9 @@ class TaskLoaderImplTest
     val app2task1 = MarathonTestHelper.mininimalTask(app2Id)
     val tasks = Iterable(app1task1, app1task2, app2task1)
 
-    f.taskRepository.allIds() returns Future.successful(tasks.map(_.taskId.idString))
+    f.taskRepository.ids() returns Source(tasks.map(_.taskId)(collection.breakOut))
     for (task <- tasks) {
-      f.taskRepository.task(task.taskId.idString) returns Future.successful(Some(TaskSerializer.toProto(task)))
+      f.taskRepository.get(task.taskId) returns Future.successful(Some(task))
     }
 
     When("loadTasks is called")

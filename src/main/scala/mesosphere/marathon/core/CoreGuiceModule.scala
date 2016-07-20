@@ -3,8 +3,9 @@ package mesosphere.marathon.core
 import javax.inject.Named
 
 import akka.actor.ActorRefFactory
-import com.google.inject.name.Names
+import akka.stream.Materializer
 import com.google.inject._
+import com.google.inject.name.Names
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
 import mesosphere.marathon.core.base.Clock
@@ -14,18 +15,15 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.bus.{ TaskStatusEmitter, TaskChangeObservables }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository }
+import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.task.update.impl.steps.{
-  ContinueOnErrorStep,
-  NotifyHealthCheckManagerStepImpl,
-  NotifyLaunchQueueStepImpl,
-  NotifyRateLimiterStepImpl,
-  PostToEventStreamStepImpl,
-  ScaleAppUpdateStepImpl,
-  TaskStatusEmitterPublishStepImpl
-}
+
+import scala.concurrent.ExecutionContext
+// scalastyle:off
+import mesosphere.marathon.core.task.update.impl.steps.{ ContinueOnErrorStep, NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
+// scalastyle:on
 import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.metrics.Metrics
@@ -100,6 +98,23 @@ class CoreGuiceModule extends AbstractModule {
   @Provides @Singleton
   def readinessCheckExecutor(coreModule: CoreModule): ReadinessCheckExecutor = coreModule.readinessModule.readinessCheckExecutor //scalastyle:ignore
 
+  @Provides
+  @Singleton
+  def materializer(coreModule: CoreModule): Materializer = coreModule.actorsModule.materializer
+
+  @Provides
+  @Singleton
+  def appRepository(coreModule: CoreModule): AppRepository = coreModule.storageModule.appRepository
+
+  @Provides
+  @Singleton
+  def deploymentRepository(coreModule: CoreModule): DeploymentRepository = coreModule.storageModule.deploymentRepository
+
+  @Provides
+  @Singleton
+  def taskFailureRepository(coreModule: CoreModule): TaskFailureRepository =
+    coreModule.storageModule.taskFailureRepository
+
   @Provides @Singleton
   def taskStatusUpdateSteps(
     notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
@@ -161,8 +176,8 @@ class CoreGuiceModule extends AbstractModule {
       capMetrics,
       actorRefFactory,
       "serializeTaskStatusUpdates",
-      maxParallel = config.internalMaxParallelStatusUpdates(),
+      maxConcurrent = config.internalMaxParallelStatusUpdates(),
       maxQueued = config.internalMaxQueuedStatusUpdates()
-    )
+    )(ExecutionContext.global)
   }
 }

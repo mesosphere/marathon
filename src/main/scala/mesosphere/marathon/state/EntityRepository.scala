@@ -1,6 +1,7 @@
 package mesosphere.marathon.state
 
 import scala.concurrent.Future
+import scala.collection.immutable.Iterable
 
 trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics with VersionedEntry {
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -65,7 +66,7 @@ trait EntityRepository[T <: MarathonState[_, T]] extends StateMetrics with Versi
         store.expunge(versionKey(id, timestamp))
       }
       val currentDeleteResult = store.expunge(id)
-      Future.sequence(currentDeleteResult +: versionsDeleteResult.toSeq)
+      Future.sequence(currentDeleteResult +: versionsDeleteResult.toVector)
     }
   }
 

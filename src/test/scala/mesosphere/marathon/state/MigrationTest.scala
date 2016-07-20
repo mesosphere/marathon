@@ -2,11 +2,12 @@ package mesosphere.marathon.state
 
 import java.util.UUID
 
+import akka.stream.scaladsl.Source
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
-import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import mesosphere.util.state.memory.InMemoryEntity
@@ -14,9 +15,11 @@ import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
-class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWhenThen with ScalaFutures {
+class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWhenThen with ScalaFutures
+    with MarathonActorSupport {
 
   test("migrations can be filtered by version") {
     val f = new Fixture
@@ -41,8 +44,8 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.store.allIds() returns Future.successful(Seq.empty)
     f.store.initialize() returns Future.successful(())
     f.store.load(any) returns Future.successful(None)
-    f.appRepo.apps() returns Future.successful(Seq.empty)
-    f.appRepo.allPathIds() returns Future.successful(Seq.empty)
+    f.appRepo.all() returns Source.empty
+    f.appRepo.ids() returns Source.empty
     f.groupRepo.group("root") returns Future.successful(None)
 
     f.migration.migrate()
@@ -60,8 +63,8 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     f.store.allIds() returns Future.successful(Seq.empty)
     f.store.initialize() returns Future.successful(())
     f.store.load(any) returns Future.successful(None)
-    f.appRepo.apps() returns Future.successful(Seq.empty)
-    f.appRepo.allPathIds() returns Future.successful(Seq.empty)
+    f.appRepo.all() returns Source.empty
+    f.appRepo.ids() returns Source.empty
     f.groupRepo.group("root") returns Future.successful(None)
     f.groupRepo.listVersions(any) returns Future.successful(Seq.empty)
 
@@ -115,10 +118,10 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
     trait StoreWithManagement extends PersistentStore with PersistentStoreManagement
     val metrics = new Metrics(new MetricRegistry)
     val store = mock[StoreWithManagement]
-    val appRepo = mock[AppRepository]
+    val appRepo = mock[AppEntityRepository]
     val groupRepo = mock[GroupRepository]
     val config = mock[MarathonConf]
-    val deploymentRepo = new DeploymentRepository(
+    val deploymentRepo = new DeploymentEntityRepository(
       new MarathonStore[DeploymentPlan](
         store = store,
         metrics = metrics,
@@ -126,7 +129,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
         prefix = "deployment:"),
       metrics
     )
-    val taskRepo = new TaskRepository(
+    val taskRepo = new TaskEntityRepository(
       new MarathonStore[MarathonTaskState](
         store = store,
         metrics = metrics,

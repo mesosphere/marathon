@@ -2,11 +2,12 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.Props
 import akka.testkit.TestActorRef
+import mesosphere.marathon.core.storage.repository.TaskFailureRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.event.{ AppTerminatedEvent, HistoryActor, MesosStatusUpdateEvent }
-import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure, TaskFailureRepository }
-import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
+import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.StoppingBehavior.KillNextBatch
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
@@ -70,7 +71,7 @@ class AppStopActorTest
     verify(f.taskFailureRepository, times(1)).store(app.id, taskFailureA)
     verify(f.taskFailureRepository, times(1)).store(app.id, taskFailureB)
 
-    verify(f.taskFailureRepository, times(1)).expunge(app.id)
+    verify(f.taskFailureRepository, times(1)).delete(app.id)
   }
 
   test("Stop App without running tasks") {
