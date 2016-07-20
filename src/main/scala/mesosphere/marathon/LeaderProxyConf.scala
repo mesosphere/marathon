@@ -20,6 +20,6 @@ trait LeaderProxyConf extends ScallopConf {
 
   lazy val leaderProxySSLIgnoreHostname = opt[Boolean]("leader_proxy_ssl_ignore_hostname",
     descr = "Do not verify that the hostname of the Marathon leader matches the one in the SSL certificate" +
-            " when proxying API requests to the current leader.",
+      " when proxying API requests to the current leader.",
     default = Some(false))
 }

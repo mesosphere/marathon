@@ -28,14 +28,18 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
+import mesosphere.marathon.core.heartbeat._
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore, _ }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import org.apache.mesos.Scheduler
 import org.apache.mesos.state.ZooKeeperState
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConverters._
+import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
@@ -56,6 +60,8 @@ object ModuleNames {
   final val STORE_GROUP = "GroupStore"
   final val STORE_TASK = "TaskStore"
   final val STORE_EVENT_SUBSCRIBERS = "EventSubscriberStore"
+
+  final val MESOS_HEARTBEAT_ACTOR = "MesosHeartbeatActor"
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf)
@@ -71,12 +77,15 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
     bind(classOf[ZookeeperConf]).toInstance(conf)
 
-    // needs to be eager to break circular dependencies
-    bind(classOf[SchedulerCallbacks]).to(classOf[SchedulerCallbacksServiceAdapter]).asEagerSingleton()
+    // MesosHeartbeatMonitor decorates MarathonScheduler
+    bind(classOf[Scheduler]).to(classOf[MesosHeartbeatMonitor]).in(Scopes.SINGLETON)
+    bind(classOf[Scheduler])
+      .annotatedWith(Names.named(MesosHeartbeatMonitor.BASE))
+      .to(classOf[MarathonScheduler])
+      .in(Scopes.SINGLETON)
 
     bind(classOf[MarathonSchedulerDriverHolder]).in(Scopes.SINGLETON)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
-    bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[TaskOpFactory]).to(classOf[TaskOpFactoryImpl]).in(Scopes.SINGLETON)
 
@@ -88,6 +97,17 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
     bind(classOf[Metrics]).in(Scopes.SINGLETON)
     bind(classOf[HttpEventStreamActorMetrics]).in(Scopes.SINGLETON)
+  }
+
+  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR)
+  @Provides
+  @Singleton
+  def provideMesosHeartbeatActor(system: ActorSystem): ActorRef = {
+    system.actorOf(Heartbeat.props(Heartbeat.Config(
+      FiniteDuration(conf.mesosHeartbeatInterval.get.getOrElse(
+        MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_INTERVAL_MS), TimeUnit.MILLISECONDS),
+      conf.mesosHeartbeatFailureThreshold.get.getOrElse(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD)
+    )), ModuleNames.MESOS_HEARTBEAT_ACTOR)
   }
 
   @Provides
