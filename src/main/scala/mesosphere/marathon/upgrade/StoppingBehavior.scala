@@ -5,7 +5,7 @@ import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.MesosStatusUpdateEvent
+import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.upgrade.StoppingBehavior.KillNextBatch
 import org.apache.mesos.SchedulerDriver

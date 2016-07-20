@@ -1,4 +1,4 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.stream
 
 import java.io.EOFException
 import java.util.concurrent.CountDownLatch
@@ -7,7 +7,7 @@ import akka.actor.Props
 import akka.event.EventStream
 import akka.testkit.{ EventFilter, ImplicitSender, TestActorRef }
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.event.{ EventStreamAttached, EventStreamDetached, Subscribe }
+import mesosphere.marathon.core.event.{ EventStreamAttached, EventStreamDetached, Subscribe }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 

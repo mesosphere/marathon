@@ -8,7 +8,7 @@ import akka.event.EventStream
 import akka.pattern.pipe
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.event.{ GroupChangeFailed, GroupChangeSuccess }
+import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinition, _ }

@@ -1,5 +1,6 @@
 package mesosphere.marathon
 
+import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
 import mesosphere.marathon.core.groupmanager.GroupManagerConfig
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
@@ -9,18 +10,19 @@ import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.upgrade.UpgradeConfig
 import org.rogach.scallop.ScallopConf
 
 import scala.sys.SystemProperties
-import mesosphere.marathon.io.storage.StorageProvider
 
 trait MarathonConf
-    extends ScallopConf with ZookeeperConf with LeaderProxyConf
-    with LaunchTokenConfig with OfferMatcherManagerConfig with OfferProcessorConfig with ReviveOffersConfig
-    with MarathonSchedulerServiceConfig with LaunchQueueConfig with PluginManagerConfiguration
-    with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with TaskJobsConfig with GroupManagerConfig {
+    extends ScallopConf
+    with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
+    with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
+    with PluginManagerConfiguration with ReviveOffersConfig with TaskJobsConfig with TaskStatusUpdateConfig
+    with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
 
   //scalastyle:off magic.number
 
@@ -130,14 +132,6 @@ trait MarathonConf
       "\"http://localhost:8888, http://domain.com\"",
     noshort = true,
     default = None)
-
-  lazy val eventStreamMaxOutstandingMessages = opt[Int](
-    "event_stream_max_outstanding_messages",
-    descr = "The event stream buffers events, that are not already consumed by clients. " +
-      "This number defines the number of events that get buffered on the server side, before messages are dropped.",
-    noshort = true,
-    default = Some(50)
-  )
 
   def executor: Executor = Executor.dispatch(defaultExecutor())
 
