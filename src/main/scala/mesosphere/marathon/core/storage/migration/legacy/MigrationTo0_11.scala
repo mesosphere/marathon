@@ -2,13 +2,13 @@ package mesosphere.marathon.core.storage.migration.legacy
 
 import akka.stream.Materializer
 import mesosphere.marathon.core.storage.LegacyStorageConfig
-import mesosphere.marathon.core.storage.repository.{AppRepository, GroupRepository}
+import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.stream.Sink
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 /**
   * Implements the following migration logic:
@@ -16,14 +16,13 @@ import scala.concurrent.{ExecutionContext, Future}
   * * Make the groupRepository the ultimate source of truth for the latest app version.
   */
 class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
-                                                                 ctx: ExecutionContext,
-                                                                 mat: Materializer,
-                                                                 metrics: Metrics) {
+  ctx: ExecutionContext,
+    mat: Materializer,
+    metrics: Metrics) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrateApps(): Future[Unit] = {
     log.info("Start 0.11 migration")
-
 
     legacyConfig.map { config =>
       val appRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], config.maxVersions)
@@ -45,17 +44,19 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
     }
   }
 
-  private[this] def storeUpdatedAppsInRootGroup(groupRepository: GroupRepository,
-                                                rootGroup: Group,
-                                                updatedApps: Iterable[AppDefinition]): Future[Unit] = {
+  private[this] def storeUpdatedAppsInRootGroup(
+    groupRepository: GroupRepository,
+    rootGroup: Group,
+    updatedApps: Iterable[AppDefinition]): Future[Unit] = {
     val updatedGroup = updatedApps.foldLeft(rootGroup){ (updatedGroup, updatedApp) =>
       updatedGroup.updateApp(updatedApp.id, _ => updatedApp, updatedApp.version)
     }
     groupRepository.storeRoot(updatedGroup, Nil, Nil).map(_ => ())
   }
 
-  private[this] def processApps(appRepository: AppRepository,
-                                appIds: Iterable[PathId], rootGroup: Group): Future[Vector[AppDefinition]] = {
+  private[this] def processApps(
+    appRepository: AppRepository,
+    appIds: Iterable[PathId], rootGroup: Group): Future[Vector[AppDefinition]] = {
     appIds.foldLeft(Future.successful[Vector[AppDefinition]](Vector.empty)) { (otherStores, appId) =>
       otherStores.flatMap { storedApps =>
         val maybeAppInGroup = rootGroup.app(appId)
@@ -70,12 +71,13 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
     }
   }
 
-  private[this] def addVersionInfo(appRepository: AppRepository,
-                                   id: PathId, appInGroup: AppDefinition): Future[Option[AppDefinition]] = {
+  private[this] def addVersionInfo(
+    appRepository: AppRepository,
+    id: PathId, appInGroup: AppDefinition): Future[Option[AppDefinition]] = {
     def addVersionInfoToVersioned(
-                                   maybeLastApp: Option[AppDefinition],
-                                   nextVersion: Timestamp,
-                                   maybeNextApp: Option[AppDefinition]): Option[AppDefinition] = {
+      maybeLastApp: Option[AppDefinition],
+      nextVersion: Timestamp,
+      maybeNextApp: Option[AppDefinition]): Option[AppDefinition] = {
       maybeNextApp.map { nextApp =>
         maybeLastApp match {
           case Some(lastApp) if !lastApp.isUpgrade(nextApp) =>

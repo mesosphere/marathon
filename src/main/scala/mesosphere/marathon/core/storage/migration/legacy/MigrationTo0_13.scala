@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.storage.migration.legacy
 
-import java.io.{ByteArrayInputStream, ObjectInputStream}
+import java.io.{ ByteArrayInputStream, ObjectInputStream }
 
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.storage.LegacyStorageConfig
@@ -12,11 +12,11 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class MigrationTo0_13(legacyStorageConfig: Option[LegacyStorageConfig])(implicit
-                                                                        ctx: ExecutionContext,
-                                                                        metrics: Metrics) {
+  ctx: ExecutionContext,
+    metrics: Metrics) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   // the bytes stored via TaskTracker are incompatible to EntityRepo, so we have to parse them 'manually'
@@ -46,7 +46,7 @@ class MigrationTo0_13(legacyStorageConfig: Option[LegacyStorageConfig])(implicit
   def migrateTasks(persistentStore: PersistentStore, taskRepository: TaskEntityRepository): Future[Unit] = {
     log.info("Start 0.13 migration")
 
-   taskRepository.store.names().flatMap { keys =>
+    taskRepository.store.names().flatMap { keys =>
       log.info("Found {} tasks in store", keys.size)
       // old format is appId:appId.taskId
       val oldFormatRegex = """^.*:.*\..*$""".r
@@ -70,14 +70,15 @@ class MigrationTo0_13(legacyStorageConfig: Option[LegacyStorageConfig])(implicit
   // had to be changed, even though tasks are not stored with versions. The new
   // format looks like this:
   // task:my-app.13cb0cbe-b959-11e5-bb6d-5e099c92de61
-  private[migration] def migrateKey(store: PersistentStore,
-                                    taskRepository: TaskEntityRepository,
-                                    legacyKey: String): Future[Unit] = {
+  private[migration] def migrateKey(
+    store: PersistentStore,
+    taskRepository: TaskEntityRepository,
+    legacyKey: String): Future[Unit] = {
     fetchLegacyTask(store, legacyKey).flatMap {
       case Some(task) =>
         taskRepository.store(TaskSerializer.fromProto(task)).flatMap { _ =>
-        taskRepository.store.expunge(legacyKey).map(_ => ())
-      }
+          taskRepository.store.expunge(legacyKey).map(_ => ())
+        }
       case _ => Future.failed[Unit](new RuntimeException(s"Unable to load entity with key = $legacyKey"))
     }
   }
@@ -119,6 +120,4 @@ class MigrationTo0_13(legacyStorageConfig: Option[LegacyStorageConfig])(implicit
       } yield ()
     }.getOrElse(Future.successful(()))
 }
-
-
 

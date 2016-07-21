@@ -11,7 +11,7 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.storage.repository.{ GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.event.{ EventModule, GroupChangeFailed, GroupChangeSuccess }
+import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
@@ -36,7 +36,7 @@ class GroupManager @Inject() (
     appRepo: ReadOnlyAppRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    @Named(EventModule.busName) eventBus: EventStream)(implicit mat: Materializer) extends PathFun {
+    eventBus: EventStream)(implicit mat: Materializer) extends PathFun {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 

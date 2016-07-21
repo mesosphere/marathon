@@ -4,15 +4,15 @@ import java.time.OffsetDateTime
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{Done, NotUsed}
+import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.migration.StorageVersions
-import mesosphere.marathon.core.storage.store.impl.{BasePersistenceStore, CategorizedKey}
+import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.util.Lock
 
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class InMemoryPersistenceStore(implicit
   protected val mat: Materializer,

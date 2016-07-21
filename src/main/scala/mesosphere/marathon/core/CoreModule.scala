@@ -3,6 +3,8 @@ package mesosphere.marathon.core
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.ActorsModule
 import mesosphere.marathon.core.election.ElectionModule
+import mesosphere.marathon.core.event.EventModule
+import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -32,4 +34,6 @@ trait CoreModule {
   def authModule: AuthModule
   def readinessModule: ReadinessModule
   def storageModule: StorageModule
+  def eventModule: EventModule
+  def historyModule: HistoryModule
 }

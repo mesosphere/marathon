@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.storage.store.impl.zk
 
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -17,8 +18,12 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
   private val bucket = math.abs(id.hashCode % ZkStoreSerialization.HashBucketSize)
   def path: String = version.fold(f"/$category/$bucket%x/$id") { v =>
-    f"/$category/$bucket%x/$id/versions/$v"
+    f"/$category/$bucket%x/$id/${ZkId.DateFormat.format(v)}"
   }
+}
+
+object ZkId {
+  val DateFormat = DateTimeFormatter.ISO_OFFSET_DATE_TIME
 }
 
 case class ZkSerialized(bytes: ByteString)

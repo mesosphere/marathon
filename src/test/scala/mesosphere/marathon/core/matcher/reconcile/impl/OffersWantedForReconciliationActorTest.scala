@@ -6,7 +6,7 @@ import akka.testkit.{ TestProbe, TestActorRef }
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
-import mesosphere.marathon.event.DeploymentStepSuccess
+import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.state.{ Group, Residency, PathId, AppDefinition }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan

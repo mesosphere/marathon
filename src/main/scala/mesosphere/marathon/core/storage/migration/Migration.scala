@@ -6,17 +6,17 @@ import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.LegacyStorageConfig
-import mesosphere.marathon.core.storage.migration.legacy.{MigrationTo0_11, MigrationTo0_13, MigrationTo0_16, MigrationTo1_2}
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{PersistentStore, PersistentStoreManagement}
-import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository, TaskRepository}
+import mesosphere.marathon.core.storage.migration.legacy.{ MigrationTo0_11, MigrationTo0_13, MigrationTo0_16, MigrationTo1_2 }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ PersistentStore, PersistentStoreManagement }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.{BuildInfo, MigrationFailedException}
+import mesosphere.marathon.{ BuildInfo, MigrationFailedException }
 
-import scala.async.Async.{async, await}
+import scala.async.Async.{ async, await }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 // scalastyle:on
 
@@ -28,8 +28,8 @@ class Migration(
     private[migration] val deploymentRepository: DeploymentRepository,
     private[migration] val taskRepo: TaskRepository,
     private[migration] val taskFailureRepo: TaskFailureRepository)(implicit
-                                                                   mat: Materializer,
-                                                                   metrics: Metrics) extends StrictLogging {
+  mat: Materializer,
+    metrics: Metrics) extends StrictLogging {
   //scalastyle:off magic.number
 
   import StorageVersions._
@@ -169,8 +169,6 @@ class Migration(
 object Migration {
   val StorageVersionName = "internal:storage:version"
 }
-
-
 
 object StorageVersions {
   val VersionRegex = """^(\d+)\.(\d+)\.(\d+).*""".r

@@ -3,13 +3,13 @@ package mesosphere.marathon.core.storage.migration.legacy
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import mesosphere.marathon.core.storage.LegacyStorageConfig
-import mesosphere.marathon.core.storage.repository.{AppRepository, GroupRepository}
+import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, Group, Timestamp}
+import mesosphere.marathon.state.{ AppDefinition, Group, Timestamp }
 import org.slf4j.LoggerFactory
 
-import scala.async.Async.{async, await}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.async.Async.{ async, await }
+import scala.concurrent.{ ExecutionContext, Future }
 
 /**
   * Implements the following migration logic:
@@ -21,9 +21,10 @@ import scala.concurrent.{ExecutionContext, Future}
   * - TODO: Could we end up with apps that have historical versions that don't have the new proto? This would
   *   only really make sense if the version wasn't referenced by an app.
   */
-class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit ctx: ExecutionContext,
-                                                                 mat: Materializer,
-                                                                 metrics: Metrics) {
+class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
+  ctx: ExecutionContext,
+    mat: Materializer,
+    metrics: Metrics) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrate(): Future[Unit] =

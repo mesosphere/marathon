@@ -4,18 +4,19 @@ import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.event.{ SchedulerDisconnectedEvent, SchedulerRegisteredEvent, SchedulerReregisteredEvent }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
-class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll with Mockito with Matchers with GivenWhenThen {
+class MarathonSchedulerTest
+    extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll with Mockito with Matchers with GivenWhenThen {
 
   var probe: TestProbe = _
   var repo: AppRepository = _
@@ -47,11 +48,7 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
       frameworkIdUtil,
       mesosLeaderInfo,
       mock[ActorSystem],
-      config,
-      new SchedulerCallbacks {
-        override def disconnected(): Unit = {}
-      }
-    ) {
+      config) {
       override protected def suicide(removeFrameworkId: Boolean): Unit = {
         suicideFn(removeFrameworkId)
       }
@@ -126,6 +123,12 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
     } finally {
       eventBus.unsubscribe(probe.ref)
     }
+
+    // we **heavily** rely on driver.stop to delegate enforcement of leadership abdication,
+    // so it's worth testing that this behavior isn't lost.
+    verify(driver, times(1)).stop(true)
+
+    noMoreInteractions(driver)
   }
 
   test("Suicide with an unknown error will not remove the framework id") {

@@ -6,13 +6,13 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.LegacyStorageConfig
-import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, GroupRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository}
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, Group, MarathonTaskState, TaskFailure}
+import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
-import scala.async.Async.{async, await}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.async.Async.{ async, await }
+import scala.concurrent.{ ExecutionContext, Future }
 // scalastyle:on
 
 /**
@@ -21,9 +21,9 @@ import scala.concurrent.{ExecutionContext, Future}
   * Does nothing unless Legacy Storage and New Storage are configured.
   */
 class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
-                                                           executionContext: ExecutionContext,
-                                                           mat: Materializer,
-                                                           metrics: Metrics) extends StrictLogging {
+  executionContext: ExecutionContext,
+    mat: Materializer,
+    metrics: Metrics) extends StrictLogging {
   def migrate(): Future[Done] = async {
     val legacyStore = await(migration.legacyStoreFuture)
     // This migration only goes from legacy storage -> new storage.
@@ -58,8 +58,9 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
     }.runFold(0) { case (acc, _) => acc + 1 }
   }
 
-  def migrateVersionedRepo[Id, T](oldRepo: VersionedRepository[Id, T],
-                              newRepo: VersionedRepository[Id, T]): Future[Int] = async {
+  def migrateVersionedRepo[Id, T](
+    oldRepo: VersionedRepository[Id, T],
+    newRepo: VersionedRepository[Id, T]): Future[Int] = async {
     val oldVersions = oldRepo.ids().flatMapConcat { id =>
       oldRepo.versions(id).mapAsync(Int.MaxValue) { version =>
         oldRepo.getVersion(id, version)
@@ -67,7 +68,6 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
     }.mapAsync(1) { value =>
       oldRepo.storeVersion(value)
     }.runFold(0) { case (acc, _) => acc + 1 }
-
 
     val currentVersions = oldRepo.all().mapAsync(1) { value =>
       newRepo.store(value)
@@ -81,20 +81,23 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
     migrateRepo(oldRepo, taskRepository).map("tasks" -> _)
   }
 
-  def migrateDeployments(legacyStore: LegacyStorageConfig,
-                         deploymentRepository: DeploymentRepository): Future[(String, Int)] = {
+  def migrateDeployments(
+    legacyStore: LegacyStorageConfig,
+    deploymentRepository: DeploymentRepository): Future[(String, Int)] = {
     val oldRepo = DeploymentRepository.legacyRepository(legacyStore.entityStore[DeploymentPlan])
     migrateRepo(oldRepo, deploymentRepository).map("deployment plans" -> _)
   }
 
-  def migrateTaskFailures(legacyStore: LegacyStorageConfig,
-                          taskFailureRepository: TaskFailureRepository): Future[(String, Int)] = {
+  def migrateTaskFailures(
+    legacyStore: LegacyStorageConfig,
+    taskFailureRepository: TaskFailureRepository): Future[(String, Int)] = {
     val oldRepo = TaskFailureRepository.legacyRepository(legacyStore.entityStore[TaskFailure])
     migrateVersionedRepo(oldRepo, taskFailureRepository).map("task failures" -> _)
   }
 
-  def migrateGroups(legacyStore: LegacyStorageConfig,
-                    groupRepository: GroupRepository): Future[(String, Int)] = {
+  def migrateGroups(
+    legacyStore: LegacyStorageConfig,
+    groupRepository: GroupRepository): Future[(String, Int)] = {
     val oldAppRepo = AppRepository.legacyRepository(legacyStore.entityStore[AppDefinition], legacyStore.maxVersions)
     val oldRepo = GroupRepository.legacyRepository(legacyStore.entityStore[Group], legacyStore.maxVersions, oldAppRepo)
 
@@ -106,6 +109,6 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
       // we store the roots one at a time with the current root last,
       // adding a new app version for every root (for simplicity)
       groupRepository.storeRoot(root, root.apps.values.toVector, Nil)
-    }.runFold(0) { case (acc, _) => acc + 1}.map("root versions" -> _)
+    }.runFold(0) { case (acc, _) => acc + 1 }.map("root versions" -> _)
   }
 }

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.event.{ MarathonEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event.{ MarathonEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }

@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatus.TemporarilyUnreachable
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event._
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 

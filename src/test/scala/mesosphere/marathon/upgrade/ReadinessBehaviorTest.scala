@@ -6,7 +6,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckS
 import mesosphere.marathon.core.readiness.{ ReadinessCheckResult, ReadinessCheck, ReadinessCheckExecutor }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent, DeploymentStatus }
+import mesosphere.marathon.core.event.{ HealthStatusChanged, MesosStatusUpdateEvent, DeploymentStatus }
 import mesosphere.marathon.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state._

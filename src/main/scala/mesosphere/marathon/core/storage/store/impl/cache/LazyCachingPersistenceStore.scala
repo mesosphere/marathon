@@ -5,18 +5,18 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Keep, Sink, Source}
-import akka.{Done, NotUsed}
+import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.util.LockManager
 
-import scala.async.Async.{async, await}
+import scala.async.Async.{ async, await }
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Seq
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 /**
   * A Write Ahead Cache of another persistence store that lazily loads values into the cache.

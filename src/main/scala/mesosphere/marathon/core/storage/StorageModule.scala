@@ -1,14 +1,14 @@
 package mesosphere.marathon.core.storage
 
 // scalastyle:off
-import akka.actor.{ActorRefFactory, Scheduler}
+import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.storage.migration.Migration
-import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository, TaskRepository}
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, Group, MarathonTaskState, TaskFailure}
+import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.util.toRichConfig
 
@@ -41,17 +41,19 @@ object StorageModule {
   }
 
   def apply(config: Config)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
-                            scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
+    scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
 
     val currentConfig = StorageConfig(config)
     val legacyConfig = config.optionalConfig("legacy-migration")
-      .map(StorageConfig(_)).collect { case l:LegacyStorageConfig => l }
+      .map(StorageConfig(_)).collect { case l: LegacyStorageConfig => l }
     apply(currentConfig, legacyConfig)
   }
 
-  def apply(config: StorageConfig,
-            legacyConfig: Option[LegacyStorageConfig])(implicit metrics: Metrics,
-                                                       mat: Materializer, ctx: ExecutionContext,
+  def apply(
+    config: StorageConfig,
+    legacyConfig: Option[LegacyStorageConfig])(implicit
+    metrics: Metrics,
+    mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
 
     config match {

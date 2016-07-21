@@ -1,13 +1,13 @@
 package mesosphere.marathon
 
-import javax.inject.{ Inject, Named }
+import javax.inject.Inject
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import mesosphere.marathon.core.base.{ CurrentRuntime, Clock }
+import mesosphere.marathon.core.base.{ Clock, CurrentRuntime }
+import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.event._
 import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
@@ -16,20 +16,15 @@ import org.slf4j.LoggerFactory
 import scala.concurrent._
 import scala.util.control.NonFatal
 
-trait SchedulerCallbacks {
-  def disconnected(): Unit
-}
-
 class MarathonScheduler @Inject() (
-    @Named(EventModule.busName) eventBus: EventStream,
+    eventBus: EventStream,
     clock: Clock,
     offerProcessor: OfferProcessor,
     taskStatusProcessor: TaskStatusUpdateProcessor,
     frameworkIdUtil: FrameworkIdUtil,
     mesosLeaderInfo: MesosLeaderInfo,
     system: ActorSystem,
-    config: MarathonConf,
-    schedulerCallbacks: SchedulerCallbacks) extends Scheduler {
+    config: MarathonConf) extends Scheduler {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
@@ -92,9 +87,11 @@ class MarathonScheduler @Inject() (
 
     eventBus.publish(SchedulerDisconnectedEvent())
 
-    // Disconnection from the Mesos master has occurred.
-    // Thus, call the scheduler callbacks.
-    schedulerCallbacks.disconnected()
+    // stop the driver. this avoids ambiguity and delegates leadership-abdication responsibility.
+    // this helps to clarify responsibility during leadership transitions: currently the
+    // **scheduler service** is responsible for integrating with leadership election.
+    // @see MarathonSchedulerService.startLeadership
+    driver.stop(true)
   }
 
   override def slaveLost(driver: SchedulerDriver, slave: SlaveID) {
