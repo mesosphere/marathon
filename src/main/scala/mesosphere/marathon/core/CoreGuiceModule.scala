@@ -2,6 +2,8 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
+import mesosphere.marathon.core.storage.repository.GroupRepository
+
 // scalastyle:off
 import akka.actor.ActorRefFactory
 import akka.stream.Materializer
@@ -115,6 +117,11 @@ class CoreGuiceModule extends AbstractModule {
   def taskFailureRepository(coreModule: CoreModule): TaskFailureRepository =
     coreModule.storageModule.taskFailureRepository
 
+  @Provides
+  @Singleton
+  def groupRepository(coreModule: CoreModule): GroupRepository =
+    coreModule.storageModule.groupRepository
+
   @Provides @Singleton
   def taskStatusUpdateSteps(
     notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
@@ -180,4 +187,8 @@ class CoreGuiceModule extends AbstractModule {
       maxQueued = config.internalMaxQueuedStatusUpdates()
     )(ExecutionContext.global)
   }
+
+  @Provides
+  @Singleton
+  def provideExecutionContext: ExecutionContext = ExecutionContext.global
 }
