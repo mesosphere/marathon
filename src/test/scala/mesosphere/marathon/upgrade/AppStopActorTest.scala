@@ -2,10 +2,11 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.Props
 import akka.testkit.TestActorRef
+import mesosphere.marathon.core.event.{ AppTerminatedEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.history.impl.HistoryActor
 import mesosphere.marathon.core.storage.repository.TaskFailureRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ AppTerminatedEvent, HistoryActor, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.StoppingBehavior.KillNextBatch

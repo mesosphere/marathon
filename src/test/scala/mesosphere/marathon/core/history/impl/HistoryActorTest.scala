@@ -1,9 +1,10 @@
-package mesosphere.marathon.event
+package mesosphere.marathon.core.history.impl
 
 import akka.actor.{ ActorRef, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.storage.repository.TaskFailureRepository
+import mesosphere.marathon.core.event.{ MesosStatusUpdateEvent, UnhealthyTaskKillEvent }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ TaskFailure, Timestamp }

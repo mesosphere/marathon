@@ -1,5 +1,6 @@
-package mesosphere.marathon.event.http
+package mesosphere.marathon.core.event.impl.callback
 
+import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.{ MarathonSpec, Protos }
 
 class EventSubscribersTest extends MarathonSpec {

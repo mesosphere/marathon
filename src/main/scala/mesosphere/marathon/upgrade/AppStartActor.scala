@@ -5,7 +5,7 @@ import akka.event.EventStream
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.DeploymentStatus
+import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
