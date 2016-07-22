@@ -36,7 +36,7 @@ class PersistentVolumeValidationTest extends MarathonSpec with GivenWhenThen wit
     Then("A validation exists with a readable error message")
     validation match {
       case Failure(violations) =>
-        violations should contain (RuleViolation("/path", "containerPath must not contain \"/\"", Some("containerPath")))
+        violations should contain (RuleViolation("/path", "value must not contain \"/\"", Some("containerPath")))
       case Success =>
         fail("validation should fail!")
     }

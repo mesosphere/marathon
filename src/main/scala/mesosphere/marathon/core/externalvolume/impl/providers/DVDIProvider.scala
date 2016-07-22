@@ -183,7 +183,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         volume.containerPath is notOneOf(DotPaths: _*)
         // TODO(jdef) change this once docker containerizer supports relative containerPaths
         volume.containerPath should
-          matchRegexFullyWithMessage(AbsolutePathPattern, "containerPath must not starts with \"/\"")
+          matchRegexFullyWithMessage(AbsolutePathPattern, "value must not starts with \"/\"")
       }
 
       def ifDVDIVolume(vtor: Validator[ExternalVolume]): Validator[ExternalVolume] = conditional(matchesProvider)(vtor)
