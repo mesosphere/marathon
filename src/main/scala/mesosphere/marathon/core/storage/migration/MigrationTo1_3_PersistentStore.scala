@@ -6,10 +6,11 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.LegacyStorageConfig
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.util.state.FrameworkId
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
@@ -40,7 +41,8 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
             migrateDeployments(legacyConfig, migration.deploymentRepository),
             migrateTaskFailures(legacyConfig, migration.taskFailureRepo),
             // note: we don't actually need to migrate apps (group does it)
-            migrateGroups(legacyConfig, migration.groupRepository)
+            migrateGroups(legacyConfig, migration.groupRepository),
+            migrateFrameworkId(legacyConfig, migration.frameworkIdRepo)
           )
         }.getOrElse(Nil)
         val summary = await(Future.sequence(futures))
@@ -110,5 +112,20 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
       // adding a new app version for every root (for simplicity)
       groupRepository.storeRoot(root, root.apps.values.toVector, Nil)
     }.runFold(0) { case (acc, _) => acc + 1 }.map("root versions" -> _)
+  }
+
+  def migrateFrameworkId(
+    legacyStore: LegacyStorageConfig,
+    frameworkIdRepository: FrameworkIdRepository): Future[(String, Int)] = {
+    val oldRepo = FrameworkIdRepository.legacyRepository(legacyStore.entityStore[FrameworkId])
+    async {
+      await(oldRepo.get()) match {
+        case Some(v) =>
+          await(frameworkIdRepository.store(v))
+          "framework-id" -> 1
+        case None =>
+          "framework-id" -> 0
+      }
+    }
   }
 }

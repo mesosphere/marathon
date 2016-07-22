@@ -15,7 +15,7 @@ import mesosphere.marathon.core.history.impl.HistoryActor
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
@@ -26,7 +26,6 @@ import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.upgrade._
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TaskID
-import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
@@ -518,7 +517,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   var hcManager: HealthCheckManager = _
   var taskTracker: TaskTracker = _
   var queue: LaunchQueue = _
-  var frameworkIdUtil: FrameworkIdUtil = _
+  var frameworkIdUtil: FrameworkIdRepository = _
   var driver: SchedulerDriver = _
   var holder: MarathonSchedulerDriverHolder = _
   var storage: StorageProvider = _
@@ -542,7 +541,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     hcManager = mock[HealthCheckManager]
     taskTracker = mock[TaskTracker]
     queue = mock[LaunchQueue]
-    frameworkIdUtil = mock[FrameworkIdUtil]
+    frameworkIdUtil = mock[FrameworkIdRepository]
     storage = mock[StorageProvider]
     taskFailureEventRepository = mock[TaskFailureRepository]
     electionService = mock[ElectionService]

@@ -15,7 +15,7 @@ import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.storage.migration.Migration
-import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
+import mesosphere.marathon.core.storage.repository.{ FrameworkIdRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
@@ -24,7 +24,6 @@ import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.PromiseActor
-import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
@@ -57,7 +56,7 @@ class MarathonSchedulerService @Inject() (
   leadershipCoordinator: LeadershipCoordinator,
   healthCheckManager: HealthCheckManager,
   config: MarathonConf,
-  frameworkIdUtil: FrameworkIdUtil,
+  frameworkIdRepository: FrameworkIdRepository,
   electionService: ElectionService,
   prePostDriverCallbacks: Seq[PrePostDriverCallback],
   appRepository: ReadOnlyAppRepository,
@@ -96,7 +95,7 @@ class MarathonSchedulerService @Inject() (
   val log = LoggerFactory.getLogger(getClass.getName)
 
   // FIXME: Remove from this class
-  def frameworkId: Option[FrameworkID] = frameworkIdUtil.fetch()
+  def frameworkId: Option[FrameworkID] = Await.result(frameworkIdRepository.get(), timeout.duration).map(_.toProto)
 
   // This is a little ugly as we are using a mutable variable. But drivers can't
   // be reused (i.e. once stopped they can't be started again. Thus,

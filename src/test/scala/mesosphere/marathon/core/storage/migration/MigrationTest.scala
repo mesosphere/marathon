@@ -8,7 +8,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.LegacyStorageConfig
 import mesosphere.marathon.core.storage.migration.StorageVersions._
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryEntity, PersistentEntity, PersistentStore, PersistentStoreManagement }
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.Mockito
@@ -27,9 +27,10 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
     groupRepository: GroupRepository = mock[GroupRepository],
     deploymentRepository: DeploymentRepository = mock[DeploymentRepository],
     taskRepository: TaskRepository = mock[TaskRepository],
-    taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository]): Migration = {
+    taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository],
+    frameworkIdRepository: FrameworkIdRepository = mock[FrameworkIdRepository]): Migration = {
     new Migration(legacyConfig, persistenceStore, appRepository, groupRepository, deploymentRepository,
-      taskRepository, taskFailureRepository)
+      taskRepository, taskFailureRepository, frameworkIdRepository)
   }
 
   val currentVersion = if (StorageVersions.current < StorageVersions(1, 3, 0)) {

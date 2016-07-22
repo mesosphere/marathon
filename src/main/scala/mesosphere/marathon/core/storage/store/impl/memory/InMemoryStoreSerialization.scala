@@ -9,6 +9,7 @@ import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.util.state.FrameworkId
 
 case class RamId(category: String, id: String, version: Option[OffsetDateTime])
 
@@ -61,6 +62,15 @@ trait InMemoryStoreSerialization {
 
   def groupResolver(maxVersions: Int): IdResolver[PathId, StoredGroup, String, RamId] =
     new InMemPathIdResolver[StoredGroup]("group", maxVersions, _.version)
+
+  implicit val frameworkIdResolver = new IdResolver[String, FrameworkId, String, RamId] {
+    override def toStorageId(id: String, version: Option[OffsetDateTime]): RamId =
+      RamId(category, id, version)
+    override val category: String = "framework-id"
+    override def fromStorageId(key: RamId): String = key.id
+    override val maxVersions: Int = 0
+    override def version(v: FrameworkId): OffsetDateTime = OffsetDateTime.MIN
+  }
 }
 
 object InMemoryStoreSerialization extends InMemoryStoreSerialization

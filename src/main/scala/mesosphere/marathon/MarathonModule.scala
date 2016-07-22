@@ -1,7 +1,6 @@
 package mesosphere.marathon
 
 // scalastyle:off
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 
@@ -29,7 +28,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager
-import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, _ }
+import mesosphere.util.state._
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.mesos.Scheduler
 import org.apache.mesos.state.ZooKeeperState
@@ -111,12 +110,13 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     }
   }
 
+  // TODO: Jason - Old storage won't work without being wired in here somehow...
+  // same if we're using a load time caching store. Maybe StorageModule should expose a Seq of its own?
   @Provides
   @Singleton
   def provideLeadershipInitializers(
-    @Named(ModuleNames.STORE_FRAMEWORK_ID) frameworkId: EntityStore[FrameworkId],
     @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) subscribers: EntityStore[EventSubscribers]): Seq[PrePostDriverCallback] = { // scalastyle:off
-    Seq(frameworkId, subscribers).collect {
+    Seq(subscribers).collect {
       case l: PrePostDriverCallback => l
     }
   }
@@ -171,7 +171,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
     launchQueue: LaunchQueue,
-    frameworkIdUtil: FrameworkIdUtil,
     driverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
     storage: StorageProvider,
@@ -250,14 +249,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   @Provides
   @Singleton
-  def provideFrameworkIdUtil(
-    @Named(ModuleNames.STORE_FRAMEWORK_ID) store: EntityStore[FrameworkId],
-    metrics: Metrics): FrameworkIdUtil = {
-    new FrameworkIdUtil(store, conf.zkTimeoutDuration)
-  }
-
-  @Provides
-  @Singleton
   def provideStorageProvider(http: HttpConf): StorageProvider =
     StorageProvider.provider(conf, http)
 
@@ -316,13 +307,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     })
 
     groupManager
-  }
-
-  @Named(ModuleNames.STORE_FRAMEWORK_ID)
-  @Provides
-  @Singleton
-  def provideFrameworkIdStore(store: PersistentStore, metrics: Metrics): EntityStore[FrameworkId] = {
-    entityStore(store, metrics, "framework:", () => new FrameworkId(UUID.randomUUID().toString))
   }
 
   @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS)

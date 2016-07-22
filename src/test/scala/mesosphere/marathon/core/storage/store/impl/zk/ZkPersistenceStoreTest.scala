@@ -14,7 +14,7 @@ import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStoreTest
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 trait ZkTestClass1Serialization {
   implicit object ZkTestClass1Resolver extends IdResolver[String, TestClass1, String, ZkId] {
@@ -61,7 +61,7 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
 
   def defaultStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
-    rootClient.create(s"/$root").futureValue
+    rootClient.create(s"/$root").futureValue(PatienceConfig(5.seconds, 10.millis))
     implicit val metrics = new Metrics(new MetricRegistry)
     new ZkPersistenceStore(rootClient.usingNamespace(root), Duration.Inf)
   }

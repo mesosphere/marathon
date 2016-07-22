@@ -3,7 +3,7 @@ package mesosphere.marathon.core
 import javax.inject.Named
 
 import mesosphere.marathon.core.storage.migration.Migration
-import mesosphere.marathon.core.storage.repository.GroupRepository
+import mesosphere.marathon.core.storage.repository.{ FrameworkIdRepository, GroupRepository }
 
 // scalastyle:off
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
@@ -125,6 +125,10 @@ class CoreGuiceModule extends AbstractModule {
   @Singleton
   def groupRepository(coreModule: CoreModule): GroupRepository =
     coreModule.storageModule.groupRepository
+
+  @Provides @Singleton
+  def framworkIdRepository(coreModule: CoreModule): FrameworkIdRepository =
+    coreModule.storageModule.frameworkIdRepository
 
   @Provides @Singleton
   def taskStatusUpdateSteps(

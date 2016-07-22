@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
@@ -13,6 +13,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, MarathonState, MarathonTaskState, PathId, StateMetrics, TaskFailure, Timestamp, VersionedEntry }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.CallerThreadExecutionContext
+import mesosphere.util.state.FrameworkId
 
 import scala.async.Async.{ async, await }
 import scala.collection.immutable.Seq
@@ -182,3 +183,17 @@ class TaskFailureEntityRepository(store: EntityStore[TaskFailure], maxVersions: 
     extends LegacyVersionedRepository[PathId, TaskFailure](store, maxVersions, _.safePath, PathId.fromSafePath, _.appId)
     with TaskFailureRepository
 
+class FrameworkIdEntityRepository(store: EntityStore[FrameworkId])(implicit
+  ctx: ExecutionContext = ExecutionContext.global,
+  metrics: Metrics)
+    extends FrameworkIdRepository {
+  private val id = "id"
+
+  override def get(): Future[Option[FrameworkId]] = store.fetch(id)
+
+  override def store(v: FrameworkId): Future[Done] =
+    store.modify(id) { _ => v }.map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
+
+  override def delete(): Future[Done] =
+    store.expunge(id).map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
+}

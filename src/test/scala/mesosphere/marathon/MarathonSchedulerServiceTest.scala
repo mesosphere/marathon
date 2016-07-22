@@ -11,13 +11,13 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.storage.migration.Migration
-import mesosphere.marathon.core.storage.repository.AppRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ EntityStore, InMemoryStore, MarathonStore }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, FrameworkIdRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
+import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
 import org.mockito.Matchers.{ any, eq => mockEq }
 import org.mockito.Mockito
@@ -77,7 +77,7 @@ class MarathonSchedulerServiceTest
   private[this] var healthCheckManager: HealthCheckManager = _
   private[this] var config: MarathonConf = _
   private[this] var httpConfig: HttpConf = _
-  private[this] var frameworkIdUtil: FrameworkIdUtil = _
+  private[this] var frameworkIdRepo: FrameworkIdRepository = _
   private[this] var electionService: ElectionService = _
   private[this] var appRepository: AppRepository = _
   private[this] var taskTracker: TaskTracker = _
@@ -94,7 +94,7 @@ class MarathonSchedulerServiceTest
     healthCheckManager = mock[HealthCheckManager]
     config = mockConfig
     httpConfig = mock[HttpConf]
-    frameworkIdUtil = mock[FrameworkIdUtil]
+    frameworkIdRepo = mock[FrameworkIdRepository]
     electionService = mock[ElectionService]
     appRepository = mock[AppRepository]
     taskTracker = mock[TaskTracker]
@@ -114,13 +114,13 @@ class MarathonSchedulerServiceTest
   test("Start timer when elected") {
     val mockTimer = mock[Timer]
 
-    when(frameworkIdUtil.fetch()).thenReturn(None)
+    when(frameworkIdRepo.get()).thenReturn(Future.successful(None))
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       healthCheckManager,
       config,
-      frameworkIdUtil,
+      frameworkIdRepo,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -142,14 +142,14 @@ class MarathonSchedulerServiceTest
   test("Cancel timer when defeated") {
     val mockTimer = mock[Timer]
 
-    when(frameworkIdUtil.fetch()).thenReturn(None)
+    when(frameworkIdRepo.get()).thenReturn(Future.successful(None))
 
     val driver = mock[SchedulerDriver]
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       healthCheckManager,
       config,
-      frameworkIdUtil,
+      frameworkIdRepo,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -175,13 +175,13 @@ class MarathonSchedulerServiceTest
   test("Re-enable timer when re-elected") {
     val mockTimer = mock[Timer]
 
-    when(frameworkIdUtil.fetch()).thenReturn(None)
+    when(frameworkIdRepo.get()).thenReturn(Future.successful(None))
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       healthCheckManager,
       config,
-      frameworkIdUtil,
+      frameworkIdRepo,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -212,15 +212,17 @@ class MarathonSchedulerServiceTest
     val frameworkId = mesos.FrameworkID.newBuilder.setValue("myId").build()
     val mockTimer = mock[Timer]
 
-    val metrics = new Metrics(new MetricRegistry)
-    val store = new MarathonStore[FrameworkId](new InMemoryStore, metrics, () => new FrameworkId(""), "frameworkId:")
-    frameworkIdUtil = new FrameworkIdUtil(store, Duration.Inf)
+    implicit val metrics = new Metrics(new MetricRegistry)
+    def createStore(name: String, newState: () => FrameworkId): EntityStore[FrameworkId] = {
+      new MarathonStore[FrameworkId](new InMemoryStore, metrics, newState, name)
+    }
+    frameworkIdRepo = FrameworkIdRepository.legacyRepository(createStore)
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       healthCheckManager,
       config,
-      frameworkIdUtil,
+      frameworkIdRepo,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -237,19 +239,19 @@ class MarathonSchedulerServiceTest
     schedulerService.frameworkId should be(None)
 
     implicit lazy val timeout = 1.second
-    frameworkIdUtil.store(frameworkId)
+    frameworkIdRepo.store(FrameworkId.fromProto(frameworkId))
 
     awaitAssert(schedulerService.frameworkId should be(Some(frameworkId)))
   }
 
   test("Abdicate leadership when migration fails and reoffer leadership") {
-    when(frameworkIdUtil.fetch()).thenReturn(None)
+    when(frameworkIdRepo.get()).thenReturn(Future.successful(None))
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       healthCheckManager,
       config,
-      frameworkIdUtil,
+      frameworkIdRepo,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -282,14 +284,14 @@ class MarathonSchedulerServiceTest
   }
 
   test("Abdicate leadership when the driver creation fails by some exception") {
-    when(frameworkIdUtil.fetch()).thenReturn(None)
+    when(frameworkIdRepo.get()).thenReturn(Future.successful(None))
     val driverFactory = mock[SchedulerDriverFactory]
 
     val schedulerService = new MarathonSchedulerService(
       leadershipCoordinator,
       healthCheckManager,
       config,
-      frameworkIdUtil,
+      frameworkIdRepo,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -314,7 +316,7 @@ class MarathonSchedulerServiceTest
   }
 
   test("Abdicate leadership when driver ends with error") {
-    when(frameworkIdUtil.fetch()).thenReturn(None)
+    when(frameworkIdRepo.get()).thenReturn(Future.successful(None))
     val driver = mock[SchedulerDriver]
     val driverFactory = mock[SchedulerDriverFactory]
 
@@ -322,7 +324,7 @@ class MarathonSchedulerServiceTest
       leadershipCoordinator,
       healthCheckManager,
       config,
-      frameworkIdUtil,
+      frameworkIdRepo,
       electionService,
       prePostDriverCallbacks,
       appRepository,
@@ -348,7 +350,7 @@ class MarathonSchedulerServiceTest
     Mockito.when(cb.postDriverTerminates).thenReturn(Future(()))
     Mockito.when(cb.preDriverStarts).thenReturn(Future(()))
 
-    when(frameworkIdUtil.fetch()).thenReturn(None)
+    when(frameworkIdRepo.get()).thenReturn(Future.successful(None))
     val driver = mock[SchedulerDriver]
     val driverFactory = mock[SchedulerDriverFactory]
 
@@ -356,7 +358,7 @@ class MarathonSchedulerServiceTest
       leadershipCoordinator,
       healthCheckManager,
       config,
-      frameworkIdUtil,
+      frameworkIdRepo,
       electionService,
       scala.collection.immutable.Seq(cb),
       appRepository,

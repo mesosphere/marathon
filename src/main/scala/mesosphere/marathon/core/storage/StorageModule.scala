@@ -5,11 +5,12 @@ import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.core.storage.migration.Migration
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.util.toRichConfig
+import mesosphere.util.state.FrameworkId
 
 import scala.concurrent.ExecutionContext
 // scalastyle:on
@@ -23,6 +24,7 @@ trait StorageModule {
   def deploymentRepository: DeploymentRepository
   def taskFailureRepository: TaskFailureRepository
   def groupRepository: GroupRepository
+  def frameworkIdRepository: FrameworkIdRepository
   def migration: Migration
 }
 
@@ -62,12 +64,12 @@ object StorageModule {
         val deploymentRepository = DeploymentRepository.legacyRepository(l.entityStore[DeploymentPlan])
         val taskFailureRepository = TaskFailureRepository.legacyRepository(l.entityStore[TaskFailure])
         val groupRepository = GroupRepository.legacyRepository(l.entityStore[Group], l.maxVersions, appRepository)
-
+        val frameworkIdRepository = FrameworkIdRepository.legacyRepository(l.entityStore[FrameworkId])
         val migration = new Migration(legacyConfig, None, appRepository, groupRepository,
-          deploymentRepository, taskRepository, taskFailureRepository)
+          deploymentRepository, taskRepository, taskFailureRepository, frameworkIdRepository)
 
         StorageModuleImpl(appRepository, taskRepository, deploymentRepository,
-          taskFailureRepository, groupRepository, migration)
+          taskFailureRepository, groupRepository, frameworkIdRepository, migration)
       case zk: CuratorZk =>
         val store = zk.store
         val appRepository = AppRepository.zkRepository(store, zk.maxVersions)
@@ -75,14 +77,17 @@ object StorageModule {
         val deploymentRepository = DeploymentRepository.zkRepository(store)
         val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val groupRepository = GroupRepository.zkRepository(store, appRepository, zk.maxVersions)
+        val frameworkIdRepository = FrameworkIdRepository.zkRepository(store)
+
         val migration = new Migration(legacyConfig, Some(store), appRepository, groupRepository,
-          deploymentRepository, taskRepository, taskFailureRepository)
+          deploymentRepository, taskRepository, taskFailureRepository, frameworkIdRepository)
         StorageModuleImpl(
           appRepository,
           taskRepository,
           deploymentRepository,
           taskFailureRepository,
           groupRepository,
+          frameworkIdRepository,
           migration)
       case mem: InMem =>
         val store = mem.store
@@ -91,14 +96,17 @@ object StorageModule {
         val deploymentRepository = DeploymentRepository.inMemRepository(store)
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val groupRepository = GroupRepository.inMemRepository(store, appRepository, mem.maxVersions)
+        val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)
+
         val migration = new Migration(legacyConfig, Some(store), appRepository, groupRepository,
-          deploymentRepository, taskRepository, taskFailureRepository)
+          deploymentRepository, taskRepository, taskFailureRepository, frameworkIdRepository)
         StorageModuleImpl(
           appRepository,
           taskRepository,
           deploymentRepository,
           taskFailureRepository,
           groupRepository,
+          frameworkIdRepository,
           migration)
     }
   }
@@ -110,4 +118,5 @@ private[storage] case class StorageModuleImpl(
   deploymentRepository: DeploymentRepository,
   taskFailureRepository: TaskFailureRepository,
   groupRepository: GroupRepository,
+  frameworkIdRepository: FrameworkIdRepository,
   migration: Migration) extends StorageModule

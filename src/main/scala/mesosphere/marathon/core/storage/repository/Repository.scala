@@ -11,18 +11,26 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryStoreSerialization, RamId }
 import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized, ZkStoreSerialization }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
-import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
-import mesosphere.marathon.core.storage.repository.impl.{ AppRepositoryImpl, DeploymentRepositoryImpl, StoredGroupRepositoryImpl, TaskFailureRepositoryImpl, TaskRepositoryImpl }
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, FrameworkIdEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
+import mesosphere.marathon.core.storage.repository.impl.{ AppRepositoryImpl, DeploymentRepositoryImpl, FrameworkIdRepositoryImpl, StoredGroupRepositoryImpl, TaskFailureRepositoryImpl, TaskRepositoryImpl }
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ TaskID, TaskState }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 // scalastyle:on
+
+// Repository that can store exactly one value of T
+trait SingletonRepository[T] {
+  def get(): Future[Option[T]]
+  def store(v: T): Future[Done]
+  def delete(): Future[Done]
+}
 
 /**
   * A Repository of values (T) identified uniquely by (Id)
@@ -187,6 +195,7 @@ object TaskFailureRepository {
     ))
     new TaskFailureEntityRepository(entityStore, 1)
   }
+
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): TaskFailureRepository = {
     import ZkStoreSerialization._
     implicit val resolver = taskFailureResolver(1)
@@ -197,5 +206,26 @@ object TaskFailureRepository {
     import InMemoryStoreSerialization._
     implicit val resolver = taskFailureResolver(1)
     new TaskFailureRepositoryImpl(persistenceStore)
+  }
+}
+
+trait FrameworkIdRepository extends SingletonRepository[FrameworkId]
+
+object FrameworkIdRepository {
+  def legacyRepository(store: (String, () => FrameworkId) => EntityStore[FrameworkId])(implicit
+    ctx: ExecutionContext,
+    metrics: Metrics): FrameworkIdEntityRepository = {
+    val entityStore = store("framework", () => FrameworkId(UUID.randomUUID().toString))
+    new FrameworkIdEntityRepository(entityStore)
+  }
+
+  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): FrameworkIdRepository = {
+    import ZkStoreSerialization._
+    new FrameworkIdRepositoryImpl(persistenceStore)
+  }
+
+  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): FrameworkIdRepository = {
+    import InMemoryStoreSerialization._
+    new FrameworkIdRepositoryImpl(persistenceStore)
   }
 }

@@ -14,6 +14,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.util.state.FrameworkId
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
   private val bucket = math.abs(id.hashCode % ZkStoreSerialization.HashBucketSize)
@@ -127,6 +128,24 @@ trait ZkStoreSerialization {
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
         StoredGroup(Protos.GroupDefinition.parseFrom(byteString.toArray))
+    }
+
+  implicit val frameworkIdResolver = new IdResolver[String, FrameworkId, String, ZkId] {
+    override def toStorageId(id: String, version: Option[OffsetDateTime]): ZkId =
+      ZkId(category, id, version)
+    override val category: String = "framework-id"
+    override def fromStorageId(key: ZkId): String = key.id
+    override val maxVersions: Int = 0
+    override def version(v: FrameworkId): OffsetDateTime = OffsetDateTime.MIN
+  }
+
+  implicit val frameworkIdMarshaller: Marshaller[FrameworkId, ZkSerialized] =
+    Marshaller.opaque(id => ZkSerialized(ByteString(id.toProtoByteArray)))
+
+  implicit val frameworkIdUnmarshaller: Unmarshaller[ZkSerialized, FrameworkId] =
+    Unmarshaller.strict {
+      case ZkSerialized(byteString) =>
+        FrameworkId.fromProtoBytes(byteString.toArray)
     }
 }
 
