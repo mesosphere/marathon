@@ -172,15 +172,20 @@ The default implicit volume size is 16 GB. If you are using the Mesos containeri
 
 ### Potential Pitfalls
 
+*   If one or more external volumes are declared for a Marathon app Docker may create anonymous external volumes if the docker image specification includes one or more `VOLUME` entries. This is default docker behavior with respect to volume management when the `--volume-driver` flag is passed to `docker run`. To prevent the creation of anonymous volumes follow these steps:
+  *  `docker inspect` the app's docker image prior to running the app in Marathon and identify the `VOLUME` entries in the specification.
+  *   declare non-external, host-volume mounts in your app's container specification for each `VOLUME` entry that should not map to an anonymous external volume.
+  *   specify a relative `hostPath` for a host-volume to instruct Mesos to create the mount in the task's sandbox (`$MESOS_SANDBOX/$hostPath`).
+
 *   You can only assign one task per volume. Your storage provider might have other limitations.
 
-*   The volumes you create are not automatically cleaned up. If you delete your cluster, you must go to your storage provider and delete the volumes you no longer need. If you're using EBS, find them by searching by the `container.volumes.external.name` that you set in your Marathon app definition. This name corresponds to an EBS volume `Name` tag.
+*   The volumes you create are not automatically cleaned up. If you delete your cluster, you must go to your storage provider and delete the volumes you no longer need. If you're using EBS, find them by searching by the `container.volumes.external.name` that you set in your Marathon app definition. This name corresponds to an EBS volume `Name` tag. Any anonymous volumes that docker has created on your behalf will have been assigned a UUID for their name.
 
 *   Volumes are namespaced by their storage provider. If you're using EBS, volumes created on the same AWS account share a namespace. Choose unique volume names to avoid conflicts.
 
 *   Docker apps with external volumes on DC/OS installations must use Docker 1.8 or later.
 
-*   If you are using Amazon's EBS, it is possible to create clusters in different availability zones (AZs). If you create a cluster with an external volume in one AZ and destroy it, a new cluster may not have access to that external volume because it could be in a different AZ.
+*   If you are using Amazon's EBS, it is possible to create clusters in different availability zones (AZs). If you create a cluster with an external volume in one AZ and subsequently destroy that cluster, a new cluster may not have access to that external volume because it could be in a different AZ.
 
 *   Launch time might increase for applications that create volumes implicitly. The amount of the increase depends on several factors which include the size and type of the volume. Your storage provider's method of handling volumes can also influence launch time for implicitly created volumes.
 
