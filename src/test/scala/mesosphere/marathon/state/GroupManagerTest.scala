@@ -9,20 +9,18 @@ import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityReposi
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException, _ }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
-import org.mockito.Matchers.any
-import org.mockito.Mockito.{ times, verify, when }
+import org.mockito.Mockito.when
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Matchers
-import org.scalatest.mock.MockitoSugar
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Matchers with MarathonSpec {
+class GroupManagerTest extends MarathonActorSupport with Mockito with Matchers with MarathonSpec {
 
   val actorId = new AtomicInteger(0)
 
@@ -313,7 +311,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
       Await.result(f.manager.update(group.id, _ => group), 3.seconds)
     }.printStackTrace()
 
-    verify(f.groupRepo, times(0)).storeRoot(any(), any(), any())
+    verify(f.groupRepo, times(0)).storeRoot(any, any, any)
   }
 
   test("Store new apps with correct version infos in groupRepo and appRepo") {
@@ -322,17 +320,17 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
     val group = Group(PathId.empty, Map(app.id -> app)).copy(version = Timestamp(1))
     when(f.groupRepo.root()).thenReturn(Future.successful(Group.empty))
-    when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
+    when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
     val appWithVersionInfo = app.copy(versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1)))
 
     val groupWithVersionInfo = Group(PathId.empty, Map(
       appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))
-    when(f.appRepo.store(any())).thenReturn(Future.successful(Done))
-    when(f.groupRepo.storeRoot(any(), any(), any())).thenReturn(Future.successful(Done))
+    when(f.appRepo.store(any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRoot(any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager.update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).storeRoot(groupWithVersionInfo, any(), any())
+    verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
   }
 
   test("Expunge removed apps from appRepo") {
@@ -342,14 +340,15 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     val group = Group(PathId.empty, Map(app.id -> app)).copy(version = Timestamp(1))
     val groupEmpty = group.copy(apps = Map(), version = Timestamp(2))
     when(f.groupRepo.root()).thenReturn(Future.successful(group))
-    when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
-    when(f.appRepo.delete(any())).thenReturn(Future.successful(Done))
-    when(f.groupRepo.storeRoot(any(), any(), any())).thenReturn(Future.successful(Done))
+    when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
+    when(f.appRepo.delete(any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRoot(any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager.update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).storeRoot(groupEmpty, any(), any())
-    verify(f.appRepo).delete(app.id)
+    verify(f.groupRepo).storeRoot(groupEmpty, Nil, Seq(app.id))
+    verify(f.appRepo, atMost(1)).delete(app.id)
+    verify(f.appRepo, atMost(1)).deleteCurrent(app.id)
   }
 
   def manager(servicePortsRange: Range) = {
