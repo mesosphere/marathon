@@ -8,7 +8,7 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.LegacyStorageConfig
 import mesosphere.marathon.core.storage.migration.legacy.{ MigrationTo0_11, MigrationTo0_13, MigrationTo0_16, MigrationTo1_2 }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ PersistentStore, PersistentStoreManagement }
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.{ BuildInfo, MigrationFailedException }
@@ -28,7 +28,8 @@ class Migration(
     private[migration] val deploymentRepository: DeploymentRepository,
     private[migration] val taskRepo: TaskRepository,
     private[migration] val taskFailureRepo: TaskFailureRepository,
-    private[migration] val frameworkIdRepo: FrameworkIdRepository)(implicit
+    private[migration] val frameworkIdRepo: FrameworkIdRepository,
+    private[migration] val eventSubscribersRepo: EventSubscribersRepository)(implicit
   mat: Materializer,
     metrics: Metrics) extends StrictLogging {
   //scalastyle:off magic.number

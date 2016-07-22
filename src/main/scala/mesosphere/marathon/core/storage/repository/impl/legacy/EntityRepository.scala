@@ -5,7 +5,8 @@ import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
+import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
@@ -192,6 +193,20 @@ class FrameworkIdEntityRepository(store: EntityStore[FrameworkId])(implicit
   override def get(): Future[Option[FrameworkId]] = store.fetch(id)
 
   override def store(v: FrameworkId): Future[Done] =
+    store.modify(id) { _ => v }.map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
+
+  override def delete(): Future[Done] =
+    store.expunge(id).map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
+}
+
+class EventSubscribersEntityRepository(store: EntityStore[EventSubscribers])(implicit
+  ctx: ExecutionContext = ExecutionContext.global,
+    metrics: Metrics) extends EventSubscribersRepository {
+  private val id = "http_event_subscribers"
+
+  override def get(): Future[Option[EventSubscribers]] = store.fetch(id)
+
+  override def store(v: EventSubscribers): Future[Done] =
     store.modify(id) { _ => v }.map(_ => Done)(CallerThreadExecutionContext.callerThreadExecutionContext)
 
   override def delete(): Future[Done] =

@@ -4,8 +4,9 @@ package mesosphere.marathon.core.storage
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.Config
+import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.storage.migration.Migration
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -25,6 +26,7 @@ trait StorageModule {
   def taskFailureRepository: TaskFailureRepository
   def groupRepository: GroupRepository
   def frameworkIdRepository: FrameworkIdRepository
+  def eventSubscribersRepository: EventSubscribersRepository
   def migration: Migration
 }
 
@@ -65,11 +67,13 @@ object StorageModule {
         val taskFailureRepository = TaskFailureRepository.legacyRepository(l.entityStore[TaskFailure])
         val groupRepository = GroupRepository.legacyRepository(l.entityStore[Group], l.maxVersions, appRepository)
         val frameworkIdRepository = FrameworkIdRepository.legacyRepository(l.entityStore[FrameworkId])
+        val eventSubscribersRepository = EventSubscribersRepository.legacyRepository(l.entityStore[EventSubscribers])
         val migration = new Migration(legacyConfig, None, appRepository, groupRepository,
-          deploymentRepository, taskRepository, taskFailureRepository, frameworkIdRepository)
+          deploymentRepository, taskRepository, taskFailureRepository,
+          frameworkIdRepository, eventSubscribersRepository)
 
         StorageModuleImpl(appRepository, taskRepository, deploymentRepository,
-          taskFailureRepository, groupRepository, frameworkIdRepository, migration)
+          taskFailureRepository, groupRepository, frameworkIdRepository, eventSubscribersRepository, migration)
       case zk: CuratorZk =>
         val store = zk.store
         val appRepository = AppRepository.zkRepository(store, zk.maxVersions)
@@ -78,9 +82,11 @@ object StorageModule {
         val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val groupRepository = GroupRepository.zkRepository(store, appRepository, zk.maxVersions)
         val frameworkIdRepository = FrameworkIdRepository.zkRepository(store)
+        val eventSubscribersRepository = EventSubscribersRepository.zkRepository(store)
 
         val migration = new Migration(legacyConfig, Some(store), appRepository, groupRepository,
-          deploymentRepository, taskRepository, taskFailureRepository, frameworkIdRepository)
+          deploymentRepository, taskRepository, taskFailureRepository,
+          frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
           appRepository,
           taskRepository,
@@ -88,6 +94,7 @@ object StorageModule {
           taskFailureRepository,
           groupRepository,
           frameworkIdRepository,
+          eventSubscribersRepository,
           migration)
       case mem: InMem =>
         val store = mem.store
@@ -97,9 +104,11 @@ object StorageModule {
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val groupRepository = GroupRepository.inMemRepository(store, appRepository, mem.maxVersions)
         val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)
+        val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(store)
 
         val migration = new Migration(legacyConfig, Some(store), appRepository, groupRepository,
-          deploymentRepository, taskRepository, taskFailureRepository, frameworkIdRepository)
+          deploymentRepository, taskRepository, taskFailureRepository,
+          frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
           appRepository,
           taskRepository,
@@ -107,6 +116,7 @@ object StorageModule {
           taskFailureRepository,
           groupRepository,
           frameworkIdRepository,
+          eventSubscribersRepository,
           migration)
     }
   }
@@ -119,4 +129,5 @@ private[storage] case class StorageModuleImpl(
   taskFailureRepository: TaskFailureRepository,
   groupRepository: GroupRepository,
   frameworkIdRepository: FrameworkIdRepository,
+  eventSubscribersRepository: EventSubscribersRepository,
   migration: Migration) extends StorageModule

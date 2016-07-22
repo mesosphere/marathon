@@ -12,15 +12,11 @@ import akka.stream.Materializer
 import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
-import com.twitter.util.JavaTimer
-import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
-import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, EntityStoreCache, InMemoryStore, MarathonStore, MesosStateStore, PersistentStore, ZKStore }
 import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
@@ -31,14 +27,11 @@ import mesosphere.marathon.upgrade.DeploymentManager
 import mesosphere.util.state._
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.mesos.Scheduler
-import org.apache.mesos.state.ZooKeeperState
 import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
-import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 // scalastyle:on
 
@@ -114,48 +107,8 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   // same if we're using a load time caching store. Maybe StorageModule should expose a Seq of its own?
   @Provides
   @Singleton
-  def provideLeadershipInitializers(
-    @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) subscribers: EntityStore[EventSubscribers]): Seq[PrePostDriverCallback] = { // scalastyle:off
-    Seq(subscribers).collect {
-      case l: PrePostDriverCallback => l
-    }
-  }
-
-  @Provides
-  @Singleton
-  def provideStore()(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): PersistentStore = {
-    def directZK(): PersistentStore = {
-      import com.twitter.util.TimeConversions._
-      val sessionTimeout = conf.zooKeeperSessionTimeout().millis
-
-      val authInfo = (conf.zkUsername, conf.zkPassword) match {
-        case (Some(user), Some(pass)) => Some(AuthInfo.digest(user, pass))
-        case _ => None
-      }
-
-      val connector = NativeConnector(conf.zkHosts, None, sessionTimeout, new JavaTimer(isDaemon = true), authInfo)
-
-      val client = ZkClient(connector)
-        .withAcl(conf.zkDefaultCreationACL.asScala)
-        .withRetries(3)
-      val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
-      new ZKStore(client, client(conf.zooKeeperStatePath), compressionConf, 8, 1024)
-    }
-    def mesosZK(): PersistentStore = {
-      val state = new ZooKeeperState(
-        conf.zkHosts,
-        conf.zkTimeoutDuration.toMillis,
-        TimeUnit.MILLISECONDS,
-        conf.zooKeeperStatePath
-      )
-      new MesosStateStore(state, conf.zkTimeoutDuration)
-    }
-    conf.internalStoreBackend.get match {
-      case Some("zk") => directZK()
-      case Some("mesos_zk") => mesosZK()
-      case Some("mem") => new InMemoryStore()
-      case backend: Option[String] => throw new IllegalArgumentException(s"Storage backend $backend not known!")
-    }
+  def provideLeadershipInitializers(): Seq[PrePostDriverCallback] = {
+    Nil
   }
 
   //scalastyle:off parameter.number method.length
@@ -309,23 +262,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     groupManager
   }
 
-  @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS)
-  @Provides
-  @Singleton
-  def provideEventSubscribersStore(store: PersistentStore, metrics: Metrics): EntityStore[EventSubscribers] = {
-    entityStore(store, metrics, "events:", () => new EventSubscribers(Set.empty[String]))
-  }
-
   @Provides
   @Singleton
   def provideEventBus(actorSystem: ActorSystem): EventStream = actorSystem.eventStream
-
-  private[this] def entityStore[T <: mesosphere.marathon.state.MarathonState[_, T]](
-    store: PersistentStore,
-    metrics: Metrics,
-    prefix: String,
-    newState: () => T)(implicit ct: ClassTag[T]): EntityStore[T] = {
-    val marathonStore = new MarathonStore[T](store, metrics, newState, prefix)
-    if (conf.storeCache()) new EntityStoreCache[T](marathonStore) else marathonStore
-  }
 }

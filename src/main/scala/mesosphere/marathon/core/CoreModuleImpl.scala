@@ -9,7 +9,7 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.election._
-import mesosphere.marathon.core.event.{ EventModule, EventSubscribers }
+import mesosphere.marathon.core.event.EventModule
 import mesosphere.marathon.core.flow.FlowModule
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
@@ -21,7 +21,6 @@ import mesosphere.marathon.core.matcher.reconcile.OfferMatcherReconciliationModu
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.storage.StorageModule
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
@@ -49,8 +48,7 @@ class CoreModuleImpl @Inject() (
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
   taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
   clock: Clock,
-  taskStatusUpdateSteps: Seq[TaskUpdateStep],
-  @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) eventSubscribersStore: EntityStore[EventSubscribers])
+  taskStatusUpdateSteps: Seq[TaskUpdateStep])
     extends CoreModule {
 
   // INFRASTRUCTURE LAYER
@@ -164,8 +162,8 @@ class CoreModuleImpl @Inject() (
   // EVENT
 
   override lazy val eventModule: EventModule = new EventModule(
-    eventStream, actorSystem, marathonConf, metrics, clock, eventSubscribersStore, electionModule.service,
-    authModule.authenticator, authModule.authorizer)
+    eventStream, actorSystem, marathonConf, metrics, clock, storageModule.eventSubscribersRepository,
+    electionModule.service, authModule.authenticator, authModule.authorizer)
 
   // HISTORY
 

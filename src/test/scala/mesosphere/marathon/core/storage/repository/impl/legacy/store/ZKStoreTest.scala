@@ -22,15 +22,7 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
   import ZKStore._
 
   implicit val metrics = new Metrics(new MetricRegistry)
-  implicit var system: ActorSystem = _
-
-  before {
-    system = ActorSystem()
-  }
-
-  after {
-    system.terminate().futureValue
-  }
+  implicit var system: ActorSystem = ActorSystem()
 
   //
   // See PersistentStoreTests for general store tests
@@ -132,6 +124,7 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
 
   override protected def afterAll(configMap: ConfigMap): Unit = {
     Await.ready(persistentStore.client.release())
+    system.terminate().futureValue
     super.afterAll(configMap)
   }
 }

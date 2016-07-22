@@ -1,20 +1,19 @@
 package mesosphere.marathon.core.storage.repository.impl
 
+// scalastyle:off
 import akka.Done
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import mesosphere.marathon.core.storage.repository.{ FrameworkIdRepository, TaskFailureRepository }
+import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.TaskFailure
+import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
+import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
 
 import scala.concurrent.Future
-// scalastyle:off
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskRepository }
 // scalastyle:on
-import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.upgrade.DeploymentPlan
 
 class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
   ir: IdResolver[PathId, AppDefinition, C, K],
@@ -60,5 +59,18 @@ class FrameworkIdRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C
   private val repo = new PersistenceStoreRepository[String, FrameworkId, K, C, S](persistenceStore, _ => ID)
   override def get(): Future[Option[FrameworkId]] = repo.get(ID)
   override def store(v: FrameworkId): Future[Done] = repo.store(v)
+  override def delete(): Future[Done] = repo.delete(ID)
+}
+
+class EventSubscribersRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
+    implicit
+    ir: IdResolver[String, EventSubscribers, C, K],
+    marshaller: Marshaller[EventSubscribers, S],
+    unmarshaller: Unmarshaller[S, EventSubscribers]
+) extends EventSubscribersRepository {
+  private val ID = "id"
+  private val repo = new PersistenceStoreRepository[String, EventSubscribers, K, C, S](persistenceStore, _ => ID)
+  override def get(): Future[Option[EventSubscribers]] = repo.get(ID)
+  override def store(v: EventSubscribers): Future[Done] = repo.store(v)
   override def delete(): Future[Done] = repo.delete(ID)
 }

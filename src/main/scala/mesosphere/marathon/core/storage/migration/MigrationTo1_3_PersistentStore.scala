@@ -5,8 +5,9 @@ import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.storage.LegacyStorageConfig
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, FrameworkIdRepository, GroupRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -42,7 +43,8 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
             migrateTaskFailures(legacyConfig, migration.taskFailureRepo),
             // note: we don't actually need to migrate apps (group does it)
             migrateGroups(legacyConfig, migration.groupRepository),
-            migrateFrameworkId(legacyConfig, migration.frameworkIdRepo)
+            migrateFrameworkId(legacyConfig, migration.frameworkIdRepo),
+            migrateEventSubscribers(legacyConfig, migration.eventSubscribersRepo)
           )
         }.getOrElse(Nil)
         val summary = await(Future.sequence(futures))
@@ -125,6 +127,21 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
           "framework-id" -> 1
         case None =>
           "framework-id" -> 0
+      }
+    }
+  }
+
+  def migrateEventSubscribers(
+    legacyStorageConfig: LegacyStorageConfig,
+    eventSubscribersRepository: EventSubscribersRepository): Future[(String, Int)] = {
+    val oldRepo = EventSubscribersRepository.legacyRepository(legacyStorageConfig.entityStore[EventSubscribers])
+    async {
+      await(oldRepo.get()) match {
+        case Some(v) =>
+          await(eventSubscribersRepository.store(v))
+          "event-subscribers" -> 1
+        case None =>
+          "event-subscribers" -> 0
       }
     }
   }

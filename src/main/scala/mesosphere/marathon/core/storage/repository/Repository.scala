@@ -8,11 +8,12 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryStoreSerialization, RamId }
 import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized, ZkStoreSerialization }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
-import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, FrameworkIdEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
-import mesosphere.marathon.core.storage.repository.impl.{ AppRepositoryImpl, DeploymentRepositoryImpl, FrameworkIdRepositoryImpl, StoredGroupRepositoryImpl, TaskFailureRepositoryImpl, TaskRepositoryImpl }
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, EventSubscribersEntityRepository, FrameworkIdEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
+import mesosphere.marathon.core.storage.repository.impl.{ AppRepositoryImpl, DeploymentRepositoryImpl, EventSubscribersRepositoryImpl, FrameworkIdRepositoryImpl, StoredGroupRepositoryImpl, TaskFailureRepositoryImpl, TaskRepositoryImpl }
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
@@ -215,7 +216,7 @@ object FrameworkIdRepository {
   def legacyRepository(store: (String, () => FrameworkId) => EntityStore[FrameworkId])(implicit
     ctx: ExecutionContext,
     metrics: Metrics): FrameworkIdEntityRepository = {
-    val entityStore = store("framework", () => FrameworkId(UUID.randomUUID().toString))
+    val entityStore = store("framework:", () => FrameworkId(UUID.randomUUID().toString))
     new FrameworkIdEntityRepository(entityStore)
   }
 
@@ -227,5 +228,26 @@ object FrameworkIdRepository {
   def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): FrameworkIdRepository = {
     import InMemoryStoreSerialization._
     new FrameworkIdRepositoryImpl(persistenceStore)
+  }
+}
+
+trait EventSubscribersRepository extends SingletonRepository[EventSubscribers]
+
+object EventSubscribersRepository {
+  def legacyRepository(store: (String, () => EventSubscribers) => EntityStore[EventSubscribers])(implicit
+    ctx: ExecutionContext,
+    metrics: Metrics): EventSubscribersEntityRepository = {
+    val entityStore = store("events:", () => EventSubscribers(Set.empty[String]))
+    new EventSubscribersEntityRepository(entityStore)
+  }
+
+  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): EventSubscribersRepository = {
+    import ZkStoreSerialization._
+    new EventSubscribersRepositoryImpl(persistenceStore)
+  }
+
+  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): EventSubscribersRepository = {
+    import InMemoryStoreSerialization._
+    new EventSubscribersRepositoryImpl(persistenceStore)
   }
 }
