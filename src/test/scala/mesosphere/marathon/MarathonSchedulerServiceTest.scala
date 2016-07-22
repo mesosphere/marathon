@@ -10,12 +10,13 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.migration.Migration
+import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppRepository, MarathonStore, Migration }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil }
 import org.apache.mesos.{ SchedulerDriver, Protos => mesos }
 import org.mockito.Matchers.{ any, eq => mockEq }

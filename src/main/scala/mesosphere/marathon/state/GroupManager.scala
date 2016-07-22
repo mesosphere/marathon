@@ -4,14 +4,17 @@ import java.net.URL
 import javax.inject.{ Inject, Named }
 
 import akka.event.EventStream
+import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import com.google.inject.Singleton
+import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.storage.repository.{ GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.upgrade._
-import mesosphere.marathon._
 import mesosphere.util.CapConcurrentExecutions
 import org.slf4j.LoggerFactory
 
@@ -30,16 +33,15 @@ class GroupManager @Inject() (
     @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
     scheduler: MarathonSchedulerService,
     groupRepo: GroupRepository,
-    appRepo: AppRepository,
+    appRepo: ReadOnlyAppRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream) extends PathFun {
+    eventBus: EventStream)(implicit mat: Materializer) extends PathFun {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
-  private[this] val zkName = groupRepo.zkRootName
 
   def rootGroup(): Future[Group] = {
-    groupRepo.group(zkName).map(_.getOrElse(Group.empty))
+    groupRepo.root()
   }
 
   /**
@@ -48,8 +50,8 @@ class GroupManager @Inject() (
     * @return the list of versions of this object.
     */
   def versions(id: PathId): Future[Iterable[Timestamp]] = {
-    groupRepo.listVersions(zkName).flatMap { versions =>
-      Future.sequence(versions.map(groupRepo.group(zkName, _))).map {
+    groupRepo.rootVersions().runWith(Sink.seq).flatMap { versions =>
+      Future.sequence(versions.map(groupRepo.rootVersion)).map {
         _.collect {
           case Some(group) if group.group(id).isDefined => group.version
         }
@@ -73,7 +75,7 @@ class GroupManager @Inject() (
     * @return the group if it is found, otherwise None
     */
   def group(id: PathId, version: Timestamp): Future[Option[Group]] = {
-    groupRepo.group(zkName, version).map {
+    groupRepo.rootVersion(version.toOffsetDateTime).map {
       _.flatMap(_.findGroup(_.id == id))
     }
   }
@@ -137,17 +139,19 @@ class GroupManager @Inject() (
 
     log.info(s"Upgrade group id:$gid version:$version with force:$force")
 
-    def storeUpdatedApps(plan: DeploymentPlan): Future[Unit] = {
-      plan.affectedApplicationIds.foldLeft(Future.successful(())) { (savedFuture, currentId) =>
+    case class AppDelta(updated: Seq[AppDefinition], deleted: Seq[PathId])
+
+    def calculateAppDelta(plan: DeploymentPlan): AppDelta = {
+      plan.affectedApplicationIds.foldLeft(AppDelta(Nil, Nil)) { (delta, currentId) =>
         plan.target.app(currentId) match {
           case Some(newApp) =>
             log.info(s"[${newApp.id}] storing new app version ${newApp.version}")
-            appRepo.store(newApp).map (_ => ())
+            delta.copy(updated = newApp +: delta.updated)
           case None =>
             log.info(s"[$currentId] expunging app")
             // this means that destroyed apps are immediately gone -- even if there are still tasks running for
             // this app. We should improve this in the future.
-            appRepo.expunge(currentId).map (_ => ())
+            delta.copy(deleted = currentId +: delta.deleted)
         }
       }
     }
@@ -161,8 +165,10 @@ class GroupManager @Inject() (
       _ = validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator(config))
       _ = log.info(s"Computed new deployment plan:\n$plan")
       _ <- scheduler.deploy(plan, force)
-      _ <- storeUpdatedApps(plan)
-      _ <- groupRepo.store(zkName, plan.target)
+      _ <- {
+        val AppDelta(updated, deleted) = calculateAppDelta(plan)
+        groupRepo.storeRoot(plan.target, updated, deleted)
+      }
       _ = log.info(s"Updated groups/apps according to deployment plan ${plan.id}")
     } yield plan
 

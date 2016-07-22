@@ -2,27 +2,32 @@ package mesosphere.marathon.health
 
 import akka.actor._
 import akka.event.EventStream
+import akka.stream.{ ActorMaterializer, Materializer }
 import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
+import com.google.inject.util.Providers
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.AppEntityRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskCreationHandler, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport }
 import mesosphere.util.Logging
-import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.{ Protos => mesos }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.ScalaFutures
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class MarathonHealthCheckManagerTest
@@ -36,6 +41,7 @@ class MarathonHealthCheckManagerTest
   var eventStream: EventStream = _
 
   implicit var system: ActorSystem = _
+  implicit var mat: Materializer = _
   var leadershipModule: LeadershipModule = _
 
   val appId = "test".toRootPath
@@ -50,6 +56,7 @@ class MarathonHealthCheckManagerTest
         """akka.loggers = ["akka.testkit.TestEventListener"]"""
       )
     )
+    mat = ActorMaterializer()
     leadershipModule = AlwaysElectedLeadershipModule(shutdownHooks)
 
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
@@ -61,10 +68,9 @@ class MarathonHealthCheckManagerTest
     taskCreationHandler = taskTrackerModule.taskCreationHandler
     stateOpProcessor = taskTrackerModule.stateOpProcessor
 
-    appRepository = new AppRepository(
+    appRepository = new AppEntityRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), "app:"),
-      None,
-      metrics)
+      maxVersions = 0)(ExecutionContext.global, metrics)
 
     eventStream = new EventStream(system)
 
@@ -79,7 +85,7 @@ class MarathonHealthCheckManagerTest
       schedulerDriverHolderProvider,
       eventStream,
       taskTrackerProvider,
-      appRepository,
+      Providers.of(appRepository),
       config
     )
   }
@@ -257,7 +263,7 @@ class MarathonHealthCheckManagerTest
     val otherTask = MarathonTestHelper.stagedTaskForApp(appId, appVersion = Timestamp(0))
     val otherHealthChecks = Set(HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds))
     startTask(otherAppId, otherTask, Timestamp(42), otherHealthChecks)
-    hcManager.addAllFor(appRepository.currentVersion(otherAppId).futureValue.get)
+    hcManager.addAllFor(appRepository.get(otherAppId).futureValue.get)
     assert(hcManager.list(otherAppId) == otherHealthChecks)
 
     // start task 0 without running health check

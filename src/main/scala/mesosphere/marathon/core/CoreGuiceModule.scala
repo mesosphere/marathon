@@ -2,7 +2,12 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
+import mesosphere.marathon.core.storage.migration.Migration
+import mesosphere.marathon.core.storage.repository.GroupRepository
+
+// scalastyle:off
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
+import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
@@ -14,10 +19,11 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, ReadOnlyAppRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.task.update.impl.steps._
+import mesosphere.marathon.core.task.update.impl.steps.{ ContinueOnErrorStep, NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
 import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.metrics.Metrics
@@ -27,9 +33,13 @@ import mesosphere.marathon.{ MarathonConf, ModuleNames }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.eclipse.jetty.servlets.EventSourceServlet
 
+import scala.concurrent.ExecutionContext
+// scalastyle:on
+
 /**
   * Provides the glue between guice and the core modules.
   */
+// scalastyle:off
 class CoreGuiceModule extends AbstractModule {
 
   // Export classes used outside of core to guice
@@ -94,6 +104,28 @@ class CoreGuiceModule extends AbstractModule {
   @Provides @Singleton
   def readinessCheckExecutor(coreModule: CoreModule): ReadinessCheckExecutor = coreModule.readinessModule.readinessCheckExecutor //scalastyle:ignore
 
+  @Provides
+  @Singleton
+  def materializer(coreModule: CoreModule): Materializer = coreModule.actorsModule.materializer
+
+  @Provides
+  @Singleton
+  def appRepository(coreModule: CoreModule): ReadOnlyAppRepository = coreModule.storageModule.appRepository
+
+  @Provides
+  @Singleton
+  def deploymentRepository(coreModule: CoreModule): DeploymentRepository = coreModule.storageModule.deploymentRepository
+
+  @Provides
+  @Singleton
+  def taskFailureRepository(coreModule: CoreModule): TaskFailureRepository =
+    coreModule.storageModule.taskFailureRepository
+
+  @Provides
+  @Singleton
+  def groupRepository(coreModule: CoreModule): GroupRepository =
+    coreModule.storageModule.groupRepository
+
   @Provides @Singleton
   def taskStatusUpdateSteps(
     notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
@@ -155,10 +187,14 @@ class CoreGuiceModule extends AbstractModule {
       capMetrics,
       actorRefFactory,
       "serializeTaskStatusUpdates",
-      maxParallel = config.internalMaxParallelStatusUpdates(),
+      maxConcurrent = config.internalMaxParallelStatusUpdates(),
       maxQueued = config.internalMaxQueuedStatusUpdates()
-    )
+    )(ExecutionContext.global)
   }
+
+  @Provides
+  @Singleton
+  def provideExecutionContext: ExecutionContext = ExecutionContext.global
 
   @Provides @Singleton
   def httpCallbackSubscriptionService(coreModule: CoreModule): HttpCallbackSubscriptionService = {
@@ -173,4 +209,8 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def httpEventStreamServlet(coreModule: CoreModule): EventSourceServlet = coreModule.eventModule.httpEventStreamServlet
+
+  @Provides
+  @Singleton
+  def migration(coreModule: CoreModule): Migration = coreModule.storageModule.migration
 }

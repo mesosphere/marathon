@@ -20,14 +20,16 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
 import mesosphere.marathon.core.matcher.reconcile.OfferMatcherReconciliationModule
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.readiness.ReadinessModule
+import mesosphere.marathon.core.storage.StorageModule
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state._
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
 
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 /**
@@ -45,10 +47,6 @@ class CoreModuleImpl @Inject() (
   metrics: Metrics,
   actorSystem: ActorSystem,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
-  appRepository: AppRepository,
-  groupRepository: GroupRepository,
-  taskRepository: TaskRepository,
-  taskFailureRepository: TaskFailureRepository,
   taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
   clock: Clock,
   taskStatusUpdateSteps: Seq[TaskUpdateStep],
@@ -59,7 +57,7 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val random = Random
   private[this] lazy val shutdownHookModule = ShutdownHooks()
-  private[this] lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
+  override lazy val actorsModule = new ActorsModule(shutdownHookModule, actorSystem)
 
   override lazy val leadershipModule = LeadershipModule(actorsModule.actorRefFactory, electionModule.service)
   override lazy val electionModule = new ElectionModule(
@@ -76,8 +74,16 @@ class CoreModuleImpl @Inject() (
 
   override lazy val taskBusModule = new TaskBusModule()
   override lazy val taskTrackerModule =
-    new TaskTrackerModule(clock, metrics, marathonConf, leadershipModule, taskRepository, taskStatusUpdateSteps)
+    new TaskTrackerModule(clock, metrics, marathonConf, leadershipModule,
+      storageModule.taskRepository, taskStatusUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
+  override lazy val storageModule = StorageModule(
+    marathonConf)(
+    metrics,
+    actorsModule.materializer,
+    ExecutionContext.global,
+    actorSystem.scheduler,
+    actorSystem)
 
   // READINESS CHECKS
   lazy val readinessModule = new ReadinessModule(actorSystem)
@@ -96,7 +102,7 @@ class CoreModuleImpl @Inject() (
       clock,
       actorSystem.eventStream,
       taskTrackerModule.taskTracker,
-      groupRepository,
+      storageModule.groupRepository,
       offerMatcherManagerModule.subOfferMatcherManager,
       leadershipModule
     )
@@ -163,7 +169,8 @@ class CoreModuleImpl @Inject() (
 
   // HISTORY
 
-  override lazy val historyModule: HistoryModule = new HistoryModule(eventStream, actorSystem, taskFailureRepository)
+  override lazy val historyModule: HistoryModule =
+    new HistoryModule(eventStream, actorSystem, storageModule.taskFailureRepository)
 
   // GREEDY INSTANTIATION
   //

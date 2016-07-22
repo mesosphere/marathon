@@ -4,9 +4,10 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppRepository, GroupManager, GroupRepository }
+import mesosphere.marathon.state.GroupManager
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.{ AllConf, MarathonConf, MarathonSchedulerService }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
@@ -30,11 +31,9 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
     capMetrics,
     system,
     s"serializeGroupUpdates${actorId.incrementAndGet()}",
-    maxParallel = 1,
+    maxConcurrent = 1,
     maxQueued = 10
   )
-
-  groupRepository.zkRootName returns GroupRepository.zkRootName
 
   val groupManager = new GroupManager(
     serializeUpdates = serializeExecutions(), scheduler = service,

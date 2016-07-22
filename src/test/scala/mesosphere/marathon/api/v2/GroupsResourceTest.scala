@@ -2,14 +2,15 @@ package mesosphere.marathon.api.v2
 
 import java.util.Collections
 
-import mesosphere.marathon.api.{ TestGroupManagerFixture, TestAuthFixture }
+import mesosphere.marathon.api.{ TestAuthFixture, TestGroupManagerFixture }
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.storage.repository.GroupRepository
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ ConflictingChangeException, UnknownGroupException, MarathonConf, MarathonSpec }
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSpec, UnknownGroupException }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.{ JsObject, Json }
 
@@ -20,7 +21,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("dry run update") {
     Given("A real Group Manager with no groups")
     useRealGroupManager()
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(Group.empty))
+    groupRepository.root() returns Future.successful(Group.empty)
 
     val app = AppDefinition(id = "/test/app".toRootPath, cmd = Some("test cmd"))
     val update = GroupUpdate(id = Some("/test".toRootPath), apps = Some(Set(app)))
@@ -97,8 +98,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     useRealGroupManager()
     val app = AppDefinition("/a".toRootPath)
     val group = Group(PathId.empty, apps = Map(app.id -> app))
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    groupRepository.root() returns Future.successful(group)
 
     Given("An unauthorized request")
     auth.authenticated = true
@@ -154,9 +154,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   test("authenticated delete without authorization leads to a 404 if the resource doesn't exist") {
     Given("A real group manager with no apps")
     useRealGroupManager()
-    groupRepository.group("/") returns Future.successful(None)
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(Group.empty))
-    groupRepository.rootGroup returns Future.successful(Some(Group.empty))
+    groupRepository.root() returns Future.successful(Group.empty)
 
     Given("An unauthorized request")
     auth.authenticated = true
@@ -203,8 +201,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     useRealGroupManager()
     val app = AppDefinition("/group/app".toRootPath)
     val group = Group("/group".toRootPath, apps = Map(app.id -> app))
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    groupRepository.root() returns Future.successful(group)
 
     When("creating a group with the same path existing app")
     val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group/app".toRootPath))))
@@ -217,8 +214,7 @@ class GroupsResourceTest extends MarathonSpec with Matchers with Mockito with Gi
     Given("A real group manager with one app")
     useRealGroupManager()
     val group = Group("/group".toRootPath)
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    groupRepository.root() returns Future.successful(group)
 
     When("creating a group with the same path existing app")
     val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group".toRootPath))))

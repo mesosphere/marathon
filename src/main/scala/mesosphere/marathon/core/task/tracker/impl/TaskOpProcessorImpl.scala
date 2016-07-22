@@ -3,11 +3,11 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
+import mesosphere.marathon.core.storage.repository.TaskRepository
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
-import mesosphere.marathon.state.TaskRepository
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -83,7 +83,7 @@ private[tracker] object TaskOpProcessorImpl {
   */
 private[tracker] class TaskOpProcessorImpl(
     taskTrackerRef: ActorRef,
-    repo: TaskRepository,
+    tasks: TaskRepository,
     stateOpResolver: TaskStateOpResolver,
     config: TaskTrackerConfig) extends TaskOpProcessor {
   import TaskOpProcessor._
@@ -96,7 +96,7 @@ private[tracker] class TaskOpProcessorImpl(
       case change: TaskStateChange.Expunge =>
         // Used for task termination or as a result from a UpdateStatus action.
         // The expunge is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        repo.expunge(op.taskId.idString).map { _ => TaskTrackerActor.Ack(op.sender, change) }
+        tasks.delete(op.taskId).map { _ => TaskTrackerActor.Ack(op.sender, change) }
           .recoverWith(tryToRecover(op)(expectedState = None, oldState = Some(change.task)))
           .flatMap { case ack: TaskTrackerActor.Ack => notifyTaskTrackerActor(op, ack) }
 
@@ -116,10 +116,9 @@ private[tracker] class TaskOpProcessorImpl(
       case change: TaskStateChange.Update =>
         // Used for a create or as a result from a UpdateStatus action.
         // The update is propagated to the taskTracker which in turn informs the sender about the success (see Ack).
-        val marathonTask = TaskSerializer.toProto(change.newState)
-        repo.store(marathonTask).map { _ => TaskTrackerActor.Ack(op.sender, change) }
+        tasks.store(change.newState).map { _ => TaskTrackerActor.Ack(op.sender, change) }
           .recoverWith(tryToRecover(op)(expectedState = Some(change.newState), oldState = change.oldState))
-          .flatMap { case ack: TaskTrackerActor.Ack => notifyTaskTrackerActor(op, ack) }
+          .flatMap { ack => notifyTaskTrackerActor(op, ack) }
     }
   }
 
@@ -128,6 +127,7 @@ private[tracker] class TaskOpProcessorImpl(
     ec: ExecutionContext): Future[Unit] = {
 
     import akka.pattern.ask
+
     import scala.concurrent.duration._
     implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
@@ -158,11 +158,10 @@ private[tracker] class TaskOpProcessorImpl(
 
       log.warn(s"${op.taskId} of app [${op.taskId.runSpecId}]: try to recover from failed ${op.stateOp}", cause)
 
-      repo.task(op.taskId.idString).map {
-        case Some(taskProto) =>
-          val task = TaskSerializer.fromProto(taskProto)
+      tasks.get(op.taskId).map {
+        case Some(task) =>
           val stateChange = TaskStateChange.Update(task, oldState)
-          ack(Some(taskProto), stateChange)
+          ack(Some(TaskSerializer.toProto(task)), stateChange)
         case None =>
           val stateChange = oldState match {
             case Some(oldTask) => TaskStateChange.Expunge(oldTask)

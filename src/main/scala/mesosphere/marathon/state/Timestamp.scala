@@ -1,5 +1,6 @@
 package mesosphere.marathon.state
 
+import java.time.{ Instant, OffsetDateTime }
 import java.util.concurrent.TimeUnit
 
 import org.joda.time.{ DateTime, DateTimeZone }
@@ -11,6 +12,11 @@ import scala.math.Ordered
   * An ordered wrapper for UTC timestamps.
   */
 abstract case class Timestamp private (private val utcDateTime: DateTime) extends Ordered[Timestamp] {
+  def toOffsetDateTime: OffsetDateTime =
+    OffsetDateTime.ofInstant(
+      Instant.ofEpochMilli(utcDateTime.toInstant.getMillis),
+      utcDateTime.getZone.toTimeZone.toZoneId)
+
   def compare(that: Timestamp): Int = this.utcDateTime compareTo that.utcDateTime
 
   override def toString: String = utcDateTime.toString
@@ -27,6 +33,9 @@ abstract case class Timestamp private (private val utcDateTime: DateTime) extend
 }
 
 object Timestamp {
+  def apply(offsetDateTime: OffsetDateTime): Timestamp =
+    apply(offsetDateTime.toInstant.toEpochMilli)
+
   /**
     * Returns a new Timestamp representing the instant that is the supplied
     * dateTime converted to UTC.

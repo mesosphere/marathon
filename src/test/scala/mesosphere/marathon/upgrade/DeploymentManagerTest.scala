@@ -9,24 +9,26 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.AppEntityRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, Group, MarathonStore }
-import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
+import mesosphere.marathon.state.{ AppDefinition, Group }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
-import mesosphere.marathon.upgrade.DeploymentManager.{ StopAllDeployments, CancelDeployment, DeploymentFailed, PerformDeployment }
+import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentFailed, PerformDeployment, StopAllDeployments }
 import mesosphere.marathon.{ MarathonConf, MarathonTestHelper, SchedulerActions }
-import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
-import scala.concurrent.Await
+import scala.concurrent.{ Await, ExecutionContext }
 import scala.concurrent.duration._
 
 class DeploymentManagerTest
@@ -125,11 +127,10 @@ class DeploymentManagerTest
       AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore, config, metrics
     )
     val scheduler: SchedulerActions = mock[SchedulerActions]
-    val appRepo: AppRepository = new AppRepository(
+    val appRepo: AppRepository = new AppEntityRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), prefix = "app:"),
-      None,
-      metrics
-    )
+      0
+    )(ExecutionContext.global, metrics)
     val storage: StorageProvider = mock[StorageProvider]
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]

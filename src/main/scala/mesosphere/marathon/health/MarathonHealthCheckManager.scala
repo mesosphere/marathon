@@ -8,11 +8,12 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Provider
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, ZookeeperConf }
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
@@ -28,7 +29,7 @@ class MarathonHealthCheckManager @Inject() (
     driverHolderProvider: Provider[MarathonSchedulerDriverHolder],
     eventBus: EventStream,
     taskTrackerProvider: Provider[TaskTracker],
-    appRepository: AppRepository,
+    appRepository: Provider[ReadOnlyAppRepository],
     zkConf: ZookeeperConf) extends HealthCheckManager {
 
   private[this] lazy val driverHolder = driverHolderProvider.get()
@@ -116,7 +117,7 @@ class MarathonHealthCheckManager @Inject() (
     }
 
   override def reconcileWith(appId: PathId): Future[Unit] =
-    appRepository.currentVersion(appId) flatMap {
+    appRepository.get.get(appId) flatMap {
       case None => Future(())
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
@@ -141,7 +142,7 @@ class MarathonHealthCheckManager @Inject() (
         // reconcile all running versions of the current app
         val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
         val res: Iterator[Future[Unit]] = appVersionsWithoutHealthChecks.iterator map { version =>
-          appRepository.app(app.id, version) map {
+          appRepository.get.getVersion(app.id, version.toOffsetDateTime) map {
             case None =>
               // FIXME: If the app version of the task is not available anymore, no health check is started.
               // We generated a new app version for every scale change. If maxVersions is configured, we

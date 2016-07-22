@@ -29802,6 +29802,2225 @@ public final class Protos {
     // @@protoc_insertion_point(class_scope:mesosphere.marathon.GroupDefinition)
   }
 
+  public interface StoredGroupOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string id = 1;
+    /**
+     * <code>required string id = 1;</code>
+     */
+    boolean hasId();
+    /**
+     * <code>required string id = 1;</code>
+     */
+    java.lang.String getId();
+    /**
+     * <code>required string id = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getIdBytes();
+
+    // required string version = 2;
+    /**
+     * <code>required string version = 2;</code>
+     */
+    boolean hasVersion();
+    /**
+     * <code>required string version = 2;</code>
+     */
+    java.lang.String getVersion();
+    /**
+     * <code>required string version = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getVersionBytes();
+
+    // repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    java.util.List<mesosphere.marathon.Protos.StoredGroup.AppReference> 
+        getAppIdsList();
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    mesosphere.marathon.Protos.StoredGroup.AppReference getAppIds(int index);
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    int getAppIdsCount();
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    java.util.List<? extends mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder> 
+        getAppIdsOrBuilderList();
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder getAppIdsOrBuilder(
+        int index);
+
+    // repeated .mesosphere.marathon.StoredGroup groups = 4;
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    java.util.List<mesosphere.marathon.Protos.StoredGroup> 
+        getGroupsList();
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    mesosphere.marathon.Protos.StoredGroup getGroups(int index);
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    int getGroupsCount();
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    java.util.List<? extends mesosphere.marathon.Protos.StoredGroupOrBuilder> 
+        getGroupsOrBuilderList();
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    mesosphere.marathon.Protos.StoredGroupOrBuilder getGroupsOrBuilder(
+        int index);
+
+    // repeated string dependencies = 5;
+    /**
+     * <code>repeated string dependencies = 5;</code>
+     */
+    java.util.List<java.lang.String>
+    getDependenciesList();
+    /**
+     * <code>repeated string dependencies = 5;</code>
+     */
+    int getDependenciesCount();
+    /**
+     * <code>repeated string dependencies = 5;</code>
+     */
+    java.lang.String getDependencies(int index);
+    /**
+     * <code>repeated string dependencies = 5;</code>
+     */
+    com.google.protobuf.ByteString
+        getDependenciesBytes(int index);
+  }
+  /**
+   * Protobuf type {@code mesosphere.marathon.StoredGroup}
+   */
+  public static final class StoredGroup extends
+      com.google.protobuf.GeneratedMessage
+      implements StoredGroupOrBuilder {
+    // Use StoredGroup.newBuilder() to construct.
+    private StoredGroup(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private StoredGroup(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final StoredGroup defaultInstance;
+    public static StoredGroup getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public StoredGroup getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private StoredGroup(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              id_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              version_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                appIds_ = new java.util.ArrayList<mesosphere.marathon.Protos.StoredGroup.AppReference>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              appIds_.add(input.readMessage(mesosphere.marathon.Protos.StoredGroup.AppReference.PARSER, extensionRegistry));
+              break;
+            }
+            case 34: {
+              if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+                groups_ = new java.util.ArrayList<mesosphere.marathon.Protos.StoredGroup>();
+                mutable_bitField0_ |= 0x00000008;
+              }
+              groups_.add(input.readMessage(mesosphere.marathon.Protos.StoredGroup.PARSER, extensionRegistry));
+              break;
+            }
+            case 42: {
+              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                dependencies_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000010;
+              }
+              dependencies_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          appIds_ = java.util.Collections.unmodifiableList(appIds_);
+        }
+        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+          groups_ = java.util.Collections.unmodifiableList(groups_);
+        }
+        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+          dependencies_ = new com.google.protobuf.UnmodifiableLazyStringList(dependencies_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              mesosphere.marathon.Protos.StoredGroup.class, mesosphere.marathon.Protos.StoredGroup.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<StoredGroup> PARSER =
+        new com.google.protobuf.AbstractParser<StoredGroup>() {
+      public StoredGroup parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new StoredGroup(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<StoredGroup> getParserForType() {
+      return PARSER;
+    }
+
+    public interface AppReferenceOrBuilder
+        extends com.google.protobuf.MessageOrBuilder {
+
+      // required string id = 1;
+      /**
+       * <code>required string id = 1;</code>
+       */
+      boolean hasId();
+      /**
+       * <code>required string id = 1;</code>
+       */
+      java.lang.String getId();
+      /**
+       * <code>required string id = 1;</code>
+       */
+      com.google.protobuf.ByteString
+          getIdBytes();
+
+      // required string version = 2;
+      /**
+       * <code>required string version = 2;</code>
+       */
+      boolean hasVersion();
+      /**
+       * <code>required string version = 2;</code>
+       */
+      java.lang.String getVersion();
+      /**
+       * <code>required string version = 2;</code>
+       */
+      com.google.protobuf.ByteString
+          getVersionBytes();
+    }
+    /**
+     * Protobuf type {@code mesosphere.marathon.StoredGroup.AppReference}
+     */
+    public static final class AppReference extends
+        com.google.protobuf.GeneratedMessage
+        implements AppReferenceOrBuilder {
+      // Use AppReference.newBuilder() to construct.
+      private AppReference(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+        super(builder);
+        this.unknownFields = builder.getUnknownFields();
+      }
+      private AppReference(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+      private static final AppReference defaultInstance;
+      public static AppReference getDefaultInstance() {
+        return defaultInstance;
+      }
+
+      public AppReference getDefaultInstanceForType() {
+        return defaultInstance;
+      }
+
+      private final com.google.protobuf.UnknownFieldSet unknownFields;
+      @java.lang.Override
+      public final com.google.protobuf.UnknownFieldSet
+          getUnknownFields() {
+        return this.unknownFields;
+      }
+      private AppReference(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        initFields();
+        int mutable_bitField0_ = 0;
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+            com.google.protobuf.UnknownFieldSet.newBuilder();
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              default: {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
+                  done = true;
+                }
+                break;
+              }
+              case 10: {
+                bitField0_ |= 0x00000001;
+                id_ = input.readBytes();
+                break;
+              }
+              case 18: {
+                bitField0_ |= 0x00000002;
+                version_ = input.readBytes();
+                break;
+              }
+            }
+          }
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(this);
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(
+              e.getMessage()).setUnfinishedMessage(this);
+        } finally {
+          this.unknownFields = unknownFields.build();
+          makeExtensionsImmutable();
+        }
+      }
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_AppReference_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_AppReference_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                mesosphere.marathon.Protos.StoredGroup.AppReference.class, mesosphere.marathon.Protos.StoredGroup.AppReference.Builder.class);
+      }
+
+      public static com.google.protobuf.Parser<AppReference> PARSER =
+          new com.google.protobuf.AbstractParser<AppReference>() {
+        public AppReference parsePartialFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return new AppReference(input, extensionRegistry);
+        }
+      };
+
+      @java.lang.Override
+      public com.google.protobuf.Parser<AppReference> getParserForType() {
+        return PARSER;
+      }
+
+      private int bitField0_;
+      // required string id = 1;
+      public static final int ID_FIELD_NUMBER = 1;
+      private java.lang.Object id_;
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public boolean hasId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public java.lang.String getId() {
+        java.lang.Object ref = id_;
+        if (ref instanceof java.lang.String) {
+          return (java.lang.String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            id_ = s;
+          }
+          return s;
+        }
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getIdBytes() {
+        java.lang.Object ref = id_;
+        if (ref instanceof java.lang.String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          id_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+
+      // required string version = 2;
+      public static final int VERSION_FIELD_NUMBER = 2;
+      private java.lang.Object version_;
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public java.lang.String getVersion() {
+        java.lang.Object ref = version_;
+        if (ref instanceof java.lang.String) {
+          return (java.lang.String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            version_ = s;
+          }
+          return s;
+        }
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getVersionBytes() {
+        java.lang.Object ref = version_;
+        if (ref instanceof java.lang.String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          version_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+
+      private void initFields() {
+        id_ = "";
+        version_ = "";
+      }
+      private byte memoizedIsInitialized = -1;
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized != -1) return isInitialized == 1;
+
+        if (!hasId()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        if (!hasVersion()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        memoizedIsInitialized = 1;
+        return true;
+      }
+
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        getSerializedSize();
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          output.writeBytes(1, getIdBytes());
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeBytes(2, getVersionBytes());
+        }
+        getUnknownFields().writeTo(output);
+      }
+
+      private int memoizedSerializedSize = -1;
+      public int getSerializedSize() {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+
+        size = 0;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(1, getIdBytes());
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(2, getVersionBytes());
+        }
+        size += getUnknownFields().getSerializedSize();
+        memoizedSerializedSize = size;
+        return size;
+      }
+
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
+        return super.writeReplace();
+      }
+
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input);
+      }
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return PARSER.parseDelimitedFrom(input);
+      }
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      }
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input);
+      }
+      public static mesosphere.marathon.Protos.StoredGroup.AppReference parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input, extensionRegistry);
+      }
+
+      public static Builder newBuilder() { return Builder.create(); }
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder(mesosphere.marathon.Protos.StoredGroup.AppReference prototype) {
+        return newBuilder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() { return newBuilder(this); }
+
+      @java.lang.Override
+      protected Builder newBuilderForType(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        Builder builder = new Builder(parent);
+        return builder;
+      }
+      /**
+       * Protobuf type {@code mesosphere.marathon.StoredGroup.AppReference}
+       */
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessage.Builder<Builder>
+         implements mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder {
+        public static final com.google.protobuf.Descriptors.Descriptor
+            getDescriptor() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_AppReference_descriptor;
+        }
+
+        protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+            internalGetFieldAccessorTable() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_AppReference_fieldAccessorTable
+              .ensureFieldAccessorsInitialized(
+                  mesosphere.marathon.Protos.StoredGroup.AppReference.class, mesosphere.marathon.Protos.StoredGroup.AppReference.Builder.class);
+        }
+
+        // Construct using mesosphere.marathon.Protos.StoredGroup.AppReference.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+
+        private Builder(
+            com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          super(parent);
+          maybeForceBuilderInitialization();
+        }
+        private void maybeForceBuilderInitialization() {
+          if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          }
+        }
+        private static Builder create() {
+          return new Builder();
+        }
+
+        public Builder clear() {
+          super.clear();
+          id_ = "";
+          bitField0_ = (bitField0_ & ~0x00000001);
+          version_ = "";
+          bitField0_ = (bitField0_ & ~0x00000002);
+          return this;
+        }
+
+        public Builder clone() {
+          return create().mergeFrom(buildPartial());
+        }
+
+        public com.google.protobuf.Descriptors.Descriptor
+            getDescriptorForType() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_AppReference_descriptor;
+        }
+
+        public mesosphere.marathon.Protos.StoredGroup.AppReference getDefaultInstanceForType() {
+          return mesosphere.marathon.Protos.StoredGroup.AppReference.getDefaultInstance();
+        }
+
+        public mesosphere.marathon.Protos.StoredGroup.AppReference build() {
+          mesosphere.marathon.Protos.StoredGroup.AppReference result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+
+        public mesosphere.marathon.Protos.StoredGroup.AppReference buildPartial() {
+          mesosphere.marathon.Protos.StoredGroup.AppReference result = new mesosphere.marathon.Protos.StoredGroup.AppReference(this);
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+            to_bitField0_ |= 0x00000001;
+          }
+          result.id_ = id_;
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          result.version_ = version_;
+          result.bitField0_ = to_bitField0_;
+          onBuilt();
+          return result;
+        }
+
+        public Builder mergeFrom(com.google.protobuf.Message other) {
+          if (other instanceof mesosphere.marathon.Protos.StoredGroup.AppReference) {
+            return mergeFrom((mesosphere.marathon.Protos.StoredGroup.AppReference)other);
+          } else {
+            super.mergeFrom(other);
+            return this;
+          }
+        }
+
+        public Builder mergeFrom(mesosphere.marathon.Protos.StoredGroup.AppReference other) {
+          if (other == mesosphere.marathon.Protos.StoredGroup.AppReference.getDefaultInstance()) return this;
+          if (other.hasId()) {
+            bitField0_ |= 0x00000001;
+            id_ = other.id_;
+            onChanged();
+          }
+          if (other.hasVersion()) {
+            bitField0_ |= 0x00000002;
+            version_ = other.version_;
+            onChanged();
+          }
+          this.mergeUnknownFields(other.getUnknownFields());
+          return this;
+        }
+
+        public final boolean isInitialized() {
+          if (!hasId()) {
+            
+            return false;
+          }
+          if (!hasVersion()) {
+            
+            return false;
+          }
+          return true;
+        }
+
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          mesosphere.marathon.Protos.StoredGroup.AppReference parsedMessage = null;
+          try {
+            parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            parsedMessage = (mesosphere.marathon.Protos.StoredGroup.AppReference) e.getUnfinishedMessage();
+            throw e;
+          } finally {
+            if (parsedMessage != null) {
+              mergeFrom(parsedMessage);
+            }
+          }
+          return this;
+        }
+        private int bitField0_;
+
+        // required string id = 1;
+        private java.lang.Object id_ = "";
+        /**
+         * <code>required string id = 1;</code>
+         */
+        public boolean hasId() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        /**
+         * <code>required string id = 1;</code>
+         */
+        public java.lang.String getId() {
+          java.lang.Object ref = id_;
+          if (!(ref instanceof java.lang.String)) {
+            java.lang.String s = ((com.google.protobuf.ByteString) ref)
+                .toStringUtf8();
+            id_ = s;
+            return s;
+          } else {
+            return (java.lang.String) ref;
+          }
+        }
+        /**
+         * <code>required string id = 1;</code>
+         */
+        public com.google.protobuf.ByteString
+            getIdBytes() {
+          java.lang.Object ref = id_;
+          if (ref instanceof String) {
+            com.google.protobuf.ByteString b = 
+                com.google.protobuf.ByteString.copyFromUtf8(
+                    (java.lang.String) ref);
+            id_ = b;
+            return b;
+          } else {
+            return (com.google.protobuf.ByteString) ref;
+          }
+        }
+        /**
+         * <code>required string id = 1;</code>
+         */
+        public Builder setId(
+            java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+          id_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>required string id = 1;</code>
+         */
+        public Builder clearId() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          id_ = getDefaultInstance().getId();
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>required string id = 1;</code>
+         */
+        public Builder setIdBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+          id_ = value;
+          onChanged();
+          return this;
+        }
+
+        // required string version = 2;
+        private java.lang.Object version_ = "";
+        /**
+         * <code>required string version = 2;</code>
+         */
+        public boolean hasVersion() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        /**
+         * <code>required string version = 2;</code>
+         */
+        public java.lang.String getVersion() {
+          java.lang.Object ref = version_;
+          if (!(ref instanceof java.lang.String)) {
+            java.lang.String s = ((com.google.protobuf.ByteString) ref)
+                .toStringUtf8();
+            version_ = s;
+            return s;
+          } else {
+            return (java.lang.String) ref;
+          }
+        }
+        /**
+         * <code>required string version = 2;</code>
+         */
+        public com.google.protobuf.ByteString
+            getVersionBytes() {
+          java.lang.Object ref = version_;
+          if (ref instanceof String) {
+            com.google.protobuf.ByteString b = 
+                com.google.protobuf.ByteString.copyFromUtf8(
+                    (java.lang.String) ref);
+            version_ = b;
+            return b;
+          } else {
+            return (com.google.protobuf.ByteString) ref;
+          }
+        }
+        /**
+         * <code>required string version = 2;</code>
+         */
+        public Builder setVersion(
+            java.lang.String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+          version_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>required string version = 2;</code>
+         */
+        public Builder clearVersion() {
+          bitField0_ = (bitField0_ & ~0x00000002);
+          version_ = getDefaultInstance().getVersion();
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>required string version = 2;</code>
+         */
+        public Builder setVersionBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+          version_ = value;
+          onChanged();
+          return this;
+        }
+
+        // @@protoc_insertion_point(builder_scope:mesosphere.marathon.StoredGroup.AppReference)
+      }
+
+      static {
+        defaultInstance = new AppReference(true);
+        defaultInstance.initFields();
+      }
+
+      // @@protoc_insertion_point(class_scope:mesosphere.marathon.StoredGroup.AppReference)
+    }
+
+    private int bitField0_;
+    // required string id = 1;
+    public static final int ID_FIELD_NUMBER = 1;
+    private java.lang.Object id_;
+    /**
+     * <code>required string id = 1;</code>
+     */
+    public boolean hasId() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string id = 1;</code>
+     */
+    public java.lang.String getId() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          id_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string id = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getIdBytes() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        id_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required string version = 2;
+    public static final int VERSION_FIELD_NUMBER = 2;
+    private java.lang.Object version_;
+    /**
+     * <code>required string version = 2;</code>
+     */
+    public boolean hasVersion() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required string version = 2;</code>
+     */
+    public java.lang.String getVersion() {
+      java.lang.Object ref = version_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          version_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string version = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getVersionBytes() {
+      java.lang.Object ref = version_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        version_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;
+    public static final int APPIDS_FIELD_NUMBER = 3;
+    private java.util.List<mesosphere.marathon.Protos.StoredGroup.AppReference> appIds_;
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    public java.util.List<mesosphere.marathon.Protos.StoredGroup.AppReference> getAppIdsList() {
+      return appIds_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    public java.util.List<? extends mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder> 
+        getAppIdsOrBuilderList() {
+      return appIds_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    public int getAppIdsCount() {
+      return appIds_.size();
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    public mesosphere.marathon.Protos.StoredGroup.AppReference getAppIds(int index) {
+      return appIds_.get(index);
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+     */
+    public mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder getAppIdsOrBuilder(
+        int index) {
+      return appIds_.get(index);
+    }
+
+    // repeated .mesosphere.marathon.StoredGroup groups = 4;
+    public static final int GROUPS_FIELD_NUMBER = 4;
+    private java.util.List<mesosphere.marathon.Protos.StoredGroup> groups_;
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    public java.util.List<mesosphere.marathon.Protos.StoredGroup> getGroupsList() {
+      return groups_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    public java.util.List<? extends mesosphere.marathon.Protos.StoredGroupOrBuilder> 
+        getGroupsOrBuilderList() {
+      return groups_;
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    public int getGroupsCount() {
+      return groups_.size();
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    public mesosphere.marathon.Protos.StoredGroup getGroups(int index) {
+      return groups_.get(index);
+    }
+    /**
+     * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+     */
+    public mesosphere.marathon.Protos.StoredGroupOrBuilder getGroupsOrBuilder(
+        int index) {
+      return groups_.get(index);
+    }
+
+    // repeated string dependencies = 5;
+    public static final int DEPENDENCIES_FIELD_NUMBER = 5;
+    private com.google.protobuf.LazyStringList dependencies_;
+    /**
+     * <code>repeated string dependencies = 5;</code>
+     */
+    public java.util.List<java.lang.String>
+        getDependenciesList() {
+      return dependencies_;
+    }
+    /**
+     * <code>repeated string dependencies = 5;</code>
+     */
+    public int getDependenciesCount() {
+      return dependencies_.size();
+    }
+    /**
+     * <code>repeated string dependencies = 5;</code>
+     */
+    public java.lang.String getDependencies(int index) {
+      return dependencies_.get(index);
+    }
+    /**
+     * <code>repeated string dependencies = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+        getDependenciesBytes(int index) {
+      return dependencies_.getByteString(index);
+    }
+
+    private void initFields() {
+      id_ = "";
+      version_ = "";
+      appIds_ = java.util.Collections.emptyList();
+      groups_ = java.util.Collections.emptyList();
+      dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasId()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasVersion()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      for (int i = 0; i < getAppIdsCount(); i++) {
+        if (!getAppIds(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getGroupsCount(); i++) {
+        if (!getGroups(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getIdBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getVersionBytes());
+      }
+      for (int i = 0; i < appIds_.size(); i++) {
+        output.writeMessage(3, appIds_.get(i));
+      }
+      for (int i = 0; i < groups_.size(); i++) {
+        output.writeMessage(4, groups_.get(i));
+      }
+      for (int i = 0; i < dependencies_.size(); i++) {
+        output.writeBytes(5, dependencies_.getByteString(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getIdBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getVersionBytes());
+      }
+      for (int i = 0; i < appIds_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, appIds_.get(i));
+      }
+      for (int i = 0; i < groups_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, groups_.get(i));
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < dependencies_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(dependencies_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getDependenciesList().size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    public static mesosphere.marathon.Protos.StoredGroup parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static mesosphere.marathon.Protos.StoredGroup parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.StoredGroup parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static mesosphere.marathon.Protos.StoredGroup parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.StoredGroup parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static mesosphere.marathon.Protos.StoredGroup parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.StoredGroup parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static mesosphere.marathon.Protos.StoredGroup parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static mesosphere.marathon.Protos.StoredGroup parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static mesosphere.marathon.Protos.StoredGroup parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(mesosphere.marathon.Protos.StoredGroup prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code mesosphere.marathon.StoredGroup}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements mesosphere.marathon.Protos.StoredGroupOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                mesosphere.marathon.Protos.StoredGroup.class, mesosphere.marathon.Protos.StoredGroup.Builder.class);
+      }
+
+      // Construct using mesosphere.marathon.Protos.StoredGroup.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getAppIdsFieldBuilder();
+          getGroupsFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        id_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        version_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        if (appIdsBuilder_ == null) {
+          appIds_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+        } else {
+          appIdsBuilder_.clear();
+        }
+        if (groupsBuilder_ == null) {
+          groups_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
+        } else {
+          groupsBuilder_.clear();
+        }
+        dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_StoredGroup_descriptor;
+      }
+
+      public mesosphere.marathon.Protos.StoredGroup getDefaultInstanceForType() {
+        return mesosphere.marathon.Protos.StoredGroup.getDefaultInstance();
+      }
+
+      public mesosphere.marathon.Protos.StoredGroup build() {
+        mesosphere.marathon.Protos.StoredGroup result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public mesosphere.marathon.Protos.StoredGroup buildPartial() {
+        mesosphere.marathon.Protos.StoredGroup result = new mesosphere.marathon.Protos.StoredGroup(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.id_ = id_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.version_ = version_;
+        if (appIdsBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004)) {
+            appIds_ = java.util.Collections.unmodifiableList(appIds_);
+            bitField0_ = (bitField0_ & ~0x00000004);
+          }
+          result.appIds_ = appIds_;
+        } else {
+          result.appIds_ = appIdsBuilder_.build();
+        }
+        if (groupsBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008)) {
+            groups_ = java.util.Collections.unmodifiableList(groups_);
+            bitField0_ = (bitField0_ & ~0x00000008);
+          }
+          result.groups_ = groups_;
+        } else {
+          result.groups_ = groupsBuilder_.build();
+        }
+        if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          dependencies_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              dependencies_);
+          bitField0_ = (bitField0_ & ~0x00000010);
+        }
+        result.dependencies_ = dependencies_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof mesosphere.marathon.Protos.StoredGroup) {
+          return mergeFrom((mesosphere.marathon.Protos.StoredGroup)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(mesosphere.marathon.Protos.StoredGroup other) {
+        if (other == mesosphere.marathon.Protos.StoredGroup.getDefaultInstance()) return this;
+        if (other.hasId()) {
+          bitField0_ |= 0x00000001;
+          id_ = other.id_;
+          onChanged();
+        }
+        if (other.hasVersion()) {
+          bitField0_ |= 0x00000002;
+          version_ = other.version_;
+          onChanged();
+        }
+        if (appIdsBuilder_ == null) {
+          if (!other.appIds_.isEmpty()) {
+            if (appIds_.isEmpty()) {
+              appIds_ = other.appIds_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+            } else {
+              ensureAppIdsIsMutable();
+              appIds_.addAll(other.appIds_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.appIds_.isEmpty()) {
+            if (appIdsBuilder_.isEmpty()) {
+              appIdsBuilder_.dispose();
+              appIdsBuilder_ = null;
+              appIds_ = other.appIds_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+              appIdsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getAppIdsFieldBuilder() : null;
+            } else {
+              appIdsBuilder_.addAllMessages(other.appIds_);
+            }
+          }
+        }
+        if (groupsBuilder_ == null) {
+          if (!other.groups_.isEmpty()) {
+            if (groups_.isEmpty()) {
+              groups_ = other.groups_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+            } else {
+              ensureGroupsIsMutable();
+              groups_.addAll(other.groups_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.groups_.isEmpty()) {
+            if (groupsBuilder_.isEmpty()) {
+              groupsBuilder_.dispose();
+              groupsBuilder_ = null;
+              groups_ = other.groups_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+              groupsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getGroupsFieldBuilder() : null;
+            } else {
+              groupsBuilder_.addAllMessages(other.groups_);
+            }
+          }
+        }
+        if (!other.dependencies_.isEmpty()) {
+          if (dependencies_.isEmpty()) {
+            dependencies_ = other.dependencies_;
+            bitField0_ = (bitField0_ & ~0x00000010);
+          } else {
+            ensureDependenciesIsMutable();
+            dependencies_.addAll(other.dependencies_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasId()) {
+          
+          return false;
+        }
+        if (!hasVersion()) {
+          
+          return false;
+        }
+        for (int i = 0; i < getAppIdsCount(); i++) {
+          if (!getAppIds(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getGroupsCount(); i++) {
+          if (!getGroups(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        mesosphere.marathon.Protos.StoredGroup parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (mesosphere.marathon.Protos.StoredGroup) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string id = 1;
+      private java.lang.Object id_ = "";
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public boolean hasId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public java.lang.String getId() {
+        java.lang.Object ref = id_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          id_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getIdBytes() {
+        java.lang.Object ref = id_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          id_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public Builder setId(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        id_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public Builder clearId() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        id_ = getDefaultInstance().getId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string id = 1;</code>
+       */
+      public Builder setIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        id_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required string version = 2;
+      private java.lang.Object version_ = "";
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public java.lang.String getVersion() {
+        java.lang.Object ref = version_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          version_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getVersionBytes() {
+        java.lang.Object ref = version_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          version_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public Builder setVersion(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public Builder clearVersion() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        version_ = getDefaultInstance().getVersion();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string version = 2;</code>
+       */
+      public Builder setVersionBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+
+      // repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;
+      private java.util.List<mesosphere.marathon.Protos.StoredGroup.AppReference> appIds_ =
+        java.util.Collections.emptyList();
+      private void ensureAppIdsIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          appIds_ = new java.util.ArrayList<mesosphere.marathon.Protos.StoredGroup.AppReference>(appIds_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.StoredGroup.AppReference, mesosphere.marathon.Protos.StoredGroup.AppReference.Builder, mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder> appIdsBuilder_;
+
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public java.util.List<mesosphere.marathon.Protos.StoredGroup.AppReference> getAppIdsList() {
+        if (appIdsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(appIds_);
+        } else {
+          return appIdsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public int getAppIdsCount() {
+        if (appIdsBuilder_ == null) {
+          return appIds_.size();
+        } else {
+          return appIdsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroup.AppReference getAppIds(int index) {
+        if (appIdsBuilder_ == null) {
+          return appIds_.get(index);
+        } else {
+          return appIdsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public Builder setAppIds(
+          int index, mesosphere.marathon.Protos.StoredGroup.AppReference value) {
+        if (appIdsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureAppIdsIsMutable();
+          appIds_.set(index, value);
+          onChanged();
+        } else {
+          appIdsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public Builder setAppIds(
+          int index, mesosphere.marathon.Protos.StoredGroup.AppReference.Builder builderForValue) {
+        if (appIdsBuilder_ == null) {
+          ensureAppIdsIsMutable();
+          appIds_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          appIdsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public Builder addAppIds(mesosphere.marathon.Protos.StoredGroup.AppReference value) {
+        if (appIdsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureAppIdsIsMutable();
+          appIds_.add(value);
+          onChanged();
+        } else {
+          appIdsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public Builder addAppIds(
+          int index, mesosphere.marathon.Protos.StoredGroup.AppReference value) {
+        if (appIdsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureAppIdsIsMutable();
+          appIds_.add(index, value);
+          onChanged();
+        } else {
+          appIdsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public Builder addAppIds(
+          mesosphere.marathon.Protos.StoredGroup.AppReference.Builder builderForValue) {
+        if (appIdsBuilder_ == null) {
+          ensureAppIdsIsMutable();
+          appIds_.add(builderForValue.build());
+          onChanged();
+        } else {
+          appIdsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public Builder addAppIds(
+          int index, mesosphere.marathon.Protos.StoredGroup.AppReference.Builder builderForValue) {
+        if (appIdsBuilder_ == null) {
+          ensureAppIdsIsMutable();
+          appIds_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          appIdsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public Builder addAllAppIds(
+          java.lang.Iterable<? extends mesosphere.marathon.Protos.StoredGroup.AppReference> values) {
+        if (appIdsBuilder_ == null) {
+          ensureAppIdsIsMutable();
+          super.addAll(values, appIds_);
+          onChanged();
+        } else {
+          appIdsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public Builder clearAppIds() {
+        if (appIdsBuilder_ == null) {
+          appIds_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+          onChanged();
+        } else {
+          appIdsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public Builder removeAppIds(int index) {
+        if (appIdsBuilder_ == null) {
+          ensureAppIdsIsMutable();
+          appIds_.remove(index);
+          onChanged();
+        } else {
+          appIdsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroup.AppReference.Builder getAppIdsBuilder(
+          int index) {
+        return getAppIdsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder getAppIdsOrBuilder(
+          int index) {
+        if (appIdsBuilder_ == null) {
+          return appIds_.get(index);  } else {
+          return appIdsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public java.util.List<? extends mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder> 
+           getAppIdsOrBuilderList() {
+        if (appIdsBuilder_ != null) {
+          return appIdsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(appIds_);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroup.AppReference.Builder addAppIdsBuilder() {
+        return getAppIdsFieldBuilder().addBuilder(
+            mesosphere.marathon.Protos.StoredGroup.AppReference.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroup.AppReference.Builder addAppIdsBuilder(
+          int index) {
+        return getAppIdsFieldBuilder().addBuilder(
+            index, mesosphere.marathon.Protos.StoredGroup.AppReference.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup.AppReference appIds = 3;</code>
+       */
+      public java.util.List<mesosphere.marathon.Protos.StoredGroup.AppReference.Builder> 
+           getAppIdsBuilderList() {
+        return getAppIdsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.StoredGroup.AppReference, mesosphere.marathon.Protos.StoredGroup.AppReference.Builder, mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder> 
+          getAppIdsFieldBuilder() {
+        if (appIdsBuilder_ == null) {
+          appIdsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              mesosphere.marathon.Protos.StoredGroup.AppReference, mesosphere.marathon.Protos.StoredGroup.AppReference.Builder, mesosphere.marathon.Protos.StoredGroup.AppReferenceOrBuilder>(
+                  appIds_,
+                  ((bitField0_ & 0x00000004) == 0x00000004),
+                  getParentForChildren(),
+                  isClean());
+          appIds_ = null;
+        }
+        return appIdsBuilder_;
+      }
+
+      // repeated .mesosphere.marathon.StoredGroup groups = 4;
+      private java.util.List<mesosphere.marathon.Protos.StoredGroup> groups_ =
+        java.util.Collections.emptyList();
+      private void ensureGroupsIsMutable() {
+        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
+          groups_ = new java.util.ArrayList<mesosphere.marathon.Protos.StoredGroup>(groups_);
+          bitField0_ |= 0x00000008;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.StoredGroup, mesosphere.marathon.Protos.StoredGroup.Builder, mesosphere.marathon.Protos.StoredGroupOrBuilder> groupsBuilder_;
+
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public java.util.List<mesosphere.marathon.Protos.StoredGroup> getGroupsList() {
+        if (groupsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(groups_);
+        } else {
+          return groupsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public int getGroupsCount() {
+        if (groupsBuilder_ == null) {
+          return groups_.size();
+        } else {
+          return groupsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroup getGroups(int index) {
+        if (groupsBuilder_ == null) {
+          return groups_.get(index);
+        } else {
+          return groupsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public Builder setGroups(
+          int index, mesosphere.marathon.Protos.StoredGroup value) {
+        if (groupsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureGroupsIsMutable();
+          groups_.set(index, value);
+          onChanged();
+        } else {
+          groupsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public Builder setGroups(
+          int index, mesosphere.marathon.Protos.StoredGroup.Builder builderForValue) {
+        if (groupsBuilder_ == null) {
+          ensureGroupsIsMutable();
+          groups_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          groupsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public Builder addGroups(mesosphere.marathon.Protos.StoredGroup value) {
+        if (groupsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureGroupsIsMutable();
+          groups_.add(value);
+          onChanged();
+        } else {
+          groupsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public Builder addGroups(
+          int index, mesosphere.marathon.Protos.StoredGroup value) {
+        if (groupsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureGroupsIsMutable();
+          groups_.add(index, value);
+          onChanged();
+        } else {
+          groupsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public Builder addGroups(
+          mesosphere.marathon.Protos.StoredGroup.Builder builderForValue) {
+        if (groupsBuilder_ == null) {
+          ensureGroupsIsMutable();
+          groups_.add(builderForValue.build());
+          onChanged();
+        } else {
+          groupsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public Builder addGroups(
+          int index, mesosphere.marathon.Protos.StoredGroup.Builder builderForValue) {
+        if (groupsBuilder_ == null) {
+          ensureGroupsIsMutable();
+          groups_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          groupsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public Builder addAllGroups(
+          java.lang.Iterable<? extends mesosphere.marathon.Protos.StoredGroup> values) {
+        if (groupsBuilder_ == null) {
+          ensureGroupsIsMutable();
+          super.addAll(values, groups_);
+          onChanged();
+        } else {
+          groupsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public Builder clearGroups() {
+        if (groupsBuilder_ == null) {
+          groups_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
+          onChanged();
+        } else {
+          groupsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public Builder removeGroups(int index) {
+        if (groupsBuilder_ == null) {
+          ensureGroupsIsMutable();
+          groups_.remove(index);
+          onChanged();
+        } else {
+          groupsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroup.Builder getGroupsBuilder(
+          int index) {
+        return getGroupsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroupOrBuilder getGroupsOrBuilder(
+          int index) {
+        if (groupsBuilder_ == null) {
+          return groups_.get(index);  } else {
+          return groupsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public java.util.List<? extends mesosphere.marathon.Protos.StoredGroupOrBuilder> 
+           getGroupsOrBuilderList() {
+        if (groupsBuilder_ != null) {
+          return groupsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(groups_);
+        }
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroup.Builder addGroupsBuilder() {
+        return getGroupsFieldBuilder().addBuilder(
+            mesosphere.marathon.Protos.StoredGroup.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public mesosphere.marathon.Protos.StoredGroup.Builder addGroupsBuilder(
+          int index) {
+        return getGroupsFieldBuilder().addBuilder(
+            index, mesosphere.marathon.Protos.StoredGroup.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .mesosphere.marathon.StoredGroup groups = 4;</code>
+       */
+      public java.util.List<mesosphere.marathon.Protos.StoredGroup.Builder> 
+           getGroupsBuilderList() {
+        return getGroupsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          mesosphere.marathon.Protos.StoredGroup, mesosphere.marathon.Protos.StoredGroup.Builder, mesosphere.marathon.Protos.StoredGroupOrBuilder> 
+          getGroupsFieldBuilder() {
+        if (groupsBuilder_ == null) {
+          groupsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              mesosphere.marathon.Protos.StoredGroup, mesosphere.marathon.Protos.StoredGroup.Builder, mesosphere.marathon.Protos.StoredGroupOrBuilder>(
+                  groups_,
+                  ((bitField0_ & 0x00000008) == 0x00000008),
+                  getParentForChildren(),
+                  isClean());
+          groups_ = null;
+        }
+        return groupsBuilder_;
+      }
+
+      // repeated string dependencies = 5;
+      private com.google.protobuf.LazyStringList dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureDependenciesIsMutable() {
+        if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+          dependencies_ = new com.google.protobuf.LazyStringArrayList(dependencies_);
+          bitField0_ |= 0x00000010;
+         }
+      }
+      /**
+       * <code>repeated string dependencies = 5;</code>
+       */
+      public java.util.List<java.lang.String>
+          getDependenciesList() {
+        return java.util.Collections.unmodifiableList(dependencies_);
+      }
+      /**
+       * <code>repeated string dependencies = 5;</code>
+       */
+      public int getDependenciesCount() {
+        return dependencies_.size();
+      }
+      /**
+       * <code>repeated string dependencies = 5;</code>
+       */
+      public java.lang.String getDependencies(int index) {
+        return dependencies_.get(index);
+      }
+      /**
+       * <code>repeated string dependencies = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getDependenciesBytes(int index) {
+        return dependencies_.getByteString(index);
+      }
+      /**
+       * <code>repeated string dependencies = 5;</code>
+       */
+      public Builder setDependencies(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDependenciesIsMutable();
+        dependencies_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string dependencies = 5;</code>
+       */
+      public Builder addDependencies(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDependenciesIsMutable();
+        dependencies_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string dependencies = 5;</code>
+       */
+      public Builder addAllDependencies(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureDependenciesIsMutable();
+        super.addAll(values, dependencies_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string dependencies = 5;</code>
+       */
+      public Builder clearDependencies() {
+        dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string dependencies = 5;</code>
+       */
+      public Builder addDependenciesBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDependenciesIsMutable();
+        dependencies_.add(value);
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:mesosphere.marathon.StoredGroup)
+    }
+
+    static {
+      defaultInstance = new StoredGroup(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:mesosphere.marathon.StoredGroup)
+  }
+
   public interface DeploymentPlanDefinitionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -35965,6 +38184,16 @@ public final class Protos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_mesosphere_marathon_GroupDefinition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_mesosphere_marathon_StoredGroup_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_mesosphere_marathon_StoredGroup_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_mesosphere_marathon_StoredGroup_AppReference_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_mesosphere_marathon_StoredGroup_AppReference_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_DeploymentPlanDefinition_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -36128,31 +38357,37 @@ public final class Protos {
       "sion\030\002 \002(\t\0224\n\004apps\030\003 \003(\0132&.mesosphere.ma" +
       "rathon.ServiceDefinition\0224\n\006groups\030\004 \003(\013" +
       "2$.mesosphere.marathon.GroupDefinition\022\024",
-      "\n\014dependencies\030\005 \003(\t\"\245\001\n\030DeploymentPlanD" +
-      "efinition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226" +
-      "\n\010original\030\004 \002(\0132$.mesosphere.marathon.G" +
-      "roupDefinition\0224\n\006target\030\005 \002(\0132$.mesosph" +
-      "ere.marathon.GroupDefinition\"\306\001\n\013TaskFai" +
-      "lure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r." +
-      "mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.Task" +
-      "State\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000" +
-      "\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007" +
-      "slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStore",
-      "Entry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005val" +
-      "ue\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005false\"\326\001\n\023" +
-      "ResidencyDefinition\022(\n relaunchEscalatio" +
-      "nTimeoutSeconds\030\001 \001(\003\022S\n\020taskLostBehavio" +
-      "r\030\002 \001(\01629.mesosphere.marathon.ResidencyD" +
-      "efinition.TaskLostBehavior\"@\n\020TaskLostBe" +
-      "havior\022\032\n\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020\n\014WA" +
-      "IT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006so" +
-      "urce\030\002 \002(\t\"\262\001\n\017EnvVarReference\0227\n\004type\030\001" +
-      " \002(\0162).mesosphere.marathon.EnvVarReferen",
-      "ce.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\013" +
-      "2$.mesosphere.marathon.EnvVarSecretRef\"\037" +
-      "\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVa" +
-      "rSecretRef\022\020\n\010secretId\030\001 \002(\tB\035\n\023mesosphe" +
-      "re.marathonB\006Protos"
+      "\n\014dependencies\030\005 \003(\t\"\336\001\n\013StoredGroup\022\n\n\002" +
+      "id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022=\n\006appIds\030\003 \003(" +
+      "\0132-.mesosphere.marathon.StoredGroup.AppR" +
+      "eference\0220\n\006groups\030\004 \003(\0132 .mesosphere.ma" +
+      "rathon.StoredGroup\022\024\n\014dependencies\030\005 \003(\t" +
+      "\032+\n\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030" +
+      "\002 \002(\t\"\245\001\n\030DeploymentPlanDefinition\022\n\n\002id" +
+      "\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\0226\n\010original\030\004 \002(" +
+      "\0132$.mesosphere.marathon.GroupDefinition\022" +
+      "4\n\006target\030\005 \002(\0132$.mesosphere.marathon.Gr",
+      "oupDefinition\"\306\001\n\013TaskFailure\022\016\n\006app_id\030" +
+      "\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n" +
+      "\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007messag" +
+      "e\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002" +
+      "(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016" +
+      ".mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030\001" +
+      " \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncom" +
+      "pressed\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefini" +
+      "tion\022(\n relaunchEscalationTimeoutSeconds" +
+      "\030\001 \001(\003\022S\n\020taskLostBehavior\030\002 \001(\01629.mesos",
+      "phere.marathon.ResidencyDefinition.TaskL" +
+      "ostBehavior\"@\n\020TaskLostBehavior\022\032\n\026RELAU" +
+      "NCH_AFTER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"$\n" +
+      "\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n\017" +
+      "EnvVarReference\0227\n\004type\030\001 \002(\0162).mesosphe" +
+      "re.marathon.EnvVarReference.Type\022\014\n\004name" +
+      "\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\0132$.mesosphere.m" +
+      "arathon.EnvVarSecretRef\"\037\n\004Type\022\013\n\007UNKNO" +
+      "WN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVarSecretRef\022\020\n\010s" +
+      "ecretId\030\001 \002(\tB\035\n\023mesosphere.marathonB\006Pr",
+      "otos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -36297,44 +38532,56 @@ public final class Protos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_GroupDefinition_descriptor,
               new java.lang.String[] { "Id", "Version", "Apps", "Groups", "Dependencies", });
-          internal_static_mesosphere_marathon_DeploymentPlanDefinition_descriptor =
+          internal_static_mesosphere_marathon_StoredGroup_descriptor =
             getDescriptor().getMessageTypes().get(16);
+          internal_static_mesosphere_marathon_StoredGroup_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_mesosphere_marathon_StoredGroup_descriptor,
+              new java.lang.String[] { "Id", "Version", "AppIds", "Groups", "Dependencies", });
+          internal_static_mesosphere_marathon_StoredGroup_AppReference_descriptor =
+            internal_static_mesosphere_marathon_StoredGroup_descriptor.getNestedTypes().get(0);
+          internal_static_mesosphere_marathon_StoredGroup_AppReference_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_mesosphere_marathon_StoredGroup_AppReference_descriptor,
+              new java.lang.String[] { "Id", "Version", });
+          internal_static_mesosphere_marathon_DeploymentPlanDefinition_descriptor =
+            getDescriptor().getMessageTypes().get(17);
           internal_static_mesosphere_marathon_DeploymentPlanDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_DeploymentPlanDefinition_descriptor,
               new java.lang.String[] { "Id", "Version", "Original", "Target", });
           internal_static_mesosphere_marathon_TaskFailure_descriptor =
-            getDescriptor().getMessageTypes().get(17);
+            getDescriptor().getMessageTypes().get(18);
           internal_static_mesosphere_marathon_TaskFailure_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_TaskFailure_descriptor,
               new java.lang.String[] { "AppId", "TaskId", "State", "Message", "Host", "Version", "Timestamp", "SlaveId", });
           internal_static_mesosphere_marathon_ZKStoreEntry_descriptor =
-            getDescriptor().getMessageTypes().get(18);
+            getDescriptor().getMessageTypes().get(19);
           internal_static_mesosphere_marathon_ZKStoreEntry_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ZKStoreEntry_descriptor,
               new java.lang.String[] { "Name", "Uuid", "Value", "Compressed", });
           internal_static_mesosphere_marathon_ResidencyDefinition_descriptor =
-            getDescriptor().getMessageTypes().get(19);
+            getDescriptor().getMessageTypes().get(20);
           internal_static_mesosphere_marathon_ResidencyDefinition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_ResidencyDefinition_descriptor,
               new java.lang.String[] { "RelaunchEscalationTimeoutSeconds", "TaskLostBehavior", });
           internal_static_mesosphere_marathon_Secret_descriptor =
-            getDescriptor().getMessageTypes().get(20);
+            getDescriptor().getMessageTypes().get(21);
           internal_static_mesosphere_marathon_Secret_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_Secret_descriptor,
               new java.lang.String[] { "Id", "Source", });
           internal_static_mesosphere_marathon_EnvVarReference_descriptor =
-            getDescriptor().getMessageTypes().get(21);
+            getDescriptor().getMessageTypes().get(22);
           internal_static_mesosphere_marathon_EnvVarReference_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_EnvVarReference_descriptor,
               new java.lang.String[] { "Type", "Name", "SecretRef", });
           internal_static_mesosphere_marathon_EnvVarSecretRef_descriptor =
-            getDescriptor().getMessageTypes().get(22);
+            getDescriptor().getMessageTypes().get(23);
           internal_static_mesosphere_marathon_EnvVarSecretRef_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_EnvVarSecretRef_descriptor,

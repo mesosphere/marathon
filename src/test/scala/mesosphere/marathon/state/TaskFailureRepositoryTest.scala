@@ -2,9 +2,10 @@ package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.storage.repository.impl.legacy.TaskFailureEntityRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.util.state.memory.InMemoryStore
-import org.scalatest.{ Matchers, GivenWhenThen }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Matchers {
   import TaskFailureTestHelper.taskFailure
@@ -15,10 +16,10 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
     val f = new Fixture
 
     When("we store a taskFailure")
-    f.taskFailureRepo.store(PathId("/some/app"), taskFailure).futureValue
+    f.taskFailureRepo.store(taskFailure).futureValue
 
     And("fetch it")
-    val readFailure = f.taskFailureRepo.current(PathId("/some/app")).futureValue
+    val readFailure = f.taskFailureRepo.get(PathId("/some/app")).futureValue
 
     Then("the resulting failure is the one we stored")
     readFailure should be(Some(taskFailure))
@@ -29,14 +30,14 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
     val f = new Fixture
 
     When("we store a taskFailure")
-    f.taskFailureRepo.store(PathId("/some/app"), taskFailure).futureValue
+    f.taskFailureRepo.store(taskFailure).futureValue
 
     And("another one for the same app")
     val anotherTaskFailure = taskFailure.copy(message = "Something else")
-    f.taskFailureRepo.store(PathId("/some/app"), anotherTaskFailure).futureValue
+    f.taskFailureRepo.store(anotherTaskFailure).futureValue
 
     And("fetch it")
-    val readFailure = f.taskFailureRepo.current(PathId("/some/app")).futureValue
+    val readFailure = f.taskFailureRepo.get(PathId("/some/app")).futureValue
 
     Then("the resulting failure is the one we stored LAST")
     readFailure should be(Some(anotherTaskFailure))
@@ -47,13 +48,13 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
     val f = new Fixture
 
     When("we store a taskFailure")
-    f.taskFailureRepo.store(PathId("/some/app"), taskFailure).futureValue
+    f.taskFailureRepo.store(taskFailure).futureValue
 
     And("expunge it again")
-    f.taskFailureRepo.expunge(PathId("/some/app")).futureValue
+    f.taskFailureRepo.delete(PathId("/some/app")).futureValue
 
     And("fetch it")
-    val readFailure = f.taskFailureRepo.current(PathId("/some/app")).futureValue
+    val readFailure = f.taskFailureRepo.get(PathId("/some/app")).futureValue
 
     Then("the result is None")
     readFailure should be(None)
@@ -69,6 +70,6 @@ class TaskFailureRepositoryTest extends MarathonSpec with GivenWhenThen with Mat
     )
     lazy val metricRegistry = new MetricRegistry
     lazy val metrics = new Metrics(metricRegistry)
-    lazy val taskFailureRepo = new TaskFailureRepository(entityStore, maxVersions = Some(1), metrics)
+    lazy val taskFailureRepo = new TaskFailureEntityRepository(entityStore, maxVersions = 1)(metrics = metrics)
   }
 }

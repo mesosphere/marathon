@@ -2,11 +2,10 @@ package mesosphere.marathon.state
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore, PersistentEntity, PersistentStore }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.{ MarathonConf, MarathonSpec, StoreCommandFailedException }
-import mesosphere.util.state.memory.InMemoryStore
-import mesosphere.util.state.{ PersistentEntity, PersistentStore }
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.rogach.scallop.ScallopConf
@@ -216,7 +215,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
   ignore("names() correctly uses timeouts") {
     val state = new InMemoryStore() {
 
-      override def allIds(): Future[scala.Seq[ID]] = Future {
+      override def allIds(): Future[Seq[ID]] = Future {
         synchronized {
           blocking(wait())
         }
@@ -237,7 +236,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
   // regression test for #1507
   test("state.names() throwing exception is treated as empty iterator (ExecutionException without cause)") {
     val state = new InMemoryStore() {
-      override def allIds(): Future[scala.Seq[ID]] = super.allIds()
+      override def allIds(): Future[Seq[ID]] = super.allIds()
     }
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
       verify()
@@ -255,7 +254,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
   // regression test for #1507
   test("state.names() throwing exception is treated as empty iterator (ExecutionException with itself as cause)") {
     val state = new InMemoryStore() {
-      override def allIds(): Future[scala.Seq[ID]] = super.allIds()
+      override def allIds(): Future[Seq[ID]] = super.allIds()
     }
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
       verify()
@@ -270,7 +269,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("state.names() throwing exception is treated as empty iterator (direct)") {
     val state = new InMemoryStore() {
-      override def allIds(): Future[scala.Seq[ID]] = super.allIds()
+      override def allIds(): Future[Seq[ID]] = super.allIds()
     }
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
       verify()
@@ -285,7 +284,7 @@ class MarathonStoreTest extends MarathonSpec with Matchers {
 
   test("state.names() throwing exception is treated as empty iterator (RuntimeException in ExecutionException)") {
     val state = new InMemoryStore() {
-      override def allIds(): Future[scala.Seq[ID]] = super.allIds()
+      override def allIds(): Future[Seq[ID]] = super.allIds()
     }
     val config = new ScallopConf(Seq("--master", "foo")) with MarathonConf {
       verify()

@@ -1,12 +1,13 @@
 package mesosphere.marathon.util
 
+import java.util.concurrent.TimeUnit
 import java.util.{ Timer, TimerTask }
 
 import akka.actor.Scheduler
 import mesosphere.util.CallerThreadExecutionContext
 import mesosphere.util.DurationToHumanReadable
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{ Duration, FiniteDuration }
 import scala.concurrent.{ ExecutionContext, Future, Promise, blocking => blockingCall }
 import scala.util.Try
 
@@ -70,19 +71,25 @@ object Timeout {
     * @tparam T The result type of 'f'
     * @return The eventual result of calling 'f' or TimeoutException if it didn't complete
     */
-  def apply[T](timeout: FiniteDuration)(f: => Future[T])(implicit
+  def apply[T](timeout: Duration)(f: => Future[T])(implicit
     scheduler: Scheduler,
     ctx: ExecutionContext): Future[T] = {
-    val promise = Promise[T]()
-    val token = scheduler.scheduleOnce(timeout) {
-      promise.tryFailure(new TimeoutException(s"Timed out after ${timeout.toHumanReadable}"))
-    }
-    val result = f
-    result.onComplete {
-      case res: Try[T] =>
+    require(timeout != Duration.Zero)
+
+    if (timeout.isFinite()) {
+      val promise = Promise[T]()
+      val finiteTimeout = FiniteDuration(timeout.toNanos, TimeUnit.NANOSECONDS)
+      val token = scheduler.scheduleOnce(finiteTimeout) {
+        promise.tryFailure(new TimeoutException(s"Timed out after ${timeout.toHumanReadable}"))
+      }
+      val result = f
+      result.onComplete { res =>
         promise.tryComplete(res)
         token.cancel()
-    }(CallerThreadExecutionContext.callerThreadExecutionContext)
-    promise.future
+      }(CallerThreadExecutionContext.callerThreadExecutionContext)
+      promise.future
+    } else {
+      f
+    }
   }
 }

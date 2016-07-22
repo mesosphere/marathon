@@ -7,9 +7,9 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.impl.callback._
 import mesosphere.marathon.core.event.impl.stream._
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
-import mesosphere.marathon.state.EntityStore
 import org.eclipse.jetty.servlets.EventSourceServlet
 import org.slf4j.LoggerFactory
 

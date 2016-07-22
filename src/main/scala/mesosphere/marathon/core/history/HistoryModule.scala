@@ -3,7 +3,7 @@ package mesosphere.marathon.core.history
 import akka.actor.{ ActorSystem, Props }
 import akka.event.EventStream
 import mesosphere.marathon.core.history.impl.HistoryActor
-import mesosphere.marathon.state.TaskFailureRepository
+import mesosphere.marathon.core.storage.repository.TaskFailureRepository
 
 /**
   * Exposes the history actor, in charge of keeping track of the task failures.
