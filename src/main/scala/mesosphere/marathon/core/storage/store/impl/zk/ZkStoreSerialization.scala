@@ -7,12 +7,12 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import mesosphere.marathon.Protos
-import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
-import mesosphere.marathon.core.storage.repository.impl.StoredGroup
+import mesosphere.marathon.Protos.{DeploymentPlanDefinition, MarathonTask, ServiceDefinition}
+import mesosphere.marathon.core.storage.repository.impl.{StoredGroup, StoredGroupRepositoryImpl}
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
+import mesosphere.marathon.state.{AppDefinition, PathId, TaskFailure}
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
@@ -104,8 +104,17 @@ trait ZkStoreSerialization {
         TaskFailure(Protos.TaskFailure.parseFrom(byteString.toArray))
     }
 
-  def groupIdResolver(maxVersions: Int): IdResolver[PathId, StoredGroup, String, ZkId] =
-    new ZkPathIdResolver[StoredGroup]("group", maxVersions, _.version)
+  def groupIdResolver(groupMaxVersions: Int): IdResolver[PathId, StoredGroup, String, ZkId] =
+    new IdResolver[PathId, StoredGroup, String, ZkId] {
+      override def toStorageId(id: PathId, version: Option[OffsetDateTime]): ZkId = {
+        require(id == StoredGroupRepositoryImpl.RootId)
+        ZkId(category, "root", version)
+      }
+      override val category: String = "group"
+      override def fromStorageId(key: ZkId): PathId = StoredGroupRepositoryImpl.RootId
+      override val maxVersions: Int = groupMaxVersions
+      override def version(v: StoredGroup): OffsetDateTime = v.version
+    }
 
   implicit val groupMarshaller: Marshaller[StoredGroup, ZkSerialized] =
     Marshaller.opaque(group => ZkSerialized(ByteString(group.toProto.toByteArray)))

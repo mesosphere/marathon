@@ -20,6 +20,7 @@ import scala.async.Async.{ async, await }
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.control.NonFatal
 // scalastyle:on
 
 private[storage] case class StoredGroup(
@@ -172,7 +173,7 @@ class StoredGroupRepositoryImpl[K, C, S](
       val deleteAppFutures = deletedApps.map(appRepository.deleteCurrent)
       val storedGroup = StoredGroup(group)
       await(Future.sequence(storeAppFutures))
-      await(Future.sequence(deleteAppFutures))
+      await(Future.sequence(deleteAppFutures).recover { case NonFatal(e) => Done })
       await(storedRepo.store(storedGroup))
     }
   }

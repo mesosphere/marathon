@@ -7,8 +7,8 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.LegacyStorageConfig
 import mesosphere.marathon.core.storage.migration.StorageVersions._
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryEntity, PersistentStore, PersistentStoreManagement}
-import mesosphere.marathon.core.storage.repository.{AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository, TaskRepository}
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryEntity, PersistentEntity, PersistentStore, PersistentStoreManagement }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.Mockito
@@ -20,13 +20,14 @@ import scala.concurrent.Future
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
   implicit private def metrics = new Metrics(new MetricRegistry)
 
-  def migration(legacyConfig: Option[LegacyStorageConfig] = None,
-                persistenceStore: Option[PersistenceStore[_, _, _]] = None,
-                appRepository: AppRepository = mock[AppRepository],
-                groupRepository: GroupRepository = mock[GroupRepository],
-                deploymentRepository: DeploymentRepository = mock[DeploymentRepository],
-                taskRepository: TaskRepository = mock[TaskRepository],
-                taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository]): Migration = {
+  def migration(
+    legacyConfig: Option[LegacyStorageConfig] = None,
+    persistenceStore: Option[PersistenceStore[_, _, _]] = None,
+    appRepository: AppRepository = mock[AppRepository],
+    groupRepository: GroupRepository = mock[GroupRepository],
+    deploymentRepository: DeploymentRepository = mock[DeploymentRepository],
+    taskRepository: TaskRepository = mock[TaskRepository],
+    taskFailureRepository: TaskFailureRepository = mock[TaskFailureRepository]): Migration = {
     new Migration(legacyConfig, persistenceStore, appRepository, groupRepository, deploymentRepository,
       taskRepository, taskFailureRepository)
   }
@@ -60,6 +61,23 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       verify(mockedStore).storageVersion()
       verify(mockedStore).setStorageVersion(StorageVersions.current)
       noMoreInteractions(mockedStore)
+    }
+
+    "migrate on an empty legacy database will set the storage version" in {
+      val legacyConfig = mock[LegacyStorageConfig]
+      val mockedPersistentStore = mock[PersistentStore]
+      mockedPersistentStore.load(Migration.StorageVersionName) returns Future.successful(None)
+      mockedPersistentStore.create(eq(Migration.StorageVersionName), eq(StorageVersions.current.toByteArray)) returns
+        Future.successful(mock[PersistentEntity])
+
+      legacyConfig.store returns mockedPersistentStore
+      val migrate = migration(legacyConfig = Some(legacyConfig))
+
+      migrate.migrate()
+
+      verify(mockedPersistentStore, times(2)).load(Migration.StorageVersionName)
+      verify(mockedPersistentStore).create(Migration.StorageVersionName, StorageVersions.current.toByteArray)
+      noMoreInteractions(mockedPersistentStore)
     }
 
     "migrate on a database with the same version will do nothing" in {
@@ -124,6 +142,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       verify(mockedPersistentStore).load(Migration.StorageVersionName)
       noMoreInteractions(mockedPersistentStore)
     }
+
     "migrations are executed sequentially" in {
       val mockedStore = mock[PersistenceStore[_, _, _]]
       mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(0, 8, 0)))
@@ -140,104 +159,5 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen {
       result should be ('nonEmpty)
       result should be(migrate.migrations.map(_._1).drop(1))
     }
-
-
   }
-  /*
-
-  test("migration is executed sequentially") {
-    val f = new Fixture
-
-    f.groupRepo.root() returns Future.successful(Group.empty)
-    f.groupRepo.storeRoot(any, any, any) returns Future.successful(Done)
-    f.store.load("internal:storage:version") returns Future.successful(None)
-    f.store.create(any, any) returns Future.successful(mock[PersistentEntity])
-    f.store.update(any) returns Future.successful(mock[PersistentEntity])
-    f.store.allIds() returns Future.successful(Seq.empty)
-    f.store.initialize() returns Future.successful(())
-    f.store.load(any) returns Future.successful(None)
-    f.appRepo.all() returns Source.empty
-    f.appRepo.ids() returns Source.empty
-    f.groupRepo.root() returns Future.successful(Group.empty)
-    f.groupRepo.rootVersions() returns Source.empty[OffsetDateTime]
-
-    val result = f.migration.applyMigrationSteps(StorageVersions(0, 8, 0)).futureValue
-    result should not be 'empty
-    result should be(f.migration.migrations.map(_._1).drop(1))
-  }
-
-  test("applyMigrationSteps throws an error for unsupported versions") {
-    val f = new Fixture
-    val minVersion = f.migration.minSupportedStorageVersion
-
-    Given("An unsupported storage version")
-    val unsupportedVersion = StorageVersions(0, 2, 0)
-
-    When("applyMigrationSteps is called for that version")
-    val ex = intercept[RuntimeException] {
-      f.migration.applyMigrationSteps(unsupportedVersion)
-    }
-
-    Then("Migration exits with a readable error message")
-    ex.getMessage should equal (s"Migration from versions < $minVersion is not supported. Your version: $unsupportedVersion")
-  }
-
-  test("migrate() from unsupported version exits with a readable error") {
-    val f = new Fixture
-    val minVersion = f.migration.minSupportedStorageVersion
-
-    f.groupRepo.root() returns Future.successful(Group.empty)
-    f.groupRepo.storeRoot(any, any, any) returns Future.successful(Done)
-
-    f.store.load("internal:storage:version") returns Future.successful(Some(InMemoryEntity(
-      id = "internal:storage:version", version = 0, bytes = minVersion.toByteArray)))
-    f.store.initialize() returns Future.successful(())
-
-    Given("An unsupported storage version")
-    val unsupportedVersion = StorageVersions(0, 2, 0)
-    f.store.load("internal:storage:version") returns Future.successful(Some(InMemoryEntity(
-      id = "internal:storage:version", version = 0, bytes = unsupportedVersion.toByteArray)))
-
-    When("A migration is approached for that version")
-    val ex = intercept[RuntimeException] {
-      f.migration.migrate()
-    }
-
-    Then("Migration exits with a readable error message")
-    ex.getMessage should equal (s"Migration from versions < $minVersion is not supported. Your version: $unsupportedVersion")
-  }
-
-  class Fixture {
-    trait StoreWithManagement extends PersistentStore with PersistentStoreManagement
-
-
-    val metrics = new Metrics(new MetricRegistry)
-    val store = mock[StoreWithManagement]
-    val appRepo = mock[AppEntityRepository]
-    val groupRepo = mock[GroupEntityRepository]
-    val config = mock[MarathonConf]
-    val deploymentRepo = new DeploymentEntityRepository(
-      new MarathonStore[DeploymentPlan](
-        store = store,
-        metrics = metrics,
-        newState = () => DeploymentPlan.empty,
-        prefix = "deployment:"))(metrics = metrics)
-    val taskRepo = new TaskEntityRepository(
-      new MarathonStore[MarathonTaskState](
-        store = store,
-        metrics = metrics,
-        newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
-        prefix = "task:")
-    )(metrics = metrics)
-    val migration = new Migration(
-      store,
-      appRepo,
-      groupRepo,
-      taskRepo,
-      deploymentRepo,
-      config,
-      new Metrics(new MetricRegistry)
-    )
-  }
-  */
 }

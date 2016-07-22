@@ -160,4 +160,4 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.getVersion(PathId("/test"), correctedAppV3.version.toOffsetDateTime).futureValue should be(Some(correctedAppV3))
   }
 }
-*/
+*/ 
