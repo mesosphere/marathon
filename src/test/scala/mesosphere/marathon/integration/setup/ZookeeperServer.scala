@@ -3,9 +3,9 @@ package mesosphere.marathon.integration.setup
 import java.nio.file.{ Files, Path }
 import java.util.concurrent.Semaphore
 
+import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework }
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
-import mesosphere.util.state.zk.{ NoRetryPolicy, RichCuratorFramework }
 import org.apache.commons.io.FileUtils
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }

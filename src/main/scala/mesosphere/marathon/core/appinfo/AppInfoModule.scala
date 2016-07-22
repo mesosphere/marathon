@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.impl.{ AppInfoBaseData, DefaultInfoService }
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.storage.repository.{ AppRepository, TaskFailureRepository }
+import mesosphere.marathon.core.storage.repository.{ ReadOnlyAppRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.GroupManager
@@ -15,7 +15,7 @@ import mesosphere.marathon.state.GroupManager
 class AppInfoModule @Inject() (
     clock: Clock,
     groupManager: GroupManager,
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
     marathonSchedulerService: MarathonSchedulerService,

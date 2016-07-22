@@ -8,12 +8,12 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import mesosphere.marathon.MarathonSchedulerActor.ScaleApp
 import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository }
+import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess, LocalLeadershipEvent }
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Sink
@@ -38,7 +38,7 @@ class MarathonSchedulerActor private (
   createSchedulerActions: ActorRef => SchedulerActions,
   deploymentManagerProps: SchedulerActions => Props,
   historyActorProps: Props,
-  appRepository: AppRepository,
+  appRepository: ReadOnlyAppRepository,
   deploymentRepository: DeploymentRepository,
   healthCheckManager: HealthCheckManager,
   taskTracker: TaskTracker,
@@ -338,7 +338,7 @@ object MarathonSchedulerActor {
     createSchedulerActions: ActorRef => SchedulerActions,
     deploymentManagerProps: SchedulerActions => Props,
     historyActorProps: Props,
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
@@ -423,7 +423,7 @@ object MarathonSchedulerActor {
 }
 
 class SchedulerActions(
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
@@ -506,8 +506,8 @@ class SchedulerActions(
 
   def reconcileHealthChecks(): Unit = {
     async {
-      val group = await(groupRepository.rootGroup())
-      val apps = group.map(_.transitiveApps).getOrElse(Set.empty)
+      val group = await(groupRepository.root())
+      val apps = group.transitiveApps
       apps.foreach(app => healthCheckManager.reconcileWith(app.id))
     }
   }

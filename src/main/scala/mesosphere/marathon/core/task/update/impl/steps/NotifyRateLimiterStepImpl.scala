@@ -2,7 +2,7 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
@@ -14,7 +14,7 @@ import scala.concurrent.Future
 
 class NotifyRateLimiterStepImpl @Inject() (
     launchQueueProvider: Provider[LaunchQueue],
-    appRepositoryProvider: Provider[AppRepository]) extends TaskUpdateStep {
+    appRepositoryProvider: Provider[ReadOnlyAppRepository]) extends TaskUpdateStep {
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
   private[this] lazy val appRepository = appRepositoryProvider.get()
@@ -44,7 +44,7 @@ class NotifyRateLimiterStepImpl @Inject() (
   private[this] def notifyRateLimiter(status: TaskStatus, task: Task): Future[_] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     task.launched.fold(Future.successful(())) { launched =>
-      appRepository.get(task.runSpecId, launched.runSpecVersion.toOffsetDateTime).map { maybeApp =>
+      appRepository.getVersion(task.runSpecId, launched.runSpecVersion.toOffsetDateTime).map { maybeApp =>
         // It would be nice if we could make sure that the delay gets send
         // to the AppTaskLauncherActor before we continue but that would require quite some work.
         //

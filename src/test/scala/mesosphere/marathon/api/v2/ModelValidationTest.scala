@@ -55,7 +55,7 @@ class ModelValidationTest
     val result = validate(group)(Group.validRootGroup(maxApps = None))
 
     ValidationHelper.getAllRuleConstrains(result).exists(v =>
-      v.message == "Requested service port 3200 conflicts with a service port in app /app2") should be(true)
+      v.message.contains("Requested service port 3200 is used by more than 1 app")) should be(true)
   }
 
   test("Model validation should allow new apps that do not conflict with service ports in existing apps") {
@@ -77,7 +77,7 @@ class ModelValidationTest
     val result = validate(group)(Group.validRootGroup(maxApps = None))
 
     ValidationHelper.getAllRuleConstrains(result).exists(v =>
-      v.message == "Requested service port 3200 conflicts with a service port in app /app2") should be(true)
+      v.message.contains("Requested service port 3200 is used by more than 1 app")) should be(true)
   }
 
   test("Multiple errors within one field of a validator should be grouped into one array") {

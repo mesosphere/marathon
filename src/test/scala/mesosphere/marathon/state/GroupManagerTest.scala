@@ -5,13 +5,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.Done
 import akka.event.EventStream
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, GroupEntityRepository }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.MarathonActorSupport
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException, _ }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
-import mesosphere.marathon._
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopConf
@@ -29,7 +29,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
   class Fixture {
     lazy val scheduler = mock[MarathonSchedulerService]
     lazy val appRepo = mock[AppEntityRepository]
-    lazy val groupRepo = mock[GroupRepository]
+    lazy val groupRepo = mock[GroupEntityRepository]
     lazy val eventBus = mock[EventStream]
     lazy val provider = mock[StorageProvider]
     lazy val config = {
@@ -307,14 +307,13 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     val app1 = AppDefinition("/app1".toPath)
     val group = Group(PathId.empty, Map(app1.id -> app1), Set(Group("/group1".toPath)))
 
-    when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
-    when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
+    when(f.groupRepo.root()).thenReturn(Future.successful(Group.empty))
 
     intercept[ValidationFailedException] {
       Await.result(f.manager.update(group.id, _ => group), 3.seconds)
     }.printStackTrace()
 
-    verify(f.groupRepo, times(0)).store(any(), any())
+    verify(f.groupRepo, times(0)).storeRoot(any(), any(), any())
   }
 
   test("Store new apps with correct version infos in groupRepo and appRepo") {
@@ -322,20 +321,18 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
 
     val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
     val group = Group(PathId.empty, Map(app.id -> app)).copy(version = Timestamp(1))
-    when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
-    when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
+    when(f.groupRepo.root()).thenReturn(Future.successful(Group.empty))
     when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
     val appWithVersionInfo = app.copy(versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1)))
 
     val groupWithVersionInfo = Group(PathId.empty, Map(
       appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))
     when(f.appRepo.store(any())).thenReturn(Future.successful(Done))
-    when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupWithVersionInfo))
+    when(f.groupRepo.storeRoot(any(), any(), any())).thenReturn(Future.successful(Done))
 
     Await.result(f.manager.update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).store(GroupRepository.zkRootName, groupWithVersionInfo)
-    verify(f.appRepo).store(appWithVersionInfo)
+    verify(f.groupRepo).storeRoot(groupWithVersionInfo, any(), any())
   }
 
   test("Expunge removed apps from appRepo") {
@@ -344,15 +341,14 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
     val group = Group(PathId.empty, Map(app.id -> app)).copy(version = Timestamp(1))
     val groupEmpty = group.copy(apps = Map(), version = Timestamp(2))
-    when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
-    when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(Some(group)))
+    when(f.groupRepo.root()).thenReturn(Future.successful(group))
     when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
     when(f.appRepo.delete(any())).thenReturn(Future.successful(Done))
-    when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupEmpty))
+    when(f.groupRepo.storeRoot(any(), any(), any())).thenReturn(Future.successful(Done))
 
     Await.result(f.manager.update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).store(GroupRepository.zkRootName, groupEmpty)
+    verify(f.groupRepo).storeRoot(groupEmpty, any(), any())
     verify(f.appRepo).delete(app.id)
   }
 

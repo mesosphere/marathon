@@ -6,7 +6,7 @@ import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
-import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
@@ -22,7 +22,7 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 class DeploymentManager(
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     taskTracker: TaskTracker,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
@@ -154,7 +154,7 @@ object DeploymentManager {
 
   //scalastyle:off
   def props(
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     taskTracker: TaskTracker,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,

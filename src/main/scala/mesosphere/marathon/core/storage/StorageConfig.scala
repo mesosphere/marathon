@@ -1,22 +1,22 @@
 package mesosphere.marathon.core.storage
 
+// scalastyle:off
 import java.util
 import java.util.concurrent.TimeUnit
 
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.{ Config, ConfigMemorySize }
-import mesosphere.marathon.core.storage.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
-import mesosphere.marathon.core.storage.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
-import mesosphere.marathon.core.storage.impl.zk.{ ZkId, ZkPersistenceStore, ZkSerialized }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, EntityStoreCache, MarathonStore, MesosStateStore, PersistentStore, ZKStore }
+import mesosphere.marathon.core.storage.store.PersistenceStore
+import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
+import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ EntityStore, EntityStoreCache, MarathonState, MarathonStore }
+import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
 import mesosphere.marathon.{ MarathonConf, ZookeeperConf }
-import mesosphere.util.state.PersistentStore
-import mesosphere.util.state.mesos.MesosStateStore
-import mesosphere.util.state.zk.{ CompressionConf, NoRetryPolicy, RichCuratorFramework, ZKStore }
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
 import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
@@ -29,10 +29,11 @@ import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ Duration, _ }
 import scala.reflect.ClassTag
+// scalastyle:on
 
 sealed trait StorageConfig
 sealed trait LegacyStorageConfig extends StorageConfig {
-  protected def store: PersistentStore
+  protected[storage] def store: PersistentStore
   val maxVersions: Int
   val enableCache: Boolean
 
@@ -59,7 +60,8 @@ case class TwitterZk(
   private val sessionTimeoutTw = {
     com.twitter.util.Duration(sessionTimeout.toMillis, TimeUnit.MILLISECONDS)
   }
-  protected def store: PersistentStore = {
+
+  protected[storage] lazy val store: PersistentStore = {
     import com.twitter.util.JavaTimer
     import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 
@@ -86,6 +88,8 @@ case class TwitterZk(
 }
 
 object TwitterZk {
+  val StoreName = "legacy_zk"
+
   def apply(cache: Boolean, config: ZookeeperConf): TwitterZk =
     TwitterZk(
       maxVersions = config.zooKeeperMaxVersions(),
@@ -135,6 +139,8 @@ case class MesosZk(
 }
 
 object MesosZk {
+  val StoreName = "mesos_zk"
+
   def apply(cache: Boolean, config: ZookeeperConf): MesosZk =
     MesosZk(
       maxVersions = config.zooKeeperMaxVersions(),
@@ -216,7 +222,7 @@ case class CuratorZk(
       override def getAclForPath(path: String): util.List[ACL] = defaultAcls
     })
     builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
-    builder.namespace(zkPath)
+    builder.namespace(zkPath.replaceAll("^/", ""))
     val client = builder.build()
     client.start()
     client.blockUntilConnected()
@@ -230,6 +236,7 @@ case class CuratorZk(
 }
 
 object CuratorZk {
+  val StoreName = "zk"
   def apply(cache: Boolean, conf: ZookeeperConf): CuratorZk =
     CuratorZk(
       cacheType = if (cache) LazyCaching else NoCaching,
@@ -274,6 +281,8 @@ case class InMem(maxVersions: Int) extends PersistenceStorageConfig[RamId, Strin
 }
 
 object InMem {
+  val StoreName = "mem"
+
   def apply(conf: ZookeeperConf): InMem =
     InMem(conf.zooKeeperMaxVersions())
 
@@ -285,19 +294,19 @@ object StorageConfig {
   val DefaultMaxVersions = 25
   def apply(conf: MarathonConf): StorageConfig = {
     conf.internalStoreBackend() match {
-      case "zk" => TwitterZk(conf.storeCache(), conf)
-      case "mesos_zk" => MesosZk(conf.storeCache(), conf)
-      case "mem" => InMem(conf)
-      case "zk2" => CuratorZk(conf.storeCache(), conf)
+      case TwitterZk.StoreName => TwitterZk(conf.storeCache(), conf)
+      case MesosZk.StoreName => MesosZk(conf.storeCache(), conf)
+      case InMem.StoreName => InMem(conf)
+      case CuratorZk.StoreName => CuratorZk(conf.storeCache(), conf)
     }
   }
 
   def apply(conf: Config): StorageConfig = {
     conf.string("storage-type", "zk") match {
-      case "zk" => TwitterZk(conf)
-      case "mesos_zk" => MesosZk(conf)
-      case "mem" => InMem(conf)
-      case "zk2" => CuratorZk(conf)
+      case TwitterZk.StoreName => TwitterZk(conf)
+      case MesosZk.StoreName => MesosZk(conf)
+      case InMem.StoreName => InMem(conf)
+      case CuratorZk.StoreName => CuratorZk(conf)
     }
   }
 }

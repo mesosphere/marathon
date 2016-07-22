@@ -49,6 +49,9 @@ class RichConfig(val config: Config) extends AnyVal {
   def optionalBytes(path: String): Option[Long] = optional(path, _.getBytes(path))
   def bytesList(path: String, ifEmpty: Seq[Long] = Nil): Seq[Long] = list(path, _.getBytesList(path), ifEmpty)
 
+  def config(path: String): Config = config.getConfig(path)
+  def optionalConfig(path: String) = optional(path, _.getConfig(path))
+
   def double(path: String): Double = config.getDouble(path)
   def double(path: String, default: Double): Double = optionalDouble(path).getOrElse(default)
   def optionalDouble(path: String): Option[Double] = optional(path, _.getDouble(path))

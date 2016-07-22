@@ -4,18 +4,18 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
+import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ PathId, TaskEntityRepository }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
-import mesosphere.util.state.PersistentStore
-import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.mockito.Matchers.any

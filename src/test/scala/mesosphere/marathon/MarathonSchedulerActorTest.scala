@@ -9,14 +9,15 @@ import akka.stream.scaladsl.Source
 import akka.testkit._
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSchedulerActor._
-import mesosphere.marathon.core.election.ElectionService
+import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
+import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.history.impl.HistoryActor
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, TaskFailureRepository }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event._
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.PathId._
@@ -47,7 +48,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
   test("RecoversDeploymentsAndReconcilesHealthChecksOnStart") {
     val app = AppDefinition(id = "test-app".toPath, instances = 1)
-    when(groupRepo.rootGroup()).thenReturn(Future.successful(Some(Group.apply(PathId.empty, apps = Map(app.id -> app)))))
+    when(groupRepo.root()).thenReturn(Future.successful(Group(PathId.empty, apps = Map(app.id -> app))))
 
     val schedulerActor = createActor()
     try {
@@ -172,7 +173,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
 
       val Some(taskFailureEvent) = TaskFailure.FromMesosStatusUpdateEvent(statusUpdateEvent)
 
-      awaitAssert(verify(taskFailureEventRepository, times(1)).store(app.id, taskFailureEvent), 5.seconds, 10.millis)
+      awaitAssert(verify(taskFailureEventRepository, times(1)).store(taskFailureEvent), 5.seconds, 10.millis)
 
       // KillTasks does no longer scale
       verify(repo, times(0)).store(any[AppDefinition])
@@ -567,7 +568,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     when(deploymentRepo.delete(any)).thenReturn(Future.successful(Done))
     when(deploymentRepo.all()).thenReturn(Source.empty)
     when(repo.all()).thenReturn(Source.empty)
-    when(groupRepo.rootGroup()).thenReturn(Future.successful(None))
+    when(groupRepo.root()).thenReturn(Future.successful(Group.empty))
     when(queue.get(any[PathId])).thenReturn(None)
     when(taskTracker.countLaunchedAppTasksSync(any[PathId])).thenReturn(0)
     when(conf.killBatchCycle).thenReturn(1.seconds)

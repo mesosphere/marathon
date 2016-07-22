@@ -6,12 +6,12 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
-import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
 import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ AppDefinition, GroupRepository, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.Implicits.taskIDToProto

@@ -7,8 +7,8 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.matcher.reconcile.impl.{ OfferMatcherReconciler, OffersWantedForReconciliationActor }
+import mesosphere.marathon.core.storage.repository.GroupRepository
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.GroupRepository
 import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{ Observable, Observer, Subject }
 
