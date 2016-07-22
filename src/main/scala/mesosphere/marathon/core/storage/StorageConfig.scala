@@ -55,7 +55,9 @@ case class TwitterZk(
     password: Option[String],
     retries: Int,
     enableCompression: Boolean,
-    compressionThreshold: ConfigMemorySize) extends LegacyStorageConfig {
+    compressionThreshold: ConfigMemorySize,
+    maxConcurrent: Int,
+    maxOutstanding: Int)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory) extends LegacyStorageConfig {
 
   private val sessionTimeoutTw = {
     com.twitter.util.Duration(sessionTimeout.toMillis, TimeUnit.MILLISECONDS)
@@ -83,14 +85,16 @@ case class TwitterZk(
       .withAcl(creationAcl)
       .withRetries(retries)
     val compressionConf = CompressionConf(enableCompression, compressionThreshold.toBytes)
-    new ZKStore(client, client(zkPath), compressionConf)
+    new ZKStore(client, client(zkPath), compressionConf, maxConcurrent = maxConcurrent, maxOutstanding = maxOutstanding)
   }
 }
 
 object TwitterZk {
   val StoreName = "legacy_zk"
 
-  def apply(cache: Boolean, config: ZookeeperConf): TwitterZk =
+  def apply(
+    cache: Boolean,
+    config: ZookeeperConf)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk =
     TwitterZk(
       maxVersions = config.zooKeeperMaxVersions(),
       enableCache = cache,
@@ -101,9 +105,11 @@ object TwitterZk {
       password = config.zkPassword,
       retries = 3,
       enableCompression = config.zooKeeperCompressionEnabled(),
-      compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold()))
+      compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold()),
+      maxConcurrent = 8,
+      maxOutstanding = 1024) // scalastyle:off magic.number
 
-  def apply(config: Config): TwitterZk = {
+  def apply(config: Config)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk = {
     // scalastyle:off
     TwitterZk(
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
@@ -115,7 +121,9 @@ object TwitterZk {
       password = config.optionalString("password"),
       retries = config.int("retries", 3),
       enableCompression = config.bool("enable-compression", true),
-      compressionThreshold = config.memorySize("compression-threshold", ConfigMemorySize.ofBytes(64 * 1024))
+      compressionThreshold = config.memorySize("compression-threshold", ConfigMemorySize.ofBytes(64 * 1024)),
+      maxConcurrent = config.int("max-concurrent", 8),
+      maxOutstanding = config.int("max-outstanding", 1024)
     )
     // scalastyle:on
   }
@@ -292,7 +300,7 @@ object InMem {
 
 object StorageConfig {
   val DefaultMaxVersions = 25
-  def apply(conf: StorageConf): StorageConfig = {
+  def apply(conf: StorageConf)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): StorageConfig = {
     conf.internalStoreBackend() match {
       case TwitterZk.StoreName => TwitterZk(conf.storeCache(), conf)
       case MesosZk.StoreName => MesosZk(conf.storeCache(), conf)
@@ -301,7 +309,7 @@ object StorageConfig {
     }
   }
 
-  def apply(conf: Config): StorageConfig = {
+  def apply(conf: Config)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): StorageConfig = {
     conf.string("storage-type", "zk") match {
       case TwitterZk.StoreName => TwitterZk(conf)
       case MesosZk.StoreName => MesosZk(conf)

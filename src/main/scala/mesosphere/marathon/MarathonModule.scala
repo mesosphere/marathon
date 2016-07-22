@@ -123,7 +123,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
 
   @Provides
   @Singleton
-  def provideStore(): PersistentStore = {
+  def provideStore()(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): PersistentStore = {
     def directZK(): PersistentStore = {
       import com.twitter.util.TimeConversions._
       val sessionTimeout = conf.zooKeeperSessionTimeout().millis
@@ -139,7 +139,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         .withAcl(conf.zkDefaultCreationACL.asScala)
         .withRetries(3)
       val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
-      new ZKStore(client, client(conf.zooKeeperStatePath), compressionConf)
+      new ZKStore(client, client(conf.zooKeeperStatePath), compressionConf, 8, 1024)
     }
     def mesosZK(): PersistentStore = {
       val state = new ZooKeeperState(

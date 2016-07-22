@@ -2,10 +2,13 @@ package mesosphere.marathon.core.storage.repository.impl.legacy.store
 
 import java.util.concurrent.TimeUnit
 
+import akka.actor.ActorSystem
+import com.codahale.metrics.MetricRegistry
 import com.twitter.util.Await
 import com.twitter.zk.ZkClient
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.integration.setup.StartedZookeeper
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.util.state.PersistentStoreTest
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.KeeperException.NoNodeException
@@ -15,8 +18,19 @@ import org.scalatest._
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matchers {
+class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matchers with BeforeAndAfter {
   import ZKStore._
+
+  implicit val metrics = new Metrics(new MetricRegistry)
+  implicit var system: ActorSystem = _
+
+  before {
+    system = ActorSystem()
+  }
+
+  after {
+    system.terminate().futureValue
+  }
 
   //
   // See PersistentStoreTests for general store tests
@@ -49,7 +63,7 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
   test("Deeply nested paths are created") {
     val client = persistentStore.client
     val path = client("/s/o/m/e/d/e/e/p/ly/n/e/s/t/e/d/p/a/t/h")
-    val store = new ZKStore(client, path, conf)
+    val store = new ZKStore(client, path, conf, 8, 1024)
     path.exists().asScala.failed.futureValue shouldBe a[NoNodeException]
     store.initialize().futureValue
     path.exists().asScala.futureValue.stat.getVersion should be(0)
@@ -59,9 +73,9 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
     val client = persistentStore.client
     val path = client("/some/deeply/nested/path")
     path.exists().asScala.failed.futureValue shouldBe a[NoNodeException]
-    new ZKStore(client, path, conf).initialize().futureValue
+    new ZKStore(client, path, conf, 8, 1024).initialize().futureValue
     path.exists().asScala.futureValue.stat.getVersion should be(0)
-    new ZKStore(client, path, conf).initialize().futureValue
+    new ZKStore(client, path, conf, 8, 1024).initialize().futureValue
     path.exists().asScala.futureValue.stat.getVersion should be(0)
   }
 
@@ -69,7 +83,7 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
     import ZKStore._
 
     val compress = CompressionConf(true, 0)
-    val store = new ZKStore(persistentStore.client, persistentStore.client("/compressed"), compress)
+    val store = new ZKStore(persistentStore.client, persistentStore.client("/compressed"), compress, 8, 1024)
     store.initialize().futureValue
     val content = 1.to(100).map(num => s"Hello number $num!").mkString(", ").getBytes("UTF-8")
 
@@ -96,7 +110,7 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
     implicit val timer = com.twitter.util.Timer.Nil
     val timeout = com.twitter.util.TimeConversions.intToTimeableNumber(10).minutes
     val client = ZkClient(config.zkHostAndPort, timeout).withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
-    new ZKStore(client, client(config.zkPath), conf)
+    new ZKStore(client, client(config.zkPath), conf, 8, 1024)
   }
 
   lazy val mesosStore: MesosStateStore = {

@@ -4,12 +4,15 @@ package mesosphere.marathon.core.storage.repository.impl.legacy.store
 import java.util.UUID
 
 import akka.Done
+import akka.actor.ActorRefFactory
 import com.fasterxml.uuid.impl.UUIDUtil
 import com.google.protobuf.{ ByteString, InvalidProtocolBufferException }
 import com.twitter.util.{ Future => TWFuture }
 import com.twitter.zk.{ ZNode, ZkClient }
 import mesosphere.marathon.io.IO
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.{ Protos, StoreCommandFailedException }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.apache.zookeeper.KeeperException
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.slf4j.LoggerFactory
@@ -20,9 +23,19 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
 
-class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionConf) extends PersistentStore
+class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionConf,
+  maxConcurrent: Int, maxOutstanding: Int)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory)
+    extends PersistentStore
     with PersistentStoreManagement with PersistentStoreWithNestedPathsSupport {
   import ZKStore._
+
+  private[this] val limitConcurrency =
+    CapConcurrentExecutions(
+      CapConcurrentExecutionsMetrics(metrics, classOf[ZKStore]),
+      actorRefFactory,
+      s"ZKStore-${UUID.randomUUID()}", // there can be many of these in testing...
+      maxConcurrent,
+      maxOutstanding)
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] implicit val ec = ExecutionContext.Implicits.global
@@ -31,7 +44,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     * Fetch data and return entity.
     * The entity is returned also if it is not found in zk, since it is needed for the store operation.
     */
-  override def load(key: ID): Future[Option[ZKEntity]] = {
+  override def load(key: ID): Future[Option[ZKEntity]] = limitConcurrency {
     val node = root(key)
     node.getData().asScala
       .map { data => Some(ZKEntity(node, ZKData(data.bytes), Some(data.stat.getVersion))) }
@@ -39,7 +52,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
       .recover(exceptionTransform(s"Could not load key $key"))
   }
 
-  override def create(key: ID, content: IndexedSeq[Byte]): Future[ZKEntity] = {
+  override def create(key: ID, content: IndexedSeq[Byte]): Future[ZKEntity] = limitConcurrency {
     val node = root(key)
     val data = ZKData(key, UUID.randomUUID(), content)
     node.create(data.toProto(compressionConf).toByteArray).asScala
@@ -53,7 +66,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
     *
     * @return Some value, if the store operation is successful otherwise None
     */
-  override def update(entity: PersistentEntity): Future[ZKEntity] = {
+  override def update(entity: PersistentEntity): Future[ZKEntity] = limitConcurrency {
     val zk = zkEntity(entity)
     val version = zk.version.getOrElse (
       throw new StoreCommandFailedException(s"Can not store entity $entity, since there is no version!")
@@ -66,7 +79,7 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   /**
     * Delete an entry with given identifier.
     */
-  override def delete(key: ID): Future[Boolean] = {
+  override def delete(key: ID): Future[Boolean] = limitConcurrency {
     val node = root(key)
     node.exists().asScala
       .flatMap { d => node.delete(d.stat.getVersion).asScala.map(_ => true) }
@@ -74,13 +87,13 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
       .recover(exceptionTransform(s"Can not delete entity $key"))
   }
 
-  override def allIds(): Future[Seq[ID]] = {
+  override def allIds(): Future[Seq[ID]] = limitConcurrency {
     root.getChildren().asScala
       .map(_.children.map(_.name)(collection.breakOut))
       .recover(exceptionTransform("Can not list all identifiers"))
   }
 
-  override def allIds(parent: ID): Future[Seq[ID]] = {
+  override def allIds(parent: ID): Future[Seq[ID]] = limitConcurrency {
     val rootNode = this.root(parent)
 
     rootNode.getChildren().asScala
@@ -120,7 +133,9 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
 
   override def initialize(): Future[Unit] = createPath(root).map(_ => ())
 
-  override def createPath(path: String): Future[Unit] = createPath(root(path)).map(_ => ())
+  override def createPath(path: String): Future[Unit] = limitConcurrency {
+    createPath(root(path)).map(_ => ())
+  }
 
   override def close(): Future[Done] = {
     client.release().asScala.recover { case _ => Done }.flatMap(_ => super.close())
