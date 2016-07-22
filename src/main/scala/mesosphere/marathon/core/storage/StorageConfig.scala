@@ -222,7 +222,7 @@ case class CuratorZk(
       override def getAclForPath(path: String): util.List[ACL] = defaultAcls
     })
     builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
-    builder.namespace(zkPath)
+    builder.namespace(zkPath.replaceAll("^/", ""))
     val client = builder.build()
     client.start()
     client.blockUntilConnected()

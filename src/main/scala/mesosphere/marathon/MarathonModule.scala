@@ -14,23 +14,23 @@ import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.util.JavaTimer
-import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
+import com.twitter.zk.{AuthInfo, NativeConnector, ZkClient}
 import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, EntityStoreCache, InMemoryStore, MarathonStore, MesosStateStore, PersistentStore, ZKStore }
-import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{CompressionConf, EntityStore, EntityStoreCache, InMemoryStore, MarathonStore, MesosStateStore, PersistentStore, ZKStore}
+import mesosphere.marathon.core.storage.repository.{DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository}
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
+import mesosphere.marathon.health.{HealthCheckManager, MarathonHealthCheckManager}
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
-import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, _ }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.marathon.upgrade.DeploymentManager
+import mesosphere.util.state.{FrameworkId, FrameworkIdUtil, _}
+import mesosphere.util.{CapConcurrentExecutions, CapConcurrentExecutionsMetrics}
 import org.apache.mesos.Scheduler
 import org.apache.mesos.state.ZooKeeperState
 import org.slf4j.LoggerFactory
@@ -114,14 +114,9 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
   @Provides
   @Singleton
   def provideLeadershipInitializers(
-    @Named(ModuleNames.STORE_APP) app: EntityStore[AppDefinition],
-    @Named(ModuleNames.STORE_GROUP) group: EntityStore[Group],
-    @Named(ModuleNames.STORE_DEPLOYMENT_PLAN) deployment: EntityStore[DeploymentPlan],
     @Named(ModuleNames.STORE_FRAMEWORK_ID) frameworkId: EntityStore[FrameworkId],
-    @Named(ModuleNames.STORE_TASK_FAILURES) taskFailure: EntityStore[TaskFailure],
-    @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) subscribers: EntityStore[EventSubscribers],
-    @Named(ModuleNames.STORE_TASK) task: EntityStore[MarathonTaskState]): Seq[PrePostDriverCallback] = {
-    Seq(app, group, deployment, frameworkId, taskFailure, task, subscribers).collect {
+    @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) subscribers: EntityStore[EventSubscribers]): Seq[PrePostDriverCallback] = {
+    Seq(frameworkId, subscribers).collect {
       case l: PrePostDriverCallback => l
     }
   }

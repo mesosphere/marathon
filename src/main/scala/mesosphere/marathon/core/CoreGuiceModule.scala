@@ -2,6 +2,7 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
+import mesosphere.marathon.core.storage.migration.Migration
 import mesosphere.marathon.core.storage.repository.GroupRepository
 
 // scalastyle:off
@@ -208,4 +209,8 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def httpEventStreamServlet(coreModule: CoreModule): EventSourceServlet = coreModule.eventModule.httpEventStreamServlet
+
+  @Provides
+  @Singleton
+  def migration(coreModule: CoreModule): Migration = coreModule.storageModule.migration
 }
