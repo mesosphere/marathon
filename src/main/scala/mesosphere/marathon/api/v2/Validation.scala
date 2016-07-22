@@ -283,7 +283,7 @@ object Validation {
     }
   }
 
-  def matchRegex(regex: Regex, failureMessage: String): Validator[String] = new NullSafeValidator[String](
+  def matchRegexWithFailureMessage(regex: Regex, failureMessage: String): Validator[String] = new NullSafeValidator[String](
     test = _.matches(regex.regex),
     failure = _ -> failureMessage
   )
