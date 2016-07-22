@@ -51,20 +51,20 @@ private[storage] case class StoredGroup(
     )
   }
 
-  def toProto: Protos.StoredGroup = {
+  def toProto: Protos.GroupDefinition = {
     import StoredGroup.DateFormat
 
     val apps = appIds.map {
       case (app, appVersion) =>
-        Protos.StoredGroup.AppReference.newBuilder()
+        Protos.GroupDefinition.AppReference.newBuilder()
           .setId(app.safePath)
           .setVersion(DateFormat.format(appVersion))
           .build()
     }
 
-    Protos.StoredGroup.newBuilder
+    Protos.GroupDefinition.newBuilder
       .setId(id.safePath)
-      .addAllAppIds(apps.asJava)
+      .addAllApps(apps.asJava)
       .addAllGroups(storedGroups.map(_.toProto).asJava)
       .addAllDependencies(dependencies.map(_.safePath).asJava)
       .setVersion(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(version))
@@ -83,9 +83,9 @@ object StoredGroup {
       dependencies = group.dependencies,
       version = group.version.toOffsetDateTime)
 
-  def apply(proto: Protos.StoredGroup): StoredGroup = {
-    val apps: Map[PathId, OffsetDateTime] = proto.getAppIdsList.asScala.map { appId =>
-      PathId.fromSafePath(appId.getId()) -> OffsetDateTime.parse(appId.getVersion, DateFormat)
+  def apply(proto: Protos.GroupDefinition): StoredGroup = {
+    val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.asScala.map { appId =>
+      PathId.fromSafePath(appId.getId) -> OffsetDateTime.parse(appId.getVersion, DateFormat)
     }(collection.breakOut)
 
     val groups = proto.getGroupsList.asScala.map(StoredGroup(_))

@@ -30,7 +30,7 @@ case class Group(
     GroupDefinition.newBuilder
       .setId(id.toString)
       .setVersion(version.toString)
-      .addAllApps(apps.values.map(_.toProto).asJava)
+      .addAllDeprecatedApps(apps.values.map(_.toProto).asJava)
       .addAllGroups(groups.map(_.toProto))
       .addAllDependencies(dependencies.map(_.toString))
       .build()
@@ -202,7 +202,7 @@ object Group {
   def fromProto(msg: GroupDefinition): Group = {
     Group(
       id = msg.getId.toPath,
-      apps = msg.getAppsList.map(AppDefinition.fromProto).map { app => app.id -> app }(collection.breakOut),
+      apps = msg.getDeprecatedAppsList.map(AppDefinition.fromProto).map { app => app.id -> app }(collection.breakOut),
       groups = msg.getGroupsList.map(fromProto).toSet,
       dependencies = msg.getDependenciesList.map(PathId.apply).toSet,
       version = Timestamp(msg.getVersion)

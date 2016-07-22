@@ -117,12 +117,16 @@ trait ZkStoreSerialization {
     }
 
   implicit val groupMarshaller: Marshaller[StoredGroup, ZkSerialized] =
-    Marshaller.opaque(group => ZkSerialized(ByteString(group.toProto.toByteArray)))
+    Marshaller.opaque { group =>
+      val proto = group.toProto
+      require(proto.getDeprecatedAppsCount == 0)
+      ZkSerialized(ByteString(proto.toByteArray))
+    }
 
   implicit val groupUnmarshaller: Unmarshaller[ZkSerialized, StoredGroup] =
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
-        StoredGroup(Protos.StoredGroup.parseFrom(byteString.toArray))
+        StoredGroup(Protos.GroupDefinition.parseFrom(byteString.toArray))
     }
 }
 

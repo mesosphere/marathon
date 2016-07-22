@@ -267,23 +267,17 @@ message UpgradeStrategyDefinition {
 }
 
 message GroupDefinition {
-  required string id = 1;
-  required string version = 2;
-  repeated ServiceDefinition apps = 3;
-  repeated GroupDefinition groups = 4;
-  repeated string dependencies = 5;
-}
-
-message StoredGroup {
   message AppReference {
     required string id = 1;
     required string version = 2;
   }
   required string id = 1;
   required string version = 2;
-  repeated AppReference appIds = 3;
-  repeated StoredGroup groups = 4;
+  // legacy: new storage uses AppReferences
+  repeated ServiceDefinition deprecated_apps = 3;
+  repeated GroupDefinition groups = 4;
   repeated string dependencies = 5;
+  repeated AppReference apps = 6;
 }
 
 message DeploymentPlanDefinition {
