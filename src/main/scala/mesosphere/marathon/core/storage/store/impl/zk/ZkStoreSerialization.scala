@@ -7,12 +7,12 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import mesosphere.marathon.Protos
-import mesosphere.marathon.Protos.{DeploymentPlanDefinition, MarathonTask, ServiceDefinition}
-import mesosphere.marathon.core.storage.repository.impl.{StoredGroup, StoredGroupRepositoryImpl}
+import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
+import mesosphere.marathon.core.storage.repository.impl.{ StoredGroup, StoredGroupRepositoryImpl }
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.state.{AppDefinition, PathId, TaskFailure}
+import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {

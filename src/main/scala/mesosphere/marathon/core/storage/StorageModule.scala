@@ -4,7 +4,6 @@ package mesosphere.marathon.core.storage
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.Config
-import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.storage.migration.Migration
 import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.metrics.Metrics
@@ -28,7 +27,7 @@ trait StorageModule {
 }
 
 object StorageModule {
-  def apply(conf: MarathonConf)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
+  def apply(conf: StorageConf)(implicit metrics: Metrics, mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
     val currentConfig = StorageConfig(conf)
     val legacyConfig = conf.internalStoreBackend() match {

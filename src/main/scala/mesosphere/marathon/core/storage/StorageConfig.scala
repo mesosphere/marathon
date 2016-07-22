@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.{ Config, ConfigMemorySize }
+import mesosphere.marathon.ZookeeperConf
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, EntityStoreCache, MarathonStore, MesosStateStore, PersistentStore, ZKStore }
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
@@ -16,7 +17,6 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCurat
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonState
 import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
-import mesosphere.marathon.{ MarathonConf, ZookeeperConf }
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
 import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
@@ -31,7 +31,7 @@ import scala.concurrent.duration.{ Duration, _ }
 import scala.reflect.ClassTag
 // scalastyle:on
 
-sealed trait StorageConfig
+sealed trait StorageConfig extends Product with Serializable
 sealed trait LegacyStorageConfig extends StorageConfig {
   protected[storage] def store: PersistentStore
   val maxVersions: Int
@@ -292,7 +292,7 @@ object InMem {
 
 object StorageConfig {
   val DefaultMaxVersions = 25
-  def apply(conf: MarathonConf): StorageConfig = {
+  def apply(conf: StorageConf): StorageConfig = {
     conf.internalStoreBackend() match {
       case TwitterZk.StoreName => TwitterZk(conf.storeCache(), conf)
       case MesosZk.StoreName => MesosZk(conf.storeCache(), conf)

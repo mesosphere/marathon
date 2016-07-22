@@ -1,6 +1,5 @@
 package mesosphere.marathon
 
-import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
@@ -8,7 +7,7 @@ import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
-import mesosphere.marathon.core.storage.{ CuratorZk, InMem, MesosZk, TwitterZk }
+import mesosphere.marathon.core.storage.StorageConf
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
@@ -18,14 +17,13 @@ import mesosphere.marathon.upgrade.UpgradeConfig
 import org.rogach.scallop.ScallopConf
 
 import scala.sys.SystemProperties
-import mesosphere.marathon.io.storage.StorageProvider
 
 trait MarathonConf
     extends ScallopConf
     with EventConf with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
     with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
-    with PluginManagerConfiguration with ReviveOffersConfig with TaskJobsConfig with TaskStatusUpdateConfig
-    with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
+    with PluginManagerConfiguration with StorageConf with ReviveOffersConfig
+    with TaskJobsConfig with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
 
   //scalastyle:off magic.number
 
@@ -287,27 +285,11 @@ trait MarathonConf
   )
 
   //Internal settings, that are not intended for external use
-  lazy val internalStoreBackend = opt[String](
-    "internal_store_backend",
-    descr = s"The backend storage system to use. One of ${TwitterZk.StoreName}, ${MesosZk.StoreName}, ${InMem.StoreName}, ${CuratorZk.StoreName}", // scalastyle:off
-    hidden = true,
-    validate = Set(TwitterZk.StoreName, MesosZk.StoreName, InMem.StoreName, CuratorZk.StoreName).contains,
-    default = Some(CuratorZk.StoreName)
-  )
 
   lazy val maxApps = opt[Int](
     "max_apps",
     descr = "The maximum number of applications that may be created.",
     noshort = true
-  )
-
-  lazy val storeCache = toggle(
-    "store_cache",
-    default = Some(true),
-    noshort = true,
-    descrYes = "(Default) Enable an in-memory cache for the storage layer.",
-    descrNo = "Disable the in-memory cache for the storage layer. ",
-    prefix = "disable_"
   )
 
   lazy val onElectedPrepareTimeout = opt[Long] (
