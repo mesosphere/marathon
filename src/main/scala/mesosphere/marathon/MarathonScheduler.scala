@@ -16,10 +16,6 @@ import org.slf4j.LoggerFactory
 import scala.concurrent._
 import scala.util.control.NonFatal
 
-trait SchedulerCallbacks {
-  def disconnected(): Unit
-}
-
 class MarathonScheduler @Inject() (
     @Named(EventModule.busName) eventBus: EventStream,
     clock: Clock,
@@ -28,8 +24,7 @@ class MarathonScheduler @Inject() (
     frameworkIdUtil: FrameworkIdUtil,
     mesosLeaderInfo: MesosLeaderInfo,
     system: ActorSystem,
-    config: MarathonConf,
-    schedulerCallbacks: SchedulerCallbacks) extends Scheduler {
+    config: MarathonConf) extends Scheduler {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
@@ -92,9 +87,11 @@ class MarathonScheduler @Inject() (
 
     eventBus.publish(SchedulerDisconnectedEvent())
 
-    // Disconnection from the Mesos master has occurred.
-    // Thus, call the scheduler callbacks.
-    schedulerCallbacks.disconnected()
+    // stop the driver. this avoids ambiguity and delegates leadership-abdication responsibility.
+    // this helps to clarify responsibility during leadership transitions: currently the
+    // **scheduler service** is responsible for integrating with leadership election.
+    // @see MarathonSchedulerService.startLeadership
+    driver.stop(true)
   }
 
   override def slaveLost(driver: SchedulerDriver, slave: SlaveID) {

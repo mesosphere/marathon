@@ -281,7 +281,8 @@ object Group {
         // of requested ports then we know there are no conflicts.
         if (merged.size == ports) {
           Success
-        } else {
+        }
+        else {
           // Otherwise we find all ports that have more than 1 app
           // interested in them.
 

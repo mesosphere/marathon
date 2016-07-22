@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
-import mesosphere.marathon.core.flow.{ ReviveOffersConfig, LaunchTokenConfig }
+import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
+import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
@@ -295,4 +296,19 @@ trait MarathonConf
     default = Some(500)
   )
 
+  lazy val mesosHeartbeatInterval = opt[Long](
+    "mesos_heartbeat_interval",
+    descr = "(milliseconds) in the absence of receiving a message from the mesos master " +
+      "during a time window of this duration, attempt to coerce mesos into communicating with marathon.",
+    noshort = true,
+    hidden = true,
+    default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_INTERVAL_MS))
+
+  lazy val mesosHeartbeatFailureThreshold = opt[Int](
+    "mesos_heartbeat_failure_threshold",
+    descr = "after missing this number of expected communications from the mesos master, " +
+      "infer that marathon has become disconnected from the master.",
+    noshort = true,
+    hidden = true,
+    default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD))
 }
