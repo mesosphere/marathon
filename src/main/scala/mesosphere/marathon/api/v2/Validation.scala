@@ -1,8 +1,9 @@
 package mesosphere.marathon.api.v2
 
 import java.net._
-
 import com.wix.accord._
+
+import com.wix.accord.ViolationBuilder._
 import mesosphere.marathon.{ AllConf, ValidationFailedException }
 import mesosphere.marathon.state.FetchUri
 import org.slf4j.LoggerFactory
@@ -11,6 +12,7 @@ import play.api.libs.json._
 import scala.collection.GenTraversableOnce
 import scala.reflect.ClassTag
 import scala.util.Try
+import scala.util.matching.Regex
 
 object Validation {
   def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
@@ -278,4 +280,10 @@ object Validation {
       validator(t)
     }
   }
+
+  def matchRegexWithFailureMessage(regex: Regex, failureMessage: String): Validator[String] =
+    new NullSafeValidator[String](
+      test = _.matches(regex.regex),
+      failure = _ -> failureMessage
+    )
 }
