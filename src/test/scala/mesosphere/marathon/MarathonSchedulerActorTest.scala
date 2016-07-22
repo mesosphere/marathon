@@ -449,17 +449,22 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     )
 
     try {
-      schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
-      schedulerActor ! Deploy(plan)
+      val probe = TestProbe()
+      schedulerActor.tell(LocalLeadershipEvent.ElectedAsLeader, probe.testActor)
+      schedulerActor.tell(Deploy(plan), probe.testActor)
 
-      expectMsgType[DeploymentStarted]
+      probe.expectMsgType[DeploymentStarted]
 
-      schedulerActor ! Deploy(plan, force = true)
+      schedulerActor.tell(Deploy(plan, force = true), probe.testActor)
 
-      val answer = expectMsgType[CommandFailed]
+      val answer = probe.expectMsgType[CommandFailed]
 
       answer.reason.isInstanceOf[TimeoutException] should be(true)
       answer.reason.getMessage should be
+
+      // TODO: this test may actually be broken as it sends another DeploymentStarted.
+      // e.g. probe.expectNoMsg() - these tests leak into each other
+      // and without these kind of assertions, the behavior is not necessarily correct.
     } finally {
       stopActor(schedulerActor)
     }
