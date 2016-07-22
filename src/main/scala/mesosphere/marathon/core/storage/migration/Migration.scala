@@ -11,7 +11,7 @@ import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ Persisten
 import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.{ BuildInfo, MigrationFailedException }
+import mesosphere.marathon.{ BuildInfo, MigrationFailedException, PrePostDriverCallback }
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -44,8 +44,12 @@ class Migration(
   private[migration] val legacyStoreFuture: Future[Option[PersistentStore]] = legacyConfig.map { config =>
     val store = config.store
     store match {
+      case s: PersistentStoreManagement with PrePostDriverCallback =>
+        s.preDriverStarts.flatMap(_ => s.initialize()).map(_ => Some(store))
       case s: PersistentStoreManagement =>
         s.initialize().map(_ => Some(store))
+      case s: PrePostDriverCallback =>
+        s.preDriverStarts.map(_ => Some(store))
       case _ =>
         Future.successful(Some(store))
     }
@@ -159,8 +163,12 @@ class Migration(
   private def closeLegacyStore: Future[Done] = async {
     val legacyStore = await(legacyStoreFuture)
     val future = legacyStore.map {
+      case s: PersistentStoreManagement with PrePostDriverCallback =>
+        s.postDriverTerminates.flatMap(_ => s.close())
       case s: PersistentStoreManagement =>
         s.close()
+      case s: PrePostDriverCallback =>
+        s.postDriverTerminates.map(_ => Done)
       case _ =>
         Future.successful(Done)
     }.getOrElse(Future.successful(Done))

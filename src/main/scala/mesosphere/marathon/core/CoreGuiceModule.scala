@@ -2,9 +2,6 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
-import mesosphere.marathon.core.storage.migration.Migration
-import mesosphere.marathon.core.storage.repository.{ FrameworkIdRepository, GroupRepository }
-
 // scalastyle:off
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
 import akka.stream.Materializer
@@ -19,7 +16,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, ReadOnlyAppRepository, TaskFailureRepository }
+import mesosphere.marathon.core.storage.migration.Migration
+import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, FrameworkIdRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
@@ -29,10 +27,10 @@ import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpd
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.plugin.http.HttpRequestHandler
-import mesosphere.marathon.{ MarathonConf, ModuleNames }
+import mesosphere.marathon.{ MarathonConf, ModuleNames, PrePostDriverCallback }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.eclipse.jetty.servlets.EventSourceServlet
-
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 // scalastyle:on
 
@@ -107,6 +105,12 @@ class CoreGuiceModule extends AbstractModule {
   @Provides
   @Singleton
   def materializer(coreModule: CoreModule): Materializer = coreModule.actorsModule.materializer
+
+  @Provides
+  @Singleton
+  def provideLeadershipInitializers(coreModule: CoreModule): immutable.Seq[PrePostDriverCallback] = {
+    coreModule.storageModule.leadershipInitializers
+  }
 
   @Provides
   @Singleton

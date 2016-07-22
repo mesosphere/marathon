@@ -29,7 +29,6 @@ import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics
 import org.apache.mesos.Scheduler
 import org.slf4j.LoggerFactory
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
@@ -101,14 +100,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
       case someUrl @ Some(_) => ConstMesosLeaderInfo(someUrl)
       case None => new MutableMesosLeaderInfo
     }
-  }
-
-  // TODO: Jason - Old storage won't work without being wired in here somehow...
-  // same if we're using a load time caching store. Maybe StorageModule should expose a Seq of its own?
-  @Provides
-  @Singleton
-  def provideLeadershipInitializers(): Seq[PrePostDriverCallback] = {
-    Nil
   }
 
   //scalastyle:off parameter.number method.length
