@@ -1,4 +1,4 @@
-package mesosphere.marathon.state
+package mesosphere.marathon.core.storage.repository
 
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -6,28 +6,22 @@ import java.util.UUID
 import akka.Done
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
-import com.twitter.zk.{ ZNode, ZkClient }
+import com.twitter.zk.ZNode
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, ZKStore }
-import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId }
 import mesosphere.marathon.test.Mockito
-import org.apache.zookeeper.ZooDefs.Ids
-import org.scalatest.BeforeAndAfterAll
 
-import scala.concurrent.duration._
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
-import scala.reflect.ClassTag
+import scala.concurrent.duration.{ Duration, _ }
 
-trait GroupRepositoryTest extends Mockito {
-  self: AkkaUnitTest =>
-
+class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServerTest {
   import PathId._
 
   def basicGroupRepository(name: String, createRepo: (AppRepository, Int) => GroupRepository): Unit = {
@@ -140,76 +134,41 @@ trait GroupRepositoryTest extends Mockito {
       }
     }
   }
-}
 
-class InMemGroupRepositoryTest extends AkkaUnitTest with GroupRepositoryTest {
-
-  def createRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createInMemRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new InMemoryPersistenceStore()
     GroupRepository.inMemRepository(store, appRepository, maxVersions)
   }
 
-  behave like basicGroupRepository("InMemoryGroupRepository", createRepos)
-}
-
-class LegacyGroupRepository extends AkkaUnitTest with GroupRepositoryTest {
-  def createRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
-    implicit val metrics = new Metrics(new MetricRegistry)
-    val store = new InMemoryStore
-    def entityStore[T <: MarathonState[_, T]](
-      prefix: String,
-      newState: () => T)(implicit ct: ClassTag[T]): EntityStore[T] = {
-      new MarathonStore[T](store, metrics, newState, prefix)
-    }
-    GroupRepository.legacyRepository(entityStore[Group], maxVersions, appRepository)
-  }
-
-  behave like basicGroupRepository("LegacyGroupRepository", createRepos)
-}
-
-class ZkGroupRepository extends AkkaUnitTest with GroupRepositoryTest with ZookeeperServerTest {
-  lazy val rootClient = zkClient()
-
-  private def defaultStore: ZkPersistenceStore = {
+  private def zkStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
+    val rootClient = zkClient()
     rootClient.create(s"/$root").futureValue
     implicit val metrics = new Metrics(new MetricRegistry)
     new ZkPersistenceStore(rootClient.usingNamespace(root), Duration.Inf)
   }
 
-  def createRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createZkRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    val store = defaultStore
+    val store = zkStore
     GroupRepository.zkRepository(store, appRepository, maxVersions)
   }
 
-  behave like basicGroupRepository("ZkGroupRepository", createRepos)
-}
-
-class LazyCachingGroupRepository extends AkkaUnitTest with GroupRepositoryTest {
-  def createRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createLazyCachingRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new LazyCachingPersistenceStore(new InMemoryPersistenceStore())
     GroupRepository.inMemRepository(store, appRepository, maxVersions)
   }
 
-  behave like basicGroupRepository("InMemoryGroupRepository", createRepos)
-}
-
-class LoadTimeCachingGroupRepository extends AkkaUnitTest with GroupRepositoryTest {
-  def createRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createLoadCachingRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
     store.preDriverStarts.futureValue
     GroupRepository.inMemRepository(store, appRepository, maxVersions)
   }
 
-  behave like basicGroupRepository("InMemoryGroupRepository", createRepos)
-}
-
-class InMemGroupEntityRepositoryTest extends AkkaUnitTest with GroupRepositoryTest {
-  def createRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createLegacyInMemRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val persistentStore = new InMemoryStore()
     def entityStore(name: String, newState: () => Group): EntityStore[Group] = {
@@ -218,27 +177,9 @@ class InMemGroupEntityRepositoryTest extends AkkaUnitTest with GroupRepositoryTe
     GroupRepository.legacyRepository(entityStore, maxVersions, appRepository)
   }
 
-  behave like basicGroupRepository("GroupEntityRepository", createRepos)
-}
-
-class ZkGroupEntityRepositoryTest extends AkkaUnitTest with GroupRepositoryTest
-    with ZookeeperServerTest with BeforeAndAfterAll {
-
-  lazy val client = {
-    import scala.collection.JavaConverters._
-    val timeout = com.twitter.util.TimeConversions.intToTimeableNumber(10).minutes
-    implicit val timer = com.twitter.util.Timer.Nil
-    ZkClient(zkServer.connectUri, timeout).withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
-  }
-
-  override def afterAll(): Unit = {
-    import ZKStore._
-    client.release().asScala.futureValue
-    super.afterAll()
-  }
-
-  def createRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
+  def createLegacyZkRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
+    val client = twitterZkClient()
     val persistentStore = new ZKStore(client, ZNode(client, s"/${UUID.randomUUID().toString}"),
       CompressionConf(true, 64 * 1024), 8, 1024)
     persistentStore.initialize().futureValue(PatienceConfig(5.seconds, 10.millis))
@@ -248,5 +189,11 @@ class ZkGroupEntityRepositoryTest extends AkkaUnitTest with GroupRepositoryTest
     GroupRepository.legacyRepository(entityStore, maxVersions, appRepository)
   }
 
-  behave like basicGroupRepository("GroupEntityRepository", createRepos)
+  behave like basicGroupRepository("InMemory", createInMemRepos)
+  behave like basicGroupRepository("Zk", createZkRepos)
+  behave like basicGroupRepository("LazyCaching", createLazyCachingRepos)
+  behave like basicGroupRepository("LoadCaching", createLoadCachingRepos)
+  behave like basicGroupRepository("LegacyInMem", createLegacyInMemRepos)
+  behave like basicGroupRepository("LegacyZk", createLegacyZkRepos)
 }
+

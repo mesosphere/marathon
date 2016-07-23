@@ -3,12 +3,14 @@ package mesosphere.marathon.integration.setup
 import java.nio.file.{ Files, Path }
 import java.util.concurrent.Semaphore
 
+import com.twitter.zk.ZkClient
 import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework }
 import mesosphere.marathon.util.Lock
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
+import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.server.{ ServerConfig, ZooKeeperServerMain }
 import org.scalatest.{ BeforeAndAfterAll, Suite }
 
@@ -85,10 +87,22 @@ object ZookeeperServer {
 trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite =>
   val zkServer = ZookeeperServer(autoStart = false)
   private val clients = Lock(ListBuffer.empty[CuratorFramework])
+  private val twitterClients = Lock(ListBuffer.empty[ZkClient])
+
   def zkClient(retryPolicy: RetryPolicy = NoRetryPolicy): RichCuratorFramework = {
     val client = CuratorFrameworkFactory.newClient(zkServer.connectUri, retryPolicy)
     clients(_ += client)
     client.start()
+    client
+  }
+
+  def twitterZkClient(): ZkClient = {
+    import scala.collection.JavaConverters._
+    val timeout = com.twitter.util.TimeConversions.intToTimeableNumber(10).minutes
+    implicit val timer = com.twitter.util.Timer.Nil
+
+    val client = ZkClient(zkServer.connectUri, timeout).withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
+    twitterClients(_ += client)
     client
   }
 
@@ -100,6 +114,10 @@ trait ZookeeperServerTest extends BeforeAndAfterAll { this: Suite =>
   abstract override def afterAll(): Unit = {
     clients { c =>
       c.foreach(_.close())
+      c.clear()
+    }
+    twitterClients { c =>
+      c.foreach(_.release())
       c.clear()
     }
     zkServer.close()

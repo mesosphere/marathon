@@ -68,7 +68,7 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
           await(delete())
           valueCache.remove(storageId)
           val old = idCache.getOrElse(category, Nil)
-          val children = old.filter(_ != storageId)
+          val children = old.filter(_ != k)
           if (children.nonEmpty) {
             idCache.put(category, children)
           } else {

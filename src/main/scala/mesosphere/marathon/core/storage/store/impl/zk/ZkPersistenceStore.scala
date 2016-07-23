@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.storage.store.impl.zk
 
 import java.time.OffsetDateTime
+import java.util.UUID
 
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
@@ -42,7 +43,7 @@ class ZkPersistenceStore(
   private val limitRequests = CapConcurrentExecutions(
     CapConcurrentExecutionsMetrics(metrics, getClass),
     actorRefFactory,
-    s"ZkPersistenceStore_$client".replaceAll("\\(|\\)|/", "_"),
+    s"ZkPersistenceStore_${client}_${UUID.randomUUID}".replaceAll("\\(|\\)|/", "_"),
     maxConcurrent = maxConcurrent,
     maxQueued = maxQueued)
 

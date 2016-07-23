@@ -105,9 +105,9 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
   }
 
   protected def deleteOld(k: K, maxVersions: Int): Future[Done] = async {
-    val versions = await(rawVersions(k).toMat(Sink.seq)(Keep.right).run()).sortBy(_.toEpochSecond)
-    // we always store the current version (twice), once as a versioned node and once as the current one.
-    val numToDelete = versions.size - maxVersions - 1
+    val versions = await(rawVersions(k).toMat(Sink.seq)(Keep.right).run())
+      .sortBy(_.toInstant.toEpochMilli)
+    val numToDelete = versions.size - maxVersions
     if (numToDelete > 0) {
       val deletes = versions.take(numToDelete).map(v => rawDelete(k, v).asTry)
       val results = await(Future.sequence(deletes))
