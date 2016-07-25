@@ -124,9 +124,10 @@ In the app definition above:
     
     **Important:** Marathon will not launch apps with external volumes if `upgradeStrategy.minimumHealthCapacity` is greater than 0.5, or if `upgradeStrategy.maximumOverCapacity` does not equal 0.
 
+<a name="docker-extvol"></a>
 ### Using a Docker Container
 
-Below is a sample app definition that uses a Docker container and specifies an external volume:
+Below is a sample app definition that uses a Docker container and specifies first an external volume, second a sandbox-relative host-volume:
 
     {
       "id": "/test-docker",
@@ -149,6 +150,11 @@ Below is a sample app definition that uses a Docker container and specifies an e
               "provider": "dvdi",
               "options": { "dvdi/driver": "rexray" }
             },
+            "mode": "RW"
+          },
+          {
+            "hostPath": "var-log",
+            "containerPath": "/var/log/myapp",
             "mode": "RW"
           }
         ]
@@ -175,7 +181,7 @@ The default implicit volume size is 16 GB. If you are using the Mesos containeri
 *   If one or more external volumes are declared for a Marathon app, and the Docker image specification includes one or more `VOLUME` entries, Docker may create anonymous external volumes. This is default Docker behavior with respect to volume management when the `--volume-driver` flag is passed to `docker run`. Follow these steps to prevent Docker from creating anonymous volumes:
   *  `docker inspect` the app's Docker image before running the app in Marathon and make a note of the `VOLUME` entries in the specification.
   *   declare non-external, host-volume mounts in your app's container specification for each `VOLUME` entry that should not map to an anonymous external volume.
-  *   specify a relative `hostPath` for a host-volume to instruct Mesos to create the mount in the task's sandbox (`$MESOS_SANDBOX/$hostPath`).
+  *   specify a relative `hostPath` for a host-volume to instruct Mesos to create the mount in the task's sandbox (`$MESOS_SANDBOX/$hostPath`); see the sandbox-relative host-volume example [above][12].
 
 *   You can only assign one task per volume. Your storage provider might have other limitations.
 
@@ -202,3 +208,4 @@ The default implicit volume size is 16 GB. If you are using the Mesos containeri
  [9]: https://github.com/emccode/dvdcli#extra-options
  [10]: https://rexray.readthedocs.org/en/v0.3.2/user-guide/schedulers/#docker-containerizer-with-marathon
  [11]: https://github.com/emccode/rexray/blob/master/.docs/user-guide/config.md
+ [12]: #docker-extvol
