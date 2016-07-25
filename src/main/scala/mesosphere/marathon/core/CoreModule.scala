@@ -3,6 +3,7 @@ package mesosphere.marathon.core
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.election.ElectionModule
 import mesosphere.marathon.core.event.EventModule
+import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -31,5 +32,6 @@ trait CoreModule {
   def authModule: AuthModule
   def readinessModule: ReadinessModule
   def eventModule: EventModule
+  def groupManagerModule: GroupManagerModule
   def historyModule: HistoryModule
 }

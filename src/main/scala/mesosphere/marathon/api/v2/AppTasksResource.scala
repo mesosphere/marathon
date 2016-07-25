@@ -9,12 +9,13 @@ import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ GroupManager, PathId }
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService, UnknownAppException }
 import org.slf4j.LoggerFactory
 

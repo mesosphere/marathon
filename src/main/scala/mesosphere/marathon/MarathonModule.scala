@@ -8,7 +8,6 @@ import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
-import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.util.JavaTimer
@@ -17,6 +16,7 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
@@ -81,6 +80,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[MarathonSchedulerDriverHolder]).in(Scopes.SINGLETON)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
+    bind(classOf[DeploymentService]).to(classOf[MarathonSchedulerService])
     bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).in(Scopes.SINGLETON)
 
     bind(classOf[String])
@@ -288,49 +288,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
       maxParallel = 1,
       maxQueued = conf.internalMaxQueuedRootGroupUpdates()
     )
-  }
-
-  @Provides
-  @Singleton
-  def provideGroupManager(
-    @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
-    scheduler: MarathonSchedulerService,
-    groupRepo: GroupRepository,
-    appRepo: AppRepository,
-    storage: StorageProvider,
-    eventBus: EventStream,
-    metrics: Metrics): GroupManager = {
-    val groupManager: GroupManager = new GroupManager(
-      serializeUpdates,
-      scheduler,
-      groupRepo,
-      appRepo,
-      storage,
-      conf,
-      eventBus
-    )
-
-    metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
-      override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), conf.zkTimeoutDuration).transitiveApps.size
-      }
-    })
-
-    metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
-      override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), conf.zkTimeoutDuration).transitiveGroups.size
-      }
-    })
-
-    metrics.gauge("service.mesosphere.marathon.uptime", new Gauge[Long] {
-      val startedAt = System.currentTimeMillis()
-
-      override def getValue: Long = {
-        System.currentTimeMillis() - startedAt
-      }
-    })
-
-    groupManager
   }
 
   // persistence functionality ----------------
