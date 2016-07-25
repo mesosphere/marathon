@@ -1,0 +1,39 @@
+{
+  "constraints": [
+    [
+      "hostname",
+      "UNIQUE"
+    ]
+  ],
+  "healthChecks": [
+    {
+      "timeoutSeconds": 5,
+      "protocol": "HTTP",
+      "portIndex": 0,
+      "path": "/repo-empty-v3.json",
+      "maxConsecutiveFailures": 3,
+      "intervalSeconds": 30,
+      "gracePeriodSeconds": 120
+    }
+  ],
+  "container": {
+    "volumes": [],
+    "docker": {
+      "portMappings": [
+        {
+          "protocol": "tcp",
+          "hostPort": 8085,
+          "containerPort": 80
+        }
+      ],
+      "image": "mesosphere/universe-server:marathon-0cfc8e2604eb54d6",
+      "network": "BRIDGE"
+    },
+    "type": "DOCKER"
+  },
+  "requirePorts": true,
+  "mem": 128,
+  "cpus": 0.25,
+  "instances": 1,
+  "id": "/universe"
+}

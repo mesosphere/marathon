@@ -6,7 +6,7 @@ import akka.testkit.{ TestProbe, TestActorRef }
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
-import mesosphere.marathon.event.DeploymentStepSuccess
+import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.state.{ Group, Residency, PathId, AppDefinition }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -62,7 +62,7 @@ class OffersWantedForReconciliationActorTest
     When("the deployment for a resident app stops")
     val valAfterDeploymentStepSuccess = f.futureOffersWanted()
     val app = AppDefinition(PathId("/resident"), residency = Some(Residency.default))
-    val plan = DeploymentPlan(original = Group.empty.copy(apps = Set(app)), target = Group.empty)
+    val plan = DeploymentPlan(original = Group.empty.copy(apps = Map(app.id -> app)), target = Group.empty)
     f.eventStream.publish(DeploymentStepSuccess(plan = plan, currentStep = plan.steps.head))
 
     Then("there is interest for offers")

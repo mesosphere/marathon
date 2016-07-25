@@ -9,6 +9,7 @@ import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture, Te
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.health.HealthCheckManager
@@ -32,7 +33,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   import mesosphere.marathon.api.v2.json.Formats._
 
   def prepareApp(app: AppDefinition): (Array[Byte], DeploymentPlan) = {
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -354,7 +355,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       portDefinitions = Seq.empty
     )
 
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app).as[JsObject] - "ports").getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -604,7 +605,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with float instance count fails") {
     Given("The json of an invalid application")
     val invalidAppJson = Json.stringify(Json.obj("id" -> "/foo", "cmd" -> "cmd", "instances" -> 0.1))
-    val group = Group(PathId("/"), Set.empty)
+    val group = Group(PathId("/"), Map.empty)
     val plan = DeploymentPlan(group, group)
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
     groupManager.rootGroup() returns Future.successful(group)
@@ -617,7 +618,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Replace an existing application") {
     Given("An app and group")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -1022,7 +1023,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Restart an existing app") {
     val app = AppDefinition(id = PathId("/app"))
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     service.deploy(any, any) returns Future.successful(())
     groupManager.app(PathId("/app")) returns Future.successful(Some(app))
@@ -1135,7 +1136,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("access without authorization is denied") {
     Given("A real Group Manager with one app")
     useRealGroupManager()
-    val group = Group(PathId.empty, apps = Set(AppDefinition("/a".toRootPath)))
+    val appA = AppDefinition("/a".toRootPath)
+    val group = Group(PathId.empty, apps = Map(appA.id -> appA))
     groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
     groupRepository.rootGroup returns Future.successful(Some(group))
 

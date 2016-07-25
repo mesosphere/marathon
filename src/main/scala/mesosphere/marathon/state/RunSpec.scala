@@ -12,6 +12,7 @@ import scala.collection.immutable.Seq
 
 //scalastyle:off
 trait RunSpec extends plugin.RunSpec {
+
   def id: PathId
 
   def cmd: Option[String]

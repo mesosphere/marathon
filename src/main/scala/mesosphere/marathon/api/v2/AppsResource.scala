@@ -1,7 +1,7 @@
 package mesosphere.marathon.api.v2
 
 import java.net.URI
-import javax.inject.{ Inject, Named }
+import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.{ Context, MediaType, Response }
@@ -12,18 +12,18 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
-import mesosphere.marathon.core.appinfo.{ AppInfoService, AppSelector, TaskCounts }
-import mesosphere.marathon.core.appinfo.AppInfo
+import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.event.{ ApiPostEvent, EventModule }
+import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, MarathonSchedulerService, UnknownAppException }
 import play.api.libs.json.Json
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 @Path("v2/apps")
@@ -31,7 +31,7 @@ import scala.collection.immutable.Seq
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppsResource @Inject() (
     clock: Clock,
-    @Named(EventModule.busName) eventBus: EventStream,
+    eventBus: EventStream,
     appTasksRes: AppTasksResource,
     service: MarathonSchedulerService,
     appInfoService: AppInfoService,

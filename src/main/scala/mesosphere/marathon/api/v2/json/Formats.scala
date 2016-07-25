@@ -8,8 +8,7 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.event._
-import mesosphere.marathon.event.http.EventSubscribers
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -1058,11 +1057,14 @@ trait AppAndGroupFormats {
 
   implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
-    (__ \ "apps").formatNullable[Set[AppDefinition]].withDefault(Group.defaultApps) ~
+    (__ \ "apps").formatNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
     (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
-  ) (Group(_, _, _, _, _), unlift(Group.unapply))
+  ) (
+      (id, apps, groups, dependencies, version) =>
+        Group(id, apps.map(app => app.id -> app)(collection.breakOut), groups, dependencies, version),
+      { (g: Group) => (g.id, g.apps.values, g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~

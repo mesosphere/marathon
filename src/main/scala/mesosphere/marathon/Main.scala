@@ -6,8 +6,6 @@ import mesosphere.chaos.http.{ HttpModule, HttpService }
 import mesosphere.chaos.metrics.MetricsModule
 import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.core.CoreGuiceModule
-import mesosphere.marathon.event.EventModule
-import mesosphere.marathon.event.http.HttpEventModule
 import mesosphere.marathon.metrics.{ MetricsReporterModule, MetricsReporterService }
 import org.slf4j.LoggerFactory
 
@@ -21,22 +19,9 @@ class MarathonApp extends App {
       new MetricsReporterModule(conf),
       new MarathonModule(conf, conf),
       new MarathonRestModule,
-      new EventModule(conf),
       new DebugModule(conf),
       new CoreGuiceModule
-    ) ++ getEventsModule
-  }
-
-  def getEventsModule: Option[Module] = {
-    conf.eventSubscriber.get.flatMap {
-      case "http_callback" =>
-        log.info("Using HttpCallbackEventSubscriber for event notification")
-        Some(new HttpEventModule(conf))
-
-      case _ =>
-        log.info("Event notification disabled.")
-        None
-    }
+    )
   }
 
   override val conf = new AllConf(args)
@@ -44,7 +29,7 @@ class MarathonApp extends App {
   def runDefault(): Unit = {
     setConcurrentContextDefaults()
 
-    log.info(s"Starting Marathon ${BuildInfo.version} with ${args.mkString(" ")}")
+    log.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
 
     AllConf.config = Some(conf)
 
