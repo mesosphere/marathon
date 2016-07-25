@@ -1,6 +1,6 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }

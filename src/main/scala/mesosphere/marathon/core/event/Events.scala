@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.event
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
