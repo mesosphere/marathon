@@ -8,11 +8,12 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.{ BuildInfo, MarathonConf, MigrationFailedException }
 import mesosphere.util.Logging
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.util.state.{ PersistentStore, PersistentStoreManagement }
 import org.slf4j.LoggerFactory
 
+import scala.async.Async.{ async, await }
 import scala.collection.SortedSet
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
@@ -379,19 +380,18 @@ class MigrationTo0_16(groupRepository: GroupRepository, appRepository: AppReposi
 class MigrationTo1_2(deploymentRepository: DeploymentRepository) {
   private[this] val log = LoggerFactory.getLogger(getClass)
 
-  def migrate(): Future[Unit] = {
+  def migrate(): Future[Unit] = async {
     log.info("Start 1.2 migration")
 
-    deploymentRepository.store.names().map(_.filter(deploymentRepository.isVersionKey)).flatMap { versionNodes =>
-      versionNodes.foldLeft(Future.successful(())) { (future, versionNode) =>
-        future.flatMap { _ =>
-          deploymentRepository.store.expunge(versionNode).map(_ => ())
-        }
-      }
-    }.flatMap { Unit =>
-      log.info("Finished 1.2 migration")
-      Future.successful(())
+    val nodes: Seq[String] = await(deploymentRepository.store.names())
+    val deploymentVersionNodes = nodes.filter(deploymentRepository.isVersionKey)
+
+    val it = deploymentVersionNodes.iterator
+    while (it.hasNext) {
+      await(deploymentRepository.store.expunge(it.next))
     }
+
+    log.info("Finished 1.2 migration")
   }
 }
 
