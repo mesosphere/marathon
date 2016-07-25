@@ -25,14 +25,19 @@ import scala.util.{ Failure, Success }
 private[group] object GroupManagerActor {
   sealed trait Request
 
+  // Replies with Option[AppDefinition]
   case class GetAppWithId(id: PathId) extends Request
 
+  // Replies with Option[Group]
   case class GetGroupWithId(id: PathId) extends Request
 
+  // Replies with Option[Group]
   case class GetGroupWithVersion(id: PathId, version: Timestamp) extends Request
 
+  // Replies with Group
   case object GetRootGroup extends Request
 
+  // Replies with DeploymentPlan
   case class GetUpgrade(
     gid: PathId,
     change: Group => Group,
@@ -40,6 +45,7 @@ private[group] object GroupManagerActor {
     force: Boolean = false,
     toKill: Map[PathId, Iterable[Task]] = Map.empty) extends Request
 
+  // Replies with Iterable[Timestamp]
   case class GetAllVersions(id: PathId) extends Request
 
   def props(
