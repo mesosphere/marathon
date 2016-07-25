@@ -393,13 +393,18 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
         }
       }
 
+    //scalastyle:off null
     def loadAndMigrateTasks(id: String): Future[MarathonTask] = {
       taskRepository.task(id).flatMap {
         case Some(entity) =>
-          val updatedEntity = entity.toBuilder
-            .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(MarathonTaskStatus(entity.getStatus)))
-            .build()
-          taskRepository.store(updatedEntity)
+          if (entity.getMarathonTaskStatus == null) {
+            val updatedEntity = entity.toBuilder
+              .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(MarathonTaskStatus(entity.getStatus)))
+              .build()
+            taskRepository.store(updatedEntity)
+          } else {
+            Future.successful(entity)
+          }
         case None => Future.failed(new MigrationFailedException(s"Inconsistency in the task store detected, " +
           s"task with id $id not found, but delivered in allIds()."))
       }
