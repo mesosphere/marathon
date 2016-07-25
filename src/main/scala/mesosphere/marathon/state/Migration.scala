@@ -393,15 +393,16 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
         }
       }
 
+    val store = taskRepository.store
     //scalastyle:off null
-    def loadAndMigrateTasks(id: String): Future[MarathonTask] = {
-      taskRepository.task(id).flatMap {
+    def loadAndMigrateTasks(id: String): Future[MarathonTaskState] = {
+      store.fetch(id).flatMap {
         case Some(entity) =>
-          if (entity.getMarathonTaskStatus == null) {
-            val updatedEntity = entity.toBuilder
-              .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(MarathonTaskStatus(entity.getStatus)))
+          if (entity.toProto.getMarathonTaskStatus == null) {
+            val updatedEntity = entity.toProto.toBuilder
+              .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(MarathonTaskStatus(entity.toProto.getStatus)))
               .build()
-            taskRepository.store(updatedEntity)
+            store.store(id, MarathonTaskState(updatedEntity))
           } else {
             Future.successful(entity)
           }
@@ -412,7 +413,7 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
 
     val migratedTasks = for {
       _ <- deploymentMigrationFuture
-      ids <- taskRepository.allIds()
+      ids <- store.names()
       tasks <- {
         log.info(s"Discovered ${ids.size} tasks for status migration")
         Future.sequence(ids.map(loadAndMigrateTasks))
