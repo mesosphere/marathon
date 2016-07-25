@@ -2,6 +2,15 @@ package mesosphere.marathon.core.task.state
 
 import org.apache.mesos
 
+
+/**
+  * To convert `old` mesos.Protos.TaskStatus.TASK_LOST to a propert
+  * MarathonTaskStatus representation (not `Lost` existing), the TaskStatus.Reason is needed. This object
+  * provides the according Reasons for MarathonTaskStatus.Gone, MarathonTaskStatus.Unreachable,
+  * MarathonTaskStatus.Unknown and MarathonTaskStatus.Dropped.
+  *
+  * Mapping of mesos.Protos.TaskStatus.Reason
+  */
 object MarathonTaskStatusMapping {
 
   // If we're disconnected at the time of a TASK_LOST event, we will only get the update during
@@ -14,7 +23,7 @@ object MarathonTaskStatusMapping {
   )
 
   val WontComeBack: Set[mesos.Protos.TaskStatus.Reason] = {
-    mesos.Protos.TaskStatus.Reason.values().toSet.diff(MightComeBack)
+    mesos.Protos.TaskStatus.Reason.values().toSet.diff(MightComeBack).diff(Unknown)
   }
 
   val Unknown: Set[mesos.Protos.TaskStatus.Reason] = Set(

@@ -3,9 +3,7 @@ package mesosphere.marathon.core.task.state
 import org.apache.mesos
 
 // TODO ju handle garbage flag
-sealed trait MarathonTaskStatus {
-  def toMesosStateName: String = "TASK_" + toString.toUpperCase
-}
+sealed trait MarathonTaskStatus
 
 // TODO ju doc
 object MarathonTaskStatus {
