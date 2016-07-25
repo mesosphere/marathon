@@ -15,12 +15,14 @@ import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.util.{ RichLock, toRichFuture }
 
 import scala.async.Async.{ async, await }
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
+import scala.util.{ Failure, Success }
 // scalastyle:on
 
 private[storage] case class StoredGroup(
@@ -29,6 +31,7 @@ private[storage] case class StoredGroup(
     storedGroups: Seq[StoredGroup],
     dependencies: Set[PathId],
     version: OffsetDateTime) {
+
   def resolve(
     groupRepository: GroupRepository,
     appRepository: AppRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
@@ -112,9 +115,17 @@ class StoredGroupRepositoryImpl[K, C, S](
 ) extends GroupRepository {
   import StoredGroupRepositoryImpl._
 
-  /* TODO: We're bypassing the cache so it won't store StoredGroup, but we should likely cache
-    the root. We should probably have read-after-write consistency...
-    */
+  /*
+  Basic strategy for caching:
+  get -> "wait" on the future, if it fails, create a new promise for it and actually fetch the root,
+  completing the promise with the fetch result.
+  set -> create a new promise for the root. If store succeeds, go update it, if it doesn't
+         complete the new future with the result of the previous root future.
+
+  This gives us read-after-write consistency.
+   */
+  private val lock = RichLock()
+  private var rootFuture = Future.failed[Group](new Exception)
 
   private val storedRepo = {
     def leafStore(store: PersistenceStore[K, C, S]): PersistenceStore[K, C, S] = store match {
@@ -125,15 +136,27 @@ class StoredGroupRepositoryImpl[K, C, S](
     new PersistenceStoreVersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
   }
 
-  override def root(): Future[Group] = async {
-    val unresolved = await(storedRepo.get(RootId))
-    unresolved.map(_.resolve(this, appRepository)) match {
-      case Some(group) =>
-        await(group)
-      case None =>
-        Group.empty
+  override def root(): Future[Group] =
+    async {
+      await(lock(rootFuture).asTry) match {
+        case Failure(_) =>
+          val promise = Promise[Group]()
+          lock {
+            rootFuture = promise.future
+          }
+          val unresolved = await(storedRepo.get(RootId))
+          val newRoot = unresolved.map(_.resolve(this, appRepository)) match {
+            case Some(group) =>
+              await(group)
+            case None =>
+              Group.empty
+          }
+          promise.success(newRoot)
+          newRoot
+        case Success(root) =>
+          root
+      }
     }
-  }
 
   override def rootVersions(): Source[OffsetDateTime, NotUsed] =
     storedRepo.versions(RootId)
@@ -167,16 +190,32 @@ class StoredGroupRepositoryImpl[K, C, S](
     * a bit), instead, we should run it out of band (triggered by a storeRoot) and use the prepare/commit/cancellable
     * described above.
     */
-  override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] = {
+  override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] =
     async {
+      val promise = Promise[Group]()
+      val oldRootFuture = lock {
+        val old = rootFuture
+        rootFuture = promise.future
+        old
+      }
       val storeAppFutures = updatedApps.map(appRepository.store)
       val deleteAppFutures = deletedApps.map(appRepository.deleteCurrent)
       val storedGroup = StoredGroup(group)
-      await(Future.sequence(storeAppFutures))
+      val storedApps = await(Future.sequence(storeAppFutures).asTry)
       await(Future.sequence(deleteAppFutures).recover { case NonFatal(e) => Done })
-      await(storedRepo.store(storedGroup))
+      val storedRoot = await(storedRepo.store(storedGroup).asTry)
+      (storedApps, storedRoot) match {
+        case (Success(_), Success(_)) =>
+          promise.success(group)
+          Done
+        case (Failure(ex), _) =>
+          promise.completeWith(oldRootFuture)
+          throw ex
+        case (Success(_), Failure(ex)) =>
+          promise.completeWith(oldRootFuture)
+          throw ex
+      }
     }
-  }
 }
 
 object StoredGroupRepositoryImpl {
