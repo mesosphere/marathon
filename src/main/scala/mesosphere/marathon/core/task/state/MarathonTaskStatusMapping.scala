@@ -22,12 +22,12 @@ object MarathonTaskStatusMapping {
     mesos.Protos.TaskStatus.Reason.REASON_SLAVE_REMOVED
   )
 
-  val WontComeBack: Set[mesos.Protos.TaskStatus.Reason] = {
-    mesos.Protos.TaskStatus.Reason.values().toSet.diff(MightComeBack).diff(Unknown)
-  }
-
   val Unknown: Set[mesos.Protos.TaskStatus.Reason] = Set(
     mesos.Protos.TaskStatus.Reason.REASON_TASK_UNKNOWN
   )
+
+  val WontComeBack: Set[mesos.Protos.TaskStatus.Reason] = {
+    mesos.Protos.TaskStatus.Reason.values().toSet.diff(MightComeBack).diff(Unknown)
+  }
 
 }
