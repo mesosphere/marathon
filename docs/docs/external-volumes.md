@@ -172,8 +172,8 @@ The default implicit volume size is 16 GB. If you are using the Mesos containeri
 
 ### Potential Pitfalls
 
-*   If one or more external volumes are declared for a Marathon app Docker may create anonymous external volumes if the docker image specification includes one or more `VOLUME` entries. This is default docker behavior with respect to volume management when the `--volume-driver` flag is passed to `docker run`. To prevent the creation of anonymous volumes follow these steps:
-  *  `docker inspect` the app's docker image prior to running the app in Marathon and identify the `VOLUME` entries in the specification.
+*   If one or more external volumes are declared for a Marathon app, and the Docker image specification includes one or more `VOLUME` entries, Docker may create anonymous external volumes. This is default Docker behavior with respect to volume management when the `--volume-driver` flag is passed to `docker run`. Follow these steps to prevent Docker from creating anonymous volumes:
+  *  `docker inspect` the app's Docker image before running the app in Marathon and make a note of the `VOLUME` entries in the specification.
   *   declare non-external, host-volume mounts in your app's container specification for each `VOLUME` entry that should not map to an anonymous external volume.
   *   specify a relative `hostPath` for a host-volume to instruct Mesos to create the mount in the task's sandbox (`$MESOS_SANDBOX/$hostPath`).
 
