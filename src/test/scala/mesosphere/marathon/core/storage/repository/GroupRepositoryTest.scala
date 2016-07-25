@@ -46,6 +46,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val root = repo.root().futureValue
         repo.storeRoot(root, Nil, Nil).futureValue
         repo.root().futureValue should be(root)
+        root.id should be ('empty)
       }
       "store new apps when storing the root" in {
         val appRepo = mock[AppRepository]
@@ -59,6 +60,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
 
         repo.storeRoot(root, apps, Nil).futureValue
         repo.root().futureValue should equal(newRoot)
+        newRoot.id should be ('empty)
 
         verify(appRepo).store(apps.head)
         verify(appRepo).store(apps.tail.head)
