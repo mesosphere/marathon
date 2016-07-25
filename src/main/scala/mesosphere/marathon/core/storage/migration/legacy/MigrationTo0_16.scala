@@ -15,9 +15,9 @@ import scala.concurrent.{ ExecutionContext, Future }
   * Implements the following migration logic:
   * - Load all root versions and then store them again. Historical versions must store the historical app
   *   versions for that version of the group as well (since storeRoot would normally do this).
-  *   [[mesosphere.marathon.state.AppDefinition.mergeFromProto]] will update portDefinitions from the deprecated ports
-  *   and when we save them again [[mesosphere.marathon.state.AppDefinition.toProto]] will save the new
-  *   definitions and remove the deprecated ports.
+  *   mesosphere.marathon.state.AppDefinition.mergeFromProto
+  *   will update portDefinitions from the deprecated ports and when we save them again
+  *   [[mesosphere.marathon.state.AppDefinition.toProto]] will save the new definitions and remove the deprecated ports.
   * - TODO: Could we end up with apps that have historical versions that don't have the new proto? This would
   *   only really make sense if the version wasn't referenced by an app.
   */

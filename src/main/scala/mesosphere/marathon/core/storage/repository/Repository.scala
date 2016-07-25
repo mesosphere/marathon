@@ -26,7 +26,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.{ ExecutionContext, Future }
 // scalastyle:on
 
-// Repository that can store exactly one value of T
+/** Repository that can store exactly one value of T */
 trait SingletonRepository[T] {
   def get(): Future[Option[T]]
   def store(v: T): Future[Done]
@@ -43,8 +43,7 @@ trait ReadOnlyRepository[Id, T] {
 }
 
 /**
-  * @inheritdoc
-  * Additionally allows for storage and deletion
+  * A Repository of values (T) identified uniquely by (Id)
   */
 trait Repository[Id, T] extends ReadOnlyRepository[Id, T] {
   def store(v: T): Future[Done]
@@ -52,8 +51,7 @@ trait Repository[Id, T] extends ReadOnlyRepository[Id, T] {
 }
 
 /**
-  * @inheritdoc
-  * Additionally allows for reading versions from the repository
+  * A Repository of versioned values (T) identified uniquely by (Id)
   */
 trait ReadOnlyVersionedRepository[Id, T] extends ReadOnlyRepository[Id, T] {
   def versions(id: Id): Source[OffsetDateTime, NotUsed]
@@ -61,8 +59,7 @@ trait ReadOnlyVersionedRepository[Id, T] extends ReadOnlyRepository[Id, T] {
 }
 
 /**
-  * @inheritdoc
-  * Allows writing versions to the repository.
+  * A Repository of versioned values (T) identified uniquely by (Id)
   */
 trait VersionedRepository[Id, T] extends ReadOnlyVersionedRepository[Id, T] with Repository[Id, T] {
   def storeVersion(v: T): Future[Done]
@@ -71,9 +68,17 @@ trait VersionedRepository[Id, T] extends ReadOnlyVersionedRepository[Id, T] with
 }
 
 trait GroupRepository {
+  /** Fetch the root, returns an empty root if the root doesn't yet exist */
   def root(): Future[Group]
+  /** List previous versions of the root */
   def rootVersions(): Source[OffsetDateTime, NotUsed]
+  /** Fetch a previous version of the root */
   def rootVersion(version: OffsetDateTime): Future[Option[Group]]
+
+  /**
+    * Store the root, new/updated apps and delete apps. fails if it could not
+    * update the apps or the root, but deletion errors are ignored.
+    */
   def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done]
 }
 

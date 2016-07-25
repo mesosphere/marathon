@@ -25,7 +25,7 @@ import scala.concurrent.Future
   * {{{
   *   case class A(id: Int, name: String, version: OffsetDateTime)
   *   object A {
-  *     implicit val zkIdResolver = new IdResolver[Int, ZkId, A, ZkSerialized] {
+  *     implicit val zkIdResolver = new IdResolver[Int, A, String, ZkId] {
   *       def toStorageId(id: Int, version: Option[OffsetDateTime]): ZkId =
   *         // note: scaladoc bug where string interpolation fails
   *         ZkId(category, id.toString, version)

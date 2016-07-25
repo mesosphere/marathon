@@ -3,13 +3,14 @@ package mesosphere.marathon.core.storage.migration
 // scalastyle:off
 import akka.Done
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.EventSubscribers
 import mesosphere.marathon.core.storage.LegacyStorageConfig
 import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, Repository, TaskFailureRepository, TaskRepository, VersionedRepository }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
+import mesosphere.marathon.util.toRichFuture
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
 
@@ -56,10 +57,20 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
     }
   }
 
-  def migrateRepo[T](oldRepo: Repository[_, T], newRepo: Repository[_, T]): Future[Int] = {
-    oldRepo.all().mapAsync(Int.MaxValue) { value =>
-      newRepo.store(value)
-    }.runFold(0) { case (acc, _) => acc + 1 }
+  def migrateRepo[Id, T](oldRepo: Repository[Id, T], newRepo: Repository[Id, T]): Future[Int] = async {
+    val migrated = await {
+      oldRepo.all().mapAsync(Int.MaxValue) { value =>
+        newRepo.store(value)
+      }.runFold(0) { case (acc, _) => acc + 1 }
+    }
+
+    await {
+      oldRepo.ids().mapAsync(Int.MaxValue) { id =>
+        oldRepo.delete(id)
+      }.runWith(Sink.ignore).asTry
+    }
+
+    migrated
   }
 
   def migrateVersionedRepo[Id, T](
