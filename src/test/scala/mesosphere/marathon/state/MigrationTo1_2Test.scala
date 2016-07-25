@@ -5,6 +5,7 @@ import mesosphere.marathon.core.task.tracker.impl.{ MarathonTaskStatusSerializer
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.core.task.Task
 import mesosphere.util.state.memory.InMemoryStore
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
@@ -12,7 +13,12 @@ import mesosphere.marathon.state.PathId.StringPathId
 
 import scala.concurrent.Future
 import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import org.apache._
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import org.apache.mesos.Protos.TaskStatus
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
@@ -38,8 +44,6 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
   }
 
   implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(1, Seconds))
-
-  val f = new Fixture
 
   test("should remove deployment version nodes, but keep deployment nodes") {
     Given("some deployment version nodes, a proper deployment node and an unrelated node")
@@ -67,11 +71,13 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
       case None => fail("Entity id was found with allIds(), but no entity could be loaded with task(id).")
     }
 
-    f.taskRepo.store(TaskSerializer.toProto(MarathonTestHelper.minimalRunning("/running1".toPath, null)))
-    f.taskRepo.store(TaskSerializer.toProto(MarathonTestHelper.minimalRunning("/running2".toPath, null)))
-    f.taskRepo.store(TaskSerializer.toProto(MarathonTestHelper.minimalRunning("/running3".toPath, null)))
-    f.taskRepo.store(TaskSerializer.toProto(MarathonTestHelper.minimalUnreachableTask("/unreachable1".toPath, null)))
-    f.taskRepo.store(TaskSerializer.toProto(MarathonTestHelper.mininimalLostTask("/lost1".toPath, null)))
+    val store = f.taskRepo.store
+
+    store.store("/running1", makeMarathonTaskState("/running1", mesos.Protos.TaskState.TASK_RUNNING))
+    store.store("/running2", makeMarathonTaskState("/running2", mesos.Protos.TaskState.TASK_RUNNING))
+    store.store("/running3", makeMarathonTaskState("/running3", mesos.Protos.TaskState.TASK_RUNNING, marathonTaskStatus = Some(MarathonTaskStatus.Running)))
+    store.store("/unreachable1", makeMarathonTaskState("/unreachable1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_RECONCILIATION)))
+    store.store("/gone1", makeMarathonTaskState("/gone1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_CONTAINER_LAUNCH_FAILED)))
 
     When("migrating")
     f.migration.migrate().futureValue
@@ -94,6 +100,19 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
 
         currentStatus should be equals expectedStatus
     }
+  }
+
+  private def makeMarathonTaskState(taskId: String, taskState: mesos.Protos.TaskState, maybeReason: Option[TaskStatus.Reason] = None, marathonTaskStatus: Option[MarathonTaskStatus] = None): MarathonTaskState = {
+    val mesosStatus = TaskStatusUpdateTestHelper.makeMesosTaskStatus(Task.Id.forRunSpec(taskId.toPath), taskState, maybeReason = maybeReason)
+    val builder = MarathonTask.newBuilder()
+      .setId(taskId)
+      .setStatus(mesosStatus)
+      .setHost("abc")
+      .setStagedAt(1)
+    if (marathonTaskStatus.isDefined) {
+      builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus.get))
+    }
+    MarathonTaskState(builder.build())
   }
 
 }

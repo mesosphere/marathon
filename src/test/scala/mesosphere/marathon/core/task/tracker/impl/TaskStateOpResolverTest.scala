@@ -5,7 +5,7 @@ import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.state.{ MarathonTaskStatus, MarathonTaskStatusMapping }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
@@ -87,7 +87,7 @@ class TaskStateOpResolverTest
   }
 
   for (
-    reason <- MarathonTaskStatus.MightComeBack
+    reason <- MarathonTaskStatusMapping.MightComeBack
   ) {
     test(s"a TASK_LOST update with $reason indicating a TemporarilyUnreachable task is mapped to an update") {
       val f = new Fixture
@@ -107,7 +107,7 @@ class TaskStateOpResolverTest
 
       And("the new state should have the correct status")
       val update: TaskStateChange.Update = stateChange.asInstanceOf[TaskStateChange.Update]
-      update.newState.mightBeLost should be (true)
+      update.newState.isUnreachable should be (true)
 
       And("there are no more interactions")
       f.verifyNoMoreInteractions()
@@ -115,7 +115,7 @@ class TaskStateOpResolverTest
   }
 
   for (
-    reason <- MarathonTaskStatus.WontComeBack
+    reason <- MarathonTaskStatusMapping.WontComeBack
   ) {
     test(s"a TASK_LOST update with $reason indicating a task won't come back is mapped to an expunge") {
       val f = new Fixture
@@ -136,9 +136,10 @@ class TaskStateOpResolverTest
         status = f.existingTask.status.copy(
           mesosStatus = Option(stateOp.mesosStatus),
           taskStatus = reason match {
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatus.WontComeBack(reason) => MarathonTaskStatus.Gone
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatus.MightComeBack(reason) => MarathonTaskStatus.Unreachable
-            case _ => MarathonTaskStatus.Lost
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.WontComeBack(reason) => MarathonTaskStatus.Gone
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.MightComeBack(reason) => MarathonTaskStatus.Unreachable
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(state) => MarathonTaskStatus.Unknown
+            case _ => MarathonTaskStatus.Dropped
           }))
       stateChange shouldEqual TaskStateChange.Expunge(expectedState)
 

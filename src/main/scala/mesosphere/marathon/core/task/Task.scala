@@ -119,19 +119,19 @@ object Task {
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
-            mesosStatus = Option(mesosStatus)))
+            mesosStatus = Some(mesosStatus)))
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
       case TaskStateOp.MesosUpdate(_, taskStatus: MarathonTaskStatus.Terminal, mesosStatus, now) =>
         val updated = copy(status = status.copy(
-          mesosStatus = Option(mesosStatus),
+          mesosStatus = Some(mesosStatus),
           taskStatus = taskStatus))
         TaskStateChange.Expunge(updated)
 
       // case 3: health or state updated
       case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, now) =>
-        updatedHealthOrState(status.mesosStatus, Option(mesosStatus)) match {
+        updatedHealthOrState(status.mesosStatus, Some(mesosStatus)) match {
           case Some(newStatus) =>
             val updatedTask = copy(status = status.copy(
               mesosStatus = Some(newStatus),
@@ -234,7 +234,7 @@ object Task {
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
-            mesosStatus = Option(mesosStatus),
+            mesosStatus = Some(mesosStatus),
             taskStatus = MarathonTaskStatus.Running))
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
@@ -248,7 +248,7 @@ object Task {
           status = Task.Status(
             stagedAt = task.status.stagedAt,
             startedAt = task.status.startedAt,
-            mesosStatus = Option(mesosStatus),
+            mesosStatus = Some(mesosStatus),
             taskStatus = taskStatus
           )
         )
@@ -256,7 +256,7 @@ object Task {
 
       // case 3: health or state updated
       case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, _) =>
-        updatedHealthOrState(status.mesosStatus, Option(mesosStatus)).map { newStatus =>
+        updatedHealthOrState(status.mesosStatus, Some(mesosStatus)).map { newStatus =>
           val updatedTask = copy(status = status.copy(
             mesosStatus = Some(newStatus),
             taskStatus = taskStatus))
@@ -477,26 +477,21 @@ object Task {
   }
 
   implicit class TaskStatusComparison(val task: Task) extends AnyVal {
-    def isReserved: Boolean = compareTo(MarathonTaskStatus.Reserved)
-    def isCreated: Boolean = compareTo(MarathonTaskStatus.Created)
-    def isError: Boolean = compareTo(MarathonTaskStatus.Error)
-    def isFailed: Boolean = compareTo(MarathonTaskStatus.Failed)
-    def isFinished: Boolean = compareTo(MarathonTaskStatus.Finished)
-    def isKilled: Boolean = compareTo(MarathonTaskStatus.Killed)
-    def isKilling: Boolean = compareTo(MarathonTaskStatus.Killing)
-    def isLost: Boolean = compareTo(MarathonTaskStatus.Lost)
-    def isMesosLost: Boolean = isLost || isGone || isUnreachable
-    def isRunning: Boolean = compareTo(MarathonTaskStatus.Running)
-    def isStaging: Boolean = compareTo(MarathonTaskStatus.Staging)
-    def isStarting: Boolean = compareTo(MarathonTaskStatus.Starting)
-    def isUnreachable: Boolean = compareTo(MarathonTaskStatus.Unreachable)
-    def isGone: Boolean = compareTo(MarathonTaskStatus.Gone)
-    def isUnknown: Boolean = compareTo(MarathonTaskStatus.Unknown)
+    def isReserved: Boolean = task.status.taskStatus == MarathonTaskStatus.Reserved
+    def isCreated: Boolean = task.status.taskStatus == MarathonTaskStatus.Created
+    def isError: Boolean = task.status.taskStatus == MarathonTaskStatus.Error
+    def isFailed: Boolean = task.status.taskStatus == MarathonTaskStatus.Failed
+    def isFinished: Boolean = task.status.taskStatus == MarathonTaskStatus.Finished
+    def isKilled: Boolean = task.status.taskStatus == MarathonTaskStatus.Killed
+    def isKilling: Boolean = task.status.taskStatus == MarathonTaskStatus.Killing
+    def isRunning: Boolean = task.status.taskStatus == MarathonTaskStatus.Running
+    def isStaging: Boolean = task.status.taskStatus == MarathonTaskStatus.Staging
+    def isStarting: Boolean = task.status.taskStatus == MarathonTaskStatus.Starting
+    def isUnreachable: Boolean = task.status.taskStatus == MarathonTaskStatus.Unreachable
+    def isGone: Boolean = task.status.taskStatus == MarathonTaskStatus.Gone
+    def isUnknown: Boolean = task.status.taskStatus == MarathonTaskStatus.Unknown
+    def isDropped: Boolean = task.status.taskStatus == MarathonTaskStatus.Unknown
 
-    def mightBeLost: Boolean = MarathonTaskStatus.mightBeLost.contains(task.status.taskStatus)
-
-    private def compareTo(marathonTaskStatus: MarathonTaskStatus): Boolean = {
-      task.status.taskStatus == marathonTaskStatus
-    }
+    def isReachable: Boolean = isStaging || isStarting || isRunning || isKilling
   }
 }

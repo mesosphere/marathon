@@ -150,20 +150,38 @@ object TaskSerializer {
 }
 
 object MarathonTaskStatusSerializer {
+
+  import mesosphere.marathon.core.task.state.MarathonTaskStatus._
+  import mesosphere._
+
+  private val proto2model = Map(
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved -> Reserved,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Created -> Created,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Error -> Error,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Failed -> Failed,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Finished -> Finished,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Killed -> Killed,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Killing -> Killing,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Running -> Running,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Staging -> Staging,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Starting -> Starting,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Unreachable -> Unreachable,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Gone -> Gone,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Unknown -> Unknown,
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Dropped -> Dropped
+  )
+
+  private val model2proto: Map[MarathonTaskStatus, marathon.Protos.MarathonTask.MarathonTaskStatus] =
+    proto2model.map(_.swap)
+
   def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): MarathonTaskStatus = {
-    val result = MarathonTaskStatus.all.collectFirst {
-      case status: MarathonTaskStatus if status.toString == "" + proto => status
-    }
-    // TODO ju<>me discuss
-    result.orNull
+    proto2model.getOrElse(proto, throw new SerializationFailedException(s"Unable to parse $proto"))
   }
 
   def toProto(marathonTaskStatus: MarathonTaskStatus): Protos.MarathonTask.MarathonTaskStatus = {
-    val result = Protos.MarathonTask.MarathonTaskStatus.values().collectFirst {
-      case status: Protos.MarathonTask.MarathonTaskStatus if status.toString == "" + marathonTaskStatus => status
-    }
-    // TODO ju<>me discuss
-    result.orNull
+    model2proto.getOrElse(
+      marathonTaskStatus,
+      throw new SerializationFailedException(s"Unable to serialize $marathonTaskStatus"))
   }
 }
 

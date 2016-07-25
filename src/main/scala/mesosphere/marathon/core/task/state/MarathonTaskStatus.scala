@@ -7,27 +7,11 @@ sealed trait MarathonTaskStatus {
   def toMesosStateName: String = "TASK_" + toString.toUpperCase
 }
 
+// TODO ju doc
 object MarathonTaskStatus {
   import org.apache.mesos.Protos.TaskState._
 
-  def fromMesosStateName(mesosStateName: String): Option[MarathonTaskStatus] = all.collectFirst {
-    case status: MarathonTaskStatus if status.toMesosStateName == mesosStateName => status
-  }
-
-  // If we're disconnected at the time of a TASK_LOST event, we will only get the update during
-  // a reconciliation. In that case, the specific reason will be shadowed by REASON_RECONCILIATION.
-  // Since we don't know the original reason, we need to assume that the task might come back.
-  val MightComeBack: Set[mesos.Protos.TaskStatus.Reason] = Set(
-    mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION,
-    mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DISCONNECTED,
-    mesos.Protos.TaskStatus.Reason.REASON_SLAVE_REMOVED
-  )
-
-  val WontComeBack: Set[mesos.Protos.TaskStatus.Reason] = {
-    mesos.Protos.TaskStatus.Reason.values().toSet.diff(MightComeBack)
-  }
-
-  trait Terminal
+  sealed trait Terminal
 
   //scalastyle:off cyclomatic.complexity
   def apply(taskStatus: mesos.Protos.TaskStatus): MarathonTaskStatus = {
@@ -38,9 +22,10 @@ object MarathonTaskStatus {
       case TASK_KILLED => Killed
       case TASK_KILLING => Killing
       case TASK_LOST => taskStatus.getReason match {
-        case state: mesos.Protos.TaskStatus.Reason if WontComeBack(state) => Gone
-        case state: mesos.Protos.TaskStatus.Reason if MightComeBack(taskStatus.getReason) => Unreachable
-        case _ => Lost
+        case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.WontComeBack(state) => Gone
+        case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.MightComeBack(state) => Unreachable
+        case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(state) => Unknown
+        case _ => Dropped
       }
       case TASK_RUNNING => Running
       case TASK_STAGING => Staging
@@ -48,53 +33,46 @@ object MarathonTaskStatus {
     }
   }
 
-  /**
-    * (Temporarily) mapping of mesos.Protos.TaskStatus.TASK_LOST to MarathonTaskStatus.
-    * Should be removed as soon as `Gone`, `Unreachable` and `Lost` are native Mesos task states.
-    *
-    * @return list of possible mappings of the mesos.Protos.TaskStatus.TASK_LOST
-    */
-  lazy val mightBeLost: Set[MarathonTaskStatus] = Set(Gone, Unreachable, Lost)
-
-  lazy val all: Set[MarathonTaskStatus] = Set(Reserved, Created, Error, Failed, Finished, Killed, Killing, Lost, //
-    Running, Staging, Starting, Unreachable, Gone, Unknown)
-
-  // Marathon specific states
-  // RESERVED
+  // Reserved: Task with persistent volume has reservation, but is not launched yet
   case object Reserved extends MarathonTaskStatus
-  // CREATED
+
+  // Created: Task is known in marathon and sent to mesos, but not staged yet
   case object Created extends MarathonTaskStatus
 
-  // 'Native' mesos TaskStates
-  // ERROR
+  // Error: indicates that a task launch attempt failed because of an error in the task specification
   case object Error extends MarathonTaskStatus with Terminal
-  // FAILED
+
+  // Failed: task aborted with an error
   case object Failed extends MarathonTaskStatus with Terminal
-  // FINISHED
+
+  // Finished: task completes successfully
   case object Finished extends MarathonTaskStatus with Terminal
-  // KILLED
+
+  // Killed: task was killed
   case object Killed extends MarathonTaskStatus with Terminal
-  // KILLING
+
+  // Killing: the request to kill the task has been received, but the task has not yet been killed
   case object Killing extends MarathonTaskStatus
-  // LOST
-  // Note: At the moment there is no `mesos native` distinguish between `Lost`, `Unreachable`, `Gone` and `Unknown`
-  // tl;dr: don't use Lost
-  case object Lost extends MarathonTaskStatus with Terminal
-  // RUNNING
+
+  // Running: the state after the task has begun running successfully
   case object Running extends MarathonTaskStatus
-  // STAGING
+
+  // Staging: the master has received the framework’s request to launch the task but the task has not yet started to run
   case object Staging extends MarathonTaskStatus
-  // STARTING
+
+  // Starting: task is currently starting
   case object Starting extends MarathonTaskStatus
 
-  // Temporarily transformation states, should become mesos native in the future
-  // UNREACHABLE
+  // Unreachable: the master has not heard from the agent running the task for a configurable period of time
   case object Unreachable extends MarathonTaskStatus
-  // GONE
+
+  // Gone: the task was running on an agent that has been terminated
   case object Gone extends MarathonTaskStatus with Terminal
-  // LOST
-  // already defined as 'native' mesos state
-  // UNKNOWN
+
+  // Dropped: the task failed to launch because of a transient error (e.g., spontaneously disconnected agent)
+  case object Dropped extends MarathonTaskStatus with Terminal
+
+  // Unknown: the master has no knowledge of the task
   case object Unknown extends MarathonTaskStatus with Terminal
 
 }

@@ -527,9 +527,7 @@ class SchedulerActions(
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     import SchedulerActions._
 
-    def launchedNotLost(t: Task) = t.launched.isDefined && !t.isMesosLost
-
-    val launchedCount = taskTracker.countAppTasksSync(app.id, launchedNotLost)
+    val launchedCount = taskTracker.countAppTasksSync(app.id, _.isReachable)
     val targetCount = app.instances
 
     if (targetCount > launchedCount) {
