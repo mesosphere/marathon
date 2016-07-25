@@ -1,11 +1,14 @@
 package mesosphere.marathon.state
 
+import java.util.UUID
+
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.StorageVersions._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.{ MarathonConf, MarathonSpec }
 import mesosphere.util.state.memory.InMemoryEntity
 import mesosphere.util.state.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
 import org.scalatest.concurrent.ScalaFutures
@@ -127,7 +130,7 @@ class MigrationTest extends MarathonSpec with Mockito with Matchers with GivenWh
       new MarathonStore[MarathonTaskState](
         store = store,
         metrics = metrics,
-        newState = () => MarathonTaskState(MarathonTestHelper.createdMarathonTask),
+        newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
         prefix = "task:"),
       metrics
     )

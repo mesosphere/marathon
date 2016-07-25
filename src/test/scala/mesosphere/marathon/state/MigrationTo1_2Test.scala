@@ -1,8 +1,10 @@
 package mesosphere.marathon.state
 
+import java.util.UUID
+
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.task.tracker.impl.{ MarathonTaskStatusSerializer, TaskSerializer }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.core.task.Task
@@ -36,7 +38,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
     lazy val taskStore = new MarathonStore[MarathonTaskState](
       store = store,
       metrics = metrics,
-      newState = () => MarathonTaskState(MarathonTestHelper.createdMarathonTask),
+      newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
       prefix = "task:")
     lazy val taskRepo = new TaskRepository(taskStore, metrics)
     lazy val deploymentRepo = new DeploymentRepository(deploymentStore, metrics)

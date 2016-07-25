@@ -309,7 +309,7 @@ object MarathonTestHelper {
       new MarathonStore[MarathonTaskState](
         store = store,
         metrics = metrics,
-        newState = () => MarathonTaskState(createdMarathonTask),
+        newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
         prefix = TaskRepository.storePrefix),
       metrics
     )
@@ -319,10 +319,6 @@ object MarathonTestHelper {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val taskTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
-  }
-
-  def createdMarathonTask = {
-    MarathonTask.newBuilder().setId(UUID.randomUUID().toString).setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Created).build()
   }
 
   def createTaskTracker(

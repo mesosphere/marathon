@@ -158,7 +158,7 @@ class MigrationTo0_13Test extends MarathonSpec with GivenWhenThen with Matchers 
     lazy val entityStore = new MarathonStore[MarathonTaskState](
       store = state,
       metrics = metrics,
-      newState = () => MarathonTaskState(MarathonTestHelper.createdMarathonTask),
+      newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
       prefix = TaskRepository.storePrefix)
     lazy val taskRepo = {
       val metrics = new Metrics(new MetricRegistry)
