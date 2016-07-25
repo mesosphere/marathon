@@ -156,6 +156,7 @@ message MarathonTask {
     Unreachable = 12;
     Gone = 13;
     Unknown = 14;
+    Dropped = 15;
   }
 
   required string id = 1;
