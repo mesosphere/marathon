@@ -2,7 +2,7 @@ package mesosphere.marathon.health
 
 import akka.actor._
 import akka.event.EventStream
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
@@ -11,19 +11,18 @@ import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.storage.repository.AppRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.AppEntityRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
+import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.tracker.{TaskCreationHandler, TaskStateOpProcessor, TaskTracker}
+import mesosphere.marathon.core.task.{Task, TaskStateOp}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport }
+import mesosphere.marathon.test.{CaptureEvents, MarathonShutdownHookSupport}
 import mesosphere.util.Logging
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.ScalaFutures
 
@@ -48,7 +47,7 @@ class MarathonHealthCheckManagerTest
   val clock = ConstantClock()
 
   before {
-    val metrics = new Metrics(new MetricRegistry)
+    implicit val metrics = new Metrics(new MetricRegistry)
 
     system = ActorSystem(
       "test-system",
@@ -68,9 +67,8 @@ class MarathonHealthCheckManagerTest
     taskCreationHandler = taskTrackerModule.taskCreationHandler
     stateOpProcessor = taskTrackerModule.stateOpProcessor
 
-    appRepository = new AppEntityRepository(
-      new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), "app:"),
-      maxVersions = 0)(ExecutionContext.global, metrics)
+    val store = new InMemoryPersistenceStore()(ctx = ExecutionContext.global, mat = mat, metrics = metrics)
+    appRepository = AppRepository.inMemRepository(store, 5)
 
     eventStream = new EventStream(system)
 
