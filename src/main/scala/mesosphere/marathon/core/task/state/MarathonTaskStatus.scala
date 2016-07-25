@@ -2,10 +2,16 @@ package mesosphere.marathon.core.task.state
 
 import org.apache.mesos
 
+/**
+  * To define the status of a Task, this trait is used and stored for each Task in Task.Status.
+  * The existing case objects are:
+  * - marathon exclusive status
+  * - representations of the mesos.Protos.TaskStatus
+  * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
+  */
 // TODO ju handle garbage flag
 sealed trait MarathonTaskStatus
 
-// TODO ju doc
 object MarathonTaskStatus {
   import org.apache.mesos.Protos.TaskState._
 

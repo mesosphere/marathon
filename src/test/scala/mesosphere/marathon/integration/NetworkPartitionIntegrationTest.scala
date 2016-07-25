@@ -32,7 +32,7 @@ class NetworkPartitionIntegrationTest extends IntegrationFunSuite with WithMesos
     // stop zk
     stopMesos(slave1)
     waitForEventMatching("Task is declared lost") {
-      matchEvent("TASK_LOST", task)
+      matchEvent("Lost", task)
     }
 
     And("The task is shows in marathon as lost")

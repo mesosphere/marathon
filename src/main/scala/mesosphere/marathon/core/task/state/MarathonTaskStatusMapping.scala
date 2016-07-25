@@ -2,7 +2,6 @@ package mesosphere.marathon.core.task.state
 
 import org.apache.mesos
 
-
 /**
   * To convert `old` mesos.Protos.TaskStatus.TASK_LOST to a propert
   * MarathonTaskStatus representation (not `Lost` existing), the TaskStatus.Reason is needed. This object
