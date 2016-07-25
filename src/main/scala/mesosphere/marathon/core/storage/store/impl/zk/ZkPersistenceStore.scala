@@ -9,7 +9,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.Protos.StorageVersion
+import mesosphere.marathon.Protos.{ StorageVersion, ZKStoreEntry }
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.core.storage.migration.Migration
 import mesosphere.marathon.core.storage.store.impl.{ BasePersistenceStore, CategorizedKey }
@@ -65,7 +65,8 @@ class ZkPersistenceStore(
       async {
         await(client.data(s"/${Migration.StorageVersionName}").asTry) match {
           case Success(GetData(_, _, byteString)) =>
-            Some(StorageVersion.parseFrom(byteString.toArray))
+            val wrapped = ZKStoreEntry.parseFrom(byteString.toArray)
+            Some(StorageVersion.parseFrom(wrapped.getValue))
           case Failure(_: NoNodeException) =>
             None
           case Failure(e: KeeperException) =>
@@ -81,7 +82,12 @@ class ZkPersistenceStore(
     retry(s"ZkPersistenceStore::setStorageVersion($storageVersion)") {
       async {
         val path = s"/${Migration.StorageVersionName}"
-        val data = ByteString(storageVersion.toByteArray)
+        val data = ByteString(
+          ZKStoreEntry.newBuilder().setValue(com.google.protobuf.ByteString.copyFrom(storageVersion.toByteArray))
+          .setName(Migration.StorageVersionName)
+          .setCompressed(false)
+          .build.toByteArray
+        )
         await(client.setData(path, data).asTry) match {
           case Success(_) => Done
           case Failure(_: NoNodeException) =>
