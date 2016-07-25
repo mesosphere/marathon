@@ -176,15 +176,12 @@ class LoadTimeCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
     lockManager.executeSequentially(category.toString) {
-      lockManager.executeSequentially(storageId.toString) {
-        async {
-          val storeFuture = store.store(id, v, version)
-          val (valueCache, idCache, _) = (await(this.valueCache), await(this.idCache), await(storeFuture))
-          valueCache.putIfAbsent(storageId, Right(v))
-          val old = idCache.getOrElse(category, Nil)
-          idCache.put(category, storageId +: old)
-          Done
-        }
+      async {
+        val storeFuture = store.store(id, v, version)
+        val (idCache, _) = (await(this.idCache), await(storeFuture))
+        val old = idCache.getOrElse(category, Nil)
+        idCache.put(category, storageId +: old)
+        Done
       }
     }
   }

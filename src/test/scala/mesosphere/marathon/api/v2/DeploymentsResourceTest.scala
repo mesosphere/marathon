@@ -1,12 +1,13 @@
 package mesosphere.marathon.api.v2
 
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.state.{ PathId, AppDefinition, Group, GroupManager }
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
-import mesosphere.marathon.upgrade.{ DeploymentStep, DeploymentPlan }
+import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec }
-import org.scalatest.{ Matchers, GivenWhenThen }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 import scala.collection.immutable.Seq

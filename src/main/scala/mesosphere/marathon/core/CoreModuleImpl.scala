@@ -11,6 +11,7 @@ import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.EventModule
 import mesosphere.marathon.core.flow.FlowModule
+import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -25,8 +26,10 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
+import mesosphere.marathon.{ DeploymentService, MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
+import mesosphere.util.CapConcurrentExecutions
 
 import scala.concurrent.ExecutionContext
 import scala.util.Random
@@ -48,6 +51,9 @@ class CoreModuleImpl @Inject() (
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
   taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
   clock: Clock,
+  storage: StorageProvider,
+  scheduler: Provider[DeploymentService],
+  @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
   taskStatusUpdateSteps: Seq[TaskUpdateStep])
     extends CoreModule {
 
@@ -169,6 +175,19 @@ class CoreModuleImpl @Inject() (
 
   override lazy val historyModule: HistoryModule =
     new HistoryModule(eventStream, actorSystem, storageModule.taskFailureRepository)
+
+  // GROUP MANAGER
+
+  override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
+    marathonConf,
+    leadershipModule,
+    serializeUpdates,
+    scheduler,
+    storageModule.groupRepository,
+    storageModule.appRepository,
+    storage,
+    eventStream,
+    metrics)(actorsModule.materializer)
 
   // GREEDY INSTANTIATION
   //

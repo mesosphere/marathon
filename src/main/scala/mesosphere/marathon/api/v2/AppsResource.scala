@@ -14,6 +14,7 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppInfoService, AppSelector, TaskCounts }
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.plugin.auth._

@@ -101,7 +101,7 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         val tc = TestClass1("abc", 1)
         store.store("test", tc, tc.version).futureValue should be(Done)
         store.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq("test")
-        store.get("test").futureValue.value should be(tc)
+        store.get("test").futureValue should be('empty)
         store.get("test", tc.version).futureValue.value should be(tc)
         store.versions("test").runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(tc.version)
         store.deleteVersion("test", tc.version).futureValue should be(Done)

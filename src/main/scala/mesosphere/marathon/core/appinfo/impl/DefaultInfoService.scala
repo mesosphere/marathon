@@ -3,6 +3,7 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory
 

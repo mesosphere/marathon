@@ -3,6 +3,7 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppSelector, GroupInfo, GroupSelector }
 import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
 import org.scalatest.{ GivenWhenThen, Matchers }

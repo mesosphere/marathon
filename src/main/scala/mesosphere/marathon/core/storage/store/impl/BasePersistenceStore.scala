@@ -155,12 +155,6 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
       lockManager.executeSequentially(id.toString) {
         async {
           val serialized = await(Marshal(v).to[Serialized])
-          await(rawGet(currentId)) match {
-            case Some(currentValue) =>
-            case None =>
-              await(rawStore(currentId, serialized))
-          }
-
           await(rawStore(storageId, serialized))
           await(deleteOld(currentId, ir.maxVersions))
           Done

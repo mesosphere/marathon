@@ -141,7 +141,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
         repo.versions(app.id).runWith(Sink.seq).futureValue should
           contain theSameElementsAs Seq(app.version.toOffsetDateTime)
         repo.get(app.id).futureValue should be ('empty)
-        repo.getVersion(app.id, app.version.toOffsetDateTime).futureValue should equal(app)
+        repo.getVersion(app.id, app.version.toOffsetDateTime).futureValue.value should equal(app)
       }
     }
   }

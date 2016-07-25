@@ -11,13 +11,15 @@ import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupSelector, GroupInfoService }
+import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, GroupSelector }
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ UnknownGroupException, ConflictingChangeException, MarathonConf }
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, UnknownGroupException }
 import play.api.libs.json.Json
+
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 

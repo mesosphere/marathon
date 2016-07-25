@@ -135,14 +135,11 @@ class LazyCachingPersistenceStore[K, Category, Serialized](
     val category = ir.category
     val storageId = ir.toStorageId(id, None)
     lockManager.executeSequentially(category.toString) {
-      lockManager.executeSequentially(storageId.toString) {
-        async {
-          await(store.store(id, v, version))
-          valueCache.putIfAbsent(storageId, Some(v))
-          val old = idCache.getOrElse(category, Nil)
-          idCache.put(category, id +: old)
-          Done
-        }
+      async {
+        await(store.store(id, v, version))
+        val old = idCache.getOrElse(category, Nil)
+        idCache.put(category, id +: old)
+        Done
       }
     }
   }

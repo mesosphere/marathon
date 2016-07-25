@@ -31,8 +31,11 @@ class InMemoryPersistenceStore(implicit
     Future.successful(Done)
   }
 
-  override protected def rawIds(category: String): Source[RamId, NotUsed] =
-    Source(entries.keySet.filter(id => id.category == category && id.version.isEmpty).toVector)
+  override protected def rawIds(category: String): Source[RamId, NotUsed] = {
+    val ids = entries.keySet.filter(_.category == category)
+    // we need to list the id even if there is no current version.
+    Source(ids.groupBy(_.id).map(_._2.head))
+  }
 
   override protected[store] def rawGet(k: RamId): Future[Option[Identity]] =
     Future.successful(entries.get(k))
