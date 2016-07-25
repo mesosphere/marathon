@@ -123,10 +123,7 @@ object TaskSerializer {
       builder.addAllPorts(hostPorts.map(Integer.valueOf).asJava)
     }
     def setMarathonTaskStatus(marathonTaskStatus: MarathonTaskStatus): Unit = {
-      //scalastyle:off null
-      if (marathonTaskStatus != null) {
-        builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus))
-      }
+      builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus))
     }
 
     setId(task.taskId)
