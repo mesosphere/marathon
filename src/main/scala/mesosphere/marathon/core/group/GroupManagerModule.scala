@@ -47,7 +47,7 @@ class GroupManagerModule(
 
     metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
       override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), config.zkTimeoutDuration).transitiveApps.size
+        Await.result(groupManager.rootGroup(), config.zkTimeoutDuration).transitiveAppsById.size
       }
     })
 

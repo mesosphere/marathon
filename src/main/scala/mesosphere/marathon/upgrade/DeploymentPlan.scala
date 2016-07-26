@@ -86,7 +86,7 @@ final case class DeploymentPlan(
     affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
   lazy val createdOrUpdatedApps: Seq[AppDefinition] = {
-    target.transitiveAppValues.toIndexedSeq.filter(app => affectedApplicationIds(app.id))
+    target.transitiveApps.toIndexedSeq.filter(app => affectedApplicationIds(app.id))
   }
 
   lazy val deletedApps: Seq[PathId] = {
@@ -196,7 +196,7 @@ object DeploymentPlan {
 
     }
 
-    val unsortedEquivalenceClasses = group.transitiveAppValues.groupBy { app =>
+    val unsortedEquivalenceClasses = group.transitiveApps.groupBy { app =>
       longestPathFromVertex(group.dependencyGraph, app).length
     }
 
@@ -209,7 +209,7 @@ object DeploymentPlan {
     */
   def dependencyOrderedSteps(original: Group, target: Group,
     toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
-    val originalApps: Map[PathId, AppDefinition] = original.transitiveApps
+    val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
 
     val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
 
@@ -255,9 +255,9 @@ object DeploymentPlan {
     toKill: Map[PathId, Iterable[Task]] = Map.empty): DeploymentPlan = {
 
     // Lookup maps for original and target apps.
-    val originalApps: Map[PathId, AppDefinition] = original.transitiveApps
+    val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
 
-    val targetApps: Map[PathId, AppDefinition] = target.transitiveApps
+    val targetApps: Map[PathId, AppDefinition] = target.transitiveAppsById
 
     // A collection of deployment steps for this plan.
     val steps = Seq.newBuilder[DeploymentStep]

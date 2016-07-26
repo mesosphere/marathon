@@ -547,7 +547,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       val reverted = deploymentReverterForFirst(normalizeVersions(targetWithAllDeployments))
 
       Then("The result should only contain items with the prior or the new version")
-      for (app <- reverted.transitiveAppValues) {
+      for (app <- reverted.transitiveApps) {
         withClue(s"version for app ${app.id} ") {
           app.version.toDateTime.getMillis should be <= (1L)
         }

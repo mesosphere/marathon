@@ -30,7 +30,7 @@ private[appinfo] class DefaultInfoService(
   override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] = {
     log.debug(s"queryAll")
     groupManager.rootGroup()
-      .map(_.transitiveAppValues.filter(selector.matches))
+      .map(_.transitiveApps.filter(selector.matches))
       .flatMap(resolveAppInfos(_, embed))
   }
 
@@ -39,7 +39,7 @@ private[appinfo] class DefaultInfoService(
     log.debug(s"queryAllInGroup $groupId")
     groupManager
       .group(groupId)
-      .map(_.map(_.transitiveAppValues.filter(selector.matches)).getOrElse(Seq.empty))
+      .map(_.map(_.transitiveApps.filter(selector.matches)).getOrElse(Seq.empty))
       .flatMap(resolveAppInfos(_, embed))
   }
 
@@ -68,7 +68,7 @@ private[appinfo] class DefaultInfoService(
     //fetch all transitive app infos with one request
     val appInfos = {
       if (groupEmbed(GroupInfo.Embed.Apps))
-        resolveAppInfos(group.transitiveAppValues.filter(groupSelector.matches), appEmbed)
+        resolveAppInfos(group.transitiveApps.filter(groupSelector.matches), appEmbed)
       else
         Future.successful(Seq.empty)
     }

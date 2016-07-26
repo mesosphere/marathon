@@ -165,7 +165,7 @@ private[impl] class GroupManagerActor(
 
   private[this] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
     def url2Path(url: String): Future[(String, String)] = contentPath(new URL(url)).map(url -> _)
-    Future.sequence(group.transitiveAppValues.flatMap(_.storeUrls).map(url2Path))
+    Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path))
       .map(_.toMap)
       .map { paths =>
         //Filter out all items with already existing path.
@@ -191,7 +191,7 @@ private[impl] class GroupManagerActor(
   //scalastyle:off method.length cyclomatic.complexity
   private[impl] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = from.transitiveAppValues.flatMap(_.servicePorts) ++ to.transitiveAppValues.flatMap(_.servicePorts)
+    var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
 
     def nextGlobalFreePort: Int = synchronized {
       val port = portRange.find(!taken.contains(_))
@@ -253,7 +253,7 @@ private[impl] class GroupManagerActor(
     }
 
     val dynamicApps: Set[AppDefinition] =
-      to.transitiveAppValues.map {
+      to.transitiveApps.map {
         // assign values for service ports that the user has left "blank" (set to zero)
         case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
         case app: AppDefinition =>

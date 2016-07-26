@@ -118,9 +118,9 @@ case class Group(
     }
   }
 
-  lazy val transitiveApps: Map[PathId, AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
-  lazy val transitiveAppValues: Set[AppDefinition] = transitiveApps.values.toSet
-  lazy val transitiveAppIds: Set[PathId] = transitiveApps.keySet
+  lazy val transitiveAppsById: Map[PathId, AppDefinition] = this.apps ++ groups.flatMap(_.transitiveAppsById)
+  lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
+  lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
 
   lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
@@ -135,8 +135,8 @@ case class Group(
       group <- allGroups
       dependencyId <- group.dependencies
       dependency <- allGroups.find(_.id == dependencyId)
-      app <- group.transitiveAppValues
-      dependentApp <- dependency.transitiveAppValues
+      app <- group.transitiveApps
+      dependentApp <- dependency.transitiveApps
     } result ::= app -> dependentApp
 
     //app->group/app dependencies
@@ -144,8 +144,8 @@ case class Group(
       group <- transitiveAppGroups
       app <- group.apps.values
       dependencyId <- app.dependencies
-      dependentApp = transitiveApps.get(dependencyId).map(a => Set(a))
-      dependentGroup = allGroups.find(_.id == dependencyId).map(_.transitiveAppValues)
+      dependentApp = transitiveAppsById.get(dependencyId).map(a => Set(a))
+      dependentGroup = allGroups.find(_.id == dependencyId).map(_.transitiveApps)
       dependent <- dependentApp orElse dependentGroup getOrElse Set.empty
     } result ::= app -> dependent
     result
@@ -154,7 +154,7 @@ case class Group(
   lazy val dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
     require(id.isRoot)
     val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
-    for (app <- transitiveAppValues)
+    for (app <- transitiveApps)
       graph.addVertex(app)
     for ((app, dependent) <- applicationDependencies)
       graph.addEdge(app, dependent)
@@ -219,7 +219,7 @@ object Group {
   def validRootGroup(maxApps: Option[Int]): Validator[Group] = {
     case object doesNotExceedMaxApps extends Validator[Group] {
       override def apply(group: Group): Result = {
-        maxApps.filter(group.transitiveApps.size > _).map { num =>
+        maxApps.filter(group.transitiveAppsById.size > _).map { num =>
           Failure(Set(RuleViolation(
             group,
             s"""This Marathon instance may only handle up to $num Apps!
@@ -272,7 +272,7 @@ object Group {
 
         // Add each servicePort <- Application to the map.
         for {
-          app <- group.transitiveAppValues
+          app <- group.transitiveApps
           // We ignore randomly assigned ports identified by `0`.
           port <- app.servicePorts if port != 0
         } {
