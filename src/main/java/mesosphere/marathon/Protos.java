@@ -27191,6 +27191,24 @@ public final class Protos {
      * <code>required uint32 patch = 3;</code>
      */
     int getPatch();
+
+    // required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];
+    /**
+     * <code>required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];</code>
+     *
+     * <pre>
+     * when we read old formats, we always assume legacy.
+     * </pre>
+     */
+    boolean hasFormat();
+    /**
+     * <code>required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];</code>
+     *
+     * <pre>
+     * when we read old formats, we always assume legacy.
+     * </pre>
+     */
+    mesosphere.marathon.Protos.StorageVersion.StorageFormat getFormat();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.StorageVersion}
@@ -27258,6 +27276,17 @@ public final class Protos {
               patch_ = input.readUInt32();
               break;
             }
+            case 32: {
+              int rawValue = input.readEnum();
+              mesosphere.marathon.Protos.StorageVersion.StorageFormat value = mesosphere.marathon.Protos.StorageVersion.StorageFormat.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(4, rawValue);
+              } else {
+                bitField0_ |= 0x00000008;
+                format_ = value;
+              }
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -27295,6 +27324,88 @@ public final class Protos {
     @java.lang.Override
     public com.google.protobuf.Parser<StorageVersion> getParserForType() {
       return PARSER;
+    }
+
+    /**
+     * Protobuf enum {@code mesosphere.marathon.StorageVersion.StorageFormat}
+     */
+    public enum StorageFormat
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>LEGACY = 0;</code>
+       */
+      LEGACY(0, 0),
+      /**
+       * <code>PERSISTENCE_STORE = 1;</code>
+       */
+      PERSISTENCE_STORE(1, 1),
+      ;
+
+      /**
+       * <code>LEGACY = 0;</code>
+       */
+      public static final int LEGACY_VALUE = 0;
+      /**
+       * <code>PERSISTENCE_STORE = 1;</code>
+       */
+      public static final int PERSISTENCE_STORE_VALUE = 1;
+
+
+      public final int getNumber() { return value; }
+
+      public static StorageFormat valueOf(int value) {
+        switch (value) {
+          case 0: return LEGACY;
+          case 1: return PERSISTENCE_STORE;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<StorageFormat>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<StorageFormat>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<StorageFormat>() {
+              public StorageFormat findValueByNumber(int number) {
+                return StorageFormat.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return mesosphere.marathon.Protos.StorageVersion.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final StorageFormat[] VALUES = values();
+
+      public static StorageFormat valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private StorageFormat(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:mesosphere.marathon.StorageVersion.StorageFormat)
     }
 
     private int bitField0_;
@@ -27346,10 +27457,35 @@ public final class Protos {
       return patch_;
     }
 
+    // required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];
+    public static final int FORMAT_FIELD_NUMBER = 4;
+    private mesosphere.marathon.Protos.StorageVersion.StorageFormat format_;
+    /**
+     * <code>required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];</code>
+     *
+     * <pre>
+     * when we read old formats, we always assume legacy.
+     * </pre>
+     */
+    public boolean hasFormat() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];</code>
+     *
+     * <pre>
+     * when we read old formats, we always assume legacy.
+     * </pre>
+     */
+    public mesosphere.marathon.Protos.StorageVersion.StorageFormat getFormat() {
+      return format_;
+    }
+
     private void initFields() {
       major_ = 0;
       minor_ = 0;
       patch_ = 0;
+      format_ = mesosphere.marathon.Protos.StorageVersion.StorageFormat.LEGACY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -27368,6 +27504,10 @@ public final class Protos {
         memoizedIsInitialized = 0;
         return false;
       }
+      if (!hasFormat()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -27383,6 +27523,9 @@ public final class Protos {
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeUInt32(3, patch_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeEnum(4, format_.getNumber());
       }
       getUnknownFields().writeTo(output);
     }
@@ -27404,6 +27547,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(3, patch_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(4, format_.getNumber());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -27527,6 +27674,8 @@ public final class Protos {
         bitField0_ = (bitField0_ & ~0x00000002);
         patch_ = 0;
         bitField0_ = (bitField0_ & ~0x00000004);
+        format_ = mesosphere.marathon.Protos.StorageVersion.StorageFormat.LEGACY;
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -27567,6 +27716,10 @@ public final class Protos {
           to_bitField0_ |= 0x00000004;
         }
         result.patch_ = patch_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.format_ = format_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -27592,6 +27745,9 @@ public final class Protos {
         if (other.hasPatch()) {
           setPatch(other.getPatch());
         }
+        if (other.hasFormat()) {
+          setFormat(other.getFormat());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -27606,6 +27762,10 @@ public final class Protos {
           return false;
         }
         if (!hasPatch()) {
+          
+          return false;
+        }
+        if (!hasFormat()) {
           
           return false;
         }
@@ -27726,6 +27886,58 @@ public final class Protos {
       public Builder clearPatch() {
         bitField0_ = (bitField0_ & ~0x00000004);
         patch_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];
+      private mesosphere.marathon.Protos.StorageVersion.StorageFormat format_ = mesosphere.marathon.Protos.StorageVersion.StorageFormat.LEGACY;
+      /**
+       * <code>required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];</code>
+       *
+       * <pre>
+       * when we read old formats, we always assume legacy.
+       * </pre>
+       */
+      public boolean hasFormat() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];</code>
+       *
+       * <pre>
+       * when we read old formats, we always assume legacy.
+       * </pre>
+       */
+      public mesosphere.marathon.Protos.StorageVersion.StorageFormat getFormat() {
+        return format_;
+      }
+      /**
+       * <code>required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];</code>
+       *
+       * <pre>
+       * when we read old formats, we always assume legacy.
+       * </pre>
+       */
+      public Builder setFormat(mesosphere.marathon.Protos.StorageVersion.StorageFormat value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
+        format_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .mesosphere.marathon.StorageVersion.StorageFormat format = 4 [default = LEGACY];</code>
+       *
+       * <pre>
+       * when we read old formats, we always assume legacy.
+       * </pre>
+       */
+      public Builder clearFormat() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        format_ = mesosphere.marathon.Protos.StorageVersion.StorageFormat.LEGACY;
         onChanged();
         return this;
       }
@@ -37254,42 +37466,45 @@ public final class Protos {
       "meInfo\022\014\n\004size\030\001 \001(\004\022\014\n\004name\030\002 \002(\t\022\020\n\010pr",
       "ovider\030\003 \002(\t\022\035\n\007options\030\004 \003(\0132\014.mesos.La" +
       "bel\")\n\020EventSubscribers\022\025\n\rcallback_urls" +
-      "\030\001 \003(\t\"=\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022" +
-      "\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\"Z\n\031Upgrade" +
-      "StrategyDefinition\022\035\n\025minimumHealthCapac" +
-      "ity\030\001 \002(\001\022\036\n\023maximumOverCapacity\030\002 \001(\001:\001" +
-      "1\"\251\002\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007ver" +
-      "sion\030\002 \002(\t\022?\n\017deprecated_apps\030\003 \003(\0132&.me" +
-      "sosphere.marathon.ServiceDefinition\0224\n\006g" +
-      "roups\030\004 \003(\0132$.mesosphere.marathon.GroupD",
-      "efinition\022\024\n\014dependencies\030\005 \003(\t\022?\n\004apps\030" +
-      "\006 \003(\01321.mesosphere.marathon.GroupDefinit" +
-      "ion.AppReference\032+\n\014AppReference\022\n\n\002id\030\001" +
-      " \002(\t\022\017\n\007version\030\002 \002(\t\"\245\001\n\030DeploymentPlan" +
-      "Definition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022" +
-      "6\n\010original\030\004 \002(\0132$.mesosphere.marathon." +
-      "GroupDefinition\0224\n\006target\030\005 \002(\0132$.mesosp" +
-      "here.marathon.GroupDefinition\"\306\001\n\013TaskFa" +
-      "ilure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r" +
-      ".mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.Tas",
-      "kState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:" +
-      "\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n" +
-      "\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStor" +
-      "eEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005va" +
-      "lue\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005false\"\326\001\n" +
-      "\023ResidencyDefinition\022(\n relaunchEscalati" +
-      "onTimeoutSeconds\030\001 \001(\003\022S\n\020taskLostBehavi" +
-      "or\030\002 \001(\01629.mesosphere.marathon.Residency" +
-      "Definition.TaskLostBehavior\"@\n\020TaskLostB" +
-      "ehavior\022\032\n\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020\n\014W",
-      "AIT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006s" +
-      "ource\030\002 \002(\t\"\262\001\n\017EnvVarReference\0227\n\004type\030" +
-      "\001 \002(\0162).mesosphere.marathon.EnvVarRefere" +
-      "nce.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(" +
-      "\0132$.mesosphere.marathon.EnvVarSecretRef\"" +
-      "\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvV" +
-      "arSecretRef\022\020\n\010secretId\030\001 \002(\tB\035\n\023mesosph" +
-      "ere.marathonB\006Protos"
+      "\030\001 \003(\t\"\274\001\n\016StorageVersion\022\r\n\005major\030\001 \002(\r" +
+      "\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I\n\006format" +
+      "\030\004 \002(\01621.mesosphere.marathon.StorageVers" +
+      "ion.StorageFormat:\006LEGACY\"2\n\rStorageForm" +
+      "at\022\n\n\006LEGACY\020\000\022\025\n\021PERSISTENCE_STORE\020\001\"Z\n" +
+      "\031UpgradeStrategyDefinition\022\035\n\025minimumHea" +
+      "lthCapacity\030\001 \002(\001\022\036\n\023maximumOverCapacity" +
+      "\030\002 \001(\001:\0011\"\251\002\n\017GroupDefinition\022\n\n\002id\030\001 \002(",
+      "\t\022\017\n\007version\030\002 \002(\t\022?\n\017deprecated_apps\030\003 " +
+      "\003(\0132&.mesosphere.marathon.ServiceDefinit" +
+      "ion\0224\n\006groups\030\004 \003(\0132$.mesosphere.maratho" +
+      "n.GroupDefinition\022\024\n\014dependencies\030\005 \003(\t\022" +
+      "?\n\004apps\030\006 \003(\01321.mesosphere.marathon.Grou" +
+      "pDefinition.AppReference\032+\n\014AppReference" +
+      "\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\"\245\001\n\030Deploy" +
+      "mentPlanDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007versio" +
+      "n\030\002 \002(\t\0226\n\010original\030\004 \002(\0132$.mesosphere.m" +
+      "arathon.GroupDefinition\0224\n\006target\030\005 \002(\0132",
+      "$.mesosphere.marathon.GroupDefinition\"\306\001" +
+      "\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id" +
+      "\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.m" +
+      "esos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004hos" +
+      "t\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030" +
+      "\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T" +
+      "\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002" +
+      "(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005f" +
+      "alse\"\326\001\n\023ResidencyDefinition\022(\n relaunch" +
+      "EscalationTimeoutSeconds\030\001 \001(\003\022S\n\020taskLo",
+      "stBehavior\030\002 \001(\01629.mesosphere.marathon.R" +
+      "esidencyDefinition.TaskLostBehavior\"@\n\020T" +
+      "askLostBehavior\022\032\n\026RELAUNCH_AFTER_TIMEOU" +
+      "T\020\000\022\020\n\014WAIT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 " +
+      "\002(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n\017EnvVarReference\022" +
+      "7\n\004type\030\001 \002(\0162).mesosphere.marathon.EnvV" +
+      "arReference.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecret" +
+      "Ref\030\003 \001(\0132$.mesosphere.marathon.EnvVarSe" +
+      "cretRef\"\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001" +
+      "\"#\n\017EnvVarSecretRef\022\020\n\010secretId\030\001 \002(\tB\035\n",
+      "\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -37421,7 +37636,7 @@ public final class Protos {
           internal_static_mesosphere_marathon_StorageVersion_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_mesosphere_marathon_StorageVersion_descriptor,
-              new java.lang.String[] { "Major", "Minor", "Patch", });
+              new java.lang.String[] { "Major", "Minor", "Patch", "Format", });
           internal_static_mesosphere_marathon_UpgradeStrategyDefinition_descriptor =
             getDescriptor().getMessageTypes().get(14);
           internal_static_mesosphere_marathon_UpgradeStrategyDefinition_fieldAccessorTable = new

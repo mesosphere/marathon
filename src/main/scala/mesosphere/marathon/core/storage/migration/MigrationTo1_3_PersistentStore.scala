@@ -29,15 +29,9 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
     metrics: Metrics) extends StrictLogging {
   def migrate(): Future[Done] = async {
     val legacyStore = await(migration.legacyStoreFuture)
-    // This migration only goes from legacy storage -> new storage.
     (legacyStore, migration.persistenceStore, migration.legacyConfig) match {
       case (Some(_), Some(_), Some(legacyConfig)) =>
         val futures = legacyStore.map { _ =>
-          val legacyConfig = {
-            // if persistent store is defined, the config has to be too.
-            require(migration.legacyConfig.isDefined)
-            migration.legacyConfig.get
-          }
           Seq(
             migrateTasks(legacyConfig, migration.taskRepo),
             migrateDeployments(legacyConfig, migration.deploymentRepository),
@@ -63,13 +57,11 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
         newRepo.store(value)
       }.runFold(0) { case (acc, _) => acc + 1 }
     }
-
     await {
       oldRepo.ids().mapAsync(Int.MaxValue) { id =>
         oldRepo.delete(id)
       }.runWith(Sink.ignore).asTry
     }
-
     migrated
   }
 
@@ -88,7 +80,9 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
       newRepo.store(value)
     }.runFold(0) { case (acc, _) => acc + 1 }
 
-    await(oldVersions) + await(currentVersions)
+    val result = await(oldVersions) + await(currentVersions)
+    await(oldRepo.ids().mapAsync(Int.MaxValue)(oldRepo.delete).runWith(Sink.ignore).asTry)
+    result
   }
 
   def migrateTasks(legacyStore: LegacyStorageConfig, taskRepository: TaskRepository): Future[(String, Int)] = {
@@ -112,11 +106,11 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
 
   def migrateGroups(
     legacyStore: LegacyStorageConfig,
-    groupRepository: GroupRepository): Future[(String, Int)] = {
+    groupRepository: GroupRepository): Future[(String, Int)] = async {
     val oldAppRepo = AppRepository.legacyRepository(legacyStore.entityStore[AppDefinition], legacyStore.maxVersions)
     val oldRepo = GroupRepository.legacyRepository(legacyStore.entityStore[Group], legacyStore.maxVersions, oldAppRepo)
 
-    oldRepo.rootVersions().mapAsync(Int.MaxValue) { version =>
+    val resultFuture = oldRepo.rootVersions().mapAsync(Int.MaxValue) { version =>
       oldRepo.rootVersion(version)
     }.collect {
       case Some(root) => root
@@ -125,6 +119,12 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
       // adding a new app version for every root (for simplicity)
       groupRepository.storeRoot(root, root.apps.values.toVector, Nil)
     }.runFold(0) { case (acc, _) => acc + 1 }.map("root versions" -> _)
+    val result = await(resultFuture)
+    val deleteOldAppsFuture = oldAppRepo.ids().mapAsync(Int.MaxValue)(oldAppRepo.delete).runWith(Sink.ignore).asTry
+    val deleteOldGroupsFuture = oldRepo.ids().mapAsync(Int.MaxValue)(oldRepo.delete).runWith(Sink.ignore).asTry
+    await(deleteOldAppsFuture)
+    await(deleteOldGroupsFuture)
+    result
   }
 
   def migrateFrameworkId(
@@ -135,6 +135,7 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
       await(oldRepo.get()) match {
         case Some(v) =>
           await(frameworkIdRepository.store(v))
+          await(oldRepo.delete().asTry)
           "framework-id" -> 1
         case None =>
           "framework-id" -> 0
@@ -150,6 +151,7 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
       await(oldRepo.get()) match {
         case Some(v) =>
           await(eventSubscribersRepository.store(v))
+          await(oldRepo.delete().asTry)
           "event-subscribers" -> 1
         case None =>
           "event-subscribers" -> 0

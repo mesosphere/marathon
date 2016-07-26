@@ -20,6 +20,13 @@ import scala.concurrent.{ Await, Future }
 import scala.util.control.NonFatal
 // scalastyle:on
 
+/**
+  * @param legacyConfig Optional configuration for the legacy store. This is used for all migrations
+  *                     that do not use the new store and the underlying PersistentStore will be closed
+  *                     when completed
+  * @param persistenceStore Optional "new" PersistenceStore for new migrations, the repositories
+  *                         are assumed to be in the new format.
+  */
 class Migration(
     private[migration] val legacyConfig: Option[LegacyStorageConfig],
     private[migration] val persistenceStore: Option[PersistenceStore[_, _, _]],
@@ -84,7 +91,7 @@ class Migration(
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.2", e)
         }
       },
-      StorageVersions(1, 3, 0) -> { () =>
+      StorageVersions(1, 3, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
         new MigrationTo1_3_PersistentStore(this).migrate().recover {
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.3", e)
         }
@@ -183,12 +190,14 @@ object Migration {
 object StorageVersions {
   val VersionRegex = """^(\d+)\.(\d+)\.(\d+).*""".r
 
-  def apply(major: Int, minor: Int, patch: Int): StorageVersion = {
+  def apply(major: Int, minor: Int, patch: Int,
+    format: StorageVersion.StorageFormat = StorageVersion.StorageFormat.LEGACY): StorageVersion = {
     StorageVersion
       .newBuilder()
       .setMajor(major)
       .setMinor(minor)
       .setPatch(patch)
+      .setFormat(format)
       .build()
   }
 
@@ -198,7 +207,8 @@ object StorageVersions {
         StorageVersions(
           major.toInt,
           minor.toInt,
-          patch.toInt
+          patch.toInt,
+          StorageVersion.StorageFormat.LEGACY
         )
     }
   }
@@ -214,5 +224,5 @@ object StorageVersions {
     def nonEmpty: Boolean = !version.equals(empty)
   }
 
-  def empty: StorageVersion = StorageVersions(0, 0, 0)
+  def empty: StorageVersion = StorageVersions(0, 0, 0, StorageVersion.StorageFormat.LEGACY)
 }

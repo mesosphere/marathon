@@ -82,8 +82,9 @@ class ZkPersistenceStore(
     retry(s"ZkPersistenceStore::setStorageVersion($storageVersion)") {
       async {
         val path = s"/${Migration.StorageVersionName}"
+        val actualVersion = storageVersion.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
         val data = ByteString(
-          ZKStoreEntry.newBuilder().setValue(com.google.protobuf.ByteString.copyFrom(storageVersion.toByteArray))
+          ZKStoreEntry.newBuilder().setValue(com.google.protobuf.ByteString.copyFrom(actualVersion.toByteArray))
           .setName(Migration.StorageVersionName)
           .setCompressed(false)
           .build.toByteArray
