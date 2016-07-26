@@ -16,7 +16,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 class GroupEntityRepository(
-  store: EntityStore[Group],
+  private[storage] val store: EntityStore[Group],
   maxVersions: Int,
   appRepository: AppRepository)(implicit
   ctx: ExecutionContext = ExecutionContext.global,

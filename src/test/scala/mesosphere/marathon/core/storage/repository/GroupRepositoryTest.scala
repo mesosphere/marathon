@@ -8,6 +8,8 @@ import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import com.twitter.zk.ZNode
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.storage.repository.impl.StoredGroupRepositoryImpl
+import mesosphere.marathon.core.storage.repository.impl.legacy.GroupEntityRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, ZKStore }
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
@@ -80,6 +82,13 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
 
         repo.storeRoot(newRoot, apps, Nil).failed.futureValue should equal(exception)
         repo.root().futureValue should equal(root)
+
+        repo match {
+          case s: StoredGroupRepositoryImpl[_, _, _] =>
+            s.underlyingRoot().futureValue should equal(root)
+          case s: GroupEntityRepository =>
+            s.store.fetch(GroupEntityRepository.ZkRootName.safePath).futureValue.value should equal(root)
+        }
 
         verify(appRepo).store(apps.head)
         verify(appRepo).store(apps.tail.head)

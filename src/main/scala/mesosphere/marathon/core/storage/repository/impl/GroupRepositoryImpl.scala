@@ -9,6 +9,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
@@ -112,7 +113,7 @@ class StoredGroupRepositoryImpl[K, C, S](
     unmarshaller: Unmarshaller[S, StoredGroup],
     val ctx: ExecutionContext,
     val mat: Materializer
-) extends GroupRepository {
+) extends GroupRepository with StrictLogging {
   import StoredGroupRepositoryImpl._
 
   /*
@@ -134,6 +135,15 @@ class StoredGroupRepositoryImpl[K, C, S](
       case s: LazyCachingPersistenceStore[K, C, S] => leafStore(s.store)
     }
     new PersistenceStoreVersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
+  }
+
+  private[storage] def underlyingRoot(): Future[Group] = async {
+    val root = await(storedRepo.get(RootId))
+    val resolved = root.map(_.resolve(this, appRepository))
+    resolved match {
+      case Some(x) => await(x)
+      case None => Group.empty
+    }
   }
 
   override def root(): Future[Group] =
@@ -203,17 +213,26 @@ class StoredGroupRepositoryImpl[K, C, S](
       val storedGroup = StoredGroup(group)
       val storedApps = await(Future.sequence(storeAppFutures).asTry)
       await(Future.sequence(deleteAppFutures).recover { case NonFatal(e) => Done })
-      val storedRoot = await(storedRepo.store(storedGroup).asTry)
-      (storedApps, storedRoot) match {
-        case (Success(_), Success(_)) =>
-          promise.success(group)
-          Done
-        case (Failure(ex), _) =>
-          promise.completeWith(oldRootFuture)
-          throw ex
-        case (Success(_), Failure(ex)) =>
-          promise.completeWith(oldRootFuture)
-          throw ex
+
+      def revertRoot(ex: Throwable): Done = {
+        promise.completeWith(oldRootFuture)
+        throw ex
+      }
+
+      storedApps match {
+        case Success(_) =>
+          val storedRoot = await(storedRepo.store(storedGroup).asTry)
+          storedRoot match {
+            case Success(_) =>
+              promise.success(group)
+              Done
+            case Failure(ex) =>
+              logger.error(s"Unable to stored updated group $group", ex)
+              revertRoot(ex)
+          }
+        case Failure(ex) =>
+          logger.error(s"Unable to store updated apps ${updatedApps.map(_.id).mkString}", ex)
+          revertRoot(ex)
       }
     }
 }
