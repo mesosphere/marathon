@@ -394,11 +394,10 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
     }
 
     val store = taskRepository.store
-    //scalastyle:off null
     def loadAndMigrateTasks(id: String): Future[MarathonTaskState] = {
       store.fetch(id).flatMap {
         case Some(entity) =>
-          if (entity.toProto.getMarathonTaskStatus == null) {
+          if (entity.toProto.hasMarathonTaskStatus) {
             val updatedEntity = entity.toProto.toBuilder
               .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(MarathonTaskStatus(entity.toProto.getStatus)))
               .build()
