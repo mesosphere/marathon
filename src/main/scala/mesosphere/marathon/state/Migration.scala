@@ -385,15 +385,6 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
   def migrate(): Future[Unit] = async {
     log.info("Start 1.2 migration")
 
-    val deploymentMigrationFuture = deploymentRepository.store.names()
-      .map(_.filter(deploymentRepository.isVersionKey)).flatMap { versionNodes =>
-        versionNodes.foldLeft(Future.successful(())) { (future, versionNode) =>
-          future.flatMap { _ =>
-            deploymentRepository.store.expunge(versionNode).map(_ => ())
-          }
-        }
-      }
-
     val nodes: Seq[String] = await(deploymentRepository.store.names())
     val deploymentVersionNodes = nodes.filter(deploymentRepository.isVersionKey)
 
@@ -421,7 +412,6 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
     }
 
     val migratedTasks = for {
-      _ <- deploymentMigrationFuture
       ids <- store.names()
       tasks <- {
         log.info(s"Discovered ${ids.size} tasks for status migration")
