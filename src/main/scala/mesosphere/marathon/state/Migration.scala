@@ -394,6 +394,7 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
     }
 
     val store = taskRepository.store
+
     def loadAndMigrateTasks(id: String): Future[MarathonTaskState] = {
       store.fetch(id).flatMap {
         case Some(entity) =>
@@ -410,18 +411,14 @@ class MigrationTo1_2(deploymentRepository: DeploymentRepository, taskRepository:
       }
     }
 
-    val migratedTasks = for {
-      ids <- store.names()
-      tasks <- {
-        log.info(s"Discovered ${ids.size} tasks for status migration")
-        Future.sequence(ids.map(loadAndMigrateTasks))
-      }
-    } yield tasks
-
-    migratedTasks.flatMap { tasks =>
-      log.info("Finished 1.2 migration")
-      Future.successful(())
+    val taskIds = await(store.names())
+    log.info(s"Discovered ${taskIds.size} tasks for status migration")
+    val taskIterator = taskIds.iterator
+    while (taskIterator.hasNext) {
+      await(loadAndMigrateTasks(taskIterator.next()))
     }
+
+    log.info("Finished 1.2 migration")
   }
 }
 
