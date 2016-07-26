@@ -1,18 +1,18 @@
-package mesosphere.marathon.health
+package mesosphere.marathon.core.health.impl
 
 import akka.actor._
 import akka.event.EventStream
 import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
-import com.google.inject.Provider
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskCreationHandler, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
@@ -68,17 +68,11 @@ class MarathonHealthCheckManagerTest
 
     eventStream = new EventStream(system)
 
-    val schedulerDriverHolderProvider = new Provider[MarathonSchedulerDriverHolder] {
-      override def get(): MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
-    }
-    val taskTrackerProvider = new Provider[TaskTracker] {
-      override def get(): TaskTracker = taskTracker
-    }
     hcManager = new MarathonHealthCheckManager(
       system,
-      schedulerDriverHolderProvider,
+      new MarathonSchedulerDriverHolder,
       eventStream,
-      taskTrackerProvider,
+      taskTracker,
       appRepository,
       config
     )

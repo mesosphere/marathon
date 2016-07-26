@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.health.Health
+import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }

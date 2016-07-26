@@ -1,4 +1,4 @@
-package mesosphere.marathon.health
+package mesosphere.marathon.core.health
 
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.task.Task
