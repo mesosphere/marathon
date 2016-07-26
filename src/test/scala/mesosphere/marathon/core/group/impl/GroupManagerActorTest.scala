@@ -43,8 +43,8 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     ))
     val servicePortsRange = 10 to 20
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
-    update.transitiveApps.flatMap(_.portNumbers.filter(servicePortsRange.contains)) should have size 5
+    update.transitiveAppValues.filter(_.hasDynamicServicePorts) should be(empty)
+    update.transitiveAppValues.flatMap(_.portNumbers.filter(servicePortsRange.contains)) should have size 5
   }
 
   test("Assign dynamic service ports specified in the container") {
@@ -67,7 +67,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val group = Group(PathId.empty, Map(app.id -> app))
     val servicePortsRange = 10 to 14
     val updatedGroup = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
-    val updatedApp = updatedGroup.transitiveApps.head
+    val updatedApp = updatedGroup.transitiveAppValues.head
     updatedApp.hasDynamicServicePorts should be (false)
     updatedApp.hostPorts should have size 4
     updatedApp.servicePorts should have size 4
@@ -104,9 +104,9 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     ))
     val servicePortsRange = 10 to 12
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
-    update.transitiveApps.flatMap(_.hostPorts.flatten.filter(servicePortsRange.contains)).toSet should have size 0
-    update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)).toSet should have size 2
+    update.transitiveAppValues.filter(_.hasDynamicServicePorts) should be (empty)
+    update.transitiveAppValues.flatMap(_.hostPorts.flatten.filter(servicePortsRange.contains)).toSet should have size 0
+    update.transitiveAppValues.flatMap(_.servicePorts.filter(servicePortsRange.contains)).toSet should have size 2
   }
 
   test("Assign dynamic service ports w/ both BRIDGE and USER containers") {
@@ -143,12 +143,12 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val servicePortsRange = 0 until 12
     val groupManager = manager(servicePortsRange)
     val groupsV1 = groupManager.assignDynamicServicePorts(Group.empty, fromGroup)
-    groupsV1.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
-    groupsV1.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1
+    groupsV1.transitiveAppValues.filter(_.hasDynamicServicePorts) should be (empty)
+    groupsV1.transitiveAppValues.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1
 
     val groupsV2 = groupManager.assignDynamicServicePorts(groupsV1, toGroup)
-    groupsV2.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
-    val assignedServicePorts = groupsV2.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains))
+    groupsV2.transitiveAppValues.filter(_.hasDynamicServicePorts) should be (empty)
+    val assignedServicePorts = groupsV2.transitiveAppValues.flatMap(_.servicePorts.filter(servicePortsRange.contains))
     assignedServicePorts should have size 3
   }
 
@@ -169,9 +169,9 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val group = Group(PathId.empty, Map(app1.id -> app1))
     val servicePortsRange = 10 to 11
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
-    update.transitiveApps.flatMap(_.hostPorts.flatten) should have size 0
-    update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1
+    update.transitiveAppValues.filter(_.hasDynamicServicePorts) should be (empty)
+    update.transitiveAppValues.flatMap(_.hostPorts.flatten) should have size 0
+    update.transitiveAppValues.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1
   }
 
   //regression for #2743
@@ -202,8 +202,8 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val app1 = AppDefinition("/app1".toPath, container = Some(container))
     val group = Group(PathId.empty, Map(app1.id -> app1))
     val update = manager(90 to 900).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
-    update.transitiveApps.flatMap(_.portNumbers) should equal (Set(80, 81))
+    update.transitiveAppValues.filter(_.hasDynamicServicePorts) should be (empty)
+    update.transitiveAppValues.flatMap(_.portNumbers) should equal (Set(80, 81))
   }
 
   test("Already taken ports will not be used") {
@@ -215,8 +215,8 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     ))
     val servicePortsRange = 10 to 20
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
-    update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
-    update.transitiveApps.flatMap(_.portNumbers.filter(servicePortsRange.contains)) should have size 5
+    update.transitiveAppValues.filter(_.hasDynamicServicePorts) should be(empty)
+    update.transitiveAppValues.flatMap(_.portNumbers.filter(servicePortsRange.contains)) should have size 5
   }
 
   // Regression test for #2868
@@ -225,7 +225,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val group = Group(PathId.empty, Map(app1.id -> app1))
     val update = manager(10 to 20).assignDynamicServicePorts(Group.empty, group)
 
-    val assignedPorts: Set[Int] = update.transitiveApps.flatMap(_.portNumbers)
+    val assignedPorts: Set[Int] = update.transitiveAppValues.flatMap(_.portNumbers)
     assignedPorts should have size 2
   }
 
@@ -237,7 +237,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val updatedGroup = Group(PathId.empty, Map(updatedApp1.id -> updatedApp1))
     val result = manager(10 to 20).assignDynamicServicePorts(originalGroup, updatedGroup)
 
-    val assignedPorts: Set[Int] = result.transitiveApps.flatMap(_.portNumbers)
+    val assignedPorts: Set[Int] = result.transitiveAppValues.flatMap(_.portNumbers)
     assignedPorts should have size 3
   }
 

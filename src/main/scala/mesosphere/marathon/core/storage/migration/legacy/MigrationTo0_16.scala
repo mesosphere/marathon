@@ -44,7 +44,7 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
 
         val storeHistoricalApps = Future.sequence(
           groupVersions.flatMap { version =>
-            version.transitiveApps.map { app =>
+            version.transitiveAppValues.map { app =>
               appRepository.storeVersion(app)
             }
           }
@@ -54,7 +54,7 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
         await(storeUpdatedVersions)
 
         val root = await(groupRepository.root())
-        await(groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil))
+        await(groupRepository.storeRoot(root, root.transitiveAppValues.toVector, Nil))
         log.info("Finished 0.16 migration")
         ()
       }

@@ -124,23 +124,6 @@ private[impl] class GroupManagerActor(
     serializeUpdates {
       log.info(s"Upgrade group id:$gid version:$version with force:$force")
 
-      case class AppDelta(updated: Seq[AppDefinition], deleted: Seq[PathId])
-
-      def calculateAppDelta(plan: DeploymentPlan): AppDelta = {
-        plan.affectedApplicationIds.foldLeft(AppDelta(Nil, Nil)) { (delta, currentId) =>
-          plan.target.app(currentId) match {
-            case Some(newApp) =>
-              log.info(s"[${newApp.id}] storing new app version ${newApp.version}")
-              delta.copy(updated = newApp +: delta.updated)
-            case None =>
-              log.info(s"[$currentId] expunging app")
-              // this means that destroyed apps are immediately gone -- even if there are still tasks running for
-              // this app. We should improve this in the future.
-              delta.copy(deleted = currentId +: delta.deleted)
-          }
-        }
-      }
-
       val deployment = for {
         from <- groupRepo.root()
         (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
@@ -151,8 +134,7 @@ private[impl] class GroupManagerActor(
         _ = log.info(s"Computed new deployment plan:\n$plan")
         _ <- scheduler.deploy(plan, force)
         _ <- {
-          val AppDelta(updated, deleted) = calculateAppDelta(plan)
-          groupRepo.storeRoot(plan.target, updated, deleted)
+          groupRepo.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps)
         }
         _ = log.info(s"Updated groups/apps according to deployment plan ${plan.id}")
       } yield plan
@@ -183,7 +165,7 @@ private[impl] class GroupManagerActor(
 
   private[this] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
     def url2Path(url: String): Future[(String, String)] = contentPath(new URL(url)).map(url -> _)
-    Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path))
+    Future.sequence(group.transitiveAppValues.flatMap(_.storeUrls).map(url2Path))
       .map(_.toMap)
       .map { paths =>
         //Filter out all items with already existing path.
@@ -209,7 +191,7 @@ private[impl] class GroupManagerActor(
   //scalastyle:off method.length cyclomatic.complexity
   private[impl] def assignDynamicServicePorts(from: Group, to: Group): Group = {
     val portRange = Range(config.localPortMin(), config.localPortMax())
-    var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
+    var taken = from.transitiveAppValues.flatMap(_.servicePorts) ++ to.transitiveAppValues.flatMap(_.servicePorts)
 
     def nextGlobalFreePort: Int = synchronized {
       val port = portRange.find(!taken.contains(_))
@@ -271,7 +253,7 @@ private[impl] class GroupManagerActor(
     }
 
     val dynamicApps: Set[AppDefinition] =
-      to.transitiveApps.map {
+      to.transitiveAppValues.map {
         // assign values for service ports that the user has left "blank" (set to zero)
         case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
         case app: AppDefinition =>

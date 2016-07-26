@@ -33,7 +33,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
       for {
         rootGroup <- rootGroupFuture
         appIdsFromAppRepo <- appIdsFuture.runWith(Sink.set)
-        appIds = appIdsFromAppRepo ++ rootGroup.transitiveApps.map(_.id)
+        appIds = appIdsFromAppRepo ++ rootGroup.transitiveAppIds
         _ = log.info(s"Discovered ${appIds.size} app IDs")
         appsWithVersions <- processApps(appRepository, appIds, rootGroup)
         _ <- storeUpdatedAppsInRootGroup(groupRepository, rootGroup, appsWithVersions)

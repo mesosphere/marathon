@@ -37,8 +37,8 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
         }
       }
 
-      val actualAppIds = actual.transitiveApps.map(_.id)
-      val expectedAppIds = expected.transitiveApps.map(_.id)
+      val actualAppIds = actual.transitiveAppIds
+      val expectedAppIds = expected.transitiveAppIds
 
       val unexpectedAppIds = actualAppIds -- expectedAppIds
       val missingAppIds = expectedAppIds -- actualAppIds
@@ -547,7 +547,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       val reverted = deploymentReverterForFirst(normalizeVersions(targetWithAllDeployments))
 
       Then("The result should only contain items with the prior or the new version")
-      for (app <- reverted.transitiveApps) {
+      for (app <- reverted.transitiveAppValues) {
         withClue(s"version for app ${app.id} ") {
           app.version.toDateTime.getMillis should be <= (1L)
         }

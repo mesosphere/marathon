@@ -118,7 +118,9 @@ case class Group(
     }
   }
 
-  lazy val transitiveApps: Set[AppDefinition] = this.apps.values.toSet ++ groups.flatMap(_.transitiveApps)
+  lazy val transitiveApps: Map[PathId, AppDefinition] = this.apps ++ groups.flatMap(_.transitiveApps)
+  lazy val transitiveAppValues: Set[AppDefinition] = transitiveApps.values.toSet
+  lazy val transitiveAppIds: Set[PathId] = transitiveApps.keySet
 
   lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
@@ -133,8 +135,8 @@ case class Group(
       group <- allGroups
       dependencyId <- group.dependencies
       dependency <- allGroups.find(_.id == dependencyId)
-      app <- group.transitiveApps
-      dependentApp <- dependency.transitiveApps
+      app <- group.transitiveAppValues
+      dependentApp <- dependency.transitiveAppValues
     } result ::= app -> dependentApp
 
     //app->group/app dependencies
@@ -142,8 +144,8 @@ case class Group(
       group <- transitiveAppGroups
       app <- group.apps.values
       dependencyId <- app.dependencies
-      dependentApp = transitiveApps.find(_.id == dependencyId).map(a => Set(a))
-      dependentGroup = allGroups.find(_.id == dependencyId).map(_.transitiveApps)
+      dependentApp = transitiveApps.get(dependencyId).map(a => Set(a))
+      dependentGroup = allGroups.find(_.id == dependencyId).map(_.transitiveAppValues)
       dependent <- dependentApp orElse dependentGroup getOrElse Set.empty
     } result ::= app -> dependent
     result
@@ -152,7 +154,7 @@ case class Group(
   lazy val dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
     require(id.isRoot)
     val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
-    for (app <- transitiveApps)
+    for (app <- transitiveAppValues)
       graph.addVertex(app)
     for ((app, dependent) <- applicationDependencies)
       graph.addEdge(app, dependent)
@@ -270,7 +272,7 @@ object Group {
 
         // Add each servicePort <- Application to the map.
         for {
-          app <- group.transitiveApps
+          app <- group.transitiveAppValues
           // We ignore randomly assigned ports identified by `0`.
           port <- app.servicePorts if port != 0
         } {

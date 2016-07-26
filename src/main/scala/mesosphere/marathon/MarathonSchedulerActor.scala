@@ -507,8 +507,8 @@ class SchedulerActions(
   def reconcileHealthChecks(): Unit = {
     async {
       val group = await(groupRepository.root())
-      val apps = group.transitiveApps
-      apps.foreach(app => healthCheckManager.reconcileWith(app.id))
+      val apps = group.transitiveApps.keys
+      apps.foreach(healthCheckManager.reconcileWith)
     }
   }
 

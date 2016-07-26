@@ -55,7 +55,7 @@ class AppTasksResource @Inject() (
         val groupPath = gid.toRootPath
         val maybeGroup = result(groupManager.group(groupPath))
         withAuthorization(ViewGroup, maybeGroup, unknownGroup(groupPath)) { group =>
-          ok(jsonObjString("tasks" -> runningTasks(group.transitiveApps.map(_.id))))
+          ok(jsonObjString("tasks" -> runningTasks(group.transitiveAppIds)))
         }
       case _ =>
         val appId = id.toRootPath

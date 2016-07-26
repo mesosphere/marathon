@@ -109,7 +109,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   override lazy val rootGroup = new Validator[Group] {
     override def apply(g: Group): Result = {
       val appsByVolume: Map[String, Set[PathId]] =
-        g.transitiveApps
+        g.transitiveAppValues
           .flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }
           .groupBy { case (volumeName, _) => volumeName }
           .mapValues(_.map { case (volumeName, appId) => appId })

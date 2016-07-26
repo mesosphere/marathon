@@ -418,7 +418,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
     When("We update the upgrade strategy to the default strategy")
     val app2 = f.validResident.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
-    val group2 = f.group.copy(apps = Map(app2.id -> app2))
+    val group2 = f.group.copy(groups = Set(f.group.group(PathId("/test")).get.copy(apps = Map(app2.id -> app2))))
     val plan2 = DeploymentPlan(f.group, group2)
 
     Then("The deployment is not valid")
