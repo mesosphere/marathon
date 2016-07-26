@@ -4,7 +4,7 @@ import java.io.File
 
 import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
 import org.apache.commons.io.FileUtils

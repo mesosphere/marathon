@@ -7,7 +7,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }

@@ -1,4 +1,4 @@
-package mesosphere.marathon.health
+package mesosphere.marathon.core.health
 
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.ValidationHelper

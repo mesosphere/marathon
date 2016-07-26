@@ -1,18 +1,21 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 
 import scala.concurrent.Future
 
 /**
   * Notify the health check manager of this update.
   */
-class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManager: HealthCheckManager) extends TaskUpdateStep {
+class NotifyHealthCheckManagerStepImpl @Inject() (healthCheckManagerProvider: Provider[HealthCheckManager])
+    extends TaskUpdateStep {
   override def name: String = "notifyHealthCheckManager"
+
+  lazy val healthCheckManager = healthCheckManagerProvider.get
 
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
     taskChanged.stateOp match {

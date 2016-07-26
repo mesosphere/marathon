@@ -3,9 +3,9 @@ package mesosphere.marathon.integration.setup
 import java.io.File
 import java.util
 
-import mesosphere.marathon.health.HealthCheck
-import mesosphere.marathon.integration.facades.{ MesosFacade, ITEnrichedTask, ITDeploymentResult, MarathonFacade }
-import mesosphere.marathon.state.{ DockerVolume, AppDefinition, Container, PathId }
+import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
+import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.apache.zookeeper.ZooDefs.Perms

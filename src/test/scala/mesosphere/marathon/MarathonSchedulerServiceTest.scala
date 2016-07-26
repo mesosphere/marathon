@@ -12,7 +12,7 @@ import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppRepository, MarathonStore, Migration }
 import mesosphere.marathon.test.MarathonActorSupport

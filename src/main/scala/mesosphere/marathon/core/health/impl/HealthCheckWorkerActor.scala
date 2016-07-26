@@ -1,4 +1,4 @@
-package mesosphere.marathon.health
+package mesosphere.marathon.core.health.impl
 
 import java.net.{ InetSocketAddress, Socket }
 import java.security.cert.X509Certificate
@@ -8,6 +8,7 @@ import akka.actor.{ Actor, ActorLogging, PoisonPill }
 import akka.util.Timeout
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol.{ COMMAND, HTTP, HTTPS, TCP }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.health.{ HealthCheck, HealthResult, Healthy, Unhealthy }
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.util.ThreadPoolContext
 import spray.client.pipelining._

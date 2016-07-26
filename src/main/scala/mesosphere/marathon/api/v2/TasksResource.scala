@@ -13,7 +13,7 @@ import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.{ GroupManager, PathId }
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }

@@ -11,6 +11,7 @@ import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.{ EventModule, EventSubscribers }
 import mesosphere.marathon.core.flow.FlowModule
+import mesosphere.marathon.core.health.HealthModule
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -165,6 +166,11 @@ class CoreModuleImpl @Inject() (
 
   override lazy val historyModule: HistoryModule = new HistoryModule(eventStream, actorSystem, taskFailureRepository)
 
+  // HEALTH CHECKS
+
+  override lazy val healthModule: HealthModule = new HealthModule(
+    actorSystem, marathonSchedulerDriverHolder, eventStream, taskTrackerModule.taskTracker, appRepository, marathonConf)
+
   // GREEDY INSTANTIATION
   //
   // Greedily instantiate everything.
@@ -187,4 +193,5 @@ class CoreModuleImpl @Inject() (
   offerMatcherReconcilerModule.start()
   eventModule
   historyModule
+  healthModule
 }
