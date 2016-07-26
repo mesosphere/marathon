@@ -110,7 +110,7 @@ class MigrationTo0_13(legacyStorageConfig: Option[LegacyStorageConfig])(implicit
   }
 
   def migrate(): Future[Unit] =
-    legacyStorageConfig.map { config =>
+    legacyStorageConfig.fold(Future.successful(())) { config =>
       val taskRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
       val store = config.store
 
@@ -118,6 +118,6 @@ class MigrationTo0_13(legacyStorageConfig: Option[LegacyStorageConfig])(implicit
         _ <- migrateTasks(store, taskRepo)
         _ <- renameFrameworkId(store)
       } yield ()
-    }.getOrElse(Future.successful(()))
+    }
 }
 

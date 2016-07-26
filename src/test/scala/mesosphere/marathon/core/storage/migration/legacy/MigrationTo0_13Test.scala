@@ -1,23 +1,26 @@
-/*package mesosphere.marathon.core.storage.migration.legacy
+package mesosphere.marathon.core.storage.migration.legacy
 
 import java.io.StreamCorruptedException
 import java.util.UUID
 
 import com.codahale.metrics.MetricRegistry
-import com.fasterxml.uuid.{EthernetAddress, Generators}
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryStore, MarathonStore, PersistentEntity, PersistentStore}
+import mesosphere.marathon.core.storage.LegacyInMemConfig
+import mesosphere.marathon.core.storage.repository.TaskRepository
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ MarathonStore, PersistentEntity, PersistentStore }
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.state.{MarathonTaskState, PathId}
+import mesosphere.marathon.state.{ MarathonTaskState, PathId }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.util.state.FrameworkId
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.{ GivenWhenThen, Matchers }
+
+import scala.concurrent.ExecutionContext
 
 class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with GivenWhenThen with Matchers {
 
@@ -37,7 +40,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     names should contain (appId.safePath + ":" + task2Proto.getId)
 
     When("we run the migration")
-    f.migration.migrateTasks().futureValue
+    f.migration.migrateTasks(f.state, f.taskRepo).futureValue
 
     Then("the tasks are stored in paths without duplicated appId")
     val taskKeys = f.taskRepo.tasks(appId).runWith(Sink.seq).futureValue
@@ -55,10 +58,10 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     f.legacyTaskStore.store(appId, task1).futureValue
 
     When("we migrate that task")
-    f.migration.migrateKey(f.legacyStoreKey(appId, task1.getId)).futureValue
+    f.migration.migrateKey(f.state, f.taskRepo, f.legacyStoreKey(appId, task1.getId)).futureValue
 
     Then("migrating it again will throw")
-    val result = f.migration.migrateKey(task1.getId).failed.futureValue
+    val result = f.migration.migrateKey(f.state, f.taskRepo, task1.getId).failed.futureValue
     result.isInstanceOf[StreamCorruptedException]
     result.getMessage.contains("invalid stream header")
   }
@@ -75,7 +78,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     names should contain (appId.safePath + ":" + task1Proto.getId)
 
     When("we run the migration")
-    f.migration.migrateTasks().futureValue
+    f.migration.migrateTasks(f.state, f.taskRepo).futureValue
 
     Then("the tasks are stored in paths without duplicated appId")
     val taskKeys1 = f.taskRepo.tasks(appId).runWith(Sink.seq).futureValue
@@ -89,7 +92,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     f.entityStore.names().futureValue should contain (appId.safePath + ":" + task2Proto.getId)
 
     And("we run the migration again")
-    f.migration.migrateTasks().futureValue
+    f.migration.migrateTasks(f.state, f.taskRepo).futureValue
 
     Then("Only the second task is considered and the first one does not crash the migration")
     val taskKeys2 = f.taskRepo.tasks(appId).runWith(Sink.seq).futureValue
@@ -109,7 +112,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     f.frameworkIdStore.fetch(oldName).futureValue should be (Some(frameworkId))
 
     When("we run the migration")
-    f.migration.renameFrameworkId().futureValue
+    f.migration.renameFrameworkId(f.state).futureValue
 
     Then("The old key should be deleted")
     val namesAfterMigration = f.frameworkIdStore.names().futureValue
@@ -127,7 +130,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     f.frameworkIdStore.names().futureValue should be (empty)
 
     When("we run the migration")
-    f.migration.renameFrameworkId().futureValue
+    f.migration.renameFrameworkId(f.state).futureValue
 
     Then("Nothing should have happened")
     f.frameworkIdStore.names().futureValue should be (empty)
@@ -145,7 +148,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     names should contain (newName)
 
     When("we run the migration")
-    f.migration.renameFrameworkId().futureValue
+    f.migration.renameFrameworkId(f.state).futureValue
 
     Then("Nothing should have changed")
     val newNames = f.frameworkIdStore.names().futureValue
@@ -155,19 +158,15 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
   }
 
   class Fixture {
+    implicit val ctx = ExecutionContext.global
     lazy val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
-    lazy val state = new InMemoryStore
-    lazy val metrics = new Metrics(new MetricRegistry)
+    val maxVersions = 25
+    lazy val config = LegacyInMemConfig(maxVersions)
+    lazy val state = config.store
+    implicit lazy val metrics = new Metrics(new MetricRegistry)
     lazy val legacyTaskStore = new LegacyTaskStore(state)
-    lazy val entityStore = new MarathonStore[MarathonTaskState](
-      store = state,
-      metrics = metrics,
-      newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
-      prefix = TaskEntityRepository.storePrefix)
-    lazy val taskRepo = {
-      val metrics = new Metrics(new MetricRegistry)
-      new TaskEntityRepository(entityStore)(metrics = metrics)
-    }
+    lazy val taskRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
+    lazy val entityStore = taskRepo.store
     lazy val frameworkIdStore = new MarathonStore[FrameworkId](
       store = state,
       metrics = metrics,
@@ -175,7 +174,7 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
       prefix = "" // don't set the prefix so we don't have to use PersistentStore for testing
     )
 
-    lazy val migration = new MigrationTo0_13(taskRepo, state)
+    lazy val migration = new MigrationTo0_13(Some(config))
 
     def legacyStoreKey(appId: PathId, taskId: String): String = appId.safePath + ":" + taskId
   }
@@ -184,14 +183,13 @@ class MigrationTo0_13Test extends MarathonSpec with MarathonActorSupport with Gi
     val oldName = "frameworkId"
     val newName = "framework:id"
   }
-
 }
 
 import java.io._
 
 import scala.concurrent.Future
 
-private[state] class LegacyTaskStore(store: PersistentStore) {
+private[legacy] class LegacyTaskStore(store: PersistentStore) {
 
   val PREFIX = "task:"
   val ID_DELIMITER = ":"
@@ -217,4 +215,4 @@ private[state] class LegacyTaskStore(store: PersistentStore) {
   }
 
 }
-*/
+

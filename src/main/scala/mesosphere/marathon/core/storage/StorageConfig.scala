@@ -8,7 +8,7 @@ import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.{ Config, ConfigMemorySize }
 import mesosphere.marathon.ZookeeperConf
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, EntityStoreCache, MarathonStore, MesosStateStore, PersistentStore, ZKStore }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store._
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
@@ -43,6 +43,12 @@ sealed trait LegacyStorageConfig extends StorageConfig {
     val marathonStore = new MarathonStore[T](store, metrics, newState, prefix)
     if (enableCache) new EntityStoreCache[T](marathonStore) else marathonStore
   }
+}
+
+// only for testing
+private[storage] case class LegacyInMemConfig(maxVersions: Int) extends LegacyStorageConfig {
+  override protected[storage] val store: PersistentStore = new InMemoryStore()
+  override val enableCache: Boolean = false
 }
 
 case class TwitterZk(

@@ -23,7 +23,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   *
   * Does nothing unless Legacy Storage and New Storage are configured.
   */
-class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
+class MigrationTo1_2_PersistenceStore(migration: Migration)(implicit
   executionContext: ExecutionContext,
     mat: Materializer,
     metrics: Metrics) extends StrictLogging {
@@ -43,7 +43,7 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
           )
         }.getOrElse(Nil)
         val summary = await(Future.sequence(futures))
-        logger.info(s"Migrated ${summary.mkString} to 1.3")
+        logger.info(s"Migrated ${summary.mkString} to new format")
         Done
       case _ =>
         logger.info("Skipping Curator Persistence Migration (no legacy store/persistent store in use)")
@@ -117,7 +117,7 @@ class MigrationTo1_3_PersistentStore(migration: Migration)(implicit
     }.concat { Source.fromFuture(oldRepo.root()) }.mapAsync(1) { root =>
       // we store the roots one at a time with the current root last,
       // adding a new app version for every root (for simplicity)
-      groupRepository.storeRoot(root, root.apps.values.toVector, Nil)
+      groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil)
     }.runFold(0) { case (acc, _) => acc + 1 }.map("root versions" -> _)
     val result = await(resultFuture)
     val deleteOldAppsFuture = oldAppRepo.ids().mapAsync(Int.MaxValue)(oldAppRepo.delete).runWith(Sink.ignore).asTry

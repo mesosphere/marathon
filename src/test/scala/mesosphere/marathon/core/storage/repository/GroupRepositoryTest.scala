@@ -16,7 +16,7 @@ import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceSto
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 
 import scala.collection.immutable.Seq
@@ -138,10 +138,15 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val firstRoot = initialRoot.copy(apps = Map(app1.id -> app1))
         repo.storeRoot(firstRoot, Seq(app1), Nil).futureValue
 
-        val nextRoot = initialRoot.copy(apps = Map(app2.id -> app2))
+        val nextRoot = initialRoot.copy(apps = Map(app2.id -> app2), version = Timestamp(1))
         repo.storeRoot(nextRoot, Seq(app2), Seq(app1.id)).futureValue
 
         repo.rootVersion(firstRoot.version.toOffsetDateTime).futureValue.value should equal(firstRoot)
+        repo.rootVersions().runWith(Sink.seq).futureValue should contain theSameElementsAs
+          Seq(firstRoot.version.toOffsetDateTime, nextRoot.version.toOffsetDateTime)
+        repo.rootVersions().mapAsync(Int.MaxValue)(repo.rootVersion)
+          .collect { case Some(g) => g }.runWith(Sink.seq).futureValue should contain theSameElementsAs
+          Seq(firstRoot, nextRoot)
       }
     }
   }

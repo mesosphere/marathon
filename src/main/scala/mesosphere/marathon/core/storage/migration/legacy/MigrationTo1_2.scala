@@ -15,7 +15,7 @@ class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit ctx: Ex
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrate(): Future[Unit] =
-    legacyConfig.map { config =>
+    legacyConfig.fold(Future.successful(())) { config =>
       log.info("Start 1.2 migration")
 
       val entityStore = DeploymentRepository.legacyRepository(config.entityStore[DeploymentPlan]).store
@@ -32,5 +32,5 @@ class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit ctx: Ex
         log.info("Finished 1.2 migration")
         Future.successful(())
       }
-    }.getOrElse(Future.successful(()))
+    }
 }

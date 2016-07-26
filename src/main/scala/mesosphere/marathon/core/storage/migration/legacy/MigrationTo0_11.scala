@@ -22,9 +22,12 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrateApps(): Future[Unit] = {
-    log.info("Start 0.11 migration")
+    legacyConfig.fold {
+      log.info("Skipped 0.11 migration, not a legacy store")
+      Future.successful(())
+    } { config =>
+      log.info("Start 0.11 migration")
 
-    legacyConfig.map { config =>
       val appRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], config.maxVersions)
       val groupRepository =
         GroupRepository.legacyRepository(config.entityStore[Group], config.maxVersions, appRepository)
@@ -38,9 +41,6 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
         appsWithVersions <- processApps(appRepository, appIds, rootGroup)
         _ <- storeUpdatedAppsInRootGroup(groupRepository, rootGroup, appsWithVersions)
       } yield log.info("Finished 0.11 migration")
-    }.getOrElse {
-      log.info("Skipped 0.11 migration, not a legacy store")
-      Future.successful(())
     }
   }
 
@@ -109,8 +109,7 @@ class MigrationTo0_11(legacyConfig: Option[LegacyStorageConfig])(implicit
           maybeNextApp <- loadApp(id, nextVersion)
           withVersionInfo = addVersionInfoToVersioned(maybeLastApp, nextVersion, maybeNextApp)
           storedResult <- withVersionInfo
-            .map((newApp: AppDefinition) => appRepository.store(newApp).map(_ => Some(newApp)))
-            .getOrElse(maybeLastAppFuture)
+            .fold(maybeLastAppFuture)((newApp: AppDefinition) => appRepository.store(newApp).map(_ => Some(newApp)))
         } yield storedResult
       }
     }

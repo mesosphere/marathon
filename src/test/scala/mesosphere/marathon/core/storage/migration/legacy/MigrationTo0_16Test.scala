@@ -1,15 +1,16 @@
-/*package mesosphere.marathon.core.storage.migration.legacy
+package mesosphere.marathon.core.storage.migration.legacy
 
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryStore, MarathonStore}
-import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
+import mesosphere.marathon.core.storage.LegacyInMemConfig
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.MarathonStore
+import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, GroupEntityRepository }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, PortDefinitions, Timestamp}
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, PortDefinitions, Timestamp }
 import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.marathon.{MarathonSpec, Protos}
-import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{GivenWhenThen, Matchers}
+import mesosphere.marathon.{ MarathonSpec, Protos }
+import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
@@ -18,16 +19,19 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
   import mesosphere.FutureTestSupport._
 
   class Fixture {
+    implicit val ctx = ExecutionContext.global
     implicit lazy val metrics = new Metrics(new MetricRegistry)
-    lazy val store = new InMemoryStore()
+    val maxVersions = 25
+    lazy val config = LegacyInMemConfig(maxVersions)
+    lazy val store = config.store
 
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
-    lazy val appRepo = new AppEntityRepository(appStore, maxVersions = 0)(ExecutionContext.global, metrics)
+    lazy val appRepo = new AppEntityRepository(appStore, maxVersions = maxVersions)(ExecutionContext.global, metrics)
 
     lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
-    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = 0, appRepo)
+    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = maxVersions, appRepo)
 
-    lazy val migration = new MigrationTo0_16(groupRepository = groupRepo, appRepository = appRepo)
+    lazy val migration = new MigrationTo0_16(Some(config))
   }
 
   val emptyGroup = Group.empty
@@ -50,6 +54,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
   }
 
   test("an app and all its revisions are migrated") {
+    import PathId._
     val f = new Fixture
 
     def appProtoInNewFormatAsserts(proto: Protos.ServiceDefinition) = {
@@ -60,9 +65,11 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
 
     def appProtoIsInNewFormat(version: Option[Long]): Unit = {
       def fetchAppProto(version: Option[Long]): Protos.ServiceDefinition = {
-        val suffix = version.map { version => s":${Timestamp(version)}" }.getOrElse("")
-        val entity = f.store.load(s"app:test$suffix").futureValue.get
-        Protos.ServiceDefinition.parseFrom(entity.bytes.toArray)
+        version.fold {
+          f.appRepo.get("test".toRootPath).futureValue.value.toProto
+        } { v =>
+          f.appRepo.getVersion("test".toRootPath, Timestamp(v).toOffsetDateTime).futureValue.value.toProto
+        }
       }
 
       appProtoInNewFormatAsserts(fetchAppProto(version))
@@ -70,13 +77,15 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
 
     def groupProtoIsInNewFormat(version: Option[Long]): Unit = {
       def fetchGroupProto(version: Option[Long]): Protos.GroupDefinition = {
-        val suffix = version.map { version => s":${Timestamp(version)}" }.getOrElse("")
-        val entity = f.store.load(s"group:${GroupEntityRepository.ZkRootName}$suffix").futureValue.get
-        Protos.GroupDefinition.parseFrom(entity.bytes.toArray)
+        version.fold {
+          f.groupRepo.root().futureValue.toProto
+        } { v =>
+          f.groupRepo.rootVersion(Timestamp(v).toOffsetDateTime).futureValue.value.toProto
+        }
       }
 
       val proto = fetchGroupProto(version)
-      proto.getAppsList.asScala.foreach(appProtoInNewFormatAsserts)
+      proto.getDeprecatedAppsList.asScala.foreach(appProtoInNewFormatAsserts)
     }
 
     val appV1 = deprecatedAppDefinition(1)
@@ -133,4 +142,3 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     }
   }
 }
-*/ 

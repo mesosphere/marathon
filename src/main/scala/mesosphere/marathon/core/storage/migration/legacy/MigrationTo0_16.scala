@@ -28,7 +28,7 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def migrate(): Future[Unit] =
-    legacyConfig.map { config =>
+    legacyConfig.fold(Future.successful(())) { config =>
       async {
         log.info("Start 0.16 migration")
         val appRepository = AppRepository.legacyRepository(config.entityStore[AppDefinition], config.maxVersions)
@@ -58,5 +58,5 @@ class MigrationTo0_16(legacyConfig: Option[LegacyStorageConfig])(implicit
         log.info("Finished 0.16 migration")
         ()
       }
-    }.getOrElse(Future.successful(()))
+    }
 }

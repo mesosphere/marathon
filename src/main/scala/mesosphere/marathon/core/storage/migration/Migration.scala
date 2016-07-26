@@ -91,8 +91,8 @@ class Migration(
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.2", e)
         }
       },
-      StorageVersions(1, 3, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
-        new MigrationTo1_3_PersistentStore(this).migrate().recover {
+      StorageVersions(1, 2, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
+        new MigrationTo1_2_PersistenceStore(this).migrate().recover {
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.3", e)
         }
       }
@@ -110,36 +110,36 @@ class Migration(
     }
   }
 
+  // scalastyle:off
   def migrate(): List[StorageVersion] = {
     val result = async {
       val legacyStore = await(legacyStoreFuture)
-      // get the version out of persistence store, if that fails, get the version from the legacy store, if we're
-      // using a legacy store.
-      val currentVersion = await {
-        persistenceStore.map(_.storageVersion()).orElse {
-          legacyStore.map(_.load(StorageVersionName).map {
-            case Some(v) => Some(StorageVersion.parseFrom(v.bytes.toArray))
-            case None => None
-          })
-        }.getOrElse(Future.successful(Some(StorageVersions.current)))
-      }
+      val currentVersion = await(getCurrentVersion(legacyStore))
 
-      val migrations = if (currentVersion.isDefined) {
-        // can't use foreach as await isn't usable in nested functions.
-        if (currentVersion.get < minSupportedStorageVersion) {
-          val msg = s"Migration from versions < $minSupportedStorageVersion is not supported. " +
-            s"Your version: ${currentVersion.get}"
+      val migrations = (currentVersion, persistenceStore) match {
+        case (Some(version), _) if version < minSupportedStorageVersion =>
+          val msg = s"Migration from versions < ${minSupportedStorageVersion.str} are not supported. " +
+            s"Your version: ${version.str}"
           throw new MigrationFailedException(msg)
-        } else {
-          val applied = applyMigrationSteps(currentVersion.get)
-          await(applied)
-        }
-      } else {
-        logger.info("No migration necessary - new database")
-        Nil
-      }
-      if (currentVersion.isEmpty || currentVersion.get < StorageVersions.current) {
-        await(storeCurrentVersion)
+        case (Some(version), None) if version.getFormat == StorageVersion.StorageFormat.PERSISTENCE_STORE =>
+          val msg = s"Migration from this storage format back to the legacy storage format" +
+            " is not supported."
+          throw new MigrationFailedException(msg)
+        case (Some(version), _) if version > StorageVersions.current =>
+          val msg = s"Migration from ${version.str} is not supported as it is newer" +
+            s" than ${StorageVersions.current.str}."
+          throw new MigrationFailedException(msg)
+        case (Some(version), _) if version < StorageVersions.current =>
+          val result = await(applyMigrationSteps(version))
+          await(storeCurrentVersion())
+          result
+        case (Some(version), _) if StorageVersions.eqIgnoreFormat(version, StorageVersions.current) =>
+          logger.info("No migration necessary, already at the current current version")
+          Nil
+        case _ =>
+          logger.info("No migration necessary, no version stored")
+          await(storeCurrentVersion())
+          Nil
       }
       await(closeLegacyStore)
       migrations
@@ -149,11 +149,25 @@ class Migration(
     }
 
     val migrations = Await.result(result, Duration.Inf)
-    logger.info(s"Migration successfully applied for version ${StorageVersions.current}")
+    logger.info(s"Migration successfully applied for version ${StorageVersions.current.str}")
     migrations
   }
+  // scalastyle:on
 
-  private def storeCurrentVersion: Future[Done] = async {
+  // get the version out of persistence store, if that fails, get the version from the legacy store, if we're
+  // using a legacy store.
+  private def getCurrentVersion(legacyStore: Option[PersistentStore]): Future[Option[StorageVersion]] = async {
+    await {
+      persistenceStore.map(_.storageVersion()).orElse {
+        legacyStore.map(_.load(StorageVersionName).map {
+          case Some(v) => Some(StorageVersion.parseFrom(v.bytes.toArray))
+          case None => None
+        })
+      }.getOrElse(Future.successful(Some(StorageVersions.current)))
+    }
+  }
+
+  private def storeCurrentVersion(): Future[Done] = async {
     val legacyStore = await(legacyStoreFuture)
     persistenceStore.map(_.setStorageVersion(StorageVersions.current)).orElse {
       val bytes = StorageVersions.current.toByteArray
@@ -189,6 +203,10 @@ object Migration {
 
 object StorageVersions {
   val VersionRegex = """^(\d+)\.(\d+)\.(\d+).*""".r
+
+  def eqIgnoreFormat(v1: StorageVersion, v2: StorageVersion): Boolean = {
+    v1.getMajor == v2.getMajor && v1.getMinor == v2.getMinor && v1.getPatch == v2.getPatch
+  }
 
   def apply(major: Int, minor: Int, patch: Int,
     format: StorageVersion.StorageFormat = StorageVersion.StorageFormat.LEGACY): StorageVersion = {

@@ -155,7 +155,7 @@ class DeploymentEntityRepository(private[storage] val store: EntityStore[Deploym
   metrics: Metrics)
     extends LegacyEntityRepository[String, DeploymentPlan](store, identity, identity, _.id) with DeploymentRepository
 
-class TaskEntityRepository(val store: EntityStore[MarathonTaskState])(implicit
+class TaskEntityRepository(private[storage] val store: EntityStore[MarathonTaskState])(implicit
   ctx: ExecutionContext = ExecutionContext.global,
   metrics: Metrics)
     extends TaskRepository with VersionedEntry {

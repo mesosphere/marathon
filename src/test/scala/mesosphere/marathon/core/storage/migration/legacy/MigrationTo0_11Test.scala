@@ -1,15 +1,15 @@
-/*package mesosphere.marathon.core.storage.migration.legacy
+package mesosphere.marathon.core.storage.migration.legacy
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryStore, MarathonStore}
-import mesosphere.marathon.core.storage.repository.impl.legacy.{AppEntityRepository, GroupEntityRepository}
+import mesosphere.marathon.core.storage.LegacyInMemConfig
+import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.test.MarathonActorSupport
-import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
 
@@ -17,15 +17,13 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
   import mesosphere.FutureTestSupport._
 
   class Fixture {
+    implicit val ctx = ExecutionContext.global
     implicit lazy val metrics = new Metrics(new MetricRegistry)
-    lazy val store = new InMemoryStore()
-    lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
-    lazy val appRepo = new AppEntityRepository(appStore, maxVersions = 0)(ExecutionContext.global, metrics)
-
-    lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
-    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = 0, appRepo)
-
-    lazy val migration = new MigrationTo0_11(groupRepository = groupRepo, appRepository = appRepo)
+    val maxVersions = 25
+    lazy val config = LegacyInMemConfig(maxVersions)
+    lazy val migration = new MigrationTo0_11(Some(config))
+    lazy val appRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], maxVersions)
+    lazy val groupRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, appRepo)
   }
 
   val emptyGroup = Group.empty
@@ -160,4 +158,3 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.getVersion(PathId("/test"), correctedAppV3.version.toOffsetDateTime).futureValue should be(Some(correctedAppV3))
   }
 }
-*/ 
