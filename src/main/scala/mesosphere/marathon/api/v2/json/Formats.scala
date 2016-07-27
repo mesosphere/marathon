@@ -4,6 +4,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
+import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.readiness.ReadinessCheck
@@ -14,6 +15,7 @@ import mesosphere.marathon.health.{ Health, HealthCheck }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
+import org.apache.mesos.Protos.ContainerInfo
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
 import org.apache.mesos.{ Protos => mesos }
 import play.api.data.validation.ValidationError
@@ -230,15 +232,6 @@ trait ContainerFormats {
     (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String])
   )(Container.Docker.PortMapping(_, _, _, _, _, _), unlift(Container.Docker.PortMapping.unapply))
 
-  implicit lazy val DockerFormat: Format[Container.Mask.Docker] = (
-    (__ \ "image").format[String] ~
-    (__ \ "network").formatNullable[DockerInfo.Network] ~
-    (__ \ "portMappings").formatNullable[Seq[Container.Docker.PortMapping]] ~
-    (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
-    (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
-    (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-  )(Container.Mask.Docker.withDefaultPortMappings(_, _, _, _, _, _), unlift(Container.Mask.Docker.unapply))
-
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
     enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mde")
 
@@ -262,20 +255,92 @@ trait ContainerFormats {
   implicit lazy val ContainerTypeFormat: Format[mesos.ContainerInfo.Type] =
     enumFormat(mesos.ContainerInfo.Type.valueOf, str => s"$str is not a valid container type")
 
-  implicit lazy val ContainerMaskFormat: Format[Container.Mask] = (
-    (__ \ "type").formatNullable[mesos.ContainerInfo.Type].withDefault(mesos.ContainerInfo.Type.DOCKER) ~
-    (__ \ "volumes").formatNullable[Seq[Volume]].withDefault(Nil) ~
-    (__ \ "docker").formatNullable[Container.Mask.Docker]
-  )(Container.Mask.apply, unlift(Container.Mask.unapply))
+  implicit lazy val ContainerReads: Reads[Container] = {
+    def container(
+      `type`: mesos.ContainerInfo.Type,
+      volumes: Seq[Volume],
+      docker: Option[DockerContainerParameters]): Container = {
+      `type` match {
+        case ContainerInfo.Type.MESOS =>
+          if (docker.isDefined) {
+            throw SerializationFailedException("Docker field is not empty")
+          }
 
-  implicit lazy val ContainerFormat: Format[Container] = Format(
-    Reads.of[Container.Mask].map(_.toContainer()),
-    new Writes[Container] {
-      override def writes(container: Container): JsValue = {
-        ContainerMaskFormat.writes(Container.Mask.fromContainer(container))
+          Container.Mesos(volumes)
+
+        case ContainerInfo.Type.DOCKER =>
+          if (docker.isEmpty) {
+            throw SerializationFailedException("Docker field is empty")
+          }
+
+          Container.Docker.withDefaultPortMappings(
+            volumes,
+            docker.get.image,
+            docker.get.network,
+            docker.get.portMappings,
+            docker.get.privileged,
+            docker.get.parameters,
+            docker.get.forcePullImage)
       }
     }
-  )
+
+    (
+      (__ \ "type").readNullable[mesos.ContainerInfo.Type].withDefault(mesos.ContainerInfo.Type.DOCKER) ~
+      (__ \ "volumes").readNullable[Seq[Volume]].withDefault(Nil) ~
+      (__ \ "docker").readNullable[DockerContainerParameters]
+    )(container(_, _, _))
+  }
+
+  implicit lazy val ContainerWriter: Writes[Container] = Writes { container =>
+    container match {
+      case m: Container.Mesos => MesosContainerWrites.writes(m)
+      case d: Container.Docker => DockerContainerWrites.writes(d)
+    }
+  }
+
+  implicit lazy val MesosContainerWrites: Writes[Container.Mesos] = Writes { m =>
+    Json.obj(
+      "type" -> mesos.ContainerInfo.Type.MESOS,
+      "volumes" -> m.volumes
+    )
+  }
+
+  implicit lazy val DockerContainerWrites: Writes[Container.Docker] = Writes { docker =>
+    def dockerValues(d: Container.Docker): JsObject = Json.obj(
+      "image" -> d.image,
+      "network" -> d.network,
+      "portMappings" -> d.portMappings,
+      "privileged" -> d.privileged,
+      "parameters" -> d.parameters,
+      "forcePullImage" -> d.forcePullImage
+    )
+    Json.obj(
+      "type" -> mesos.ContainerInfo.Type.DOCKER,
+      "volumes" -> docker.volumes,
+      "docker" -> dockerValues(docker)
+    )
+  }
+
+  /*
+   * Helpers
+   */
+
+  private[this] case class DockerContainerParameters(
+    image: String,
+    network: Option[ContainerInfo.DockerInfo.Network],
+    portMappings: Option[Seq[Container.Docker.PortMapping]],
+    privileged: Boolean,
+    parameters: Seq[Parameter],
+    forcePullImage: Boolean)
+
+  private[this] implicit lazy val DockerContainerParametersFormat: Format[DockerContainerParameters] = (
+    (__ \ "image").format[String] ~
+    (__ \ "network").formatNullable[DockerInfo.Network] ~
+    (__ \ "portMappings").formatNullable[Seq[Container.Docker.PortMapping]] ~
+    (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
+    (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
+    (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
+  )(DockerContainerParameters(_, _, _, _, _, _), unlift(DockerContainerParameters.unapply))
 }
 
 trait IpAddressFormats {

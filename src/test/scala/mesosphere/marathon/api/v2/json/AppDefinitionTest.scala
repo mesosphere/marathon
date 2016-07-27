@@ -155,7 +155,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     app = correct.copy(
-      container = Some(app.container.get.asInstanceOf[Docker].copy(
+      container = Some(Docker(
+        image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Some(Seq(
           Docker.PortMapping(8080, None, 0, "tcp", Some("foo"))
@@ -169,7 +170,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     app = correct.copy(
-      container = Some(app.container.get.asInstanceOf[Docker].copy(
+      container = Some(Docker(
+        image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
         portMappings = Some(Seq(
           Docker.PortMapping(8080, None, 0, "tcp", Some("foo"))
@@ -183,7 +185,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     app = correct.copy(
-      container = Some(app.container.get.asInstanceOf[Docker].copy(
+      container = Some(Docker(
+        image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Some(Seq(
           Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
@@ -199,7 +202,9 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     // unique port names for USER mode
     app = correct.copy(
-      container = Some(app.container.get.asInstanceOf[Docker].copy(
+      container = Some(Docker(
+        image = "mesosphere/marathon",
+        network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Some(Seq(
           Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
           Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))

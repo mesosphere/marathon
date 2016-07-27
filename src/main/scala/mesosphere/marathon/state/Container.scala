@@ -48,6 +48,32 @@ object Container {
 
   object Docker {
 
+    def withDefaultPortMappings(
+      volumes: Seq[Volume],
+      image: String = "",
+      network: Option[ContainerInfo.DockerInfo.Network] = None,
+      portMappings: Option[Seq[Docker.PortMapping]] = None,
+      privileged: Boolean = false,
+      parameters: Seq[Parameter] = Nil,
+      forcePullImage: Boolean = false): Docker = Docker(
+      volumes = volumes,
+      image = image,
+      network = network,
+      portMappings = network match {
+        case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.BRIDGE =>
+          portMappings.map(_.map { m =>
+            m match {
+              // backwards compat: when in BRIDGE mode, missing host ports default to zero
+              case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(PortMapping.HostPortDefault), y, z, w, a)
+              case _ => m
+            }
+          })
+        case _ => portMappings
+      },
+      privileged = privileged,
+      parameters = parameters,
+      forcePullImage = forcePullImage)
+
     /**
       * @param containerPort The container port to expose
       * @param hostPort      The host port to bind
@@ -68,6 +94,8 @@ object Container {
     object PortMapping {
       val TCP = "tcp"
       val UDP = "udp"
+
+      val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
 
       implicit val uniqueProtocols: Validator[Iterable[String]] =
         isTrue[Iterable[String]]("protocols must be unique.") { protocols =>
@@ -116,116 +144,6 @@ object Container {
         case docker: Docker => validate(docker)(Docker.validDockerContainer)
       }
     } and validGeneralContainer
-  }
-
-  /**
-    * An intermediate structure that parallels the external JSON API for containers.
-    * This allows for validation of all JSON input combinations,
-    * before they have been reduced to a single outcome of type Container
-    * which would cover up too many possible error conditions.
-    * Furthrmore, we can provide trivial Formats implementation via apply/unapply.
-    */
-  case class Mask(
-      `type`: ContainerInfo.Type,
-      volumes: Seq[Volume] = Nil,
-      docker: Option[Mask.Docker]) {
-
-    def toContainer(): Container = {
-      // When writing tests against this validation,
-      // note that paths begin at the container level (not the app level)
-      // and thus do not contain the prefix "/container".
-      validateOrThrow(this)
-
-      docker match {
-        case Some(d) =>
-          Container.Docker(
-            volumes,
-            d.image,
-            d.network,
-            d.portMappings,
-            d.privileged,
-            d.parameters,
-            d.forcePullImage
-          )
-        case _ =>
-          Container.Mesos(volumes)
-      }
-    }
-  }
-
-  object Mask {
-
-    def fromContainer(container: Container): Mask = {
-      container match {
-        case m: Container.Mesos =>
-          Mask(ContainerInfo.Type.MESOS, m.volumes, None)
-        case d: Container.Docker =>
-          Mask(ContainerInfo.Type.DOCKER, d.volumes, Some(Mask.Docker(
-            d.image,
-            d.network,
-            d.portMappings,
-            d.privileged,
-            d.parameters,
-            d.forcePullImage
-          )))
-      }
-    }
-
-    case class Docker(
-      image: String = "",
-      network: Option[ContainerInfo.DockerInfo.Network] = None,
-      portMappings: Option[Seq[Container.Docker.PortMapping]] = None,
-      privileged: Boolean = false,
-      parameters: Seq[Parameter] = Nil,
-      forcePullImage: Boolean = false)
-
-    object Docker {
-      import Container.Docker.PortMapping
-
-      val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
-
-      def withDefaultPortMappings(
-        image: String = "",
-        network: Option[ContainerInfo.DockerInfo.Network] = None,
-        portMappings: Option[Seq[Container.Docker.PortMapping]] = None,
-        privileged: Boolean = false,
-        parameters: Seq[Parameter] = Nil,
-        forcePullImage: Boolean = false): Docker = Docker(
-        image = image,
-        network = network,
-        portMappings = network match {
-          case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.BRIDGE =>
-            portMappings.map(_.map { m =>
-              m match {
-                // backwards compat: when in BRIDGE mode, missing host ports default to zero
-                case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(HostPortDefault), y, z, w, a)
-                case _ => m
-              }
-            })
-          case _ => portMappings
-        },
-        privileged = privileged,
-        parameters = parameters,
-        forcePullImage = forcePullImage)
-    }
-
-    implicit val validContainerMask: Validator[Container.Mask] = {
-      val validDockerContainerMask: Validator[Container.Mask] = validator[Container.Mask] { mask =>
-        mask.docker is notEmpty
-      }
-
-      val validMesosContainerMask: Validator[Container.Mask] = validator[Container.Mask] { mask =>
-        mask.docker is empty
-      }
-
-      new Validator[Container.Mask] {
-        override def apply(mask: Container.Mask): Result = mask.`type` match {
-          case ContainerInfo.Type.MESOS => validate(mask)(validMesosContainerMask)
-          case ContainerInfo.Type.DOCKER => validate(mask)(validDockerContainerMask)
-          case _ => Failure(Set(RuleViolation(mask.`type`, "unknown", None)))
-        }
-      }
-    }
   }
 }
 

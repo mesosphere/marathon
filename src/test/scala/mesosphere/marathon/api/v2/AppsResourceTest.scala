@@ -5,7 +5,7 @@ import javax.ws.rs.core.Response
 
 import akka.event.EventStream
 import mesosphere.marathon._
-import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture, TestGroupManagerFixture }
+import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
@@ -334,17 +334,18 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app in BRIDGE mode w/ Docker") {
     Given("An app and group")
+    val container = Container.Docker(
+      network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+      image = "jdef/helpme",
+      portMappings = Some(Seq(
+        Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+      ))
+    )
+
     val app = AppDefinition(
       id = PathId("/app"),
       cmd = Some("cmd"),
-      container = Some(Container.Docker(
-        network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-        image = "jdef/helpme",
-        portMappings = Some(Seq(
-          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-        ))
-      )
-      ),
+      container = Some(container),
       portDefinitions = Seq.empty
     )
 
@@ -367,7 +368,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val expected = AppInfo(
       app.copy(
         versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
-        container = Some(app.container.get.asInstanceOf[Container.Docker].copy(
+        container = Some(container.copy(
           portMappings = Some(Seq(
             Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
           ))
@@ -650,13 +651,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |  }
         |}""".stripMargin.getBytes("UTF-8")
 
-    When("The application is updated")
-    val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
-
-    Then("The return code indicates a validation error for container.docker")
-    response.getStatus should be(422)
-    response.getEntity.toString should include("/docker")
-    response.getEntity.toString should include("must not be empty")
+    Then("An serialization exception is thrown")
+    intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
   }
 
   def createAppWithVolumes(`type`: String, volumes: String): Response = {
@@ -1001,13 +997,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |  }
         |}""".stripMargin.getBytes("UTF-8")
 
-    When("The application is updated")
-    val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
-
-    Then("The return code indicates a validation error for container.docker")
-    response.getStatus should be(422)
-    response.getEntity.toString should include("/docker")
-    response.getEntity.toString should include("must be empty")
+    Then("A serialization exception is thrown")
+    intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
   }
 
   test("Restart an existing app") {

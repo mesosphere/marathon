@@ -1,6 +1,6 @@
 package mesosphere.marathon.api.serialization
 
-import mesosphere.marathon.Protos
+import mesosphere.marathon.{ Protos, SerializationFailedException }
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state._
@@ -27,6 +27,10 @@ object ContainerSerializer {
 
   def fromProto(proto: Protos.ExtendedContainerInfo): Container = {
     if (proto.hasDocker) {
+      if (proto.getType != mesos.Protos.ContainerInfo.Type.DOCKER) {
+        throw new SerializationFailedException(s"Unable to parse ${proto.getType}")
+      }
+
       val d = proto.getDocker
       val pms = d.getPortMappingsList.asScala
       Container.Docker(
@@ -39,6 +43,10 @@ object ContainerSerializer {
         forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
       )
     } else {
+      if (proto.getType != mesos.Protos.ContainerInfo.Type.MESOS) {
+        throw new SerializationFailedException(s"Unable to parse ${proto.getType}")
+      }
+
       Container.Mesos(
         volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq]
       )
