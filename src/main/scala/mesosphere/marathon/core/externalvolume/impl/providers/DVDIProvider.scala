@@ -25,16 +25,6 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
   override def validations: ExternalVolumeValidations = DVDIProviderValidations
 
   object Builders {
-    /**
-      * see [[mesosphere.marathon.api.serialization.ContainerSerializer]].
-      */
-    def toDockerizedMesosVolume(volume: ExternalVolume): MesosVolume =
-      MesosVolume.newBuilder
-        .setContainerPath(volume.containerPath)
-        .setHostPath(volume.external.name)
-        .setMode(volume.mode)
-        .build
-
     def dockerVolumeParameters(volume: ExternalVolume): Seq[Parameter] = {
       import OptionLabelPatterns._
       val prefix: String = name + OptionNamespaceSeparator
@@ -67,12 +57,16 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
       }
     }
 
-    def toUnifiedMesosVolume(volume: ExternalVolume): MesosVolume = {
+    def toUnifiedContainerVolume(volume: ExternalVolume): MesosVolume = {
       val driverName = volume.external.options(driverOption)
       val volBuilder = MesosVolume.Source.DockerVolume.newBuilder
         .setDriver(driverName)
         .setName(volume.external.name)
+
+      // these parameters are only really used for the mesos containerizer, not the docker
+      // containerizer. the docker containerizer simply ignores them.
       applyOptions(volBuilder, dockerVolumeParameters(volume))
+
       MesosVolume.newBuilder
         .setContainerPath(volume.containerPath)
         .setMode(volume.mode)
@@ -83,18 +77,8 @@ private[impl] case object DVDIProvider extends ExternalVolumeProvider {
     }
   } // Builders
 
-  override def build(builder: ContainerInfo.Builder, ev: ExternalVolume): Unit = {
-    // special behavior for docker vs. mesos containers
-    // - docker containerizer: serialize volumes into mesos proto
-    // - docker containerizer: specify "volumeDriver" for the container
-    if (builder.getType == ContainerInfo.Type.DOCKER && builder.hasDocker) {
-      val driverName = ev.external.options(driverOption)
-      builder.setDocker(builder.getDocker.toBuilder.setVolumeDriver(driverName).build)
-      builder.addVolumes(Builders.toDockerizedMesosVolume(ev))
-    } else if (builder.getType == ContainerInfo.Type.MESOS) {
-      builder.addVolumes(Builders.toUnifiedMesosVolume(ev))
-    }
-  }
+  override def build(builder: ContainerInfo.Builder, ev: ExternalVolume): Unit =
+    builder.addVolumes(Builders.toUnifiedContainerVolume(ev))
 
   val driverOption = "dvdi/driver"
   val quotedDriverOption = '"' + driverOption + '"'
@@ -182,7 +166,8 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         volume.external.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
         volume.containerPath is notOneOf(DotPaths: _*)
         // TODO(jdef) change this once docker containerizer supports relative containerPaths
-        volume.containerPath should matchRegexFully(AbsolutePathPattern)
+        volume.containerPath should
+          matchRegexWithFailureMessage(AbsolutePathPattern, "value must not starts with \"/\"")
       }
 
       def ifDVDIVolume(vtor: Validator[ExternalVolume]): Validator[ExternalVolume] = conditional(matchesProvider)(vtor)

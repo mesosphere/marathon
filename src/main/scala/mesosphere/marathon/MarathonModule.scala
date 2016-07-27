@@ -8,7 +8,6 @@ import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.event.EventStream
 import akka.routing.RoundRobinPool
-import com.codahale.metrics.Gauge
 import com.google.inject._
 import com.google.inject.name.Names
 import com.twitter.util.JavaTimer
@@ -17,28 +16,32 @@ import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.launcher.TaskOpFactory
-import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan }
-import mesosphere.mesos.{ InMemRejectOfferCollector, RejectOfferCollector }
+import mesosphere.marathon.core.heartbeat._
 import mesosphere.util.state.memory.InMemoryStore
 import mesosphere.util.state.mesos.MesosStateStore
 import mesosphere.util.state.zk.{ CompressionConf, ZKStore }
 import mesosphere.util.state.{ FrameworkId, FrameworkIdUtil, PersistentStore, _ }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import org.apache.mesos.Scheduler
 import org.apache.mesos.state.ZooKeeperState
 import org.slf4j.LoggerFactory
 
+import mesosphere.marathon.core.launcher.TaskOpFactory
+import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
+import mesosphere.mesos.{ InMemRejectOfferCollector, RejectOfferCollector }
+
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
@@ -56,6 +59,8 @@ object ModuleNames {
   final val STORE_GROUP = "GroupStore"
   final val STORE_TASK = "TaskStore"
   final val STORE_EVENT_SUBSCRIBERS = "EventSubscriberStore"
+
+  final val MESOS_HEARTBEAT_ACTOR = "MesosHeartbeatActor"
 }
 
 class MarathonModule(conf: MarathonConf, http: HttpConf)
@@ -69,24 +74,38 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[LeaderProxyConf]).toInstance(conf)
     bind(classOf[ZookeeperConf]).toInstance(conf)
 
-    // needs to be eager to break circular dependencies
-    bind(classOf[SchedulerCallbacks]).to(classOf[SchedulerCallbacksServiceAdapter]).asEagerSingleton()
+    // MesosHeartbeatMonitor decorates MarathonScheduler
+    bind(classOf[Scheduler]).to(classOf[MesosHeartbeatMonitor]).in(Scopes.SINGLETON)
+    bind(classOf[Scheduler])
+      .annotatedWith(Names.named(MesosHeartbeatMonitor.BASE))
+      .to(classOf[MarathonScheduler])
+      .in(Scopes.SINGLETON)
 
     bind(classOf[MarathonSchedulerDriverHolder]).in(Scopes.SINGLETON)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
-    bind(classOf[MarathonScheduler]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
 
     bind(classOf[RejectOfferCollector]).to(classOf[InMemRejectOfferCollector]).in(Scopes.SINGLETON)
     bind(classOf[TaskOpFactory]).to(classOf[TaskOpFactoryImpl]).in(Scopes.SINGLETON)
 
-    bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).in(Scopes.SINGLETON)
+    bind(classOf[DeploymentService]).to(classOf[MarathonSchedulerService])
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.SERVER_SET_PATH))
       .toInstance(conf.zooKeeperServerSetPath)
 
     bind(classOf[Metrics]).in(Scopes.SINGLETON)
+  }
+
+  @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR)
+  @Provides
+  @Singleton
+  def provideMesosHeartbeatActor(system: ActorSystem): ActorRef = {
+    system.actorOf(Heartbeat.props(Heartbeat.Config(
+      FiniteDuration(conf.mesosHeartbeatInterval.get.getOrElse(
+        MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_INTERVAL_MS), TimeUnit.MILLISECONDS),
+      conf.mesosHeartbeatFailureThreshold.get.getOrElse(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD)
+    )), ModuleNames.MESOS_HEARTBEAT_ACTOR)
   }
 
   @Provides
@@ -276,49 +295,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
       maxParallel = 1,
       maxQueued = conf.internalMaxQueuedRootGroupUpdates()
     )
-  }
-
-  @Provides
-  @Singleton
-  def provideGroupManager(
-    @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
-    scheduler: MarathonSchedulerService,
-    groupRepo: GroupRepository,
-    appRepo: AppRepository,
-    storage: StorageProvider,
-    eventBus: EventStream,
-    metrics: Metrics): GroupManager = {
-    val groupManager: GroupManager = new GroupManager(
-      serializeUpdates,
-      scheduler,
-      groupRepo,
-      appRepo,
-      storage,
-      conf,
-      eventBus
-    )
-
-    metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
-      override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), conf.zkTimeoutDuration).transitiveApps.size
-      }
-    })
-
-    metrics.gauge("service.mesosphere.marathon.group.count", new Gauge[Int] {
-      override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), conf.zkTimeoutDuration).transitiveGroups.size
-      }
-    })
-
-    metrics.gauge("service.mesosphere.marathon.uptime", new Gauge[Long] {
-      val startedAt = System.currentTimeMillis()
-
-      override def getValue: Long = {
-        System.currentTimeMillis() - startedAt
-      }
-    })
-
-    groupManager
   }
 
   // persistence functionality ----------------

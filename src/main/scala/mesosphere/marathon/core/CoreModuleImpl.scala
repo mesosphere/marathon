@@ -11,9 +11,11 @@ import mesosphere.marathon.core.base.{ ActorsModule, Clock, ShutdownHooks }
 import mesosphere.marathon.core.election._
 import mesosphere.marathon.core.event.{ EventModule, EventSubscribers }
 import mesosphere.marathon.core.flow.FlowModule
+import mesosphere.marathon.core.health.HealthModule
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
+import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
@@ -24,9 +26,11 @@ import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
+import mesosphere.marathon.{ DeploymentService, MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
+import mesosphere.util.CapConcurrentExecutions
 import mesosphere.mesos.RejectOfferCollector
 
 import scala.util.Random
@@ -52,6 +56,9 @@ class CoreModuleImpl @Inject() (
   taskFailureRepository: TaskFailureRepository,
   taskStatusUpdateProcessor: Provider[TaskStatusUpdateProcessor],
   clock: Clock,
+  storage: StorageProvider,
+  scheduler: Provider[DeploymentService],
+  @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
   taskStatusUpdateSteps: Seq[TaskUpdateStep],
   rejectionCollector: RejectOfferCollector,
   @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) eventSubscribersStore: EntityStore[EventSubscribers])
@@ -168,6 +175,24 @@ class CoreModuleImpl @Inject() (
 
   override lazy val historyModule: HistoryModule = new HistoryModule(eventStream, actorSystem, taskFailureRepository)
 
+  // HEALTH CHECKS
+
+  override lazy val healthModule: HealthModule = new HealthModule(
+    actorSystem, marathonSchedulerDriverHolder, eventStream, taskTrackerModule.taskTracker, appRepository, marathonConf)
+
+  // GROUP MANAGER
+
+  override lazy val groupManagerModule: GroupManagerModule = new GroupManagerModule(
+    marathonConf,
+    leadershipModule,
+    serializeUpdates,
+    scheduler,
+    groupRepository,
+    appRepository,
+    storage,
+    eventStream,
+    metrics)
+
   // GREEDY INSTANTIATION
   //
   // Greedily instantiate everything.
@@ -190,4 +215,5 @@ class CoreModuleImpl @Inject() (
   offerMatcherReconcilerModule.start()
   eventModule
   historyModule
+  healthModule
 }

@@ -1,16 +1,22 @@
-package mesosphere.marathon.state
+package mesosphere.marathon.core.group.impl
 
 import java.util.concurrent.atomic.AtomicInteger
+import javax.inject.Provider
 
+import akka.actor.ActorSystem
 import akka.event.EventStream
+import akka.pattern.ask
+import akka.testkit.TestActorRef
+import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.test.MarathonActorSupport
-import mesosphere.util.{ CapConcurrentExecutionsMetrics, CapConcurrentExecutions }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
 import mesosphere.marathon._
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.state._
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopConf
@@ -21,40 +27,9 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Matchers with MarathonSpec {
+class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec {
 
   val actorId = new AtomicInteger(0)
-
-  class Fixture {
-    lazy val scheduler = mock[MarathonSchedulerService]
-    lazy val appRepo = mock[AppRepository]
-    lazy val groupRepo = mock[GroupRepository]
-    lazy val eventBus = mock[EventStream]
-    lazy val provider = mock[StorageProvider]
-    lazy val config = {
-      new ScallopConf(Seq("--master", "foo")) with MarathonConf {
-        verify()
-      }
-    }
-
-    lazy val metricRegistry = new MetricRegistry()
-    lazy val metrics = new Metrics(metricRegistry)
-    lazy val capMetrics = new CapConcurrentExecutionsMetrics(metrics, classOf[GroupManager])
-
-    def serializeExecutions() = CapConcurrentExecutions(
-      capMetrics,
-      system,
-      s"serializeGroupUpdates${actorId.incrementAndGet()}",
-      maxParallel = 1,
-      maxQueued = 10
-    )
-
-    lazy val manager = new GroupManager(
-      serializeUpdates = serializeExecutions(), scheduler = scheduler,
-      groupRepo = groupRepo, appRepo = appRepo,
-      storage = provider, config = config, eventBus = eventBus)
-
-  }
 
   test("Assign dynamic app ports") {
     val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0))
@@ -219,7 +194,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
         network = Some(Network.BRIDGE),
         portMappings = Some(Seq(
           PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 80, protocol = "tcp"),
-          PortMapping (containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
+          PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
         ))
       ))
     )
@@ -310,7 +285,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
 
     intercept[ValidationFailedException] {
-      Await.result(f.manager.update(group.id, _ => group), 3.seconds)
+      Await.result(f.manager ? update(group.id, _ => group), 3.seconds)
     }.printStackTrace()
 
     verify(f.groupRepo, times(0)).store(any(), any())
@@ -330,7 +305,7 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     when(f.appRepo.store(any())).thenReturn(Future.successful(appWithVersionInfo))
     when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupWithVersionInfo))
 
-    Await.result(f.manager.update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
+    Await.result(f.manager ? update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
 
     verify(f.groupRepo).store(GroupRepository.zkRootName, groupWithVersionInfo)
     verify(f.appRepo).store(appWithVersionInfo)
@@ -348,13 +323,56 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
     when(f.appRepo.expunge(any())).thenReturn(Future.successful(Seq(true)))
     when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupEmpty))
 
-    Await.result(f.manager.update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
+    Await.result(f.manager ? update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
     verify(f.groupRepo).store(GroupRepository.zkRootName, groupEmpty)
     verify(f.appRepo).expunge(app.id)
   }
 
-  def manager(servicePortsRange: Range) = {
+  private[this] implicit val timeout: Timeout = 3.seconds
+
+  class Fixture {
+    implicit val system = ActorSystem()
+    lazy val scheduler = mock[MarathonSchedulerService]
+    lazy val appRepo = mock[AppRepository]
+    lazy val groupRepo = mock[GroupRepository]
+    lazy val eventBus = mock[EventStream]
+    lazy val provider = mock[StorageProvider]
+    lazy val config = {
+      new ScallopConf(Seq("--master", "foo")) with MarathonConf {
+        verify()
+      }
+    }
+
+    lazy val metricRegistry = new MetricRegistry()
+    lazy val metrics = new Metrics(metricRegistry)
+    lazy val capMetrics = new CapConcurrentExecutionsMetrics(metrics, classOf[GroupManager])
+
+    private[this] def serializeExecutions() = CapConcurrentExecutions(
+      capMetrics,
+      system,
+      s"serializeGroupUpdates${actorId.incrementAndGet()}",
+      maxParallel = 1,
+      maxQueued = 10
+    )
+
+    val schedulerProvider = new Provider[DeploymentService] {
+      override def get() = scheduler
+    }
+
+    val props = GroupManagerActor.props(
+      serializeExecutions(),
+      schedulerProvider,
+      groupRepo,
+      appRepo,
+      provider,
+      config,
+      eventBus)
+
+    lazy val manager = system.actorOf(props)
+  }
+
+  private def manager(servicePortsRange: Range): GroupManagerActor = {
     val f = new Fixture {
       override lazy val config = new ScallopConf(Seq(
         "--master", "foo",
@@ -363,8 +381,20 @@ class GroupManagerTest extends MarathonActorSupport with MockitoSugar with Match
         "--local_port_max", (servicePortsRange.end + 1).toString)) with MarathonConf {
         verify()
       }
+
+      override lazy val manager = TestActorRef(props)
     }
 
-    f.manager
+    f.manager.underlyingActor
   }
+
+  private def update(
+    gid: PathId,
+    fn: (Group) => Group,
+    version: Timestamp = Timestamp.now()) = GroupManagerActor.GetUpgrade(
+    gid,
+    _.update(gid, fn, version),
+    version,
+    false,
+    Map.empty)
 }

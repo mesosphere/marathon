@@ -295,7 +295,55 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           docker = Some(Docker()), // must have this to force docker container serialization
           `type` = MesosProtos.ContainerInfo.Type.DOCKER,
           volumes = Seq[Volume](
-            DockerVolume("/container/path", "namedFoo", MesosProtos.Volume.Mode.RW)
+            DockerVolume("/container/path", "relativeDirName", MesosProtos.Volume.Mode.RW)
+          )
+        ))
+      )
+    )
+
+    val Some((taskInfo, _)) = task
+    def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
+    assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
+
+    // check protobuf construction, should be a ContainerInfo w/ volumes
+    def vol(path: String): Option[MesosProtos.Volume] = {
+      if (taskInfo.hasContainer) {
+        taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == path)
+      } else None
+    }
+
+    assert(taskInfo.getContainer.getVolumesList.size > 0, "check that container has volumes declared")
+    assert(!taskInfo.getContainer.getDocker.hasVolumeDriver, "docker spec should not define a volume driver")
+    assert(
+      vol("relativeDirName").isDefined,
+      s"missing expected volume relativeDirName, got instead: ${taskInfo.getContainer.getVolumesList}")
+  }
+
+  test("build creates task for DOCKER container using host-local and external [DockerVolume] volumes") {
+    import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
+    val offer = MarathonTestHelper.makeBasicOffer(
+      cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
+    ).build
+
+    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1.0,
+        mem = 32.0,
+        executor = "//cmd",
+        portDefinitions = Nil,
+        container = Some(Container(
+          `type` = MesosProtos.ContainerInfo.Type.DOCKER,
+          docker = Some(Docker()), // must have this to force docker container serialization
+          volumes = Seq[Volume](
+            ExternalVolume("/container/path", ExternalVolumeInfo(
+              name = "namedFoo",
+              provider = "dvdi",
+              options = Map[String, String]("dvdi/driver" -> "bar")
+            ), MesosProtos.Volume.Mode.RW),
+            DockerVolume("/container/path", "relativeDirName", MesosProtos.Volume.Mode.RW)
           )
         ))
       )
@@ -312,16 +360,29 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       } else None
     }
 
-    assert(taskInfo.getContainer.getVolumesList.size > 0, "check that container has volumes declared")
+    assert(taskInfo.getContainer.getVolumesList.size == 2, "check that container has volumes declared")
     assert(!taskInfo.getContainer.getDocker.hasVolumeDriver, "docker spec should not define a volume driver")
+
     assert(
-      vol("namedFoo").isDefined,
-      s"missing expected volume namedFoo, got instead: ${taskInfo.getContainer.getVolumesList}")
+      taskInfo.getContainer.getVolumesList.size == 2,
+      s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}")
+
+    val vol1 = volumeWith(
+      containerPath("/container/path"),
+      mode(MesosProtos.Volume.Mode.RW),
+      volumeRef("bar", "namedFoo")
+    )
+
+    val got1 = taskInfo.getContainer.getVolumes(0)
+    assert(vol1.equals(got1), s"expected volume $vol1, got instead: $got1")
+
+    assert(
+      vol("relativeDirName").isDefined,
+      s"missing expected volume relativeDirName, got instead: ${taskInfo.getContainer.getVolumesList}")
   }
 
-  // TODO(jdef) test both dockerhostvol and persistent extvol in the same docker container
-
   test("build creates task for DOCKER container using external [DockerVolume] volumes") {
+    import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
     val offer = MarathonTestHelper.makeBasicOffer(
       cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
     ).build
@@ -347,7 +408,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
             ExternalVolume("/container/path2", ExternalVolumeInfo(
               name = "namedEdc",
               provider = "dvdi",
-              options = Map[String, String]("dvdi/driver" -> "ert")
+              options = Map[String, String]("dvdi/driver" -> "ert", "dvdi/boo" -> "baa")
             ), MesosProtos.Volume.Mode.RO)
           )
         ))
@@ -358,22 +419,31 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
     assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
-    // check protobuf construction, should be a ContainerInfo w/ volumes
-    def vol(name: String): Option[MesosProtos.Volume] = {
-      if (taskInfo.hasContainer) {
-        taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == name)
-      } else None
-    }
+    assert(taskInfo.getContainer.getVolumesList.size == 2, "check that container has volumes declared")
+    assert(!taskInfo.getContainer.getDocker.hasVolumeDriver, "docker spec should not define a volume driver")
 
-    assert(taskInfo.getContainer.getVolumesList.size > 0, "check that container has volumes declared")
-    assert(taskInfo.getContainer.getDocker.hasVolumeDriver, "docker spec should define a volume driver")
-    assert(taskInfo.getContainer.getDocker.getVolumeDriver == "ert", "docker spec should choose ert driver")
+    // check protobuf construction, should be a ContainerInfo w/ no volumes, w/ envvar
     assert(
-      vol("namedFoo").isDefined,
-      s"missing expected volume namedFoo, got instead: ${taskInfo.getContainer.getVolumesList}")
-    assert(
-      vol("namedEdc").isDefined,
-      s"missing expected volume namedFoo, got instead: ${taskInfo.getContainer.getVolumesList}")
+      taskInfo.getContainer.getVolumesList.size == 2,
+      s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}")
+
+    val vol1 = volumeWith(
+      containerPath("/container/path"),
+      mode(MesosProtos.Volume.Mode.RW),
+      volumeRef("bar", "namedFoo")
+    )
+
+    val got1 = taskInfo.getContainer.getVolumes(0)
+    assert(vol1.equals(got1), s"expected volume $vol1, got instead: $got1")
+
+    val vol2 = volumeWith(
+      containerPath("/container/path2"),
+      mode(MesosProtos.Volume.Mode.RO),
+      volumeRef("ert", "namedEdc"),
+      options(Map("boo" -> "baa"))
+    )
+    val got2 = taskInfo.getContainer.getVolumes(1)
+    assert(vol2.equals(got2), s"expected volume $vol2, got instead: $got2")
   }
 
   test("build creates task for MESOS container using named, external [ExternalVolume] volumes") {
@@ -414,22 +484,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
     assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
-    def hasEnv(name: String, value: String): Boolean =
-      taskInfo.getExecutor.getCommand.hasEnvironment &&
-        taskInfo.getExecutor.getCommand.getEnvironment.getVariablesList.asScala.find { ev =>
-          ev.getName == name && ev.getValue == value
-        }.isDefined
-
-    def missingEnv(name: String): Boolean =
-      taskInfo.getExecutor.getCommand.hasEnvironment &&
-        taskInfo.getExecutor.getCommand.getEnvironment.getVariablesList.asScala.find { ev =>
-          ev.getName == name
-        }.isEmpty
-
-    taskInfo.hasContainer should be(false)
-    taskInfo.hasCommand should be(false)
-    taskInfo.getExecutor.hasContainer should be(true)
-    taskInfo.getExecutor.getContainer.hasMesos should be(true)
+    taskInfo.hasContainer should be (false)
+    taskInfo.hasCommand should be (false)
+    taskInfo.getExecutor.hasContainer should be (true)
+    taskInfo.getExecutor.getContainer.hasMesos should be (true)
 
     // check protobuf construction, should be a ContainerInfo w/ no volumes, w/ envvar
     assert(
@@ -588,11 +646,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val (taskInfo, taskPorts) = task.get
 
-    taskInfo.hasExecutor should be(false)
-    taskInfo.hasContainer should be(true)
+    taskInfo.hasExecutor should be (false)
+    taskInfo.hasContainer should be (true)
 
     val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
-    networkInfos.size should be(1)
+    networkInfos.size should be (1)
 
     val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
       .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
@@ -617,12 +675,12 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val (taskInfo, taskPorts) = task.get
 
-    taskInfo.hasContainer should be(false)
-    taskInfo.hasExecutor should be(true)
-    taskInfo.getExecutor.hasContainer should be(true)
+    taskInfo.hasContainer should be (false)
+    taskInfo.hasExecutor should be (true)
+    taskInfo.getExecutor.hasContainer should be (true)
 
     val networkInfos = taskInfo.getExecutor.getContainer.getNetworkInfosList.asScala
-    networkInfos.size should be(1)
+    networkInfos.size should be (1)
 
     val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
       .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
@@ -638,8 +696,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     TextFormat.shortDebugString(networkInfos.head) should equal(TextFormat.shortDebugString(networkInfoProto))
     networkInfos.head should equal(networkInfoProto)
 
-    taskInfo.hasDiscovery should be(true)
-    taskInfo.getDiscovery.getName should be(taskInfo.getName)
+    taskInfo.hasDiscovery should be (true)
+    taskInfo.getDiscovery.getName should be (taskInfo.getName)
   }
 
   test("BuildIfMatchesWithIpAddressAndNetworkName") {
@@ -685,11 +743,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val (taskInfo, taskPorts) = task.get
 
-    taskInfo.hasExecutor should be(false)
-    taskInfo.hasContainer should be(true)
+    taskInfo.hasExecutor should be (false)
+    taskInfo.hasContainer should be (true)
 
     val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
-    networkInfos.size should be(1)
+    networkInfos.size should be (1)
 
     val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
       .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.getDefaultInstance)
@@ -705,7 +763,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     TextFormat.shortDebugString(networkInfos.head) should equal(TextFormat.shortDebugString(networkInfoProto))
     networkInfos.head should equal(networkInfoProto)
 
-    taskInfo.hasDiscovery should be(true)
+    taskInfo.hasDiscovery should be (true)
     val discoveryInfo = taskInfo.getDiscovery
 
     val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder

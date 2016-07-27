@@ -2,6 +2,8 @@ package mesosphere.marathon
 
 import mesosphere.marathon.core.event.EventConf
 import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
+import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
+import mesosphere.marathon.core.group.GroupManagerConfig
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
@@ -18,7 +20,7 @@ import scala.sys.SystemProperties
 
 trait MarathonConf
     extends ScallopConf
-    with EventConf with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
+    with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
     with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
     with PluginManagerConfiguration with ReviveOffersConfig with TaskJobsConfig with TaskStatusUpdateConfig
     with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
@@ -329,4 +331,19 @@ trait MarathonConf
     default = Some(500)
   )
 
+  lazy val mesosHeartbeatInterval = opt[Long](
+    "mesos_heartbeat_interval",
+    descr = "(milliseconds) in the absence of receiving a message from the mesos master " +
+      "during a time window of this duration, attempt to coerce mesos into communicating with marathon.",
+    noshort = true,
+    hidden = true,
+    default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_INTERVAL_MS))
+
+  lazy val mesosHeartbeatFailureThreshold = opt[Int](
+    "mesos_heartbeat_failure_threshold",
+    descr = "after missing this number of expected communications from the mesos master, " +
+      "infer that marathon has become disconnected from the master.",
+    noshort = true,
+    hidden = true,
+    default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD))
 }

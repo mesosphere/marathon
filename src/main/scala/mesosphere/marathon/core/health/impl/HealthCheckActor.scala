@@ -1,14 +1,16 @@
-package mesosphere.marathon.health
+package mesosphere.marathon.core.health.impl
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Cancellable, Props }
 import akka.event.EventStream
+import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatus.TemporarilyUnreachable
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.MarathonSchedulerDriverHolder
 
 private[health] class HealthCheckActor(
     app: AppDefinition,
@@ -18,8 +20,7 @@ private[health] class HealthCheckActor(
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
-  import mesosphere.marathon.health.HealthCheckActor.{ GetTaskHealth, _ }
-  import mesosphere.marathon.health.HealthCheckWorker.HealthCheckJob
+  import HealthCheckWorker.HealthCheckJob
 
   var nextScheduledCheck: Option[Cancellable] = None
   var taskHealth = Map[Task.Id, Health]()

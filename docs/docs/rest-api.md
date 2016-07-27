@@ -10,8 +10,7 @@ title: REST API
   * [GET /v2/apps/{appId}](#get-v2-apps-appid): List the app `appId`
   * [GET /v2/apps/{appId}/versions](#get-v2-apps-appid-versions): List the versions of the application with id `appId`.
   * [GET /v2/apps/{appId}/versions/{version}](#get-v2-apps-appid-versions-version): List the configuration of the application with id `appId` at version `version`.
-  * [PUT /v2/apps/{appId}](#put-v2-apps-appid): Change config of the app
-    `appId`
+  * [PUT /v2/apps/{appId}](#put-v2-apps-appid): Update or create an app with id `appId`
   * [POST /v2/apps/{appId}/restart](#post-v2-apps-appid-restart): Rolling restart of all tasks of the given app
   * [DELETE /v2/apps/{appId}](#delete-v2-apps-appid): Destroy app `appId`
   * [GET /v2/apps/{appId}/tasks](#get-v2-apps-appid-tasks): List running tasks
@@ -138,9 +137,12 @@ Transfer-Encoding: chunked
 
 #### PUT `/v2/apps/{appId}`
 
-Change parameters of a running application.  The new application parameters
-apply only to subsequently created tasks.  Currently running tasks are
-restarted, while maintaining the `minimumHealthCapacity`
+If application `appId` is running, then update the parameters; if it
+is not running, create it. 
+
+The new application parameters apply only to subsequently created tasks.  
+Currently running tasks are restarted, while maintaining the 
+`minimumHealthCapacity`
 
 ##### Parameters
 

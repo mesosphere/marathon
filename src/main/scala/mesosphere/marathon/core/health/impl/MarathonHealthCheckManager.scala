@@ -1,17 +1,15 @@
-package mesosphere.marathon.health
-
-import javax.inject.Inject
+package mesosphere.marathon.core.health.impl
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
-import com.google.inject.Provider
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
+import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
-import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, ZookeeperConf }
 import mesosphere.util.RWLock
@@ -23,17 +21,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class MarathonHealthCheckManager @Inject() (
-    system: ActorSystem,
-    driverHolderProvider: Provider[MarathonSchedulerDriverHolder],
+class MarathonHealthCheckManager(
+    actorSystem: ActorSystem,
+    driverHolder: MarathonSchedulerDriverHolder,
     eventBus: EventStream,
-    taskTrackerProvider: Provider[TaskTracker],
+    taskTracker: TaskTracker,
     appRepository: AppRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
-
-  private[this] lazy val driverHolder = driverHolderProvider.get()
-  private[this] lazy val taskTracker = taskTrackerProvider.get()
-
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,
     actor: ActorRef)
@@ -64,7 +58,7 @@ class MarathonHealthCheckManager @Inject() (
       else {
         log.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
-        val ref = system.actorOf(
+        val ref = actorSystem.actorOf(
           HealthCheckActor.props(app, driverHolder, healthCheck, taskTracker, eventBus))
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
@@ -191,7 +185,7 @@ class MarathonHealthCheckManager @Inject() (
     }
 
   override def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]] = {
-    import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
+    import HealthCheckActor.GetTaskHealth
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
@@ -232,7 +226,7 @@ class MarathonHealthCheckManager @Inject() (
     }
 
   protected[this] def deactivate(healthCheck: ActiveHealthCheck): Unit =
-    appHealthChecks.writeLock { _ => system stop healthCheck.actor }
+    appHealthChecks.writeLock { _ => actorSystem stop healthCheck.actor }
 
 }
 
