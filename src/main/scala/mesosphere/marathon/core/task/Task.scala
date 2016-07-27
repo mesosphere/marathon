@@ -493,6 +493,5 @@ object Task {
     def isDropped: Boolean = task.status.taskStatus == MarathonTaskStatus.Dropped
 
     def isReachable: Boolean = isStaging || isStarting || isRunning || isKilling
-    def isLost: Boolean = isDropped || isUnknown || isGone || isUnreachable
   }
 }
