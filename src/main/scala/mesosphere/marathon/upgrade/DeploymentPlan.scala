@@ -130,7 +130,7 @@ final case class DeploymentPlan(
   override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
     original = Group.empty.mergeFromProto(msg.getDeprecatedOriginal),
     target = Group.empty.mergeFromProto(msg.getDeprecatedTarget),
-    version = Timestamp(msg.getDeprecatedVersion),
+    version = Timestamp(msg.getTimestamp),
     id = Some(msg.getId)
   )
 
@@ -140,7 +140,7 @@ final case class DeploymentPlan(
       .setId(id)
       .setDeprecatedOriginal(original.toProto)
       .setDeprecatedTarget(target.toProto)
-      .setDeprecatedVersion(version.toString)
+      .setTimestamp(version.toString)
       .build()
 }
 

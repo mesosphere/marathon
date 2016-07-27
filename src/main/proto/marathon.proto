@@ -264,7 +264,7 @@ message StorageVersion {
   required uint32 minor = 2;
   required uint32 patch = 3;
   // when we read old formats, we always assume legacy.
-  required StorageFormat format = 4 [default=LEGACY];
+  optional StorageFormat format = 4 [default=LEGACY];
 }
 
 message UpgradeStrategyDefinition {
@@ -288,9 +288,9 @@ message GroupDefinition {
 
 message DeploymentPlanDefinition {
   required string id = 1;
+  optional string timestamp = 2;
   // Note: deprecated_* can't be read by legacy persistent stores if they aren't set (since they were required)
   // They are no longer read by PersistenceStores
-  optional string deprecated_version = 2;
   optional GroupDefinition deprecated_original = 4;
   optional GroupDefinition deprecated_target = 5;
   // The new original and target are required by PersistenceStores

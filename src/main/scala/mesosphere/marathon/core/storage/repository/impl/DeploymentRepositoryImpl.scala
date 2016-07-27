@@ -29,7 +29,7 @@ case class StoredPlan(
       (original, target) match {
         case (Some(o), Some(t)) =>
           Some(DeploymentPlan(o, t, version = Timestamp(version), id = Some(id)))
-        case (Some(_), None) | (None, Some(_)) =>
+        case (_, None) | (None, _) =>
           logger.error(s"While retrieving $id, either original ($original)"
             + s" or target ($target) were no longer available")
           throw new IllegalStateException("Missing target or original")
@@ -43,7 +43,7 @@ case class StoredPlan(
       .setId(id)
       .setOriginalRootVersion(StoredPlan.DateFormat.format(originalVersion))
       .setTargetRootVersion(StoredPlan.DateFormat.format(targetVersion))
-      .setDeprecatedVersion(StoredPlan.DateFormat.format(version))
+      .setTimestamp(StoredPlan.DateFormat.format(version))
       .build()
   }
 }
@@ -57,8 +57,8 @@ object StoredPlan {
   }
 
   def apply(proto: Protos.DeploymentPlanDefinition): StoredPlan = {
-    val version = if (proto.hasDeprecatedVersion) {
-      OffsetDateTime.parse(proto.getDeprecatedVersion, DateFormat)
+    val version = if (proto.hasTimestamp()) {
+      OffsetDateTime.parse(proto.getTimestamp, DateFormat)
     } else {
       OffsetDateTime.MIN
     }
