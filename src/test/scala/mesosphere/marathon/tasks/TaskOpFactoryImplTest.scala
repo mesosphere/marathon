@@ -43,7 +43,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       runSpecVersion = app.version,
       status = Task.Status(
         stagedAt = f.clock.now(),
-        taskStatus = MarathonTaskStatus.Created
+        taskStatus = MarathonTaskStatus.Staging
       ),
       hostPorts = Seq.empty
     )

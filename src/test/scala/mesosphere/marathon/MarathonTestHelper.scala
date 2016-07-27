@@ -248,7 +248,7 @@ object MarathonTestHelper {
     taskInfo: TaskInfo,
     offer: Offer = makeBasicOffer().build(),
     version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
-    marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Created): Task.LaunchedEphemeral =
+    marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Staging): Task.LaunchedEphemeral =
     {
       import scala.collection.JavaConverters._
 
