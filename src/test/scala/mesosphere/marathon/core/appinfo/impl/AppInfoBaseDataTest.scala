@@ -6,7 +6,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.storage.repository.TaskFailureRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo

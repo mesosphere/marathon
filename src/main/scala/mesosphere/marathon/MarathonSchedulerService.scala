@@ -17,7 +17,7 @@ import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.storage.migration.Migration
 import mesosphere.marathon.core.storage.repository.{ FrameworkIdRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.stream.Sink

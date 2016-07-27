@@ -13,7 +13,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._

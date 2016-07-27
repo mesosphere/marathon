@@ -1,9 +1,11 @@
-package mesosphere.marathon.health
+package mesosphere.marathon.core.health.impl
 
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon._
 import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon._
+import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }

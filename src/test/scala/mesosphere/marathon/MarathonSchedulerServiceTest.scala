@@ -14,7 +14,7 @@ import mesosphere.marathon.core.storage.migration.Migration
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ EntityStore, InMemoryStore, MarathonStore }
 import mesosphere.marathon.core.storage.repository.{ AppRepository, FrameworkIdRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.util.state.FrameworkId

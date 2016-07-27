@@ -19,7 +19,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.{ HealthCheckManager, MarathonHealthCheckManager }
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.upgrade.DeploymentManager
@@ -72,7 +72,6 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
     bind(classOf[DeploymentService]).to(classOf[MarathonSchedulerService])
-    bind(classOf[HealthCheckManager]).to(classOf[MarathonHealthCheckManager]).in(Scopes.SINGLETON)
 
     bind(classOf[String])
       .annotatedWith(Names.named(ModuleNames.SERVER_SET_PATH))

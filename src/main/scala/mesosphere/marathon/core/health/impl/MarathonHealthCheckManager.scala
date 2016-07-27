@@ -1,18 +1,18 @@
-package mesosphere.marathon.health
+package mesosphere.marathon.core.health.impl
 
-import javax.inject.Inject
-
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ ActorRef, ActorRefFactory }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
-import com.google.inject.Provider
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
+import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
-import mesosphere.marathon.health.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, ZookeeperConf }
 import mesosphere.util.RWLock
@@ -24,17 +24,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class MarathonHealthCheckManager @Inject() (
-    system: ActorSystem,
-    driverHolderProvider: Provider[MarathonSchedulerDriverHolder],
+class MarathonHealthCheckManager(
+  actorRefFactory: ActorRefFactory,
+    driverHolder: MarathonSchedulerDriverHolder,
     eventBus: EventStream,
-    taskTrackerProvider: Provider[TaskTracker],
-    appRepository: Provider[ReadOnlyAppRepository],
+    taskTracker: TaskTracker,
+    appRepository: ReadOnlyAppRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
-
-  private[this] lazy val driverHolder = driverHolderProvider.get()
-  private[this] lazy val taskTracker = taskTrackerProvider.get()
-
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,
     actor: ActorRef)
@@ -65,7 +61,7 @@ class MarathonHealthCheckManager @Inject() (
       else {
         log.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
-        val ref = system.actorOf(
+        val ref = actorRefFactory.actorOf(
           HealthCheckActor.props(app, driverHolder, healthCheck, taskTracker, eventBus))
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
@@ -117,7 +113,7 @@ class MarathonHealthCheckManager @Inject() (
     }
 
   override def reconcileWith(appId: PathId): Future[Unit] =
-    appRepository.get.get(appId) flatMap {
+    appRepository.get(appId) flatMap {
       case None => Future(())
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
@@ -142,7 +138,7 @@ class MarathonHealthCheckManager @Inject() (
         // reconcile all running versions of the current app
         val appVersionsWithoutHealthChecks: Set[Timestamp] = activeAppVersions -- healthCheckAppVersions
         val res: Iterator[Future[Unit]] = appVersionsWithoutHealthChecks.iterator map { version =>
-          appRepository.get.getVersion(app.id, version.toOffsetDateTime) map {
+          appRepository.getVersion(app.id, version.toOffsetDateTime) map {
             case None =>
               // FIXME: If the app version of the task is not available anymore, no health check is started.
               // We generated a new app version for every scale change. If maxVersions is configured, we
@@ -192,7 +188,7 @@ class MarathonHealthCheckManager @Inject() (
     }
 
   override def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]] = {
-    import mesosphere.marathon.health.HealthCheckActor.GetTaskHealth
+    import HealthCheckActor.GetTaskHealth
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
@@ -233,7 +229,7 @@ class MarathonHealthCheckManager @Inject() (
     }
 
   protected[this] def deactivate(healthCheck: ActiveHealthCheck): Unit =
-    appHealthChecks.writeLock { _ => system stop healthCheck.actor }
+    appHealthChecks.writeLock { _ => actorRefFactory stop healthCheck.actor }
 
 }
 

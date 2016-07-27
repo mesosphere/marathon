@@ -13,7 +13,7 @@ import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.AppEntityRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._

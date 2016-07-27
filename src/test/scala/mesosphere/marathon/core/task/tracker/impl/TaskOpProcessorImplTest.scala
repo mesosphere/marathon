@@ -15,7 +15,7 @@ import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, MarathonTaskStatu
 import mesosphere.marathon.core.task.tracker.TaskUpdater
 import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateChangeException, TaskStateOp }
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureLogEvents, MarathonActorSupport, Mockito }
@@ -412,6 +412,9 @@ class TaskOpProcessorImplTest
     def stateOpReserve(task: Task) = TaskStateOp.Reserve(task.asInstanceOf[Task.Reserved])
 
     lazy val healthCheckManager: HealthCheckManager = mock[HealthCheckManager]
+    lazy val healthCheckManagerProvider: Provider[HealthCheckManager] = new Provider[HealthCheckManager] {
+      override def get(): HealthCheckManager = healthCheckManager
+    }
     lazy val schedulerActor: TestProbe = TestProbe()
     lazy val schedulerActorProvider = new Provider[ActorRef] {
       override def get(): ActorRef = schedulerActor.ref
@@ -443,7 +446,7 @@ class TaskOpProcessorImplTest
     )
 
     // task status update steps
-    lazy val notifyHealthCheckManager = new NotifyHealthCheckManagerStepImpl(healthCheckManager)
+    lazy val notifyHealthCheckManager = new NotifyHealthCheckManagerStepImpl(healthCheckManagerProvider)
     lazy val notifyRateLimiter = new NotifyRateLimiterStepImpl(launchQueueProvider, appRepositoryProvider)
     lazy val postToEventStream = new PostToEventStreamStepImpl(eventBus, clock)
     lazy val notifyLaunchQueue = new NotifyLaunchQueueStepImpl(launchQueueProvider)

@@ -10,7 +10,8 @@ import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupReposit
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.mesos.protos
