@@ -1,4 +1,4 @@
-package mesosphere.marathon.health
+package mesosphere.marathon.core.health
 
 import com.wix.accord._
 import com.wix.accord.dsl._
