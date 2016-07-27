@@ -39,9 +39,9 @@ object StorageModule {
     scheduler: Scheduler, actorRefFactory: ActorRefFactory): StorageModule = {
     val currentConfig = StorageConfig(conf)
     val legacyConfig = conf.internalStoreBackend() match {
-      case TwitterZk.StoreName => Some(TwitterZk(cache = true, conf))
-      case MesosZk.StoreName => Some(MesosZk(cache = true, conf))
-      case CuratorZk.StoreName => Some(TwitterZk(cache = true, conf))
+      case TwitterZk.StoreName => Some(TwitterZk(conf))
+      case MesosZk.StoreName => Some(MesosZk(conf))
+      case CuratorZk.StoreName => Some(TwitterZk(conf))
       case InMem.StoreName => None
     }
     apply(currentConfig, legacyConfig)
@@ -93,10 +93,11 @@ object StorageModule {
       case zk: CuratorZk =>
         val store = zk.store
         val appRepository = AppRepository.zkRepository(store, zk.maxVersions)
-        val taskRepository = TaskRepository.zkRepository(store)
-        val deploymentRepository = DeploymentRepository.zkRepository(store)
-        val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val groupRepository = GroupRepository.zkRepository(store, appRepository, zk.maxVersions)
+
+        val taskRepository = TaskRepository.zkRepository(store)
+        val deploymentRepository = DeploymentRepository.zkRepository(store, groupRepository)
+        val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.zkRepository(store)
         val eventSubscribersRepository = EventSubscribersRepository.zkRepository(store)
 
@@ -124,9 +125,9 @@ object StorageModule {
         val store = mem.store
         val appRepository = AppRepository.inMemRepository(store, mem.maxVersions)
         val taskRepository = TaskRepository.inMemRepository(store)
-        val deploymentRepository = DeploymentRepository.inMemRepository(store)
-        val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val groupRepository = GroupRepository.inMemRepository(store, appRepository, mem.maxVersions)
+        val deploymentRepository = DeploymentRepository.inMemRepository(store, groupRepository)
+        val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)
         val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(store)
 

@@ -148,14 +148,18 @@ object DeploymentRepository {
     new DeploymentEntityRepository(entityStore)
   }
 
-  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): DeploymentRepository = {
+  def zkRepository(
+    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
+    groupRepository: GroupRepository)(implicit ctx: ExecutionContext): DeploymentRepository = {
     import ZkStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore)
+    new DeploymentRepositoryImpl(persistenceStore, groupRepository)
   }
 
-  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): DeploymentRepository = {
+  def inMemRepository(
+    persistenceStore: PersistenceStore[RamId, String, Identity],
+    groupRepository: GroupRepository)(implicit ctx: ExecutionContext): DeploymentRepository = {
     import InMemoryStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore)
+    new DeploymentRepositoryImpl(persistenceStore, groupRepository)
   }
 }
 

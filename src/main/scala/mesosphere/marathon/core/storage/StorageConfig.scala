@@ -7,7 +7,6 @@ import java.util.concurrent.TimeUnit
 import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
 import com.typesafe.config.{ Config, ConfigMemorySize }
-import mesosphere.marathon.ZookeeperConf
 import mesosphere.marathon.core.storage.repository.impl.legacy.store._
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
@@ -99,11 +98,10 @@ object TwitterZk {
   val StoreName = "legacy_zk"
 
   def apply(
-    cache: Boolean,
-    config: ZookeeperConf)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk =
+    config: StorageConf)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk =
     TwitterZk(
-      maxVersions = config.zooKeeperMaxVersions(),
-      enableCache = cache,
+      maxVersions = config.maxVersions(),
+      enableCache = config.storeCache(),
       sessionTimeout = config.zkSessionTimeoutDuration,
       zkHosts = config.zkHosts,
       zkPath = config.zkPath,
@@ -118,7 +116,7 @@ object TwitterZk {
   def apply(config: Config)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk = {
     // scalastyle:off
     TwitterZk(
-      maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
+      maxVersions = config.int("max-versions", StorageConfig.DefaultLegacyMaxVersions),
       enableCache = config.bool("enable-cache", true),
       sessionTimeout = config.duration("session-timeout", 10.seconds),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
@@ -155,17 +153,17 @@ case class MesosZk(
 object MesosZk {
   val StoreName = "mesos_zk"
 
-  def apply(cache: Boolean, config: ZookeeperConf): MesosZk =
+  def apply(config: StorageConf): MesosZk =
     MesosZk(
-      maxVersions = config.zooKeeperMaxVersions(),
-      enableCache = cache,
+      maxVersions = config.maxVersions(),
+      enableCache = config.storeCache(),
       zkHosts = config.zkHosts,
       zkPath = config.zkPath,
       timeout = config.zkTimeoutDuration)
 
   def apply(config: Config): MesosZk =
     MesosZk(
-      maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions),
+      maxVersions = config.int("max-versions", StorageConfig.DefaultLegacyMaxVersions),
       enableCache = config.bool("enable-cache", true),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
       zkPath = config.string("path", "marathon"),
@@ -251,9 +249,9 @@ case class CuratorZk(
 
 object CuratorZk {
   val StoreName = "zk"
-  def apply(cache: Boolean, conf: ZookeeperConf): CuratorZk =
+  def apply(conf: StorageConf): CuratorZk =
     CuratorZk(
-      cacheType = if (cache) LazyCaching else NoCaching,
+      cacheType = if (conf.storeCache()) LazyCaching else NoCaching,
       sessionTimeout = Some(conf.zkSessionTimeoutDuration),
       connectionTimeout = None,
       timeout = conf.zkTimeoutDuration,
@@ -261,11 +259,11 @@ object CuratorZk {
       zkPath = conf.zkPath,
       username = conf.zkUsername,
       password = conf.zkUsername,
-      enableCompression = conf.zooKeeperCompressionEnabled.get.get,
+      enableCompression = conf.zooKeeperCompressionEnabled(),
       retryConfig = RetryConfig(),
       maxConcurrent = 8,
       maxOutstanding = 1024, // scalastyle:off magic.number
-      maxVersions = conf.zooKeeperMaxVersions.get.get
+      maxVersions = conf.maxVersions()
     )
 
   def apply(config: Config): CuratorZk =
@@ -297,21 +295,22 @@ case class InMem(maxVersions: Int) extends PersistenceStorageConfig[RamId, Strin
 object InMem {
   val StoreName = "mem"
 
-  def apply(conf: ZookeeperConf): InMem =
-    InMem(conf.zooKeeperMaxVersions())
+  def apply(conf: StorageConf): InMem =
+    InMem(conf.maxVersions())
 
   def apply(conf: Config): InMem =
     InMem(conf.int("max-versions", StorageConfig.DefaultMaxVersions))
 }
 
 object StorageConfig {
-  val DefaultMaxVersions = 25
+  val DefaultLegacyMaxVersions = 25
+  val DefaultMaxVersions = 5000
   def apply(conf: StorageConf)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): StorageConfig = {
     conf.internalStoreBackend() match {
-      case TwitterZk.StoreName => TwitterZk(conf.storeCache(), conf)
-      case MesosZk.StoreName => MesosZk(conf.storeCache(), conf)
+      case TwitterZk.StoreName => TwitterZk(conf)
+      case MesosZk.StoreName => MesosZk(conf)
       case InMem.StoreName => InMem(conf)
-      case CuratorZk.StoreName => CuratorZk(conf.storeCache(), conf)
+      case CuratorZk.StoreName => CuratorZk(conf)
     }
   }
 

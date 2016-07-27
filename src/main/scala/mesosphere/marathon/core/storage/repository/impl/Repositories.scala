@@ -5,11 +5,10 @@ import akka.Done
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, TaskFailureRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
-import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
 
 import scala.concurrent.Future
@@ -31,13 +30,6 @@ class TaskRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(i
   unmarshaller: Unmarshaller[S, Task])
     extends PersistenceStoreRepository[Task.Id, Task, K, C, S](persistenceStore, _.taskId)
     with TaskRepository
-
-class DeploymentRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-  ir: IdResolver[String, DeploymentPlan, C, K],
-  marshaller: Marshaller[DeploymentPlan, S],
-  unmarshaller: Unmarshaller[S, DeploymentPlan])
-    extends PersistenceStoreRepository[String, DeploymentPlan, K, C, S](persistenceStore, _.id)
-    with DeploymentRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
   implicit

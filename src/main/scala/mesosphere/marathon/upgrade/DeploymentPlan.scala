@@ -6,6 +6,7 @@ import java.util.UUID
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.storage.TwitterZk
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
@@ -127,18 +128,19 @@ final case class DeploymentPlan(
     mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
 
   override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
-    original = Group.empty.mergeFromProto(msg.getOriginal),
-    target = Group.empty.mergeFromProto(msg.getTarget),
-    version = Timestamp(msg.getVersion)
-  ).copy(id = msg.getId)
+    original = Group.empty.mergeFromProto(msg.getDeprecatedOriginal),
+    target = Group.empty.mergeFromProto(msg.getDeprecatedTarget),
+    version = Timestamp(msg.getDeprecatedVersion),
+    id = Some(msg.getId)
+  )
 
   override def toProto: Protos.DeploymentPlanDefinition =
     Protos.DeploymentPlanDefinition
       .newBuilder
       .setId(id)
-      .setOriginal(original.toProto)
-      .setTarget(target.toProto)
-      .setVersion(version.toString)
+      .setDeprecatedOriginal(original.toProto)
+      .setDeprecatedTarget(target.toProto)
+      .setDeprecatedVersion(version.toString)
       .build()
 }
 
@@ -252,7 +254,8 @@ object DeploymentPlan {
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Iterable[Task]] = Map.empty): DeploymentPlan = {
+    toKill: Map[PathId, Iterable[Task]] = Map.empty,
+    id: Option[String] = None): DeploymentPlan = {
 
     // Lookup maps for original and target apps.
     val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
@@ -297,7 +300,7 @@ object DeploymentPlan {
 
     // Build the result.
     val result = DeploymentPlan(
-      UUID.randomUUID().toString,
+      id.getOrElse(UUID.randomUUID().toString),
       original,
       target,
       steps.result().filter(_.actions.nonEmpty),
@@ -313,11 +316,17 @@ object DeploymentPlan {
                          |You can adjust this value via --zk_max_node_size, but make sure this value is compatible with
                          |your ZooKeeper ensemble!
                          |See: http://zookeeper.apache.org/doc/r3.3.1/zookeeperAdmin.html#Unsafe+Options""".stripMargin
+
     val notBeTooBig = isTrue[DeploymentPlan](maxSizeError) { plan =>
-      val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
-      val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id), plan.toProto.toByteArray)
-        .toProto(compressionConf)
-      zkDataProto.toByteArray.length < maxSize
+      if (conf.internalStoreBackend() == TwitterZk.StoreName) {
+        val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
+        val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id), plan.toProto.toByteArray)
+          .toProto(compressionConf)
+        zkDataProto.toByteArray.length < maxSize
+      } else {
+        // we could try serializing the proto then gzip compressing it for the new ZK backend, but should we?
+        true
+      }
     }
 
     validator[DeploymentPlan] { plan =>

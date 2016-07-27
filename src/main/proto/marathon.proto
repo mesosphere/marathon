@@ -288,9 +288,14 @@ message GroupDefinition {
 
 message DeploymentPlanDefinition {
   required string id = 1;
-  required string version = 2;
-  required GroupDefinition original = 4;
-  required GroupDefinition target = 5;
+  // Note: deprecated_* can't be read by legacy persistent stores if they aren't set (since they were required)
+  // They are no longer read by PersistenceStores
+  optional string deprecated_version = 2;
+  optional GroupDefinition deprecated_original = 4;
+  optional GroupDefinition deprecated_target = 5;
+  // The new original and target are required by PersistenceStores
+  optional string original_root_version = 6;
+  optional string target_root_version = 7;
 }
 
 message TaskFailure {

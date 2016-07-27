@@ -5,11 +5,10 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.storage.repository.impl.StoredGroup
+import mesosphere.marathon.core.storage.repository.impl.{ StoredGroup, StoredPlan }
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
-import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
 
 case class RamId(category: String, id: String, version: Option[OffsetDateTime])
@@ -48,14 +47,14 @@ trait InMemoryStoreSerialization {
       override def version(v: Task): OffsetDateTime = OffsetDateTime.MIN
     }
 
-  implicit val deploymentResolver: IdResolver[String, DeploymentPlan, String, RamId] =
-    new IdResolver[String, DeploymentPlan, String, RamId] {
+  implicit val deploymentResolver: IdResolver[String, StoredPlan, String, RamId] =
+    new IdResolver[String, StoredPlan, String, RamId] {
       override def toStorageId(id: String, version: Option[OffsetDateTime]): RamId =
         RamId(category, id, version)
       override val category: String = "deployment"
       override def fromStorageId(key: RamId): String = key.id
       override val maxVersions: Int = 0
-      override def version(v: DeploymentPlan): OffsetDateTime = OffsetDateTime.MIN
+      override def version(v: StoredPlan): OffsetDateTime = OffsetDateTime.MIN
     }
 
   def taskFailureResolver(maxVersions: Int): IdResolver[PathId, TaskFailure, String, RamId] =

@@ -55,7 +55,8 @@ object MarathonTestHelper {
     acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None,
     principal: Option[String] = None,
-    maxZkNodeSize: Option[Int] = None): AllConf = {
+    maxZkNodeSize: Option[Int] = None,
+    internalStorageBackend: Option[String] = None): AllConf = {
 
     var args = Seq(
       "--master", "127.0.0.1:5050",
@@ -68,6 +69,7 @@ object MarathonTestHelper {
     acceptedResourceRoles.foreach(v => args ++= Seq("--default_accepted_resource_roles", v.mkString(",")))
     maxZkNodeSize.foreach(size => args ++= Seq("--zk_max_node_size", size.toString))
     envVarsPrefix.foreach(args ++= Seq("--env_vars_prefix", _))
+    internalStorageBackend.foreach(backend => args ++= Seq("--internal_store_backend", backend))
     makeConfig(args: _*)
   }
 

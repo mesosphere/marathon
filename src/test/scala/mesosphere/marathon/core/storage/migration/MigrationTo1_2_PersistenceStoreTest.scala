@@ -27,7 +27,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
     val persistenceStore = new InMemoryPersistenceStore()
     val appRepository = AppRepository.inMemRepository(persistenceStore, maxVersions)
     val groupRepository = GroupRepository.inMemRepository(persistenceStore, appRepository, maxVersions)
-    val deploymentRepository = DeploymentRepository.inMemRepository(persistenceStore)
+    val deploymentRepository = DeploymentRepository.inMemRepository(persistenceStore, groupRepository)
     val taskRepo = TaskRepository.inMemRepository(persistenceStore)
     val taskFailureRepository = TaskFailureRepository.inMemRepository(persistenceStore)
     val frameworkIdRepository = FrameworkIdRepository.inMemRepository(persistenceStore)
@@ -176,16 +176,30 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         implicit val metrics = new Metrics(new MetricRegistry)
         val config = LegacyInMemConfig(maxVersions)
         val oldRepo = DeploymentRepository.legacyRepository(config.entityStore[DeploymentPlan])
+        val appRepo = AppRepository.legacyRepository(config.entityStore[AppDefinition], maxVersions)
+        val oldGroupRepo = GroupRepository.legacyRepository(config.entityStore[Group], maxVersions, appRepo)
+
         val plans = Seq(
-          DeploymentPlan(Group.emptyWithId("abc".toRootPath), Group.emptyWithId("abc".toRootPath)),
-          DeploymentPlan(Group.emptyWithId("def".toRootPath), Group.emptyWithId("def".toRootPath)),
-          DeploymentPlan(Group.empty, Group.empty)
+          DeploymentPlan(
+            Group.empty.copy(version = Timestamp(1)),
+            Group.empty.copy(version = Timestamp(2))),
+          DeploymentPlan(
+            Group.empty.copy(version = Timestamp(3)),
+            Group.empty.copy(version = Timestamp(4))),
+          DeploymentPlan(
+            Group.empty.copy(version = Timestamp(1)),
+            Group.empty.copy(version = Timestamp(2)))
         )
-        plans.foreach(oldRepo.store(_).futureValue)
+        plans.foreach { plan =>
+          oldGroupRepo.storeRoot(plan.original, Nil, Nil).futureValue
+          oldGroupRepo.storeRoot(plan.target, Nil, Nil).futureValue
+          oldRepo.store(plan).futureValue
+        }
         val migrator = migration(Some(config))
         val migrate = new MigrationTo1_2_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
+        val migrated = migrator.deploymentRepository.all().runWith(Sink.seq).futureValue
         migrator.deploymentRepository.all().runWith(Sink.seq).futureValue should contain theSameElementsAs plans
         oldRepo.all().runWith(Sink.seq).futureValue should be('empty)
       }
