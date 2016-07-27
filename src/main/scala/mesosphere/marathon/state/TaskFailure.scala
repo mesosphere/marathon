@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos
-import mesosphere.marathon.event.UnhealthyTaskKillEvent
+import mesosphere.marathon.core.event.UnhealthyTaskKillEvent
 import mesosphere.marathon.state.PathId._
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
@@ -44,7 +44,7 @@ case class TaskFailure(
 
 object TaskFailure {
 
-  import mesosphere.marathon.event.MesosStatusUpdateEvent
+  import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 
   def empty: TaskFailure = {
     TaskFailure(

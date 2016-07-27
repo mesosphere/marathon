@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.integration.facades.{ ITEnrichedTask, ITDeployment, ITQueueItem, MarathonFacade }
 import MarathonFacade._
 import mesosphere.marathon.integration.setup._

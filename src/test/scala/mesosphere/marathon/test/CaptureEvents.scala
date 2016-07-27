@@ -4,7 +4,7 @@ import akka.actor.ActorDSL._
 import akka.actor.{ ActorSystem, PoisonPill, Terminated }
 import akka.event.EventStream
 import akka.testkit.TestProbe
-import mesosphere.marathon.event.MarathonEvent
+import mesosphere.marathon.core.event.MarathonEvent
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await

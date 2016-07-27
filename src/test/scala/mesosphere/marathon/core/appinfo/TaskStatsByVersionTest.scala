@@ -2,7 +2,7 @@ package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.health.Health
+import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
 import org.scalatest.{ Matchers, GivenWhenThen }

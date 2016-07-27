@@ -4,9 +4,10 @@ import akka.actor.Props
 import akka.testkit.TestActorRef
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ AppTerminatedEvent, HistoryActor, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.event.{ AppTerminatedEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.history.impl.HistoryActor
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure, TaskFailureRepository }
-import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.StoppingBehavior.KillNextBatch
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
@@ -96,7 +97,6 @@ class AppStopActorTest
     val tasks = Set(MarathonTestHelper.runningTask("task_a"), MarathonTestHelper.runningTask("task_b"))
 
     when(f.taskTracker.appTasksLaunchedSync(app.id)).thenReturn(tasks)
-
     val ref = f.stopActor(app, promise)
     watch(ref)
 

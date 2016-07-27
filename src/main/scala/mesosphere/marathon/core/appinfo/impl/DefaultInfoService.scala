@@ -2,6 +2,7 @@ package mesosphere.marathon.core.appinfo.impl
 
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory
 
@@ -83,7 +84,7 @@ private[appinfo] class DefaultInfoService(
             None
         def apps: Option[Seq[AppInfo]] =
           if (groupEmbed(GroupInfo.Embed.Apps))
-            Some(ref.apps.toIndexedSeq.flatMap(a => infoById.get(a.id)).sortBy(_.app.id))
+            Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id))
           else
             None
         //if a subgroup is allowed, we also have to allow all parents implicitly

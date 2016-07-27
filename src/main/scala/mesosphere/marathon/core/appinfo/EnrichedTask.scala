@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.health.Health
+import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.state.PathId
 
 case class EnrichedTask(
