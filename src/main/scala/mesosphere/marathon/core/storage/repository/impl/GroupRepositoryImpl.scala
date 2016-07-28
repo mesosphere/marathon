@@ -129,6 +129,7 @@ class StoredGroupRepositoryImpl[K, C, S](
    */
   private val lock = RichLock()
   private var rootFuture = Future.failed[Group](new Exception)
+  private[storage] var beforeStore = Option.empty[(StoredGroup) => Future[Done]]
 
   private val storedRepo = {
     def leafStore(store: PersistenceStore[K, C, S]): PersistenceStore[K, C, S] = store match {
@@ -185,6 +186,12 @@ class StoredGroupRepositoryImpl[K, C, S](
 
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] =
     async {
+      val storedGroup = StoredGroup(group)
+      beforeStore match {
+        case Some(preStore) =>
+          await(preStore(storedGroup))
+        case _ =>
+      }
       val promise = Promise[Group]()
       val oldRootFuture = lock {
         val old = rootFuture
@@ -193,7 +200,6 @@ class StoredGroupRepositoryImpl[K, C, S](
       }
       val storeAppFutures = updatedApps.map(appRepository.store)
       val deleteAppFutures = deletedApps.map(appRepository.deleteCurrent)
-      val storedGroup = StoredGroup(group)
       val storedApps = await(Future.sequence(storeAppFutures).asTry)
       await(Future.sequence(deleteAppFutures).recover { case NonFatal(e) => Done })
 
