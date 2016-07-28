@@ -3,7 +3,7 @@ package mesosphere.marathon.core.task.update.impl
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
@@ -132,7 +132,7 @@ class TaskStatusUpdateProcessorImplTest
     val task = MarathonTestHelper.runningTask(taskId.idString)
     val origUpdate = TaskStatusUpdateTestHelper.killing(task)
     val status = origUpdate.status
-    val expectedTaskStateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(status), f.clock.now())
+    val expectedTaskStateOp = TaskStateOp.MesosUpdate(task, status, f.clock.now())
 
     Given("a task")
     import scala.concurrent.ExecutionContext.Implicits.global

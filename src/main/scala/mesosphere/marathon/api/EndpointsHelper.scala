@@ -2,7 +2,6 @@ package mesosphere.marathon.api
 
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.AppDefinition
-import org.apache.mesos.Protos.TaskState
 
 object EndpointsHelper {
   /**
@@ -25,7 +24,7 @@ object EndpointsHelper {
 
       if (servicePorts.isEmpty) {
         sb.append(cleanId).append(delimiter).append(' ').append(delimiter)
-        for (task <- tasks if task.mesosStatus.exists(_.getState == TaskState.TASK_RUNNING)) {
+        for (task <- tasks if task.isRunning) {
           sb.append(task.agentInfo.host).append(' ')
         }
         sb.append('\n')
@@ -34,7 +33,7 @@ object EndpointsHelper {
         for ((port, i) <- servicePorts.zipWithIndex) {
           sb.append(cleanId).append(delimiter).append(port).append(delimiter)
 
-          for (task <- tasks if task.mesosStatus.exists(_.getState == TaskState.TASK_RUNNING)) {
+          for (task <- tasks if task.isRunning) {
             val taskPort = task.launched.flatMap(_.hostPorts.drop(i).headOption).getOrElse(0)
             sb.append(task.agentInfo.host).append(':').append(taskPort).append(delimiter)
           }

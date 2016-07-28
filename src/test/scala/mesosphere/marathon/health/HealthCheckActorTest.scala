@@ -58,6 +58,18 @@ class HealthCheckActorTest
     verifyNoMoreInteractions(f.driver)
   }
 
+  test("should not dispatch health checks for unreachable tasks") {
+    val f = new Fixture
+    val latch = TestLatch(1)
+    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.unreachableTask))
+
+    val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
+
+    actor.underlyingActor.dispatchJobs()
+    latch.isOpen should be (false)
+    verifyNoMoreInteractions(f.driver)
+  }
+
   // regression test for #1456
   test("task should be killed if health check fails") {
     val f = new Fixture
@@ -72,7 +84,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val actor = f.actor(HealthCheck(maxConsecutiveFailures = 3))
 
-    actor.underlyingActor.checkConsecutiveFailures(f.lostTask, Health(f.lostTask.taskId, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(f.unreachableTask, Health(f.unreachableTask.taskId, consecutiveFailures = 3))
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
 
@@ -93,6 +105,7 @@ class HealthCheckActorTest
 
     val task = MarathonTestHelper.runningTask("test_task.9876543", appVersion = appVersion)
     val lostTask = MarathonTestHelper.mininimalLostTask(appId)
+    val unreachableTask = MarathonTestHelper.minimalUnreachableTask(appId)
 
     def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
       Props(

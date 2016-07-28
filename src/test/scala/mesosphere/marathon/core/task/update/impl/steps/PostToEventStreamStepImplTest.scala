@@ -6,15 +6,15 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskStatusUpdateTestHelper }
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.event.{ MarathonEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
-import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 
@@ -30,7 +30,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
     When("we receive a running status update")
     val status = runningTaskStatus
-    val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), updateTimestamp).wrapped
+    val taskUpdate = TaskStatusUpdateTestHelper.taskUpdateFor(existingTask, MarathonTaskStatus(status), status, updateTimestamp).wrapped
     val (logs, events) = f.captureLogAndEvents {
       f.step.processUpdate(taskUpdate).futureValue
     }
@@ -65,7 +65,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
     When("we receive a running update")
     val status = runningTaskStatus
-    val stateOp = TaskStateOp.MesosUpdate(existingTask, MarathonTaskStatus(status), updateTimestamp)
+    val stateOp = TaskStateOp.MesosUpdate(existingTask, status, updateTimestamp)
     val stateChange = existingTask.update(stateOp)
     val taskChanged = TaskChanged(stateOp, stateChange)
     val (logs, events) = f.captureLogAndEvents {
@@ -91,7 +91,7 @@ class PostToEventStreamStepImplTest extends FunSuite with Matchers with GivenWhe
 
     When("we receive a terminal status update")
     val status = runningTaskStatus.toBuilder.setState(terminalTaskState).clearContainerStatus().build()
-    val stateOp = TaskStateOp.MesosUpdate(existingTask, MarathonTaskStatus(status), updateTimestamp)
+    val stateOp = TaskStateOp.MesosUpdate(existingTask, status, updateTimestamp)
     val stateChange = existingTask.update(stateOp)
     val taskUpdate = TaskChanged(stateOp, stateChange)
     val (logs, events) = f.captureLogAndEvents {

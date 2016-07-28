@@ -5,6 +5,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
 import mesosphere.marathon.state.{ ResourceRole, RunSpec }
@@ -58,7 +59,8 @@ class TaskOpFactoryImpl(
           ),
           runSpecVersion = runSpec.version,
           status = Task.Status(
-            stagedAt = clock.now()
+            stagedAt = clock.now(),
+            taskStatus = MarathonTaskStatus.Created
           ),
           hostPorts = ports.flatten
         )
@@ -148,7 +150,8 @@ class TaskOpFactoryImpl(
           task.taskId,
           runSpecVersion = spec.version,
           status = Task.Status(
-            stagedAt = clock.now()
+            stagedAt = clock.now(),
+            taskStatus = MarathonTaskStatus.Created
           ),
           hostPorts = ports.flatten)
 
@@ -179,7 +182,11 @@ class TaskOpFactoryImpl(
         agentId = Some(offer.getSlaveId.getValue),
         attributes = offer.getAttributesList.asScala
       ),
-      reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout)))
+      reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
+      status = Task.Status(
+        stagedAt = now,
+        taskStatus = MarathonTaskStatus.Reserved
+      )
     )
     val taskStateOp = TaskStateOp.Reserve(task)
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, taskStateOp, resourceMatch.resources, localVolumes)
