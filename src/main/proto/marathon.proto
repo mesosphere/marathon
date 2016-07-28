@@ -142,6 +142,7 @@ message MarathonTask {
     required State state = 2;
   }
   enum MarathonTaskStatus {
+    Unknown = 0;
     Reserved = 1;
     Created = 2;
     Error = 3;
@@ -155,8 +156,7 @@ message MarathonTask {
     Starting = 11;
     Unreachable = 12;
     Gone = 13;
-    Unknown = 14;
-    Dropped = 15;
+    Dropped = 14;
   }
 
   required string id = 1;

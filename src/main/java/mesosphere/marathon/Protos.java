@@ -13289,67 +13289,71 @@ public final class Protos {
     public enum MarathonTaskStatus
         implements com.google.protobuf.ProtocolMessageEnum {
       /**
+       * <code>Unknown = 0;</code>
+       */
+      Unknown(0, 0),
+      /**
        * <code>Reserved = 1;</code>
        */
-      Reserved(0, 1),
+      Reserved(1, 1),
       /**
        * <code>Created = 2;</code>
        */
-      Created(1, 2),
+      Created(2, 2),
       /**
        * <code>Error = 3;</code>
        */
-      Error(2, 3),
+      Error(3, 3),
       /**
        * <code>Failed = 4;</code>
        */
-      Failed(3, 4),
+      Failed(4, 4),
       /**
        * <code>Finished = 5;</code>
        */
-      Finished(4, 5),
+      Finished(5, 5),
       /**
        * <code>Killed = 6;</code>
        */
-      Killed(5, 6),
+      Killed(6, 6),
       /**
        * <code>Killing = 7;</code>
        */
-      Killing(6, 7),
+      Killing(7, 7),
       /**
        * <code>Lost = 8;</code>
        */
-      Lost(7, 8),
+      Lost(8, 8),
       /**
        * <code>Running = 9;</code>
        */
-      Running(8, 9),
+      Running(9, 9),
       /**
        * <code>Staging = 10;</code>
        */
-      Staging(9, 10),
+      Staging(10, 10),
       /**
        * <code>Starting = 11;</code>
        */
-      Starting(10, 11),
+      Starting(11, 11),
       /**
        * <code>Unreachable = 12;</code>
        */
-      Unreachable(11, 12),
+      Unreachable(12, 12),
       /**
        * <code>Gone = 13;</code>
        */
-      Gone(12, 13),
+      Gone(13, 13),
       /**
-       * <code>Unknown = 14;</code>
+       * <code>Dropped = 14;</code>
        */
-      Unknown(13, 14),
-      /**
-       * <code>Dropped = 15;</code>
-       */
-      Dropped(14, 15),
+      Dropped(14, 14),
       ;
 
+      /**
+       * <code>Unknown = 0;</code>
+       */
+      public static final int Unknown_VALUE = 0;
       /**
        * <code>Reserved = 1;</code>
        */
@@ -13403,19 +13407,16 @@ public final class Protos {
        */
       public static final int Gone_VALUE = 13;
       /**
-       * <code>Unknown = 14;</code>
+       * <code>Dropped = 14;</code>
        */
-      public static final int Unknown_VALUE = 14;
-      /**
-       * <code>Dropped = 15;</code>
-       */
-      public static final int Dropped_VALUE = 15;
+      public static final int Dropped_VALUE = 14;
 
 
       public final int getNumber() { return value; }
 
       public static MarathonTaskStatus valueOf(int value) {
         switch (value) {
+          case 0: return Unknown;
           case 1: return Reserved;
           case 2: return Created;
           case 3: return Error;
@@ -13429,8 +13430,7 @@ public final class Protos {
           case 11: return Starting;
           case 12: return Unreachable;
           case 13: return Gone;
-          case 14: return Unknown;
-          case 15: return Dropped;
+          case 14: return Dropped;
           default: return null;
         }
       }
@@ -16000,7 +16000,7 @@ public final class Protos {
       slaveId_ = org.apache.mesos.Protos.SlaveID.getDefaultInstance();
       oBSOLETENetworks_ = java.util.Collections.emptyList();
       reservation_ = mesosphere.marathon.Protos.MarathonTask.Reservation.getDefaultInstance();
-      marathonTaskStatus_ = mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved;
+      marathonTaskStatus_ = mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus.Unknown;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -16331,7 +16331,7 @@ public final class Protos {
           reservationBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000800);
-        marathonTaskStatus_ = mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved;
+        marathonTaskStatus_ = mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus.Unknown;
         bitField0_ = (bitField0_ & ~0x00001000);
         return this;
       }
@@ -18203,7 +18203,7 @@ public final class Protos {
         return reservationBuilder_;
       }
 
-      private mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus marathonTaskStatus_ = mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved;
+      private mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus marathonTaskStatus_ = mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus.Unknown;
       /**
        * <code>optional .mesosphere.marathon.MarathonTask.MarathonTaskStatus marathonTaskStatus = 13;</code>
        */
@@ -18233,7 +18233,7 @@ public final class Protos {
        */
       public Builder clearMarathonTaskStatus() {
         bitField0_ = (bitField0_ & ~0x00001000);
-        marathonTaskStatus_ = mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus.Reserved;
+        marathonTaskStatus_ = mesosphere.marathon.Protos.MarathonTask.MarathonTaskStatus.Unknown;
         onChanged();
         return this;
       }
@@ -36252,12 +36252,12 @@ public final class Protos {
       "aunchEscalationTimeout\020\001\022\026\n\022ReservationT" +
       "imeout\020\002\"F\n\004Type\022\007\n\003New\020\001\022\014\n\010Launched\020\002\022" +
       "\r\n\tSuspended\020\003\022\013\n\007Garbage\020\004\022\013\n\007Unknown\020\005" +
-      "\"\324\001\n\022MarathonTaskStatus\022\014\n\010Reserved\020\001\022\013\n" +
-      "\007Created\020\002\022\t\n\005Error\020\003\022\n\n\006Failed\020\004\022\014\n\010Fin" +
-      "ished\020\005\022\n\n\006Killed\020\006\022\013\n\007Killing\020\007\022\010\n\004Lost" +
-      "\020\010\022\013\n\007Running\020\t\022\013\n\007Staging\020\n\022\014\n\010Starting" +
-      "\020\013\022\017\n\013Unreachable\020\014\022\010\n\004Gone\020\r\022\013\n\007Unknown",
-      "\020\016\022\013\n\007Dropped\020\017\"M\n\013MarathonApp\022\014\n\004name\030\001" +
+      "\"\324\001\n\022MarathonTaskStatus\022\013\n\007Unknown\020\000\022\014\n\010" +
+      "Reserved\020\001\022\013\n\007Created\020\002\022\t\n\005Error\020\003\022\n\n\006Fa" +
+      "iled\020\004\022\014\n\010Finished\020\005\022\n\n\006Killed\020\006\022\013\n\007Kill" +
+      "ing\020\007\022\010\n\004Lost\020\010\022\013\n\007Running\020\t\022\013\n\007Staging\020" +
+      "\n\022\014\n\010Starting\020\013\022\017\n\013Unreachable\020\014\022\010\n\004Gone",
+      "\020\r\022\013\n\007Dropped\020\016\"M\n\013MarathonApp\022\014\n\004name\030\001" +
       " \001(\t\0220\n\005tasks\030\002 \003(\0132!.mesosphere.maratho" +
       "n.MarathonTask\"1\n\rContainerInfo\022\017\n\005image" +
       "\030\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\332\004\n\025ExtendedCo" +
