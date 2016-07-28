@@ -23,7 +23,7 @@ trait InMemoryStoreSerialization {
 
   private class InMemPathIdResolver[T](
     val category: String,
-    val maxVersions: Int,
+    val hasVersions: Boolean,
     getVersion: T => OffsetDateTime)
       extends IdResolver[PathId, T, String, RamId] {
     override def toStorageId(id: PathId, version: Option[OffsetDateTime]): RamId =
@@ -34,8 +34,8 @@ trait InMemoryStoreSerialization {
     override def version(v: T): OffsetDateTime = getVersion(v)
   }
 
-  def appDefResolver(maxVersions: Int): IdResolver[PathId, AppDefinition, String, RamId] =
-    new InMemPathIdResolver[AppDefinition]("app", maxVersions, _.version.toOffsetDateTime)
+  implicit def appDefResolver: IdResolver[PathId, AppDefinition, String, RamId] =
+    new InMemPathIdResolver[AppDefinition]("app", true, _.version.toOffsetDateTime)
 
   implicit val taskResolver: IdResolver[Task.Id, Task, String, RamId] =
     new IdResolver[Task.Id, Task, String, RamId] {
@@ -43,7 +43,7 @@ trait InMemoryStoreSerialization {
         RamId(category, id.idString, version)
       override val category: String = "task"
       override def fromStorageId(key: RamId): Task.Id = Task.Id(key.id)
-      override val maxVersions: Int = 0
+      override val hasVersions = false
       override def version(v: Task): OffsetDateTime = OffsetDateTime.MIN
     }
 
@@ -53,22 +53,22 @@ trait InMemoryStoreSerialization {
         RamId(category, id, version)
       override val category: String = "deployment"
       override def fromStorageId(key: RamId): String = key.id
-      override val maxVersions: Int = 0
+      override val hasVersions = false
       override def version(v: StoredPlan): OffsetDateTime = OffsetDateTime.MIN
     }
 
-  def taskFailureResolver(maxVersions: Int): IdResolver[PathId, TaskFailure, String, RamId] =
-    new InMemPathIdResolver[TaskFailure]("taskfailure", maxVersions, _.version.toOffsetDateTime)
+  implicit def taskFailureResolver: IdResolver[PathId, TaskFailure, String, RamId] =
+    new InMemPathIdResolver[TaskFailure]("taskfailure", true, _.version.toOffsetDateTime)
 
-  def groupResolver(maxVersions: Int): IdResolver[PathId, StoredGroup, String, RamId] =
-    new InMemPathIdResolver[StoredGroup]("group", maxVersions, _.version)
+  implicit def groupResolver: IdResolver[PathId, StoredGroup, String, RamId] =
+    new InMemPathIdResolver[StoredGroup]("group", true, _.version)
 
   implicit val frameworkIdResolver = new IdResolver[String, FrameworkId, String, RamId] {
     override def toStorageId(id: String, version: Option[OffsetDateTime]): RamId =
       RamId(category, id, version)
     override val category: String = "framework-id"
     override def fromStorageId(key: RamId): String = key.id
-    override val maxVersions: Int = 0
+    override val hasVersions = false
     override def version(v: FrameworkId): OffsetDateTime = OffsetDateTime.MIN
   }
 
@@ -77,7 +77,7 @@ trait InMemoryStoreSerialization {
       RamId(category, id, version)
     override val category: String = "event-subscribers"
     override def fromStorageId(key: RamId): String = key.id
-    override val maxVersions: Int = 0
+    override val hasVersions = true
     override def version(v: EventSubscribers): OffsetDateTime = OffsetDateTime.MIN
   }
 }

@@ -25,7 +25,7 @@ trait StorageConf extends ZookeeperConf {
     descr = "Limit the number of versions, stored for one entity.",
     default = internalStoreBackend() match {
       case TwitterZk.StoreName => Some(25)
-      case _ => Some(5000)
+      case _ => Some(50)
     }
   )
 }

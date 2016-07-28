@@ -4,17 +4,18 @@ package mesosphere.marathon.core.storage.repository
 import java.time.OffsetDateTime
 import java.util.UUID
 
+import akka.actor.ActorRefFactory
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryStoreSerialization, RamId }
-import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized, ZkStoreSerialization }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.EntityStore
 import mesosphere.marathon.core.storage.repository.impl.legacy.{ AppEntityRepository, DeploymentEntityRepository, EventSubscribersEntityRepository, FrameworkIdEntityRepository, GroupEntityRepository, TaskEntityRepository, TaskFailureEntityRepository }
 import mesosphere.marathon.core.storage.repository.impl.{ AppRepositoryImpl, DeploymentRepositoryImpl, EventSubscribersRepositoryImpl, FrameworkIdRepositoryImpl, StoredGroupRepositoryImpl, TaskFailureRepositoryImpl, TaskRepositoryImpl }
 import mesosphere.marathon.core.storage.store.PersistenceStore
+import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryStoreSerialization, RamId }
+import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized, ZkStoreSerialization }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, PathId, TaskFailure }
@@ -95,20 +96,19 @@ object GroupRepository {
 
   def zkRepository(
     store: PersistenceStore[ZkId, String, ZkSerialized],
-    appRepository: AppRepository, maxVersions: Int)(implicit
+    appRepository: AppRepository)(implicit
     ctx: ExecutionContext,
-    mat: Materializer): GroupRepository = {
+    mat: Materializer): StoredGroupRepositoryImpl[ZkId, String, ZkSerialized] = {
     import ZkStoreSerialization._
-    implicit val idResolver = groupIdResolver(maxVersions)
     new StoredGroupRepositoryImpl(store, appRepository)
   }
 
   def inMemRepository(
     store: PersistenceStore[RamId, String, Identity],
-    appRepository: AppRepository,
-    maxVersions: Int)(implicit ctx: ExecutionContext, mat: Materializer): GroupRepository = {
+    appRepository: AppRepository)(implicit
+    ctx: ExecutionContext,
+    mat: Materializer): StoredGroupRepositoryImpl[RamId, String, Identity] = {
     import InMemoryStoreSerialization._
-    implicit val idResolver = groupResolver(maxVersions)
     new StoredGroupRepositoryImpl(store, appRepository)
   }
 }
@@ -124,16 +124,15 @@ object AppRepository {
     new AppEntityRepository(entityStore, maxVersions)
   }
 
-  def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized], maxVersions: Int): AppRepository = {
+  def zkRepository(
+    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): AppRepositoryImpl[ZkId, String, ZkSerialized] = {
     import ZkStoreSerialization._
-    implicit def idResolver = appDefResolver(maxVersions)
-
     new AppRepositoryImpl(persistenceStore)
   }
 
-  def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity], maxVersions: Int): AppRepository = {
+  def inMemRepository(
+    persistenceStore: PersistenceStore[RamId, String, Identity]): AppRepositoryImpl[RamId, String, Identity] = {
     import InMemoryStoreSerialization._
-    implicit def idResolver = appDefResolver(maxVersions)
     new AppRepositoryImpl(persistenceStore)
   }
 }
@@ -150,16 +149,26 @@ object DeploymentRepository {
 
   def zkRepository(
     persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
-    groupRepository: GroupRepository)(implicit ctx: ExecutionContext): DeploymentRepository = {
+    groupRepository: StoredGroupRepositoryImpl[ZkId, String, ZkSerialized],
+    appRepository: AppRepositoryImpl[ZkId, String, ZkSerialized],
+    maxVersions: Int)(implicit
+    ctx: ExecutionContext,
+    actorRefFactory: ActorRefFactory,
+    mat: Materializer): DeploymentRepository = {
     import ZkStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository)
+    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, maxVersions)
   }
 
   def inMemRepository(
     persistenceStore: PersistenceStore[RamId, String, Identity],
-    groupRepository: GroupRepository)(implicit ctx: ExecutionContext): DeploymentRepository = {
+    groupRepository: StoredGroupRepositoryImpl[RamId, String, Identity],
+    appRepository: AppRepositoryImpl[RamId, String, Identity],
+    maxVersions: Int)(implicit
+    ctx: ExecutionContext,
+    actorRefFactory: ActorRefFactory,
+    mat: Materializer): DeploymentRepository = {
     import InMemoryStoreSerialization._
-    new DeploymentRepositoryImpl(persistenceStore, groupRepository)
+    new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, maxVersions)
   }
 }
 
@@ -208,13 +217,11 @@ object TaskFailureRepository {
 
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): TaskFailureRepository = {
     import ZkStoreSerialization._
-    implicit val resolver = taskFailureResolver(1)
     new TaskFailureRepositoryImpl(persistenceStore)
   }
 
   def inMemRepository(persistenceStore: PersistenceStore[RamId, String, Identity]): TaskFailureRepository = {
     import InMemoryStoreSerialization._
-    implicit val resolver = taskFailureResolver(1)
     new TaskFailureRepositoryImpl(persistenceStore)
   }
 }

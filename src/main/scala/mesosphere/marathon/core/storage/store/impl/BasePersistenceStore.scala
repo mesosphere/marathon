@@ -5,16 +5,14 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.{ Marshal, Marshaller }
 import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.stream.Materializer
-import akka.stream.scaladsl.{ Keep, Sink, Source }
+import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.util.toRichFuture
 import mesosphere.util.LockManager
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Failure
 
 case class CategorizedKey[C, K](category: C, key: K)
 
@@ -104,22 +102,6 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
     }
   }
 
-  protected def deleteOld(k: K, maxVersions: Int): Future[Done] = async {
-    val versions = await(rawVersions(k).toMat(Sink.seq)(Keep.right).run())
-      .sortBy(_.toInstant.toEpochMilli)
-    val numToDelete = versions.size - maxVersions
-    if (numToDelete > 0) {
-      val deletes = versions.take(numToDelete).map(v => rawDelete(k, v).asTry)
-      val results = await(Future.sequence(deletes))
-      val failures = results.collect { case Failure(t) => t }
-      if (failures.nonEmpty) {
-        logger.warn(s"When cleaning up oldVersions of $k, ${failures.size}/${deletes.size} failed" +
-          s"(${failures.map(_.getMessage)}).")
-      }
-    }
-    Done
-  }
-
   protected def rawStore[V](k: K, v: Serialized): Future[Done]
 
   override def store[Id, V](id: Id, v: V)(implicit
@@ -130,16 +112,13 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
       async {
         val serialized = await(Marshal(v).to[Serialized])
         val storeCurrent = rawStore(unversionedId, serialized)
-        val storeVersioned = if (ir.maxVersions > 0) {
+        val storeVersioned = if (ir.hasVersions) {
           rawStore(ir.toStorageId(id, Some(ir.version(v))), serialized)
         } else {
           Future.successful(Done)
         }
         await(storeCurrent)
         await(storeVersioned)
-        if (ir.maxVersions > 0) {
-          await(deleteOld(unversionedId, ir.maxVersions))
-        }
         Done
       }
     }
@@ -149,14 +128,13 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
     version: OffsetDateTime)(implicit
     ir: IdResolver[Id, V, Category, K],
     m: Marshaller[V, Serialized]): Future[Done] = {
-    if (ir.maxVersions > 0) {
+    if (ir.hasVersions) {
       val storageId = ir.toStorageId(id, Some(version))
       val currentId = ir.toStorageId(id, None)
       lockManager.executeSequentially(id.toString) {
         async {
           val serialized = await(Marshal(v).to[Serialized])
           await(rawStore(storageId, serialized))
-          await(deleteOld(currentId, ir.maxVersions))
           Done
         }
       }

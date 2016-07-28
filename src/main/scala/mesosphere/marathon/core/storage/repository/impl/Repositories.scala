@@ -1,6 +1,8 @@
 package mesosphere.marathon.core.storage.repository.impl
 
 // scalastyle:off
+import java.time.OffsetDateTime
+
 import akka.Done
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -22,7 +24,12 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
       persistenceStore,
       _.id,
       _.version.toOffsetDateTime)
-    with AppRepository
+    with AppRepository {
+
+  private[storage] def deleteVersion(id: PathId, version: OffsetDateTime): Future[Done] = {
+    persistenceStore.deleteVersion(id, version)
+  }
+}
 
 class TaskRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
   ir: IdResolver[Task.Id, Task, C, K],

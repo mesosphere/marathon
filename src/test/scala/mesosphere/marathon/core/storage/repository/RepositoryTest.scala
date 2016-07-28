@@ -165,14 +165,14 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
   def createInMemRepo(maxVersions: Int): AppRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    AppRepository.inMemRepository(new InMemoryPersistenceStore(), maxVersions)
+    AppRepository.inMemRepository(new InMemoryPersistenceStore())
   }
 
   def createLoadTimeCachingRepo(maxVersions: Int): AppRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
     cached.preDriverStarts.futureValue
-    AppRepository.inMemRepository(cached, maxVersions)
+    AppRepository.inMemRepository(cached)
   }
 
   def createZKRepo(maxVersions: Int): AppRepository = {
@@ -181,12 +181,12 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     val rootClient = zkClient()
     rootClient.create(s"/$root").futureValue
     val store = new ZkPersistenceStore(rootClient.usingNamespace(root), Duration.Inf)
-    AppRepository.zkRepository(store, maxVersions)
+    AppRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(maxVersions: Int): AppRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    AppRepository.inMemRepository(new LazyCachingPersistenceStore(new InMemoryPersistenceStore()), maxVersions)
+    AppRepository.inMemRepository(new LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
   }
 
   behave like basic("InMemEntity", createLegacyRepo(_, new InMemoryStore()))

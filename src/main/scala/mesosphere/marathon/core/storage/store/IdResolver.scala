@@ -30,8 +30,7 @@ trait IdResolver[Id, V, Category, K] {
     */
   def fromStorageId(key: K): Id
 
-  /** The maximum number of versions for the given object type */
-  val maxVersions: Int
+  val hasVersions: Boolean
 
   /**
     * The version of 'V'

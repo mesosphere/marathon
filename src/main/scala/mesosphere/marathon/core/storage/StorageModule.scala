@@ -92,11 +92,12 @@ object StorageModule {
           leadershipInitializers)
       case zk: CuratorZk =>
         val store = zk.store
-        val appRepository = AppRepository.zkRepository(store, zk.maxVersions)
-        val groupRepository = GroupRepository.zkRepository(store, appRepository, zk.maxVersions)
+        val appRepository = AppRepository.zkRepository(store)
+        val groupRepository = GroupRepository.zkRepository(store, appRepository)
 
         val taskRepository = TaskRepository.zkRepository(store)
-        val deploymentRepository = DeploymentRepository.zkRepository(store, groupRepository)
+        val deploymentRepository = DeploymentRepository.zkRepository(store, groupRepository,
+          appRepository, zk.maxVersions)
         val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.zkRepository(store)
         val eventSubscribersRepository = EventSubscribersRepository.zkRepository(store)
@@ -123,10 +124,11 @@ object StorageModule {
           leadershipInitializers)
       case mem: InMem =>
         val store = mem.store
-        val appRepository = AppRepository.inMemRepository(store, mem.maxVersions)
+        val appRepository = AppRepository.inMemRepository(store)
         val taskRepository = TaskRepository.inMemRepository(store)
-        val groupRepository = GroupRepository.inMemRepository(store, appRepository, mem.maxVersions)
-        val deploymentRepository = DeploymentRepository.inMemRepository(store, groupRepository)
+        val groupRepository = GroupRepository.inMemRepository(store, appRepository)
+        val deploymentRepository = DeploymentRepository.inMemRepository(store, groupRepository,
+          appRepository, mem.maxVersions)
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)
         val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(store)

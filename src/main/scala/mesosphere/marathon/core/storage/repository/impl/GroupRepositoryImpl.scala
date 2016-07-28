@@ -33,6 +33,8 @@ private[storage] case class StoredGroup(
     dependencies: Set[PathId],
     version: OffsetDateTime) {
 
+  lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
+
   def resolve(
     groupRepository: GroupRepository,
     appRepository: AppRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
@@ -106,7 +108,7 @@ object StoredGroup {
 
 class StoredGroupRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
-    protected val appRepository: AppRepository)(
+    appRepository: AppRepository)(
     implicit
     ir: IdResolver[PathId, StoredGroup, C, K],
     marshaller: Marshaller[StoredGroup, S],
@@ -181,25 +183,6 @@ class StoredGroupRepositoryImpl[K, C, S](
     }
   }
 
-  /**
-    * @inheritdoc
-    * @todo We need to eventually garbage collect as we will accumulate apps/appVersions that neither
-    * the root nor any historical group references.
-    *
-    * When should we run the garbage collection? We should probably not block root updates, but instead have
-    * a kind of "prepareGC"/"commitGC" phase so that a root update will invalidate the GC and start it over.
-    * If in the process of a prepare, storeRoot is called, we should cancel the current prepareGC and start
-    * it again.
-    *
-    * This may be as simple as "get all of the app ids" and compare them to the appIds that are in a group.
-    * If no group has the appId, delete it. We probably don't actually need to delete app versions that are no longer
-    * in use as there is some group still referring to some version of the app, so eventually it will be deleted once
-    * it is no longer in actual usage.
-    *
-    * The garbage collection does not need to run as part of storeRoot (which would likely slow it down by quite
-    * a bit), instead, we should run it out of band (triggered by a storeRoot) and use the prepare/commit/cancellable
-    * described above.
-    */
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] =
     async {
       val promise = Promise[Group]()
@@ -235,6 +218,14 @@ class StoredGroupRepositoryImpl[K, C, S](
           revertRoot(ex)
       }
     }
+
+  private[storage] def lazyRootVersion(version: OffsetDateTime): Future[Option[StoredGroup]] = {
+    storedRepo.getVersion(RootId, version)
+  }
+
+  private[storage] def deleteRootVersion(version: OffsetDateTime): Future[Done] = {
+    persistenceStore.deleteVersion(RootId, version)
+  }
 }
 
 object StoredGroupRepositoryImpl {

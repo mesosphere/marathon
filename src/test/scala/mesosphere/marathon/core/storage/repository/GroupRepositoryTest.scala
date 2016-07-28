@@ -10,23 +10,23 @@ import com.twitter.zk.ZNode
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.repository.impl.StoredGroupRepositoryImpl
 import mesosphere.marathon.core.storage.repository.impl.legacy.GroupEntityRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, ZKStore }
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{CompressionConf, EntityStore, InMemoryStore, MarathonStore, ZKStore}
+import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
 import mesosphere.marathon.test.Mockito
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.concurrent.duration.{ Duration, _ }
+import scala.concurrent.duration.{Duration, _}
 
 class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServerTest {
   import PathId._
 
-  def basicGroupRepository(name: String, createRepo: (AppRepository, Int) => GroupRepository): Unit = {
+  def basicGroupRepository[K, C, S](name: String, createRepo: (AppRepository, Int) => GroupRepository): Unit = {
     name should {
       "return an empty root if no root exists" in {
         val repo = createRepo(mock[AppRepository], 1)
@@ -128,7 +128,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       }
       "retrieve a historical version" in {
         implicit val metrics = new Metrics(new MetricRegistry)
-        val appRepo = AppRepository.inMemRepository(new InMemoryPersistenceStore(), 2)
+        val appRepo = AppRepository.inMemRepository(new InMemoryPersistenceStore())
         val repo = createRepo(appRepo, 2)
 
         val app1 = AppDefinition("app1".toRootPath)
@@ -154,7 +154,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   def createInMemRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new InMemoryPersistenceStore()
-    GroupRepository.inMemRepository(store, appRepository, maxVersions)
+    GroupRepository.inMemRepository(store, appRepository)
   }
 
   private def zkStore: ZkPersistenceStore = {
@@ -168,20 +168,20 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   def createZkRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = zkStore
-    GroupRepository.zkRepository(store, appRepository, maxVersions)
+    GroupRepository.zkRepository(store, appRepository)
   }
 
   def createLazyCachingRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new LazyCachingPersistenceStore(new InMemoryPersistenceStore())
-    GroupRepository.inMemRepository(store, appRepository, maxVersions)
+    GroupRepository.inMemRepository(store, appRepository)
   }
 
   def createLoadCachingRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
     store.preDriverStarts.futureValue
-    GroupRepository.inMemRepository(store, appRepository, maxVersions)
+    GroupRepository.inMemRepository(store, appRepository)
   }
 
   def createLegacyInMemRepos(appRepository: AppRepository, maxVersions: Int): GroupRepository = {
