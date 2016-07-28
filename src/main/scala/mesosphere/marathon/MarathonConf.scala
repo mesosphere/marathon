@@ -8,6 +8,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
+import mesosphere.marathon.core.task.termination.TaskKillConfig
 import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.io.storage.StorageProvider
@@ -22,7 +23,7 @@ trait MarathonConf
     with EventConf with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
     with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
     with PluginManagerConfiguration with ReviveOffersConfig with TaskJobsConfig with TaskStatusUpdateConfig
-    with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
+    with TaskTrackerConfig with UpgradeConfig with ZookeeperConf with TaskKillConfig {
 
   //scalastyle:off magic.number
 

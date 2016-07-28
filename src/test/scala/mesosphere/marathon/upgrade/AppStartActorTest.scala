@@ -69,7 +69,7 @@ class AppStartActorTest
 
   test("Failed") {
     val f = new Fixture
-    f.scheduler.stopApp(any, any).asInstanceOf[Future[Unit]] returns Future.successful(())
+    f.scheduler.stopApp(any).asInstanceOf[Future[Unit]] returns Future.successful(())
 
     val app = AppDefinition(id = PathId("app"), instances = 10)
     val promise = Promise[Unit]()
@@ -83,7 +83,7 @@ class AppStartActorTest
     }
 
     verify(f.scheduler).startApp(f.driver, app.copy(instances = 2))
-    verify(f.scheduler).stopApp(f.driver, app)
+    verify(f.scheduler).stopApp(app)
     expectTerminated(ref)
   }
 

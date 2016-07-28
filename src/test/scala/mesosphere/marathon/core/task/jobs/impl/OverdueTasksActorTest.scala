@@ -4,14 +4,13 @@ import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
-import mesosphere.mesos.protos.TaskID
-import org.apache.mesos.Protos.{ TaskState, TaskStatus }
-import org.apache.mesos.{ Protos => MesosProtos, SchedulerDriver }
+import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.scalatest.GivenWhenThen
@@ -25,6 +24,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
   var taskTracker: TaskTracker = _
   var taskReservationTimeoutHandler: TaskReservationTimeoutHandler = _
   var driver: SchedulerDriver = _
+  var killService: TaskKillService = _
   var checkActor: ActorRef = _
   val clock = ConstantClock()
 
@@ -33,11 +33,12 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     taskTracker = mock[TaskTracker]
     taskReservationTimeoutHandler = mock[TaskReservationTimeoutHandler]
     driver = mock[SchedulerDriver]
+    killService = mock[TaskKillService]
     val driverHolder = new MarathonSchedulerDriverHolder()
     driverHolder.driver = Some(driver)
     val config = MarathonTestHelper.defaultConfig()
     checkActor = actorSystem.actorOf(
-      OverdueTasksActor.props(config, taskTracker, taskReservationTimeoutHandler, driverHolder, clock),
+      OverdueTasksActor.props(config, taskTracker, taskReservationTimeoutHandler, killService, clock),
       "check")
   }
 
@@ -86,8 +87,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
     Then("the task kill gets initiated")
     verify(taskTracker, Mockito.timeout(1000)).tasksByApp()(any[ExecutionContext])
-    import mesosphere.mesos.protos.Implicits._
-    verify(driver, Mockito.timeout(1000)).killTask(TaskID("someId"))
+    verify(killService, Mockito.timeout(1000)).killTask(mockTask, TaskKillReason.Overdue)
   }
 
   // sounds strange, but this is how it currently works: determineOverdueTasks will consider a missing startedAt to
@@ -150,9 +150,9 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     verify(taskTracker).tasksByApp()(any[ExecutionContext])
 
     And("All somehow overdue tasks are killed")
-    verify(driver).killTask(unconfirmedOverdueTask.taskId.mesosTaskId)
-    verify(driver).killTask(overdueUnstagedTask.taskId.mesosTaskId)
-    verify(driver).killTask(overdueStagedTask.taskId.mesosTaskId)
+    verify(killService).killTask(unconfirmedOverdueTask, TaskKillReason.Overdue)
+    verify(killService).killTask(overdueUnstagedTask, TaskKillReason.Overdue)
+    verify(killService).killTask(overdueStagedTask, TaskKillReason.Overdue)
 
     And("but not more")
     verifyNoMoreInteractions(driver)

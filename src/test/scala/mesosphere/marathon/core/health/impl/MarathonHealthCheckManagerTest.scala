@@ -10,6 +10,7 @@ import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
@@ -68,9 +69,10 @@ class MarathonHealthCheckManagerTest
 
     eventStream = new EventStream()
 
+    val killService = mock[TaskKillService]
     hcManager = new MarathonHealthCheckManager(
       system,
-      new MarathonSchedulerDriverHolder,
+      killService,
       eventStream,
       taskTracker,
       appRepository,

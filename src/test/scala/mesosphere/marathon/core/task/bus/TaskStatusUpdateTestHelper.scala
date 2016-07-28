@@ -96,4 +96,6 @@ object TaskStatusUpdateTestHelper {
   def killing(task: Task = defaultTask) = taskUpdateFor(task, MarathonTaskStatus.Killing, makeTaskStatus(task.taskId, TaskState.TASK_KILLING))
 
   def error(task: Task = defaultTask) = taskExpungeFor(task, MarathonTaskStatus.Error, makeTaskStatus(task.taskId, TaskState.TASK_ERROR))
+
+  def failed(task: Task = defaultTask) = taskExpungeFor(task, MarathonTaskStatus.Failed, makeTaskStatus(task.taskId, TaskState.TASK_FAILED))
 }

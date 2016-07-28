@@ -30,14 +30,19 @@ class ScaleAppUpdateStepImpl @Inject() (
         // stateOp is a terminal MesosUpdate
         case (TaskStateOp.MesosUpdate(task, _: MarathonTaskStatus.Terminal, _, _), _) => Some(task)
 
-        // A Lost task that might come back wouldN#t be included in Terminal(_)
-        case (TaskStateOp.MesosUpdate(task, MarathonTaskStatus.Unreachable, _, _), _) => Some(task)
+        // A Lost task was is being expunged
+        case (TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Unreachable, mesosState, _),
+          TaskStateChange.Expunge(task)) => Some(task)
+
+        // A Lost task that might come back and is not expunged but updated
+        case (TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Unreachable, mesosState, _),
+          TaskStateChange.Update(task, _)) => Some(task)
 
         // stateChange is an expunge (probably because we expunged a timeout reservation)
         case (_, TaskStateChange.Expunge(task)) => Some(task)
 
         // no ScaleApp needed
-        case _ => None
+        case _                                  => None
       }
     }
 
