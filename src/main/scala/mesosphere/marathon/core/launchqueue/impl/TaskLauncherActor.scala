@@ -104,8 +104,6 @@ private class TaskLauncherActor(
       runSpec.id, runSpec.version, tasksToLaunch)
 
     tasksMap = taskTracker.tasksByAppSync.appTasksMap(runSpec.id).taskMap
-    log.info(">>> received tasksMap: {}", tasksMap.keySet.mkString(","))
-
     rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
   }
 

@@ -9,7 +9,16 @@ import org.apache.mesos
   * - representations of the mesos.Protos.TaskStatus
   * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
   */
-sealed trait MarathonTaskStatus
+sealed trait MarathonTaskStatus {
+  def toMesosStateName: String = {
+    import MarathonTaskStatus._
+    this match {
+      case Gone | Unreachable | Unknown | Dropped => mesos.Protos.TaskState.TASK_LOST.toString
+      case Created | Reserved => mesos.Protos.TaskState.TASK_STAGING.toString
+      case s: MarathonTaskStatus => "TASK_" + s.toString.toUpperCase()
+    }
+  }
+}
 
 object MarathonTaskStatus {
   import org.apache.mesos.Protos.TaskState._
