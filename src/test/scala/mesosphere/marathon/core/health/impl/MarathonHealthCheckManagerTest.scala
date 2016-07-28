@@ -21,6 +21,7 @@ import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.{ Protos => mesos }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{ Millis, Span }
 
 import scala.concurrent.duration._
 
@@ -308,4 +309,6 @@ class MarathonHealthCheckManagerTest
   }
 
   def captureEvents = new CaptureEvents(eventStream)
+
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(1000, Millis)))
 }
