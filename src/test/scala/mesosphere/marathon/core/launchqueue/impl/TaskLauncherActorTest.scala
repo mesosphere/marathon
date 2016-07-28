@@ -282,7 +282,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   }
 
   for (
-    update <- MarathonTaskStatusMapping.WontComeBack.toSeq.map(reason => TaskStatusUpdateTestHelper.lost(reason, f.marathonTask))
+    update <- MarathonTaskStatusMapping.Gone.toSeq.map(reason => TaskStatusUpdateTestHelper.lost(reason, f.marathonTask))
       .union(Seq(
         TaskStatusUpdateTestHelper.finished(f.marathonTask),
         TaskStatusUpdateTestHelper.killed(f.marathonTask),
@@ -311,7 +311,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
   val log = LoggerFactory.getLogger(getClass)
   for (
-    update <- MarathonTaskStatusMapping.MightComeBack.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonTask))
+    update <- MarathonTaskStatusMapping.Unreachable.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonTask))
   ) {
     test(s"TemporarilyUnreachable task (${update.simpleName} with ${update.reason} is NOT removed") {
       Mockito.when(taskTracker.tasksByAppSync).thenReturn(TaskTracker.TasksByApp.forTasks(f.marathonTask))
@@ -355,7 +355,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
   }
 
   for (
-    update <- MarathonTaskStatusMapping.WontComeBack.toSeq.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonTask))
+    update <- MarathonTaskStatusMapping.Gone.toSeq.map(r => TaskStatusUpdateTestHelper.lost(r, f.marathonTask))
       .union(Seq(
         TaskStatusUpdateTestHelper.finished(f.marathonTask),
         TaskStatusUpdateTestHelper.killed(f.marathonTask),

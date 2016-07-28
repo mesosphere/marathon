@@ -87,7 +87,7 @@ class TaskStateOpResolverTest
   }
 
   for (
-    reason <- MarathonTaskStatusMapping.MightComeBack
+    reason <- MarathonTaskStatusMapping.Unreachable
   ) {
     test(s"a TASK_LOST update with $reason indicating a TemporarilyUnreachable task is mapped to an update") {
       val f = new Fixture
@@ -115,7 +115,7 @@ class TaskStateOpResolverTest
   }
 
   for (
-    reason <- MarathonTaskStatusMapping.WontComeBack
+    reason <- MarathonTaskStatusMapping.Gone
   ) {
     test(s"a TASK_LOST update with $reason indicating a task won't come back is mapped to an expunge") {
       val f = new Fixture
@@ -136,8 +136,8 @@ class TaskStateOpResolverTest
         status = f.existingTask.status.copy(
           mesosStatus = Option(stateOp.mesosStatus),
           taskStatus = reason match {
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.WontComeBack(reason) => MarathonTaskStatus.Gone
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.MightComeBack(reason) => MarathonTaskStatus.Unreachable
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Gone(reason) => MarathonTaskStatus.Gone
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unreachable(reason) => MarathonTaskStatus.Unreachable
             case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(state) => MarathonTaskStatus.Unknown
             case _ => MarathonTaskStatus.Dropped
           }))

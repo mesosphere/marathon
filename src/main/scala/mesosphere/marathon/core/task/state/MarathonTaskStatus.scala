@@ -26,8 +26,8 @@ object MarathonTaskStatus {
       case TASK_KILLED => Killed
       case TASK_KILLING => Killing
       case TASK_LOST => taskStatus.getReason match {
-        case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.WontComeBack(reason) => Gone
-        case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.MightComeBack(reason) => Unreachable
+        case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Gone(reason) => Gone
+        case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unreachable(reason) => Unreachable
         case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(reason) => Unknown
         case _ => Dropped
       }
