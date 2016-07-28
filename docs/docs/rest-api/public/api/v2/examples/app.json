@@ -77,8 +77,8 @@
     {
       "name": "myReadyCheck",
       "protocol": "HTTP",
-      "path": "/v1/plan"
-      "portName": "http"
+      "path": "/v1/plan",
+      "portName": "http",
       "interval": 10000,
       "timeout": 10000,
       "httpStatusCodesForReady": [ 200 ],
