@@ -131,7 +131,7 @@ object Task {
 
       // case 3: health or state updated
       case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, now) =>
-        updatedHealthOrState(status.mesosStatus, Some(mesosStatus)) match {
+        updatedHealthOrState(status.mesosStatus, mesosStatus) match {
           case Some(newStatus) =>
             val updatedTask = copy(status = status.copy(
               mesosStatus = Some(newStatus),
@@ -256,7 +256,7 @@ object Task {
 
       // case 3: health or state updated
       case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, _) =>
-        updatedHealthOrState(status.mesosStatus, Some(mesosStatus)).map { newStatus =>
+        updatedHealthOrState(status.mesosStatus, mesosStatus).map { newStatus =>
           val updatedTask = copy(status = status.copy(
             mesosStatus = Some(newStatus),
             taskStatus = taskStatus))
@@ -298,22 +298,18 @@ object Task {
   /** returns the new status if the health status has been added or changed, or if the state changed */
   private[this] def updatedHealthOrState(
     maybeCurrent: Option[MesosProtos.TaskStatus],
-    maybeUpdate: Option[MesosProtos.TaskStatus]): Option[MesosProtos.TaskStatus] = {
+    update: MesosProtos.TaskStatus): Option[MesosProtos.TaskStatus] = {
 
-    maybeUpdate match {
-      case Some(update) =>
-        maybeCurrent match {
-          case Some(current) =>
-            val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
-            val changed = healthy || current.getState != update.getState
-            if (changed) {
-              Some(update)
-            } else {
-              None
-            }
-          case None => Some(update)
+    maybeCurrent match {
+      case Some(current) =>
+        val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
+        val changed = healthy || current.getState != update.getState
+        if (changed) {
+          Some(update)
+        } else {
+          None
         }
-      case None => None
+      case None => Some(update)
     }
   }
 

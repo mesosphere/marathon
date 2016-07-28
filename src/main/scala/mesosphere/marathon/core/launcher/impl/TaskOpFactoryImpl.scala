@@ -59,7 +59,7 @@ class TaskOpFactoryImpl(
           runSpecVersion = runSpec.version,
           status = Task.Status(
             stagedAt = clock.now(),
-            taskStatus = MarathonTaskStatus.Staging
+            taskStatus = MarathonTaskStatus.Created
           ),
           hostPorts = ports.flatten
         )
@@ -148,7 +148,7 @@ class TaskOpFactoryImpl(
           runSpecVersion = spec.version,
           status = Task.Status(
             stagedAt = clock.now(),
-            taskStatus = MarathonTaskStatus.Staging
+            taskStatus = MarathonTaskStatus.Created
           ),
           hostPorts = ports.flatten)
 
