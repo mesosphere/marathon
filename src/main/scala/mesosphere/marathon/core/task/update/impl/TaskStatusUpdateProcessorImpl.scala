@@ -5,7 +5,6 @@ import javax.inject.Inject
 import com.google.inject.name.Names
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
@@ -45,7 +44,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
 
     taskTracker.task(taskId).flatMap {
       case Some(task) if task.launched.isDefined =>
-        val taskStateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(status), now)
+        val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
         stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
       case maybeTask: Option[Task] if killWhenUnknownOrNotLaunched(status) =>

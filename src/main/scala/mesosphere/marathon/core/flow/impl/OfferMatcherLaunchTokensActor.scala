@@ -5,7 +5,8 @@ import mesosphere.marathon.core.flow.LaunchTokenConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, TaskChangeObservables }
+import mesosphere.marathon.core.task.bus.TaskChangeObservables
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import org.apache.mesos.Protos.TaskStatus
 import rx.lang.scala.{ Observable, Subscription }
 
@@ -53,9 +54,8 @@ private class OfferMatcherLaunchTokensActor(
   private[this] def healthy(status: TaskStatus): Boolean = !status.hasHealthy || status.getHealthy
 
   override def receive: Receive = {
-    case TaskChanged(
-      TaskStateOp.MesosUpdate(
-        task, MarathonTaskStatus.Running(Some(mesosStatus)), timestamp), stateChange) if healthy(mesosStatus) =>
+    case TaskChanged(TaskStateOp.MesosUpdate(task, MarathonTaskStatus.Running, mesosStatus, timestamp), stateChange) //
+    if healthy(mesosStatus) =>
 
       offerMatcherManager.addLaunchTokens(1)
   }

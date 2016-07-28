@@ -3,7 +3,6 @@ package mesosphere.marathon.core.task.update.impl.steps
 import akka.event.EventStream
 import com.google.inject.Inject
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus.WithMesosStatus
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ EffectiveTaskStateChange, Task, TaskStateOp }
@@ -29,8 +28,8 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) 
     taskChanged match {
       // case 1: Mesos status update => update or expunge
       // In this case, we post the OLD state - when terminated, a persistent task no longer has a launched
-      case TaskChanged(MesosUpdate(task, WithMesosStatus(status), now), EffectiveTaskStateChange(_)) =>
-        postEvent(clock.now(), Some(status), task)
+      case TaskChanged(MesosUpdate(task, status, mesosStatus, now), EffectiveTaskStateChange(_)) =>
+        postEvent(clock.now(), Some(mesosStatus), task)
 
       // case 2: Any TaskStateOp => update or expunge
       // In this case, we post the NEW state

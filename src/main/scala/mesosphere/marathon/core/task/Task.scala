@@ -1,9 +1,9 @@
 package mesosphere.marathon.core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
-import mesosphere.marathon.state.{ RunSpec, PathId, PersistentVolume, Timestamp }
-import org.apache.mesos.Protos.{ TaskState }
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
+import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
@@ -61,6 +61,8 @@ sealed trait Task {
 
   def runSpecId: PathId = taskId.runSpecId
 
+  def status: Task.Status
+
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task
     taskId.mesosTaskId
@@ -112,23 +114,28 @@ object Task {
     //scalastyle:off cyclomatic.complexity method.length
     override def update(update: TaskStateOp): TaskStateChange = update match {
       // case 1: now running
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running(mesosStatus), now) if !hasStartedRunning =>
+      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
-            mesosStatus = mesosStatus))
+            mesosStatus = Some(mesosStatus),
+            taskStatus = MarathonTaskStatus.Running))
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(updatedStatus), now) =>
-        val updated = copy(status = status.copy(mesosStatus = updatedStatus.mesosStatus))
+      case TaskStateOp.MesosUpdate(_, taskStatus: MarathonTaskStatus.Terminal, mesosStatus, now) =>
+        val updated = copy(status = status.copy(
+          mesosStatus = Some(mesosStatus),
+          taskStatus = taskStatus))
         TaskStateChange.Expunge(updated)
 
       // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(_, taskStatus, now) =>
-        updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus) match {
+      case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, now) =>
+        updatedHealthOrState(status.mesosStatus, mesosStatus) match {
           case Some(newStatus) =>
-            val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
+            val updatedTask = copy(status = status.copy(
+              mesosStatus = Some(newStatus),
+              taskStatus = taskStatus))
             TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
           case None =>
             log.debug("Ignoring status update for {}. Status did not change.", taskId)
@@ -169,15 +176,16 @@ object Task {
   case class Reserved(
       taskId: Task.Id,
       agentInfo: AgentInfo,
-      reservation: Reservation) extends Task {
+      reservation: Reservation,
+      status: Status) extends Task {
 
     override def reservationWithVolumes: Option[Reservation] = Some(reservation)
 
     override def launched: Option[Launched] = None
 
     override def update(update: TaskStateOp): TaskStateChange = update match {
-      case TaskStateOp.LaunchOnReservation(_, runSpecVersion, status, hostPorts) =>
-        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, status, hostPorts, reservation)
+      case TaskStateOp.LaunchOnReservation(_, runSpecVersion, taskStatus, hostPorts) =>
+        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       case _: TaskStateOp.ReservationTimeout =>
@@ -222,27 +230,36 @@ object Task {
     //scalastyle:off cyclomatic.complexity method.length
     override def update(update: TaskStateOp): TaskStateChange = update match {
       // case 1: now running
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running(mesosStatus), now) if !hasStartedRunning =>
+      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
-            mesosStatus = mesosStatus))
+            mesosStatus = Some(mesosStatus),
+            taskStatus = MarathonTaskStatus.Running))
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
-      case TaskStateOp.MesosUpdate(_, MarathonTaskStatus.Terminal(_), now) =>
+      case TaskStateOp.MesosUpdate(task, taskStatus: MarathonTaskStatus.Terminal, mesosStatus, now) =>
         val updatedTask = Task.Reserved(
           taskId = taskId,
           agentInfo = agentInfo,
-          reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None))
+          reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
+          status = Task.Status(
+            stagedAt = task.status.stagedAt,
+            startedAt = task.status.startedAt,
+            mesosStatus = Some(mesosStatus),
+            taskStatus = taskStatus
+          )
         )
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       // case 3: health or state updated
-      case TaskStateOp.MesosUpdate(_, taskStatus, _) =>
-        updatedHealthOrState(status.mesosStatus, taskStatus.mesosStatus).map { newStatus =>
-          val updatedTask = copy(status = status.copy(mesosStatus = Some(newStatus)))
+      case TaskStateOp.MesosUpdate(_, taskStatus, mesosStatus, _) =>
+        updatedHealthOrState(status.mesosStatus, mesosStatus).map { newStatus =>
+          val updatedTask = copy(status = status.copy(
+            mesosStatus = Some(newStatus),
+            taskStatus = taskStatus))
           TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
         } getOrElse {
           log.debug("Ignoring status update for {}. Status did not change.", taskId)
@@ -281,22 +298,18 @@ object Task {
   /** returns the new status if the health status has been added or changed, or if the state changed */
   private[this] def updatedHealthOrState(
     maybeCurrent: Option[MesosProtos.TaskStatus],
-    maybeUpdate: Option[MesosProtos.TaskStatus]): Option[MesosProtos.TaskStatus] = {
+    update: MesosProtos.TaskStatus): Option[MesosProtos.TaskStatus] = {
 
-    maybeUpdate match {
-      case Some(update) =>
-        maybeCurrent match {
-          case Some(current) =>
-            val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
-            val changed = healthy || current.getState != update.getState
-            if (changed) {
-              Some(update)
-            } else {
-              None
-            }
-          case None => Some(update)
+    maybeCurrent match {
+      case Some(current) =>
+        val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
+        val changed = healthy || current.getState != update.getState
+        if (changed) {
+          Some(update)
+        } else {
+          None
         }
-      case None => None
+      case None => Some(update)
     }
   }
 
@@ -436,7 +449,8 @@ object Task {
   case class Status(
     stagedAt: Timestamp,
     startedAt: Option[Timestamp] = None,
-    mesosStatus: Option[MesosProtos.TaskStatus] = None)
+    mesosStatus: Option[MesosProtos.TaskStatus] = None,
+    taskStatus: MarathonTaskStatus)
 
   object Terminated {
     def isTerminated(state: TaskState): Boolean = state match {
@@ -456,5 +470,22 @@ object Task {
         )
       else None
     }
+  }
+
+  implicit class TaskStatusComparison(val task: Task) extends AnyVal {
+    def isReserved: Boolean = task.status.taskStatus == MarathonTaskStatus.Reserved
+    def isCreated: Boolean = task.status.taskStatus == MarathonTaskStatus.Created
+    def isError: Boolean = task.status.taskStatus == MarathonTaskStatus.Error
+    def isFailed: Boolean = task.status.taskStatus == MarathonTaskStatus.Failed
+    def isFinished: Boolean = task.status.taskStatus == MarathonTaskStatus.Finished
+    def isKilled: Boolean = task.status.taskStatus == MarathonTaskStatus.Killed
+    def isKilling: Boolean = task.status.taskStatus == MarathonTaskStatus.Killing
+    def isRunning: Boolean = task.status.taskStatus == MarathonTaskStatus.Running
+    def isStaging: Boolean = task.status.taskStatus == MarathonTaskStatus.Staging
+    def isStarting: Boolean = task.status.taskStatus == MarathonTaskStatus.Starting
+    def isUnreachable: Boolean = task.status.taskStatus == MarathonTaskStatus.Unreachable
+    def isGone: Boolean = task.status.taskStatus == MarathonTaskStatus.Gone
+    def isUnknown: Boolean = task.status.taskStatus == MarathonTaskStatus.Unknown
+    def isDropped: Boolean = task.status.taskStatus == MarathonTaskStatus.Dropped
   }
 }
