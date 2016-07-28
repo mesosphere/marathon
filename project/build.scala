@@ -115,7 +115,7 @@ object MarathonBuild extends Build {
     scalacOptions in Compile ++= Seq(
       "-encoding", "UTF-8",
       "-target:jvm-1.8",
-      "-deprecation:false", // FIXME (gkleiman): reenable deprecation after Mesos 1.0.0-rc2 deprecations are handled
+      "-deprecation",
       "-feature",
       "-unchecked",
       "-Xlog-reflective-calls",
@@ -124,6 +124,9 @@ object MarathonBuild extends Build {
       "-Xfatal-warnings",
       "-Yno-adapted-args",
       "-Ywarn-numeric-widen"
+    ),
+    scalacOptions in Test ++= Seq(
+      "-deprecation:false" // TODO(jdef) remove this once deprecated mesos-1.0 APIs are actually removed
     ),
     javacOptions in Compile ++= Seq("-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"),
     resolvers ++= Seq(
