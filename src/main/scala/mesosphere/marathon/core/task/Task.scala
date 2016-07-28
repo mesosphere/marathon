@@ -118,7 +118,8 @@ object Task {
         val updated = copy(
           status = status.copy(
             startedAt = Some(now),
-            mesosStatus = Some(mesosStatus)))
+            mesosStatus = Some(mesosStatus),
+            taskStatus = MarathonTaskStatus.Running))
         TaskStateChange.Update(newState = updated, oldState = Some(this))
 
       // case 2: terminal
