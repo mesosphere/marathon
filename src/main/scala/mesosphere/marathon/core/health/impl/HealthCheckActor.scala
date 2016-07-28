@@ -87,7 +87,7 @@ private[health] class HealthCheckActor(
     taskTracker.appTasksSync(app.id).foreach { task =>
 
       task.launched.foreach { launched =>
-        if (launched.runSpecVersion == app.version && launched.hasStartedRunning && task.isRunning) {
+        if (launched.runSpecVersion == app.version && launched.hasStartedRunning && !task.isUnreachable) {
           log.debug("Dispatching health check job for {}", task.taskId)
           val worker: ActorRef = context.actorOf(workerProps)
           worker ! HealthCheckJob(app, task, launched, healthCheck)
