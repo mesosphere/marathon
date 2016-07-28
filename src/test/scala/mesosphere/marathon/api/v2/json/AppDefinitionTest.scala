@@ -385,7 +385,23 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(app.copy(mem = -3.0), "/mem", "got -3.0, expected 0.0 or more")
     shouldViolate(app.copy(cpus = -3.0), "/cpus", "got -3.0, expected 0.0 or more")
     shouldViolate(app.copy(disk = -3.0), "/disk", "got -3.0, expected 0.0 or more")
+    shouldViolate(app.copy(gpus = -3), "/gpus", "got -3, expected 0 or more")
     shouldViolate(app.copy(instances = -3), "/instances", "got -3, expected 0 or more")
+
+    shouldViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+
+    AllConf.withTestConfig(Seq("--enable_features", "gpu_resources"))
+
+    shouldNotViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+
+    app = correct.copy(
+      gpus = 1,
+      container = Some(Container(
+        docker = Some(Docker())
+      ))
+    )
+
+    shouldViolate(app, "/", "GPU resources only work with the Mesos containerizer")
   }
 
   test("SerializationRoundtrip empty") {

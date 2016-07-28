@@ -594,6 +594,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
+    appDef must complyWithGpuRules
     appDef.constraints.each must complyWithConstraintRules
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
   } and ExternalVolumes.validApp and EnvVarValue.validApp
@@ -681,6 +682,13 @@ object AppDefinition extends GeneralPurposeCombinators {
   private val complyWithUpgradeStrategyRules: Validator[AppDefinition] = validator[AppDefinition] { appDef =>
     (appDef.isSingleInstance is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForSingleInstanceApps)
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
+  }
+
+  private val complyWithGpuRules: Validator[AppDefinition] = conditional[AppDefinition](_.gpus > 0) {
+    isTrue[AppDefinition]("GPU resources only work with the Mesos containerizer") { app =>
+      //TODO: we should check for the existence of the Mesos Containerizer, not the absence of Docker
+      app.container.exists(_.docker.isEmpty)
+    } and featureEnabled(Features.GPU_RESOURCES)
   }
 
   private val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
