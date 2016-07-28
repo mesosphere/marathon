@@ -417,7 +417,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! Deploy(plan)
 
-      expectMsgType[DeploymentStarted]
+      expectMsgType[DeploymentStarted](10.seconds)
 
       schedulerActor ! Deploy(plan, force = true)
 
@@ -539,7 +539,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
   var conf: UpgradeConfig = _
   var readinessCheckExecutor: ReadinessCheckExecutor = _
 
-  implicit val defaultTimeout: Timeout = 5.seconds
+  implicit val defaultTimeout: Timeout = 30.seconds
 
   before {
     driver = mock[SchedulerDriver]
