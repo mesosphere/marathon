@@ -29,7 +29,7 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) 
       // case 1: Mesos status update => update or expunge
       // In this case, we post the OLD state - when terminated, a persistent task no longer has a launched
       case TaskChanged(MesosUpdate(task, status, mesosStatus, now), EffectiveTaskStateChange(_)) =>
-        postEvent(clock.now(), Option(mesosStatus), task)
+        postEvent(clock.now(), Some(mesosStatus), task)
 
       // case 2: Any TaskStateOp => update or expunge
       // In this case, we post the NEW state
