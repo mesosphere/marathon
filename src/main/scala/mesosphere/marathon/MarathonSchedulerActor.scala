@@ -527,9 +527,9 @@ class SchedulerActions(
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
     import SchedulerActions._
 
-    def launchedAndReachable(t: Task) = t.launched.isDefined && t.isReachable
+`    def inQueueOrRunning(t: Task) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
 
-    val launchedCount = taskTracker.countAppTasksSync(app.id, launchedAndReachable)
+    val launchedCount = taskTracker.countAppTasksSync(app.id, inQueueOrRunning)
 
     val targetCount = app.instances
 
