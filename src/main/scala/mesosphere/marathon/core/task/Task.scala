@@ -68,7 +68,6 @@ sealed trait Task {
     taskId.mesosTaskId
   }
 
-  // TODO ju remove
   def mesosStatus: Option[MesosProtos.TaskStatus] = {
     launched.flatMap(_.status.mesosStatus).orElse {
       launchedMesosId.map { mesosId =>

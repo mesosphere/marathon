@@ -582,7 +582,6 @@ private[this] object SchedulerActions {
       case (Some(av), Some(bv)) => fn(av, bv)
       case _ => default
     }
-    // TODO ju replaceable with ```a.taskStatus, ...``` ?
     opt(a.mesosStatus, b.mesosStatus, a.mesosStatus.isDefined) { (aStatus, bStatus) =>
       runningOrStaged(bStatus.getState) compareTo runningOrStaged(aStatus.getState) match {
         case 0 => opt(a.launched, b.launched, a.launched.isDefined) { (aLaunched, bLaunched) =>

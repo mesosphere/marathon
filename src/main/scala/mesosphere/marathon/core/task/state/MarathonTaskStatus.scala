@@ -9,7 +9,6 @@ import org.apache.mesos
   * - representations of the mesos.Protos.TaskStatus
   * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
   */
-// TODO ju handle garbage flag
 sealed trait MarathonTaskStatus
 
 object MarathonTaskStatus {
