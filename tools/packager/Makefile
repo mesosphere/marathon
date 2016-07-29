@@ -62,7 +62,7 @@ el: el6 el7
 fedora: fedora20 fedora21 fedora22
 
 .PHONY: ubuntu
-ubuntu: ubuntu-precise ubuntu-trusty ubuntu-vivid
+ubuntu: ubuntu-precise ubuntu-trusty ubuntu-xenial
 
 .PHONY: debian
 debian: debian-jessie
@@ -169,6 +169,15 @@ ubuntu-vivid: toor/ubuntu-vivid/$(PREFIX)/bin/marathon
 ubuntu-vivid: marathon.systemd.postinst
 	fpm -C toor/ubuntu-vivid --config-files lib/systemd/system/marathon.service \
 		--iteration $(PKG_REL).ubuntu1504 \
+		--after-install marathon.systemd.postinst \
+		$(FPM_OPTS_DEB) $(FPM_OPTS) .
+
+.PHONY: ubuntu-xenial
+ubuntu-xenial: toor/ubuntu-xenial/lib/systemd/system/marathon.service
+ubuntu-xenial: toor/ubuntu-xenial/$(PREFIX)/bin/marathon
+ubuntu-xenial: marathon.systemd.postinst
+	fpm -C toor/ubuntu-xenial --config-files lib/systemd/system/marathon.service \
+		--iteration $(PKG_REL).ubuntu1604 \
 		--after-install marathon.systemd.postinst \
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
