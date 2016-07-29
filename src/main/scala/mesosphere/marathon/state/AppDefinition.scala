@@ -123,8 +123,7 @@ case class AppDefinition(
     val cpusResource = ScalarResource(Resource.CPUS, cpus)
     val memResource = ScalarResource(Resource.MEM, mem)
     val diskResource = ScalarResource(Resource.DISK, disk)
-    // TODO (Yubo): Change hard-coded "gpus" to "Resource.GPUS" after mesos-util has GPU resource type support.
-    val gpusResource = ScalarResource("gpus", gpus.toDouble)
+    val gpusResource = ScalarResource(Resource.GPUS, gpus.toDouble)
     val appLabels = labels.map {
       case (key, value) =>
         mesos.Parameter.newBuilder
@@ -252,8 +251,7 @@ case class AppDefinition(
       cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
       mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
       disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
-      // TODO (Yubo): Change hard-coded "gpus" to "Resource.GPUS" after mesos-util has GPU resource type support.
-      gpus = resourcesMap.getOrElse("gpus", this.gpus.toDouble).toInt,
+      gpus = resourcesMap.getOrElse(Resource.GPUS, this.gpus.toDouble).toInt,
       env = envMap ++ envRefs,
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
