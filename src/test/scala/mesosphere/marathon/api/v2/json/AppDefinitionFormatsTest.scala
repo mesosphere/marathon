@@ -358,6 +358,7 @@ class AppDefinitionFormatsTest
         dd.credential.isDefined
         dd.credential.get.principal should equal("aPrincipal")
         dd.credential.get.secret should equal(Some("aSecret"))
+      case _ => {}
     }
   }
 
@@ -394,6 +395,7 @@ class AppDefinitionFormatsTest
         ma.labels("version") should equal("1.2.0")
         ma.labels("arch") should equal("amd64")
         ma.labels("os") should equal("linux")
+      case _ => {}
     }
   }
 

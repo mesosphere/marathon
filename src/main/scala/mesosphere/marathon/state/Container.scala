@@ -8,7 +8,7 @@ import org.apache.mesos.Protos.ContainerInfo
 
 import scala.collection.immutable.Seq
 
-trait Container {
+sealed trait Container {
   val volumes: Seq[Volume]
 
   def docker(): Option[Container.DockerDocker] = {
