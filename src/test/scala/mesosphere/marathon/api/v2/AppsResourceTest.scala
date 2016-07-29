@@ -306,11 +306,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Some(Seq(
+        portMappings = Seq(
           Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         )
-        ))
-      ),
+      )),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -338,9 +337,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val container = Container.Docker(
       network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
-      portMappings = Some(Seq(
+      portMappings = Seq(
         Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-      ))
+      )
     )
 
     val app = AppDefinition(
@@ -370,9 +369,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       app.copy(
         versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
         container = Some(container.copy(
-          portMappings = Some(Seq(
+          portMappings = Seq(
             Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
-          ))
+          )
         ))
       ),
       maybeTasks = Some(immutable.Seq.empty),
@@ -396,11 +395,10 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Some(Seq(
+        portMappings = Seq(
           Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-        ))
-      )
-      ),
+        )
+      )),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -652,7 +650,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |  }
         |}""".stripMargin.getBytes("UTF-8")
 
-    Then("An serialization exception is thrown")
+    Then("A serialization exception is thrown")
     intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
   }
 
@@ -982,8 +980,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getStatus should be(201)
   }
 
-  test("Replace an existing application fails due to mesos container validation") {
-    Given("An app update with an invalid container (missing docker field)")
+  test("Replacing an existing application with a Mesos docker container passes validation") {
+    Given("An app update to a Mesos container with a docker image")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
     prepareApp(app)
 
@@ -998,8 +996,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |  }
         |}""".stripMargin.getBytes("UTF-8")
 
-    Then("A serialization exception is thrown")
-    intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
+    When("The application is updated")
+    val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
+
+    Then("The return code indicates success")
+    response.getStatus should be(200)
   }
 
   test("Restart an existing app") {

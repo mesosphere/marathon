@@ -174,6 +174,8 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       def volumeValidator(container: Container) = container match {
         case _: Container.Mesos => validMesosVolume
+        case _: Container.MesosDocker => validMesosVolume
+        case _: Container.MesosAppC => validMesosVolume
         case _: Container.Docker => validDockerVolume
       }
 

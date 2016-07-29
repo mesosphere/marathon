@@ -104,8 +104,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val app = MarathonTestHelper.makeBasicApp().copy(
       container = Some(Container.Docker(
         image = "mesosphere/marathon",
-        network = Some(Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
-        portMappings = Some(Seq.empty)
+        network = Some(Protos.ContainerInfo.DockerInfo.Network.BRIDGE)
       )),
       portDefinitions = Seq.empty
     )
@@ -114,7 +113,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val task = MarathonTestHelper.mininimalTask(app.id)
 
     Then("The port assignments are empty")
-    app.portAssignments(task).value should be(empty)
+    app.portAssignments(task) should be(None)
   }
 
   test("portAssignments with IP-per-task using Docker USER networking and a port mapping NOT requesting a host port") {

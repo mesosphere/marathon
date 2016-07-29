@@ -8,6 +8,7 @@ import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -157,15 +158,9 @@ object MarathonTestHelper {
   }
 
   def reservation(principal: String, labels: Map[String, String] = Map.empty): Mesos.Resource.ReservationInfo = {
-    val labelsBuilder = Mesos.Labels.newBuilder()
-    labels.foreach {
-      case (k, v) =>
-        labelsBuilder.addLabels(Mesos.Label.newBuilder().setKey(k).setValue(v))
-    }
-
     Mesos.Resource.ReservationInfo.newBuilder()
       .setPrincipal(principal)
-      .setLabels(labelsBuilder)
+      .setLabels(LabelsSerializer.toMesosLabelsBuilder(labels))
       .build()
   }
 
@@ -577,9 +572,9 @@ object MarathonTestHelper {
         app.copy(container = Some(docker.copy(network = Some(network))))
       }
 
-      def withPortMappings(portMappings: Seq[PortMapping]): AppDefinition = {
+      def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
         val container = app.container.getOrElse(Container.Mesos())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(portMappings))
+        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = newPortMappings)
 
         app.copy(container = Some(docker))
       }

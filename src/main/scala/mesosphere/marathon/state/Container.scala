@@ -8,7 +8,7 @@ import org.apache.mesos.Protos.ContainerInfo
 
 import scala.collection.immutable.Seq
 
-trait Container {
+sealed trait Container {
   val volumes: Seq[Volume]
 
   def docker(): Option[Container.Docker] = {
@@ -20,10 +20,9 @@ trait Container {
 
   def getPortMappings: Option[Seq[Container.Docker.PortMapping]] = {
     for {
-      d <- docker
+      d <- docker if !d.portMappings.isEmpty
       n <- d.network if n == ContainerInfo.DockerInfo.Network.BRIDGE || n == ContainerInfo.DockerInfo.Network.USER
-      pms <- d.portMappings
-    } yield pms
+    } yield d.portMappings
   }
 
   def hostPorts: Option[Seq[Option[Int]]] =
@@ -41,7 +40,7 @@ object Container {
     volumes: Seq[Volume] = Seq.empty,
     image: String = "",
     network: Option[ContainerInfo.DockerInfo.Network] = None,
-    portMappings: Option[Seq[Docker.PortMapping]] = None,
+    portMappings: Seq[Docker.PortMapping] = Seq.empty,
     privileged: Boolean = false,
     parameters: Seq[Parameter] = Nil,
     forcePullImage: Boolean = false) extends Container
@@ -53,8 +52,8 @@ object Container {
       image: String = "",
       network: Option[ContainerInfo.DockerInfo.Network] = None,
       portMappings: Option[Seq[Docker.PortMapping]] = None,
-      privileged: Boolean = false,
-      parameters: Seq[Parameter] = Nil,
+      privileged: Option[Boolean] = None,
+      parameters: Option[Seq[Parameter]] = None,
       forcePullImage: Boolean = false): Docker = Docker(
       volumes = volumes,
       image = image,
@@ -67,11 +66,11 @@ object Container {
               case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(PortMapping.HostPortDefault), y, z, w, a)
               case _ => m
             }
-          })
-        case _ => portMappings
+          }).getOrElse(Seq.empty)
+        case _ => portMappings.getOrElse(Seq.empty)
       },
-      privileged = privileged,
-      parameters = parameters,
+      privileged = privileged.getOrElse(false),
+      parameters = parameters.getOrElse(Seq.empty),
       forcePullImage = forcePullImage)
 
     /**
@@ -128,8 +127,48 @@ object Container {
       }
     }
 
-    val validDockerContainer: Validator[Container.Docker] = validator[Container.Docker] { docker =>
-      docker.portMappings is optional(PortMapping.portMappingsValidator and PortMapping.validForDocker(docker))
+    val validDockerDockerContainer = validator[Docker] { docker =>
+      docker.image is notEmpty
+      docker.portMappings is PortMapping.portMappingsValidator and PortMapping.validForDocker(docker)
+    }
+  }
+
+  case class Credential(
+    principal: String,
+    secret: Option[String] = None)
+
+  case class MesosDocker(
+    volumes: Seq[Volume] = Seq.empty,
+    image: String = "",
+    credential: Option[Credential] = None,
+    forcePullImage: Boolean = false) extends Container
+
+  object MesosDocker {
+    val validMesosDockerContainer = validator[MesosDocker] { docker =>
+      docker.image is notEmpty
+    }
+  }
+
+  case class MesosAppC(
+    volumes: Seq[Volume] = Seq.empty,
+    image: String = "",
+    id: Option[String] = None,
+    labels: Map[String, String] = Map.empty[String, String],
+    forcePullImage: Boolean = false) extends Container
+
+  object MesosAppC {
+    val prefix = "sha512-"
+
+    val validId: Validator[String] =
+      isTrue[String](s"id must begin with '$prefix',") { id =>
+        id.startsWith(prefix)
+      } and isTrue[String](s"id must contain non-empty digest after '$prefix'.") { id =>
+        id.length > prefix.length
+      }
+
+    val validMesosAppCContainer = validator[MesosAppC] { appc =>
+      appc.image is notEmpty
+      appc.id is optional(validId)
     }
   }
 
@@ -141,7 +180,9 @@ object Container {
     new Validator[Container] {
       override def apply(container: Container): Result = container match {
         case _: Mesos => Success
-        case docker: Docker => validate(docker)(Docker.validDockerContainer)
+        case dd: Docker => validate(dd)(Docker.validDockerDockerContainer)
+        case md: MesosDocker => validate(md)(MesosDocker.validMesosDockerContainer)
+        case ma: MesosAppC => validate(ma)(MesosAppC.validMesosAppCContainer)
       }
     } and validGeneralContainer
   }

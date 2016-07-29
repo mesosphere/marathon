@@ -22,6 +22,14 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
   import mesosphere.mesos.protos.Implicits._
 
+  val labels = Map("foo" -> "bar", "test" -> "test")
+
+  val expectedLabels = MesosProtos.Labels.newBuilder.addAllLabels(
+    labels.map {
+    case (mKey, mValue) =>
+      MesosProtos.Label.newBuilder.setKey(mKey).setValue(mValue).build()
+  }.asJava).build
+
   test("BuildIfMatches") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
@@ -131,7 +139,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         executor = "//cmd",
         container = Some(Docker(
           network = Some(DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
+          portMappings = Seq(
             PortMapping(
               containerPort = 8080,
               hostPort = Some(0),
@@ -148,7 +156,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
               name = Some("admin"),
               labels = Map("VIP" -> "127.0.0.1:8081")
             )
-          ))
+          )
         ))
       ))
 
@@ -505,10 +513,84 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(vol2.equals(got2), s"expected volume $vol2, got instead: $got2")
   }
 
+  test("build creates task for MESOS Docker container") {
+    val offer = MarathonTestHelper.makeBasicOfferWithRole(
+      cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved
+    )
+      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+      .build
+
+    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
+      offer, AppDefinition(
+      id = "testApp".toPath,
+      cpus = 1.0,
+      mem = 64.0,
+      disk = 1.0,
+      executor = "//cmd",
+      container = Some(Container.MesosDocker(
+        image = "busybox",
+        credential = Some(Container.Credential(
+          principal = "aPrincipal",
+          secret = Some("aSecret")
+        ))
+      )),
+      portDefinitions = Seq.empty,
+      ipAddress = Some(IpAddress(networkName = Some("vnet")))
+    )
+    )
+    assert(task.isDefined, "expected task to match offer")
+    val (taskInfo, _) = task.get
+    taskInfo.hasContainer should be (true)
+    taskInfo.getContainer.getType should be (MesosProtos.ContainerInfo.Type.MESOS)
+    taskInfo.getContainer.hasMesos should be (true)
+    taskInfo.getContainer.getMesos.hasImage should be (true)
+    taskInfo.getContainer.getMesos.getImage.getType should be (MesosProtos.Image.Type.DOCKER)
+    taskInfo.getContainer.getMesos.getImage.hasDocker should be (true)
+    taskInfo.getContainer.getMesos.getImage.getDocker.hasCredential should be (true)
+    taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getPrincipal should be ("aPrincipal")
+    taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.hasSecret should be (true)
+    taskInfo.getContainer.getMesos.getImage.getDocker.getCredential.getSecret should be ("aSecret")
+  }
+
+  test("build creates task for MESOS AppC container") {
+    val offer = MarathonTestHelper.makeBasicOfferWithRole(
+      cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved
+    )
+      .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
+      .build
+
+    val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
+      offer, AppDefinition(
+      id = "testApp".toPath,
+      cpus = 1.0,
+      mem = 64.0,
+      disk = 1.0,
+      executor = "//cmd",
+      container = Some(Container.MesosAppC(
+        image = "anImage",
+        id = Some("sha512-aHashValue"),
+        labels = labels
+      )),
+      portDefinitions = Seq.empty,
+      ipAddress = Some(IpAddress(networkName = Some("vnet")))
+    )
+    )
+    assert(task.isDefined, "expected task to match offer")
+    val (taskInfo, _) = task.get
+    taskInfo.hasContainer should be (true)
+    taskInfo.getContainer.getType should be (MesosProtos.ContainerInfo.Type.MESOS)
+    taskInfo.getContainer.hasMesos should be (true)
+    taskInfo.getContainer.getMesos.hasImage should be (true)
+    taskInfo.getContainer.getMesos.getImage.getType should be (MesosProtos.Image.Type.APPC)
+    taskInfo.getContainer.getMesos.getImage.hasAppc should be (true)
+    taskInfo.getContainer.getMesos.getImage.getAppc.hasId should be (true)
+    taskInfo.getContainer.getMesos.getImage.getAppc.getId should be ("sha512-aHashValue")
+    taskInfo.getContainer.getMesos.getImage.getAppc.hasLabels should be (true)
+    taskInfo.getContainer.getMesos.getImage.getAppc.getLabels should be (expectedLabels)
+  }
+
   test("BuildIfMatchesWithLabels") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
-
-    val labels = Map("foo" -> "bar", "test" -> "test")
 
     val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
       offer,
@@ -529,12 +611,6 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val (taskInfo, taskPorts) = task.get
     assertTaskInfo(taskInfo, taskPorts, offer)
 
-    val expectedLabels = MesosProtos.Labels.newBuilder.addAllLabels(
-      labels.map {
-      case (mKey, mValue) =>
-        MesosProtos.Label.newBuilder.setKey(mKey).setValue(mValue).build()
-    }.asJava
-    ).build()
     assert(taskInfo.hasLabels)
     assert(taskInfo.getLabels == expectedLabels)
   }
@@ -931,9 +1007,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.BRIDGE),
-        portMappings = Some(Seq(
+        portMappings = Seq(
           PortMapping(containerPort = 0, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
-        ))
+        )
       ))
     )
     )
@@ -961,9 +1037,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.USER),
-        portMappings = Some(Seq(
+        portMappings = Seq(
           PortMapping()
-        ))
+        )
       )),
       portDefinitions = Seq.empty,
       ipAddress = Some(IpAddress(networkName = Some("vnet")))
@@ -996,11 +1072,11 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.USER),
-        portMappings = Some(Seq(
+        portMappings = Seq(
           PortMapping(containerPort = 0, hostPort = Some(31000), servicePort = 9000, protocol = "tcp"),
           PortMapping(containerPort = 0, hostPort = None, servicePort = 9001, protocol = "tcp"),
           PortMapping(containerPort = 0, hostPort = Some(31005), servicePort = 9002, protocol = "tcp")
-        ))
+        )
       ))
     )
     )
@@ -1419,10 +1495,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         runSpec = AppDefinition(
           container = Some(Docker(
             network = Some(DockerInfo.Network.BRIDGE),
-            portMappings = Some(Seq(
+            portMappings = Seq(
               PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("http")),
               PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("jabber"))
-            ))
+            )
           ))
         ),
         taskId = Some(Task.Id("task-123")),
@@ -1446,10 +1522,10 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           portDefinitions = PortDefinitions(22, 23),
           container = Some(Docker(
             network = Some(DockerInfo.Network.BRIDGE),
-            portMappings = Some(Seq(
+            portMappings = Seq(
               PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp"),
               PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
-            ))
+            )
           ))
         ),
         taskId = Some(Task.Id("task-123")),
@@ -1537,7 +1613,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         container = Some(Docker(
           image = "jdef/foo",
           network = Some(MesosProtos.ContainerInfo.DockerInfo.Network.USER),
-          portMappings = Some(Seq(
+          portMappings = Seq(
             // order is important here since it impacts the specific assertions that follow
             Container.Docker.PortMapping(containerPort = 0, hostPort = None),
             Container.Docker.PortMapping(containerPort = 100, hostPort = Some(0)),
@@ -1545,7 +1621,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
             Container.Docker.PortMapping(containerPort = 0, hostPort = Some(25001)),
             Container.Docker.PortMapping(containerPort = 400, hostPort = None),
             Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0))
-          ))
+          )
         )),
         ipAddress = Some(IpAddress(networkName = Some("vnet"))),
         portDefinitions = Nil

@@ -92,6 +92,14 @@ class AppUpdateTest extends MarathonSpec {
     JsonTestHelper.assertSerializationRoundtripWorks(update0)
   }
 
+  test("SerializationRoundtrip for definition with simple AppC container") {
+    val update0 = AppUpdate(container = Some(Container.MesosAppC(
+      image = "anImage",
+      labels = Map("key" -> "foo", "value" -> "bar")
+    )))
+    JsonTestHelper.assertSerializationRoundtripWorks(update0)
+  }
+
   ignore("SerializationRoundtrip for extended definition") {
     val update1 = AppUpdate(
       cmd = Some("sleep 60"),
