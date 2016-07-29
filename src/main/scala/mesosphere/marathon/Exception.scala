@@ -56,6 +56,7 @@ class ConcurrentTaskUpgradeException(msg: String) extends TaskUpgradeFailedExcep
 class MissingHealthCheckException(msg: String) extends TaskUpgradeFailedException(msg)
 class AppDeletedException(msg: String) extends TaskUpgradeFailedException(msg)
 class TaskUpgradeCanceledException(msg: String) extends TaskUpgradeFailedException(msg)
+class KillingTasksFailedException(msg: String) extends Exception(msg)
 
 /*
  * Deployment specific exceptions

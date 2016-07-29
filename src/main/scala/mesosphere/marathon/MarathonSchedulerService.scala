@@ -5,8 +5,7 @@ import java.util.{ Timer, TimerTask }
 import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.event.EventStream
-import akka.pattern.{ after, ask }
+import akka.pattern.ask
 import akka.util.Timeout
 import com.google.common.util.concurrent.AbstractExecutionThreadService
 import mesosphere.marathon.MarathonSchedulerActor._
@@ -14,8 +13,7 @@ import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.event.EventModule
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
@@ -30,7 +28,7 @@ import com.codahale.metrics.MetricRegistry
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future, TimeoutException }
-import scala.util.{ Failure, Success }
+import scala.util.Failure
 
 /**
   * PrePostDriverCallback is implemented by callback receivers which have to listen for driver
@@ -136,7 +134,7 @@ class MarathonSchedulerService @Inject() (
   def killTasks(
     appId: PathId,
     tasks: Iterable[Task]): Iterable[Task] = {
-    schedulerActor ! KillTasks(appId, tasks.map(_.taskId))
+    schedulerActor ! KillTasks(appId, tasks)
 
     tasks
   }

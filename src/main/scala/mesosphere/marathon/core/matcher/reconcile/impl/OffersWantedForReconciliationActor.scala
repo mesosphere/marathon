@@ -4,7 +4,7 @@ import akka.actor.{ Actor, Cancellable, Props }
 import akka.event.{ EventStream, LoggingReceive }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.ReviveOffersConfig
-import mesosphere.marathon.event.DeploymentStepSuccess
+import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.upgrade.StopApplication
 import org.slf4j.LoggerFactory

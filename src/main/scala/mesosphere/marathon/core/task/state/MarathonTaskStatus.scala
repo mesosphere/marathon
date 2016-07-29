@@ -9,7 +9,16 @@ import org.apache.mesos
   * - representations of the mesos.Protos.TaskStatus
   * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
   */
-sealed trait MarathonTaskStatus
+sealed trait MarathonTaskStatus {
+  def toMesosStateName: String = {
+    import MarathonTaskStatus._
+    this match {
+      case Gone | Unreachable | Unknown | Dropped => mesos.Protos.TaskState.TASK_LOST.toString
+      case Created | Reserved                     => mesos.Protos.TaskState.TASK_STAGING.toString
+      case s: MarathonTaskStatus                  => "TASK_" + s.toString.toUpperCase()
+    }
+  }
+}
 
 object MarathonTaskStatus {
   import org.apache.mesos.Protos.TaskState._
@@ -19,19 +28,19 @@ object MarathonTaskStatus {
   //scalastyle:off cyclomatic.complexity
   def apply(taskStatus: mesos.Protos.TaskStatus): MarathonTaskStatus = {
     taskStatus.getState match {
-      case TASK_ERROR => Error
-      case TASK_FAILED => Failed
+      case TASK_ERROR    => Error
+      case TASK_FAILED   => Failed
       case TASK_FINISHED => Finished
-      case TASK_KILLED => Killed
-      case TASK_KILLING => Killing
+      case TASK_KILLED   => Killed
+      case TASK_KILLING  => Killing
       case TASK_LOST => taskStatus.getReason match {
         case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Gone(reason) => Gone
         case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unreachable(reason) => Unreachable
         case reason: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(reason) => Unknown
         case _ => Dropped
       }
-      case TASK_RUNNING => Running
-      case TASK_STAGING => Staging
+      case TASK_RUNNING  => Running
+      case TASK_STAGING  => Staging
       case TASK_STARTING => Starting
     }
   }

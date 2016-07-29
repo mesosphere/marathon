@@ -5,6 +5,7 @@ import javax.inject.Inject
 import com.google.inject.name.Names
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
@@ -23,7 +24,8 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     clock: Clock,
     taskTracker: TaskTracker,
     stateOpProcessor: TaskStateOpProcessor,
-    driverHolder: MarathonSchedulerDriverHolder) extends TaskStatusUpdateProcessor {
+    driverHolder: MarathonSchedulerDriverHolder,
+    killService: TaskKillService) extends TaskStatusUpdateProcessor {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -43,15 +45,14 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val taskId = Task.Id(status.getTaskId)
 
     taskTracker.task(taskId).flatMap {
-      case Some(task) if task.launched.isDefined =>
+      case Some(task) =>
         val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
         stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
-      case maybeTask: Option[Task] if killWhenUnknownOrNotLaunched(status) =>
+      case None if killWhenUnknown(status) =>
         killUnknownTaskTimer {
-          val taskStr = taskKnownOrNotStr(maybeTask)
-          log.warn(s"Kill $taskStr $taskId")
-          killTask(taskId.mesosTaskId)
+          log.warn("Kill unknown {}", taskId)
+          killService.killUnknownTask(taskId, TaskKillReason.Unknown)
           acknowledge(status)
         }
 
@@ -66,20 +67,22 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     driverHolder.driver.foreach(_.acknowledgeStatusUpdate(taskStatus))
     Future.successful(())
   }
-
-  private[this] def killTask(taskId: MesosProtos.TaskID): Unit = {
-    driverHolder.driver.foreach(_.killTask(taskId))
-  }
 }
 
 object TaskStatusUpdateProcessorImpl {
   lazy val name = Names.named(getClass.getSimpleName)
 
-  private[this] val ignoreWhenUnknown = Set(MesosProtos.TaskState.TASK_KILLING, MesosProtos.TaskState.TASK_LOST)
-  // If we kill an unknown task, we will get another TASK_LOST notification which leads to an endless
-  // stream of kills and TASK_LOST updates.
-  // In addition, we won't kill unknown tasks when they're in state TASK_KILLING
-  private def killWhenUnknownOrNotLaunched(status: MesosProtos.TaskStatus): Boolean = {
+  private[this] val ignoreWhenUnknown = Set(
+    MesosProtos.TaskState.TASK_KILLED,
+    MesosProtos.TaskState.TASK_KILLING,
+    MesosProtos.TaskState.TASK_ERROR,
+    MesosProtos.TaskState.TASK_FAILED,
+    MesosProtos.TaskState.TASK_FINISHED,
+    MesosProtos.TaskState.TASK_LOST
+  )
+  // It doesn't make sense to kill an unknown task if it is in a terminal or killing state
+  // We'd only get another update for the same task
+  private def killWhenUnknown(status: MesosProtos.TaskStatus): Boolean = {
     !ignoreWhenUnknown.contains(status.getState)
   }
 

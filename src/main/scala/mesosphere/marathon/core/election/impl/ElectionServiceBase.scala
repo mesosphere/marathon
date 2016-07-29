@@ -6,10 +6,9 @@ import akka.pattern.after
 import com.codahale.metrics.{ Gauge, MetricRegistry }
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.{ CurrentRuntime, ShutdownHooks }
-import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
-import mesosphere.marathon.event.LocalLeadershipEvent
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.metrics.Metrics.Timer
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -222,8 +221,7 @@ abstract class ElectionServiceBase(
     * Subscribe to leadership change events.
     *
     * The given actorRef will initally get the current state via the appropriate
-    * [[mesosphere.marathon.event.LocalLeadershipEvent]] message and will
-    * be informed of changes after that.
+    * [[LocalLeadershipEvent]] message and will be informed of changes after that.
     */
   override def subscribe(self: ActorRef): Unit = {
     eventStream.subscribe(self, classOf[LocalLeadershipEvent])

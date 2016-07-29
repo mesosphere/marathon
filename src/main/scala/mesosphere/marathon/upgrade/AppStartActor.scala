@@ -5,7 +5,7 @@ import akka.event.EventStream
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.DeploymentStatus
+import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
@@ -36,7 +36,7 @@ class AppStartActor(
     eventBus.unsubscribe(self)
     if (!promise.isCompleted) {
       if (promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
-        scheduler.stopApp(driver, app).onFailure {
+        scheduler.stopApp(app).onFailure {
           case NonFatal(e) => log.error(s"while stopping app ${app.id}", e)
         }(context.dispatcher)
       }

@@ -6,8 +6,8 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckS
 import mesosphere.marathon.core.readiness.{ ReadinessCheckResult, ReadinessCheck, ReadinessCheckExecutor }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.event.{ HealthStatusChanged, MesosStatusUpdateEvent, DeploymentStatus }
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.event.{ HealthStatusChanged, MesosStatusUpdateEvent, DeploymentStatus }
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
@@ -105,7 +105,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     When("The task becomes running")
     system.eventStream.publish(f.taskRunning)
 
-    Then("Task readiness checks are perfomed")
+    Then("Task readiness checks are performed")
     eventually(taskIsReady should be (false))
     actor.underlyingActor.taskTargetCountReached(1) should be (false)
     eventually(actor.underlyingActor.readyTasks should have size 1)
@@ -170,7 +170,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     task.effectiveIpAddress(any) returns Some("some.host")
     task.agentInfo returns agentInfo
     launched.hostPorts returns Seq(1, 2, 3)
-    tracker.task(any)(any) returns Future.successful(Some(task))
+    tracker.task(any) returns Future.successful(Some(task))
 
     def readinessActor(appDef: AppDefinition, readinessCheckResults: Seq[ReadinessCheckResult], taskReadyFn: Task.Id => Unit) = {
       val executor = new ReadinessCheckExecutor {
