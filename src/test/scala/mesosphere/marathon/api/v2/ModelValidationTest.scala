@@ -29,10 +29,13 @@ class ModelValidationTest
   }
 
   test("A group can not be updated to have more than the configured number of apps") {
-    val group = Group("/".toPath, Set(
-      createServicePortApp("/a".toPath, 0),
-      createServicePortApp("/b".toPath, 0),
-      createServicePortApp("/c".toPath, 0)
+    val appA = createServicePortApp("/a".toPath, 0)
+    val appB = createServicePortApp("/b".toPath, 0)
+    val appC = createServicePortApp("/c".toPath, 0)
+    val group = Group("/".toPath, Map(
+      appA.id -> appA,
+      appB.id -> appB,
+      appC.id -> appC
     ))
 
     val failedResult = Group.validRootGroup(maxApps = Some(2)).apply(group)
@@ -48,11 +51,11 @@ class ModelValidationTest
     val existingApp = createServicePortApp("/app1".toPath, 3200)
     val conflictingApp = createServicePortApp("/app2".toPath, 3200)
 
-    val group = Group(id = PathId.empty, apps = Set(existingApp, conflictingApp))
+    val group = Group(id = PathId.empty, apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
     val result = validate(group)(Group.validRootGroup(maxApps = None))
 
     ValidationHelper.getAllRuleConstrains(result).exists(v =>
-      v.message == "Requested service port 3200 conflicts with a service port in app /app2") should be(true)
+      v.message.contains("Requested service port 3200 is used by more than 1 app")) should be(true)
   }
 
   test("Model validation should allow new apps that do not conflict with service ports in existing apps") {
@@ -60,7 +63,7 @@ class ModelValidationTest
     val existingApp = createServicePortApp("/app1".toPath, 3200)
     val conflictingApp = createServicePortApp("/app2".toPath, 3201)
 
-    val group = Group(id = PathId.empty, apps = Set(existingApp, conflictingApp))
+    val group = Group(id = PathId.empty, apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
     val result = validate(group)(Group.validRootGroup(maxApps = None))
 
     result.isSuccess should be(true)
@@ -70,11 +73,11 @@ class ModelValidationTest
     val existingApp = createServicePortApp("/app1".toPath, 3200)
     val conflictingApp = existingApp.copy(id = "/app2".toPath)
 
-    val group = Group(id = PathId.empty, apps = Set(existingApp, conflictingApp))
+    val group = Group(id = PathId.empty, apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
     val result = validate(group)(Group.validRootGroup(maxApps = None))
 
     ValidationHelper.getAllRuleConstrains(result).exists(v =>
-      v.message == "Requested service port 3200 conflicts with a service port in app /app2") should be(true)
+      v.message.contains("Requested service port 3200 is used by more than 1 app")) should be(true)
   }
 
   test("Multiple errors within one field of a validator should be grouped into one array") {
@@ -91,10 +94,12 @@ class ModelValidationTest
   }
 
   test("Validators should not produce 'value' string at the end of description.") {
+    val validApp = AppDefinition("/test/group1/valid".toPath, cmd = Some("foo"));
+    val invalidApp = AppDefinition("/test/group1/invalid".toPath)
     val group = Group("/test".toPath, groups = Set(
-      Group("/test/group1".toPath, Set(
-        AppDefinition("/test/group1/valid".toPath, cmd = Some("foo")),
-        AppDefinition("/test/group1/invalid".toPath))
+      Group("/test/group1".toPath, Map(
+        validApp.id -> validApp,
+        invalidApp.id -> invalidApp)
       ),
       Group("/test/group2".toPath)))
 

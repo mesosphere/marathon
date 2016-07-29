@@ -5,7 +5,7 @@ import mesosphere.marathon.Features
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.state._
 
 import scala.collection.immutable.Seq
@@ -161,5 +161,6 @@ object AppUpdate {
     appUp.env is optional(valid(EnvVarValue.envValidator))
     appUp.secrets is optional(valid(Secret.secretsValidator))
     appUp.secrets is optional(empty) or featureEnabled(Features.SECRETS)
+    appUp.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appUp.isResident))
   }
 }

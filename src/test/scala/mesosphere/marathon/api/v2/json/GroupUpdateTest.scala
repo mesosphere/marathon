@@ -38,14 +38,15 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     apps should be('defined)
     apps.get.apps should have size 1
     val app = apps.get.apps.head
-    app.id.toString should be ("/apps/app1")
-    app.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
+    app._1.toString should be ("/apps/app1")
+    app._2.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
   }
 
   test("A group update can be applied to existing entries") {
     Given("A group with updates of existing nodes")
+    val blaApp = AppDefinition("/test/bla".toPath, Some("foo"))
     val actual = Group(PathId.empty, groups = Set(
-      Group("/test".toPath, apps = Set(AppDefinition("/test/bla".toPath, Some("foo")))),
+      Group("/test".toPath, apps = Map(blaApp.id -> blaApp)),
       Group("/apps".toPath, groups = Set(Group("/apps/foo".toPath)))
     ))
     val update = GroupUpdate(
@@ -83,17 +84,19 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     apps.get.groups should have size 1
     apps.get.apps should have size 1
     val app = apps.get.apps.head
-    app.id.toString should be ("/apps/app1")
-    app.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
+    app._1.toString should be ("/apps/app1")
+    app._2.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
   }
 
   test("GroupUpdate will update a Group correctly") {
     Given("An existing group with two subgroups")
+    val app1 = AppDefinition("/test/group1/app1".toPath, Some("foo"))
+    val app2 = AppDefinition("/test/group2/app2".toPath, Some("foo"))
     val current = Group(
       "/test".toPath,
       groups = Set(
-        Group("/test/group1".toPath, Set(AppDefinition("/test/group1/app1".toPath, Some("foo")))),
-        Group("/test/group2".toPath, Set(AppDefinition("/test/group2/app2".toPath, Some("foo"))))
+        Group("/test/group1".toPath, Map(app1.id -> app1)),
+        Group("/test/group2".toPath, Map(app2.id -> app2))
       )
     )
 
@@ -125,7 +128,7 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     val group1 = result.group("/test/group1".toPath).get
     val group3 = result.group("/test/group3".toPath).get
     group1.id should be("/test/group1".toPath)
-    group1.apps.head.id should be("/test/group1/app3".toPath)
+    group1.apps.head._1 should be("/test/group1/app3".toPath)
     group3.id should be("/test/group3".toPath)
     group3.apps should be('empty)
   }

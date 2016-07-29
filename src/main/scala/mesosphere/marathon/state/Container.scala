@@ -47,6 +47,32 @@ object Container {
 
   object DockerDocker {
 
+    def withDefaultPortMappings(
+      volumes: Seq[Volume],
+      image: String = "",
+      network: Option[ContainerInfo.DockerInfo.Network] = None,
+      portMappings: Option[Seq[DockerDocker.PortMapping]] = None,
+      privileged: Option[Boolean] = None,
+      parameters: Option[Seq[Parameter]] = None,
+      forcePullImage: Boolean = false): DockerDocker = DockerDocker(
+      volumes = volumes,
+      image = image,
+      network = network,
+      portMappings = network match {
+        case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.BRIDGE =>
+          portMappings.map(_.map { m =>
+            m match {
+              // backwards compat: when in BRIDGE mode, missing host ports default to zero
+              case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(PortMapping.HostPortDefault), y, z, w, a)
+              case _ => m
+            }
+          }).getOrElse(Seq.empty)
+        case _ => portMappings.getOrElse(Seq.empty)
+      },
+      privileged = privileged.getOrElse(false),
+      parameters = parameters.getOrElse(Seq.empty),
+      forcePullImage = forcePullImage)
+
     /**
       * @param containerPort The container port to expose
       * @param hostPort      The host port to bind
@@ -67,6 +93,8 @@ object Container {
     object PortMapping {
       val TCP = "tcp"
       val UDP = "udp"
+
+      val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
 
       implicit val uniqueProtocols: Validator[Iterable[String]] =
         isTrue[Iterable[String]]("protocols must be unique.") { protocols =>
@@ -157,189 +185,6 @@ object Container {
         case ma: MesosAppC => validate(ma)(MesosAppC.validMesosAppCContainer)
       }
     } and validGeneralContainer
-  }
-
-  /**
-    * An intermediate structure that parallels the external JSON API for containers.
-    * This allows for validation of all JSON input combinations,
-    * before they have been reduced to a single outcome of type Container
-    * which would cover up too many possible error conditions.
-    * Furthrmore, we can provide trivial Formats implementation via apply/unapply.
-    */
-  case class Mask(
-      `type`: ContainerInfo.Type,
-      volumes: Seq[Volume] = Nil,
-      docker: Option[Mask.Docker] = None,
-      appc: Option[Mask.AppC] = None) {
-
-    def toContainer(): Container = {
-      // When writing tests against this validation,
-      // note that paths begin at the container level (not the app level)
-      // and thus do not contain the prefix "/container".
-      validateOrThrow(this)
-
-      docker match {
-        case Some(d) =>
-          if (`type` == ContainerInfo.Type.DOCKER) {
-            Container.DockerDocker(
-              volumes,
-              d.image,
-              d.network,
-              d.portMappings.getOrElse(Seq.empty),
-              d.privileged.getOrElse(false),
-              d.parameters.getOrElse(Seq.empty),
-              d.forcePullImage
-            )
-          } else {
-            Container.MesosDocker(
-              volumes,
-              d.image,
-              d.credential,
-              d.forcePullImage
-            )
-          }
-        case _ =>
-          appc match {
-            case Some(a) =>
-              Container.MesosAppC(
-                volumes,
-                a.image,
-                a.id,
-                a.labels,
-                a.forcePullImage
-              )
-            case _ =>
-              Container.Mesos(volumes)
-          }
-      }
-    }
-  }
-
-  object Mask {
-
-    def fromContainer(container: Container): Mask = {
-      container match {
-        case m: Container.Mesos =>
-          Mask(ContainerInfo.Type.MESOS, m.volumes, None)
-        case dd: Container.DockerDocker =>
-          Mask(ContainerInfo.Type.DOCKER, dd.volumes, docker = Some(Mask.Docker(
-            image = dd.image,
-            network = dd.network,
-            portMappings = if (dd.portMappings.isEmpty) None else Some(dd.portMappings),
-            privileged = Some(dd.privileged),
-            parameters = if (dd.parameters.isEmpty) None else Some(dd.parameters),
-            forcePullImage = dd.forcePullImage
-          )))
-        case md: MesosDocker =>
-          Mask(ContainerInfo.Type.MESOS, md.volumes, docker = Some(Mask.Docker(
-            image = md.image,
-            credential = md.credential,
-            forcePullImage = md.forcePullImage
-          )))
-        case ma: MesosAppC =>
-          Mask(ContainerInfo.Type.MESOS, ma.volumes, appc = Some(Mask.AppC(
-            ma.image,
-            ma.id,
-            ma.labels,
-            ma.forcePullImage
-          )))
-      }
-    }
-
-    case class Docker(
-      image: String = "",
-      network: Option[ContainerInfo.DockerInfo.Network] = None,
-      portMappings: Option[Seq[Container.DockerDocker.PortMapping]] = None,
-      privileged: Option[Boolean] = None,
-      parameters: Option[Seq[Parameter]] = None,
-      credential: Option[Credential] = None,
-      forcePullImage: Boolean = false)
-
-    object Docker {
-      import Container.DockerDocker.PortMapping
-
-      val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
-
-      def withDefaultPortMappings(
-        image: String = "",
-        network: Option[ContainerInfo.DockerInfo.Network] = None,
-        portMappings: Option[Seq[Container.DockerDocker.PortMapping]] = None,
-        privileged: Option[Boolean] = None,
-        parameters: Option[Seq[Parameter]] = None,
-        credential: Option[Container.Credential] = None,
-        forcePullImage: Boolean = false): Docker = Docker(
-        image = image,
-        network = network,
-        portMappings = network match {
-          case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.BRIDGE =>
-            portMappings.map(_.map { m =>
-              m match {
-                // backwards compat: when in BRIDGE mode, missing host ports default to zero
-                case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(HostPortDefault), y, z, w, a)
-                case _ => m
-              }
-            })
-          case _ => portMappings
-        },
-        privileged = privileged,
-        parameters = parameters,
-        credential = credential,
-        forcePullImage = forcePullImage)
-    }
-
-    case class AppC(
-      image: String = "",
-      id: Option[String] = None,
-      labels: Map[String, String] = Map.empty[String, String],
-      forcePullImage: Boolean = false)
-
-    // Validation of structural constraints on the allowed JSON syntax,
-    // mainly what fields may be specified for what type of container.
-    implicit val validContainerMask: Validator[Container.Mask] = {
-      val validDockerDockerMask: Validator[Container.Mask.Docker] = validator[Container.Mask.Docker] { mask =>
-        mask.credential is empty
-      }
-
-      val validDockerDockerContainerMask: Validator[Container.Mask] = validator[Container.Mask] { mask =>
-        mask.appc is empty
-        mask.docker is notEmpty
-        mask.docker is optional(validDockerDockerMask)
-      }
-
-      val validMesosDockerMask: Validator[Container.Mask.Docker] = validator[Container.Mask.Docker] { mask =>
-        mask.network is empty
-        mask.portMappings is empty
-        mask.privileged is empty
-        mask.parameters is empty
-      }
-
-      val validMesosDockerContainerMask: Validator[Container.Mask] = validator[Container.Mask] { mask =>
-        mask.appc is empty
-        mask.docker is notEmpty
-        mask.docker is optional(validMesosDockerMask)
-      }
-
-      val validMesosAppCContainerMask: Validator[Container.Mask] = validator[Container.Mask] { mask =>
-        mask.docker is empty
-      }
-
-      new Validator[Container.Mask] {
-        override def apply(mask: Container.Mask): Result = mask.`type` match {
-          case ContainerInfo.Type.MESOS =>
-            if (mask.docker.isDefined) {
-              validate(mask)(validMesosDockerContainerMask)
-            } else if (mask.appc.isDefined) {
-              validate(mask)(validMesosAppCContainerMask)
-            } else {
-              Success
-            }
-          case ContainerInfo.Type.DOCKER =>
-            validate(mask)(validDockerDockerContainerMask)
-          case _ =>
-            Failure(Set(RuleViolation(mask.`type`, "unknown", None)))
-        }
-      }
-    }
   }
 }
 

@@ -8,7 +8,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.state.Container.DockerDocker
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
@@ -155,7 +155,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     app = correct.copy(
-      container = Some(app.container.get.asInstanceOf[DockerDocker].copy(
+      container = Some(DockerDocker(
+        image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Seq(
           DockerDocker.PortMapping(8080, None, 0, "tcp", Some("foo"))
@@ -169,7 +170,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     app = correct.copy(
-      container = Some(app.container.get.asInstanceOf[DockerDocker].copy(
+      container = Some(DockerDocker(
+        image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
         portMappings = Seq(
           DockerDocker.PortMapping(8080, None, 0, "tcp", Some("foo"))
@@ -183,7 +185,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     app = correct.copy(
-      container = Some(app.container.get.asInstanceOf[DockerDocker].copy(
+      container = Some(DockerDocker(
+        image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Seq(
           DockerDocker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
@@ -199,7 +202,9 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     // unique port names for USER mode
     app = correct.copy(
-      container = Some(app.container.get.asInstanceOf[DockerDocker].copy(
+      container = Some(DockerDocker(
+        image = "mesosphere/marathon",
+        network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Seq(
           DockerDocker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
           DockerDocker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))

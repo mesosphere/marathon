@@ -4,9 +4,10 @@ import java.util.Collections
 
 import mesosphere.marathon._
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.health.HealthCheckManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
@@ -33,7 +34,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val tasksByApp = TaskTracker.TasksByApp.forTasks(task)
     taskTracker.tasksByAppSync returns tasksByApp
 
-    val rootGroup = Group("/".toRootPath, apps = Set(app))
+    val rootGroup = Group("/".toRootPath, apps = Map(app.id -> app))
     groupManager.rootGroup() returns Future.successful(rootGroup)
 
     assert(app.servicePorts.size > task.launched.get.hostPorts.size)
