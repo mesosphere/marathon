@@ -3,7 +3,7 @@ package mesosphere.marathon.api.validation
 import mesosphere.marathon.MarathonSpec
 import com.wix.accord.validate
 import mesosphere.marathon.api.v2.json.AppUpdate
-import mesosphere.marathon.state.Container.DockerDocker
+import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.{ Container, PathId }
 import org.scalatest.Matchers
 
@@ -28,9 +28,9 @@ class AppUpdateValidatorTest extends MarathonSpec with Matchers {
   }
 
   class Fixture {
-    def invalidDockerContainer: Container = Container.DockerDocker(
+    def invalidDockerContainer: Container = Container.Docker(
       portMappings = Seq(
-        DockerDocker.PortMapping(-1, Some(-1), -1, "tcp") // Invalid (negative) port numbers
+        Docker.PortMapping(-1, Some(-1), -1, "tcp") // Invalid (negative) port numbers
       )
     )
 

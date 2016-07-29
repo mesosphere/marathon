@@ -1,7 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.state.Container.DockerDocker
+import mesosphere.marathon.state.Container.Docker
 import org.apache.mesos.Protos
 import org.scalatest.{ OptionValues, GivenWhenThen, Matchers, FunSuiteLike }
 
@@ -85,7 +85,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withNoPortDefinitions()
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.BRIDGE)
       .withPortMappings(Seq(
-        DockerDocker.PortMapping(containerPort = 80, hostPort = Some(0), servicePort = 0, protocol = "tcp",
+        Docker.PortMapping(containerPort = 80, hostPort = Some(0), servicePort = 0, protocol = "tcp",
           name = Some("http"))
       ))
 
@@ -102,7 +102,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
   test("portAssignments without IP-per-task using Docker BRIDGE network and no port mappings") {
     Given("An app using bridge network with no port mappings nor ports")
     val app = MarathonTestHelper.makeBasicApp().copy(
-      container = Some(Container.DockerDocker(
+      container = Some(Container.Docker(
         image = "mesosphere/marathon",
         network = Some(Protos.ContainerInfo.DockerInfo.Network.BRIDGE)
       )),
@@ -123,7 +123,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withIpAddress(IpAddress.empty)
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
       .withPortMappings(Seq(
-        DockerDocker.PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp", name = Some("http"))
+        Docker.PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp", name = Some("http"))
       ))
 
     Given("A task with an IP and without a host port")
@@ -147,7 +147,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withIpAddress(IpAddress.empty)
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
       .withPortMappings(Seq(
-        DockerDocker.PortMapping(containerPort = 80, hostPort = Some(0), servicePort = 0, protocol = "tcp",
+        Docker.PortMapping(containerPort = 80, hostPort = Some(0), servicePort = 0, protocol = "tcp",
           name = Some("http"))
       ))
 
@@ -172,8 +172,8 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withIpAddress(IpAddress.empty)
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
       .withPortMappings(Seq(
-        DockerDocker.PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp", name = Some("http")),
-        DockerDocker.PortMapping(containerPort = 443, hostPort = Some(0), servicePort = 0, protocol = "tcp",
+        Docker.PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp", name = Some("http")),
+        Docker.PortMapping(containerPort = 443, hostPort = Some(0), servicePort = 0, protocol = "tcp",
           name = Some("https"))
       ))
 
@@ -198,9 +198,9 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withNoPortDefinitions()
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
       .withPortMappings(Seq(
-        DockerDocker.PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp",
+        Docker.PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp",
           name = Some("http")),
-        DockerDocker.PortMapping(containerPort = 443, hostPort = Some(0), servicePort = 0, protocol = "tcp",
+        Docker.PortMapping(containerPort = 443, hostPort = Some(0), servicePort = 0, protocol = "tcp",
           name = Some("https"))
       ))
 

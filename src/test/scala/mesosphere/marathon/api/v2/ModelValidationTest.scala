@@ -4,7 +4,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.v2.json.GroupUpdate
-import mesosphere.marathon.state.Container.DockerDocker.PortMapping
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -115,7 +115,7 @@ class ModelValidationTest
   private def createServicePortApp(id: PathId, servicePort: Int) =
     AppDefinition(
       id,
-      container = Some(DockerDocker(
+      container = Some(Docker(
         image = "demothing",
         network = Some(Network.BRIDGE),
         portMappings = Seq(PortMapping(2000, Some(0), servicePort = servicePort))

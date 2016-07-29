@@ -216,7 +216,7 @@ class TaskBuilder(
       // Fill in Docker container details if necessary
       runSpec.container.foreach { c =>
         val containerWithPortMappings = c match {
-          case docker: Container.DockerDocker => docker.copy(portMappings =
+          case docker: Container.Docker => docker.copy(portMappings =
             docker.portMappings.zip(hostPorts).collect {
               case (mapping, Some(hport)) =>
                 // Use case: containerPort = 0 and hostPort = 0

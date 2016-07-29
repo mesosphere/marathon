@@ -1,11 +1,11 @@
 package mesosphere.marathon.state
 
 import com.wix.accord._
-import mesosphere.marathon.state.Container.DockerDocker.PortMapping
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import org.scalatest.{ FunSuiteLike, Matchers }
 
 class PortMappingTest extends FunSuiteLike with Matchers {
-  import mesosphere.marathon.state.Container.DockerDocker.PortMapping.portMappingValidator
+  import mesosphere.marathon.state.Container.Docker.PortMapping.portMappingValidator
 
   test("valid portMapping should be valid") {
     validate(Fixture.validPortMapping) should be(Success)

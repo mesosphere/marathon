@@ -47,10 +47,10 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   }
 
   test("Assign dynamic service ports specified in the container") {
-    import Container.DockerDocker
-    import DockerDocker.PortMapping
+    import Container.Docker
+    import Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-    val container = DockerDocker(
+    val container = Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
       portMappings = Seq(
@@ -72,17 +72,17 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   }
 
   test("Assign dynamic service ports specified in multiple containers") {
-    import Container.DockerDocker
-    import DockerDocker.PortMapping
+    import Container.Docker
+    import Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-    val c1 = Some(DockerDocker(
+    val c1 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
       portMappings = Seq(
         PortMapping(containerPort = 8080)
       )
     ))
-    val c2 = Some(DockerDocker(
+    val c2 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
       portMappings = Seq(
@@ -103,17 +103,17 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   }
 
   test("Assign dynamic service ports w/ both BRIDGE and USER containers") {
-    import Container.DockerDocker
-    import DockerDocker.PortMapping
+    import Container.Docker
+    import Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-    val bridgeModeContainer = Some(DockerDocker(
+    val bridgeModeContainer = Some(Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
       portMappings = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0))
       )
     ))
-    val userModeContainer = Some(DockerDocker(
+    val userModeContainer = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
       portMappings = Seq(
@@ -142,10 +142,10 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   }
 
   test("Assign a service port for an app using Docker USER networking with a default port mapping") {
-    import Container.DockerDocker
-    import DockerDocker.PortMapping
+    import Container.Docker
+    import Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-    val c1 = Some(DockerDocker(
+    val c1 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
       portMappings = Seq(
@@ -173,10 +173,10 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
 
   // Regression test for #1365
   test("Export non-dynamic service ports specified in the container to the ports field") {
-    import Container.DockerDocker
-    import DockerDocker.PortMapping
+    import Container.Docker
+    import Docker.PortMapping
     import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-    val container = DockerDocker(
+    val container = Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
       portMappings = Seq(
@@ -241,7 +241,7 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   }
 
   test("Retain the original container definition if port mappings are missing") {
-    val container = Container.DockerDocker(image = "busybox")
+    val container = Container.Docker(image = "busybox")
 
     val app1 = AppDefinition(
       id = "/app1".toPath,

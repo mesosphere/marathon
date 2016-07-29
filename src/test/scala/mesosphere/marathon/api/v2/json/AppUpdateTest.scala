@@ -116,7 +116,7 @@ class AppUpdateTest extends MarathonSpec {
       backoff = Some(2.seconds),
       backoffFactor = Some(1.2),
       maxLaunchDelay = Some(1.minutes),
-      container = Some(DockerDocker(
+      container = Some(Docker(
         volumes = Nil,
         image = "docker:///group/image"
       )),

@@ -176,7 +176,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         case _: Container.Mesos => validMesosVolume
         case _: Container.MesosDocker => validMesosVolume
         case _: Container.MesosAppC => validMesosVolume
-        case _: Container.DockerDocker => validDockerVolume
+        case _: Container.Docker => validDockerVolume
       }
 
       validator[Container] { ct =>

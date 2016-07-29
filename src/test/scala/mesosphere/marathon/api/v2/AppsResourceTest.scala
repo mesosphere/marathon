@@ -303,11 +303,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       id = PathId("/app"),
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
-      container = Some(Container.DockerDocker(
+      container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
         portMappings = Seq(
-          Container.DockerDocker.PortMapping(containerPort = 0, protocol = "tcp")
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         )
       )),
       portDefinitions = Seq.empty
@@ -334,11 +334,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app in BRIDGE mode w/ Docker") {
     Given("An app and group")
-    val container = Container.DockerDocker(
+    val container = Container.Docker(
       network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
       portMappings = Seq(
-        Container.DockerDocker.PortMapping(containerPort = 0, protocol = "tcp")
+        Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
       )
     )
 
@@ -370,7 +370,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
         container = Some(container.copy(
           portMappings = Seq(
-            Container.DockerDocker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
+            Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
           )
         ))
       ),
@@ -392,11 +392,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container.DockerDocker(
+      container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
         portMappings = Seq(
-          Container.DockerDocker.PortMapping(containerPort = 0, protocol = "tcp")
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         )
       )),
       portDefinitions = Seq.empty
@@ -424,7 +424,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container.DockerDocker(
+      container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
         image = "jdef/helpme"
       )

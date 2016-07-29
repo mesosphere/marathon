@@ -47,7 +47,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       id = "play".toPath,
       cmd = None,
       args = Some(Seq("a", "b", "c")),
-      container = Some(Container.DockerDocker(image = "group/image")),
+      container = Some(Container.Docker(image = "group/image")),
       cpus = 4.0,
       mem = 256.0,
       instances = 5,
@@ -146,13 +146,13 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
           networkName = Some("blahze")
         )
       ),
-      container = Some(Container.DockerDocker(
+      container = Some(Container.Docker(
         image = "jdef/foo",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Seq(
-          Container.DockerDocker.PortMapping(hostPort = None),
-          Container.DockerDocker.PortMapping(hostPort = Some(123)),
-          Container.DockerDocker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+          Container.Docker.PortMapping(hostPort = None),
+          Container.Docker.PortMapping(hostPort = Some(123)),
+          Container.Docker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
         )
       ))
     )
@@ -170,13 +170,13 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       id = "app-with-ip-address".toPath,
       cmd = Some("sleep 30"),
       portDefinitions = Nil,
-      container = Some(Container.DockerDocker(
+      container = Some(Container.Docker(
         image = "jdef/foo",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
         portMappings = Seq(
-          Container.DockerDocker.PortMapping(hostPort = Some(0)),
-          Container.DockerDocker.PortMapping(hostPort = Some(123)),
-          Container.DockerDocker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+          Container.Docker.PortMapping(hostPort = Some(0)),
+          Container.Docker.PortMapping(hostPort = Some(123)),
+          Container.Docker.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
         )
       ))
     )

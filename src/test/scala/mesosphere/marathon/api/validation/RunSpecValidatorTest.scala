@@ -618,7 +618,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     Given("A docker app with no portDefinitions and HTTP health checks")
 
     val app1 = AppDefinition(
-      container = Some(Container.DockerDocker(
+      container = Some(Container.Docker(
         image = "group/image",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.HOST)
       )),
@@ -692,7 +692,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
   }
 
   class Fixture {
-    def validDockerContainer: Container.DockerDocker = Container.DockerDocker(
+    def validDockerContainer: Container.Docker = Container.Docker(
       volumes = Nil,
       image = "foo/bar:latest"
     )

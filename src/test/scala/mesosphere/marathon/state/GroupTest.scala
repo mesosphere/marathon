@@ -6,7 +6,7 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.state.Container.DockerDocker.PortMapping
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import org.apache.mesos.Protos
 
 import scala.collection.JavaConverters._

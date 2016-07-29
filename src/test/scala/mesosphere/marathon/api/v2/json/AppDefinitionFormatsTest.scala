@@ -297,7 +297,7 @@ class AppDefinitionFormatsTest
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
     appDef.container.isDefined
-    appDef.container.get shouldBe a[Container.DockerDocker]
+    appDef.container.get shouldBe a[Container.Docker]
     appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
   }
 
@@ -323,10 +323,10 @@ class AppDefinitionFormatsTest
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
     appDef.container.isDefined
-    appDef.container.get shouldBe a[Container.DockerDocker]
+    appDef.container.get shouldBe a[Container.Docker]
     appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
     appDef.container.flatMap(_.getPortMappings) should equal (Some(Seq(
-      Container.DockerDocker.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))
+      Container.Docker.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))
     )))
   }
 

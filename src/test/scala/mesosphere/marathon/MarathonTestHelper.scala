@@ -17,8 +17,8 @@ import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.Container.DockerDocker
-import mesosphere.marathon.state.Container.DockerDocker.PortMapping
+import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
@@ -565,8 +565,8 @@ object MarathonTestHelper {
 
       def withDockerNetwork(network: Mesos.ContainerInfo.DockerInfo.Network): AppDefinition = {
         val docker = app.container.getOrElse(Container.Mesos()) match {
-          case docker: DockerDocker => docker
-          case _ => DockerDocker(image = "busybox")
+          case docker: Docker => docker
+          case _ => Docker(image = "busybox")
         }
 
         app.copy(container = Some(docker.copy(network = Some(network))))
@@ -574,7 +574,7 @@ object MarathonTestHelper {
 
       def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
         val container = app.container.getOrElse(Container.Mesos())
-        val docker = container.docker.getOrElse(DockerDocker(image = "busybox")).copy(portMappings = newPortMappings)
+        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = newPortMappings)
 
         app.copy(container = Some(docker))
       }
