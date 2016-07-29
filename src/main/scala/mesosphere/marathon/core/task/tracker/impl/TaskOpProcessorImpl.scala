@@ -132,7 +132,7 @@ private[tracker] class TaskOpProcessorImpl(
     implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
     val msg = TaskTrackerActor.StateChanged(taskChanged = TaskChanged(op.stateOp, ack.stateChange), ack)
-    (taskTrackerRef ? msg).mapTo[Unit]
+    (taskTrackerRef ? msg).map(_ => ())
   }
 
   /**

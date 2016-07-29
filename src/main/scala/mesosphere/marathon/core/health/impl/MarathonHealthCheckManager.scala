@@ -5,16 +5,15 @@ import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.ZookeeperConf
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
-import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.core.health._
+import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
 import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.{ MarathonSchedulerDriverHolder, ZookeeperConf }
 import mesosphere.util.RWLock
 import org.apache.mesos.Protos.TaskStatus
 
@@ -25,12 +24,13 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class MarathonHealthCheckManager(
-  actorRefFactory: ActorRefFactory,
-    driverHolder: MarathonSchedulerDriverHolder,
+    actorRefFactory: ActorRefFactory,
+    killService: TaskKillService,
     eventBus: EventStream,
     taskTracker: TaskTracker,
     appRepository: ReadOnlyAppRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
+
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,
     actor: ActorRef)
@@ -62,7 +62,7 @@ class MarathonHealthCheckManager(
         log.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
         val ref = actorRefFactory.actorOf(
-          HealthCheckActor.props(app, driverHolder, healthCheck, taskTracker, eventBus))
+          HealthCheckActor.props(app, killService, healthCheck, taskTracker, eventBus))
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 
@@ -220,7 +220,7 @@ class MarathonHealthCheckManager(
         taskTracker.appTasks(appId).map { appTasks =>
           appTasks.iterator.map { task =>
             groupedHealth.get(task.taskId) match {
-              case Some(xs) => task.taskId -> xs.toSeq
+              case Some(xs) => task.taskId -> xs
               case None => task.taskId -> Nil
             }
           }.toMap

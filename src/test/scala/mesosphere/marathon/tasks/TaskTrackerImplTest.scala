@@ -6,7 +6,6 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, PersistentStore }
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
@@ -285,7 +284,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .toBuilder
       .setTimestamp(123)
       .build()
-    val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
+    val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
@@ -305,7 +304,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .toBuilder
       .setTimestamp(123)
       .build()
-    val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
+    val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
@@ -324,7 +323,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val status = sampleTask.launched.get.status.mesosStatus.get.toBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
       .build()
-    val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
+    val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
@@ -336,7 +335,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val newStatus = status.toBuilder
       .setState(Protos.TaskState.TASK_FAILED)
       .build()
-    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(newStatus), clock.now())
+    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
@@ -348,7 +347,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val status = sampleTask.launched.get.status.mesosStatus.get.toBuilder
       .setHealthy(true)
       .build()
-    val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
+    val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
@@ -360,7 +359,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val newStatus = status.toBuilder
       .setHealthy(false)
       .build()
-    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(newStatus), clock.now())
+    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
@@ -375,7 +374,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .setTaskId(sampleTask.taskId.mesosTaskId)
       .setHealthy(true)
       .build()
-    val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
+    val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
@@ -388,7 +387,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .setState(Protos.TaskState.TASK_RUNNING)
       .setHealthy(false)
       .build()
-    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(newStatus), clock.now())
+    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
@@ -402,7 +401,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .setState(Protos.TaskState.TASK_RUNNING)
       .setTaskId(sampleTask.taskId.mesosTaskId)
       .build()
-    val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
+    val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
@@ -414,7 +413,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val newStatus = status.toBuilder
       .setHealthy(true)
       .build()
-    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(newStatus), clock.now())
+    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
@@ -428,7 +427,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .setState(Protos.TaskState.TASK_RUNNING)
       .setTaskId(sampleTask.taskId.mesosTaskId)
       .build()
-    val update = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(status), clock.now())
+    val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
     stateOpProcessor.process(update).futureValue
@@ -441,7 +440,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .setState(Protos.TaskState.TASK_RUNNING)
       .setHealthy(false)
       .build()
-    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, MarathonTaskStatus(newStatus), clock.now())
+    val newUpdate = TaskStateOp.MesosUpdate(sampleTask, newStatus, clock.now())
 
     stateOpProcessor.process(newUpdate).futureValue
 
@@ -457,11 +456,10 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   def makeTaskStatus(task: Task, state: TaskState = TaskState.TASK_RUNNING) = {
-    val mesosStatus = TaskStatus.newBuilder
+    TaskStatus.newBuilder
       .setTaskId(task.taskId.mesosTaskId)
       .setState(state)
       .build
-    MarathonTaskStatus(mesosStatus)
   }
 
   def containsTask(tasks: Iterable[Task], task: Task) =
@@ -474,11 +472,11 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     assert(!containsTask(tasks, task), s"Should not contain ${task.taskId}")
 
   def shouldHaveTaskStatus(task: Task, stateOp: TaskStateOp.MesosUpdate) {
-    assert(stateOp.status.mesosStatus.isDefined, "mesos status is None")
+    assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
     assert(task.launched.isDefined)
     assert(
-      task.launched.get.status.mesosStatus.get == stateOp.status.mesosStatus.get,
-      s"Should have task status ${stateOp.status.mesosStatus.get}")
+      task.launched.get.status.mesosStatus.get == stateOp.mesosStatus,
+      s"Should have task status ${stateOp.mesosStatus}")
   }
 
   def stateShouldNotContainKey(state: PersistentStore, key: Task.Id) {

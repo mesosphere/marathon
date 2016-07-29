@@ -1,28 +1,38 @@
-/*package mesosphere.marathon.core.storage.migration.legacy
+package mesosphere.marathon.core.storage.migration.legacy
 
+import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.core.storage.repository.impl.legacy.DeploymentEntityRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{InMemoryStore, MarathonStore}
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.storage.LegacyInMemConfig
+import mesosphere.marathon.core.storage.repository.TaskRepository
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.tracker.impl.{MarathonTaskStatusSerializer, TaskSerializer}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.state.MarathonTaskState
+import mesosphere.marathon.test.MarathonActorSupport
+import org.apache.mesos
+import org.apache.mesos.Protos.TaskStatus
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{GivenWhenThen, Matchers}
 
-class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
+import scala.concurrent.ExecutionContext
+
+class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers with MarathonActorSupport {
   import mesosphere.FutureTestSupport._
+  import mesosphere.marathon.state.PathId._
+
+  implicit val ctx = ExecutionContext.global
 
   class Fixture {
-    lazy val metrics = new Metrics(new MetricRegistry)
-    lazy val store = new InMemoryStore()
-    lazy val deploymentStore = new MarathonStore[DeploymentPlan](
-      store = store,
-      metrics = metrics,
-      newState = () => DeploymentPlan.empty,
-      prefix = "deployment:"
-    )
-    lazy val deploymentRepo = new DeploymentEntityRepository(deploymentStore)(metrics = metrics)
-    lazy val migration = new MigrationTo1_2(deploymentRepo)
+    implicit lazy val metrics = new Metrics(new MetricRegistry)
+    lazy val config = LegacyInMemConfig(25)
+    lazy val store = config.store
+    lazy val taskRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
+
+    lazy val migration = new MigrationTo1_2(Some(config))
   }
 
   implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(1, Seconds))
@@ -44,5 +54,46 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
     nodeNames should contain theSameElementsAs Seq("deployment:fcabfa75-7756-4bc8-94b3-c9d5b2abd38c", "foo:bar")
   }
 
+  test("should migrate tasks and add calculated MarathonTaskStatus to stored tasks") {
+    Given("some tasks without MarathonTaskStatus")
+    val f = new Fixture
+
+    val store = f.taskRepo.store
+
+    store.store("/running1", makeMarathonTaskState("/running1", mesos.Protos.TaskState.TASK_RUNNING))
+    store.store("/running2", makeMarathonTaskState("/running2", mesos.Protos.TaskState.TASK_RUNNING))
+    store.store("/running3", makeMarathonTaskState("/running3", mesos.Protos.TaskState.TASK_RUNNING, marathonTaskStatus = Some(MarathonTaskStatus.Running)))
+    store.store("/unreachable1", makeMarathonTaskState("/unreachable1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_RECONCILIATION)))
+    store.store("/gone1", makeMarathonTaskState("/gone1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_CONTAINER_LAUNCH_FAILED)))
+
+    When("migrating")
+    f.migration.migrate().futureValue
+
+    Then("the tasks should all have a MarathonTaskStatus according their initial mesos task status")
+    val storedTasks = f.taskRepo.all().map(TaskSerializer.toProto).runWith(Sink.seq)
+
+    storedTasks.futureValue.foreach {
+      task =>
+        task.getMarathonTaskStatus should not be null
+        val serializedTask = TaskSerializer.fromProto(task)
+        val expectedStatus = MarathonTaskStatus(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
+        val currentStatus = MarathonTaskStatusSerializer.fromProto(task.getMarathonTaskStatus)
+
+        currentStatus should be equals expectedStatus
+    }
+  }
+
+  private def makeMarathonTaskState(taskId: String, taskState: mesos.Protos.TaskState, maybeReason: Option[TaskStatus.Reason] = None, marathonTaskStatus: Option[MarathonTaskStatus] = None): MarathonTaskState = {
+    val mesosStatus = TaskStatusUpdateTestHelper.makeMesosTaskStatus(Task.Id.forRunSpec(taskId.toPath), taskState, maybeReason = maybeReason)
+    val builder = MarathonTask.newBuilder()
+      .setId(taskId)
+      .setStatus(mesosStatus)
+      .setHost("abc")
+      .setStagedAt(1)
+    if (marathonTaskStatus.isDefined) {
+      builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus.get))
+    }
+    MarathonTaskState(builder.build())
+  }
+
 }
-*/ 

@@ -3,8 +3,9 @@ package mesosphere.marathon.tasks
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.Mockito
@@ -41,7 +42,8 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
       ),
       runSpecVersion = app.version,
       status = Task.Status(
-        stagedAt = f.clock.now()
+        stagedAt = f.clock.now(),
+        taskStatus = MarathonTaskStatus.Created
       ),
       hostPorts = Seq.empty
     )

@@ -11,7 +11,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.storage.repository.{ AppRepository, ReadOnlyAppRepository, TaskRepository }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.bus.{ MarathonTaskStatus, MarathonTaskStatusTestHelper, TaskStatusEmitter }
+import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusEmitter }
 import mesosphere.marathon.core.task.tracker.TaskUpdater
 import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateChangeException, TaskStateOp }
@@ -23,6 +23,7 @@ import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
+import org.apache.mesos
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -44,8 +45,8 @@ class TaskOpProcessorImplTest
     Given("a taskRepository")
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
-    val stateOp = f.stateOpUpdate(task, MarathonTaskStatusTestHelper.runningHealthy)
-    val mesosStatus = stateOp.status.mesosStatus.get
+    val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.runningHealthy)
+    val mesosStatus = stateOp.mesosStatus
     val expectedChange = TaskStateChange.Update(task, Some(task))
     val taskChanged = TaskChanged(stateOp, expectedChange)
     val ack = TaskTrackerActor.Ack(f.opSender.ref, expectedChange)
@@ -83,7 +84,7 @@ class TaskOpProcessorImplTest
     Given("a taskRepository and existing task")
     val task = MarathonTestHelper.stagedTaskForApp(appId)
     val taskProto = TaskSerializer.toProto(task)
-    val stateOp = f.stateOpUpdate(task, MarathonTaskStatusTestHelper.running)
+    val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
     val expectedChange = TaskStateChange.Update(task, Some(task))
     val taskChanged = TaskChanged(stateOp, expectedChange)
     val ack = TaskTrackerActor.Ack(f.opSender.ref, expectedChange)
@@ -130,7 +131,7 @@ class TaskOpProcessorImplTest
     Given("a taskRepository and no task")
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
-    val stateOp = f.stateOpUpdate(task, MarathonTaskStatusTestHelper.running)
+    val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
     val resolvedStateChange = TaskStateChange.Update(task, Some(task))
     val storeException: RuntimeException = new scala.RuntimeException("fail")
     val expectedTaskChanged = TaskChanged(stateOp, TaskStateChange.Failure(storeException))
@@ -180,7 +181,7 @@ class TaskOpProcessorImplTest
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
     val storeFailed: RuntimeException = new scala.RuntimeException("store failed")
-    val stateOp = f.stateOpUpdate(task, MarathonTaskStatusTestHelper.running)
+    val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
     val expectedChange = TaskStateChange.Update(task, Some(task))
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.store(task) returns Future.failed(storeFailed)
@@ -340,7 +341,7 @@ class TaskOpProcessorImplTest
     Given("a statusUpdateResolver and an update")
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskProto = TaskSerializer.toProto(task)
-    val stateOp = f.stateOpUpdate(task, MarathonTaskStatusTestHelper.running)
+    val stateOp = f.stateOpUpdate(task, MesosTaskStatusTestHelper.running)
     val expectedChange = TaskStateChange.NoChange(task.taskId)
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.get(task.taskId) returns Future.successful(Some(task))
@@ -405,7 +406,7 @@ class TaskOpProcessorImplTest
     lazy val now = clock.now()
 
     def stateOpLaunch(task: Task) = TaskStateOp.LaunchEphemeral(task)
-    def stateOpUpdate(task: Task, status: MarathonTaskStatus, now: Timestamp = now) = TaskStateOp.MesosUpdate(task, status, now)
+    def stateOpUpdate(task: Task, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp = now) = TaskStateOp.MesosUpdate(task, mesosStatus, now)
     def stateOpExpunge(task: Task) = TaskStateOp.ForceExpunge(task.taskId)
     def stateOpLaunchOnReservation(task: Task, status: Task.Status) = TaskStateOp.LaunchOnReservation(task.taskId, now, status, Seq.empty)
     def stateOpReservationTimeout(task: Task) = TaskStateOp.ReservationTimeout(task.taskId)

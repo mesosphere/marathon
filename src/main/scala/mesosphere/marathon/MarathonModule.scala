@@ -18,6 +18,7 @@ import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository }
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
@@ -112,6 +113,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
     taskTracker: TaskTracker,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     driverHolder: MarathonSchedulerDriverHolder,
     electionService: ElectionService,
@@ -135,6 +137,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         launchQueue,
         eventBus,
         schedulerActor,
+        killService,
         conf)
     }
 
@@ -143,6 +146,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         new DeploymentManager(
           appRepository,
           taskTracker,
+          killService,
           launchQueue,
           schedulerActions,
           storage,
@@ -163,6 +167,7 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
         deploymentRepository,
         healthCheckManager,
         taskTracker,
+        killService,
         launchQueue,
         driverHolder,
         electionService,

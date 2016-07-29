@@ -13,7 +13,7 @@ import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
@@ -24,6 +24,7 @@ import mesosphere.util.Logging
 import org.apache.mesos.{ Protos => mesos }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{ Millis, Span }
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -71,9 +72,10 @@ class MarathonHealthCheckManagerTest
 
     eventStream = new EventStream(system)
 
+    val killService = mock[TaskKillService]
     hcManager = new MarathonHealthCheckManager(
       system,
-      new MarathonSchedulerDriverHolder,
+      killService,
       eventStream,
       taskTracker,
       appRepository,
@@ -86,7 +88,7 @@ class MarathonHealthCheckManagerTest
 
     val taskStatus = MarathonTestHelper.runningTask(taskId.idString).launched.get.status.mesosStatus.get
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
-    val update = TaskStateOp.MesosUpdate(marathonTask, MarathonTaskStatus(taskStatus), clock.now())
+    val update = TaskStateOp.MesosUpdate(marathonTask, taskStatus, clock.now())
 
     taskCreationHandler.created(TaskStateOp.LaunchEphemeral(marathonTask)).futureValue
     stateOpProcessor.process(update).futureValue
@@ -131,7 +133,7 @@ class MarathonHealthCheckManagerTest
 
     val taskStatus = MarathonTestHelper.unhealthyTask(taskId.idString).launched.get.status.mesosStatus.get
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = app.version)
-    val update = TaskStateOp.MesosUpdate(marathonTask, MarathonTaskStatus(taskStatus), clock.now())
+    val update = TaskStateOp.MesosUpdate(marathonTask, taskStatus, clock.now())
 
     val healthCheck = HealthCheck(protocol = Protocol.COMMAND, gracePeriod = 0.seconds)
 
@@ -242,7 +244,7 @@ class MarathonHealthCheckManagerTest
         healthChecks = healthChecks
       )).futureValue
       taskCreationHandler.created(TaskStateOp.LaunchEphemeral(task)).futureValue
-      val update = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(taskStatus(task)), clock.now())
+      val update = TaskStateOp.MesosUpdate(task, taskStatus(task), clock.now())
       stateOpProcessor.process(update).futureValue
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
@@ -312,4 +314,6 @@ class MarathonHealthCheckManagerTest
   }
 
   def captureEvents = new CaptureEvents(eventStream)
+
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(1000, Millis)))
 }

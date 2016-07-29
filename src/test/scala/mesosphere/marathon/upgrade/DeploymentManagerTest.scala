@@ -6,14 +6,15 @@ import akka.testkit.TestActor.{ AutoPilot, NoAutoPilot }
 import akka.testkit.{ ImplicitSender, TestActorRef, TestProbe }
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.AppEntityRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, MarathonStore }
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
@@ -28,8 +29,8 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, FunSuiteLike, Matchers }
 
-import scala.concurrent.{ Await, ExecutionContext }
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, ExecutionContext }
 
 class DeploymentManagerTest
     extends MarathonActorSupport
@@ -126,6 +127,7 @@ class DeploymentManagerTest
     val taskTracker: TaskTracker = MarathonTestHelper.createTaskTracker (
       AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore, config, metrics
     )
+    val taskKillService: TaskKillService = mock[TaskKillService]
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val appRepo: AppRepository = new AppEntityRepository(
       new MarathonStore[AppDefinition](new InMemoryStore, metrics, () => AppDefinition(), prefix = "app:"),
@@ -136,7 +138,7 @@ class DeploymentManagerTest
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     def deploymentManager(): TestActorRef[DeploymentManager] = TestActorRef (
-      DeploymentManager.props(appRepo, taskTracker, launchQueue, scheduler, storage, hcManager, eventBus, readinessCheckExecutor, config)
+      DeploymentManager.props(appRepo, taskTracker, taskKillService, launchQueue, scheduler, storage, hcManager, eventBus, readinessCheckExecutor, config)
     )
 
   }
