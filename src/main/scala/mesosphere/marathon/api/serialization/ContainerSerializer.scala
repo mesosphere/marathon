@@ -64,7 +64,7 @@ object ContainerSerializer {
         builder.setMesos(MesosAppCSerializer.toMesos(ma))
     }
 
-    container.volumes foreach {
+    container.volumes.foreach {
       case pv: PersistentVolume => // PersistentVolumes are handled differently
       case ev: ExternalVolume => ExternalVolumes.build(builder, ev) // this also adds the volume
       case dv: DockerVolume => builder.addVolumes(VolumeSerializer.toMesos(dv))
@@ -123,10 +123,10 @@ object ExternalVolumeInfoSerializer {
       .setName(info.name)
       .setProvider(info.provider)
 
-    info.size foreach builder.setSize
+    info.size.foreach(builder.setSize)
     info.options.map{
       case (key, value) => mesos.Protos.Label.newBuilder().setKey(key).setValue(value).build
-    } foreach builder.addOptions
+    }.foreach(builder.addOptions)
 
     builder.build
   }
@@ -154,9 +154,9 @@ object DockerDockerSerializer {
       .addAllParameters(docker.parameters.map(ParameterSerializer.toMesos).asJava)
       .setForcePullImage(docker.forcePullImage)
 
-    docker.network foreach builder.setNetwork
+    docker.network.foreach(builder.setNetwork)
 
-    docker.portMappings foreach { pms =>
+    docker.portMappings.foreach { pms =>
       builder.addPortMappings(PortMappingSerializer.toProto(pms))
     }
 
@@ -168,9 +168,9 @@ object DockerDockerSerializer {
 
     builder.setImage(docker.image)
 
-    docker.network foreach builder.setNetwork
+    docker.network.foreach(builder.setNetwork)
 
-    docker.portMappings foreach { pms =>
+    docker.portMappings.foreach { pms =>
       builder.addAllPortMappings(PortMappingSerializer.toMesos(pms).asJava)
     }
 
@@ -193,7 +193,7 @@ object LabelsSerializer {
 
   def toMesosLabelsBuilder(labels: Map[String, String]): mesos.Protos.Labels.Builder = {
     val builder = mesos.Protos.Labels.newBuilder
-    toMesos(labels) foreach builder.addLabels
+    toMesos(labels).foreach(builder.addLabels)
     builder
   }
 }
@@ -205,9 +205,9 @@ object PortMappingSerializer {
       .setProtocol(mapping.protocol)
       .setServicePort(mapping.servicePort)
 
-    mapping.hostPort foreach builder.setHostPort
-    mapping.name foreach builder.setName
-    LabelsSerializer.toMesos(mapping.labels) foreach builder.addLabels
+    mapping.hostPort.foreach(builder.setHostPort)
+    mapping.name.foreach(builder.setName)
+    LabelsSerializer.toMesos(mapping.labels).foreach(builder.addLabels)
 
     builder.build
   }
@@ -253,7 +253,7 @@ object PortMappingSerializer {
       .setNumber(effectiveHostPort)
       .setProtocol(pm.protocol)
 
-    pm.name foreach builder.setName
+    pm.name.foreach(builder.setName)
 
     if (pm.labels.nonEmpty) {
       builder.setLabels(LabelsSerializer.toMesosLabelsBuilder(pm.labels))
@@ -284,7 +284,7 @@ object CredentialSerializer {
   def toMesos(credential: Container.Credential): mesos.Protos.Credential = {
     val builder = mesos.Protos.Credential.newBuilder
       .setPrincipal(credential.principal)
-    credential.secret foreach builder.setSecret
+    credential.secret.foreach(builder.setSecret)
     builder.build
   }
 }
@@ -305,7 +305,7 @@ object MesosDockerSerializer {
       .setImage(docker.image)
       .setForcePullImage(docker.forcePullImage)
 
-    docker.credential foreach { credential =>
+    docker.credential.foreach { credential =>
       builder.setCredential(CredentialSerializer.toMesos(credential))
     }
 
@@ -316,7 +316,7 @@ object MesosDockerSerializer {
     val dockerBuilder = mesos.Protos.Image.Docker.newBuilder
       .setName(container.image)
 
-    container.credential foreach { credential =>
+    container.credential.foreach { credential =>
       dockerBuilder.setCredential(CredentialSerializer.toMesos(credential))
     }
 
@@ -346,9 +346,9 @@ object MesosAppCSerializer {
       .setImage(appc.image)
       .setForcePullImage(appc.forcePullImage)
 
-    appc.id foreach builder.setId
+    appc.id.foreach(builder.setId)
 
-    LabelsSerializer.toMesos(appc.labels) foreach builder.addLabels
+    LabelsSerializer.toMesos(appc.labels).foreach(builder.addLabels)
 
     builder.build
   }
@@ -356,7 +356,7 @@ object MesosAppCSerializer {
   def toMesos(container: Container.MesosAppC): mesos.Protos.ContainerInfo.MesosInfo = {
     val appcBuilder = mesos.Protos.Image.Appc.newBuilder
       .setName(container.image)
-    container.id foreach appcBuilder.setId
+    container.id.foreach(appcBuilder.setId)
     appcBuilder.setLabels(LabelsSerializer.toMesosLabelsBuilder(container.labels))
 
     val imageBuilder = mesos.Protos.Image.newBuilder
