@@ -70,7 +70,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
 
     def loadTask(id: String): Future[Protos.MarathonTask] = f.taskRepo.task(id).map {
       case Some(entity) => entity
-      case None => fail("Entity id was found with allIds(), but no entity could be loaded with task(id).")
+      case None         => fail("Entity id was found with allIds(), but no entity could be loaded with task(id).")
     }
 
     val store = f.taskRepo.store
