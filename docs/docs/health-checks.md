@@ -47,6 +47,8 @@ or secure HTTP:
 }
 ```
 
+*Note:* HTTPS health checks do not verify the SSL certificate.  
+
 or TCP:
 
 ```json
