@@ -233,7 +233,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         migrator.groupRepository.rootVersions()
           .runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(emptyRoot.version.toOffsetDateTime)
       }
-      "store all the previous roots up to the max versions" in {
+      "store all the previous roots" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val oldMax = 3
         val config = LegacyInMemConfig(oldMax)
@@ -255,7 +255,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
 
         val roots = Seq(root1, root2, root3)
 
-        // one less root version than the old
+        // one less root version than the old, but doesn't matter because it doesn't run GC.
         val migrator = migration(Some(config), 2)
         val migrate = new MigrationTo1_2_PersistenceStore(migrator)
         migrate.migrate().futureValue
@@ -266,8 +266,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         migrator.groupRepository.root().futureValue should equal(root3)
         migrator.groupRepository.rootVersions().mapAsync(Int.MaxValue)(migrator.groupRepository.rootVersion)
           .collect { case Some(g) => g }
-          .runWith(Sink.seq).futureValue should contain theSameElementsAs
-          Seq(root3, root2)
+          .runWith(Sink.seq).futureValue should contain theSameElementsAs roots
 
         // we don't need to verify app repository as the new persistence store doesn't
         // store the apps in the groups, so if the roots load, we're all good.

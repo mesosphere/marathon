@@ -10,18 +10,18 @@ import com.twitter.zk.ZNode
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.repository.impl.StoredGroupRepositoryImpl
 import mesosphere.marathon.core.storage.repository.impl.legacy.GroupEntityRepository
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{CompressionConf, EntityStore, InMemoryStore, MarathonStore, ZKStore}
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, ZKStore }
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration.{ Duration, _ }
 
 class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServerTest {
   import PathId._

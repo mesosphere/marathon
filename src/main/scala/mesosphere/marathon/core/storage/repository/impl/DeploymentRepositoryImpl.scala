@@ -2,7 +2,7 @@ package mesosphere.marathon.core.storage.repository.impl
 
 import java.time.OffsetDateTime
 
-import akka.actor.{ ActorRefFactory, Props }
+import akka.actor.ActorRefFactory
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
@@ -18,7 +18,6 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future, Promise }
-import scala.util.Try
 
 case class StoredPlan(
     id: String,
@@ -62,20 +61,19 @@ object StoredPlan {
 
   def apply(proto: Protos.DeploymentPlanDefinition): StoredPlan = {
     val version = if (proto.hasTimestamp) {
-      Try(OffsetDateTime.parse(proto.getTimestamp, DateFormat)).getOrElse(OffsetDateTime.MIN)
+      OffsetDateTime.parse(proto.getTimestamp, DateFormat)
     } else {
       OffsetDateTime.MIN
     }
     StoredPlan(
       proto.getId,
-      Try(OffsetDateTime.parse(proto.getOriginalRootVersion, DateFormat)).getOrElse(OffsetDateTime.MIN),
-      Try(OffsetDateTime.parse(proto.getTargetRootVersion, DateFormat)).getOrElse(OffsetDateTime.MIN),
+      OffsetDateTime.parse(proto.getOriginalRootVersion, DateFormat),
+      OffsetDateTime.parse(proto.getTargetRootVersion, DateFormat),
       version)
   }
 }
 
 // TODO: We should probably cache the plans we resolve...
-// TODO: Add more docs, especially about GC.
 class DeploymentRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
@@ -88,9 +86,9 @@ class DeploymentRepositoryImpl[K, C, S](
     actorRefFactory: ActorRefFactory,
     mat: Materializer) extends DeploymentRepository {
 
-  private val gcActor = actorRefFactory.actorOf(
-    Props(classOf[GcActor[K, C, S]], this, groupRepository,
-      appRepository, maxVersions, mat, ctx), "PersistenceGarbageCollector")
+  private val gcActor = GcActor(
+    s"PersistenceGarbageCollector:$hashCode",
+    this, groupRepository, appRepository, maxVersions)
 
   appRepository.beforeStore = Some((id, version) => {
     val promise = Promise[Done]()

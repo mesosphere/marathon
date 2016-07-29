@@ -125,13 +125,13 @@ object AppRepository {
   }
 
   def zkRepository(
-    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext): AppRepositoryImpl[ZkId, String, ZkSerialized] = {
+    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext): AppRepositoryImpl[ZkId, String, ZkSerialized] = { // scalastyle:off
     import ZkStoreSerialization._
     new AppRepositoryImpl(persistenceStore)
   }
 
   def inMemRepository(
-    persistenceStore: PersistenceStore[RamId, String, Identity])(implicit ctx: ExecutionContext): AppRepositoryImpl[RamId, String, Identity] = {
+    persistenceStore: PersistenceStore[RamId, String, Identity])(implicit ctx: ExecutionContext): AppRepositoryImpl[RamId, String, Identity] = { // scalastyle:off
     import InMemoryStoreSerialization._
     new AppRepositoryImpl(persistenceStore)
   }

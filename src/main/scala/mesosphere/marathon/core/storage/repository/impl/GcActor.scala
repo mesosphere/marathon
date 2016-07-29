@@ -4,10 +4,10 @@ package mesosphere.marathon.core.storage.repository.impl
 import java.time.OffsetDateTime
 
 import akka.Done
-import akka.actor.{ Actor, ActorLogging, ActorRef }
+import akka.actor.{ Actor, ActorLogging, ActorRef, ActorRefFactory, Props }
 import akka.pattern._
 import akka.stream.Materializer
-import mesosphere.marathon.core.storage.repository.impl.GcActor.{ CompactDone, Message, RunGC, ScanDone, StoreApp, StoreEntity, StorePlan, StoreRoot }
+import mesosphere.marathon.core.storage.repository.impl.GcActor._
 import mesosphere.marathon.state.{ Group, PathId }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -160,11 +160,11 @@ private trait ScanBehavior[K, C, S] { this: Actor with ActorLogging with Compact
         val currentRoot = await(currentRootFuture)
         val storedPlans = await(storedPlansFuture)
 
-        val inUseRootVersions: SortedSet[OffsetDateTime] = storedPlans.flatMap { plan =>
+        val currentlyInDeployment: SortedSet[OffsetDateTime] = storedPlans.flatMap { plan =>
           Seq(plan.originalVersion, plan.targetVersion)
         }(collection.breakOut)
 
-        val deletionCandidates = rootVersions.diff(inUseRootVersions + currentRoot.version.toOffsetDateTime)
+        val deletionCandidates = rootVersions.diff(currentlyInDeployment + currentRoot.version.toOffsetDateTime)
 
         if (deletionCandidates.isEmpty) {
           ScanDone(Set.empty, Map.empty, Set.empty)
@@ -253,7 +253,7 @@ private trait CompactBehavior[K, C, S] { this: Actor with ActorLogging with Scan
     rootVersionsDeleting: Set[OffsetDateTime],
     promises: List[Promise[Done]], gcRequested: Boolean): Receive = {
     case RunGC =>
-      context.become(compacting(appsDeleting, appVersionsDeleting, rootVersionsDeleting, promises, gcRequested))
+      context.become(compacting(appsDeleting, appVersionsDeleting, rootVersionsDeleting, promises, gcRequested = true))
     case CompactDone =>
       promises.foreach(_.success(Done))
       if (gcRequested) {
@@ -342,6 +342,26 @@ private trait CompactBehavior[K, C, S] { this: Actor with ActorLogging with Scan
 }
 
 object GcActor {
+  def props[K, C, S](
+    deploymentRepository: DeploymentRepositoryImpl[K, C, S],
+    groupRepository: StoredGroupRepositoryImpl[K, C, S],
+    appRepository: AppRepositoryImpl[K, C, S],
+    maxVersions: Int)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
+    Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, maxVersions))
+  }
+
+  def apply[K, C, S](
+    name: String,
+    deploymentRepository: DeploymentRepositoryImpl[K, C, S],
+    groupRepository: StoredGroupRepositoryImpl[K, C, S],
+    appRepository: AppRepositoryImpl[K, C, S],
+    maxVersions: Int)(implicit
+    mat: Materializer,
+    ctx: ExecutionContext,
+    actorRefFactory: ActorRefFactory): ActorRef = {
+    actorRefFactory.actorOf(props(deploymentRepository, groupRepository, appRepository, maxVersions), name)
+  }
+
   sealed trait Message extends Product with Serializable
   case class ScanDone(appsToDelete: Set[PathId], appVersionsToDelete: Map[PathId, SortedSet[OffsetDateTime]],
     rootVersionsToDelete: Set[OffsetDateTime]) extends Message

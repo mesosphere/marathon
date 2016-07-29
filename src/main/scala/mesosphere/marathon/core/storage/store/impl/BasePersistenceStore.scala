@@ -130,7 +130,6 @@ abstract class BasePersistenceStore[K, Category, Serialized](implicit
     m: Marshaller[V, Serialized]): Future[Done] = {
     if (ir.hasVersions) {
       val storageId = ir.toStorageId(id, Some(version))
-      val currentId = ir.toStorageId(id, None)
       lockManager.executeSequentially(id.toString) {
         async {
           val serialized = await(Marshal(v).to[Serialized])

@@ -45,7 +45,7 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
         await(preStore(v.id, Some(v.version.toOffsetDateTime)))
       case _ =>
     }
-    await(super.store(v))
+    await(super.storeVersion(v))
   }
 
   private[storage] def deleteVersion(id: PathId, version: OffsetDateTime): Future[Done] = {

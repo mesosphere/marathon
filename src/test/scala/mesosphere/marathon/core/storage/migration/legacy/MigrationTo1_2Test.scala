@@ -9,14 +9,14 @@ import mesosphere.marathon.core.storage.repository.TaskRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.tracker.impl.{MarathonTaskStatusSerializer, TaskSerializer}
+import mesosphere.marathon.core.task.tracker.impl.{ MarathonTaskStatusSerializer, TaskSerializer }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus
-import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
 
