@@ -76,9 +76,9 @@ private[health] class HealthCheckActor(
         healthCheck
       )
       nextScheduledCheck = Some(
-        context.system.scheduler.scheduleOnce(healthCheck.interval) {
-          self ! Tick
-        }
+        // schedule health check in FirstHealthCheckTime (1s) and then repeating every interval
+        // need to give some buffer for tasks to be launched
+        context.system.scheduler.schedule(HealthCheck.FirstHealthCheckTime, healthCheck.interval, self, Tick)
       )
     }
 
@@ -150,7 +150,6 @@ private[health] class HealthCheckActor(
     case Tick =>
       purgeStatusOfDoneTasks()
       dispatchJobs()
-      scheduleNextHealthCheck()
 
     case result: HealthResult if result.version == app.version =>
       log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
