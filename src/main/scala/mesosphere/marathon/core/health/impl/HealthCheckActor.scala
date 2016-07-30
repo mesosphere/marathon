@@ -20,6 +20,8 @@ private[health] class HealthCheckActor(
 
   import context.dispatcher
   import HealthCheckWorker.HealthCheckJob
+  import scala.concurrent.duration._
+  import scala.language.postfixOps
 
   var nextScheduledCheck: Option[Cancellable] = None
   var taskHealth = Map[Task.Id, Health]()
@@ -76,9 +78,8 @@ private[health] class HealthCheckActor(
         healthCheck
       )
       nextScheduledCheck = Some(
-        context.system.scheduler.scheduleOnce(healthCheck.interval) {
-          self ! Tick
-        }
+        // schedule health check immediately and then repeating every interval
+        context.system.scheduler.schedule(0 milliseconds,healthCheck.interval, self, Tick)
       )
     }
 
@@ -150,7 +151,6 @@ private[health] class HealthCheckActor(
     case Tick =>
       purgeStatusOfDoneTasks()
       dispatchJobs()
-      scheduleNextHealthCheck()
 
     case result: HealthResult if result.version == app.version =>
       log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
