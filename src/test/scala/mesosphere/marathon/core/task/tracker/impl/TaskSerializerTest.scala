@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.tracker.impl
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonTestHelper, SerializationFailedException }
@@ -23,13 +24,14 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       .setId("task")
       .setVersion(now.toString)
       .setStagedAt(now.toDateTime.getMillis)
+      .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Running)
       .setHost(f.sampleHost).build()
 
     When("we convert it to task")
     val task = TaskSerializer.fromProto(taskProto)
 
     Then("we get a minimal task State")
-    val expectedState = MarathonTestHelper.mininimalTask(f.taskId.idString, now)
+    val expectedState = MarathonTestHelper.mininimalTask(f.taskId.idString, now, None, MarathonTaskStatus.Running)
 
     task should be(expectedState)
 
@@ -197,7 +199,8 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         status = Task.Status(
           stagedAt = Timestamp(stagedAtLong),
           startedAt = Some(Timestamp(startedAtLong)),
-          mesosStatus = Some(sampleTaskStatus)
+          mesosStatus = Some(sampleTaskStatus),
+          taskStatus = MarathonTaskStatus.Running
         ),
         hostPorts = Seq.empty,
         reservation = Task.Reservation(
@@ -216,6 +219,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setVersion(appVersion.toString)
         .setStatus(sampleTaskStatus)
         .setSlaveId(sampleSlaveId)
+        .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Running)
         .setReservation(MarathonTask.Reservation.newBuilder
           .addLocalVolumeIds(LocalVolumeId(appId, "my-volume", "uuid-123").idString)
           .setState(MarathonTask.Reservation.State.newBuilder()
@@ -243,7 +247,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       private[this] val stagedAt = now - 1.minute
       private[this] val startedAt = now - 55.seconds
       private[this] val mesosStatus = MarathonTestHelper.statusForState(taskId.idString, MesosProtos.TaskState.TASK_RUNNING)
-      private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus))
+      private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus), taskStatus = MarathonTaskStatus.Running)
       private[this] val hostPorts = Seq(1, 2, 3)
 
       def reservedProto = MarathonTask.newBuilder()
@@ -251,6 +255,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setHost(host)
         .setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))
         .addAllAttributes(attributes.asJava)
+        .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Reserved)
         .setReservation(MarathonTask.Reservation.newBuilder()
           .addAllLocalVolumeIds(localVolumeIds.map(_.idString).asJava)
           .setState(MarathonTask.Reservation.State.newBuilder()
@@ -265,7 +270,8 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         Task.Id(taskId.idString),
         Task.AgentInfo(host = host, agentId = Some(agentId), attributes),
         reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.New(Some(Task.Reservation.Timeout(
-          initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout))))
+          initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout)))),
+        status = Task.Status(stagedAt = Timestamp(0), taskStatus = MarathonTaskStatus.Reserved)
       )
 
       def launchedEphemeralProto = MarathonTask.newBuilder()
@@ -277,6 +283,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .setStagedAt(stagedAt.toDateTime.getMillis)
         .setStartedAt(startedAt.toDateTime.getMillis)
         .setStatus(mesosStatus)
+        .setMarathonTaskStatus(MarathonTask.MarathonTaskStatus.Running)
         .addAllPorts(hostPorts.map(Integer.valueOf).asJava)
         .build()
 

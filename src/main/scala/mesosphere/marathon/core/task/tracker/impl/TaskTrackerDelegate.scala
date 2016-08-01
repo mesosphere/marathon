@@ -67,10 +67,8 @@ private[tracker] class TaskTrackerDelegate(
     tasksByApp().map(_.appTasks(appId))
   override def appTasksLaunchedSync(appId: PathId): Iterable[Task] = appTasksSync(appId).filter(_.launched.isDefined)
 
-  override def task(taskId: Task.Id)(
-    implicit
-    ec: ExecutionContext): Future[Option[Task]] =
-    tasksByApp().map(_.task(taskId))
+  override def task(taskId: Task.Id): Future[Option[Task]] =
+    (taskTrackerRef ? TaskTrackerActor.Get(taskId)).mapTo[Option[Task]]
 
   private[this] val tasksByAppTimer =
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))

@@ -7,10 +7,11 @@ import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, 
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ PathId, AppRepository, Group, Timestamp }
+import mesosphere.marathon.state.{ AppRepository, Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, DeploymentCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
@@ -23,6 +24,7 @@ import scala.util.control.NonFatal
 class DeploymentManager(
     appRepository: AppRepository,
     taskTracker: TaskTracker,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
@@ -91,6 +93,7 @@ class DeploymentManager(
           self,
           sender(),
           driver,
+          killService,
           scheduler,
           plan,
           taskTracker,
@@ -155,6 +158,7 @@ object DeploymentManager {
   def props(
     appRepository: AppRepository,
     taskTracker: TaskTracker,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
@@ -162,7 +166,7 @@ object DeploymentManager {
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     config: UpgradeConfig): Props = {
-    Props(new DeploymentManager(appRepository, taskTracker, launchQueue,
+    Props(new DeploymentManager(appRepository, taskTracker, killService, launchQueue,
       scheduler, storage, healthCheckManager, eventBus, readinessCheckExecutor, config))
   }
 
