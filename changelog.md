@@ -1,8 +1,37 @@
-## Changes from 1.1.0 to (unreleased version)
+## Changes from 1.2.0 to (unreleased version)
+
+
+## Changes from 1.1.0 to 1.2.0
 
 ### Fixed issues
 
-- #3926 - Create PORT_NAME environment variable when we define portDefinitions with name
+- #4129 - TaskOpProcessorImplTest is flaky (#4148)
+- #4093 - Refactor MigrationTo1_2Test using async/wait (#4128)
+- #4095 - Used Map instead of Set to store apps in Group. (#4096)
+- #4085 - Stopping all running deployments instead of cancelling  (#4086)
+- #4071 - Service Port validations are not consistently enforced (#4077)
+- #3991 - Use suppressOffers (#3992)
+- #3515 - Create MAX_PER constraint. (#3989)
+- #3515 - Update AppDefinition.json schema (#3993)
+- #3970 - Validate constraints
+- #3926 - Create PORT_NAME environment variable when we defined portDefinitions with name (#3982)
+- #3981 and #3963 - Allow health-checks to be performed directly against specified ports
+- #3977 - Add jenkins shell script for Velocity Integration
+- #3970 - Improve docs for LIKE/UNLIKE
+- #3851 - Allow dynamically reserved resources for normal task matching (#3855)
+- #3848 - Size check for deployments (#3852)
+- #3843 - Fixing the upgradeStrategy/residency defaults (#3846)
+- #3291 - Event subscriptions validation (#3787)
+- #3261 - http_event_request_timeout set the HTTP timeout (#3827)
+- #3813 - handling TASK_KILLING status updates (#3829)
+- #3694 - enabling chaos gzip handling. - use chaos 0.8.6 with gzip handling - add http_compression flag - bump version of scallop to 1.0 - deprecate asset_path property
+- #3806 - Do not silently fail on reservations (#3808)
+- #3472 - Remove MarathonTask from most code (#3778)
+- #3723 - Fix validation of duplicate volume names (#3737)
+- #3505 - Adding documentation for ReadinessChecks (#3711)
+- #3503 - Implementing integration tests for starting and updati… (#3738)
+- #3648 - LaunchQueue: Do not defer TaskChanged (#3721) 
+
 
 ## Changes from 1.0.0 to 1.1.0
 
