@@ -12,6 +12,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
@@ -246,7 +247,8 @@ object MarathonTestHelper {
   def makeTaskFromTaskInfo(
     taskInfo: TaskInfo,
     offer: Offer = makeBasicOffer().build(),
-    version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): Task.LaunchedEphemeral =
+    version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
+    marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Staging): Task.LaunchedEphemeral =
     {
       import scala.collection.JavaConverters._
 
@@ -259,7 +261,8 @@ object MarathonTestHelper {
         ),
         runSpecVersion = version,
         status = Task.Status(
-          stagedAt = now
+          stagedAt = now,
+          taskStatus = marathonTaskStatus
         ),
         hostPorts = Seq(1, 2, 3)
       )
@@ -329,6 +332,9 @@ object MarathonTestHelper {
   def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forRunSpec(appId).idString)
   def mininimalTask(taskId: Task.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
   def mininimalTask(taskId: String, now: Timestamp = clock.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
+    mininimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) MarathonTaskStatus(mesosStatus.get) else MarathonTaskStatus.Created)
+  }
+  def mininimalTask(taskId: String, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: MarathonTaskStatus): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
@@ -336,25 +342,46 @@ object MarathonTestHelper {
       status = Task.Status(
         stagedAt = now,
         startedAt = None,
-        mesosStatus = mesosStatus
+        mesosStatus = mesosStatus,
+        taskStatus = marathonTaskStatus
       ),
       hostPorts = Seq.empty
     )
   }
 
-  def mininimalLostTask(appId: PathId): Task.LaunchedEphemeral = {
+  def mininimalLostTask(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Gone): Task.LaunchedEphemeral = {
     val taskId = Task.Id.forRunSpec(appId)
     val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION))
     mininimalTask(
       taskId = taskId.idString,
-      mesosStatus = Some(status))
+      now = clock.now(),
+      mesosStatus = Some(status),
+      marathonTaskStatus = marathonTaskStatus
+    )
+  }
+
+  def minimalUnreachableTask(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Unreachable): Task.LaunchedEphemeral = {
+    val lostTask = mininimalLostTask(appId)
+    lostTask.copy(status = lostTask.status.copy(taskStatus = marathonTaskStatus))
+  }
+
+  def minimalRunning(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Running): Task.LaunchedEphemeral = {
+    val taskId = Task.Id.forRunSpec(appId)
+    val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_RUNNING, maybeHealth = Option(true))
+    mininimalTask(
+      taskId = taskId.idString,
+      now = clock.now(),
+      mesosStatus = Some(status),
+      marathonTaskStatus = marathonTaskStatus
+    )
   }
 
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
       taskId = Task.Id.forRunSpec(appId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
-      reservation = reservation)
+      reservation = reservation,
+      status = Task.Status(Timestamp.now(), taskStatus = MarathonTaskStatus.Reserved))
 
   def newReservation: Task.Reservation = Task.Reservation(Seq.empty, taskReservationStateNew)
 
@@ -362,12 +389,12 @@ object MarathonTestHelper {
 
   def taskLaunched: Task.Launched = {
     val now = Timestamp.now()
-    Task.Launched(now, status = Task.Status(now), hostPorts = Seq.empty)
+    Task.Launched(now, status = Task.Status(stagedAt = now, taskStatus = MarathonTaskStatus.Running), hostPorts = Seq.empty)
   }
 
   def taskLaunchedOp(taskId: Task.Id): TaskStateOp.LaunchOnReservation = {
     val now = Timestamp.now()
-    TaskStateOp.LaunchOnReservation(taskId = taskId, runSpecVersion = now, status = Task.Status(now), hostPorts = Seq.empty)
+    TaskStateOp.LaunchOnReservation(taskId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = MarathonTaskStatus.Running), hostPorts = Seq.empty)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
@@ -384,7 +411,8 @@ object MarathonTestHelper {
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
         startedAt = None,
-        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STARTING))
+        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STARTING)),
+        taskStatus = MarathonTaskStatus.Starting
       ),
       hostPorts = Seq.empty
     )
@@ -404,7 +432,8 @@ object MarathonTestHelper {
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
         startedAt = None,
-        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STAGING))
+        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STAGING)),
+        taskStatus = MarathonTaskStatus.Staging
       ),
       hostPorts = Seq.empty
     )
@@ -529,7 +558,8 @@ object MarathonTestHelper {
       status = Task.Status(
         stagedAt = now,
         startedAt = None,
-        mesosStatus = None
+        mesosStatus = None,
+        taskStatus = MarathonTaskStatus.Running
       ),
       hostPorts = Seq.empty,
       reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))

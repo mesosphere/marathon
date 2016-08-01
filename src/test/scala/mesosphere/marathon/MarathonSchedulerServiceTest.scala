@@ -85,6 +85,7 @@ class MarathonSchedulerServiceTest
   private[this] var schedulerActor: ActorRef = _
   private[this] var heartbeatActor: ActorRef = _
   private[this] var prePostDriverCallbacks: scala.collection.immutable.Seq[PrePostDriverCallback] = _
+  private[this] var mockTimer: Timer = _
 
   before {
     probe = TestProbe()
@@ -102,6 +103,7 @@ class MarathonSchedulerServiceTest
     schedulerActor = probe.ref
     heartbeatActor = heartbeatProbe.ref
     prePostDriverCallbacks = scala.collection.immutable.Seq.empty
+    mockTimer = mock[Timer]
   }
 
   def driverFactory[T](provide: => SchedulerDriver): SchedulerDriverFactory = {
@@ -111,8 +113,6 @@ class MarathonSchedulerServiceTest
   }
 
   test("Start timer when elected") {
-    val mockTimer = mock[Timer]
-
     when(frameworkIdUtil.fetch()).thenReturn(None)
 
     val schedulerService = new MarathonSchedulerService(
@@ -129,7 +129,6 @@ class MarathonSchedulerServiceTest
       schedulerActor,
       heartbeatActor
     )
-
     schedulerService.timer = mockTimer
 
     when(leadershipCoordinator.prepareForStart()).thenReturn(Future.successful(()))
@@ -139,8 +138,6 @@ class MarathonSchedulerServiceTest
   }
 
   test("Cancel timer when defeated") {
-    val mockTimer = mock[Timer]
-
     when(frameworkIdUtil.fetch()).thenReturn(None)
 
     val driver = mock[SchedulerDriver]
@@ -172,8 +169,6 @@ class MarathonSchedulerServiceTest
   }
 
   test("Re-enable timer when re-elected") {
-    val mockTimer = mock[Timer]
-
     when(frameworkIdUtil.fetch()).thenReturn(None)
 
     val schedulerService = new MarathonSchedulerService(
@@ -194,6 +189,8 @@ class MarathonSchedulerServiceTest
       override def newTimer() = mockTimer
     }
 
+    schedulerService.timer = mockTimer
+
     when(leadershipCoordinator.prepareForStart()).thenReturn(Future.successful(()))
 
     schedulerService.startLeadership()
@@ -209,8 +206,6 @@ class MarathonSchedulerServiceTest
 
   test("Always fetch current framework ID") {
     val frameworkId = mesos.FrameworkID.newBuilder.setValue("myId").build()
-    val mockTimer = mock[Timer]
-
     val metrics = new Metrics(new MetricRegistry)
     val store = new MarathonStore[FrameworkId](new InMemoryStore, metrics, () => new FrameworkId(""), "frameworkId:")
     frameworkIdUtil = new FrameworkIdUtil(store, Duration.Inf)
@@ -232,6 +227,8 @@ class MarathonSchedulerServiceTest
       override def startLeadership(): Unit = ()
       override def newTimer() = mockTimer
     }
+
+    schedulerService.timer = mockTimer
 
     schedulerService.frameworkId should be(None)
 
@@ -257,8 +254,8 @@ class MarathonSchedulerServiceTest
       migration,
       schedulerActor,
       heartbeatActor
-    ) {
-    }
+    )
+    schedulerService.timer = mockTimer
 
     import java.util.concurrent.TimeoutException
 
@@ -297,8 +294,9 @@ class MarathonSchedulerServiceTest
       migration,
       schedulerActor,
       heartbeatActor
-    ) {
-    }
+    )
+
+    schedulerService.timer = mockTimer
 
     when(leadershipCoordinator.prepareForStart()).thenReturn(Future.successful(()))
     when(driverFactory.createDriver()).thenThrow(new Exception("Some weird exception"))
@@ -330,8 +328,8 @@ class MarathonSchedulerServiceTest
       migration,
       schedulerActor,
       heartbeatActor
-    ) {
-    }
+    )
+    schedulerService.timer = mockTimer
 
     when(leadershipCoordinator.prepareForStart()).thenReturn(Future.successful(()))
     when(driverFactory.createDriver()).thenReturn(driver)
@@ -364,8 +362,8 @@ class MarathonSchedulerServiceTest
       migration,
       schedulerActor,
       heartbeatActor
-    ) {
-    }
+    )
+    schedulerService.timer = mockTimer
 
     when(leadershipCoordinator.prepareForStart()).thenReturn(Future.successful(()))
     when(driverFactory.createDriver()).thenReturn(driver)

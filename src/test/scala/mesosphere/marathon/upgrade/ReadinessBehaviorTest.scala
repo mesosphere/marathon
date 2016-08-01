@@ -110,7 +110,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     When("The task becomes running")
     system.eventStream.publish(f.taskRunning)
 
-    Then("Task readiness checks are perfomed")
+    Then("Task readiness checks are performed")
     eventually(taskIsReady should be (false))
     actor.underlyingActor.taskTargetCountReached(1) should be (false)
     eventually(actor.underlyingActor.readyTasks should have size 1)
@@ -176,7 +176,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     task.effectiveIpAddress(any) returns Some("some.host")
     task.agentInfo returns agentInfo
     launched.hostPorts returns Seq(1, 2, 3)
-    tracker.task(any)(any) returns Future.successful(Some(task))
+    tracker.task(any) returns Future.successful(Some(task))
 
     def readinessActor(appDef: AppDefinition, readinessCheckResults: Seq[ReadinessCheckResult], taskReadyFn: Task.Id => Unit) = {
       val executor = new ReadinessCheckExecutor {

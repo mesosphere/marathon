@@ -11,6 +11,8 @@ import scala.concurrent.duration.{ FiniteDuration, _ }
   * Provides a Marathon callback test endpoint for integration tests.
   */
 trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
+  import UpdateEventsHelper._
+
   def config: IntegrationTestConfig
   def marathon: MarathonFacade
 
@@ -32,7 +34,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   def waitForEvent(kind: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
-    waitForEventWith("deployment_success", _.info.getOrElse("id", "") == deploymentId, maxWait)
+    waitForEventWith("deployment_success", _.id == deploymentId, maxWait)
   }
 
   def waitForChange(change: RestResult[ITDeploymentResult], maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
@@ -55,7 +57,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
   }
 
   def waitForStatusUpdates(kinds: String*) = kinds.foreach { kind =>
-    waitForEventWith("status_update_event", _.info("taskStatus") == kind)
+    waitForEventWith("status_update_event", _.taskStatus == kind)
   }
 
   /**
@@ -87,4 +89,23 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
 
     receivedEventsForKinds.groupBy(_.eventType)
   }
+}
+
+object UpdateEventsHelper {
+  implicit class CallbackEventToStatusUpdateEvent(val event: CallbackEvent) extends AnyVal {
+    def taskStatus: String = event.info("taskStatus").toString
+    def message: String = event.info("message").toString
+    def id: String = event.info("id").toString
+    def running: Boolean = taskStatus == "TASK_RUNNING"
+    def finished: Boolean = taskStatus == "TASK_FINISHED"
+    def failed: Boolean = taskStatus == "TASK_FAILED"
+  }
+
+  object StatusUpdateEvent {
+    def unapply(event: CallbackEvent): Option[CallbackEvent] = {
+      if (event.eventType == "status_update_event") Some(event)
+      else None
+    }
+  }
+
 }

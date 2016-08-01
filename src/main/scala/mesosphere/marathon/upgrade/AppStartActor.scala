@@ -36,7 +36,7 @@ class AppStartActor(
     eventBus.unsubscribe(self)
     if (!promise.isCompleted) {
       if (promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
-        scheduler.stopApp(driver, app).onFailure {
+        scheduler.stopApp(app).onFailure {
           case NonFatal(e) => log.error(s"while stopping app ${app.id}", e)
         }(context.dispatcher)
       }

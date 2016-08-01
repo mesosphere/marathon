@@ -8,11 +8,12 @@ import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
 import mesosphere.mesos.Constraints
 import org.apache.mesos.SchedulerDriver
@@ -24,6 +25,7 @@ private class DeploymentActor(
     deploymentManager: ActorRef,
     receiver: ActorRef,
     driver: SchedulerDriver,
+    killService: TaskKillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
     taskTracker: TaskTracker,
@@ -58,7 +60,9 @@ private class DeploymentActor(
 
       performStep(step) onComplete {
         case Success(_) => self ! NextStep
-        case Failure(t) => self ! Fail(t)
+        case Failure(t) =>
+          log.debug("Performing {} failed: {}", step, t)
+          self ! Fail(t)
       }
 
     case NextStep =>
@@ -71,6 +75,7 @@ private class DeploymentActor(
       context.stop(self)
 
     case Fail(t) =>
+      log.debug("Deployment for {} failed: {}", plan, t)
       receiver ! DeploymentFailed(plan, t)
       context.stop(self)
   }
@@ -119,8 +124,8 @@ private class DeploymentActor(
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
       runningTasks, toKill, killToMeetConstraints, scaleTo)
 
-    def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) {
-      killTasks(app.id, _)
+    def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
+      killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
     }
 
     def startTasksIfNeeded: Future[Unit] = tasksToStart.fold(Future.successful(())) { _ =>
@@ -135,17 +140,11 @@ private class DeploymentActor(
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
-  def killTasks(appId: PathId, tasks: Seq[Task]): Future[Unit] = {
-    val promise = Promise[Unit]()
-    context.actorOf(TaskKillActor.props(driver, appId, taskTracker, eventBus, tasks.map(_.taskId), config, promise))
-    promise.future
-  }
-
   def stopApp(app: AppDefinition): Future[Unit] = {
-    val promise = Promise[Unit]()
-    context.actorOf(AppStopActor.props(driver, taskTracker, eventBus, app, config, promise))
-    promise.future.andThen {
-      case Success(_) => scheduler.stopApp(driver, app)
+    val tasks = taskTracker.appTasksLaunchedSync(app.id)
+    // TODO: the launch queue is purged in stopApp, but it would make sense to do that before calling kill(tasks)
+    killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
+      case Success(_) => scheduler.stopApp(app)
     }
   }
 
@@ -154,7 +153,7 @@ private class DeploymentActor(
       Future.successful(())
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, launchQueue, taskTracker,
+      context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService, launchQueue, taskTracker,
         eventBus, readinessCheckExecutor, app, promise))
       promise.future
     }
@@ -179,6 +178,7 @@ object DeploymentActor {
     deploymentManager: ActorRef,
     receiver: ActorRef,
     driver: SchedulerDriver,
+    killService: TaskKillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
     taskTracker: TaskTracker,
@@ -194,6 +194,7 @@ object DeploymentActor {
       deploymentManager,
       receiver,
       driver,
+      killService,
       scheduler,
       plan,
       taskTracker,

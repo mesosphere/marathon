@@ -77,7 +77,15 @@ object ProcessKeeper {
       upWhen = _.toLowerCase.contains("registered with master"))
   }
 
-  def setupMesosEnv(workDirFile: File, workDir: String, containerizers: String = "docker,mesos") = {
+  private[this] def defaultContainerizers: String = {
+    if (sys.env.getOrElse("RUN_DOCKER_INTEGRATION_TESTS", "true") == "true") {
+      "docker,mesos"
+    } else {
+      "mesos"
+    }
+  }
+  def setupMesosEnv(workDirFile: File, workDir: String, containerizers: Option[String] = None) = {
+    val effectiveContainerizers = containerizers.getOrElse(defaultContainerizers)
     val credentialsPath = write(workDirFile, fileName = "credentials", content = "principal1 secret1")
     val aclsPath = write(workDirFile, fileName = "acls.json", content =
       """
@@ -106,7 +114,7 @@ object ProcessKeeper {
     Seq(
       ENV_MESOS_WORK_DIR -> workDir,
       "MESOS_LAUNCHER" -> "posix",
-      "MESOS_CONTAINERIZERS" -> containerizers,
+      "MESOS_CONTAINERIZERS" -> effectiveContainerizers,
       "MESOS_ROLES" -> "public,foo",
       "MESOS_ACLS" -> s"file://$aclsPath",
       "MESOS_CREDENTIALS" -> s"file://$credentialsPath")
@@ -117,7 +125,7 @@ object ProcessKeeper {
     if (wipe) FileUtils.deleteDirectory(workDirFile)
     FileUtils.forceMkdir(workDirFile)
 
-    val mesosEnv = setupMesosEnv(workDirFile, workDir, containerizers = "mesos")
+    val mesosEnv = setupMesosEnv(workDirFile, workDir, containerizers = Some("mesos"))
     startProcess(
       processName,
       Process(args, cwd = None, mesosEnv: _*),
