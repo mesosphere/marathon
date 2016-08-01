@@ -248,14 +248,14 @@ private[impl] class GroupManagerActor(
       // defined only if there are port mappings
       val newContainer: Option[Container] = for {
         c <- app.container
-        d <- c.docker if !d.portMappings.isEmpty
+        d <- c.docker if !d.pms.isEmpty
       } yield {
-        val newPortMappings = d.portMappings.zip(servicePorts).map {
+        val newPortMappings = d.pms.zip(servicePorts).map {
           case (portMapping, servicePort) =>
             portMapping.copy(servicePort = servicePort)
         }
 
-        d.copy(portMappings = newPortMappings)
+        d.copy(pms = newPortMappings)
       }
 
       app.copy(

@@ -53,7 +53,7 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val container = Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
-      portMappings = Seq(
+      pms = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 0, protocol = "tcp"),
         PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 10555, protocol = "udp"),
         PortMapping(containerPort = 9001, hostPort = Some(31337), servicePort = 0, protocol = "udp"),
@@ -78,14 +78,14 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val c1 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Seq(
+      pms = Seq(
         PortMapping(containerPort = 8080)
       )
     ))
     val c2 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Seq(
+      pms = Seq(
         PortMapping(containerPort = 8081)
       )
     ))
@@ -109,14 +109,14 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val bridgeModeContainer = Some(Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
-      portMappings = Seq(
+      pms = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0))
       )
     ))
     val userModeContainer = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Seq(
+      pms = Seq(
         PortMapping(containerPort = 8081),
         PortMapping(containerPort = 8082, hostPort = Some(0))
       )
@@ -148,7 +148,7 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val c1 = Some(Docker(
       image = "busybox",
       network = Some(Network.USER),
-      portMappings = Seq(
+      pms = Seq(
         PortMapping()
       )
     ))
@@ -179,7 +179,7 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val container = Docker(
       image = "busybox",
       network = Some(Network.BRIDGE),
-      portMappings = Seq(
+      pms = Seq(
         PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 80, protocol = "tcp"),
         PortMapping (containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
       )

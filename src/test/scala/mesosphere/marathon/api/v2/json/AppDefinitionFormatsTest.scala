@@ -325,7 +325,7 @@ class AppDefinitionFormatsTest
     appDef.container.isDefined
     appDef.container.get shouldBe a[Container.Docker]
     appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
-    appDef.container.flatMap(_.getPortMappings) should equal (Some(Seq(
+    appDef.container.flatMap(_.portMappings) should equal (Some(Seq(
       Container.Docker.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))
     )))
   }

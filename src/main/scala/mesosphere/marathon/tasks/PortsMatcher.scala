@@ -44,8 +44,8 @@ class PortsMatcher(
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
       for {
         c <- runSpec.container
-        d <- c.docker if !d.portMappings.isEmpty
-      } yield d.portMappings
+        d <- c.docker if !d.pms.isEmpty
+      } yield d.pms
 
     (runSpec.portNumbers, portMappings) match {
       case (Nil, None) => // optimization for empty special case

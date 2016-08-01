@@ -82,7 +82,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       container = Some(Container.Docker(
         image = "foo/bar",
         network = Some(ContainerInfo.DockerInfo.Network.BRIDGE),
-        portMappings = Seq(
+        pms = Seq(
           Container.Docker.PortMapping(31001, Some(0), 0, "tcp", Some("qax")),
           Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
         )
@@ -112,7 +112,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
       container = Some(Container.Docker(
         image = "foo/bar",
         network = Some(ContainerInfo.DockerInfo.Network.USER),
-        portMappings = Seq(
+        pms = Seq(
           Container.Docker.PortMapping(0, Some(0), 0, "tcp", Some("yas")),
           Container.Docker.PortMapping(31001, None, 0, "tcp", Some("qax")),
           Container.Docker.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))

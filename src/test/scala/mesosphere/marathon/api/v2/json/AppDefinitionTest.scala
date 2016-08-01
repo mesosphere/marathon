@@ -110,7 +110,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Docker(
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-        portMappings = Seq(
+        pms = Seq(
           Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
           Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
         )
@@ -142,7 +142,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(
       container = Some(Docker(
         image = "mesosphere/marathon",
-        portMappings = Seq(
+        pms = Seq(
           Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
           Docker.PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
         )
@@ -158,7 +158,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Docker(
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
-        portMappings = Seq(
+        pms = Seq(
           Docker.PortMapping(8080, None, 0, "tcp", Some("foo"))
         )
       )),
@@ -173,7 +173,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Docker(
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-        portMappings = Seq(
+        pms = Seq(
           Docker.PortMapping(8080, None, 0, "tcp", Some("foo"))
         )
       )),
@@ -188,7 +188,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Docker(
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
-        portMappings = Seq(
+        pms = Seq(
           Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
           Docker.PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
         )
@@ -205,7 +205,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Docker(
         image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
-        portMappings = Seq(
+        pms = Seq(
           Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
           Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
         )
@@ -328,7 +328,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(
       container = Some(Docker(
         network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-        portMappings = Seq(
+        pms = Seq(
           Docker.PortMapping(8080, Some(0), 0, "tcp"),
           Docker.PortMapping(8081, Some(0), 0, "tcp")
         )
@@ -522,7 +522,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       cmd = Some("sleep 30"),
       portDefinitions = Seq.empty,
       container = Some(Docker(
-        portMappings = Seq(Docker.PortMapping())
+        pms = Seq(Docker.PortMapping())
       )),
       healthChecks = Set(HealthCheck())
     )
@@ -562,7 +562,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       container = Some(Docker(
         image = "python:3",
         network = Some(Network.BRIDGE),
-        portMappings = Seq(
+        pms = Seq(
           PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
         )
       ))

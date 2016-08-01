@@ -380,7 +380,7 @@ case class AppDefinition(
     def fromPortMappings: Option[Seq[PortAssignment]] = {
       for {
         c <- container
-        pms <- c.getPortMappings
+        pms <- c.portMappings
         launched <- task.launched
         effectiveIpAddress <- task.effectiveIpAddress(this)
       } yield {
@@ -414,7 +414,7 @@ case class AppDefinition(
 
   def portNames: Seq[String] = {
     def fromDiscoveryInfo = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
-    def fromPortMappings = container.map(_.getPortMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
+    def fromPortMappings = container.map(_.portMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
     def fromPortDefinitions = portDefinitions.flatMap(_.name)
 
     if (networkModeBridge || networkModeUser) fromPortMappings

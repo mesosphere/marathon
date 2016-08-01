@@ -306,7 +306,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Seq(
+        pms = Seq(
           Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         )
       )),
@@ -337,7 +337,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val container = Container.Docker(
       network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
       image = "jdef/helpme",
-      portMappings = Seq(
+      pms = Seq(
         Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
       )
     )
@@ -369,7 +369,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       app.copy(
         versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
         container = Some(container.copy(
-          portMappings = Seq(
+          pms = Seq(
             Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
           )
         ))
@@ -395,7 +395,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       container = Some(Container.Docker(
         network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
         image = "jdef/helpme",
-        portMappings = Seq(
+        pms = Seq(
           Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         )
       )),

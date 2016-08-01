@@ -12,7 +12,7 @@ import scala.collection.immutable.Seq
 object ContainerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container = {
     if (proto.hasDocker) {
-      DockerDockerSerializer.fromProto(proto)
+      DockerSerializer.fromProto(proto)
     } else if (proto.hasMesosDocker) {
       MesosDockerSerializer.fromProto(proto)
     } else if (proto.hasMesosAppC) {
@@ -33,7 +33,7 @@ object ContainerSerializer {
         builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
       case dd: Container.Docker =>
         builder.setType(mesos.Protos.ContainerInfo.Type.DOCKER)
-        builder.setDocker(DockerDockerSerializer.toProto(dd))
+        builder.setDocker(DockerSerializer.toProto(dd))
       case md: Container.MesosDocker =>
         builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
         builder.setMesosDocker(MesosDockerSerializer.toProto(md))
@@ -55,7 +55,7 @@ object ContainerSerializer {
         builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
       case dd: Container.Docker =>
         builder.setType(mesos.Protos.ContainerInfo.Type.DOCKER)
-        builder.setDocker(DockerDockerSerializer.toMesos(dd))
+        builder.setDocker(DockerSerializer.toMesos(dd))
       case md: Container.MesosDocker =>
         builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
         builder.setMesos(MesosDockerSerializer.toMesos(md))
@@ -132,7 +132,7 @@ object ExternalVolumeInfoSerializer {
   }
 }
 
-object DockerDockerSerializer {
+object DockerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container.Docker = {
     val d = proto.getDocker
     val pms = d.getPortMappingsList.asScala
@@ -140,7 +140,7 @@ object DockerDockerSerializer {
       volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
       image = d.getImage,
       network = if (d.hasNetwork) Some(d.getNetwork) else None,
-      portMappings = pms.map(PortMappingSerializer.fromProto).to[Seq],
+      pms = pms.map(PortMappingSerializer.fromProto).to[Seq],
       privileged = d.getPrivileged,
       parameters = d.getParametersList.asScala.map(Parameter(_)).to[Seq],
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
@@ -156,7 +156,7 @@ object DockerDockerSerializer {
 
     docker.network.foreach(builder.setNetwork)
 
-    docker.portMappings.foreach { pms =>
+    docker.pms.foreach { pms =>
       builder.addPortMappings(PortMappingSerializer.toProto(pms))
     }
 
@@ -170,7 +170,7 @@ object DockerDockerSerializer {
 
     docker.network.foreach(builder.setNetwork)
 
-    docker.portMappings.foreach { pms =>
+    docker.pms.foreach { pms =>
       builder.addAllPortMappings(PortMappingSerializer.toMesos(pms).asJava)
     }
 

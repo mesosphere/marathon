@@ -18,18 +18,18 @@ sealed trait Container {
     }
   }
 
-  def getPortMappings: Option[Seq[Container.Docker.PortMapping]] = {
+  def portMappings: Option[Seq[Container.Docker.PortMapping]] = {
     for {
-      d <- docker if !d.portMappings.isEmpty
+      d <- docker if !d.pms.isEmpty
       n <- d.network if n == ContainerInfo.DockerInfo.Network.BRIDGE || n == ContainerInfo.DockerInfo.Network.USER
-    } yield d.portMappings
+    } yield d.pms
   }
 
   def hostPorts: Option[Seq[Option[Int]]] =
-    for (pms <- getPortMappings) yield pms.map(_.hostPort)
+    for (pms <- portMappings) yield pms.map(_.hostPort)
 
   def servicePorts: Option[Seq[Int]] =
-    for (pms <- getPortMappings) yield pms.map(_.servicePort)
+    for (pms <- portMappings) yield pms.map(_.servicePort)
 }
 
 object Container {
@@ -40,7 +40,7 @@ object Container {
     volumes: Seq[Volume] = Seq.empty,
     image: String = "",
     network: Option[ContainerInfo.DockerInfo.Network] = None,
-    portMappings: Seq[Docker.PortMapping] = Seq.empty,
+    pms: Seq[Docker.PortMapping] = Seq.empty,
     privileged: Boolean = false,
     parameters: Seq[Parameter] = Nil,
     forcePullImage: Boolean = false) extends Container
@@ -58,7 +58,7 @@ object Container {
       volumes = volumes,
       image = image,
       network = network,
-      portMappings = network match {
+      pms = network match {
         case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.BRIDGE =>
           portMappings.map(_.map { m =>
             m match {
@@ -129,7 +129,7 @@ object Container {
 
     val validDockerDockerContainer = validator[Docker] { docker =>
       docker.image is notEmpty
-      docker.portMappings is PortMapping.portMappingsValidator and PortMapping.validForDocker(docker)
+      docker.pms is PortMapping.portMappingsValidator and PortMapping.validForDocker(docker)
     }
   }
 

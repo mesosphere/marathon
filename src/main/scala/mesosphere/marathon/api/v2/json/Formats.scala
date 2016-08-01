@@ -333,7 +333,7 @@ trait ContainerFormats {
     def dockerValues(d: Container.Docker): JsObject = Json.obj(
       "image" -> d.image,
       "network" -> d.network,
-      "portMappings" -> d.portMappings,
+      "portMappings" -> d.pms,
       "privileged" -> d.privileged,
       "parameters" -> d.parameters,
       "forcePullImage" -> d.forcePullImage
@@ -905,7 +905,7 @@ trait AppAndGroupFormats {
     */
   private[this] def addHealthCheckPortIndexIfNecessary(app: AppDefinition): AppDefinition = {
     val hasPortMappings = app.container.exists(_ match {
-      case docker: Container.Docker => docker.portMappings.nonEmpty
+      case docker: Container.Docker => docker.pms.nonEmpty
       case _ => false
     })
     val portIndexesMakeSense = app.portDefinitions.nonEmpty || hasPortMappings

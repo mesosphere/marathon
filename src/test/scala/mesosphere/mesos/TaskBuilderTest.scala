@@ -139,7 +139,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         executor = "//cmd",
         container = Some(Docker(
           network = Some(DockerInfo.Network.BRIDGE),
-          portMappings = Seq(
+          pms = Seq(
             PortMapping(
               containerPort = 8080,
               hostPort = Some(0),
@@ -1007,7 +1007,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.BRIDGE),
-        portMappings = Seq(
+        pms = Seq(
           PortMapping(containerPort = 0, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
         )
       ))
@@ -1037,7 +1037,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.USER),
-        portMappings = Seq(
+        pms = Seq(
           PortMapping()
         )
       )),
@@ -1072,7 +1072,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.USER),
-        portMappings = Seq(
+        pms = Seq(
           PortMapping(containerPort = 0, hostPort = Some(31000), servicePort = 9000, protocol = "tcp"),
           PortMapping(containerPort = 0, hostPort = None, servicePort = 9001, protocol = "tcp"),
           PortMapping(containerPort = 0, hostPort = Some(31005), servicePort = 9002, protocol = "tcp")
@@ -1495,7 +1495,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         runSpec = AppDefinition(
           container = Some(Docker(
             network = Some(DockerInfo.Network.BRIDGE),
-            portMappings = Seq(
+            pms = Seq(
               PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("http")),
               PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp", name = Some("jabber"))
             )
@@ -1522,7 +1522,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
           portDefinitions = PortDefinitions(22, 23),
           container = Some(Docker(
             network = Some(DockerInfo.Network.BRIDGE),
-            portMappings = Seq(
+            pms = Seq(
               PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp"),
               PortMapping(containerPort = 8081, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
             )
@@ -1613,7 +1613,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         container = Some(Docker(
           image = "jdef/foo",
           network = Some(MesosProtos.ContainerInfo.DockerInfo.Network.USER),
-          portMappings = Seq(
+          pms = Seq(
             // order is important here since it impacts the specific assertions that follow
             Container.Docker.PortMapping(containerPort = 0, hostPort = None),
             Container.Docker.PortMapping(containerPort = 100, hostPort = Some(0)),

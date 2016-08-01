@@ -184,7 +184,7 @@ class TaskBuilder(
     val portProtos = runSpec.ipAddress match {
       case Some(IpAddress(_, _, DiscoveryInfo(ports), _)) if ports.nonEmpty => ports.map(_.toProto)
       case _ =>
-        runSpec.container.flatMap(_.getPortMappings) match {
+        runSpec.container.flatMap(_.portMappings) match {
           case Some(portMappings) =>
             // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
             portMappings.zip(hostPorts).collect {
@@ -216,8 +216,8 @@ class TaskBuilder(
       // Fill in Docker container details if necessary
       runSpec.container.foreach { c =>
         val containerWithPortMappings = c match {
-          case docker: Container.Docker => docker.copy(portMappings =
-            docker.portMappings.zip(hostPorts).collect {
+          case docker: Container.Docker => docker.copy(pms =
+            docker.pms.zip(hostPorts).collect {
               case (mapping, Some(hport)) =>
                 // Use case: containerPort = 0 and hostPort = 0
                 //
@@ -286,7 +286,7 @@ object TaskBuilder {
     val declaredPorts = {
       val containerPorts = for {
         c <- runSpec.container
-        pms <- c.getPortMappings
+        pms <- c.portMappings
       } yield pms.map(_.containerPort)
 
       containerPorts.getOrElse(runSpec.portNumbers)
@@ -294,7 +294,7 @@ object TaskBuilder {
     val portNames = {
       val containerPortNames = for {
         c <- runSpec.container
-        pms <- c.getPortMappings
+        pms <- c.portMappings
       } yield pms.map(_.name)
 
       containerPortNames.getOrElse(runSpec.portDefinitions.map(_.name))
