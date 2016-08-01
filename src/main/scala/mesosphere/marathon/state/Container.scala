@@ -127,7 +127,7 @@ object Container {
       }
     }
 
-    val validDockerDockerContainer = validator[Docker] { docker =>
+    val validDockerContainer = validator[Docker] { docker =>
       docker.image is notEmpty
       docker.pms is PortMapping.portMappingsValidator and PortMapping.validForDocker(docker)
     }
@@ -180,7 +180,7 @@ object Container {
     new Validator[Container] {
       override def apply(container: Container): Result = container match {
         case _: Mesos => Success
-        case dd: Docker => validate(dd)(Docker.validDockerDockerContainer)
+        case dd: Docker => validate(dd)(Docker.validDockerContainer)
         case md: MesosDocker => validate(md)(MesosDocker.validMesosDockerContainer)
         case ma: MesosAppC => validate(ma)(MesosAppC.validMesosAppCContainer)
       }

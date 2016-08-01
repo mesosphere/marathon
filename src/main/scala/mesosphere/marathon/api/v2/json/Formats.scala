@@ -316,7 +316,7 @@ trait ContainerFormats {
   implicit lazy val ContainerWriter: Writes[Container] = Writes { container =>
     container match {
       case m: Container.Mesos => MesosContainerWrites.writes(m)
-      case d: Container.Docker => DockerDockerContainerWrites.writes(d)
+      case d: Container.Docker => DockerContainerWrites.writes(d)
       case c: Container.MesosDocker => MesosDockerContainerWrites.writes(c)
       case c: Container.MesosAppC => AppCContainerWrites.writes(c)
     }
@@ -329,7 +329,7 @@ trait ContainerFormats {
     )
   }
 
-  implicit lazy val DockerDockerContainerWrites: Writes[Container.Docker] = Writes { docker =>
+  implicit lazy val DockerContainerWrites: Writes[Container.Docker] = Writes { docker =>
     def dockerValues(d: Container.Docker): JsObject = Json.obj(
       "image" -> d.image,
       "network" -> d.network,

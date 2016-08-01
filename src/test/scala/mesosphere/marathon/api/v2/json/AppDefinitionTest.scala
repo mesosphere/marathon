@@ -119,7 +119,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     shouldViolate(
       app,
-      "/container/portMappings",
+      "/container/pms",
       "Port names must be unique."
     )
 
@@ -150,7 +150,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       portDefinitions = Nil)
     shouldNotViolate(
       app,
-      "/container/portMappings",
+      "/container/pms",
       "Port names must be unique."
     )
 
@@ -165,7 +165,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       portDefinitions = Nil)
     shouldNotViolate(
       app,
-      "/container/portMappings(0)",
+      "/container/pms(0)",
       "hostPort is required for BRIDGE mode."
     )
 
@@ -180,7 +180,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       portDefinitions = Nil)
     shouldViolate(
       app,
-      "/container/portMappings(0)",
+      "/container/pms(0)",
       "hostPort is required for BRIDGE mode."
     )
 
@@ -196,7 +196,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       portDefinitions = Nil)
     shouldNotViolate(
       app,
-      "/container/portMappings",
+      "/container/pms",
       "Port names must be unique."
     )
 
@@ -213,7 +213,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       portDefinitions = Nil)
     shouldViolate(
       app,
-      "/container/portMappings",
+      "/container/pms",
       "Port names must be unique."
     )
 
