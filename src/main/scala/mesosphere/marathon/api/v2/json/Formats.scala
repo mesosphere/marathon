@@ -260,6 +260,39 @@ trait ContainerFormats {
     enumFormat(mesos.ContainerInfo.Type.valueOf, str => s"$str is not a valid container type")
 
   implicit lazy val ContainerReads: Reads[Container] = {
+
+    case class DockerContainerParameters(
+      image: String,
+      network: Option[ContainerInfo.DockerInfo.Network],
+      portMappings: Option[Seq[Container.Docker.PortMapping]],
+      privileged: Option[Boolean],
+      parameters: Option[Seq[Parameter]],
+      credential: Option[Container.Credential],
+      forcePullImage: Boolean)
+
+    implicit lazy val DockerContainerParametersFormat: Format[DockerContainerParameters] = (
+      (__ \ "image").format[String] ~
+      (__ \ "network").formatNullable[DockerInfo.Network] ~
+      (__ \ "portMappings").formatNullable[Seq[Container.Docker.PortMapping]] ~
+      (__ \ "privileged").formatNullable[Boolean] ~
+      (__ \ "parameters").formatNullable[Seq[Parameter]] ~
+      (__ \ "credential").formatNullable[Container.Credential] ~
+      (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
+    )(DockerContainerParameters(_, _, _, _, _, _, _), unlift(DockerContainerParameters.unapply))
+
+    case class AppcContainerParameters(
+      image: String,
+      id: Option[String],
+      labels: Map[String, String],
+      forcePullImage: Boolean)
+
+    implicit lazy val AppcContainerParametersFormat: Format[AppcContainerParameters] = (
+      (__ \ "image").format[String] ~
+      (__ \ "id").formatNullable[String] ~
+      (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
+      (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
+    )(AppcContainerParameters(_, _, _, _), unlift(AppcContainerParameters.unapply))
+
     def container(
       `type`: mesos.ContainerInfo.Type,
       volumes: Seq[Volume],
@@ -313,100 +346,65 @@ trait ContainerFormats {
     )(container(_, _, _, _))
   }
 
-  implicit lazy val ContainerWriter: Writes[Container] = Writes { container =>
-    container match {
-      case m: Container.Mesos => MesosContainerWrites.writes(m)
-      case d: Container.Docker => DockerContainerWrites.writes(d)
-      case c: Container.MesosDocker => MesosDockerContainerWrites.writes(c)
-      case c: Container.MesosAppC => AppCContainerWrites.writes(c)
+  implicit lazy val ContainerWriter: Writes[Container] = {
+    lazy val MesosContainerWrites: Writes[Container.Mesos] = Writes { m =>
+      Json.obj(
+        "type" -> mesos.ContainerInfo.Type.MESOS,
+        "volumes" -> m.volumes
+      )
+    }
+
+    lazy val DockerContainerWrites: Writes[Container.Docker] = Writes { docker =>
+      def dockerValues(d: Container.Docker): JsObject = Json.obj(
+        "image" -> d.image,
+        "network" -> d.network,
+        "portMappings" -> d.pms,
+        "privileged" -> d.privileged,
+        "parameters" -> d.parameters,
+        "forcePullImage" -> d.forcePullImage
+      )
+      Json.obj(
+        "type" -> mesos.ContainerInfo.Type.DOCKER,
+        "volumes" -> docker.volumes,
+        "docker" -> dockerValues(docker)
+      )
+    }
+
+    lazy val MesosDockerContainerWrites: Writes[Container.MesosDocker] = Writes { m =>
+      def dockerValues(c: Container.MesosDocker): JsObject = Json.obj(
+        "image" -> c.image,
+        "credential" -> c.credential,
+        "forcePullImage" -> c.forcePullImage
+      )
+      Json.obj(
+        "type" -> mesos.ContainerInfo.Type.MESOS,
+        "volumes" -> m.volumes,
+        "docker" -> dockerValues(m)
+      )
+    }
+
+    lazy val AppCContainerWrites: Writes[Container.MesosAppC] = Writes { appc =>
+      def appcValues(a: Container.MesosAppC): JsObject = Json.obj(
+        "image" -> a.image,
+        "id" -> a.id,
+        "labels" -> a.labels,
+        "forcePullImage" -> a.forcePullImage
+      )
+      Json.obj(
+        "type" -> mesos.ContainerInfo.Type.MESOS,
+        "volumes" -> appc.volumes,
+        "appc" -> appcValues(appc)
+      )
+    }
+    Writes { container =>
+      container match {
+        case m: Container.Mesos => MesosContainerWrites.writes(m)
+        case d: Container.Docker => DockerContainerWrites.writes(d)
+        case c: Container.MesosDocker => MesosDockerContainerWrites.writes(c)
+        case c: Container.MesosAppC => AppCContainerWrites.writes(c)
+      }
     }
   }
-
-  implicit lazy val MesosContainerWrites: Writes[Container.Mesos] = Writes { m =>
-    Json.obj(
-      "type" -> mesos.ContainerInfo.Type.MESOS,
-      "volumes" -> m.volumes
-    )
-  }
-
-  implicit lazy val DockerContainerWrites: Writes[Container.Docker] = Writes { docker =>
-    def dockerValues(d: Container.Docker): JsObject = Json.obj(
-      "image" -> d.image,
-      "network" -> d.network,
-      "portMappings" -> d.pms,
-      "privileged" -> d.privileged,
-      "parameters" -> d.parameters,
-      "forcePullImage" -> d.forcePullImage
-    )
-    Json.obj(
-      "type" -> mesos.ContainerInfo.Type.DOCKER,
-      "volumes" -> docker.volumes,
-      "docker" -> dockerValues(docker)
-    )
-  }
-
-  implicit lazy val MesosDockerContainerWrites: Writes[Container.MesosDocker] = Writes { m =>
-    def dockerValues(c: Container.MesosDocker): JsObject = Json.obj(
-      "image" -> c.image,
-      "credential" -> c.credential,
-      "forcePullImage" -> c.forcePullImage
-    )
-    Json.obj(
-      "type" -> mesos.ContainerInfo.Type.MESOS,
-      "volumes" -> m.volumes,
-      "docker" -> dockerValues(m)
-    )
-  }
-
-  implicit lazy val AppCContainerWrites: Writes[Container.MesosAppC] = Writes { appc =>
-    def appcValues(a: Container.MesosAppC): JsObject = Json.obj(
-      "image" -> a.image,
-      "id" -> a.id,
-      "labels" -> a.labels,
-      "forcePullImage" -> a.forcePullImage
-    )
-    Json.obj(
-      "type" -> mesos.ContainerInfo.Type.MESOS,
-      "volumes" -> appc.volumes,
-      "appc" -> appcValues(appc)
-    )
-  }
-
-  /*
-   * Helpers
-   */
-
-  private[this] case class DockerContainerParameters(
-    image: String,
-    network: Option[ContainerInfo.DockerInfo.Network],
-    portMappings: Option[Seq[Container.Docker.PortMapping]],
-    privileged: Option[Boolean],
-    parameters: Option[Seq[Parameter]],
-    credential: Option[Container.Credential],
-    forcePullImage: Boolean)
-
-  private[this] implicit lazy val DockerContainerParametersFormat: Format[DockerContainerParameters] = (
-    (__ \ "image").format[String] ~
-    (__ \ "network").formatNullable[DockerInfo.Network] ~
-    (__ \ "portMappings").formatNullable[Seq[Container.Docker.PortMapping]] ~
-    (__ \ "privileged").formatNullable[Boolean] ~
-    (__ \ "parameters").formatNullable[Seq[Parameter]] ~
-    (__ \ "credential").formatNullable[Container.Credential] ~
-    (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-  )(DockerContainerParameters(_, _, _, _, _, _, _), unlift(DockerContainerParameters.unapply))
-
-  private[this] case class AppcContainerParameters(
-    image: String,
-    id: Option[String],
-    labels: Map[String, String],
-    forcePullImage: Boolean)
-
-  private[this] implicit lazy val AppcContainerParametersFormat: Format[AppcContainerParameters] = (
-    (__ \ "image").format[String] ~
-    (__ \ "id").formatNullable[String] ~
-    (__ \ "labels").formatNullable[Map[String, String]].withDefault(Map.empty[String, String]) ~
-    (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
-  )(AppcContainerParameters(_, _, _, _), unlift(AppcContainerParameters.unapply))
 }
 
 trait IpAddressFormats {
