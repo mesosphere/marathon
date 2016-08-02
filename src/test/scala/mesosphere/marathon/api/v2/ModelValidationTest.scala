@@ -1,8 +1,10 @@
 package mesosphere.marathon.api.v2
 
+import java.util.UUID
+
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container._
@@ -10,8 +12,8 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.scalatest.{ BeforeAndAfterAll, Matchers, OptionValues }
-
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, StartApplication }
 import play.api.libs.json.{ JsObject, Json }
 
 import scala.collection.immutable.Seq
@@ -52,7 +54,11 @@ class ModelValidationTest
     val conflictingApp = createServicePortApp("/app2".toPath, 3200)
 
     val group = Group(id = PathId.empty, apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
-    val result = validate(group)(Group.validRootGroup(maxApps = None))
+
+    val steps = Seq(DeploymentStep(Seq(StartApplication(existingApp, 1))))
+    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, group, group, steps, Timestamp.now())
+
+    val result = validate(deploymentPlan)(DeploymentPlan.deploymentPlanValidator(MarathonTestHelper.defaultConfig()))
 
     ValidationHelper.getAllRuleConstrains(result).exists(v =>
       v.message.contains("Requested service port 3200 is used by more than 1 app")) should be(true)
@@ -74,7 +80,10 @@ class ModelValidationTest
     val conflictingApp = existingApp.copy(id = "/app2".toPath)
 
     val group = Group(id = PathId.empty, apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
-    val result = validate(group)(Group.validRootGroup(maxApps = None))
+    val steps = Seq(DeploymentStep(Seq(StartApplication(existingApp, 1))))
+    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, group, group, steps, Timestamp.now())
+
+    val result = validate(deploymentPlan)(DeploymentPlan.deploymentPlanValidator(MarathonTestHelper.defaultConfig()))
 
     ValidationHelper.getAllRuleConstrains(result).exists(v =>
       v.message.contains("Requested service port 3200 is used by more than 1 app")) should be(true)

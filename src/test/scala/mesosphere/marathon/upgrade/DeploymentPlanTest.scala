@@ -1,5 +1,7 @@
 package mesosphere.marathon.upgrade
 
+import java.util.UUID
+
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
@@ -10,6 +12,7 @@ import mesosphere.marathon.test.Mockito
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import com.wix.accord._
+import mesosphere.marathon.state.Container.Docker.PortMapping
 
 import scala.collection.immutable.Seq
 
@@ -444,6 +447,55 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
                                                                              |You can adjust this value via --zk_max_node_size, but make sure this value is compatible with
                                                                              |your ZooKeeper ensemble!
                                                                              |See: http://zookeeper.apache.org/doc/r3.3.1/zookeeperAdmin.html#Unsafe+Options""".stripMargin)
+  }
+
+  test("Deployment plan validates that there are no service ports conflicts") {
+    import MarathonTestHelper.Implicits._
+
+    Given("a deployment with duplicated service ports")
+    val f = new Fixture()
+    val appFoo = AppDefinition(id = "/foo/app".toRootPath).withPortMappings(
+      Seq(PortMapping(hostPort = Some(0), containerPort = 0, servicePort = 123))
+    ).withDockerNetwork(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)
+    val groupFoo = Group(id = "/foo".toRootPath, apps = Map(appFoo.id -> appFoo))
+
+    val appBar = appFoo.copy(id = "/bar/app".toRootPath)
+    val groupBar = Group(id = "/bar".toRootPath, apps = Map(appBar.id -> appBar))
+
+    val root = Group.empty.copy(groups = Set(groupFoo, groupBar))
+
+    val steps = Seq(DeploymentStep(Seq(StartApplication(appBar, 1))))
+    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, root, root, steps, Timestamp.now())
+
+    When("validating the deployment plan")
+    val result = validate(deploymentPlan)(f.validator)
+
+    Then("the validation returns an error")
+    ValidationHelper.getAllRuleConstrains(result).head.message should include ("used by more than 1 app")
+  }
+
+  test("Deployment plan validates that there are no service ports conflicts only in created or updated apps") {
+    import MarathonTestHelper.Implicits._
+
+    Given("a deployment with duplicated service ports")
+    val f = new Fixture()
+    val appFoo = AppDefinition(id = "/foo/app".toRootPath).withPortMappings(
+      Seq(PortMapping(hostPort = Some(0), containerPort = 0, servicePort = 123))
+    ).withDockerNetwork(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)
+    val groupFoo = Group(id = "/foo".toRootPath, apps = Map(appFoo.id -> appFoo))
+
+    val appBar = appFoo.copy(id = "/bar/app".toRootPath)
+    val groupBar = Group(id = "/bar".toRootPath, apps = Map(appBar.id -> appBar))
+
+    val root = Group.empty.copy(groups = Set(groupFoo, groupBar))
+
+    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, root, root, Seq.empty, Timestamp.now())
+
+    When("validating the deployment plan")
+    val result = validate(deploymentPlan)(f.validator)
+
+    Then("the validation returns no error, altthough a validation error exists (but not in created or udpated apps)")
+    ValidationHelper.getAllRuleConstrains(result) should have size 0
   }
 
   class Fixture {
