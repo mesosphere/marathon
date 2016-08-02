@@ -4,16 +4,16 @@ import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import mesosphere.marathon.core.storage.LegacyStorageConfig
-import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, TaskRepository }
+import mesosphere.marathon.core.storage.repository.{DeploymentRepository, TaskRepository}
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.tracker.impl.{ MarathonTaskStatusSerializer, TaskSerializer }
+import mesosphere.marathon.core.task.tracker.impl.MarathonTaskStatusSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 
-import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.async.Async.{async, await}
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * Removes all deployment version nodes from ZK
@@ -29,7 +29,7 @@ class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit
       log.info("Start 1.2 migration")
 
       val entityStore = DeploymentRepository.legacyRepository(config.entityStore[DeploymentPlan]).store
-      val taskStore = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
+      val taskStore = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState]).repo
 
       import mesosphere.marathon.state.VersionedEntry.isVersionKey
       async {
@@ -43,11 +43,11 @@ class MigrationTo1_2(legacyConfig: Option[LegacyStorageConfig])(implicit
           }
 
         val addTaskStatuses = taskStore.all().mapAsync(Int.MaxValue) { task =>
-          val proto = TaskSerializer.toProto(task)
-          if (proto.hasMarathonTaskStatus) {
+          val proto = task.toProto
+          if (!proto.hasMarathonTaskStatus) {
             val updated = proto.toBuilder
               .setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(MarathonTaskStatus(proto.getStatus)))
-            taskStore.store(TaskSerializer.fromProto(updated.build()))
+            taskStore.store(MarathonTaskState(updated.build()))
           } else {
             Future.successful(Done)
           }
