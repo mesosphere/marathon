@@ -7,66 +7,62 @@
 
 ### Breaking Changes
 
-#### You need mesos 1.0.0 or higher
-Starting with Marathon 1.2.0 Mesos 1.0.0 or later is required.
+#### You need Mesos 1.0.0 or higher
+Starting with Marathon 1.2.0, Mesos 1.0.0 or later is required.
 
 #### New leader election library
-The leader election code has been greatly improved and is based on [Curator](http://curator.apache.org) - a well known, well tested library.
-The new leader election functionality is now more robust.
+The leader election code has been greatly improved and is based on [Curator](http://curator.apache.org),a well-known, well-tested library. The new leader election functionality is now more robust.
+
 __Caution: the new leader election library is not compatible with Marathon versions prior to 1.2.0__
-To upgrade to this version, you have to stop all older Marathon instances, before the new version get's started.
-Otherwise there is a risk of more than one leading master.
+To upgrade to this version, stop all older Marathon instances before the new version starts.
+Otherwise, there is a risk of more than one leading master.
 
 
 #### Framework authentication command line flags
-Prior versions of Marathon have tried to authenticate, whenever a principal has been provided via the command line.
+Prior versions of Marathon have tried to authenticate whenever a principal has been provided via the command line.
 Framework authentication is now explicit. There is a command line toggle option for authentication: `--mesos_authentication`.
-This toggle is disabled by default. 
-If you want to use framework authentication, you have to supply this flag.
+This toggle is disabled by default. You must now supply this flag to use framework authentication.
 
 
 ### Overview
 
 #### TASK_LOST behavior
 If Mesos agents get detached from the Mesos master, all tasks are assumed LOST.
-The reaction of Marathon in the past was to kill LOST tasks.
-Under certain configurations, those agents are able to rejoin the cluster so LOST is not a terminal state.
+The reaction of Marathon in the past was to kill LOST tasks. Under certain configurations, however, those agents were able to rejoin the cluster, so LOST was not a terminal state.
 
-With this version Marathon will wait for a configurable amount of time, until a LOST task is assumed dead.
-The default timeout is 24 hours.
-LOST tasks after that timeout get killed by Marathon.
+In this version, Marathon will wait until a LOST task is assumed dead. This amount of time is configurable. The default timeout is 24 hours. LOST tasks after that timeout get killed by Marathon.
 
-This change was so important, that we back ported this functionality to prior versions of Marathon.
+This change was so important that we back ported this functionality to prior versions of Marathon.
 
 #### Task Kill Grace Period
 Every application can now define a kill grace period. 
-When killing a task the agent will wait in a best-effort manner for the grace period specified, before forcibly destroying the task. 
-The task must not assume that it will always be allotted the full grace period, as the agent may decide to allot a shorter period and failures / forcible terminations may occur.
+When killing a task, the agent will wait in a best-effort manner for the grace period specified before forcibly destroying the task. 
+The task must not assume that it will always be allotted the full grace period, as the agent may decide to allot a shorter period and failures/forcible terminations may occur.
 
 #### MAX_PER constraint
 Applications in Marathon can now be constrained by MAX_PER operators.
-It can be used for example to limit tasks across racks or data centers.
+It can be used, for example, to limit tasks across racks or data centers.
 
 #### Virtual heartbeat monitor 
-During network partitions Marathon did not recognize it has been detached from Mesos master.
-The virtual heart beat will make sure, Marathon recognizes this situation and abdicates.
+Previous versions of Marathon did not recognize when it had been detached from Mesos master during network partitions.
+The virtual heart beat will make sure that Marathon recognizes this situation and abdicates.
 
 #### Authorization to system endpoints
 Marathon already has authorization hooks for AppDefinition and Group changes.
-We added authorization hooks for system endpoints: `/v2/leader`, `/v2/info`, `/v2/events` , `/v2/eventSubscriptions`
+We added authorization hooks for system endpoints: `/v2/leader`, `/v2/info`, `/v2/events` , `/v2/eventSubscriptions`.
 
 #### Support for secrets API
 It is now possible to use secrets in your AppDefinition. 
-Secrets are defined as a first class entity and are used inside environment variables.
+Secrets are defined as a first-class entity and are used inside environment variables.
 Please note: there is no native Mesos support for secrets at the moment.
 We have defined a plugin interface to handle secrets.
-You need a plugin in order to effectively use this feature.
+You need a plugin in order to use this feature effectively.
 
 #### Support all attribute types with constraints 
-If attributes are some non-text type (such as scalar or range), those types are now supported.
+Non-text type attributes (such as scalar or range) are now supported.
 
 #### ZooKeeper digest authentication support
-The zk client now supports ZK authentication and acls.
+The ZK client now supports ZK authentication and ACLs.
 
 ### Fixed issues
 
