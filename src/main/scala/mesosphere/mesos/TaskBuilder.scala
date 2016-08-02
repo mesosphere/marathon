@@ -216,22 +216,24 @@ class TaskBuilder(
       // Fill in Docker container details if necessary
       runSpec.container.foreach { c =>
         val containerWithPortMappings = c match {
-          case docker: Container.Docker => docker.copy(pms =
-            docker.pms.zip(hostPorts).collect {
-              case (mapping, Some(hport)) =>
-                // Use case: containerPort = 0 and hostPort = 0
-                //
-                // For apps that have their own service registry and require p2p communication,
-                // they will need to advertise
-                // the externally visible ports that their components come up on.
-                // Since they generally know there container port and advertise that, this is
-                // fixed most easily if the container port is the same as the externally visible host
-                // port.
-                if (mapping.containerPort == 0) {
-                  mapping.copy(hostPort = Some(hport), containerPort = hport)
-                } else {
-                  mapping.copy(hostPort = Some(hport))
-                }
+          case docker: Container.Docker => docker.copy(
+            portMappings = docker.portMappings.map { pms =>
+              pms.zip(hostPorts).collect {
+                case (mapping, Some(hport)) =>
+                  // Use case: containerPort = 0 and hostPort = 0
+                  //
+                  // For apps that have their own service registry and require p2p communication,
+                  // they will need to advertise
+                  // the externally visible ports that their components come up on.
+                  // Since they generally know there container port and advertise that, this is
+                  // fixed most easily if the container port is the same as the externally visible host
+                  // port.
+                  if (mapping.containerPort == 0) {
+                    mapping.copy(hostPort = Some(hport), containerPort = hport)
+                  } else {
+                    mapping.copy(hostPort = Some(hport))
+                  }
+              }
             }
           )
           case _ => c

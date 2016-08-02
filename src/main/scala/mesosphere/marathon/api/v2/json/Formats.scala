@@ -265,8 +265,8 @@ trait ContainerFormats {
       image: String,
       network: Option[ContainerInfo.DockerInfo.Network],
       portMappings: Option[Seq[Container.Docker.PortMapping]],
-      privileged: Option[Boolean],
-      parameters: Option[Seq[Parameter]],
+      privileged: Boolean,
+      parameters: Seq[Parameter],
       credential: Option[Container.Credential],
       forcePullImage: Boolean)
 
@@ -274,8 +274,8 @@ trait ContainerFormats {
       (__ \ "image").format[String] ~
       (__ \ "network").formatNullable[DockerInfo.Network] ~
       (__ \ "portMappings").formatNullable[Seq[Container.Docker.PortMapping]] ~
-      (__ \ "privileged").formatNullable[Boolean] ~
-      (__ \ "parameters").formatNullable[Seq[Parameter]] ~
+      (__ \ "privileged").formatNullable[Boolean].withDefault(false) ~
+      (__ \ "parameters").formatNullable[Seq[Parameter]].withDefault(Seq.empty) ~
       (__ \ "credential").formatNullable[Container.Credential] ~
       (__ \ "forcePullImage").formatNullable[Boolean].withDefault(false)
     )(DockerContainerParameters(_, _, _, _, _, _, _), unlift(DockerContainerParameters.unapply))
@@ -358,7 +358,7 @@ trait ContainerFormats {
       def dockerValues(d: Container.Docker): JsObject = Json.obj(
         "image" -> d.image,
         "network" -> d.network,
-        "portMappings" -> d.pms,
+        "portMappings" -> d.portMappings,
         "privileged" -> d.privileged,
         "parameters" -> d.parameters,
         "forcePullImage" -> d.forcePullImage
@@ -902,10 +902,7 @@ trait AppAndGroupFormats {
     * made it optional (also with ip-per-container in mind) and we have to re-add it in cases where it makes sense.
     */
   private[this] def addHealthCheckPortIndexIfNecessary(app: AppDefinition): AppDefinition = {
-    val hasPortMappings = app.container.exists(_ match {
-      case docker: Container.Docker => docker.pms.nonEmpty
-      case _ => false
-    })
+    val hasPortMappings = app.container.exists(_.portMappings.nonEmpty)
     val portIndexesMakeSense = app.portDefinitions.nonEmpty || hasPortMappings
     app.copy(healthChecks = app.healthChecks.map { healthCheck =>
       def needsDefaultPortIndex =

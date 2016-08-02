@@ -11,6 +11,7 @@ import scala.collection.immutable.Seq
 sealed trait Container {
   val volumes: Seq[Volume]
 
+  // TODO(nfnt): Remove this field and use type matching instead.
   def docker(): Option[Container.Docker] = {
     this match {
       case docker: Container.Docker => Some(docker)
@@ -18,12 +19,7 @@ sealed trait Container {
     }
   }
 
-  def portMappings: Option[Seq[Container.Docker.PortMapping]] = {
-    for {
-      d <- docker if !d.pms.isEmpty
-      n <- d.network if n == ContainerInfo.DockerInfo.Network.BRIDGE || n == ContainerInfo.DockerInfo.Network.USER
-    } yield d.pms
-  }
+  def portMappings: Option[Seq[Container.Docker.PortMapping]] = None
 
   def hostPorts: Option[Seq[Option[Int]]] =
     for (pms <- portMappings) yield pms.map(_.hostPort)
@@ -40,7 +36,7 @@ object Container {
     volumes: Seq[Volume] = Seq.empty,
     image: String = "",
     network: Option[ContainerInfo.DockerInfo.Network] = None,
-    pms: Seq[Docker.PortMapping] = Seq.empty,
+    override val portMappings: Option[Seq[Docker.PortMapping]] = None,
     privileged: Boolean = false,
     parameters: Seq[Parameter] = Nil,
     forcePullImage: Boolean = false) extends Container
@@ -52,13 +48,13 @@ object Container {
       image: String = "",
       network: Option[ContainerInfo.DockerInfo.Network] = None,
       portMappings: Option[Seq[Docker.PortMapping]] = None,
-      privileged: Option[Boolean] = None,
-      parameters: Option[Seq[Parameter]] = None,
+      privileged: Boolean = false,
+      parameters: Seq[Parameter] = Seq.empty,
       forcePullImage: Boolean = false): Docker = Docker(
       volumes = volumes,
       image = image,
       network = network,
-      pms = network match {
+      portMappings = network match {
         case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.BRIDGE =>
           portMappings.map(_.map { m =>
             m match {
@@ -66,11 +62,12 @@ object Container {
               case PortMapping(x, None, y, z, w, a) => PortMapping(x, Some(PortMapping.HostPortDefault), y, z, w, a)
               case _ => m
             }
-          }).getOrElse(Seq.empty)
-        case _ => portMappings.getOrElse(Seq.empty)
+          })
+        case Some(networkMode) if networkMode == ContainerInfo.DockerInfo.Network.USER => portMappings
+        case _ => None
       },
-      privileged = privileged.getOrElse(false),
-      parameters = parameters.getOrElse(Seq.empty),
+      privileged = privileged,
+      parameters = parameters,
       forcePullImage = forcePullImage)
 
     /**
@@ -129,7 +126,7 @@ object Container {
 
     val validDockerContainer = validator[Docker] { docker =>
       docker.image is notEmpty
-      docker.pms is PortMapping.portMappingsValidator and PortMapping.validForDocker(docker)
+      docker.portMappings is optional(PortMapping.portMappingsValidator and PortMapping.validForDocker(docker))
     }
   }
 

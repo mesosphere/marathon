@@ -29,9 +29,9 @@ class AppUpdateValidatorTest extends MarathonSpec with Matchers {
 
   class Fixture {
     def invalidDockerContainer: Container = Container.Docker(
-      pms = Seq(
+      portMappings = Some(Seq(
         Docker.PortMapping(-1, Some(-1), -1, "tcp") // Invalid (negative) port numbers
-      )
+      ))
     )
 
     def invalidAppCContainer: Container = Container.MesosAppC(

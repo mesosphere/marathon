@@ -39,6 +39,27 @@ class DockerAppIntegrationTest
       waitForTasks(app.id, 1) // The app has really started
     }
 
+    test("deploy a simple Docker app using the Mesos containerizer") {
+      Given("a new Docker app")
+      val app = AppDefinition(
+        id = testBasePath / "mesosdockerapp",
+        cmd = Some("sleep 600"),
+        container = Some(Container.MesosDocker(image = "busybox")),
+        cpus = 0.2,
+        mem = 16.0,
+        instances = 1
+      )
+
+      When("The app is deployed")
+      val result = marathon.createAppV2(app)
+
+      Then("The app is created")
+      result.code should be(201) // Created
+      extractDeploymentIds(result) should have size 1
+      waitForEvent("deployment_success")
+      waitForTasks(app.id, 1) // The app has really started
+    }
+
     test("create a simple docker app using http health checks with HOST networking") {
       Given("a new app")
       val app = dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, withHealth = true)
