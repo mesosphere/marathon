@@ -36,16 +36,16 @@ With this version Marathon will wait for a configurable amount of time, until a 
 The default timeout is 24 hours.
 LOST tasks after that timeout get killed by Marathon.
 
-This change was so important, that we backported this functionality to prior versions of Marathon.
+This change was so important, that we back ported this functionality to prior versions of Marathon.
 
 #### Task Kill Grace Period
 Every application can now define a kill grace period. 
 When killing a task the agent will wait in a best-effort manner for the grace period specified, before forcibly destroying the task. 
 The task must not assume that it will always be allotted the full grace period, as the agent may decide to allot a shorter period and failures / forcible terminations may occur.
 
-#### MAX_PER constraint. (#3989)
-Applications in Maration can now be constrained by MAX_PER operators.
-It can be used for example to limit tasks across racks or datacenters.
+#### MAX_PER constraint
+Applications in Marathon can now be constrained by MAX_PER operators.
+It can be used for example to limit tasks across racks or data centers.
 
 #### Virtual heartbeat monitor 
 During network partitions Marathon did not recognize it has been detached from Mesos master.
@@ -94,7 +94,6 @@ The zk client now supports ZK authentication and acls.
 - #3472 - Remove MarathonTask from most code (#3778)
 - #3723 - Fix validation of duplicate volume names (#3737)
 - #3505 - Adding documentation for ReadinessChecks (#3711)
-- #3503 - Implementing integration tests for starting and updati… (#3738)
 - #3648 - LaunchQueue: Do not defer TaskChanged (#3721) 
 
 
