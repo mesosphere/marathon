@@ -106,8 +106,18 @@ class CuratorElectionService(
       connectString(config.zkHosts).
       sessionTimeoutMs(config.zooKeeperSessionTimeout().toInt).
       aclProvider(new ACLProvider {
+        val rootAcl = {
+          val acls = new util.ArrayList[ACL]()
+          acls.addAll(acls)
+          acls.addAll(ZooDefs.Ids.OPEN_ACL_UNSAFE)
+          acls
+        }
         override def getDefaultAcl: util.List[ACL] = acl
-        override def getAclForPath(path: String): util.List[ACL] = acl
+        override def getAclForPath(path: String): util.List[ACL] = if (path != config.zkPath) {
+          acl
+        } else {
+          rootAcl
+        }
       }).
       retryPolicy(new RetryPolicy {
         override def allowRetry(retryCount: Int, elapsedTimeMs: Long, sleeper: RetrySleeper): Boolean = {

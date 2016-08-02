@@ -6,19 +6,20 @@ import java.util.UUID
 import akka.Done
 import akka.actor.ActorRefFactory
 import com.fasterxml.uuid.impl.UUIDUtil
-import com.google.protobuf.{ ByteString, InvalidProtocolBufferException }
-import com.twitter.util.{ Future => TWFuture }
-import com.twitter.zk.{ ZNode, ZkClient }
+import com.google.protobuf.{ByteString, InvalidProtocolBufferException}
+import com.twitter.util.{Future => TWFuture}
+import com.twitter.zk.{ZNode, ZkClient}
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.{ Protos, StoreCommandFailedException }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
-import org.apache.zookeeper.KeeperException
-import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
+import mesosphere.marathon.{Protos, StoreCommandFailedException}
+import mesosphere.util.{CapConcurrentExecutions, CapConcurrentExecutionsMetrics}
+import org.apache.zookeeper.{KeeperException, ZooDefs}
+import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 import org.slf4j.LoggerFactory
 
+import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 // scalastyle:on
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
@@ -113,22 +114,30 @@ class ZKStore(val client: ZkClient, root: ZNode, compressionConf: CompressionCon
   }
 
   private[this] def createPath(path: ZNode): Future[ZNode] = {
-    def nodeExists(node: ZNode): Future[Boolean] = node.exists().asScala
-      .map(_ => true)
-      .recover { case ex: NoNodeException => false }
-      .recover(exceptionTransform("Can not query for exists"))
+    if (path.path.contains(root.path)) {
+      def nodeExists(node: ZNode): Future[Boolean] = node.exists().asScala
+        .map(_ => true)
+        .recover { case ex: NoNodeException => false }
+        .recover(exceptionTransform("Can not query for exists"))
 
-    def createNode(node: ZNode): Future[ZNode] = node.create().asScala
-      .recover { case ex: NodeExistsException => node }
-      .recover(exceptionTransform("Can not create"))
+      def createNode(node: ZNode): Future[ZNode] = node.create().asScala
+        .recover { case ex: NodeExistsException => node }
+        .recover(exceptionTransform("Can not create"))
 
-    def createPath(node: ZNode): Future[ZNode] = {
-      nodeExists(node).flatMap {
-        case true => Future.successful(node)
-        case false => createPath(node.parent).flatMap(_ => createNode(node))
+      def createPathRec(node: ZNode): Future[ZNode] = {
+        nodeExists(node).flatMap {
+          case true => Future.successful(node)
+          case false => createPath(node.parent).flatMap(_ => createNode(node))
+        }
       }
+      createPathRec(path)
+    } else {
+      // if the path is not in the root, create with OPEN_ACL_UNSAFE (/marathon is supposed to be readable, state isn't)
+      val rootAcl = ZooDefs.Ids.OPEN_ACL_UNSAFE ++ client.acl
+      path.create(acls = rootAcl).asScala
+        .recover { case ex: NodeExistsException => path }
+        .recover(exceptionTransform("Can not create"))
     }
-    createPath(path)
   }
 
   override def initialize(): Future[Unit] = createPath(root).map(_ => ())
@@ -162,7 +171,7 @@ case class ZKData(name: String, uuid: UUID, bytes: IndexedSeq[Byte] = Vector.emp
   }
 }
 object ZKData {
-  import IO.{ gzipUncompress => uncompress }
+  import IO.{gzipUncompress => uncompress}
   def apply(bytes: Array[Byte]): ZKData = {
     try {
       val proto = Protos.ZKStoreEntry.parseFrom(bytes)
