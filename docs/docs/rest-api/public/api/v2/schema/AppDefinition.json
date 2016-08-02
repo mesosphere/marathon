@@ -300,6 +300,10 @@
           "cache": {
             "type": "boolean",
             "description": "Cache fetched artifact if supported by Mesos fetcher module"
+          },
+          "outputFile": {
+            "type": "string",
+            "description": "Rename fetched artifact with the given name"
           }
         },
         "required": [ "uri" ]
