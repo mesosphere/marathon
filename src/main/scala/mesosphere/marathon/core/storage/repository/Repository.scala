@@ -154,7 +154,8 @@ object DeploymentRepository {
     maxVersions: Int)(implicit
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
-    mat: Materializer): DeploymentRepository = {
+    mat: Materializer,
+                      metrics: Metrics): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
     import ZkStoreSerialization._
     new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, maxVersions)
   }
@@ -166,7 +167,8 @@ object DeploymentRepository {
     maxVersions: Int)(implicit
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
-    mat: Materializer): DeploymentRepository = {
+    mat: Materializer,
+                      metrics: Metrics): DeploymentRepositoryImpl[RamId, String, Identity] = {
     import InMemoryStoreSerialization._
     new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, maxVersions)
   }

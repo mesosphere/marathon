@@ -1,20 +1,21 @@
 package mesosphere.marathon.core.storage.repository.impl
 
 // scalastyle:off
-import java.time.OffsetDateTime
+import java.time.{Duration, Instant, OffsetDateTime}
 
 import akka.Done
-import akka.actor.{ Actor, ActorLogging, ActorRef, ActorRefFactory, Props }
+import akka.actor.{ActorLogging, ActorRef, ActorRefFactory, FSM, LoggingFSM, Props}
 import akka.pattern._
 import akka.stream.Materializer
 import mesosphere.marathon.core.storage.repository.impl.GcActor._
-import mesosphere.marathon.state.{ Group, PathId }
+import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.{Group, PathId}
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentPlan
 
-import scala.async.Async.{ async, await }
-import scala.collection.{ SortedSet, mutable }
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.async.Async.{async, await}
+import scala.collection.{SortedSet, mutable}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 // scalastyle:on
 
@@ -60,31 +61,54 @@ import scala.util.control.NonFatal
   * - If compact fails for any reason,  transition back to idle or scanning depending on whether or not one or
   *   more additional GC Requests were sent to the actor.
   */
-private class GcActor[K, C, S](
+private[storage] class GcActor[K, C, S](
   val deploymentRepository: DeploymentRepositoryImpl[K, C, S],
   val groupRepository: StoredGroupRepositoryImpl[K, C, S],
   val appRepository: AppRepositoryImpl[K, C, S],
-  val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext)
-    extends Actor with ActorLogging with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
-  override val receive: Receive = idle
+  val maxVersions: Int)(implicit val mat: Materializer, val ctx: ExecutionContext, metrics: Metrics)
+    extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
-  def idle: Receive = {
-    case RunGC =>
-      // scan runs in the execution context, not in the actor's context.
+  private var totalGcs = metrics.counter("GarbageCollector.totalGcs")
+  private var lastScanStart = Instant.now()
+  private var scanTime = metrics.histogram("GarbageCollector.scanTime")
+  private var lastCompactStart = Instant.now()
+  private var compactTime = metrics.histogram("GarbageCollector.compactTime")
+
+  startWith(Idle, IdleData)
+
+  when(Idle) {
+    case Event(RunGC, _) =>
       scan().pipeTo(self)
-      context.become(scanning(
-        Set.empty,
-        new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime],
-        Set.empty, gcRequested = false))
-    case StoreEntity(promise) =>
-      // all attempts to store can proceed.
+      goto(Scanning) using UpdatedEntities()
+    case Event(StoreEntity(promise), _) =>
       promise.success(Done)
-    case _: Message =>
-    // ignore other messages
+      stay
+    case Event(_: Message, _) =>
+      stay
+      // ignore
   }
+
+  onTransition {
+    case Idle -> Scanning =>
+      lastScanStart = Instant.now()
+    case Scanning -> Compacting =>
+      lastCompactStart = Instant.now()
+      scanTime.update(Duration.between(lastScanStart, lastCompactStart).toMillis)
+    case Scanning -> Idle =>
+      scanTime.update(Duration.between(lastScanStart, Instant.now).toMillis)
+    case Compacting -> Idle =>
+      compactTime.update(Duration.between(lastCompactStart, Instant.now).toMillis)
+      totalGcs.inc()
+    case Compacting -> Scanning =>
+      lastScanStart = Instant.now()
+      compactTime.update(Duration.between(lastCompactStart, Instant.now).toMillis)
+      totalGcs.inc()
+  }
+
+  initialize()
 }
 
-private trait ScanBehavior[K, C, S] { this: Actor with ActorLogging with CompactBehavior[K, C, S] =>
+private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with ActorLogging with CompactBehavior[K, C, S] =>
   implicit val mat: Materializer
   implicit val ctx: ExecutionContext
   val maxVersions: Int
@@ -93,11 +117,53 @@ private trait ScanBehavior[K, C, S] { this: Actor with ActorLogging with Compact
   val deploymentRepository: DeploymentRepositoryImpl[K, C, S]
   val self: ActorRef
 
+  when(Scanning) {
+    case Event(RunGC, updates: UpdatedEntities) =>
+      stay using updates.copy(gcRequested = true)
+    case Event(done: ScanDone, updates: UpdatedEntities) =>
+      if (done.isEmpty) {
+        if (updates.gcRequested) {
+          scan().pipeTo(self)
+          goto(Scanning) using UpdatedEntities()
+        } else {
+          goto(Idle) using IdleData
+        }
+      } else {
+        val (appsToDelete, appVersionsToDelete, rootsToDelete) =
+          computeActualDeletions(updates.appsStored, updates.appVersionsStored, updates.rootsStored, done)
+        compact(appsToDelete, appVersionsToDelete, rootsToDelete).pipeTo(self)
+        goto(Compacting) using BlockedEntities(appsToDelete, appVersionsToDelete, rootsToDelete, Nil, updates.gcRequested)
+      }
+    case Event(StoreApp(appId, Some(version), promise), updates: UpdatedEntities) =>
+      promise.success(Done)
+      val appVersions = updates.appVersionsStored + (appId -> (updates.appVersionsStored(appId) + version))
+      stay using updates.copy(appVersionsStored = appVersions)
+    case Event(StoreApp(appId, _, promise), updates: UpdatedEntities) =>
+      promise.success(Done)
+      stay using updates.copy(appsStored = updates.appsStored + appId)
+    case Event(StoreRoot(root, promise), updates: UpdatedEntities) =>
+      promise.success(Done)
+      val appVersions = addAppVersions(root.transitiveAppIds, updates.appVersionsStored)
+      stay using updates.copy(rootsStored = updates.rootsStored + root.version, appVersionsStored = appVersions)
+    case Event(StorePlan(plan, promise), updates: UpdatedEntities) =>
+      promise.success(Done)
+      val originalUpdates =
+        addAppVersions(plan.original.transitiveAppsById.mapValues(_.version.toOffsetDateTime),
+          updates.appVersionsStored)
+      val allUpdates =
+        addAppVersions(plan.target.transitiveAppsById.mapValues(_.version.toOffsetDateTime), originalUpdates)
+      val newRootsStored = updates.rootsStored ++
+        Set(plan.original.version.toOffsetDateTime, plan.target.version.toOffsetDateTime)
+      stay using updates.copy(appVersionsStored = allUpdates, rootsStored = newRootsStored)
+    case Event(_: Message, _) =>
+      stay
+  }
+
   def computeActualDeletions(
     appsStored: Set[PathId],
-    appVersionsStored: mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime], // scalastyle:off
+    appVersionsStored: Map[PathId, Set[OffsetDateTime]], // scalastyle:off
     rootsStored: Set[OffsetDateTime],
-    scanDone: ScanDone): (Set[PathId], Map[PathId, SortedSet[OffsetDateTime]], Set[OffsetDateTime]) = {
+    scanDone: ScanDone): (Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) = {
     val ScanDone(appsToDelete, appVersionsToDelete, rootVersionsToDelete) = scanDone
     val appsToActuallyDelete = appsToDelete.diff(appsStored)
     val appVersionsToActuallyDelete = appVersionsToDelete.map {
@@ -112,41 +178,10 @@ private trait ScanBehavior[K, C, S] { this: Actor with ActorLogging with Compact
 
   def addAppVersions(
     apps: Map[PathId, OffsetDateTime],
-    appVersionsStored: mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime]): Unit = { // scalastyle:off
-    apps.foreach { case (id, appVersion) => appVersionsStored.addBinding(id, appVersion) }
-  }
-
-  def scanning(
-    appsStored: Set[PathId],
-    appVersionsStored: mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime], // scalastyle:off
-    rootsStored: Set[OffsetDateTime],
-    gcRequested: Boolean): Receive = {
-    case RunGC =>
-      context.become(scanning(appsStored, appVersionsStored, rootsStored, gcRequested = true))
-    case done: ScanDone =>
-      val (appsToDelete, appVersionsToDelete, rootsToDelete) =
-        computeActualDeletions(appsStored, appVersionsStored, rootsStored, done)
-      compact(appsToDelete, appVersionsToDelete, rootsToDelete).pipeTo(self)
-      context.become(compacting(appsToDelete, appVersionsToDelete, rootsToDelete, Nil, gcRequested))
-    case StoreApp(appId, Some(version), promise) =>
-      promise.success(Done)
-      context.become(scanning(appsStored, appVersionsStored.addBinding(appId, version), rootsStored, gcRequested))
-    case StoreApp(appId, _, promise) =>
-      promise.success(Done)
-      context.become(scanning(appsStored + appId, appVersionsStored, rootsStored, gcRequested))
-    case StoreRoot(root, promise) =>
-      promise.success(Done)
-      addAppVersions(root.transitiveAppIds, appVersionsStored)
-      context.become(scanning(appsStored, appVersionsStored, rootsStored + root.version, gcRequested))
-    case StorePlan(plan, promise) =>
-      promise.success(Done)
-      addAppVersions(plan.original.transitiveAppsById.mapValues(_.version.toOffsetDateTime), appVersionsStored)
-      addAppVersions(plan.target.transitiveAppsById.mapValues(_.version.toOffsetDateTime), appVersionsStored)
-      val newRootsStored = rootsStored ++
-        Set(plan.original.version.toOffsetDateTime, plan.target.version.toOffsetDateTime)
-      context.become(scanning(appsStored, appVersionsStored, newRootsStored, gcRequested))
-    case _: Message =>
-    // ignore
+    appVersionsStored: Map[PathId, Set[OffsetDateTime]]): Map[PathId, Set[OffsetDateTime]] = {
+    apps.foldLeft(appVersionsStored) { case (appVersions, (pathId, version)) =>
+      appVersions + (pathId -> (appVersions(pathId) + version))
+    }
   }
 
   def scan(): Future[ScanDone] = {
@@ -185,7 +220,7 @@ private trait ScanBehavior[K, C, S] { this: Actor with ActorLogging with Compact
     storedPlans: Seq[StoredPlan],
     currentRoot: Group): Future[ScanDone] = {
 
-    def appsInUse(roots: Seq[StoredGroup]): Map[PathId, SortedSet[OffsetDateTime]] = {
+    def appsInUse(roots: Seq[StoredGroup]): Map[PathId, Set[OffsetDateTime]] = {
       val appVersionsInUse = new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime] // scalastyle:off
       currentRoot.transitiveAppsById.foreach {
         case (id, app) =>
@@ -197,7 +232,7 @@ private trait ScanBehavior[K, C, S] { this: Actor with ActorLogging with Compact
             appVersionsInUse.addBinding(id, version)
         }
       }
-      appVersionsInUse.mapValues(_.to[SortedSet]).toMap
+      appVersionsInUse.mapValues(_.to[Set]).toMap
     }
 
     def rootsInUse(): Future[Seq[StoredGroup]] = {
@@ -210,7 +245,7 @@ private trait ScanBehavior[K, C, S] { this: Actor with ActorLogging with Compact
       }
     }.map(_.flatten)
 
-    def appsExceedingMaxVersions(usedApps: Iterable[PathId]): Future[Map[PathId, SortedSet[OffsetDateTime]]] = {
+    def appsExceedingMaxVersions(usedApps: Iterable[PathId]): Future[Map[PathId, Set[OffsetDateTime]]] = {
       Future.sequence {
         usedApps.map { id =>
           appRepository.versions(id).runWith(Sink.sortedSet).map(id -> _)
@@ -239,76 +274,58 @@ private trait ScanBehavior[K, C, S] { this: Actor with ActorLogging with Compact
   }
 }
 
-private trait CompactBehavior[K, C, S] { this: Actor with ActorLogging with ScanBehavior[K, C, S] =>
+private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with ActorLogging with ScanBehavior[K, C, S] =>
   val maxVersions: Int
   val appRepository: AppRepositoryImpl[K, C, S]
   val groupRepository: StoredGroupRepositoryImpl[K, C, S]
   val self: ActorRef
 
-  def idle: Receive
-
-  def compacting(
-    appsDeleting: Set[PathId],
-    appVersionsDeleting: Map[PathId, SortedSet[OffsetDateTime]],
-    rootVersionsDeleting: Set[OffsetDateTime],
-    promises: List[Promise[Done]], gcRequested: Boolean): Receive = {
-    case RunGC =>
-      context.become(compacting(appsDeleting, appVersionsDeleting, rootVersionsDeleting, promises, gcRequested = true))
-    case CompactDone =>
-      promises.foreach(_.success(Done))
-      if (gcRequested) {
-        context.become(scanning(
-          Set.empty,
-          new mutable.HashMap[PathId, mutable.Set[OffsetDateTime]] with mutable.MultiMap[PathId, OffsetDateTime],
-          Set.empty, gcRequested = false))
+  when(Compacting) {
+    case Event(RunGC, blocked: BlockedEntities) =>
+      stay using blocked.copy(gcRequested = true)
+    case Event(CompactDone, blocked: BlockedEntities) =>
+      blocked.promises.foreach(_.success(Done))
+      if (blocked.gcRequested) {
+        scan().pipeTo(self)
+        goto(Scanning) using UpdatedEntities()
       } else {
-        context.become(idle)
+        goto(Idle) using IdleData
       }
-    case StoreApp(appId, Some(version), promise) =>
-      if (appsDeleting.contains(appId) || appVersionsDeleting.get(appId).fold(false)(_.contains(version))) {
-        context.become(compacting(
-          appsDeleting,
-          appVersionsDeleting,
-          rootVersionsDeleting,
-          promise :: promises,
-          gcRequested))
+    case Event(StoreApp(appId, Some(version), promise), blocked: BlockedEntities) =>
+      if (blocked.appsDeleting.contains(appId) ||
+          blocked.appVersionsDeleting.get(appId).fold(false)(_.contains(version))) {
+        stay using blocked.copy(promises = promise :: blocked.promises)
       } else {
         promise.success(Done)
+        stay
       }
-    case StoreApp(appId, _, promise) =>
-      if (appsDeleting.contains(appId)) {
-        context.become(compacting(
-          appsDeleting,
-          appVersionsDeleting,
-          rootVersionsDeleting,
-          promise :: promises,
-          gcRequested))
+    case Event(StoreApp(appId, _, promise), blocked: BlockedEntities) =>
+      if (blocked.appsDeleting.contains(appId)) {
+        stay using blocked.copy(promises = promise :: blocked.promises)
       } else {
         promise.success(Done)
+        stay
       }
-    case StoreRoot(root, promise) =>
+    case Event(StoreRoot(root, promise), blocked: BlockedEntities) =>
       // the last case could be optimized to actually check the versions...
-      if (rootVersionsDeleting.contains(root.version) ||
-        appsDeleting.intersect(root.transitiveAppIds.keySet).nonEmpty ||
-        appVersionsDeleting.keySet.intersect(root.transitiveAppIds.keySet).nonEmpty) {
-        context.become(compacting(
-          appsDeleting,
-          appVersionsDeleting,
-          rootVersionsDeleting,
-          promise :: promises,
-          gcRequested))
+      if (blocked.rootsDeleting.contains(root.version) ||
+        blocked.appsDeleting.intersect(root.transitiveAppIds.keySet).nonEmpty ||
+        blocked.appVersionsDeleting.keySet.intersect(root.transitiveAppIds.keySet).nonEmpty) {
+        stay using blocked.copy(promises =  promise :: blocked.promises)
       } else {
         promise.success(Done)
+        stay
       }
-    case StorePlan(plan, promise) =>
+    case Event(StorePlan(plan, promise), blocked: BlockedEntities) =>
       val promise1 = Promise[Done]()
       val promise2 = Promise[Done]()
       self ! StoreRoot(StoredGroup(plan.original), promise1)
       self ! StoreRoot(StoredGroup(plan.target), promise2)
       promise.completeWith(Future.sequence(Seq(promise1.future, promise2.future)).map(_ => Done))
+      stay
   }
 
-  def compact(appsToDelete: Set[PathId], appVersionsToDelete: Map[PathId, SortedSet[OffsetDateTime]],
+  def compact(appsToDelete: Set[PathId], appVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
     rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {
     async {
       if (rootVersionsToDelete.nonEmpty) {
@@ -342,11 +359,30 @@ private trait CompactBehavior[K, C, S] { this: Actor with ActorLogging with Scan
 }
 
 object GcActor {
+  private[storage] sealed trait State extends Product with Serializable
+  case object Idle extends State
+  case object Scanning extends State
+  case object Compacting extends State
+
+  private[storage] sealed trait Data extends Product with Serializable
+  case object IdleData extends Data
+  case class UpdatedEntities(appsStored: Set[PathId] = Set.empty,
+                             appVersionsStored: Map[PathId, Set[OffsetDateTime]] =
+                                Map.empty.withDefaultValue(Set.empty),
+                             rootsStored: Set[OffsetDateTime] = Set.empty,
+                             gcRequested: Boolean = false) extends Data
+  case class BlockedEntities(appsDeleting: Set[PathId] = Set.empty,
+                             appVersionsDeleting: Map[PathId, Set[OffsetDateTime]] =
+                              Map.empty.withDefaultValue(Set.empty),
+                             rootsDeleting: Set[OffsetDateTime] = Set.empty,
+                             promises: List[Promise[Done]] = List.empty,
+                             gcRequested: Boolean = false) extends Data
+
   def props[K, C, S](
     deploymentRepository: DeploymentRepositoryImpl[K, C, S],
     groupRepository: StoredGroupRepositoryImpl[K, C, S],
     appRepository: AppRepositoryImpl[K, C, S],
-    maxVersions: Int)(implicit mat: Materializer, ctx: ExecutionContext): Props = {
+    maxVersions: Int)(implicit mat: Materializer, ctx: ExecutionContext, metrics: Metrics): Props = {
     Props(new GcActor[K, C, S](deploymentRepository, groupRepository, appRepository, maxVersions))
   }
 
@@ -358,13 +394,16 @@ object GcActor {
     maxVersions: Int)(implicit
     mat: Materializer,
     ctx: ExecutionContext,
-    actorRefFactory: ActorRefFactory): ActorRef = {
+    actorRefFactory: ActorRefFactory, metrics: Metrics): ActorRef = {
     actorRefFactory.actorOf(props(deploymentRepository, groupRepository, appRepository, maxVersions), name)
   }
 
   sealed trait Message extends Product with Serializable
-  case class ScanDone(appsToDelete: Set[PathId], appVersionsToDelete: Map[PathId, SortedSet[OffsetDateTime]],
-    rootVersionsToDelete: Set[OffsetDateTime]) extends Message
+  case class ScanDone(appsToDelete: Set[PathId] = Set.empty,
+                      appVersionsToDelete: Map[PathId, Set[OffsetDateTime]] = Map.empty,
+    rootVersionsToDelete: Set[OffsetDateTime] = Set.empty) extends Message {
+    def isEmpty = appsToDelete.isEmpty && appVersionsToDelete.isEmpty && rootVersionsToDelete.isEmpty
+  }
   case object RunGC extends Message
   sealed trait CompactDone extends Message
   case object CompactDone extends CompactDone
