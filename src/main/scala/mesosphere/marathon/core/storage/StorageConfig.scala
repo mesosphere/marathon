@@ -56,6 +56,7 @@ case class TwitterZk(
     sessionTimeout: Duration,
     zkHosts: String,
     zkPath: String,
+    zkAcl: util.List[ACL],
     username: Option[String],
     password: Option[String],
     retries: Int,
@@ -77,17 +78,10 @@ case class TwitterZk(
       case _ => None
     }
 
-    val creationAcl = (username, password) match {
-      case (Some(user), Some(pass)) =>
-        ZooDefs.Ids.CREATOR_ALL_ACL
-      case _ =>
-        ZooDefs.Ids.OPEN_ACL_UNSAFE
-    }
-
     val connector = NativeConnector(zkHosts, None, sessionTimeoutTw, new JavaTimer(isDaemon = true), authInfo)
 
     val client = ZkClient(connector)
-      .withAcl(creationAcl)
+      .withAcl(zkAcl)
       .withRetries(retries)
     val compressionConf = CompressionConf(enableCompression, compressionThreshold.toBytes)
     new ZKStore(client, client(zkPath), compressionConf, maxConcurrent = maxConcurrent, maxOutstanding = maxOutstanding)
@@ -104,7 +98,8 @@ object TwitterZk {
       enableCache = config.storeCache(),
       sessionTimeout = config.zkSessionTimeoutDuration,
       zkHosts = config.zkHosts,
-      zkPath = config.zkPath,
+      zkPath = config.zooKeeperStatePath,
+      zkAcl = config.zkDefaultCreationACL,
       username = config.zkUsername,
       password = config.zkPassword,
       retries = 3,
@@ -114,15 +109,22 @@ object TwitterZk {
       maxOutstanding = 1024) // scalastyle:off magic.number
 
   def apply(config: Config)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk = {
+    val username = config.optionalString("username")
+    val password = config.optionalString("password")
+    val acls = (username, password) match {
+      case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
+      case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
+    }
     // scalastyle:off
     TwitterZk(
       maxVersions = config.int("max-versions", StorageConfig.DefaultLegacyMaxVersions),
       enableCache = config.bool("enable-cache", true),
       sessionTimeout = config.duration("session-timeout", 10.seconds),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
-      zkPath = config.string("path", "marathon"),
-      username = config.optionalString("username"),
-      password = config.optionalString("password"),
+      zkPath = s"${config.string("path", "marathon")}/state",
+      zkAcl = acls,
+      username = username,
+      password = password,
       retries = config.int("retries", 3),
       enableCompression = config.bool("enable-compression", true),
       compressionThreshold = config.memorySize("compression-threshold", ConfigMemorySize.ofBytes(64 * 1024)),
@@ -158,7 +160,7 @@ object MesosZk {
       maxVersions = config.maxVersions(),
       enableCache = config.storeCache(),
       zkHosts = config.zkHosts,
-      zkPath = config.zkPath,
+      zkPath = config.zooKeeperStatePath,
       timeout = config.zkTimeoutDuration)
 
   def apply(config: Config): MesosZk =
@@ -166,7 +168,7 @@ object MesosZk {
       maxVersions = config.int("max-versions", StorageConfig.DefaultLegacyMaxVersions),
       enableCache = config.bool("enable-cache", true),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
-      zkPath = config.string("path", "marathon"),
+      zkPath = s"${config.string("path", "marathon")}/state",
       timeout = config.duration("timeout", 10.seconds)
     )
 }
@@ -207,6 +209,7 @@ case class CuratorZk(
     timeout: Duration,
     zkHosts: String,
     zkPath: String,
+    zkAcls: util.List[ACL],
     username: Option[String],
     password: Option[String],
     enableCompression: Boolean,
@@ -221,17 +224,15 @@ case class CuratorZk(
     sessionTimeout.foreach(t => builder.sessionTimeoutMs(t.toMillis.toInt))
     connectionTimeout.foreach(t => builder.connectionTimeoutMs(t.toMillis.toInt))
     if (enableCompression) builder.compressionProvider(new GzipCompressionProvider)
-    val defaultAcls = (username, password) match {
+    (username, password) match {
       case (Some(user), Some(pass)) =>
         builder.authorization(Seq(new AuthInfo("digest", s"$user:$pass".getBytes("UTF-8"))))
-        ZooDefs.Ids.CREATOR_ALL_ACL
       case _ =>
-        ZooDefs.Ids.OPEN_ACL_UNSAFE
     }
     builder.aclProvider(new ACLProvider {
-      override def getDefaultAcl: util.List[ACL] = defaultAcls
+      override def getDefaultAcl: util.List[ACL] = zkAcls
 
-      override def getAclForPath(path: String): util.List[ACL] = defaultAcls
+      override def getAclForPath(path: String): util.List[ACL] = zkAcls
     })
     builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
     builder.namespace(zkPath.replaceAll("^/", ""))
@@ -256,7 +257,8 @@ object CuratorZk {
       connectionTimeout = None,
       timeout = conf.zkTimeoutDuration,
       zkHosts = conf.zkHosts,
-      zkPath = conf.zkPath,
+      zkPath = conf.zooKeeperStatePath,
+      zkAcls = conf.zkDefaultCreationACL,
       username = conf.zkUsername,
       password = conf.zkUsername,
       enableCompression = conf.zooKeeperCompressionEnabled(),
@@ -266,22 +268,30 @@ object CuratorZk {
       maxVersions = conf.maxVersions()
     )
 
-  def apply(config: Config): CuratorZk =
+  def apply(config: Config): CuratorZk = {
+    val username = config.optionalString("username")
+    val password = config.optionalString("password")
+    val acls = (username, password) match {
+      case (Some(_), Some(_)) => ZooDefs.Ids.CREATOR_ALL_ACL
+      case _ => ZooDefs.Ids.OPEN_ACL_UNSAFE
+    }
     CuratorZk(
       cacheType = CacheType(config.string("cache-type", "lazy")),
       sessionTimeout = config.optionalDuration("session-timeout"),
       connectionTimeout = config.optionalDuration("connect-timeout"),
       timeout = config.duration("timeout", 10.seconds),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
-      zkPath = config.string("path", "marathon"),
-      username = config.optionalString("username"),
-      password = config.optionalString("password"),
+      zkPath = s"${config.string("path", "marathon")}/state",
+      zkAcls = acls,
+      username = username,
+      password = password,
       enableCompression = config.bool("enable-compression", true),
       retryConfig = RetryConfig(config),
       maxConcurrent = config.int("max-concurrent-requests", 8),
       maxOutstanding = config.int("max-concurrent-outstanding", 1024), // scalastyle:off magic.number
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions)
     )
+  }
 }
 
 case class InMem(maxVersions: Int) extends PersistenceStorageConfig[RamId, String, Identity] {
