@@ -155,7 +155,7 @@ object DeploymentRepository {
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
     mat: Materializer,
-                      metrics: Metrics): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
+    metrics: Metrics): DeploymentRepositoryImpl[ZkId, String, ZkSerialized] = {
     import ZkStoreSerialization._
     new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, maxVersions)
   }
@@ -168,7 +168,7 @@ object DeploymentRepository {
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
     mat: Materializer,
-                      metrics: Metrics): DeploymentRepositoryImpl[RamId, String, Identity] = {
+    metrics: Metrics): DeploymentRepositoryImpl[RamId, String, Identity] = {
     import InMemoryStoreSerialization._
     new DeploymentRepositoryImpl(persistenceStore, groupRepository, appRepository, maxVersions)
   }

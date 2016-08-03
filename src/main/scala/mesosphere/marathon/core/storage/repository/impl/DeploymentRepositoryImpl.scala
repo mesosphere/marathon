@@ -7,18 +7,18 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{Done, NotUsed}
+import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos
-import mesosphere.marathon.core.storage.repository.impl.GcActor.{StoreApp, StorePlan, StoreRoot}
-import mesosphere.marathon.core.storage.repository.{DeploymentRepository, GroupRepository}
-import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.core.storage.repository.impl.GcActor.{ StoreApp, StorePlan, StoreRoot }
+import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, GroupRepository }
+import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.upgrade.DeploymentPlan
 
-import scala.async.Async.{async, await}
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.async.Async.{ async, await }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 case class StoredPlan(
     id: String,
@@ -86,7 +86,7 @@ class DeploymentRepositoryImpl[K, C, S](
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
     mat: Materializer,
-                      metrics: Metrics) extends DeploymentRepository {
+    metrics: Metrics) extends DeploymentRepository {
 
   private val gcActor = GcActor(
     s"PersistenceGarbageCollector:$hashCode",

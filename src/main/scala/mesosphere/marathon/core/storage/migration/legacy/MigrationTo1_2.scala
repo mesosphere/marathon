@@ -4,7 +4,7 @@ import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import mesosphere.marathon.core.storage.LegacyStorageConfig
-import mesosphere.marathon.core.storage.repository.{DeploymentRepository, TaskRepository}
+import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, TaskRepository }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.impl.MarathonTaskStatusSerializer
 import mesosphere.marathon.metrics.Metrics
@@ -12,8 +12,8 @@ import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.slf4j.LoggerFactory
 
-import scala.async.Async.{async, await}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.async.Async.{ async, await }
+import scala.concurrent.{ ExecutionContext, Future }
 
 /**
   * Removes all deployment version nodes from ZK

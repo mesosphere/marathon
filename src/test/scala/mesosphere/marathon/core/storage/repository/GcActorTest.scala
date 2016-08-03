@@ -5,22 +5,22 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.Done
-import akka.stream.scaladsl.{Sink, Source}
-import akka.testkit.{TestFSMRef, TestKitBase}
+import akka.stream.scaladsl.{ Sink, Source }
+import akka.testkit.{ TestFSMRef, TestKitBase }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.repository.impl.GcActor._
-import mesosphere.marathon.core.storage.repository.impl.{AppRepositoryImpl, DeploymentRepositoryImpl, GcActor, StoredGroup, StoredGroupRepositoryImpl}
-import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
+import mesosphere.marathon.core.storage.repository.impl.{ AppRepositoryImpl, DeploymentRepositoryImpl, GcActor, StoredGroup, StoredGroupRepositoryImpl }
+import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.AppDefinition.VersionInfo
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.GivenWhenThen
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{Future, Promise, blocking}
+import scala.concurrent.{ Future, Promise, blocking }
 
 class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with Mockito {
   import PathId._
@@ -34,10 +34,11 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     })
   }
 
-  def compactWaitOnSem(appsToDelete: AtomicReference[Set[PathId]],
-                       appVersionsToDelete: AtomicReference[Map[PathId, Set[OffsetDateTime]]],
-                       rootVersionsToDelete: AtomicReference[Set[OffsetDateTime]],
-                       sem: Semaphore): Option[(Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = {
+  def compactWaitOnSem(
+    appsToDelete: AtomicReference[Set[PathId]],
+    appVersionsToDelete: AtomicReference[Map[PathId, Set[OffsetDateTime]]],
+    rootVersionsToDelete: AtomicReference[Set[OffsetDateTime]],
+    sem: Semaphore): Option[(Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = {
     Some((apps, appVersions, roots) => Future {
       appsToDelete.set(apps)
       appVersionsToDelete.set(appVersions)
@@ -46,8 +47,6 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       CompactDone
     })
   }
-
-
 
   private def processReceiveUntil[T <: GcActor[_, _, _]](fsm: TestFSMRef[State, _, T], state: State): State = {
     // give the blocking scan a little time to deliver the message
@@ -62,8 +61,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
   }
 
   case class Fixture(maxVersions: Int)(
-    testScan: Option[() => Future[ScanDone]] = None)(
-    testCompact: Option[(Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = None) {
+      testScan: Option[() => Future[ScanDone]] = None)(
+      testCompact: Option[(Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = None) {
     val store = new InMemoryPersistenceStore()
     val appRepo = AppRepository.inMemRepository(store)
     val groupRepo = GroupRepository.inMemRepository(store, appRepo)
@@ -73,9 +72,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         testScan.fold(super.scan())(_())
       }
 
-      override def compact(appsToDelete: Set[PathId],
-                           appVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
-                           rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {
+      override def compact(
+        appsToDelete: Set[PathId],
+        appVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
+        rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {
         testCompact.fold(super.compact(appsToDelete, appVersionsToDelete, rootVersionsToDelete)) {
           _(appsToDelete, appVersionsToDelete, rootVersionsToDelete)
         }
@@ -196,8 +196,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.actor ! StorePlan(DeploymentPlan(root1, root2, Nil, Timestamp.now()), deployPromise)
         deployPromise.future.isCompleted should be(true)
         f.actor.stateData should equal(
-          UpdatedEntities(appVersionsStored = Map(app1.id -> Set(app1.version.toOffsetDateTime),
-          app2.id -> Set(app2.version.toOffsetDateTime)),
+          UpdatedEntities(
+            appVersionsStored = Map(
+            app1.id -> Set(app1.version.toOffsetDateTime),
+            app2.id -> Set(app2.version.toOffsetDateTime)),
             rootsStored = Set(root1.version.toOffsetDateTime, root2.version.toOffsetDateTime)))
       }
       "remove stores from deletions when scan is done" in {
@@ -211,20 +213,25 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val app2 = AppDefinition("b".toRootPath)
         val root1 = Group("/".toRootPath, Map("a".toRootPath -> app1), Set.empty, Set.empty)
         val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Set.empty, Set.empty)
-        val updates = UpdatedEntities(appVersionsStored = Map(app1.id -> Set(app1.version.toOffsetDateTime),
+        val updates = UpdatedEntities(
+          appVersionsStored = Map(
+          app1.id -> Set(app1.version.toOffsetDateTime),
           app2.id -> Set(app2.version.toOffsetDateTime)),
           rootsStored = Set(root1.version.toOffsetDateTime, root2.version.toOffsetDateTime))
         f.actor.setState(Scanning, updates)
 
         val now = OffsetDateTime.now
-        f.actor ! ScanDone(appsToDelete = Set(app1.id, app2.id, "c".toRootPath),
-          appVersionsToDelete = Map(app1.id -> Set(app1.version.toOffsetDateTime, now),
+        f.actor ! ScanDone(
+          appsToDelete = Set(app1.id, app2.id, "c".toRootPath),
+          appVersionsToDelete = Map(
+            app1.id -> Set(app1.version.toOffsetDateTime, now),
             app2.id -> Set(app2.version.toOffsetDateTime, now),
             "d".toRootPath -> Set(now)),
           rootVersionsToDelete = Set(root1.version.toOffsetDateTime, root2.version.toOffsetDateTime, now))
 
         f.actor.stateName should equal(Compacting)
-        f.actor.stateData should equal(BlockedEntities(appsDeleting = Set("c".toRootPath),
+        f.actor.stateData should equal(BlockedEntities(
+          appsDeleting = Set("c".toRootPath),
           appVersionsDeleting = Map(app1.id -> Set(now), app2.id -> Set(now), "d".toRootPath -> Set(now)),
           rootsDeleting = Set(now)))
 
@@ -273,7 +280,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.actor ! StoreApp("a".toRootPath, Some(now), promise)
         promise.future.isCompleted should be(false)
         f.actor.stateName should be(Compacting)
-        f.actor.stateData should be(BlockedEntities(appVersionsDeleting = Map("a".toRootPath -> Set(now)),
+        f.actor.stateData should be(BlockedEntities(
+          appVersionsDeleting = Map("a".toRootPath -> Set(now)),
           promises = List(promise)))
         f.actor ! CompactDone
         promise.future.isCompleted should be(true)
@@ -446,9 +454,11 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val deployRepo = mock[DeploymentRepositoryImpl[RamId, String, Identity]]
         val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, 25))
         actor.setState(Scanning, UpdatedEntities())
-        val scanResult = ScanDone(appsToDelete = Set("a".toRootPath),
-          appVersionsToDelete = Map("b".toRootPath -> Set(OffsetDateTime.MIN, OffsetDateTime.MAX),
-          "c".toRootPath -> Set(OffsetDateTime.MIN)),
+        val scanResult = ScanDone(
+          appsToDelete = Set("a".toRootPath),
+          appVersionsToDelete = Map(
+            "b".toRootPath -> Set(OffsetDateTime.MIN, OffsetDateTime.MAX),
+            "c".toRootPath -> Set(OffsetDateTime.MIN)),
           rootVersionsToDelete = Set(OffsetDateTime.MIN, OffsetDateTime.MAX))
 
         appRepo.delete(any) returns Future.successful(Done)

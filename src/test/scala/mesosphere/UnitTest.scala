@@ -5,8 +5,8 @@ import java.util.concurrent.TimeUnit
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, BeforeAndAfterEach, Matchers, OptionValues, TryValues, WordSpec, WordSpecLike}
+import com.typesafe.config.{ Config, ConfigFactory }
+import org.scalatest.{ BeforeAndAfter, BeforeAndAfterAll, BeforeAndAfterEach, Matchers, OptionValues, TryValues, WordSpec, WordSpecLike }
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration

@@ -6,20 +6,20 @@ import java.util.UUID
 import akka.Done
 import akka.actor.ActorRefFactory
 import com.fasterxml.uuid.impl.UUIDUtil
-import com.google.protobuf.{ByteString, InvalidProtocolBufferException}
-import com.twitter.util.{Future => TWFuture}
-import com.twitter.zk.{ZNode, ZkClient}
+import com.google.protobuf.{ ByteString, InvalidProtocolBufferException }
+import com.twitter.util.{ Future => TWFuture }
+import com.twitter.zk.{ ZNode, ZkClient }
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.{Protos, StoreCommandFailedException}
-import mesosphere.util.{CapConcurrentExecutions, CapConcurrentExecutionsMetrics}
-import org.apache.zookeeper.{KeeperException, ZooDefs}
-import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
+import mesosphere.marathon.{ Protos, StoreCommandFailedException }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import org.apache.zookeeper.{ KeeperException, ZooDefs }
+import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 // scalastyle:on
 
 case class CompressionConf(enabled: Boolean, sizeLimit: Long)
@@ -171,7 +171,7 @@ case class ZKData(name: String, uuid: UUID, bytes: IndexedSeq[Byte] = Vector.emp
   }
 }
 object ZKData {
-  import IO.{gzipUncompress => uncompress}
+  import IO.{ gzipUncompress => uncompress }
   def apply(bytes: Array[Byte]): ZKData = {
     try {
       val proto = Protos.ZKStoreEntry.parseFrom(bytes)

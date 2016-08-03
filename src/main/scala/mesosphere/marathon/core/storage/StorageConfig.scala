@@ -4,21 +4,21 @@ package mesosphere.marathon.core.storage
 import java.util
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{ActorRefFactory, Scheduler}
+import akka.actor.{ ActorRefFactory, Scheduler }
 import akka.stream.Materializer
-import com.typesafe.config.{Config, ConfigMemorySize}
+import com.typesafe.config.{ Config, ConfigMemorySize }
 import mesosphere.marathon.core.storage.repository.impl.legacy.store._
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
-import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
-import mesosphere.marathon.core.storage.store.impl.zk.{NoRetryPolicy, RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized}
+import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
+import mesosphere.marathon.core.storage.store.impl.memory.{ Identity, InMemoryPersistenceStore, RamId }
+import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonState
-import mesosphere.marathon.util.{RetryConfig, toRichConfig}
+import mesosphere.marathon.util.{ RetryConfig, toRichConfig }
 import org.apache.curator.framework.api.ACLProvider
 import org.apache.curator.framework.imps.GzipCompressionProvider
-import org.apache.curator.framework.{AuthInfo, CuratorFrameworkFactory}
+import org.apache.curator.framework.{ AuthInfo, CuratorFrameworkFactory }
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.ZooDefs
 import org.apache.zookeeper.data.ACL
@@ -26,7 +26,7 @@ import org.apache.zookeeper.data.ACL
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration.{ Duration, _ }
 import scala.reflect.ClassTag
 // scalastyle:on
 
@@ -71,7 +71,7 @@ case class TwitterZk(
 
   protected[storage] lazy val store: PersistentStore = {
     import com.twitter.util.JavaTimer
-    import com.twitter.zk.{AuthInfo, NativeConnector, ZkClient}
+    import com.twitter.zk.{ AuthInfo, NativeConnector, ZkClient }
 
     val authInfo = (username, password) match {
       case (Some(user), Some(pass)) => Some(AuthInfo.digest(user, pass))
@@ -82,7 +82,7 @@ case class TwitterZk(
     val client = ZkClient(connector)
       .withAcl(zkAcl)
       .withRetries(retries)
-     val compressionConf = CompressionConf(enableCompression, compressionThreshold.toBytes)
+    val compressionConf = CompressionConf(enableCompression, compressionThreshold.toBytes)
     new ZKStore(client, client(zkPath), compressionConf, maxConcurrent = maxConcurrent, maxOutstanding = maxOutstanding)
   }
 }

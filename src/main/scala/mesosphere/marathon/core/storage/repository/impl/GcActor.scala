@@ -1,21 +1,21 @@
 package mesosphere.marathon.core.storage.repository.impl
 
 // scalastyle:off
-import java.time.{Duration, Instant, OffsetDateTime}
+import java.time.{ Duration, Instant, OffsetDateTime }
 
 import akka.Done
-import akka.actor.{ActorLogging, ActorRef, ActorRefFactory, FSM, LoggingFSM, Props}
+import akka.actor.{ ActorLogging, ActorRef, ActorRefFactory, FSM, LoggingFSM, Props }
 import akka.pattern._
 import akka.stream.Materializer
 import mesosphere.marathon.core.storage.repository.impl.GcActor._
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{Group, PathId}
+import mesosphere.marathon.state.{ Group, PathId }
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentPlan
 
-import scala.async.Async.{async, await}
-import scala.collection.{SortedSet, mutable}
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.async.Async.{ async, await }
+import scala.collection.{ SortedSet, mutable }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
 // scalastyle:on
 
@@ -85,7 +85,7 @@ private[storage] class GcActor[K, C, S](
       stay
     case Event(_: Message, _) =>
       stay
-      // ignore
+    // ignore
   }
 
   onTransition {
@@ -93,15 +93,23 @@ private[storage] class GcActor[K, C, S](
       lastScanStart = Instant.now()
     case Scanning -> Compacting =>
       lastCompactStart = Instant.now()
-      scanTime.update(Duration.between(lastScanStart, lastCompactStart).toMillis)
+      val scanDuration = Duration.between(lastScanStart, lastCompactStart)
+      log.info(s"Completed scan phase in $scanDuration")
+      scanTime.update(scanDuration.toMillis)
     case Scanning -> Idle =>
-      scanTime.update(Duration.between(lastScanStart, Instant.now).toMillis)
+      val scanDuration = Duration.between(lastScanStart, Instant.now)
+      log.info(s"Completed empty scan in $scanDuration")
+      scanTime.update(scanDuration.toMillis)
     case Compacting -> Idle =>
-      compactTime.update(Duration.between(lastCompactStart, Instant.now).toMillis)
+      val compactDuration = Duration.between(lastCompactStart, Instant.now)
+      log.info(s"Completed compaction in $compactDuration")
+      compactTime.update(compactDuration.toMillis)
       totalGcs.inc()
     case Compacting -> Scanning =>
       lastScanStart = Instant.now()
-      compactTime.update(Duration.between(lastCompactStart, Instant.now).toMillis)
+      val compactDuration = Duration.between(lastCompactStart, Instant.now)
+      log.info(s"Completed compaction in $compactDuration")
+      compactTime.update(compactDuration.toMillis)
       totalGcs.inc()
   }
 
@@ -132,7 +140,8 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
         val (appsToDelete, appVersionsToDelete, rootsToDelete) =
           computeActualDeletions(updates.appsStored, updates.appVersionsStored, updates.rootsStored, done)
         compact(appsToDelete, appVersionsToDelete, rootsToDelete).pipeTo(self)
-        goto(Compacting) using BlockedEntities(appsToDelete, appVersionsToDelete, rootsToDelete, Nil, updates.gcRequested)
+        goto(Compacting) using
+          BlockedEntities(appsToDelete, appVersionsToDelete, rootsToDelete, Nil, updates.gcRequested)
       }
     case Event(StoreApp(appId, Some(version), promise), updates: UpdatedEntities) =>
       promise.success(Done)
@@ -148,7 +157,8 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
     case Event(StorePlan(plan, promise), updates: UpdatedEntities) =>
       promise.success(Done)
       val originalUpdates =
-        addAppVersions(plan.original.transitiveAppsById.mapValues(_.version.toOffsetDateTime),
+        addAppVersions(
+          plan.original.transitiveAppsById.mapValues(_.version.toOffsetDateTime),
           updates.appVersionsStored)
       val allUpdates =
         addAppVersions(plan.target.transitiveAppsById.mapValues(_.version.toOffsetDateTime), originalUpdates)
@@ -179,8 +189,9 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
   def addAppVersions(
     apps: Map[PathId, OffsetDateTime],
     appVersionsStored: Map[PathId, Set[OffsetDateTime]]): Map[PathId, Set[OffsetDateTime]] = {
-    apps.foldLeft(appVersionsStored) { case (appVersions, (pathId, version)) =>
-      appVersions + (pathId -> (appVersions(pathId) + version))
+    apps.foldLeft(appVersionsStored) {
+      case (appVersions, (pathId, version)) =>
+        appVersions + (pathId -> (appVersions(pathId) + version))
     }
   }
 
@@ -300,7 +311,7 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Ac
       }
     case Event(StoreApp(appId, Some(version), promise), blocked: BlockedEntities) =>
       if (blocked.appsDeleting.contains(appId) ||
-          blocked.appVersionsDeleting.get(appId).fold(false)(_.contains(version))) {
+        blocked.appVersionsDeleting.get(appId).fold(false)(_.contains(version))) {
         stay using blocked.copy(promises = promise :: blocked.promises)
       } else {
         promise.success(Done)
@@ -318,7 +329,7 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Ac
       if (blocked.rootsDeleting.contains(root.version) ||
         blocked.appsDeleting.intersect(root.transitiveAppIds.keySet).nonEmpty ||
         blocked.appVersionsDeleting.keySet.intersect(root.transitiveAppIds.keySet).nonEmpty) {
-        stay using blocked.copy(promises =  promise :: blocked.promises)
+        stay using blocked.copy(promises = promise :: blocked.promises)
       } else {
         promise.success(Done)
         stay
@@ -372,17 +383,17 @@ object GcActor {
 
   private[storage] sealed trait Data extends Product with Serializable
   case object IdleData extends Data
-  case class UpdatedEntities(appsStored: Set[PathId] = Set.empty,
-                             appVersionsStored: Map[PathId, Set[OffsetDateTime]] =
-                                Map.empty.withDefaultValue(Set.empty),
-                             rootsStored: Set[OffsetDateTime] = Set.empty,
-                             gcRequested: Boolean = false) extends Data
-  case class BlockedEntities(appsDeleting: Set[PathId] = Set.empty,
-                             appVersionsDeleting: Map[PathId, Set[OffsetDateTime]] =
-                              Map.empty.withDefaultValue(Set.empty),
-                             rootsDeleting: Set[OffsetDateTime] = Set.empty,
-                             promises: List[Promise[Done]] = List.empty,
-                             gcRequested: Boolean = false) extends Data
+  case class UpdatedEntities(
+    appsStored: Set[PathId] = Set.empty,
+    appVersionsStored: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+    rootsStored: Set[OffsetDateTime] = Set.empty,
+    gcRequested: Boolean = false) extends Data
+  case class BlockedEntities(
+    appsDeleting: Set[PathId] = Set.empty,
+    appVersionsDeleting: Map[PathId, Set[OffsetDateTime]] = Map.empty.withDefaultValue(Set.empty),
+    rootsDeleting: Set[OffsetDateTime] = Set.empty,
+    promises: List[Promise[Done]] = List.empty,
+    gcRequested: Boolean = false) extends Data
 
   def props[K, C, S](
     deploymentRepository: DeploymentRepositoryImpl[K, C, S],
@@ -405,9 +416,10 @@ object GcActor {
   }
 
   sealed trait Message extends Product with Serializable
-  case class ScanDone(appsToDelete: Set[PathId] = Set.empty,
-                      appVersionsToDelete: Map[PathId, Set[OffsetDateTime]] = Map.empty,
-    rootVersionsToDelete: Set[OffsetDateTime] = Set.empty) extends Message {
+  case class ScanDone(
+      appsToDelete: Set[PathId] = Set.empty,
+      appVersionsToDelete: Map[PathId, Set[OffsetDateTime]] = Map.empty,
+      rootVersionsToDelete: Set[OffsetDateTime] = Set.empty) extends Message {
     def isEmpty = appsToDelete.isEmpty && appVersionsToDelete.isEmpty && rootVersionsToDelete.isEmpty
   }
   case object RunGC extends Message
