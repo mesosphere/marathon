@@ -345,7 +345,10 @@ object DeploymentPlan {
 
         val createdOrUpdatedApps = plan.createdOrUpdatedApps.map(app => app.id).toSet
         var ports: Int = 0
-        val merged =
+        val allPorts =
+          new mutable.HashMap[Int, mutable.Set[AppDefinition.AppKey]] with mutable.MultiMap[Int, AppDefinition.AppKey]
+
+        val createdOrUpdatedPorts =
           new mutable.HashMap[Int, mutable.Set[AppDefinition.AppKey]] with mutable.MultiMap[Int, AppDefinition.AppKey]
 
         // Add each servicePort <- Application to the map.
@@ -355,12 +358,15 @@ object DeploymentPlan {
           port <- app.servicePorts if port != 0
         } {
           ports += 1
-          merged.addBinding(port, app.id)
+          allPorts.addBinding(port, app.id)
+          if (createdOrUpdatedApps(app.id)) {
+            createdOrUpdatedPorts.addBinding(port, app.id)
+          }
         }
 
         // If the total number of unique ports is equal to the number
         // of requested ports then we know there are no conflicts.
-        if (merged.size == ports) {
+        if (allPorts.size == ports) {
           Success
         } else {
           // Otherwise we find all ports that have more than 1 app
@@ -369,13 +375,21 @@ object DeploymentPlan {
           // We report all the conflicting apps along with which other
           // apps they conflict with.
           val violations = for {
-            // only yield port as conflict if createdOrUpdatedApps are involved and therefore in the intersection set
-            (port, apps) <- merged if apps.size > 1 && apps.intersect(createdOrUpdatedApps).nonEmpty
+            // only yield port as conflict if it is used in createdOrUpdated application and additionally in another
+            // (changed or unchanged) application.
+            // To check if it is bigger then 2:
+            // 1 = only present in allPorts (not a changed port)
+            // 2 = present in createdOrUpdated and in allPorts. No problem, app must be in both sets.
+            // 3 = present more then once in createdOrUpdated or in allPorts -> conflict
+            (port, apps) <- createdOrUpdatedPorts if (apps.size + allPorts.getOrElse(port, Seq.empty).size) > 2
             app <- apps
-          } yield RuleViolation(
-            app,
-            s"Requested service port $port is used by more than 1 app: ${apps.mkString(", ")}",
-            None)
+          } yield {
+            val affectedApps = apps ++ allPorts.getOrElse(port, Seq.empty)
+            RuleViolation(
+              app,
+              s"Requested service port $port is used by more than 1 app: ${affectedApps.mkString(", ")}",
+              None)
+          }
 
           if (violations.isEmpty) {
             Success
