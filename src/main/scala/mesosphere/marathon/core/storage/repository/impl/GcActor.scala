@@ -212,6 +212,10 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
           }
         }
       }
+    }.recover {
+      case NonFatal(e) =>
+        log.error("Error while scanning for unused roots {}: {}", e, Option(e.getMessage).getOrElse(""))
+        ScanDone()
     }
   }
 
@@ -255,7 +259,6 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
 
     async {
       val inUseRootFuture = rootsInUse()
-
       val allAppIdsFuture = appRepository.ids().runWith(Sink.set)
       val allAppIds = await(allAppIdsFuture)
       val inUseRoots = await(inUseRootFuture)
@@ -270,6 +273,10 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
 
       val appsToCompletelyDelete = allAppIds.diff(usedApps.keySet)
       ScanDone(appsToCompletelyDelete, appVersionsToDelete, rootsToDelete)
+    }.recover {
+      case NonFatal(e) =>
+        log.error("Error while scanning for unused apps {}: {}", e, Option(e.getMessage).getOrElse(""))
+        ScanDone()
     }
   }
 }
@@ -329,8 +336,7 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Ac
     rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {
     async {
       if (rootVersionsToDelete.nonEmpty) {
-        log.info(s"Deleting Root Versions ${rootVersionsToDelete.mkString(", ")} as there are currently " +
-          s"${rootVersionsToDelete.size} which exceeds the maximum size $maxVersions and nothing refers to them anymore.")
+        log.info(s"Deleting Root Versions ${rootVersionsToDelete.mkString(", ")} as nothing refers to them anymore.")
       }
       if (appsToDelete.nonEmpty) {
         log.info(s"Deleting Applications: (${appsToDelete.mkString(", ")}) as no roots refer to them")
@@ -352,7 +358,7 @@ private[storage] trait CompactBehavior[K, C, S] { this: FSM[State, Data] with Ac
       CompactDone
     }.recover {
       case NonFatal(e) =>
-        log.error("While deleting unused objects, encountered an error", e)
+        log.error("While deleting unused objects, encountered an error {}: {}", e, Option(e.getMessage).getOrElse(""))
         CompactDone
     }
   }

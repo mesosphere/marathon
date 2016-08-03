@@ -5,22 +5,27 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.Done
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.{TestFSMRef, TestKitBase}
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.storage.repository.impl.GcActor._
-import mesosphere.marathon.core.storage.repository.impl.{GcActor, StoredGroup}
-import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.core.storage.repository.impl.{AppRepositoryImpl, DeploymentRepositoryImpl, GcActor, StoredGroup, StoredGroupRepositoryImpl}
+import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
+import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.GivenWhenThen
 
+import scala.collection.immutable.Seq
 import scala.concurrent.{Future, Promise, blocking}
 
-class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen {
+class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with Mockito {
   import PathId._
   implicit val metrics = new Metrics(new MetricRegistry)
+
   // scalastyle:off
   def scanWaitOnSem(sem: Semaphore): Option[() => Future[ScanDone]] = {
     Some(() => Future {
@@ -47,9 +52,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen {
   private def processReceiveUntil[T <: GcActor[_, _, _]](fsm: TestFSMRef[State, _, T], state: State): State = {
     // give the blocking scan a little time to deliver the message
     var done = 0
-    while (done < 50) {
+    while (done < 500) {
+      Thread.`yield`()
       Thread.sleep(1)
-      if (fsm.stateName == state) done = 50
+      if (fsm.stateName == state) done = 500
       else done += 1
     }
     fsm.stateName
@@ -194,7 +200,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen {
           app2.id -> Set(app2.version.toOffsetDateTime)),
             rootsStored = Set(root1.version.toOffsetDateTime, root2.version.toOffsetDateTime)))
       }
-      "remove stores when scan is done" in {
+      "remove stores from deletions when scan is done" in {
         val sem = new Semaphore(0)
         val compactedAppIds = new AtomicReference[Set[PathId]]()
         val compactedAppVersions = new AtomicReference[Map[PathId, Set[OffsetDateTime]]]()
@@ -326,6 +332,140 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen {
         f.actor ! CompactDone
         processReceiveUntil(f.actor, Idle) should be(Idle)
         promise.future.isCompleted should be(true)
+      }
+    }
+    "actually running" should {
+      "ignore scan errors on roots" in {
+        val store = new InMemoryPersistenceStore()
+        val appRepo = AppRepository.inMemRepository(store)
+        val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
+        val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, 1)
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, 1))
+        groupRepo.rootVersions() returns Source(Seq(OffsetDateTime.now(), OffsetDateTime.MIN, OffsetDateTime.MAX))
+        groupRepo.root() returns Future.failed(new Exception)
+        actor ! RunGC
+        processReceiveUntil(actor, Idle) should be(Idle)
+      }
+      "ignore scan errors on apps" in {
+        val store = new InMemoryPersistenceStore()
+        val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
+        val groupRepo = GroupRepository.inMemRepository(store, appRepo)
+        val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, 2)
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, 2))
+        val root1 = Group("/".toRootPath)
+        val root2 = Group("/".toRootPath)
+        val root3 = Group("/".toRootPath)
+        Seq(root1, root2, root3).foreach(groupRepo.storeRoot(_, Nil, Nil).futureValue)
+        appRepo.ids returns Source.failed(new Exception)
+        actor ! RunGC
+        processReceiveUntil(actor, Idle) should be(Idle)
+      }
+      "ignore errors when compacting" in {
+        val store = new InMemoryPersistenceStore()
+        val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
+        val groupRepo = GroupRepository.inMemRepository(store, appRepo)
+        val deployRepo = DeploymentRepository.inMemRepository(store, groupRepo, appRepo, 2)
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, 2))
+        actor.setState(Scanning, UpdatedEntities())
+        appRepo.delete(any) returns Future.failed(new Exception)
+        actor ! ScanDone(appsToDelete = Set("a".toRootPath))
+        processReceiveUntil(actor, Idle) should be(Idle)
+      }
+      "do nothing if there are less than max roots" in {
+        val sem = new Semaphore(0)
+        val compactedAppIds = new AtomicReference[Set[PathId]]()
+        val compactedAppVersions = new AtomicReference[Map[PathId, Set[OffsetDateTime]]]()
+        val compactedRoots = new AtomicReference[Set[OffsetDateTime]]()
+        val f = Fixture(2)()(compactWaitOnSem(compactedAppIds, compactedAppVersions, compactedRoots, sem))
+        val root1 = Group("/".toRootPath)
+        val root2 = Group("/".toRootPath)
+        Seq(root1, root2).foreach(f.groupRepo.storeRoot(_, Nil, Nil).futureValue)
+        f.actor ! RunGC
+        sem.release()
+        processReceiveUntil(f.actor, Idle) should be(Idle)
+        // compact shouldn't have been called.
+        Option(compactedAppIds.get) should be('empty)
+        Option(compactedAppVersions.get) should be('empty)
+        Option(compactedRoots.get) should be('empty)
+      }
+      "do nothing if all of the roots are in use" in {
+        val sem = new Semaphore(0)
+        val compactedAppIds = new AtomicReference[Set[PathId]]()
+        val compactedAppVersions = new AtomicReference[Map[PathId, Set[OffsetDateTime]]]()
+        val compactedRoots = new AtomicReference[Set[OffsetDateTime]]()
+        val f = Fixture(1)()(compactWaitOnSem(compactedAppIds, compactedAppVersions, compactedRoots, sem))
+        val root1 = Group("/".toRootPath)
+        val root2 = Group("/".toRootPath)
+        Seq(root1, root2).foreach(f.groupRepo.storeRoot(_, Nil, Nil).futureValue)
+        val plan = DeploymentPlan(root1, root2)
+        f.deployRepo.store(plan).futureValue
+
+        f.actor ! RunGC
+        sem.release()
+        processReceiveUntil(f.actor, Idle) should be(Idle)
+        // compact shouldn't have been called.
+        Option(compactedAppIds.get) should be('empty)
+        Option(compactedAppVersions.get) should be('empty)
+        Option(compactedRoots.get) should be('empty)
+      }
+      "delete unused apps and roots" in {
+        val f = Fixture(1)()()
+        val dApp1 = AppDefinition("a".toRootPath)
+        val dApp2 = AppDefinition("b".toRootPath)
+        val dApp1V2 = dApp1.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(7)))
+        val app3 = AppDefinition("c".toRootPath)
+        f.appRepo.store(dApp1).futureValue
+        f.appRepo.storeVersion(dApp2).futureValue
+        f.appRepo.store(app3)
+        val dRoot1 = Group("/".toRootPath, Map(dApp1.id -> dApp1), version = Timestamp(1))
+        f.groupRepo.storeRoot(dRoot1, dRoot1.transitiveApps.toVector, Seq(dApp2.id)).futureValue
+
+        val root2 = Group("/".toRootPath, Map(app3.id -> app3, dApp1V2.id -> dApp1V2), version = Timestamp(2))
+        val root3 = Group("/".toRootPath, version = Timestamp(3))
+        val root4 = Group("/".toRootPath, Map(dApp1V2.id -> dApp1V2), version = Timestamp(4))
+        f.groupRepo.storeRoot(root2, root2.transitiveApps.toVector, Nil).futureValue
+        f.groupRepo.storeRoot(root3, Nil, Nil).futureValue
+
+        val plan = DeploymentPlan(root2, root3)
+        f.deployRepo.store(plan).futureValue
+        f.groupRepo.storeRoot(root4, Nil, Nil).futureValue
+
+        f.actor ! RunGC
+        processReceiveUntil(f.actor, Idle) should be(Idle)
+        // dApp1 -> delete only dApp1.version, dApp2 -> full delete, dRoot1 -> delete
+        f.appRepo.ids().runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dApp1.id, app3.id)
+        f.appRepo.versions(dApp1.id).runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(dApp1V2.version.toOffsetDateTime)
+        f.groupRepo.rootVersions().mapAsync(Int.MaxValue)(f.groupRepo.rootVersion).collect {
+          case Some(g) => g
+        }.runWith(Sink.seq).futureValue should
+          contain theSameElementsAs Seq(root2, root3, root4)
+      }
+      "actually delete the requested objects" in {
+        val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
+        val groupRepo = mock[StoredGroupRepositoryImpl[RamId, String, Identity]]
+        val deployRepo = mock[DeploymentRepositoryImpl[RamId, String, Identity]]
+        val actor = TestFSMRef(new GcActor(deployRepo, groupRepo, appRepo, 25))
+        actor.setState(Scanning, UpdatedEntities())
+        val scanResult = ScanDone(appsToDelete = Set("a".toRootPath),
+          appVersionsToDelete = Map("b".toRootPath -> Set(OffsetDateTime.MIN, OffsetDateTime.MAX),
+          "c".toRootPath -> Set(OffsetDateTime.MIN)),
+          rootVersionsToDelete = Set(OffsetDateTime.MIN, OffsetDateTime.MAX))
+
+        appRepo.delete(any) returns Future.successful(Done)
+        appRepo.deleteVersion(any, any) returns Future.successful(Done)
+        groupRepo.deleteRootVersion(any) returns Future.successful(Done)
+
+        actor ! scanResult
+
+        verify(appRepo).delete("a".toRootPath)
+        verify(appRepo).deleteVersion("b".toRootPath, OffsetDateTime.MIN)
+        verify(appRepo).deleteVersion("b".toRootPath, OffsetDateTime.MAX)
+        verify(appRepo).deleteVersion("c".toRootPath, OffsetDateTime.MIN)
+        verify(groupRepo).deleteRootVersion(OffsetDateTime.MIN)
+        verify(groupRepo).deleteRootVersion(OffsetDateTime.MAX)
+        noMoreInteractions(appRepo)
+        noMoreInteractions(groupRepo)
+        noMoreInteractions(deployRepo)
       }
     }
   }
