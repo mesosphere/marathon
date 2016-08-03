@@ -469,7 +469,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val result = validate(deploymentPlan)(f.validator)
 
     Then("the validation returns an error")
-    result shouldBe a [Failure]
+    result shouldBe a[Failure]
     ValidationHelper.getAllRuleConstrains(result).head.message should include ("used by more than 1 app")
     ValidationHelper.getAllRuleConstrains(result).head.message should include ("/foo, /bar")
   }
@@ -517,7 +517,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val result = validate(deploymentPlan)(f.validator)
 
     Then("the validation returns an error")
-    result shouldBe a [Failure]
+    result shouldBe a[Failure]
     ValidationHelper.getAllRuleConstrains(result).head.message should include ("used by more than 1 app")
     ValidationHelper.getAllRuleConstrains(result).head.message should include ("/foo, /bar")
   }
@@ -572,7 +572,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val result = validate(deploymentPlan)(f.validator)
 
     Then("the validation returns no error, altthough a validation error exists (but not in created or udpated apps)")
-    result shouldBe a [Failure]
+    result shouldBe a[Failure]
     ValidationHelper.getAllRuleConstrains(result).head.message should include ("used by more than 1 app")
     ValidationHelper.getAllRuleConstrains(result).head.message should include ("/foo, /foo2, /bar")
   }
