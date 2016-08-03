@@ -377,7 +377,11 @@ object DeploymentPlan {
             s"Requested service port $port is used by more than 1 app: ${apps.mkString(", ")}",
             None)
 
-          Failure(violations.toSet)
+          if (violations.isEmpty) {
+            Success
+          } else {
+            Failure(violations.toSet)
+          }
         }
       }
     }
