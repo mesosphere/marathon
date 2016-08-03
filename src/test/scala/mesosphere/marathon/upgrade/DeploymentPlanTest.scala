@@ -449,23 +449,21 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
                                                                              |See: http://zookeeper.apache.org/doc/r3.3.1/zookeeperAdmin.html#Unsafe+Options""".stripMargin)
   }
 
-  test("Deployment plan validates that there are no service ports conflicts") {
+  test("Deployment plan validates that there are no service ports conflicts - one application involved, other not") {
     import MarathonTestHelper.Implicits._
 
     Given("a deployment with duplicated service ports")
     val f = new Fixture()
-    val appFoo = AppDefinition(id = "/foo/app".toRootPath).withPortMappings(
+    val appFoo = AppDefinition(id = "/foo".toRootPath).withPortMappings(
       Seq(PortMapping(hostPort = Some(0), containerPort = 0, servicePort = 123))
     ).withDockerNetwork(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)
-    val groupFoo = Group(id = "/foo".toRootPath, apps = Map(appFoo.id -> appFoo))
 
-    val appBar = appFoo.copy(id = "/bar/app".toRootPath)
-    val groupBar = Group(id = "/bar".toRootPath, apps = Map(appBar.id -> appBar))
+    val appBar = appFoo.copy(id = "/bar".toRootPath)
 
-    val root = Group.empty.copy(groups = Set(groupFoo, groupBar))
+    val group = Group(id = "/foo".toRootPath, apps = Map(appFoo.id -> appFoo, appBar.id -> appBar))
 
     val steps = Seq(DeploymentStep(Seq(StartApplication(appBar, 1))))
-    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, root, root, steps, Timestamp.now())
+    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, group, group, steps, Timestamp.now())
 
     When("validating the deployment plan")
     val result = validate(deploymentPlan)(f.validator)
@@ -475,22 +473,72 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     ValidationHelper.getAllRuleConstrains(result).head.message should include ("used by more than 1 app")
   }
 
-  test("Deployment plan validates that there are no service ports conflicts only in created or updated apps") {
+  test("Deployment plan validates that there are no service ports conflicts - no application involved") {
     import MarathonTestHelper.Implicits._
 
     Given("a deployment with duplicated service ports")
     val f = new Fixture()
-    val appFoo = AppDefinition(id = "/foo/app".toRootPath).withPortMappings(
+    val appFoo = AppDefinition(id = "/foo".toRootPath).withPortMappings(
       Seq(PortMapping(hostPort = Some(0), containerPort = 0, servicePort = 123))
     ).withDockerNetwork(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)
-    val groupFoo = Group(id = "/foo".toRootPath, apps = Map(appFoo.id -> appFoo))
 
-    val appBar = appFoo.copy(id = "/bar/app".toRootPath)
-    val groupBar = Group(id = "/bar".toRootPath, apps = Map(appBar.id -> appBar))
+    val appBar = appFoo.copy(id = "/bar".toRootPath)
 
-    val root = Group.empty.copy(groups = Set(groupFoo, groupBar))
+    val group = Group(id = "/foo".toRootPath, apps = Map(appFoo.id -> appFoo, appBar.id -> appBar))
 
-    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, root, root, Seq.empty, Timestamp.now())
+    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, group, group, Seq.empty, Timestamp.now())
+
+    When("validating the deployment plan")
+    val result = validate(deploymentPlan)(f.validator)
+
+    Then("the validation returns no error, altthough a validation error exists (but not in created or udpated apps)")
+    result should be (Success)
+    ValidationHelper.getAllRuleConstrains(result) should have size 0
+  }
+
+  test("Deployment plan validates that there are no service ports conflicts - both application involved") {
+    import MarathonTestHelper.Implicits._
+
+    Given("a deployment with duplicated service ports")
+    val f = new Fixture()
+    val appFoo = AppDefinition(id = "/foo".toRootPath).withPortMappings(
+      Seq(PortMapping(hostPort = Some(0), containerPort = 0, servicePort = 123))
+    ).withDockerNetwork(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)
+
+    val appBar = appFoo.copy(id = "/bar".toRootPath)
+
+    val group = Group(id = "/foo".toRootPath, apps = Map(appFoo.id -> appFoo, appBar.id -> appBar))
+
+    val steps = Seq(DeploymentStep(Seq(StartApplication(appBar, 1), StartApplication(appFoo, 1))))
+    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, group, group, steps, Timestamp.now())
+
+    When("validating the deployment plan")
+    val result = validate(deploymentPlan)(f.validator)
+
+    Then("the validation returns an error")
+    result shouldBe a [Failure]
+    ValidationHelper.getAllRuleConstrains(result).head.message should include ("used by more than 1 app")
+  }
+
+  test("Deployment plan validates that there are no service ports conflicts - one application involved, two conflicting not") {
+    import MarathonTestHelper.Implicits._
+
+    Given("a deployment with duplicated service ports")
+    val f = new Fixture()
+    val appFoo = AppDefinition(id = "/foo".toRootPath).withPortMappings(
+      Seq(PortMapping(hostPort = Some(0), containerPort = 0, servicePort = 123))
+    ).withDockerNetwork(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)
+
+    val appFoo2 = appFoo.copy(id = "/foo2".toRootPath)
+
+    val appBar = appFoo.copy(id = "/bar".toRootPath).withPortMappings(
+      Seq(PortMapping(hostPort = Some(0), containerPort = 0, servicePort = 124))
+    )
+
+    val group = Group(id = "/foo".toRootPath, apps = Map(appFoo.id -> appFoo, appBar.id -> appBar, appFoo2.id -> appFoo2))
+
+    val steps = Seq(DeploymentStep(Seq(StartApplication(appBar, 1))))
+    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, group, group, steps, Timestamp.now())
 
     When("validating the deployment plan")
     val result = validate(deploymentPlan)(f.validator)
