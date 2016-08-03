@@ -36,10 +36,9 @@ private[storage] case class StoredGroup(
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
 
   def resolve(
-    groupRepository: GroupRepository,
     appRepository: AppRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
     val appFutures = appIds.map { case (appId, appVersion) => appRepository.getVersion(appId, appVersion) }
-    val groupFutures = storedGroups.map(_.resolve(groupRepository, appRepository))
+    val groupFutures = storedGroups.map(_.resolve(appRepository))
 
     val apps: Map[PathId, AppDefinition] = await(Future.sequence(appFutures)).collect {
       case Some(app: AppDefinition) =>
@@ -142,7 +141,7 @@ class StoredGroupRepositoryImpl[K, C, S](
 
   private[storage] def underlyingRoot(): Future[Group] = async {
     val root = await(storedRepo.get(RootId))
-    val resolved = root.map(_.resolve(this, appRepository))
+    val resolved = root.map(_.resolve(appRepository))
     resolved match {
       case Some(x) => await(x)
       case None => Group.empty
@@ -158,7 +157,7 @@ class StoredGroupRepositoryImpl[K, C, S](
             rootFuture = promise.future
           }
           val unresolved = await(storedRepo.get(RootId))
-          val newRoot = unresolved.map(_.resolve(this, appRepository)) match {
+          val newRoot = unresolved.map(_.resolve(appRepository)) match {
             case Some(group) =>
               await(group)
             case None =>
@@ -176,7 +175,7 @@ class StoredGroupRepositoryImpl[K, C, S](
 
   override def rootVersion(version: OffsetDateTime): Future[Option[Group]] = async {
     val unresolved = await(storedRepo.getVersion(RootId, version))
-    unresolved.map(_.resolve(this, appRepository)) match {
+    unresolved.map(_.resolve(appRepository)) match {
       case Some(group) =>
         Some(await(group))
       case None =>

@@ -165,7 +165,7 @@ private[storage] trait ScanBehavior[K, C, S] { this: FSM[State, Data] with Actor
     rootsStored: Set[OffsetDateTime],
     scanDone: ScanDone): (Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) = {
     val ScanDone(appsToDelete, appVersionsToDelete, rootVersionsToDelete) = scanDone
-    val appsToActuallyDelete = appsToDelete.diff(appsStored)
+    val appsToActuallyDelete = appsToDelete.diff(appsStored.union(appVersionsStored.keySet))
     val appVersionsToActuallyDelete = appVersionsToDelete.map {
       case (id, versions) =>
         appVersionsStored.get(id).fold(id -> versions) { versionsStored =>
