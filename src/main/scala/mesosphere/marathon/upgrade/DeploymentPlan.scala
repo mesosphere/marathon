@@ -343,18 +343,19 @@ object DeploymentPlan {
         // We keep track of the total number of ports to support an
         // early exit condition.
 
+        val requestedPorts = plan.createdOrUpdatedApps.flatMap(_.servicePorts.filter(_ != 0)).toSet
         var ports: Int = 0
         val merged =
-          new mutable.HashMap[Int, mutable.Set[AppDefinition.AppKey]] with mutable.MultiMap[Int, AppDefinition.AppKey]
+          new mutable.HashMap[Int, mutable.Set[AppDefinition]] with mutable.MultiMap[Int, AppDefinition]
 
         // Add each servicePort <- Application to the map.
         for {
           app <- plan.target.transitiveApps
           // We ignore randomly assigned ports identified by `0`.
-          port <- app.servicePorts if port != 0
+          port <- app.servicePorts if port != 0 && requestedPorts(port)
         } {
           ports += 1
-          merged.addBinding(port, app.id)
+          merged.addBinding(port, app)
         }
 
         // If the total number of unique ports is equal to the number
@@ -367,23 +368,15 @@ object DeploymentPlan {
 
           // We report all the conflicting apps along with which other
           // apps they conflict with.
-          val requestedPorts = plan.createdOrUpdatedApps.flatMap(_.servicePorts.filter(_ != 0)).toSet
-          val violations: Set[Violation] = for {
-            app <- plan.target.transitiveApps
-            port <- app.servicePorts if port != 0 && requestedPorts(port) && merged.getOrElse(port, Seq.empty).size > 1
-          } yield {
-            val affectedApps = merged(port)
-            RuleViolation(
-              app,
-              s"Requested service port $port is used by more than 1 app: ${affectedApps.mkString(", ")}",
-              None)
+          val violations = merged.filter(_._2.size > 1).map {
+            case (port, apps) =>
+              RuleViolation(
+                apps.head,
+                s"Requested service port $port is used by more than 1 app: ${apps.map(a => a.id).mkString(", ")}",
+                None)
           }
 
-          if (violations.isEmpty) {
-            Success
-          } else {
-            Failure(violations)
-          }
+          Failure(violations.toSet)
         }
       }
     }
