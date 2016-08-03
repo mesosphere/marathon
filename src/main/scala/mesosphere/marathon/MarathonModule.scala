@@ -36,6 +36,10 @@ import org.apache.mesos.Scheduler
 import org.apache.mesos.state.ZooKeeperState
 import org.slf4j.LoggerFactory
 
+import mesosphere.marathon.core.launcher.TaskOpFactory
+import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
+import mesosphere.mesos.{ InMemRejectOfferCollector, RejectOfferCollector }
+
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
@@ -81,6 +85,10 @@ class MarathonModule(conf: MarathonConf, http: HttpConf)
     bind(classOf[MarathonSchedulerDriverHolder]).in(Scopes.SINGLETON)
     bind(classOf[SchedulerDriverFactory]).to(classOf[MesosSchedulerDriverFactory]).in(Scopes.SINGLETON)
     bind(classOf[MarathonSchedulerService]).in(Scopes.SINGLETON)
+
+    bind(classOf[RejectOfferCollector]).to(classOf[InMemRejectOfferCollector]).in(Scopes.SINGLETON)
+    bind(classOf[TaskOpFactory]).to(classOf[TaskOpFactoryImpl]).in(Scopes.SINGLETON)
+
     bind(classOf[DeploymentService]).to(classOf[MarathonSchedulerService])
 
     bind(classOf[String])

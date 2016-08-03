@@ -8,7 +8,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state.{ AppDefinition, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
-
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
@@ -22,7 +21,8 @@ class TaskBuilder(
     runSpec: RunSpec,
     newTaskId: PathId => Task.Id,
     config: MarathonConf,
-    appTaskProc: Option[RunSpecTaskProcessor] = None) {
+    appTaskProc: Option[RunSpecTaskProcessor] = None,
+    rejectionCollectorOpt: Option[RejectOfferCollector]) {
 
   import TaskBuilder.log
 
@@ -79,7 +79,7 @@ class TaskBuilder(
 
     val resourceMatch =
       ResourceMatcher.matchResources(
-        offer, runSpec, runningTasks, ResourceSelector.any(acceptedResourceRoles))
+        offer, runSpec, runningTasks, ResourceSelector.any(acceptedResourceRoles), rejectionCollectorOpt)
 
     build(offer, resourceMatch)
   }

@@ -32,6 +32,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
 import mesosphere.marathon.{ DeploymentService, MarathonConf, MarathonSchedulerDriverHolder, ModuleNames }
 import mesosphere.util.CapConcurrentExecutions
+import mesosphere.mesos.RejectOfferCollector
 
 import scala.util.Random
 
@@ -60,6 +61,7 @@ class CoreModuleImpl @Inject() (
   scheduler: Provider[DeploymentService],
   @Named(ModuleNames.SERIALIZE_GROUP_UPDATES) serializeUpdates: CapConcurrentExecutions,
   taskStatusUpdateSteps: Seq[TaskUpdateStep],
+  rejectionCollector: RejectOfferCollector,
   @Named(ModuleNames.STORE_EVENT_SUBSCRIBERS) eventSubscribersStore: EntityStore[EventSubscribers])
     extends CoreModule {
 
@@ -126,6 +128,7 @@ class CoreModuleImpl @Inject() (
       offerMatcherReconcilerModule.offerMatcherReconciler,
       offerMatcherManagerModule.globalOfferMatcher
     ),
+    rejectionCollector,
     pluginModule.pluginManager
   )
 

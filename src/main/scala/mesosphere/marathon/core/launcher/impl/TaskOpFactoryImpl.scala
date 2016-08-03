@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launcher.impl
 
+import com.google.inject.Inject
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
@@ -10,7 +11,7 @@ import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
 import mesosphere.marathon.state.{ ResourceRole, RunSpec }
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
-import mesosphere.mesos.{ PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
+import mesosphere.mesos.{ RejectOfferCollector, PersistentVolumeMatcher, ResourceMatcher, TaskBuilder }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 import org.slf4j.LoggerFactory
@@ -18,9 +19,10 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-class TaskOpFactoryImpl(
+class TaskOpFactoryImpl @Inject() (
   config: MarathonConf,
   clock: Clock,
+  rejectionCollector: RejectOfferCollector,
   pluginManager: PluginManager = PluginManager.None)
     extends TaskOpFactory {
 
@@ -47,25 +49,26 @@ class TaskOpFactoryImpl(
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values).map {
-      case (taskInfo, ports) =>
-        val task = Task.LaunchedEphemeral(
-          taskId = Task.Id(taskInfo.getTaskId),
-          agentInfo = Task.AgentInfo(
-            host = offer.getHostname,
-            agentId = Some(offer.getSlaveId.getValue),
-            attributes = offer.getAttributesList.asScala
-          ),
-          runSpecVersion = runSpec.version,
-          status = Task.Status(
-            stagedAt = clock.now(),
-            taskStatus = MarathonTaskStatus.Created
-          ),
-          hostPorts = ports.flatten
-        )
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc), Some(rejectionCollector))
+      .buildIfMatches(offer, tasks.values).map {
+        case (taskInfo, ports) =>
+          val task = Task.LaunchedEphemeral(
+            taskId = Task.Id(taskInfo.getTaskId),
+            agentInfo = Task.AgentInfo(
+              host = offer.getHostname,
+              agentId = Some(offer.getSlaveId.getValue),
+              attributes = offer.getAttributesList.asScala
+            ),
+            runSpecVersion = runSpec.version,
+            status = Task.Status(
+              stagedAt = clock.now(),
+              taskStatus = MarathonTaskStatus.Created
+            ),
+            hostPorts = ports.flatten
+          )
 
-        taskOperationFactory.launchEphemeral(taskInfo, task)
-    }
+          taskOperationFactory.launchEphemeral(taskInfo, task)
+      }
   }
 
   private[this] def inferForResidents(request: TaskOpFactory.Request): Option[TaskOp] = {
@@ -102,7 +105,8 @@ class TaskOpFactoryImpl(
         val matchingReservedResourcesWithoutVolumes =
           ResourceMatcher.matchResources(
             offer, runSpec, tasksToConsiderForConstraints.values,
-            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
+            ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels),
+            Some(rejectionCollector)
           )
 
         matchingReservedResourcesWithoutVolumes.flatMap { otherResourcesMatch =>
@@ -123,7 +127,8 @@ class TaskOpFactoryImpl(
       val matchingResourcesForReservation =
         ResourceMatcher.matchResources(
           offer, runSpec, tasks.values,
-          ResourceSelector.reservable
+          ResourceSelector.reservable,
+          Some(rejectionCollector)
         )
       matchingResourcesForReservation.map { resourceMatch =>
         reserveAndCreateVolumes(request.frameworkId, runSpec, offer, resourceMatch)
@@ -141,19 +146,20 @@ class TaskOpFactoryImpl(
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
-      case (taskInfo, ports) =>
-        val taskStateOp = TaskStateOp.LaunchOnReservation(
-          task.taskId,
-          runSpecVersion = spec.version,
-          status = Task.Status(
-            stagedAt = clock.now(),
-            taskStatus = MarathonTaskStatus.Created
-          ),
-          hostPorts = ports.flatten)
+    new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc), Some(rejectionCollector))
+      .build(offer, resourceMatch, volumeMatch) map {
+        case (taskInfo, ports) =>
+          val taskStateOp = TaskStateOp.LaunchOnReservation(
+            task.taskId,
+            runSpecVersion = spec.version,
+            status = Task.Status(
+              stagedAt = clock.now(),
+              taskStatus = MarathonTaskStatus.Created
+            ),
+            hostPorts = ports.flatten)
 
-        taskOperationFactory.launchOnReservation(taskInfo, taskStateOp, task)
-    }
+          taskOperationFactory.launchOnReservation(taskInfo, taskStateOp, task)
+      }
   }
 
   private[this] def reserveAndCreateVolumes(

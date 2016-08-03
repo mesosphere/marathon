@@ -277,7 +277,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(portsResource.getRole == "marathon")
   }
 
-  test("build creates task for DOCKER container using relative hostPath") {
+  test("build creates task for DOCKER container using named, external [DockerVolume] volumes") {
     val offer = MarathonTestHelper.makeBasicOffer(
       cpus = 2.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000
     ).build
@@ -1052,7 +1052,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val builder = new TaskBuilder(
       app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None, None)
 
     val task = builder.buildIfMatches(offer, s)
 
@@ -1076,7 +1076,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val builder = new TaskBuilder(
       app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None, None)
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
@@ -1128,7 +1128,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     val builder = new TaskBuilder(
       app,
-      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+      s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None, None)
 
     def shouldBuildTask(message: String, offer: Offer) {
       val Some((taskInfo, ports)) = builder.buildIfMatches(offer, runningTasks)
@@ -1642,7 +1642,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     )
 
     val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
-    val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig())
+    val builder = new TaskBuilder(app, s => Task.Id(s.toString), MarathonTestHelper.defaultConfig(), None, None)
     val runningTasks = Set.empty[Task]
     val task = builder.buildIfMatches(offer, runningTasks)
 
@@ -1669,7 +1669,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       MarathonTestHelper.defaultConfig(
         mesosRole = mesosRole,
         acceptedResourceRoles = acceptedResourceRoles,
-        envVarsPrefix = envVarsPrefix))
+        envVarsPrefix = envVarsPrefix), None, None)
 
     builder.buildIfMatches(offer, Iterable.empty)
   }

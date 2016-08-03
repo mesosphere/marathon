@@ -126,7 +126,7 @@ object ResourceMatcher {
     * the reservation.
     */
   def matchResources(offer: Offer, runSpec: RunSpec, runningTasks: => Iterable[Task],
-    selector: ResourceSelector): Option[ResourceMatch] = {
+    selector: ResourceSelector, rejectCollectorOpt: Option[RejectOfferCollector] = None): Option[ResourceMatch] = {
 
     val groupedResources: Map[Role, mutable.Buffer[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName)
 
@@ -151,7 +151,7 @@ object ResourceMatcher {
 
     def portsMatchOpt: Option[PortsMatch] = new PortsMatcher(runSpec, offer, selector).portsMatch
 
-    def meetsAllConstraints: Boolean = {
+    def rejectedConstraints = {
       lazy val tasks =
         runningTasks.filter(_.launched.exists(_.runSpecVersion >= runSpec.versionInfo.lastConfigChangeVersion))
       val badConstraints = runSpec.constraints.filterNot { constraint =>
@@ -165,17 +165,20 @@ object ResourceMatcher {
         )
       }
 
-      badConstraints.isEmpty
+      badConstraints
     }
 
-    if (scalarMatchResults.forall(_.matches)) {
+    if (scalarMatchResults.forall(_.matches) && rejectedConstraints.isEmpty) {
       for {
         portsMatch <- portsMatchOpt
-        if meetsAllConstraints
       } yield ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch)
     } else {
+      rejectCollectorOpt.map(_.addRejection(
+        runSpec.id,
+        new RejectionReason(scalarMatchResults.collect { case m: NoMatch => m }.toSet, rejectedConstraints)))
       None
     }
+
   }
 
   private[this] def matchScalarResource(

@@ -13,6 +13,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId._
+import mesosphere.mesos.RejectOfferCollector
 import play.api.libs.json.Json
 
 import scala.concurrent.duration._
@@ -24,7 +25,8 @@ class QueueResource @Inject() (
     launchQueue: LaunchQueue,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val config: MarathonConf) extends AuthResource {
+    val config: MarathonConf,
+    val rejectOfferCollector: RejectOfferCollector) extends AuthResource {
 
   @GET
   @Timed
@@ -58,5 +60,18 @@ class QueueResource @Inject() (
       launchQueue.resetDelay(app)
       noContent
     }
+  }
+
+  @GET
+  @Path("""{appId:.+}/stats""")
+  def offerStats(
+    @PathParam("appId") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+    val appId = id.toRootPath
+    val result = rejectOfferCollector.getStatsFor(appId)
+    val allKeys = result.stats.allKeys.map(k => (k, Json.toJsFieldJsValueWrapper("" + result.stats.count(k))))
+    ok(Json.obj(
+      "count" -> result.count,
+      "details" -> Json.obj(allKeys.toSeq: _*)).toString())
   }
 }
