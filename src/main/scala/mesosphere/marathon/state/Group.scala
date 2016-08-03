@@ -13,7 +13,6 @@ import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 
 case class Group(
     id: PathId,
@@ -236,7 +235,6 @@ object Group {
     // We do not want a "/value" prefix, therefore we do not create nested validators with validator[Group]
     // but chain the validators directly.
     doesNotExceedMaxApps and
-      validPorts and
       validNestedGroup(PathId.empty) and
       ExternalVolumes.validRootGroup()
   }
@@ -251,54 +249,4 @@ object Group {
   private def noCyclicDependencies: Validator[Group] =
     isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
 
-  private def validPorts: Validator[Group] = {
-    new Validator[Group] {
-      override def apply(group: Group): Result = {
-        // Each service port should be unique across a cluster. We
-        // want to report conflicts if the same service port is used
-        // by multiple apps.
-        // We construct the mapping servicePort <- Set[AppKey]. This
-        // allows us to report any service port that has more than 1
-        // application using the same port.
-
-        // We keep track of the total number of ports to support an
-        // early exit condition.
-        var ports: Int = 0
-        var merged =
-          new mutable.HashMap[Int, mutable.Set[AppDefinition.AppKey]] with mutable.MultiMap[Int, AppDefinition.AppKey]
-
-        // Add each servicePort <- Application to the map.
-        for {
-          app <- group.transitiveApps
-          // We ignore randomly assigned ports identified by `0`.
-          port <- app.servicePorts if port != 0
-        } {
-          ports += 1
-          merged.addBinding(port, app.id)
-        }
-
-        // If the total number of unique ports is equal to the number
-        // of requested ports then we know there are no conflicts.
-        if (merged.size == ports) {
-          Success
-        }
-        else {
-          // Otherwise we find all ports that have more than 1 app
-          // interested in them.
-
-          // We report all the conflicting apps along with which other
-          // apps they conflict with.
-          val violations = for {
-            (port, apps) <- merged if apps.size > 1
-            app <- apps
-          } yield RuleViolation(
-            app,
-            s"Requested service port $port is used by more than 1 app: ${apps.mkString(", ")}",
-            None)
-
-          Failure(violations.toSet)
-        }
-      }
-    }
-  }
 }

@@ -14,7 +14,7 @@ import mesosphere.util.state.zk.{ CompressionConf, ZKData }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.collection.SortedMap
+import scala.collection.{ SortedMap, mutable }
 import scala.collection.immutable.Seq
 
 sealed trait DeploymentAction {
@@ -322,7 +322,64 @@ object DeploymentPlan {
 
     validator[DeploymentPlan] { plan =>
       plan.createdOrUpdatedApps as "app" is every(valid(AppDefinition.updateIsValid(plan.original)))
-      plan should notBeTooBig
+      plan should notBeTooBig and haveValidPorts
+    }
+  }
+
+  private def haveValidPorts: Validator[DeploymentPlan] = {
+    new Validator[DeploymentPlan] {
+      override def apply(plan: DeploymentPlan): Result = {
+        // Each service port should be unique across a cluster. We
+        // want to report conflicts if the same service port is used
+        // by multiple apps.
+
+        // This validation rule is only applied for newly created or
+        // updated applications (within this deployment plan),
+        // not for all applications.
+
+        // We construct the mapping servicePort <- Set[AppKey]. This
+        // allows us to report any service port that has more than 1
+        // application using the same port.
+
+        // We keep track of the total number of ports to support an
+        // early exit condition.
+
+        val requestedPorts = plan.createdOrUpdatedApps.flatMap(_.servicePorts.filter(_ != 0)).toSet
+        var ports: Int = 0
+        val merged =
+          new mutable.HashMap[Int, mutable.Set[AppDefinition]] with mutable.MultiMap[Int, AppDefinition]
+
+        // Add each servicePort <- Application to the map.
+        for {
+          app <- plan.target.transitiveApps
+          // We ignore randomly assigned ports identified by `0`.
+          port <- app.servicePorts if port != 0 && requestedPorts(port)
+        } {
+          ports += 1
+          merged.addBinding(port, app)
+        }
+
+        // If the total number of unique ports is equal to the number
+        // of requested ports then we know there are no conflicts.
+        if (merged.size == ports) {
+          Success
+        } else {
+          // Otherwise we find all ports that have more than 1 app
+          // interested in them.
+
+          // We report all the conflicting apps along with which other
+          // apps they conflict with.
+          val violations = merged.filter(_._2.size > 1).map {
+            case (port, apps) =>
+              RuleViolation(
+                apps.head,
+                s"Requested service port $port is used by more than 1 app: ${apps.map(a => a.id).mkString(", ")}",
+                None)
+          }
+
+          Failure(violations.toSet)
+        }
+      }
     }
   }
 }

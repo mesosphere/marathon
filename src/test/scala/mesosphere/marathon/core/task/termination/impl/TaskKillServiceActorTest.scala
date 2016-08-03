@@ -303,7 +303,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     }
   }
 
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(2000, Millis)))
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(timeout = scaled(Span(4000, Millis)))
 
   class Fixture {
     import scala.concurrent.duration._
