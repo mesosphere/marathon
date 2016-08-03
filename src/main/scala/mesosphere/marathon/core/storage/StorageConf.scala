@@ -23,9 +23,6 @@ trait StorageConf extends ZookeeperConf {
   lazy val maxVersions = opt[Int](
     "zk_max_versions", // while called Zk, applies to every store but the name is kept
     descr = "Limit the number of versions, stored for one entity.",
-    default = internalStoreBackend() match {
-      case TwitterZk.StoreName => Some(25)
-      case _ => Some(50)
-    }
+    default = Some(50)
   )
 }

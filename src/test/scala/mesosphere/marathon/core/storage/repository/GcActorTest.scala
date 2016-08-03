@@ -97,7 +97,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         f.actor ! RunGC
         sem.release()
-        processReceiveUntil(f.actor, Scanning) should equal(Scanning)
+        f.actor.stateName should equal(Scanning)
         f.actor.stateData should equal(UpdatedEntities())
       }
       "RunGC while scanning should set 'scan again'" in {
@@ -198,8 +198,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         f.actor.stateData should equal(
           UpdatedEntities(
             appVersionsStored = Map(
-            app1.id -> Set(app1.version.toOffsetDateTime),
-            app2.id -> Set(app2.version.toOffsetDateTime)),
+              app1.id -> Set(app1.version.toOffsetDateTime),
+              app2.id -> Set(app2.version.toOffsetDateTime)),
             rootsStored = Set(root1.version.toOffsetDateTime, root2.version.toOffsetDateTime)))
       }
       "remove stores from deletions when scan is done" in {
@@ -215,8 +215,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val root2 = Group("/".toRootPath, Map("b".toRootPath -> app2), Set.empty, Set.empty)
         val updates = UpdatedEntities(
           appVersionsStored = Map(
-          app1.id -> Set(app1.version.toOffsetDateTime),
-          app2.id -> Set(app2.version.toOffsetDateTime)),
+            app1.id -> Set(app1.version.toOffsetDateTime),
+            app2.id -> Set(app2.version.toOffsetDateTime)),
           rootsStored = Set(root1.version.toOffsetDateTime, root2.version.toOffsetDateTime))
         f.actor.setState(Scanning, updates)
 

@@ -3,6 +3,8 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.repository.impl.legacy.TaskEntityRepository
 import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryStore, PersistentStore }

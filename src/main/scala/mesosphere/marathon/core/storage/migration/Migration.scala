@@ -48,7 +48,7 @@ class Migration(
 
   private[migration] val minSupportedStorageVersion = StorageVersions(0, 8, 0)
 
-  private[migration] val legacyStoreFuture: Future[Option[PersistentStore]] = legacyConfig.map { config =>
+  private[migration] lazy val legacyStoreFuture: Future[Option[PersistentStore]] = legacyConfig.map { config =>
     val store = config.store
     store match {
       case s: PersistentStoreManagement with PrePostDriverCallback =>
@@ -112,6 +112,7 @@ class Migration(
 
   // scalastyle:off
   def migrate(): List[StorageVersion] = {
+    println("zxx")
     val result = async {
       val legacyStore = await(legacyStoreFuture)
       val currentVersion = await(getCurrentVersion(legacyStore))

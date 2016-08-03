@@ -24,8 +24,8 @@ trait MarathonConf
     extends ScallopConf
     with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
     with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
-    with PluginManagerConfiguration with StorageConf with ReviveOffersConfig with TaskJobsConfig
-    with TaskKillConfig with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
+    with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with TaskKillConfig
+    with TaskJobsConfig with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
 
   //scalastyle:off magic.number
 

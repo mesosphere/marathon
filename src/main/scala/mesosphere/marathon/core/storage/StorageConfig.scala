@@ -79,6 +79,7 @@ case class TwitterZk(
     }
 
     val connector = NativeConnector(zkHosts, None, sessionTimeoutTw, new JavaTimer(isDaemon = true), authInfo)
+
     val client = ZkClient(connector)
       .withAcl(zkAcl)
       .withRetries(retries)
@@ -159,7 +160,7 @@ object MesosZk {
       maxVersions = config.maxVersions(),
       enableCache = config.storeCache(),
       zkHosts = config.zkHosts,
-      zkPath = config.zkPath,
+      zkPath = config.zooKeeperStatePath,
       timeout = config.zkTimeoutDuration)
 
   def apply(config: Config): MesosZk =
@@ -167,7 +168,7 @@ object MesosZk {
       maxVersions = config.int("max-versions", StorageConfig.DefaultLegacyMaxVersions),
       enableCache = config.bool("enable-cache", true),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
-      zkPath = config.string("path", "marathon"),
+      zkPath = s"${config.string("path", "marathon")}/state",
       timeout = config.duration("timeout", 10.seconds)
     )
 }
@@ -208,7 +209,7 @@ case class CuratorZk(
     timeout: Duration,
     zkHosts: String,
     zkPath: String,
-    zkAcl: util.List[ACL],
+    zkAcls: util.List[ACL],
     username: Option[String],
     password: Option[String],
     enableCompression: Boolean,
@@ -229,19 +230,9 @@ case class CuratorZk(
       case _ =>
     }
     builder.aclProvider(new ACLProvider {
-      val rootAcl = {
-        val acls = new util.ArrayList[ACL]()
-        acls.addAll(zkAcl)
-        acls.addAll(ZooDefs.Ids.OPEN_ACL_UNSAFE)
-        acls
-      }
-      override def getDefaultAcl: util.List[ACL] = zkAcl
+      override def getDefaultAcl: util.List[ACL] = zkAcls
 
-      override def getAclForPath(path: String): util.List[ACL] = if (path != zkPath) {
-        zkAcl
-      } else {
-        rootAcl
-      }
+      override def getAclForPath(path: String): util.List[ACL] = zkAcls
     })
     builder.retryPolicy(NoRetryPolicy) // We use our own Retry.
     builder.namespace(zkPath.replaceAll("^/", ""))
@@ -267,7 +258,7 @@ object CuratorZk {
       timeout = conf.zkTimeoutDuration,
       zkHosts = conf.zkHosts,
       zkPath = conf.zooKeeperStatePath,
-      zkAcl = conf.zkDefaultCreationACL,
+      zkAcls = conf.zkDefaultCreationACL,
       username = conf.zkUsername,
       password = conf.zkUsername,
       enableCompression = conf.zooKeeperCompressionEnabled(),
@@ -291,7 +282,7 @@ object CuratorZk {
       timeout = config.duration("timeout", 10.seconds),
       zkHosts = config.stringList("hosts", Seq("localhost:2181")).mkString(","),
       zkPath = s"${config.string("path", "marathon")}/state",
-      zkAcl = acls,
+      zkAcls = acls,
       username = username,
       password = password,
       enableCompression = config.bool("enable-compression", true),
