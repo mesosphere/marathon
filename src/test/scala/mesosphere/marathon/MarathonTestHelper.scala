@@ -17,6 +17,7 @@ import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ InMemoryS
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics

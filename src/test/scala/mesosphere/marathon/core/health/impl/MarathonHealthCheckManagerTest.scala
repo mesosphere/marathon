@@ -14,6 +14,7 @@ import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, Lead
 import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.termination.TaskKillService
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics

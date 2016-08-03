@@ -17,6 +17,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository, TaskFailureRepository }
 import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker

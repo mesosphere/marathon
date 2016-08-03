@@ -159,7 +159,7 @@ class TaskEntityRepository(private[storage] val store: EntityStore[MarathonTaskS
   ctx: ExecutionContext = ExecutionContext.global,
   metrics: Metrics)
     extends TaskRepository with VersionedEntry {
-  private val repo = new LegacyEntityRepository[Task.Id, MarathonTaskState](
+  private[storage] val repo = new LegacyEntityRepository[Task.Id, MarathonTaskState](
     store,
     _.idString, Task.Id(_), task => Task.Id(task.task.getId))
   override def ids(): Source[Task.Id, NotUsed] = repo.ids()

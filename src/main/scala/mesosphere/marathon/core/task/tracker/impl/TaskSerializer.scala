@@ -165,8 +165,7 @@ object MarathonTaskStatusSerializer {
     marathon.Protos.MarathonTask.MarathonTaskStatus.Unreachable -> Unreachable,
     marathon.Protos.MarathonTask.MarathonTaskStatus.Gone -> Gone,
     marathon.Protos.MarathonTask.MarathonTaskStatus.Unknown -> Unknown,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Dropped -> Dropped,
-    marathon.Protos.MarathonTask.MarathonTaskStatus.Invalid -> Unknown
+    marathon.Protos.MarathonTask.MarathonTaskStatus.Dropped -> Dropped
   )
 
   private val model2proto: Map[MarathonTaskStatus, marathon.Protos.MarathonTask.MarathonTaskStatus] =
