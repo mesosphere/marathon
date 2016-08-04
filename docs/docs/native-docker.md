@@ -282,7 +282,7 @@ the future, as Mesos may not always interact with Docker via the CLI.
 
 #### Docker container support without Docker Engine
 
-Starting with version 1.2.0, Marathon supports docker container images without having the Docker Containerizer
+Starting with version 1.3.0, Marathon supports docker container images without having the Docker Containerizer
 depend on a Docker Engine. Instead the Mesos containerizer with native AppC support added in Apache Mesos version 1.0
 (released July 2016) directly uses native OS features to configure and start Docker containers and to provide isolation.
 This setup is selected by specifying a JSON combination that used to provoke an error message:
