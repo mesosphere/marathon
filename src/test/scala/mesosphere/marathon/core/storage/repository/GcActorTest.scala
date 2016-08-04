@@ -92,13 +92,11 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
       "RunGC should move to Scanning" in {
         val sem = new Semaphore(0)
-
         val f = Fixture(2)(scanWaitOnSem(sem))()
-
         f.actor ! RunGC
-        sem.release()
         f.actor.stateName should equal(Scanning)
         f.actor.stateData should equal(UpdatedEntities())
+        sem.release()
       }
       "RunGC while scanning should set 'scan again'" in {
         val f = Fixture(2)()()
