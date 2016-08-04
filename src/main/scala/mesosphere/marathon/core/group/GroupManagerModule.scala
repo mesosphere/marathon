@@ -4,13 +4,14 @@ import javax.inject.Provider
 
 import akka.actor.ActorRef
 import akka.event.EventStream
+import akka.stream.Materializer
 import com.codahale.metrics.Gauge
 import mesosphere.marathon.core.group.impl.{ GroupManagerActor, GroupManagerDelegate }
 import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.core.storage.repository.{ GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.{ DeploymentService, MarathonConf }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppRepository, GroupRepository }
 import mesosphere.util.CapConcurrentExecutions
 
 import scala.concurrent.Await
@@ -24,10 +25,10 @@ class GroupManagerModule(
     serializeUpdates: CapConcurrentExecutions,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
-    appRepo: AppRepository,
+    appRepo: ReadOnlyAppRepository,
     storage: StorageProvider,
     eventBus: EventStream,
-    metrics: Metrics) {
+    metrics: Metrics)(implicit mat: Materializer) {
 
   private[this] val groupManagerActorRef: ActorRef = {
     val props = GroupManagerActor.props(
@@ -46,7 +47,7 @@ class GroupManagerModule(
 
     metrics.gauge("service.mesosphere.marathon.app.count", new Gauge[Int] {
       override def getValue: Int = {
-        Await.result(groupManager.rootGroup(), config.zkTimeoutDuration).transitiveApps.size
+        Await.result(groupManager.rootGroup(), config.zkTimeoutDuration).transitiveAppsById.size
       }
     })
 

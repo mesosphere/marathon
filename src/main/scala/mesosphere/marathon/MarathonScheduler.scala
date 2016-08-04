@@ -7,8 +7,9 @@ import akka.event.EventStream
 import mesosphere.marathon.core.base.{ Clock, CurrentRuntime }
 import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
+import mesosphere.marathon.core.storage.repository.FrameworkIdRepository
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }
+import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
@@ -21,7 +22,7 @@ class MarathonScheduler @Inject() (
     clock: Clock,
     offerProcessor: OfferProcessor,
     taskStatusProcessor: TaskStatusUpdateProcessor,
-    frameworkIdUtil: FrameworkIdUtil,
+    frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
     system: ActorSystem,
     config: MarathonConf) extends Scheduler {
@@ -37,7 +38,7 @@ class MarathonScheduler @Inject() (
     frameworkId: FrameworkID,
     master: MasterInfo): Unit = {
     log.info(s"Registered as ${frameworkId.getValue} to master '${master.getId}'")
-    frameworkIdUtil.store(frameworkId)
+    Await.result(frameworkIdRepository.store(FrameworkId.fromProto(frameworkId)), zkTimeout)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerRegisteredEvent(frameworkId.getValue, master.getHostname))
   }
@@ -136,7 +137,7 @@ class MarathonScheduler @Inject() (
   protected def suicide(removeFrameworkId: Boolean): Unit = {
     log.error(s"Committing suicide!")
 
-    if (removeFrameworkId) Await.ready(frameworkIdUtil.expunge(), config.zkTimeoutDuration)
+    if (removeFrameworkId) Await.ready(frameworkIdRepository.delete(), config.zkTimeoutDuration)
 
     // Asynchronously call asyncExit to avoid deadlock due to the JVM shutdown hooks
     CurrentRuntime.asyncExit()

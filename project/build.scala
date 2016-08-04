@@ -117,7 +117,7 @@ object MarathonBuild extends Build {
     testScalaStyle := {
       org.scalastyle.sbt.ScalastylePlugin.scalastyle.in(Compile).toTask("").value
     },
-    (test in Test) <<= (test in Test) dependsOn testScalaStyle
+    (compile in Test) <<= (compile in Test) dependsOn testScalaStyle
   )
 
   lazy val IntegrationTest = config("integration") extend Test
@@ -267,6 +267,7 @@ object Dependencies {
     akkaActor % "compile",
     akkaSlf4j % "compile",
     akkaStream % "compile",
+    akkaHttp % "compile",
     asyncAwait % "compile",
     sprayClient % "compile",
     sprayHttpx % "compile",
@@ -296,6 +297,7 @@ object Dependencies {
     curatorClient % "compile",
     curatorFramework % "compile",
     java8Compat % "compile",
+    scalaLogging % "compile",
     logstash % "compile",
 
     // test
@@ -340,6 +342,7 @@ object Dependency {
     val WixAccord = "0.5"
     val Curator = "2.10.0"
     val Java8Compat = "0.8.0-RC1"
+    val ScalaLogging = "3.4.0"
 
     // test deps versions
     val Mockito = "1.10.19"
@@ -354,6 +357,7 @@ object Dependency {
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
+  val akkaHttp = "com.typesafe.akka" %% "akka-http-experimental" % V.Akka
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
@@ -386,6 +390,7 @@ object Dependency {
   val curatorClient = "org.apache.curator" % "curator-client" % V.Curator
   val curatorFramework = "org.apache.curator" % "curator-framework" % V.Curator
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
+  val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

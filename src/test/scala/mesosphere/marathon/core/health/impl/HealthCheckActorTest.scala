@@ -3,10 +3,12 @@ package mesosphere.marathon.core.health.impl
 import akka.actor.{ ActorSystem, Props }
 import akka.testkit._
 import mesosphere.marathon._
+import mesosphere.marathon.core.storage.repository.AppRepository
+import mesosphere.marathon._
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.util.CallerThreadExecutionContext
@@ -36,7 +38,7 @@ class HealthCheckActorTest
     val app = AppDefinition(id = appId)
     val appRepository: AppRepository = mock[AppRepository]
 
-    when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
+    when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
     when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.task))
 
@@ -98,8 +100,9 @@ class HealthCheckActorTest
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     val driver = mock[SchedulerDriver]
     holder.driver = Some(driver)
+    when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
     val killService: TaskKillService = mock[TaskKillService]
-    when(appRepository.app(appId, appVersion)).thenReturn(Future.successful(Some(app)))
+    when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
     val taskId = "test_task.9876543"
     val scheduler: MarathonScheduler = mock[MarathonScheduler]

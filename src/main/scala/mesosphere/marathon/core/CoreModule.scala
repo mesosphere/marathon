@@ -1,16 +1,18 @@
 package mesosphere.marathon.core
 
 import mesosphere.marathon.core.auth.AuthModule
+import mesosphere.marathon.core.base.ActorsModule
 import mesosphere.marathon.core.election.ElectionModule
 import mesosphere.marathon.core.event.EventModule
-import mesosphere.marathon.core.health.HealthModule
 import mesosphere.marathon.core.group.GroupManagerModule
+import mesosphere.marathon.core.health.HealthModule
 import mesosphere.marathon.core.history.HistoryModule
 import mesosphere.marathon.core.launcher.LauncherModule
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.readiness.ReadinessModule
+import mesosphere.marathon.core.storage.StorageModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
@@ -23,6 +25,7 @@ import mesosphere.marathon.core.task.tracker.TaskTrackerModule
   * (as long as we have them).
   */
 trait CoreModule {
+  def actorsModule: ActorsModule
   def appOfferMatcherModule: LaunchQueueModule
   def authModule: AuthModule
   def electionModule: ElectionModule
@@ -34,6 +37,7 @@ trait CoreModule {
   def leadershipModule: LeadershipModule
   def pluginModule: PluginModule
   def readinessModule: ReadinessModule
+  def storageModule: StorageModule
   def taskBusModule: TaskBusModule
   def taskJobsModule: TaskJobsModule
   def taskTrackerModule: TaskTrackerModule

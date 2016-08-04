@@ -4,11 +4,12 @@ import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.TaskStateOp
+import mesosphere.marathon.core.storage.repository.GroupRepository
 import mesosphere.marathon.core.task.Task.Id
+import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
-import mesosphere.marathon.state.{ Group, GroupRepository, Timestamp }
+import mesosphere.marathon.state.{ Group, Timestamp }
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
 import org.slf4j.LoggerFactory
@@ -75,7 +76,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
 
         // query in parallel
         val tasksByAppFuture = taskTracker.tasksByApp()
-        val rootGroupFuture = groupRepository.rootGroupOrEmpty()
+        val rootGroupFuture = groupRepository.root()
 
         for { tasksByApp <- tasksByAppFuture; rootGroup <- rootGroupFuture } yield createTaskOps(tasksByApp, rootGroup)
       }

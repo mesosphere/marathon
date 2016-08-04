@@ -6,9 +6,12 @@ import javax.inject.Provider
 import akka.actor.{ Actor, ActorLogging, Props }
 import akka.event.EventStream
 import akka.pattern.pipe
+import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
+import mesosphere.marathon.core.storage.repository.{ GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
@@ -52,10 +55,10 @@ private[group] object GroupManagerActor {
     serializeUpdates: CapConcurrentExecutions,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository,
-    appRepo: AppRepository,
+    appRepo: ReadOnlyAppRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream): Props = {
+    eventBus: EventStream)(implicit mat: Materializer): Props = {
     Props(new GroupManagerActor(
       serializeUpdates,
       scheduler,
@@ -73,10 +76,10 @@ private[impl] class GroupManagerActor(
     // Once MarathonSchedulerService is in CoreModule, the Provider could be removed
     schedulerProvider: Provider[DeploymentService],
     groupRepo: GroupRepository,
-    appRepo: AppRepository,
+    appRepo: ReadOnlyAppRepository,
     storage: StorageProvider,
     config: MarathonConf,
-    eventBus: EventStream) extends Actor with ActorLogging with PathFun {
+    eventBus: EventStream)(implicit mat: Materializer) extends Actor with ActorLogging with PathFun {
   import GroupManagerActor._
   import context.dispatcher
 
@@ -90,7 +93,7 @@ private[impl] class GroupManagerActor(
 
   override def receive: Receive = {
     case GetAppWithId(id) => getApp(id).pipeTo(sender())
-    case GetRootGroup => getRootGroup.pipeTo(sender())
+    case GetRootGroup => groupRepo.root().pipeTo(sender())
     case GetGroupWithId(id) => getGroupWithId(id).pipeTo(sender())
     case GetGroupWithVersion(id, version) => getGroupWithVersion(id, version).pipeTo(sender())
     case GetUpgrade(gid, change, version, force, toKill) =>
@@ -99,19 +102,15 @@ private[impl] class GroupManagerActor(
   }
 
   private[this] def getApp(id: PathId): Future[Option[AppDefinition]] = {
-    getRootGroup().map(_.app(id))
-  }
-
-  private[this] def getRootGroup(): Future[Group] = {
-    groupRepo.group(groupRepo.zkRootName).map(_.getOrElse(Group.empty))
+    groupRepo.root().map(_.app(id))
   }
 
   private[this] def getGroupWithId(id: PathId): Future[Option[Group]] = {
-    getRootGroup().map(_.findGroup(_.id == id))
+    groupRepo.root().map(_.findGroup(_.id == id))
   }
 
   private[this] def getGroupWithVersion(id: PathId, version: Timestamp): Future[Option[Group]] = {
-    groupRepo.group(groupRepo.zkRootName, version).map {
+    groupRepo.rootVersion(version.toOffsetDateTime).map {
       _.flatMap(_.findGroup(_.id == id))
     }
   }
@@ -125,23 +124,8 @@ private[impl] class GroupManagerActor(
     serializeUpdates {
       log.info(s"Upgrade group id:$gid version:$version with force:$force")
 
-      def storeUpdatedApps(plan: DeploymentPlan): Future[Unit] = {
-        plan.affectedApplicationIds.foldLeft(Future.successful(())) { (savedFuture, currentId) =>
-          plan.target.app(currentId) match {
-            case Some(newApp) =>
-              log.info(s"[${newApp.id}] storing new app version ${newApp.version}")
-              appRepo.store(newApp).map(_ => ())
-            case None =>
-              log.info(s"[$currentId] expunging app")
-              // this means that destroyed apps are immediately gone -- even if there are still tasks running for
-              // this app. We should improve this in the future.
-              appRepo.expunge(currentId).map(_ => ())
-          }
-        }
-      }
-
       val deployment = for {
-        from <- getRootGroup()
+        from <- groupRepo.root()
         (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
         to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
         _ = validateOrThrow(to)(Group.validRootGroup(config.maxApps.get))
@@ -149,8 +133,9 @@ private[impl] class GroupManagerActor(
         _ = validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator(config))
         _ = log.info(s"Computed new deployment plan:\n$plan")
         _ <- scheduler.deploy(plan, force)
-        _ <- storeUpdatedApps(plan)
-        _ <- groupRepo.store(groupRepo.zkRootName, plan.target)
+        _ <- {
+          groupRepo.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps)
+        }
         _ = log.info(s"Updated groups/apps according to deployment plan ${plan.id}")
       } yield plan
 
@@ -169,8 +154,8 @@ private[impl] class GroupManagerActor(
   }
 
   private[this] def getVersions(id: PathId): Future[Iterable[Timestamp]] = {
-    groupRepo.listVersions(groupRepo.zkRootName).flatMap { versions =>
-      Future.sequence(versions.map(groupRepo.group(groupRepo.zkRootName, _))).map {
+    groupRepo.rootVersions().runWith(Sink.seq).flatMap { versions =>
+      Future.sequence(versions.map(groupRepo.rootVersion)).map {
         _.collect {
           case Some(group) if group.group(id).isDefined => group.version
         }

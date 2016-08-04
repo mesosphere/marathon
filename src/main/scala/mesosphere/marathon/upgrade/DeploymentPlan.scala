@@ -6,10 +6,11 @@ import java.util.UUID
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.storage.TwitterZk
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.marathon.{ MarathonConf, Protos }
-import mesosphere.util.state.zk.{ CompressionConf, ZKData }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -72,11 +73,11 @@ final case class DeploymentPlan(
     */
   def revert(group: Group): Group = DeploymentPlanReverter.revert(original, target)(group)
 
-  def isEmpty: Boolean = steps.isEmpty
+  lazy val isEmpty: Boolean = steps.isEmpty
 
-  def nonEmpty: Boolean = !isEmpty
+  lazy val nonEmpty: Boolean = !isEmpty
 
-  def affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app)).toSet
+  lazy val affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app)).toSet
 
   /** @return all ids of apps which are referenced in any deployment actions */
   lazy val affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
@@ -85,8 +86,12 @@ final case class DeploymentPlan(
     // FIXME: check for group change conflicts?
     affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
 
-  def createdOrUpdatedApps: Seq[AppDefinition] = {
+  lazy val createdOrUpdatedApps: Seq[AppDefinition] = {
     target.transitiveApps.toIndexedSeq.filter(app => affectedApplicationIds(app.id))
+  }
+
+  lazy val deletedApps: Seq[PathId] = {
+    original.transitiveAppIds.diff(target.transitiveAppIds).toVector
   }
 
   override def toString: String = {
@@ -123,18 +128,19 @@ final case class DeploymentPlan(
     mergeFromProto(Protos.DeploymentPlanDefinition.parseFrom(bytes))
 
   override def mergeFromProto(msg: Protos.DeploymentPlanDefinition): DeploymentPlan = DeploymentPlan(
-    original = Group.empty.mergeFromProto(msg.getOriginal),
-    target = Group.empty.mergeFromProto(msg.getTarget),
-    version = Timestamp(msg.getVersion)
-  ).copy(id = msg.getId)
+    original = Group.empty.mergeFromProto(msg.getDeprecatedOriginal),
+    target = Group.empty.mergeFromProto(msg.getDeprecatedTarget),
+    version = Timestamp(msg.getTimestamp),
+    id = Some(msg.getId)
+  )
 
   override def toProto: Protos.DeploymentPlanDefinition =
     Protos.DeploymentPlanDefinition
       .newBuilder
       .setId(id)
-      .setOriginal(original.toProto)
-      .setTarget(target.toProto)
-      .setVersion(version.toString)
+      .setDeprecatedOriginal(original.toProto)
+      .setDeprecatedTarget(target.toProto)
+      .setTimestamp(version.toString)
       .build()
 }
 
@@ -205,8 +211,7 @@ object DeploymentPlan {
     */
   def dependencyOrderedSteps(original: Group, target: Group,
     toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
-    val originalApps: Map[PathId, AppDefinition] =
-      original.transitiveApps.map(app => app.id -> app).toMap
+    val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
 
     val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
 
@@ -249,14 +254,13 @@ object DeploymentPlan {
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Iterable[Task]] = Map.empty): DeploymentPlan = {
+    toKill: Map[PathId, Iterable[Task]] = Map.empty,
+    id: Option[String] = None): DeploymentPlan = {
 
     // Lookup maps for original and target apps.
-    val originalApps: Map[PathId, AppDefinition] =
-      original.transitiveApps.map(app => app.id -> app).toMap
+    val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
 
-    val targetApps: Map[PathId, AppDefinition] =
-      target.transitiveApps.map(app => app.id -> app).toMap
+    val targetApps: Map[PathId, AppDefinition] = target.transitiveAppsById
 
     // A collection of deployment steps for this plan.
     val steps = Seq.newBuilder[DeploymentStep]
@@ -296,7 +300,7 @@ object DeploymentPlan {
 
     // Build the result.
     val result = DeploymentPlan(
-      UUID.randomUUID().toString,
+      id.getOrElse(UUID.randomUUID().toString),
       original,
       target,
       steps.result().filter(_.actions.nonEmpty),
@@ -312,11 +316,17 @@ object DeploymentPlan {
                          |You can adjust this value via --zk_max_node_size, but make sure this value is compatible with
                          |your ZooKeeper ensemble!
                          |See: http://zookeeper.apache.org/doc/r3.3.1/zookeeperAdmin.html#Unsafe+Options""".stripMargin
+
     val notBeTooBig = isTrue[DeploymentPlan](maxSizeError) { plan =>
-      val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
-      val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id), plan.toProto.toByteArray)
-        .toProto(compressionConf)
-      zkDataProto.toByteArray.length < maxSize
+      if (conf.internalStoreBackend() == TwitterZk.StoreName) {
+        val compressionConf = CompressionConf(conf.zooKeeperCompressionEnabled(), conf.zooKeeperCompressionThreshold())
+        val zkDataProto = ZKData(s"deployment-${plan.id}", UUID.fromString(plan.id), plan.toProto.toByteArray)
+          .toProto(compressionConf)
+        zkDataProto.toByteArray.length < maxSize
+      } else {
+        // we could try serializing the proto then gzip compressing it for the new ZK backend, but should we?
+        true
+      }
     }
 
     validator[DeploymentPlan] { plan =>

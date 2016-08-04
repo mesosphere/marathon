@@ -4,6 +4,7 @@ import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
+import mesosphere.marathon.core.storage.repository.TaskFailureRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
@@ -155,7 +156,7 @@ class AppInfoBaseData(
 
     lazy val maybeLastTaskFailureFuture: Future[Option[TaskFailure]] = {
       log.debug(s"retrieving last task failure for app [${app.id}]")
-      taskFailureRepository.current(app.id)
+      taskFailureRepository.get(app.id)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while retrieving last task failure for app [${app.id}]", e)
     }

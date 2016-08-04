@@ -1,24 +1,30 @@
 package mesosphere.marathon
 
+import akka.Done
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.storage.repository.{ AppRepository, GroupRepository }
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupRepository, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
-import org.scalatest.{ GivenWhenThen, Matchers }
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import org.scalatest.time.{ Millis, Span }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -35,7 +41,7 @@ class SchedulerActionsTest
     val f = new Fixture
     val app = AppDefinition(id = PathId("/myapp"))
 
-    f.repo.expunge(app.id) returns Future.successful(Seq(true))
+    f.repo.delete(app.id) returns Future.successful(Done)
     f.taskTracker.appTasks(eq(app.id))(any) returns Future.successful(Iterable.empty[Task])
 
     f.scheduler.stopApp(app).futureValue(1.second)
@@ -59,7 +65,7 @@ class SchedulerActionsTest
 
     val tasks = Set(runningTask, stagedTask, stagedTaskWithSlaveId)
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(AppTasks.forTasks(app.id, tasks)))
-    f.repo.allPathIds() returns Future.successful(Seq(app.id))
+    f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
@@ -75,7 +81,7 @@ class SchedulerActionsTest
     val f = new Fixture
 
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.empty)
-    f.repo.allPathIds() returns Future.successful(Seq())
+    f.repo.ids() returns Source.empty
 
     f.scheduler.reconcileTasks(f.driver).futureValue
 
@@ -98,7 +104,7 @@ class SchedulerActionsTest
     val tasksOfOrphanedApp = AppTasks.forTasks(orphanedApp.id, Iterable(orphanedTask))
 
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(tasksOfApp, tasksOfOrphanedApp))
-    f.repo.allPathIds() returns Future.successful(Seq(app.id))
+    f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 

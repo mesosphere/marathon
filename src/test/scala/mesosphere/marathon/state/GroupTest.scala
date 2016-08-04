@@ -196,7 +196,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
 
       Then("the group with same path has been replaced by the new app definition")
       changed.transitiveGroups.map(_.id.toString) should be(Set("/", "/some"))
-      changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested"))
+      changed.transitiveAppIds.map(_.toString) should be(Set("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
       validate(changed)(Group.validRootGroup(maxApps = None)) should be (Success)
@@ -226,7 +226,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       Then("the group with same path has NOT been replaced by the new app definition")
       current.transitiveGroups.map(_.id.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
-      changed.transitiveApps.map(_.id.toString) should be(Set("/some/nested", "/some/nested/path2/app"))
+      changed.transitiveAppIds.map(_.toString) should be(Set("/some/nested", "/some/nested/path2/app"))
 
       Then("the conflict will be detected by our V2 API model validation")
       val result = validate(changed)(Group.validRootGroup(maxApps = None))

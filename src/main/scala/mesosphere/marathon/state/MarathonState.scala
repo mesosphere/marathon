@@ -1,8 +1,8 @@
 package mesosphere.marathon.state
 
-import com.google.protobuf.Message
+import com.google.protobuf.MessageLite
 
-trait MarathonState[M <: Message, T <: MarathonState[M, _]] {
+trait MarathonState[M <: MessageLite, T <: MarathonState[M, _]] {
 
   def mergeFromProto(message: M): T
 

@@ -1,12 +1,13 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{ TestProbe, TestActorRef }
+import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.InMemoryStore
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTracker }
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
@@ -15,7 +16,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonTestHelper, SchedulerActions, TaskUpgradeCanceledException }
-import mesosphere.util.state.memory.InMemoryStore
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito.{ spy, verify, when }

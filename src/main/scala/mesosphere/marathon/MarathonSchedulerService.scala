@@ -6,6 +6,7 @@ import javax.inject.{ Inject, Named }
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.pattern.ask
+import akka.stream.Materializer
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
 import com.google.common.util.concurrent.AbstractExecutionThreadService
@@ -13,14 +14,16 @@ import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.heartbeat._
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
+import mesosphere.marathon.core.storage.migration.Migration
+import mesosphere.marathon.core.storage.repository.{ FrameworkIdRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, Migration, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
+import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager.{ CancelDeployment, DeploymentStepInfo }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.PromiseActor
-import mesosphere.util.state.FrameworkIdUtil
 import org.apache.mesos.Protos.FrameworkID
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
@@ -67,16 +70,16 @@ class MarathonSchedulerService @Inject() (
   leadershipCoordinator: LeadershipCoordinator,
   healthCheckManager: HealthCheckManager,
   config: MarathonConf,
-  frameworkIdUtil: FrameworkIdUtil,
+  frameworkIdRepository: FrameworkIdRepository,
   electionService: ElectionService,
   prePostDriverCallbacks: Seq[PrePostDriverCallback],
-  appRepository: AppRepository,
+  appRepository: ReadOnlyAppRepository,
   driverFactory: SchedulerDriverFactory,
   system: ActorSystem,
   migration: Migration,
   @Named("schedulerActor") schedulerActor: ActorRef,
   @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) mesosHeartbeatActor: ActorRef,
-  metrics: Metrics = new Metrics(new MetricRegistry))
+  metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer)
     extends AbstractExecutionThreadService with ElectionCandidate with DeploymentService {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -106,7 +109,7 @@ class MarathonSchedulerService @Inject() (
   val log = LoggerFactory.getLogger(getClass.getName)
 
   // FIXME: Remove from this class
-  def frameworkId: Option[FrameworkID] = frameworkIdUtil.fetch()
+  def frameworkId: Option[FrameworkID] = Await.result(frameworkIdRepository.get(), timeout.duration).map(_.toProto)
 
   // This is a little ugly as we are using a mutable variable. But drivers can't
   // be reused (i.e. once stopped they can't be started again. Thus,
@@ -130,7 +133,7 @@ class MarathonSchedulerService @Inject() (
     schedulerActor ! CancelDeployment(id)
 
   def listAppVersions(appId: PathId): Iterable[Timestamp] =
-    Await.result(appRepository.listVersions(appId), config.zkTimeoutDuration)
+    Await.result(appRepository.versions(appId).map(Timestamp(_)).runWith(Sink.seq), config.zkTimeoutDuration)
 
   def listRunningDeployments(): Future[Seq[DeploymentStepInfo]] =
     (schedulerActor ? RetrieveRunningDeployments)
@@ -142,7 +145,7 @@ class MarathonSchedulerService @Inject() (
       .map(_.plans)
 
   def getApp(appId: PathId, version: Timestamp): Option[AppDefinition] = {
-    Await.result(appRepository.app(appId, version), config.zkTimeoutDuration)
+    Await.result(appRepository.getVersion(appId, version.toOffsetDateTime), config.zkTimeoutDuration)
   }
 
   def killTasks(

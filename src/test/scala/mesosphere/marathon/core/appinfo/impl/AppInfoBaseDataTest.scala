@@ -3,6 +3,7 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
+import mesosphere.marathon.core.storage.repository.TaskFailureRepository
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
@@ -10,7 +11,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSchedulerService, MarathonSpec }
+import mesosphere.marathon.{ MarathonSchedulerService, MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
 
@@ -222,7 +223,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting lastTaskFailure when one exists") {
     val f = new Fixture
     Given("One last taskFailure")
-    f.taskFailureRepository.current(app.id) returns Future.successful(Some(TaskFailureTestHelper.taskFailure))
+    f.taskFailureRepository.get(app.id) returns Future.successful(Some(TaskFailureTestHelper.taskFailure))
 
     When("Getting AppInfos with last task failures")
     val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.LastTaskFailure)).futureValue
@@ -233,7 +234,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskFailureRepository should have been called to retrieve the failure")
-    verify(f.taskFailureRepository, times(1)).current(app.id)
+    verify(f.taskFailureRepository, times(1)).get(app.id)
 
     And("we have no more interactions")
     f.verifyNoMoreInteractions()
@@ -242,7 +243,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("requesting lastTaskFailure when None exist") {
     val f = new Fixture
     Given("no taskFailure")
-    f.taskFailureRepository.current(app.id) returns Future.successful(None)
+    f.taskFailureRepository.get(app.id) returns Future.successful(None)
 
     When("Getting AppInfos with last task failures")
     val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.LastTaskFailure)).futureValue
@@ -251,7 +252,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     appInfo should be(AppInfo(app))
 
     And("the taskFailureRepository should have been called to retrieve the failure")
-    verify(f.taskFailureRepository, times(1)).current(app.id)
+    verify(f.taskFailureRepository, times(1)).get(app.id)
 
     And("we have no more interactions")
     f.verifyNoMoreInteractions()
@@ -308,7 +309,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
   test("Combining embed options work") {
     val f = new Fixture
     Given("One last taskFailure and no deployments")
-    f.taskFailureRepository.current(app.id) returns Future.successful(Some(TaskFailureTestHelper.taskFailure))
+    f.taskFailureRepository.get(app.id) returns Future.successful(Some(TaskFailureTestHelper.taskFailure))
     f.marathonSchedulerService.listRunningDeployments() returns Future.successful(
       Seq.empty[DeploymentStepInfo]
     )
@@ -324,7 +325,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     ))
 
     And("the taskFailureRepository should have been called to retrieve the failure")
-    verify(f.taskFailureRepository, times(1)).current(app.id)
+    verify(f.taskFailureRepository, times(1)).get(app.id)
 
     And("the marathonSchedulerService should have been called to retrieve the deployments")
     verify(f.marathonSchedulerService, times(1)).listRunningDeployments()

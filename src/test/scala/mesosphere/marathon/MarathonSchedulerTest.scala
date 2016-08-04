@@ -1,27 +1,32 @@
 package mesosphere.marathon
 
+import akka.Done
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.storage.repository.{ AppRepository, FrameworkIdRepository }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.core.event._
-import mesosphere.marathon.state.AppRepository
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo, MutableMesosLeaderInfo }
+import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo, MutableMesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
-class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll with Mockito with Matchers with GivenWhenThen {
+import scala.concurrent.Future
+
+class MarathonSchedulerTest
+    extends MarathonActorSupport with MarathonSpec with BeforeAndAfterAll
+    with Mockito with Matchers with GivenWhenThen {
 
   var probe: TestProbe = _
   var repo: AppRepository = _
   var queue: LaunchQueue = _
   var scheduler: MarathonScheduler = _
-  var frameworkIdUtil: FrameworkIdUtil = _
+  var frameworkIdRepository: FrameworkIdRepository = _
   var mesosLeaderInfo: MesosLeaderInfo = _
   var config: MarathonConf = _
   var eventBus: EventStream = _
@@ -32,7 +37,7 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
   before {
     repo = mock[AppRepository]
     queue = mock[LaunchQueue]
-    frameworkIdUtil = mock[FrameworkIdUtil]
+    frameworkIdRepository = mock[FrameworkIdRepository]
     mesosLeaderInfo = new MutableMesosLeaderInfo
     mesosLeaderInfo.onNewMasterInfo(MasterInfo.getDefaultInstance)
     config = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
@@ -44,7 +49,7 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
       Clock(),
       offerProcessor = offerProcessor,
       taskStatusProcessor = taskStatusProcessor,
-      frameworkIdUtil,
+      frameworkIdRepository,
       mesosLeaderInfo,
       mock[ActorSystem],
       config) {
@@ -67,6 +72,8 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
       .setHostname("some_host")
       .build()
 
+    frameworkIdRepository.store(any) returns Future.successful(Done)
+
     eventBus.subscribe(probe.ref, classOf[SchedulerRegisteredEvent])
 
     scheduler.registered(driver, frameworkId, masterInfo)
@@ -78,6 +85,8 @@ class MarathonSchedulerTest extends MarathonActorSupport with MarathonSpec with 
       assert(msg.master == masterInfo.getHostname)
       assert(msg.eventType == "scheduler_registered_event")
       assert(mesosLeaderInfo.currentLeaderUrl.get == "http://some_host:5050/")
+      verify(frameworkIdRepository).store(FrameworkId.fromProto(frameworkId))
+      noMoreInteractions(frameworkIdRepository)
     } finally {
       eventBus.unsubscribe(probe.ref)
     }

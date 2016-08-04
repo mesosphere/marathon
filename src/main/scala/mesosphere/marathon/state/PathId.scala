@@ -90,7 +90,10 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
 }
 
 object PathId {
-  def fromSafePath(in: String): PathId = PathId(in.split("_").toList, absolute = true)
+  def fromSafePath(in: String): PathId = {
+    if (in.isEmpty) PathId.empty
+    else PathId(in.split("_").toList, absolute = true)
+  }
   def apply(in: String): PathId =
     PathId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").filter(_.nonEmpty).toList, in.startsWith("/"))
   def empty: PathId = PathId(Nil)

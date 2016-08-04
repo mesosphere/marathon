@@ -5,9 +5,9 @@ import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.impl.{ AppInfoBaseData, DefaultInfoService }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.storage.repository.{ ReadOnlyAppRepository, TaskFailureRepository }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.{ AppRepository, TaskFailureRepository }
 
 /**
   * Provides a service to query information related to apps.
@@ -15,7 +15,7 @@ import mesosphere.marathon.state.{ AppRepository, TaskFailureRepository }
 class AppInfoModule @Inject() (
     clock: Clock,
     groupManager: GroupManager,
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     taskTracker: TaskTracker,
     healthCheckManager: HealthCheckManager,
     marathonSchedulerService: MarathonSchedulerService,

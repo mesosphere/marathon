@@ -2,6 +2,7 @@ package mesosphere.util.state.mesos
 
 import java.util.concurrent.TimeUnit
 
+import mesosphere.marathon.core.storage.repository.impl.legacy.store.MesosStateStore
 import mesosphere.marathon.integration.setup.StartedZookeeper
 import mesosphere.util.state.PersistentStoreTest
 import org.apache.mesos.state.ZooKeeperState

@@ -3,19 +3,18 @@ package mesosphere.marathon.benchmarks.storage.zk
 import java.nio.file.Files
 
 import mesosphere.marathon.benchmarks.Benchmark
+import mesosphere.marathon.core.storage.store.impl.zk.{ NoRetryPolicy, RichCuratorFramework }
 import mesosphere.marathon.integration.setup.ProcessKeeper
-import mesosphere.marathon.test.zk.NoRetryPolicy
 import mesosphere.util.PortAllocator
-import mesosphere.util.state.zk.RichCuratorFramework
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.zookeeper.KeeperException.{ NoNodeException, NodeExistsException }
 import org.scalameter.api._
 
+import scala.async.Async.{ async, await }
 import scala.collection.immutable.IndexedSeq
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Future }
-import scala.async.Async.{ async, await }
 
 class ZkStorageBenchmark extends Benchmark {
   // scalastyle:off magic.number

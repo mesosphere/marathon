@@ -2,6 +2,7 @@ package mesosphere.marathon.core.appinfo.impl
 
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.appinfo.{ AppInfo, AppSelector, GroupInfo, GroupSelector }
+import mesosphere.marathon.core.storage.repository.AppRepository
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
@@ -15,7 +16,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   test("queryForAppId") {
     Given("a group repo with some apps")
     val f = new Fixture
-    f.appRepo.currentVersion(app1.id) returns Future.successful(Some(app1))
+    f.appRepo.get(app1.id) returns Future.successful(Some(app1))
     f.baseData.appInfoFuture(any, any) answers { args =>
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
     }
@@ -26,7 +27,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     Then("we get an appInfo for the app from the appRepo/baseAppData")
     appInfo.map(_.app.id).toSet should be(Set(app1.id))
 
-    verify(f.appRepo, times(1)).currentVersion(app1.id)
+    verify(f.appRepo, times(1)).get(app1.id)
     for (app <- Set(app1)) {
       verify(f.baseData, times(1)).appInfoFuture(app, Set.empty)
     }
@@ -38,7 +39,7 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
   test("queryForAppId passes embed options along") {
     Given("a group repo with some apps")
     val f = new Fixture
-    f.appRepo.currentVersion(app1.id) returns Future.successful(Some(app1))
+    f.appRepo.get(app1.id) returns Future.successful(Some(app1))
     f.baseData.appInfoFuture(any, any) answers { args =>
       Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
     }

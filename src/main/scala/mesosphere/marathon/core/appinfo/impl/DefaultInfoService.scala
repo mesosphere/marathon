@@ -1,18 +1,19 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
+import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
 import scala.collection.immutable.Seq
 import scala.collection.mutable
+import scala.concurrent.Future
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -20,7 +21,7 @@ private[appinfo] class DefaultInfoService(
 
   override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]] = {
     log.debug(s"queryForAppId $id")
-    appRepository.currentVersion(id).flatMap {
+    appRepository.get(id).flatMap {
       case Some(app) if selector.matches(app) => newBaseData().appInfoFuture(app, embed).map(Some(_))
       case None => Future.successful(None)
     }

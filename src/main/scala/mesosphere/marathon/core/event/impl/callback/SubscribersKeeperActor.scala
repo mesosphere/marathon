@@ -4,11 +4,14 @@ import akka.actor.{ Actor, ActorLogging }
 import akka.pattern.pipe
 import mesosphere.marathon.core.event.impl.callback.SubscribersKeeperActor._
 import mesosphere.marathon.core.event.{ EventSubscribers, MarathonSubscriptionEvent, Subscribe, Unsubscribe }
-import mesosphere.marathon.state.EntityStore
-import scala.concurrent.Future
+import mesosphere.marathon.core.storage.repository.EventSubscribersRepository
+import mesosphere.util.LockManager
 
-class SubscribersKeeperActor(val store: EntityStore[EventSubscribers]) extends Actor with ActorLogging {
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.async.Async.{ async, await }
 
+class SubscribersKeeperActor(val store: EventSubscribersRepository) extends Actor with ActorLogging {
+  private val lockManager = LockManager.create()
   override def receive: Receive = {
 
     case event @ Subscribe(_, callbackUrl, _, _) =>
@@ -38,38 +41,46 @@ class SubscribersKeeperActor(val store: EntityStore[EventSubscribers]) extends A
       subscription pipeTo sender()
 
     case GetSubscribers =>
-      val subscription = store.fetch(Subscribers).map(_.getOrElse(EventSubscribers()))(context.dispatcher)
-
+      val subscription = store.get().map(_.getOrElse(EventSubscribers()))(context.dispatcher)
       import context.dispatcher
       subscription pipeTo sender()
   }
 
   protected[this] def add(callbackUrl: String): Future[EventSubscribers] =
-    store.modify(Subscribers) { deserialize =>
-      val existingSubscribers = deserialize()
-      if (existingSubscribers.urls.contains(callbackUrl)) {
-        log.info("Existing callback {} resubscribed.", callbackUrl)
-        existingSubscribers
-      } else EventSubscribers(existingSubscribers.urls + callbackUrl)
-    }
+    lockManager.executeSequentially("") {
+      async {
+        val subscribers = await(store.get()).getOrElse(EventSubscribers())
+        val updated = if (subscribers.urls.contains(callbackUrl)) {
+          log.info("Existing callback {} resubscribed.", callbackUrl)
+          subscribers
+        } else EventSubscribers(subscribers.urls + callbackUrl)
+
+        if (updated != subscribers) {
+          await(store.store(updated))
+        }
+        updated
+      }(ExecutionContext.global)
+    }(ExecutionContext.global) // blocks a thread, don't block the actor.
 
   protected[this] def remove(callbackUrl: String): Future[EventSubscribers] =
-    store.modify(Subscribers) { deserialize =>
-      val existingSubscribers = deserialize()
-
-      if (existingSubscribers.urls.contains(callbackUrl))
-        EventSubscribers(existingSubscribers.urls - callbackUrl)
-
-      else {
-        log.warning("Attempted to unsubscribe nonexistent callback {}", callbackUrl)
-        existingSubscribers
-      }
-    }
+    lockManager.executeSequentially("") {
+      async {
+        val subscribers = await(store.get()).getOrElse(EventSubscribers())
+        val updated = if (subscribers.urls.contains(callbackUrl)) {
+          EventSubscribers(subscribers.urls - callbackUrl)
+        } else {
+          log.warning("Attempted to unsubscribe nonexistent callback {}", callbackUrl)
+          subscribers
+        }
+        if (updated != subscribers) {
+          await(store.store(updated))
+        }
+        updated
+      }(ExecutionContext.global)
+    }(ExecutionContext.global) // blocks a thread, don't block the actor.
 }
 
 object SubscribersKeeperActor {
 
   case object GetSubscribers
-
-  final val Subscribers = "http_event_subscribers"
 }
