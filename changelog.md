@@ -64,6 +64,19 @@ Non-text type attributes (such as scalar or range) are now supported.
 #### ZooKeeper digest authentication support
 The ZK client now supports ZK authentication and ACLs.
 
+#### Support for virtual networking for Docker containers
+Added support for Docker `USER` networking
+
+#### "Service ports must be unique" validation
+On newly created or updated applications the validation of unique service ports is enforced.
+
+
+### Performance improvements
+- Fixes #4095 - Used Map instead of Set to store apps in Group. (#4096)
+- Improve servicePort validation performance. (#4115)
+- Made `dependencyGraph` only be called once per `Group` instance. (#4116)
+- Fixes #3991 - Use suppressOffers (#3992)
+
 ### Fixed issues
 
 - #4129 - TaskOpProcessorImplTest is flaky (#4148)
