@@ -314,7 +314,6 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     }
 
     assert(taskInfo.getContainer.getVolumesList.size > 0, "check that container has volumes declared")
-    assert(!taskInfo.getContainer.getDocker.hasVolumeDriver, "docker spec should not define a volume driver")
     assert(
       vol("relativeDirName").isDefined,
       s"missing expected volume relativeDirName, got instead: ${taskInfo.getContainer.getVolumesList}")
@@ -363,7 +362,6 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     }
 
     assert(taskInfo.getContainer.getVolumesList.size == 2, "check that container has volumes declared")
-    assert(!taskInfo.getContainer.getDocker.hasVolumeDriver, "docker spec should not define a volume driver")
 
     assert(
       taskInfo.getContainer.getVolumesList.size == 2,
@@ -422,7 +420,6 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
     assert(taskInfo.getContainer.getVolumesList.size == 2, "check that container has volumes declared")
-    assert(!taskInfo.getContainer.getDocker.hasVolumeDriver, "docker spec should not define a volume driver")
 
     // check protobuf construction, should be a ContainerInfo w/ no volumes, w/ envvar
     assert(
