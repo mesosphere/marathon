@@ -55,7 +55,7 @@ class TaskBuilder(
 
       log.info(
         s"Offer [${offer.getId.getValue}]. Insufficient resources for [${runSpec.id}] (need cpus=${runSpec.cpus}, " +
-          s"mem=${runSpec.mem}, disk=${runSpec.disk}, $portsString, available in offer: " +
+          s"mem=${runSpec.mem}, disk=${runSpec.disk}, gpus=${runSpec.gpus}, $portsString, available in offer: " +
           s"[${TextFormat.shortDebugString(offer)}]"
       )
     }
@@ -447,7 +447,8 @@ object TaskBuilder {
         "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.flatMap(_.docker.map(_.image)),
         "MARATHON_APP_RESOURCE_CPUS" -> Some(runSpec.cpus.toString),
         "MARATHON_APP_RESOURCE_MEM" -> Some(runSpec.mem.toString),
-        "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.disk.toString)
+        "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.disk.toString),
+        "MARATHON_APP_RESOURCE_GPUS" -> Some(runSpec.gpus.toString)
       ).collect {
           case (key, Some(value)) => key -> value
         }.toMap ++ labelsToEnvVars(runSpec.labels)

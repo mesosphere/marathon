@@ -31,6 +31,8 @@ trait RunSpec extends plugin.RunSpec {
 
   def disk: Double
 
+  def gpus: Int
+
   def executor: String
 
   def constraints: Set[Constraint]

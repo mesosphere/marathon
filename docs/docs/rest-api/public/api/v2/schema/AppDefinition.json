@@ -396,6 +396,11 @@
       "description": "The amount of memory in MB that is needed for the application per instance.",
       "minimum": 0
     },
+    "gpus": {
+     "type": "integer",
+     "description": "The amount of GPU cores that is needed for the application per instance.",
+     "minimum": 0
+    },
     "ipAddress": {
       "type": "object",
       "description": "If an application definition includes the 'ipAddress' field, then Marathon will request a per-task IP from Mesos. A separate ports/portMappings configuration is then disallowed.",

@@ -144,7 +144,8 @@ object ResourceMatcher {
     val scalarMatchResults = Iterable(
       scalarResourceMatch(Resource.CPUS, runSpec.cpus, ScalarMatchResult.Scope.NoneDisk),
       scalarResourceMatch(Resource.MEM, runSpec.mem, ScalarMatchResult.Scope.NoneDisk),
-      diskMatch
+      diskMatch,
+      scalarResourceMatch(Resource.GPUS, runSpec.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)
     ).filter(_.requiredValue != 0)
 
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
