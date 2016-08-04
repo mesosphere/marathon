@@ -215,6 +215,8 @@ class TaskBuilder(
 
       // Fill in Docker container details if necessary
       runSpec.container.foreach { c =>
+        // TODO(nfnt): Other containers might also support port mappings in the future.
+        // If that is the case, a more general way than the one below needs to be implemented.
         val containerWithPortMappings = c match {
           case docker: Container.Docker => docker.copy(
             portMappings = docker.portMappings.map { pms =>
