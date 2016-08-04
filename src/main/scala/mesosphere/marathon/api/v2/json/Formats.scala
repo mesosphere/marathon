@@ -783,6 +783,7 @@ trait AppAndGroupFormats {
       (__ \ "cpus").readNullable[Double].withDefault(AppDefinition.DefaultCpus) ~
       (__ \ "mem").readNullable[Double].withDefault(AppDefinition.DefaultMem) ~
       (__ \ "disk").readNullable[Double].withDefault(AppDefinition.DefaultDisk) ~
+      (__ \ "gpus").readNullable[Int].withDefault(AppDefinition.DefaultGpus) ~
       (__ \ "executor").readNullable[String](Reads.pattern(executorPattern))
       .withDefault(AppDefinition.DefaultExecutor) ~
       (__ \ "constraints").readNullable[Set[Constraint]].withDefault(AppDefinition.DefaultConstraints) ~
@@ -795,11 +796,11 @@ trait AppAndGroupFormats {
       (__ \ "container").readNullable[Container] ~
       (__ \ "healthChecks").readNullable[Set[HealthCheck]].withDefault(AppDefinition.DefaultHealthChecks)
     ) ((
-        id, cmd, args, maybeString, env, instances, cpus, mem, disk, executor, constraints, storeUrls,
+        id, cmd, args, maybeString, env, instances, cpus, mem, disk, gpus, executor, constraints, storeUrls,
         requirePorts, backoff, backoffFactor, maxLaunchDelay, container, checks
       ) => AppDefinition(
         id = id, cmd = cmd, args = args, user = maybeString, env = env, instances = instances, cpus = cpus,
-        mem = mem, disk = disk, executor = executor, constraints = constraints, storeUrls = storeUrls,
+        mem = mem, disk = disk, gpus = gpus, executor = executor, constraints = constraints, storeUrls = storeUrls,
         requirePorts = requirePorts, backoff = backoff,
         backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container,
         healthChecks = checks)).flatMap { app =>
@@ -966,6 +967,7 @@ trait AppAndGroupFormats {
         "cpus" -> runSpec.cpus,
         "mem" -> runSpec.mem,
         "disk" -> runSpec.disk,
+        "gpus" -> runSpec.gpus,
         "executor" -> runSpec.executor,
         "constraints" -> runSpec.constraints,
         "uris" -> runSpec.fetch.map(_.uri),
@@ -1113,6 +1115,7 @@ trait AppAndGroupFormats {
     (__ \ "cpus").readNullable[Double] ~
     (__ \ "mem").readNullable[Double] ~
     (__ \ "disk").readNullable[Double] ~
+    (__ \ "gpus").readNullable[Int] ~
     (__ \ "executor").readNullable[String](Reads.pattern("^(//cmd)|(/?[^/]+(/[^/]+)*)|$".r)) ~
     (__ \ "constraints").readNullable[Set[Constraint]] ~
     (__ \ "storeUrls").readNullable[Seq[String]] ~
@@ -1123,11 +1126,12 @@ trait AppAndGroupFormats {
     (__ \ "container").readNullable[Container] ~
     (__ \ "healthChecks").readNullable[Set[HealthCheck]] ~
     (__ \ "dependencies").readNullable[Set[PathId]]
-  ) ((id, cmd, args, user, env, instances, cpus, mem, disk, executor, constraints, storeUrls, requirePorts,
+  ) ((id, cmd, args, user, env, instances, cpus, mem, disk, gpus, executor, constraints, storeUrls, requirePorts,
       backoffSeconds, backoffFactor, maxLaunchDelaySeconds, container, healthChecks, dependencies) =>
       AppUpdate(
         id = id, cmd = cmd, args = args, user = user, env = env, instances = instances, cpus = cpus, mem = mem,
-        disk = disk, executor = executor, constraints = constraints, storeUrls = storeUrls, requirePorts = requirePorts,
+        disk = disk, gpus = gpus, executor = executor, constraints = constraints,
+        storeUrls = storeUrls, requirePorts = requirePorts,
         backoff = backoffSeconds, backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelaySeconds,
         container = container, healthChecks = healthChecks, dependencies = dependencies
       )
