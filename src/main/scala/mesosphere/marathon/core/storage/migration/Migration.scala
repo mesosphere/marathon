@@ -91,8 +91,8 @@ class Migration(
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.2", e)
         }
       },
-      StorageVersions(1, 2, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
-        new MigrationTo1_2_PersistenceStore(this).migrate().recover {
+      StorageVersions(1, 4, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE) -> { () =>
+        new MigrationTo1_4_PersistenceStore(this).migrate().recover {
           case NonFatal(e) => throw new MigrationFailedException("while migrating storage to 1.3", e)
         }
       }

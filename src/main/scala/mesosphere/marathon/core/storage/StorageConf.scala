@@ -25,4 +25,11 @@ trait StorageConf extends ZookeeperConf {
     descr = "Limit the number of versions, stored for one entity.",
     default = Some(50)
   )
+
+  lazy val zkMaxConcurrency = opt[Int](
+    "zk_max_concurrency",
+    default = Some(32), // scalastyle:off magic.number
+    hidden = true,
+    descr = "Max outstanding requests to Zookeeper persistence"
+  )
 }

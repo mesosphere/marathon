@@ -19,11 +19,11 @@ import scala.concurrent.{ ExecutionContext, Future }
 // scalastyle:on
 
 /**
-  * Migration from Legacy Storage in 1.2 to the new Persistence Storage in 1.3
+  * Migration from Legacy Storage in 1.2 to the new Persistence Storage in 1.4
   *
   * Does nothing unless Legacy Storage and New Storage are configured.
   */
-class MigrationTo1_2_PersistenceStore(migration: Migration)(implicit
+class MigrationTo1_4_PersistenceStore(migration: Migration)(implicit
   executionContext: ExecutionContext,
     mat: Materializer,
     metrics: Metrics) extends StrictLogging {

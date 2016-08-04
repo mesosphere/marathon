@@ -105,7 +105,7 @@ object TwitterZk {
       retries = 3,
       enableCompression = config.zooKeeperCompressionEnabled(),
       compressionThreshold = ConfigMemorySize.ofBytes(config.zooKeeperCompressionThreshold()),
-      maxConcurrent = 8,
+      maxConcurrent = config.zkMaxConcurrency(),
       maxOutstanding = 1024) // scalastyle:off magic.number
 
   def apply(config: Config)(implicit metrics: Metrics, actorRefFactory: ActorRefFactory): TwitterZk = {
@@ -128,7 +128,7 @@ object TwitterZk {
       retries = config.int("retries", 3),
       enableCompression = config.bool("enable-compression", true),
       compressionThreshold = config.memorySize("compression-threshold", ConfigMemorySize.ofBytes(64 * 1024)),
-      maxConcurrent = config.int("max-concurrent", 8),
+      maxConcurrent = config.int("max-concurrent", 32),
       maxOutstanding = config.int("max-outstanding", 1024)
     )
     // scalastyle:on
@@ -263,7 +263,7 @@ object CuratorZk {
       password = conf.zkUsername,
       enableCompression = conf.zooKeeperCompressionEnabled(),
       retryConfig = RetryConfig(),
-      maxConcurrent = 8,
+      maxConcurrent = conf.zkMaxConcurrency(),
       maxOutstanding = 1024, // scalastyle:off magic.number
       maxVersions = conf.maxVersions()
     )
@@ -287,7 +287,7 @@ object CuratorZk {
       password = password,
       enableCompression = config.bool("enable-compression", true),
       retryConfig = RetryConfig(config),
-      maxConcurrent = config.int("max-concurrent-requests", 8),
+      maxConcurrent = config.int("max-concurrent-requests", 32), // scalastyle:off magic.number
       maxOutstanding = config.int("max-concurrent-outstanding", 1024), // scalastyle:off magic.number
       maxVersions = config.int("max-versions", StorageConfig.DefaultMaxVersions)
     )
