@@ -39,7 +39,9 @@ class DockerAppIntegrationTest
       waitForTasks(app.id, 1) // The app has really started
     }
 
-    test("deploy a simple Docker app using the Mesos containerizer") {
+    // TODO(nfnt): Enable this test when integration tests aren't run in a Docker container.
+    // The Mesos containerizer needs access to cgroups, which is hard to provide in a container.
+    ignore("deploy a simple Docker app using the Mesos containerizer") {
       Given("a new Docker app")
       val app = AppDefinition(
         id = testBasePath / "mesosdockerapp",
