@@ -64,11 +64,16 @@ Non-text type attributes (such as scalar or range) are now supported.
 #### ZooKeeper digest authentication support
 The ZK client now supports ZK authentication and ACLs.
 
-#### Support for virtual networking for Docker containers
-Added support for Docker `USER` networking
+#### Support for virtual networking for docker containers.
+Added support for Docker `USER` networking.
 
-#### "Service ports must be unique" validation
-For newly created or updated applications the validation of unique service ports is enforced.
+#### CNI networking support
+Added the optional field `ipAddress.Name`, which can be used to start a task using CNI networking.
+
+#### Enforce the uniqueness of service ports
+Marathon will now ensure for newly created or updated applications, that the services ports are not used by another application.
+
+__Caution: this change might lead to Marathon rejecting app definitions that used to be accepted by previous versions.__
 
 
 ### Performance improvements
@@ -79,6 +84,7 @@ For newly created or updated applications the validation of unique service ports
 
 ### Fixed issues
 
+- #3972 - network/cni support (#3974)
 - #4129 - TaskOpProcessorImplTest is flaky (#4148)
 - #4093 - Refactor MigrationTo1_2Test using async/wait (#4128)
 - #4095 - Used Map instead of Set to store apps in Group. (#4096)
