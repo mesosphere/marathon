@@ -467,6 +467,8 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
 
         actor ! scanResult
 
+        processReceiveUntil(actor, Idle) should be(Idle)
+
         verify(appRepo).delete("a".toRootPath)
         verify(appRepo).deleteVersion("b".toRootPath, OffsetDateTime.MIN)
         verify(appRepo).deleteVersion("b".toRootPath, OffsetDateTime.MAX)

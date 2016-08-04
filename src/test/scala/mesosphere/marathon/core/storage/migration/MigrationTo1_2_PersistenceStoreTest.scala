@@ -270,7 +270,9 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
 
         // we don't need to verify app repository as the new persistence store doesn't
         // store the apps in the groups, so if the roots load, we're all good.
-        migrator.appRepository.ids().runWith(Sink.seq).futureValue should not contain "deleted-app".toRootPath
+        val appIds = migrator.appRepository.ids().runWith(Sink.seq).futureValue
+        appIds should not contain "deleted-app".toRootPath
+        appIds should not be 'empty
       }
     }
   }

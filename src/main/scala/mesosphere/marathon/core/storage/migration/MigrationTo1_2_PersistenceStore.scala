@@ -117,8 +117,10 @@ class MigrationTo1_2_PersistenceStore(migration: Migration)(implicit
     }.concat { Source.fromFuture(oldRepo.root()) }.mapAsync(1) { root =>
       // we store the roots one at a time with the current root last,
       // adding a new app version for every root (for simplicity)
-      groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil)
-    }.runFold(0) { case (acc, _) => acc + 1 }.map("root versions" -> _)
+      groupRepository.storeRoot(root, root.transitiveApps.toVector, Nil).map(_ =>
+        root.transitiveApps.size
+      )
+    }.runFold(0) { case (acc, apps) => acc + apps + 1 }.map("root + app versions" -> _)
     val result = await(resultFuture)
     val deleteOldAppsFuture = oldAppRepo.ids().mapAsync(Int.MaxValue)(oldAppRepo.delete).runWith(Sink.ignore).asTry
     val deleteOldGroupsFuture = oldRepo.ids().mapAsync(Int.MaxValue)(oldRepo.delete).runWith(Sink.ignore).asTry
