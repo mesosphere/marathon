@@ -405,12 +405,31 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     app = correct.copy(
       gpus = 1,
-      container = Some(Container(
-        docker = Some(Docker())
-      ))
+      container = Some(Container.Docker())
     )
 
     shouldViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+
+    app = correct.copy(
+      gpus = 1,
+      container = Some(Container.Mesos())
+    )
+
+    shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+
+    app = correct.copy(
+      gpus = 1,
+      container = Some(Container.MesosDocker())
+    )
+
+    shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+
+    app = correct.copy(
+      gpus = 1,
+      container = Some(Container.MesosAppC())
+    )
+
+    shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
   }
 
   test("SerializationRoundtrip empty") {

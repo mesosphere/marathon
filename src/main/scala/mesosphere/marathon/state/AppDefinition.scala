@@ -7,6 +7,7 @@ import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.state.Container.{ Mesos, MesosAppC, MesosDocker }
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 // scalastyle:on
@@ -684,8 +685,14 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   private val complyWithGpuRules: Validator[AppDefinition] = conditional[AppDefinition](_.gpus > 0) {
     isTrue[AppDefinition]("GPU resources only work with the Mesos containerizer") { app =>
-      //TODO: we should check for the existence of the Mesos Containerizer, not the absence of Docker
-      app.container.exists(_.docker.isEmpty)
+      app.container.exists{
+        _ match {
+          case _: MesosDocker => true
+          case _: MesosAppC => true
+          case _: Mesos => true
+          case _ => false
+        }
+      }
     } and featureEnabled(Features.GPU_RESOURCES)
   }
 
