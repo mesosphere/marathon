@@ -79,6 +79,22 @@
         "docker": {
           "additionalProperties": false,
           "properties": {
+            "credential": {
+              "type": "object",
+              "description": "Credential to authenticate with the docker registry.",
+              "additionalProperties": false,
+              "properties": {
+                "principal": {
+                  "type": "string",
+                  "description": "Principal to authenticate with the docker registry."
+                },
+                "secret": {
+                  "type": "string",
+                  "description": "Secret to authenticate with the docker registry."
+                }
+              },
+              "required": [ "principal" ]
+            },
             "forcePullImage": {
               "type": "boolean",
               "description": "The container will be pulled, regardless if it is already available on the local system."
@@ -167,9 +183,37 @@
           ],
           "type": "object"
         },
+        "appc": {
+          "additionalProperties": false,
+          "properties": {
+            "image": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the AppC image to use."
+            },
+            "id": {
+              "type": "string",
+              "minLength": 7,
+              "description": "An image ID is a string of the format 'hash-value', where 'hash' is the hash algorithm used and 'value' is the hex-encoded digest. Currently the only permitted hash algorithm is sha512."
+            },
+            "labels": {
+              "type": "object",
+              "description": "Optional labels. Suggested labels: 'version', 'os', and 'arch'.",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "forcePullImage": {
+              "type": "boolean",
+              "description": "The container will be pulled, regardless if it is already available on the local system."
+            }
+          },
+          "required": [ "image" ],
+          "type": "object"
+        },
         "type": {
           "type": "string",
-          "description": "Supported container types at the moment are DOCKER and MESOS.",
+          "description": "Container engine type. Supported engine types at the moment are DOCKER and MESOS.",
           "enum": ["MESOS", "DOCKER"]
         },
         "volumes": {
@@ -300,6 +344,10 @@
           "cache": {
             "type": "boolean",
             "description": "Cache fetched artifact if supported by Mesos fetcher module"
+          },
+          "outputFile": {
+            "type": "string",
+            "description": "Rename fetched artifact with the given name"
           }
         },
         "required": [ "uri" ]
@@ -395,6 +443,11 @@
       "type": "number",
       "description": "The amount of memory in MB that is needed for the application per instance.",
       "minimum": 0
+    },
+    "gpus": {
+     "type": "integer",
+     "description": "The amount of GPU cores that is needed for the application per instance.",
+     "minimum": 0
     },
     "ipAddress": {
       "type": "object",

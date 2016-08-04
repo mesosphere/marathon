@@ -27,6 +27,10 @@ object Sink {
     AkkaSink.fromGraph(new CollectionStage[(K, V), immutable.Map[K, V]](immutable.Map.newBuilder[K, V]))
   }
 
+  def list[T]: AkkaSink[T, Future[List[T]]] = {
+    AkkaSink.fromGraph(new CollectionStage[T, List[T]](List.newBuilder[T]))
+  }
+
   // Akka's API
   def fromGraph[T, M](g: Graph[SinkShape[T], M]): AkkaSink[T, M] = AkkaSink.fromGraph(g)
   def fromSubscriber[T](subscriber: Subscriber[T]): AkkaSink[T, NotUsed] = AkkaSink.fromSubscriber(subscriber)

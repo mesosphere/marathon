@@ -2,19 +2,23 @@ package mesosphere.marathon.core.storage.repository.impl
 
 import java.time.OffsetDateTime
 
+import akka.actor.ActorRefFactory
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos
+import mesosphere.marathon.core.storage.repository.impl.GcActor.{ StoreApp, StorePlan, StoreRoot }
 import mesosphere.marathon.core.storage.repository.{ DeploymentRepository, GroupRepository }
 import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.async.Async.{ async, await }
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 
 case class StoredPlan(
     id: String,
@@ -57,7 +61,7 @@ object StoredPlan {
   }
 
   def apply(proto: Protos.DeploymentPlanDefinition): StoredPlan = {
-    val version = if (proto.hasTimestamp()) {
+    val version = if (proto.hasTimestamp) {
       OffsetDateTime.parse(proto.getTimestamp, DateFormat)
     } else {
       OffsetDateTime.MIN
@@ -70,19 +74,55 @@ object StoredPlan {
   }
 }
 
+// TODO: We should probably cache the plans we resolve...
 class DeploymentRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
-    groupRepository: GroupRepository)(implicit
+    groupRepository: StoredGroupRepositoryImpl[K, C, S],
+    appRepository: AppRepositoryImpl[K, C, S],
+    maxVersions: Int)(implicit
   ir: IdResolver[String, StoredPlan, C, K],
     marshaller: Marshaller[StoredPlan, S],
     unmarshaller: Unmarshaller[S, StoredPlan],
-    ctx: ExecutionContext) extends DeploymentRepository {
+    ctx: ExecutionContext,
+    actorRefFactory: ActorRefFactory,
+    mat: Materializer,
+    metrics: Metrics) extends DeploymentRepository {
+
+  private val gcActor = GcActor(
+    s"PersistenceGarbageCollector:$hashCode",
+    this, groupRepository, appRepository, maxVersions)
+
+  appRepository.beforeStore = Some((id, version) => {
+    val promise = Promise[Done]()
+    gcActor ! StoreApp(id, version, promise)
+    promise.future
+  })
+
+  groupRepository.beforeStore = Some(group => {
+    val promise = Promise[Done]()
+    gcActor ! StoreRoot(group, promise)
+    promise.future
+  })
+
+  private def beforeStore(plan: DeploymentPlan): Future[Done] = {
+    val promise = Promise[Done]()
+    gcActor ! StorePlan(plan, promise)
+    promise.future
+  }
 
   val repo = new PersistenceStoreRepository[String, StoredPlan, K, C, S](persistenceStore, _.id)
 
-  override def store(v: DeploymentPlan): Future[Done] = repo.store(StoredPlan(v))
+  override def store(v: DeploymentPlan): Future[Done] = async {
+    await(beforeStore(v))
+    await(repo.store(StoredPlan(v)))
+  }
 
-  override def delete(id: String): Future[Done] = repo.delete(id)
+  override def delete(id: String): Future[Done] = async {
+    val plan = await(get(id))
+    val future = repo.delete(id)
+    plan.foreach(p => future.onComplete(_ => gcActor ! GcActor.RunGC))
+    await(future)
+  }
 
   override def ids(): Source[String, NotUsed] = repo.ids()
 
@@ -97,4 +137,8 @@ class DeploymentRepositoryImpl[K, C, S](
         None
     }
   }
+
+  private[impl] def lazyAll(): Source[StoredPlan, NotUsed] =
+    repo.ids().mapAsync(Int.MaxValue)(repo.get).collect { case Some(g) => g }
 }
+

@@ -10,15 +10,18 @@ case class FetchUri(
     uri: String,
     extract: Boolean = true,
     executable: Boolean = false,
-    cache: Boolean = false) {
+    cache: Boolean = false,
+    outputFile: Option[String] = None) {
 
-  def toProto(): mesos.CommandInfo.URI =
-    mesos.CommandInfo.URI.newBuilder()
+  def toProto(): mesos.CommandInfo.URI = {
+    val builder = mesos.CommandInfo.URI.newBuilder()
       .setValue(uri)
       .setExecutable(executable)
       .setExtract(extract)
       .setCache(cache)
-      .build()
+    outputFile.foreach{ name => builder.setOutputFile(name) }
+    builder.build()
+  }
 }
 
 object FetchUri {
@@ -30,7 +33,8 @@ object FetchUri {
       uri = uri.getValue,
       executable = uri.getExecutable,
       extract = uri.getExtract,
-      cache = uri.getCache
+      cache = uri.getCache,
+      outputFile = if (uri.hasOutputFile) Some(uri.getOutputFile) else None
     )
 
   def isExtract(uri: String): Boolean = {

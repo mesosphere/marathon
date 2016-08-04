@@ -27,7 +27,7 @@ trait ZkTestClass1Serialization {
       ZkId(category = "test-class", id.replaceAll("/", "_"), version)
     }
     override val category: String = "test-class"
-    override val maxVersions: Int = 2
+    override val hasVersions = true
     override def version(tc: TestClass1): OffsetDateTime = tc.version
   }
 

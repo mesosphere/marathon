@@ -1,6 +1,8 @@
 package mesosphere.marathon.core.storage.repository.impl
 
 // scalastyle:off
+import java.time.OffsetDateTime
+
 import akka.Done
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -11,18 +13,45 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.util.state.FrameworkId
 
-import scala.concurrent.Future
+import scala.async.Async.{ async, await }
+import scala.concurrent.{ ExecutionContext, Future }
 // scalastyle:on
 
 class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
   ir: IdResolver[PathId, AppDefinition, C, K],
   marhaller: Marshaller[AppDefinition, S],
-  unmarshaller: Unmarshaller[S, AppDefinition])
+  unmarshaller: Unmarshaller[S, AppDefinition],
+  ctx: ExecutionContext)
     extends PersistenceStoreVersionedRepository[PathId, AppDefinition, K, C, S](
       persistenceStore,
       _.id,
       _.version.toOffsetDateTime)
-    with AppRepository
+    with AppRepository {
+
+  private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
+
+  override def store(v: AppDefinition): Future[Done] = async {
+    beforeStore match {
+      case Some(preStore) =>
+        await(preStore(v.id, None))
+      case _ =>
+    }
+    await(super.store(v))
+  }
+
+  override def storeVersion(v: AppDefinition): Future[Done] = async {
+    beforeStore match {
+      case Some(preStore) =>
+        await(preStore(v.id, Some(v.version.toOffsetDateTime)))
+      case _ =>
+    }
+    await(super.storeVersion(v))
+  }
+
+  private[storage] def deleteVersion(id: PathId, version: OffsetDateTime): Future[Done] = {
+    persistenceStore.deleteVersion(id, version)
+  }
+}
 
 class TaskRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
   ir: IdResolver[Task.Id, Task, C, K],

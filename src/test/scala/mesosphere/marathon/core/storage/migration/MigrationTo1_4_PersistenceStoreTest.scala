@@ -19,16 +19,16 @@ import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
 
-class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
+class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
   val maxVersions = 25
   import mesosphere.marathon.state.PathId._
 
   def migration(legacyConfig: Option[LegacyStorageConfig] = None, maxVersions: Int = maxVersions): Migration = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val persistenceStore = new InMemoryPersistenceStore()
-    val appRepository = AppRepository.inMemRepository(persistenceStore, maxVersions)
-    val groupRepository = GroupRepository.inMemRepository(persistenceStore, appRepository, maxVersions)
-    val deploymentRepository = DeploymentRepository.inMemRepository(persistenceStore, groupRepository)
+    val appRepository = AppRepository.inMemRepository(persistenceStore)
+    val groupRepository = GroupRepository.inMemRepository(persistenceStore, appRepository)
+    val deploymentRepository = DeploymentRepository.inMemRepository(persistenceStore, groupRepository, appRepository, 25)
     val taskRepo = TaskRepository.inMemRepository(persistenceStore)
     val taskFailureRepository = TaskFailureRepository.inMemRepository(persistenceStore)
     val frameworkIdRepository = FrameworkIdRepository.inMemRepository(persistenceStore)
@@ -46,7 +46,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val oldRepo = FrameworkIdRepository.legacyRepository(config.entityStore[FrameworkId])
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         migrator.frameworkIdRepo.get().futureValue should be('empty)
@@ -59,7 +59,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         oldRepo.store(id).futureValue
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         migrator.frameworkIdRepo.get().futureValue.value should equal(id)
@@ -73,7 +73,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val oldRepo = EventSubscribersRepository.legacyRepository(config.entityStore[EventSubscribers])
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         migrator.eventSubscribersRepo.get().futureValue should be('empty)
@@ -86,7 +86,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         oldRepo.store(subscribers).futureValue
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         migrator.eventSubscribersRepo.get().futureValue.value should equal(subscribers)
@@ -100,7 +100,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val oldRepo = TaskRepository.legacyRepository(config.entityStore[MarathonTaskState])
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         migrator.taskRepo.all().runWith(Sink.seq).futureValue should be('empty)
@@ -120,7 +120,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         tasks.foreach(oldRepo.store(_).futureValue)
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         migrator.taskRepo.all().runWith(Sink.seq).futureValue should contain theSameElementsAs tasks
@@ -134,7 +134,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val oldRepo = TaskFailureRepository.legacyRepository(config.entityStore[TaskFailure])
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         migrator.taskRepo.all().runWith(Sink.seq).futureValue should be('empty)
@@ -153,7 +153,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         failures.foreach(oldRepo.store(_).futureValue)
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         // we only keep 1 historical version, not 2
@@ -168,7 +168,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val oldRepo = DeploymentRepository.legacyRepository(config.entityStore[DeploymentPlan])
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         migrator.deploymentRepository.all().runWith(Sink.seq).futureValue should be('empty)
@@ -197,7 +197,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
           oldRepo.store(plan).futureValue
         }
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         val migrated = migrator.deploymentRepository.all().runWith(Sink.seq).futureValue
@@ -216,7 +216,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         oldAppRepo.store(AppDefinition("deleted-app".toRootPath)).futureValue
 
         val migrator = migration(Some(config))
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         oldAppRepo.all().runWith(Sink.seq).futureValue should be('empty)
@@ -233,7 +233,7 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         migrator.groupRepository.rootVersions()
           .runWith(Sink.seq).futureValue should contain theSameElementsAs Seq(emptyRoot.version.toOffsetDateTime)
       }
-      "store all the previous roots up to the max versions" in {
+      "store all the previous roots" in {
         implicit val metrics = new Metrics(new MetricRegistry)
         val oldMax = 3
         val config = LegacyInMemConfig(oldMax)
@@ -255,9 +255,9 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
 
         val roots = Seq(root1, root2, root3)
 
-        // one less root version than the old
+        // one less root version than the old, but doesn't matter because it doesn't run GC.
         val migrator = migration(Some(config), 2)
-        val migrate = new MigrationTo1_2_PersistenceStore(migrator)
+        val migrate = new MigrationTo1_4_PersistenceStore(migrator)
         migrate.migrate().futureValue
 
         oldAppRepo.all().runWith(Sink.seq).futureValue should be('empty)
@@ -266,12 +266,13 @@ class MigrationTo1_2_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         migrator.groupRepository.root().futureValue should equal(root3)
         migrator.groupRepository.rootVersions().mapAsync(Int.MaxValue)(migrator.groupRepository.rootVersion)
           .collect { case Some(g) => g }
-          .runWith(Sink.seq).futureValue should contain theSameElementsAs
-          Seq(root3, root2)
+          .runWith(Sink.seq).futureValue should contain theSameElementsAs roots
 
         // we don't need to verify app repository as the new persistence store doesn't
         // store the apps in the groups, so if the roots load, we're all good.
-        migrator.appRepository.ids().runWith(Sink.seq).futureValue should not contain "deleted-app".toRootPath
+        val appIds = migrator.appRepository.ids().runWith(Sink.seq).futureValue
+        appIds should not contain "deleted-app".toRootPath
+        appIds should not be 'empty
       }
     }
   }

@@ -13,7 +13,7 @@ trait InMemoryTestClass1Serialization {
     override def toStorageId(id: String, version: Option[OffsetDateTime]): RamId =
       RamId(category, id, version)
     override val category: String = "test-class"
-    override val maxVersions: Int = 2
+    override val hasVersions = true
 
     override def fromStorageId(key: RamId): String = key.id
     override def version(v: TestClass1): OffsetDateTime = v.version

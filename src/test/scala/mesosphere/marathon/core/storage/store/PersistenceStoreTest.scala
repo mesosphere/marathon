@@ -73,9 +73,9 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         store.deleteAll("task-2").futureValue should be(Done)
         store.deleteAll("task-2").futureValue should be(Done)
       }
-      "store the most recent N versions of the old values" in {
+      "store the multiple versions of the old values" in {
         val clock = new SettableClock()
-        val versions = 0.until(ir.maxVersions).map { i =>
+        val versions = 0.until(10).map { i =>
           clock.plus(1.minute)
           TestClass1("abc", i, OffsetDateTime.now(clock))
         }
@@ -89,9 +89,8 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         // it should have dropped one element.
         val storedVersions = store.versions("task").runWith(Sink.seq).futureValue
         // the current version is listed too.
-        storedVersions.size should equal(ir.maxVersions)
-        storedVersions should contain theSameElementsAs newestVersion.version +: versions.tail.map(_.version)
-        versions.tail.foreach { v =>
+        storedVersions should contain theSameElementsAs newestVersion.version +: versions.map(_.version)
+        versions.foreach { v =>
           store.get("task", v.version).futureValue.value should equal(v)
         }
       }

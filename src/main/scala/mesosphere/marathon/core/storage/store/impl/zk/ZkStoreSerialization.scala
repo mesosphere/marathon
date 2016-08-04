@@ -33,7 +33,7 @@ trait ZkStoreSerialization {
   /** General id resolver for a key of Path.Id */
   private class ZkPathIdResolver[T](
     val category: String,
-    val maxVersions: Int,
+    val hasVersions: Boolean,
     getVersion: (T) => OffsetDateTime)
       extends IdResolver[PathId, T, String, ZkId] {
     override def toStorageId(id: PathId, version: Option[OffsetDateTime]): ZkId =
@@ -42,8 +42,8 @@ trait ZkStoreSerialization {
     override def version(v: T): OffsetDateTime = getVersion(v)
   }
 
-  def appDefResolver(maxVersions: Int): IdResolver[PathId, AppDefinition, String, ZkId] =
-    new ZkPathIdResolver[AppDefinition]("apps", maxVersions, _.version.toOffsetDateTime)
+  implicit val appDefResolver: IdResolver[PathId, AppDefinition, String, ZkId] =
+    new ZkPathIdResolver[AppDefinition]("apps", true, _.version.toOffsetDateTime)
 
   implicit val appDefMarshaller: Marshaller[AppDefinition, ZkSerialized] =
     Marshaller.opaque(appDef => ZkSerialized(ByteString(appDef.toProtoByteArray)))
@@ -61,7 +61,7 @@ trait ZkStoreSerialization {
         ZkId(category, id.idString, version)
       override val category: String = "task"
       override def fromStorageId(key: ZkId): Task.Id = Task.Id(key.id)
-      override val maxVersions: Int = 0
+      override val hasVersions = false
       override def version(v: Task): OffsetDateTime = OffsetDateTime.MIN
     }
 
@@ -80,7 +80,7 @@ trait ZkStoreSerialization {
         ZkId(category, id, version)
       override val category: String = "deployment"
       override def fromStorageId(key: ZkId): String = key.id
-      override val maxVersions: Int = 0
+      override val hasVersions = false
       override def version(v: StoredPlan): OffsetDateTime = OffsetDateTime.MIN
     }
 
@@ -93,8 +93,8 @@ trait ZkStoreSerialization {
         StoredPlan(DeploymentPlanDefinition.parseFrom(byteString.toArray))
     }
 
-  def taskFailureResolver(maxVersions: Int): IdResolver[PathId, TaskFailure, String, ZkId] =
-    new ZkPathIdResolver[TaskFailure]("taskFailures", maxVersions, _.version.toOffsetDateTime)
+  implicit val taskFailureResolver: IdResolver[PathId, TaskFailure, String, ZkId] =
+    new ZkPathIdResolver[TaskFailure]("taskFailures", true, _.version.toOffsetDateTime)
 
   implicit val taskFailureMarshaller: Marshaller[TaskFailure, ZkSerialized] =
     Marshaller.opaque(failure => ZkSerialized(ByteString(failure.toProtoByteArray)))
@@ -105,7 +105,7 @@ trait ZkStoreSerialization {
         TaskFailure(Protos.TaskFailure.parseFrom(byteString.toArray))
     }
 
-  def groupIdResolver(groupMaxVersions: Int): IdResolver[PathId, StoredGroup, String, ZkId] =
+  implicit val groupIdResolver: IdResolver[PathId, StoredGroup, String, ZkId] =
     new IdResolver[PathId, StoredGroup, String, ZkId] {
       override def toStorageId(id: PathId, version: Option[OffsetDateTime]): ZkId = {
         require(id == StoredGroupRepositoryImpl.RootId)
@@ -113,7 +113,7 @@ trait ZkStoreSerialization {
       }
       override val category: String = "group"
       override def fromStorageId(key: ZkId): PathId = StoredGroupRepositoryImpl.RootId
-      override val maxVersions: Int = groupMaxVersions
+      override val hasVersions = true
       override def version(v: StoredGroup): OffsetDateTime = v.version
     }
 
@@ -135,7 +135,7 @@ trait ZkStoreSerialization {
       ZkId(category, id, version)
     override val category: String = "framework-id"
     override def fromStorageId(key: ZkId): String = key.id
-    override val maxVersions: Int = 0
+    override val hasVersions = false
     override def version(v: FrameworkId): OffsetDateTime = OffsetDateTime.MIN
   }
 
@@ -153,7 +153,7 @@ trait ZkStoreSerialization {
       ZkId(id, category, version)
     override val category: String = "event-subscribers"
     override def fromStorageId(key: ZkId): String = key.id
-    override val maxVersions: Int = 0
+    override val hasVersions = false
     override def version(v: EventSubscribers): OffsetDateTime = OffsetDateTime.MIN
   }
 

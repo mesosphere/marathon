@@ -69,7 +69,7 @@ class MarathonHealthCheckManagerTest
     stateOpProcessor = taskTrackerModule.stateOpProcessor
 
     val store = new InMemoryPersistenceStore()(ctx = ExecutionContext.global, mat = mat, metrics = metrics)
-    appRepository = AppRepository.inMemRepository(store, 5)
+    appRepository = AppRepository.inMemRepository(store)(ExecutionContext.global)
 
     eventStream = new EventStream(system)
 

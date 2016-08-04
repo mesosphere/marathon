@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launcher.impl
 
+import mesosphere.marathon.api.serialization.LabelsSerializer
 import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
@@ -7,12 +8,7 @@ import org.apache.mesos.{ Protos => MesosProtos }
   */
 case class ReservationLabels(labels: Map[String, String]) {
   lazy val mesosLabels: MesosProtos.Labels = {
-    val labelsBuilder = MesosProtos.Labels.newBuilder()
-    labels.foreach {
-      case (k, v) =>
-        labelsBuilder.addLabels(MesosProtos.Label.newBuilder().setKey(k).setValue(v))
-    }
-    labelsBuilder.build()
+    LabelsSerializer.toMesosLabelsBuilder(labels).build
   }
 
   def get(key: String): Option[String] = labels.get(key)

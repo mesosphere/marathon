@@ -6,7 +6,7 @@ import akka.Done
 import com.codahale.metrics.MetricRegistry
 import com.twitter.zk.ZNode
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.storage.repository.impl.legacy.store.{ CompressionConf, EntityStore, InMemoryStore, MarathonStore, PersistentStore, ZKStore }
+import mesosphere.marathon.core.storage.repository.impl.legacy.store._
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
@@ -104,12 +104,12 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
           lastVersion)
         versions.foreach { v => repo.store(v).futureValue }
 
-        repo.versions(app.id).runWith(Sink.seq).futureValue should
-          contain theSameElementsAs versions.tail.map(_.version.toOffsetDateTime)
-        repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
+        // New Persistence Stores are Garbage collected so they can store extra versions...
+        versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
+          repo.versions(app.id).runWith(Sink.set).futureValue) should be ('empty)
+        versions.tail.toSet.diff(repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
           .collect { case Some(g) => g }
-          .runWith(Sink.seq).futureValue should
-          contain theSameElementsAs versions.tail
+          .runWith(Sink.set).futureValue) should be ('empty)
 
         repo.get(app.id).futureValue.value should equal(lastVersion)
 
@@ -117,12 +117,13 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
         repo.deleteCurrent(app.id).futureValue
 
         Then("The versions are still list-able, including the current one")
-        repo.versions(app.id).runWith(Sink.seq).futureValue should
-          contain theSameElementsAs versions.tail.map(_.version.toOffsetDateTime)
-        repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
+        versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
+          repo.versions(app.id).runWith(Sink.set).futureValue) should be('empty)
+        versions.tail.toSet.diff(
+          repo.versions(app.id).mapAsync(Int.MaxValue)(repo.getVersion(app.id, _))
           .collect { case Some(g) => g }
-          .runWith(Sink.seq).futureValue should
-          contain theSameElementsAs versions.tail
+          .runWith(Sink.set).futureValue
+        ) should be ('empty)
 
         And("Get of the current will fail")
         repo.get(app.id).futureValue should be('empty)
@@ -165,14 +166,14 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
   def createInMemRepo(maxVersions: Int): AppRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    AppRepository.inMemRepository(new InMemoryPersistenceStore(), maxVersions)
+    AppRepository.inMemRepository(new InMemoryPersistenceStore())
   }
 
   def createLoadTimeCachingRepo(maxVersions: Int): AppRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
     val cached = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore())
     cached.preDriverStarts.futureValue
-    AppRepository.inMemRepository(cached, maxVersions)
+    AppRepository.inMemRepository(cached)
   }
 
   def createZKRepo(maxVersions: Int): AppRepository = {
@@ -181,12 +182,12 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     val rootClient = zkClient()
     rootClient.create(s"/$root").futureValue
     val store = new ZkPersistenceStore(rootClient.usingNamespace(root), Duration.Inf)
-    AppRepository.zkRepository(store, maxVersions)
+    AppRepository.zkRepository(store)
   }
 
   def createLazyCachingRepo(maxVersions: Int): AppRepository = {
     implicit val metrics = new Metrics(new MetricRegistry)
-    AppRepository.inMemRepository(new LazyCachingPersistenceStore(new InMemoryPersistenceStore()), maxVersions)
+    AppRepository.inMemRepository(new LazyCachingPersistenceStore(new InMemoryPersistenceStore()))
   }
 
   behave like basic("InMemEntity", createLegacyRepo(_, new InMemoryStore()))
