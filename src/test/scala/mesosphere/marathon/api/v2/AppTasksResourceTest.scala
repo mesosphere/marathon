@@ -29,14 +29,30 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val toKill = Set(MarathonTestHelper.stagedTaskForApp(PathId(appId)))
 
     config.zkTimeoutDuration returns 5.seconds
-    taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
+    taskKiller.kill(any, any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId.toRootPath) returns Future.successful(Some(AppDefinition(appId.toRootPath)))
 
-    val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = false, auth.request)
+    val response = appsTaskResource.deleteMany(appId, host, killCount = -1, scale = false, force = false, wipe = false, noOp = false, auth.request)
     response.getStatus shouldEqual 200
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
       .correspondsToJsonOf(Json.obj("tasks" -> toKill))
+  }
+
+  test("deleteMany with noOp") {
+    val appId = "/my/app"
+    val host = "host"
+    val toKill = Set(MarathonTestHelper.stagedTaskForApp(PathId(appId)))
+
+    groupManager.app(appId.toRootPath) returns Future.successful(Some(AppDefinition(appId.toRootPath)))
+    taskKiller.getTasksToKill(any, any, any, any) returns toKill
+    taskTracker.appTasksLaunchedSync(appId.toRootPath) returns toKill
+
+    val response = appsTaskResource.deleteMany(appId, host, killCount = -1, scale = false, force = false, wipe = false, noOp = true, auth.request)
+    response.getStatus shouldEqual 200
+    JsonTestHelper
+      .assertThatJsonString(response.getEntity.asInstanceOf[String])
+      .correspondsToJsonOf(Json.obj("tasks" -> toKill, "noOp" -> true))
   }
 
   test("deleteMany with scale and wipe fails") {
@@ -44,7 +60,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val host = "host"
 
     val exception = intercept[BadRequestException] {
-      appsTaskResource.deleteMany(appId, host, scale = true, force = false, wipe = true, auth.request)
+      appsTaskResource.deleteMany(appId, host, killCount = -1, scale = true, force = false, wipe = true, noOp = false, auth.request)
     }
     exception.getMessage shouldEqual "You cannot use scale and wipe at the same time."
   }
@@ -52,11 +68,11 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
   test("deleteMany with wipe delegates to taskKiller with wipe value") {
     val appId = "/my/app"
     val host = "host"
-    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Task])
+    taskKiller.kill(any, any, any, any)(any) returns Future.successful(Iterable.empty[Task])
 
-    val response = appsTaskResource.deleteMany(appId, host, scale = false, force = false, wipe = true, auth.request)
+    val response = appsTaskResource.deleteMany(appId, host, killCount = -1, scale = false, force = false, wipe = true, noOp = false, auth.request)
     response.getStatus shouldEqual 200
-    verify(taskKiller).kill(any, any, eq(true))(any)
+    verify(taskKiller).kill(any, any, eq(true), any)(any)
   }
 
   test("deleteOne") {
@@ -71,7 +87,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.appTasks(appId) returns Future.successful(Set(task1, task2))
-    taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
+    taskKiller.kill(any, any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
     val response = appsTaskResource.deleteOne(
@@ -81,7 +97,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
       .correspondsToJsonOf(Json.obj("task" -> toKill.head))
-    verify(taskKiller).kill(equalTo(appId), any, any)(any)
+    verify(taskKiller).kill(equalTo(appId), any, any, any)(any)
     verifyNoMoreInteractions(taskKiller)
   }
 
@@ -107,7 +123,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.appTasks(appId) returns Future.successful(Set(task1, task2))
-    taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
+    taskKiller.kill(any, any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
     val response = appsTaskResource.deleteOne(
@@ -117,7 +133,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     JsonTestHelper
       .assertThatJsonString(response.getEntity.asInstanceOf[String])
       .correspondsToJsonOf(Json.obj("task" -> toKill.head))
-    verify(taskKiller).kill(equalTo(appId), any, org.mockito.Matchers.eq(true))(any)
+    verify(taskKiller).kill(equalTo(appId), any, org.mockito.Matchers.eq(true), any)(any)
     verifyNoMoreInteractions(taskKiller)
   }
 
@@ -169,7 +185,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     deleteOne.getStatus should be(auth.NotAuthenticatedStatus)
 
     When(s"multiple tasks are deleted")
-    val deleteMany = appsTaskResource.deleteMany("appId", "host", false, false, false, req)
+    val deleteMany = appsTaskResource.deleteMany("appId", "host", -1, false, false, false, false, req)
     Then("we receive a NotAuthenticated response")
     deleteMany.getStatus should be(auth.NotAuthenticatedStatus)
   }
@@ -308,7 +324,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     groupManager.app("/app".toRootPath) returns Future.successful(Some(AppDefinition("/app".toRootPath)))
 
     When(s"deleteMany is called")
-    val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)
+    val deleteMany = appsTaskResource.deleteMany("app", "host", -1, false, false, false, false, req)
     Then("we receive a not authorized response")
     deleteMany.getStatus should be(auth.UnauthorizedStatus)
   }
@@ -324,7 +340,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     groupManager.app("/app".toRootPath) returns Future.successful(None)
 
     When(s"deleteMany is called")
-    val deleteMany = appsTaskResource.deleteMany("app", "host", false, false, false, req)
+    val deleteMany = appsTaskResource.deleteMany("app", "host", -1, false, false, false, false, req)
     Then("we receive a not authorized response")
     deleteMany.getStatus should be(404)
   }

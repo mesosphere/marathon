@@ -83,9 +83,11 @@ class AppTasksResource @Inject() (
   def deleteMany(
     @PathParam("appId") appId: String,
     @QueryParam("host") host: String,
+    @QueryParam("killCount")@DefaultValue("-1") killCount: Integer = -1,
     @QueryParam("scale")@DefaultValue("false") scale: Boolean = false,
     @QueryParam("force")@DefaultValue("false") force: Boolean = false,
     @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
+    @QueryParam("noOp")@DefaultValue("false") noOp: Boolean = false,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
 
@@ -97,11 +99,19 @@ class AppTasksResource @Inject() (
 
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
-    if (scale) {
-      val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
+    if (noOp) {
+      result(groupManager.app(pathId)) match {
+        case None => unknownApp(pathId)
+        case Some(appInfo) =>
+          var tasks = findToKill(taskTracker.appTasksLaunchedSync(pathId))
+          tasks = taskKiller.getTasksToKill(pathId, appInfo, tasks, killCount)
+          ok(jsonObjString("tasks" -> tasks, "noOp" -> true))
+      }
+    } else if (scale) {
+      val deploymentF = taskKiller.killAndScale(pathId, findToKill, force, killCount)
       deploymentResult(result(deploymentF))
     } else {
-      reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
+      reqToResponse(taskKiller.kill(pathId, findToKill, wipe, killCount)) {
         tasks => ok(jsonObjString("tasks" -> tasks))
       }
     }
@@ -126,7 +136,7 @@ class AppTasksResource @Inject() (
       val deploymentF = taskKiller.killAndScale(pathId, findToKill, force)
       deploymentResult(result(deploymentF))
     } else {
-      reqToResponse(taskKiller.kill(pathId, findToKill, wipe)) {
+      reqToResponse(taskKiller.kill(pathId, findToKill, wipe, -1)) {
         tasks => tasks.headOption.fold(unknownTask(id))(task => ok(jsonObjString("task" -> task)))
       }
     }
