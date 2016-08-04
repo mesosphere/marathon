@@ -623,8 +623,10 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       id = "app-with-fetch".toPath,
       cmd = Some("brew update"),
       fetch = Seq(
-        new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true),
-        new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false)
+        new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true,
+          outputFile = None),
+        new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false,
+          outputFile = None)
       )
     )
 
@@ -678,8 +680,10 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       id = "app-with-fetch".toPath,
       cmd = Some("brew update"),
       fetch = Seq(
-        new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true),
-        new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false)
+        new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true,
+          outputFile = None),
+        new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false,
+          outputFile = None)
       )
     )
 

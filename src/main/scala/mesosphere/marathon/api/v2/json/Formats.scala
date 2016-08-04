@@ -563,8 +563,9 @@ trait FetchUriFormats {
       (__ \ "uri").format[String] ~
       (__ \ "extract").formatNullable[Boolean].withDefault(true) ~
       (__ \ "executable").formatNullable[Boolean].withDefault(false) ~
-      (__ \ "cache").formatNullable[Boolean].withDefault(false)
-    )(FetchUri(_, _, _, _), unlift(FetchUri.unapply))
+      (__ \ "cache").formatNullable[Boolean].withDefault(false) ~
+      (__ \ "outputFile").formatNullable[String]
+    )(FetchUri(_, _, _, _, _), unlift(FetchUri.unapply))
   }
 }
 
