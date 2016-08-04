@@ -111,13 +111,25 @@ object ProcessKeeper {
         |}
       """.stripMargin)
 
-    Seq(
-      ENV_MESOS_WORK_DIR -> workDir,
-      "MESOS_LAUNCHER" -> "posix",
-      "MESOS_CONTAINERIZERS" -> effectiveContainerizers,
-      "MESOS_ROLES" -> "public,foo",
-      "MESOS_ACLS" -> s"file://$aclsPath",
-      "MESOS_CREDENTIALS" -> s"file://$credentialsPath")
+    if (sys.env.getOrElse("RUN_DOCKER_INTEGRATION_TESTS", "true") == "true") {
+      Seq(
+        ENV_MESOS_WORK_DIR -> workDir,
+        "MESOS_LAUNCHER" -> "linux",
+        "MESOS_CONTAINERIZERS" -> effectiveContainerizers,
+        "MESOS_IMAGE_PROVIDERS" -> "docker",
+        "MESOS_ISOLATION" -> "filesystem/linux,docker/runtime",
+        "MESOS_ROLES" -> "public,foo",
+        "MESOS_ACLS" -> s"file://$aclsPath",
+        "MESOS_CREDENTIALS" -> s"file://$credentialsPath")
+    } else {
+      Seq(
+        ENV_MESOS_WORK_DIR -> workDir,
+        "MESOS_LAUNCHER" -> "posix",
+        "MESOS_CONTAINERIZERS" -> effectiveContainerizers,
+        "MESOS_ROLES" -> "public,foo",
+        "MESOS_ACLS" -> s"file://$aclsPath",
+        "MESOS_CREDENTIALS" -> s"file://$credentialsPath")
+    }
   }
 
   def startMesos(processName: String, workDir: String, args: Seq[String], startMessage: String, wipe: Boolean): Process = {
