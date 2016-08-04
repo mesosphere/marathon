@@ -6,35 +6,41 @@
       "/foo"
     ],
     "steps": [
-      [
-        {
-          "action": "StartApplication",
-          "app": "/foo"
-        }
-      ],
-      [
-        {
-          "action": "ScaleApplication",
-          "app": "/foo"
-        }
-      ]
+      {
+        "actions": [
+          {
+            "action": "StartApplication",
+            "app": "/foo"
+          }
+        ]
+      },
+      {
+        "actions": [
+          {
+            "action": "ScaleApplication",
+            "app": "/foo"
+          }
+        ]
+      }
     ],
     "currentActions": [
       {
         "action": "ScaleApplication",
         "app": "/foo",
-        "readinessChecks": [
-          {
-            "lastResponse": {
-              "body": "{}",
-              "contentType": "application/json",
-              "status": 500
-            },
-            "name": "myReadyCheck",
-            "ready": false,
-            "taskId": "foo.c9de6033"
-          }
-        ]
+        "readinessCheckResults": {
+          "/foo": [
+            {
+              "taskId": "foo.c9de6033",
+              "lastResponse": {
+                "body": "{}",
+                "contentType": "application/json",
+                "status": 500
+              },
+              "name": "myReadyCheck",
+              "ready": false
+            }
+          ]
+        }
       }
     ],
     "currentStep": 2,

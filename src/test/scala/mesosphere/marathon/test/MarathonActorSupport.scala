@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory
   */
 trait MarathonActorSupport extends Suite with TestKitBase with BeforeAndAfterAll {
 
-  private[this] val log = LoggerFactory.getLogger(getClass)
+  val log = LoggerFactory.getLogger(getClass)
 
   /** Make sure that top-level actors in tests die if they throw an exception. */
   private[this] lazy val stoppingConfigStr =

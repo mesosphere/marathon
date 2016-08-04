@@ -135,7 +135,7 @@ object Constraints {
       if (value.nonEmpty) {
         !getValueString(attr.get).matches(value)
       } else {
-        log.warn(s"Error, value is required for LIKE operation")
+        log.warn(s"Error, value is required for UNLIKE operation")
         false
       }
     }
@@ -249,4 +249,3 @@ object Constraints {
     }
   }
 }
-

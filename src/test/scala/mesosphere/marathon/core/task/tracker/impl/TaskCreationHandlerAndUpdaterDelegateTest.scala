@@ -3,7 +3,6 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
@@ -116,7 +115,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(TaskID.newBuilder().setValue(taskIdString)).buildPartial()
-    val stateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(update), now)
+    val stateOp = TaskStateOp.MesosUpdate(task, update, now)
 
     When("created is called")
     val statusUpdate = f.delegate.process(stateOp)
@@ -141,7 +140,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(taskId.mesosTaskId).buildPartial()
-    val stateOp = TaskStateOp.MesosUpdate(task, MarathonTaskStatus(update), now)
+    val stateOp = TaskStateOp.MesosUpdate(task, update, now)
 
     When("statusUpdate is called")
     val statusUpdate = f.delegate.process(stateOp)

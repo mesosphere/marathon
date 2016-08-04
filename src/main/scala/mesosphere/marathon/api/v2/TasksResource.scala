@@ -12,12 +12,12 @@ import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller,
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
-import org.apache.mesos.Protos.TaskState
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
@@ -71,7 +71,7 @@ class TasksResource @Inject() (
       (appId, task) <- tasks
       app <- appIdsToApps(appId)
       if isAuthorized(ViewRunSpec, app)
-      if statusSet.isEmpty || task.mesosStatus.exists(s => statusSet(s.getState))
+      if statusSet.isEmpty || statusSet(task.status.taskStatus)
     } yield {
       EnrichedTask(
         appId,
@@ -142,9 +142,9 @@ class TasksResource @Inject() (
     else killTasks(tasksByAppId)
   }
 
-  private def toTaskState(state: String): Option[TaskState] = state.toLowerCase match {
-    case "running" => Some(TaskState.TASK_RUNNING)
-    case "staging" => Some(TaskState.TASK_STAGING)
+  private def toTaskState(state: String): Option[MarathonTaskStatus] = state.toLowerCase match {
+    case "running" => Some(MarathonTaskStatus.Running)
+    case "staging" => Some(MarathonTaskStatus.Staging)
     case _ => None
   }
 }

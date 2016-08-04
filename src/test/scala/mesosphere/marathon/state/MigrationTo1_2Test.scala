@@ -1,12 +1,27 @@
 package mesosphere.marathon.state
 
+import java.util.UUID
+
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.task.tracker.impl.{ MarathonTaskStatusSerializer, TaskSerializer }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.core.task.Task
 import mesosphere.util.state.memory.InMemoryStore
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ GivenWhenThen, Matchers }
+import mesosphere.marathon.state.PathId.StringPathId
+
+import scala.concurrent.Future
+import mesosphere.marathon.Protos
+import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import org.apache._
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import org.apache.mesos.Protos.TaskStatus
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
   import mesosphere.FutureTestSupport._
@@ -20,8 +35,14 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
       newState = () => DeploymentPlan.empty,
       prefix = "deployment:"
     )
+    lazy val taskStore = new MarathonStore[MarathonTaskState](
+      store = store,
+      metrics = metrics,
+      newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
+      prefix = "task:")
+    lazy val taskRepo = new TaskRepository(taskStore, metrics)
     lazy val deploymentRepo = new DeploymentRepository(deploymentStore, metrics)
-    lazy val migration = new MigrationTo1_2(deploymentRepo)
+    lazy val migration = new MigrationTo1_2(deploymentRepo, taskRepo)
   }
 
   implicit val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(1, Seconds))
@@ -41,6 +62,59 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers {
     Then("the deployment version nodes are removed, all other nodes are kept")
     val nodeNames: Seq[String] = f.store.allIds().futureValue
     nodeNames should contain theSameElementsAs Seq("deployment:fcabfa75-7756-4bc8-94b3-c9d5b2abd38c", "foo:bar")
+  }
+
+  test("should migrate tasks and add calculated MarathonTaskStatus to stored tasks") {
+    Given("some tasks without MarathonTaskStatus")
+    val f = new Fixture
+
+    def loadTask(id: String): Future[Protos.MarathonTask] = f.taskRepo.task(id).map {
+      case Some(entity) => entity
+      case None => fail("Entity id was found with allIds(), but no entity could be loaded with task(id).")
+    }
+
+    val store = f.taskRepo.store
+
+    store.store("/running1", makeMarathonTaskState("/running1", mesos.Protos.TaskState.TASK_RUNNING))
+    store.store("/running2", makeMarathonTaskState("/running2", mesos.Protos.TaskState.TASK_RUNNING))
+    store.store("/running3", makeMarathonTaskState("/running3", mesos.Protos.TaskState.TASK_RUNNING, marathonTaskStatus = Some(MarathonTaskStatus.Running)))
+    store.store("/unreachable1", makeMarathonTaskState("/unreachable1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_RECONCILIATION)))
+    store.store("/gone1", makeMarathonTaskState("/gone1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_CONTAINER_LAUNCH_FAILED)))
+
+    When("migrating")
+    f.migration.migrate().futureValue
+
+    Then("the tasks should all have a MarathonTaskStatus according their initial mesos task status")
+    val storedTasks = for {
+      ids <- f.taskRepo.allIds()
+      tasks <- {
+        Future.sequence(ids.map(loadTask))
+      }
+    } yield tasks
+
+    storedTasks.futureValue.foreach {
+      task =>
+        task.getMarathonTaskStatus should not be null
+
+        val serializedTask = TaskSerializer.fromProto(task)
+        val expectedStatus = MarathonTaskStatus(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
+        val currentStatus = MarathonTaskStatusSerializer.fromProto(task.getMarathonTaskStatus)
+
+        currentStatus should be equals expectedStatus
+    }
+  }
+
+  private def makeMarathonTaskState(taskId: String, taskState: mesos.Protos.TaskState, maybeReason: Option[TaskStatus.Reason] = None, marathonTaskStatus: Option[MarathonTaskStatus] = None): MarathonTaskState = {
+    val mesosStatus = TaskStatusUpdateTestHelper.makeMesosTaskStatus(Task.Id.forRunSpec(taskId.toPath), taskState, maybeReason = maybeReason)
+    val builder = MarathonTask.newBuilder()
+      .setId(taskId)
+      .setStatus(mesosStatus)
+      .setHost("abc")
+      .setStagedAt(1)
+    if (marathonTaskStatus.isDefined) {
+      builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus.get))
+    }
+    MarathonTaskState(builder.build())
   }
 
 }

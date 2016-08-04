@@ -58,7 +58,8 @@
   ],
   "env": {
     "XPS1": "Test",
-    "XPS2": "Rest"
+    "XPS2": "Rest",
+    "PASSWORD": { "secret": "/db/password" }
   },
   "executor": "",
   "healthChecks": [
@@ -77,12 +78,12 @@
     {
       "name": "myReadyCheck",
       "protocol": "HTTP",
-      "path": "/v1/plan"
-      "portName": "http"
-      "interval": 10000,
-      "timeout": 10000,
+      "path": "/v1/plan",
+      "portName": "http",
+      "intervalSeconds": 10,
+      "timeoutSeconds": 3,
       "httpStatusCodesForReady": [ 200 ],
-      "preserveLastResponse": false
+      "preserveLastResponse": true
     }
   ],
   "labels": {
@@ -107,9 +108,6 @@
       "environment": "dev"
     }
   },
-  "ports": [
-    0
-  ],
   "portDefinitions": [
     {
       "port": 0,
@@ -127,5 +125,10 @@
     { "uri": "https://foo.com/setup.py" },
     { "uri": "https://foo.com/archive.zip", "executable": false, "extract": true, "cache": true }
   ],
-  "user": "root"
+  "user": "root",
+  "secrets": {
+    "secret1": { "source": "/db/password" },
+    "secret3": { "source": "/foo2" }
+  },
+  "taskKillGracePeriodSeconds": 30
 }

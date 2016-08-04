@@ -24,6 +24,7 @@ import mesosphere.marathon.core.plugin.PluginModule
 import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
+import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.TaskTrackerModule
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.io.storage.StorageProvider
@@ -87,7 +88,11 @@ class CoreModuleImpl @Inject() (
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
   // READINESS CHECKS
-  lazy val readinessModule = new ReadinessModule(actorSystem)
+  override lazy val readinessModule = new ReadinessModule(actorSystem)
+
+  // this one can't be lazy right now because it wouldn't be instantiated soon enough ...
+  override val taskTerminationModule = new TaskTerminationModule(
+    taskTrackerModule, leadershipModule, marathonSchedulerDriverHolder, marathonConf, clock)
 
   // OFFER MATCHING AND LAUNCHING TASKS
 
@@ -175,7 +180,8 @@ class CoreModuleImpl @Inject() (
   // HEALTH CHECKS
 
   override lazy val healthModule: HealthModule = new HealthModule(
-    actorSystem, marathonSchedulerDriverHolder, eventStream, taskTrackerModule.taskTracker, appRepository, marathonConf)
+    actorSystem, taskTerminationModule.taskKillService, eventStream,
+    taskTrackerModule.taskTracker, appRepository, marathonConf)
 
   // GROUP MANAGER
 
@@ -203,7 +209,7 @@ class CoreModuleImpl @Inject() (
   taskJobsModule.handleOverdueTasks(
     taskTrackerModule.taskTracker,
     taskTrackerModule.taskReservationTimeoutHandler,
-    marathonSchedulerDriverHolder
+    taskTerminationModule.taskKillService
   )
   taskJobsModule.expungeOverdueLostTasks(taskTrackerModule.taskTracker, taskTrackerModule.stateOpProcessor)
   maybeOfferReviver
