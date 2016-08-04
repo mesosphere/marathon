@@ -299,8 +299,7 @@ class ResidentTaskIntegrationTest
           Residency.defaultTaskLostBehaviour
         )),
         constraints = constraints,
-        container = Some(Container(
-          `type` = Mesos.ContainerInfo.Type.MESOS,
+        container = Some(Container.Mesos(
           volumes = Seq(persistentVolume)
         )),
         cmd = Some(cmd),

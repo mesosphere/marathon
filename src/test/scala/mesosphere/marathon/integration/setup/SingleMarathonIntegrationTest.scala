@@ -227,21 +227,17 @@ trait SingleMarathonIntegrationTest
     AppDefinition(
       id = appId,
       cmd = cmd,
-      container = Some(
-        new Container(
-          docker = Some(new mesosphere.marathon.state.Container.Docker(
-            image = s"""marathon-buildbase:${sys.env.getOrElse("BUILD_ID", "test")}""",
-            network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST)
-          )),
-          volumes = collection.immutable.Seq(
-            new DockerVolume(hostPath = env.getOrElse("IVY2_DIR", "/root/.ivy2"), containerPath = "/root/.ivy2", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = s"""$targetDirs/main""", containerPath = "/marathon/target", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = s"""$targetDirs/project""", containerPath = "/marathon/project/target", mode = Protos.Volume.Mode.RO)
-          )
+      container = Some(Container.Docker(
+        image = s"""marathon-buildbase:${sys.env.getOrElse("BUILD_ID", "test")}""",
+        network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST),
+        volumes = collection.immutable.Seq(
+          new DockerVolume(hostPath = env.getOrElse("IVY2_DIR", "/root/.ivy2"), containerPath = "/root/.ivy2", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = s"""$targetDirs/main""", containerPath = "/marathon/target", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = s"""$targetDirs/project""", containerPath = "/marathon/project/target", mode = Protos.Volume.Mode.RO)
         )
-      ),
+      )),
       instances = instances,
       cpus = 0.5,
       mem = 128.0,

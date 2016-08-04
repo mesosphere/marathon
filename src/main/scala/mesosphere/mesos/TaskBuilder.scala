@@ -7,7 +7,7 @@ import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefiniti
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{ AppDefinition, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
+import mesosphere.marathon.state.{ AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
 
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
@@ -208,41 +208,39 @@ class TaskBuilder(
   }
 
   protected def computeContainerInfo(hostPorts: Seq[Option[Int]]): Option[ContainerInfo] = {
-    if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) None
-    else {
+    if (runSpec.container.isEmpty && runSpec.ipAddress.isEmpty) {
+      None
+    } else {
       val builder = ContainerInfo.newBuilder
 
       // Fill in Docker container details if necessary
       runSpec.container.foreach { c =>
-        val portMappings = c.docker.map { d =>
-          d.portMappings.map { pms =>
-            pms.zip(hostPorts).collect {
-              case (mapping, Some(hport)) =>
-                // Use case: containerPort = 0 and hostPort = 0
-                //
-                // For apps that have their own service registry and require p2p communication,
-                // they will need to advertise
-                // the externally visible ports that their components come up on.
-                // Since they generally know there container port and advertise that, this is
-                // fixed most easily if the container port is the same as the externally visible host
-                // port.
-                if (mapping.containerPort == 0) {
-                  mapping.copy(hostPort = Some(hport), containerPort = hport)
-                } else {
-                  mapping.copy(hostPort = Some(hport))
-                }
-            }
-          }
-        }
-
-        val containerWithPortMappings = portMappings match {
-          case None => c
-          case Some(newMappings) => c.copy(
-            docker = c.docker.map {
-              _.copy(portMappings = newMappings)
+        // TODO(nfnt): Other containers might also support port mappings in the future.
+        // If that is the case, a more general way than the one below needs to be implemented.
+        val containerWithPortMappings = c match {
+          case docker: Container.Docker => docker.copy(
+            portMappings = docker.portMappings.map { pms =>
+              pms.zip(hostPorts).collect {
+                case (mapping, Some(hport)) =>
+                  // Use case: containerPort = 0 and hostPort = 0
+                  //
+                  // For apps that have their own service registry and require p2p communication,
+                  // they will need to advertise
+                  // the externally visible ports that their components come up on.
+                  // Since they generally know there container port and advertise that, this is
+                  // fixed most easily if the container port is the same as the externally visible host
+                  // port.
+                  if (mapping.containerPort == 0) {
+                    mapping.copy(hostPort = Some(hport), containerPort = hport)
+                  } else {
+                    mapping.copy(hostPort = Some(hport))
+                  }
+              }
             }
           )
+          case _ => c
         }
+
         builder.mergeFrom(ContainerSerializer.toMesos(containerWithPortMappings))
       }
 
@@ -264,9 +262,10 @@ class TaskBuilder(
       if (!builder.hasType)
         builder.setType(ContainerInfo.Type.MESOS)
 
-      if (builder.getType.equals(ContainerInfo.Type.MESOS)) {
-        builder.setMesos(ContainerInfo.MesosInfo.newBuilder()
-          .build())
+      if (builder.getType.equals(ContainerInfo.Type.MESOS) && !builder.hasMesos) {
+        // The comments in "mesos.proto" are fuzzy about whether a miranda MesosInfo
+        // is required, but we err on the safe side here and provide one
+        builder.setMesos(ContainerInfo.MesosInfo.newBuilder.build)
       }
       Some(builder.build)
     }

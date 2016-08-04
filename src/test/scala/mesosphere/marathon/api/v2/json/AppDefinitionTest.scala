@@ -107,21 +107,19 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = AppDefinition(
       id = "test".toPath,
       cmd = Some("true"),
-      container = Some(Container(
-        docker = Some(Docker(
-          image = "mesosphere/marathon",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
-            Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-            Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
-          ))
+      container = Some(Docker(
+        image = "mesosphere/marathon",
+        network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+        portMappings = Some(Seq(
+          Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+          Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
         ))
       )),
       portDefinitions = Nil
     )
     shouldViolate(
       app,
-      "/container/docker/portMappings",
+      "/container/portMappings",
       "Port names must be unique."
     )
 
@@ -142,64 +140,80 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val correct = AppDefinition(id = "test".toPath)
 
     app = correct.copy(
-      container = Some(Container(
-        docker = Some(Docker(
-          image = "mesosphere/marathon",
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
-            Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
-            Docker.PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
-          ))
+      container = Some(Docker(
+        image = "mesosphere/marathon",
+        portMappings = Some(Seq(
+          Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
+          Docker.PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
         ))
       )),
       portDefinitions = Nil)
     shouldNotViolate(
       app,
-      "/container/docker/portMappings",
+      "/container/portMappings",
       "Port names must be unique."
     )
 
     app = correct.copy(
-      container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+      container = Some(Docker(
+        image = "mesosphere/marathon",
+        network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Some(Seq(
-          Docker.PortMapping(8080, None, 0, "tcp", Some("foo")),
-          Docker.PortMapping(8081, None, 0, "tcp", Some("bar"))
+          Docker.PortMapping(8080, None, 0, "tcp", Some("foo"))
         ))
-      )))),
+      )),
       portDefinitions = Nil)
-    shouldViolate(
+    shouldNotViolate(
       app,
-      "/container/docker/portMappings(0)",
+      "/container/portMappings(0)",
       "hostPort is required for BRIDGE mode."
     )
 
     app = correct.copy(
-      container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+      container = Some(Docker(
+        image = "mesosphere/marathon",
+        network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+        portMappings = Some(Seq(
+          Docker.PortMapping(8080, None, 0, "tcp", Some("foo"))
+        ))
+      )),
+      portDefinitions = Nil)
+    shouldViolate(
+      app,
+      "/container/portMappings(0)",
+      "hostPort is required for BRIDGE mode."
+    )
+
+    app = correct.copy(
+      container = Some(Docker(
+        image = "mesosphere/marathon",
         network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Some(Seq(
           Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
           Docker.PortMapping(8081, Some(0), 0, "tcp", Some("bar"))
         ))
-      )))),
+      )),
       portDefinitions = Nil)
     shouldNotViolate(
       app,
-      "/container/docker/portMappings",
+      "/container/portMappings",
       "Port names must be unique."
     )
 
     // unique port names for USER mode
     app = correct.copy(
-      container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+      container = Some(Docker(
+        image = "mesosphere/marathon",
+        network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
         portMappings = Some(Seq(
           Docker.PortMapping(8080, Some(0), 0, "tcp", Some("foo")),
           Docker.PortMapping(8081, Some(0), 0, "tcp", Some("foo"))
         ))
-      )))),
+      )),
       portDefinitions = Nil)
     shouldViolate(
       app,
-      "/container/docker/portMappings",
+      "/container/portMappings",
       "Port names must be unique."
     )
 
@@ -267,7 +281,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(
       app,
       "/",
-      "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
+      "AppDefinition must either contain one of 'cmd' or 'args', and/or a non-Mesos 'container'."
     )
     MarathonTestHelper.validateJsonSchema(app, false)
 
@@ -275,7 +289,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     shouldNotViolate(
       app,
       "/",
-      "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
+      "AppDefinition must either contain one of 'cmd' or 'args', and/or a non-Mesos 'container'."
     )
     MarathonTestHelper.validateJsonSchema(app)
 
@@ -312,13 +326,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     MarathonTestHelper.validateJsonSchema(app, false)
 
     app = correct.copy(
-      container = Some(Container(
-        docker = Some(Docker(
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq(
-            Docker.PortMapping(8080, Some(0), 0, "tcp"),
-            Docker.PortMapping(8081, Some(0), 0, "tcp")
-          ))
+      container = Some(Docker(
+        network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+        portMappings = Some(Seq(
+          Docker.PortMapping(8080, Some(0), 0, "tcp"),
+          Docker.PortMapping(8081, Some(0), 0, "tcp")
         ))
       )),
       portDefinitions = Nil,
@@ -332,11 +344,8 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     MarathonTestHelper.validateJsonSchema(app, false) // missing image
 
     app = correct.copy(
-      container = Some(Container(
-        docker = Some(Docker(
-          network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = None
-        ))
+      container = Some(Docker(
+        network = Some(mesos.ContainerInfo.DockerInfo.Network.BRIDGE)
       )),
       portDefinitions = Nil,
       healthChecks = Set(HealthCheck(protocol = Protocol.COMMAND))
@@ -396,12 +405,31 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     app = correct.copy(
       gpus = 1,
-      container = Some(Container(
-        docker = Some(Docker())
-      ))
+      container = Some(Container.Docker())
     )
 
     shouldViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+
+    app = correct.copy(
+      gpus = 1,
+      container = Some(Container.Mesos())
+    )
+
+    shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+
+    app = correct.copy(
+      gpus = 1,
+      container = Some(Container.MesosDocker())
+    )
+
+    shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+
+    app = correct.copy(
+      gpus = 1,
+      container = Some(Container.MesosAppC())
+    )
+
+    shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
   }
 
   test("SerializationRoundtrip empty") {
@@ -467,9 +495,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       backoff = 5.seconds,
       backoffFactor = 1.5,
       maxLaunchDelay = 3.minutes,
-      container = Some(
-        Container(docker = Some(Container.Docker("group/image")))
-      ),
+      container = Some(Docker(image = "group/image")),
       healthChecks = Set(HealthCheck(portIndex = Some(0))),
       dependencies = Set(PathId("/prod/product/backend")),
       upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.75)
@@ -531,14 +557,9 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       cmd = Some("sleep 30"),
       portDefinitions = Seq.empty,
       container = Some(
-        Container(
-          docker = Some(
-            Docker(
-              portMappings = Some(
-                Seq(Docker.PortMapping())
-              )
-            )
-          )
+        Docker(
+          network = Some(mesos.ContainerInfo.DockerInfo.Network.USER),
+          portMappings = Some(Seq.empty)
         )
       ),
       healthChecks = Set(HealthCheck())
@@ -558,15 +579,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       id = PathId("/prod/product/frontend/my-app"),
       cmd = Some("sleep 30"),
       portDefinitions = Seq.empty,
-      container = Some(
-        Container(
-          docker = Some(
-            Docker(
-              portMappings = Some(Seq.empty)
-            )
-          )
-        )
-      ),
+      container = Some(Docker()),
       healthChecks = Set(HealthCheck())
     )
 
@@ -584,13 +597,11 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val app4 = AppDefinition(
       id = "bridged-webapp".toPath,
       cmd = Some("python3 -m http.server 8080"),
-      container = Some(Container(
-        docker = Some(Docker(
-          image = "python:3",
-          network = Some(Network.BRIDGE),
-          portMappings = Some(Seq(
-            PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
-          ))
+      container = Some(Docker(
+        image = "python:3",
+        network = Some(Network.BRIDGE),
+        portMappings = Some(Seq(
+          PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
         ))
       ))
     )

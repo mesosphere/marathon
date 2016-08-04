@@ -276,7 +276,8 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.map(_.`type`.toString) should equal (Some("MESOS"))
+    appDef.container.isDefined
+    appDef.container.get shouldBe a[Container.Mesos]
   }
 
   test("FromJSON should parse ipAddress.networkName with DOCKER container w/o port mappings") {
@@ -297,7 +298,8 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.map(_.`type`.toString) should equal (Some("DOCKER"))
+    appDef.container.isDefined
+    appDef.container.get shouldBe a[Container.Docker]
     appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
   }
 
@@ -322,11 +324,81 @@ class AppDefinitionFormatsTest
 
     appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
     appDef.ipAddress.get.networkName should equal(Some("foo"))
-    appDef.container.map(_.`type`.toString) should equal (Some("DOCKER"))
+    appDef.container.isDefined
+    appDef.container.get shouldBe a[Container.Docker]
     appDef.container.flatMap(_.docker.flatMap(_.network.map(_.toString))) should equal (Some("USER"))
-    appDef.container.flatMap(_.docker.flatMap(_.portMappings)) should equal (Some(Seq(
+    appDef.container.flatMap(_.portMappings) should equal (Some(Seq(
       Container.Docker.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))
     )))
+  }
+
+  test("FromJSON should parse Mesos Docker container") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "ipAddress": {
+        |    "networkName": "foo"
+        |  },
+        |  "container": {
+        |    "type": "MESOS",
+        |    "docker": {
+        |      "image": "busybox",
+        |      "credential": {
+        |        "principal": "aPrincipal",
+        |        "secret": "aSecret"
+        |      }
+        |    }
+        |  }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
+    appDef.ipAddress.get.networkName should equal(Some("foo"))
+    appDef.container.isDefined
+    appDef.container.get shouldBe a[Container.MesosDocker]
+    appDef.container.get match {
+      case dd: Container.MesosDocker =>
+        dd.credential.isDefined
+        dd.credential.get.principal should equal("aPrincipal")
+        dd.credential.get.secret should equal(Some("aSecret"))
+      case _ => {}
+    }
+  }
+
+  test("FromJSON should parse Mesos AppC container") {
+    val appDef = Json.parse(
+      """{
+        |  "id": "test",
+        |  "ipAddress": {
+        |    "networkName": "foo"
+        |  },
+        |  "container": {
+        |    "type": "MESOS",
+        |    "appc": {
+        |      "image": "busybox",
+        |      "id": "sha512-aHashValue",
+        |      "labels": {
+        |        "version": "1.2.0",
+        |        "arch": "amd64",
+        |        "os": "linux"
+        |      }
+        |    }
+        |  }
+        |}""".stripMargin).as[AppDefinition]
+
+    appDef.ipAddress.isDefined && appDef.ipAddress.get.networkName.isDefined should equal(true)
+    appDef.ipAddress.get.networkName should equal(Some("foo"))
+    appDef.container.isDefined
+    appDef.container.get shouldBe a[Container.MesosAppC]
+    appDef.container.get match {
+      case ma: Container.MesosAppC =>
+        ma.image should equal("busybox")
+        ma.id should equal(Some("sha512-aHashValue"))
+        ma.labels.keys.size should equal(3)
+        ma.labels("version") should equal("1.2.0")
+        ma.labels("arch") should equal("amd64")
+        ma.labels("os") should equal("linux")
+      case _ => {}
+    }
   }
 
   test("FromJSON should parse ipAddress without networkName") {

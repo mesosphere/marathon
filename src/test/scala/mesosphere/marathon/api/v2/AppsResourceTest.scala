@@ -5,7 +5,7 @@ import javax.ws.rs.core.Response
 
 import akka.event.EventStream
 import mesosphere.marathon._
-import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture, TestGroupManagerFixture }
+import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
@@ -145,9 +145,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
       portDefinitions = Seq.empty[PortDefinition],
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.MESOS
-      ))
+      container = Some(Container.Mesos())
     )
     val (body, plan) = prepareApp(app)
 
@@ -305,14 +303,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       id = PathId("/app"),
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+        image = "jdef/helpme",
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         ))
       )),
       portDefinitions = Seq.empty
@@ -339,19 +334,18 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app in BRIDGE mode w/ Docker") {
     Given("An app and group")
+    val container = Container.Docker(
+      network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+      image = "jdef/helpme",
+      portMappings = Some(Seq(
+        Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+      ))
+    )
+
     val app = AppDefinition(
       id = PathId("/app"),
       cmd = Some("cmd"),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
-        ))
-      )),
+      container = Some(container),
       portDefinitions = Seq.empty
     )
 
@@ -374,11 +368,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val expected = AppInfo(
       app.copy(
         versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
-        container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+        container = Some(container.copy(
           portMappings = Some(Seq(
             Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
           ))
-        ))))
+        ))
       ),
       maybeTasks = Some(immutable.Seq.empty),
       maybeCounts = Some(TaskCounts.zero),
@@ -398,16 +392,14 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+        image = "jdef/helpme",
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         ))
-      )),
+      )
+      ),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -433,13 +425,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
-          image = "jdef/helpme"
-        ))
-      )),
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
+        image = "jdef/helpme"
+      )
+      ),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -661,13 +651,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |  }
         |}""".stripMargin.getBytes("UTF-8")
 
-    When("The application is updated")
-    val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
-
-    Then("The return code indicates a validation error for container.docker")
-    response.getStatus should be(422)
-    response.getEntity.toString should include("/container/docker")
-    response.getEntity.toString should include("must not be empty")
+    Then("A serialization exception is thrown")
+    intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
   }
 
   def createAppWithVolumes(`type`: String, volumes: String): Response = {
@@ -996,8 +981,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getStatus should be(201)
   }
 
-  test("Replace an existing application fails due to mesos container validation") {
-    Given("An app update with an invalid container (missing docker field)")
+  test("Replacing an existing application with a Mesos docker container passes validation") {
+    Given("An app update to a Mesos container with a docker image")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
     prepareApp(app)
 
@@ -1015,10 +1000,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     When("The application is updated")
     val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
 
-    Then("The return code indicates a validation error for container.docker")
-    response.getStatus should be(422)
-    response.getEntity.toString should include("/container/docker")
-    response.getEntity.toString should include("must be empty")
+    Then("The return code indicates success")
+    response.getStatus should be(200)
   }
 
   test("Restart an existing app") {

@@ -23,13 +23,30 @@ class DockerAppIntegrationTest
       val app = AppDefinition(
         id = testBasePath / "dockerapp",
         cmd = Some("sleep 600"),
-        container = Some(
-          Container(
-            docker = Some(
-              mesosphere.marathon.state.Container.Docker(
-                image = "busybox"
-              )))
-        ),
+        container = Some(Container.Docker(image = "busybox")),
+        cpus = 0.2,
+        mem = 16.0,
+        instances = 1
+      )
+
+      When("The app is deployed")
+      val result = marathon.createAppV2(app)
+
+      Then("The app is created")
+      result.code should be(201) // Created
+      extractDeploymentIds(result) should have size 1
+      waitForEvent("deployment_success")
+      waitForTasks(app.id, 1) // The app has really started
+    }
+
+    // TODO(nfnt): Enable this test when integration tests aren't run in a Docker container.
+    // The Mesos containerizer needs access to cgroups, which is hard to provide in a container.
+    ignore("deploy a simple Docker app using the Mesos containerizer") {
+      Given("a new Docker app")
+      val app = AppDefinition(
+        id = testBasePath / "mesosdockerapp",
+        cmd = Some("sleep 600"),
+        container = Some(Container.MesosDocker(image = "busybox")),
         cpus = 0.2,
         mem = 16.0,
         instances = 1
