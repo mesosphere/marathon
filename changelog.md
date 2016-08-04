@@ -68,7 +68,7 @@ The ZK client now supports ZK authentication and ACLs.
 Added support for Docker `USER` networking
 
 #### "Service ports must be unique" validation
-On newly created or updated applications the validation of unique service ports is enforced.
+For newly created or updated applications the validation of unique service ports is enforced.
 
 
 ### Performance improvements
