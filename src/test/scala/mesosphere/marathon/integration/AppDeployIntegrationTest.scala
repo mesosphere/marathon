@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import org.apache.mesos.{ Protos => MesosProtos }
 
 class AppDeployIntegrationTest
     extends IntegrationFunSuite
@@ -594,13 +593,11 @@ class AppDeployIntegrationTest
       id = appId,
       cmd = Some("sleep 1"),
       instances = 0,
-      container = Some(Container(
-        `type` = MesosProtos.ContainerInfo.Type.MESOS
-      ))
+      container = Some(Container.Mesos())
     )
 
     app.container should not be empty
-    app.container.get.`type` should equal(MesosProtos.ContainerInfo.Type.MESOS)
+    app.container.get shouldBe a[Container.Mesos]
 
     When("The request is sent")
     val result = marathon.createAppV2(app)
@@ -617,7 +614,7 @@ class AppDeployIntegrationTest
 
     Then("The container should still be of type MESOS")
     maybeContainer1 should not be empty
-    maybeContainer1.get.`type` should equal(MesosProtos.ContainerInfo.Type.MESOS)
+    app.container.get shouldBe a[Container.Mesos]
 
     And("container.docker should not be set")
     maybeContainer1.get.docker shouldBe (empty)
@@ -635,7 +632,7 @@ class AppDeployIntegrationTest
 
     Then("The container should still be of type MESOS")
     maybeContainer2 should not be empty
-    maybeContainer2.get.`type` should equal(MesosProtos.ContainerInfo.Type.MESOS)
+    app.container.get shouldBe a[Container.Mesos]
 
     And("container.docker should not be set")
     maybeContainer1.get.docker shouldBe (empty)

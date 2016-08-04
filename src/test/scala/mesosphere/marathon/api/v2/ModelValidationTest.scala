@@ -124,12 +124,10 @@ class ModelValidationTest
   private def createServicePortApp(id: PathId, servicePort: Int) =
     AppDefinition(
       id,
-      container = Some(Container(
-        docker = Some(Docker(
-          image = "demothing",
-          network = Some(Network.BRIDGE),
-          portMappings = Some(Seq(PortMapping(2000, Some(0), servicePort = servicePort)))
-        ))
+      container = Some(Docker(
+        image = "demothing",
+        network = Some(Network.BRIDGE),
+        portMappings = Some(Seq(PortMapping(2000, Some(0), servicePort = servicePort)))
       ))
     )
 

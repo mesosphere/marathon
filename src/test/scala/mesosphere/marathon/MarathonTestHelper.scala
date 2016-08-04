@@ -9,6 +9,7 @@ import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
@@ -35,6 +36,8 @@ import play.api.libs.json.Json
 import scala.collection.JavaConverters
 import scala.collection.immutable.Seq
 import scala.util.Random
+
+//scalastyle:off number.of.methods
 
 object MarathonTestHelper {
 
@@ -161,15 +164,9 @@ object MarathonTestHelper {
   }
 
   def reservation(principal: String, labels: Map[String, String] = Map.empty): Mesos.Resource.ReservationInfo = {
-    val labelsBuilder = Mesos.Labels.newBuilder()
-    labels.foreach {
-      case (k, v) =>
-        labelsBuilder.addLabels(Mesos.Label.newBuilder().setKey(k).setValue(v))
-    }
-
     Mesos.Resource.ReservationInfo.newBuilder()
       .setPrincipal(principal)
-      .setLabels(labelsBuilder)
+      .setLabels(LabelsSerializer.toMesosLabelsBuilder(labels))
       .build()
   }
 
@@ -569,16 +566,14 @@ object MarathonTestHelper {
       reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
   }
 
-  def mesosContainerWithPersistentVolume = Container(
-    `type` = Mesos.ContainerInfo.Type.MESOS,
+  def mesosContainerWithPersistentVolume = Container.Mesos(
     volumes = Seq[mesosphere.marathon.state.Volume](
       PersistentVolume(
         containerPath = "persistent-volume",
         persistent = PersistentVolumeInfo(10), // must match persistentVolumeResources
         mode = Mesos.Volume.Mode.RW
       )
-    ),
-    docker = None
+    )
   )
 
   def mesosIpAddress(ipAddress: String) = {
@@ -603,17 +598,19 @@ object MarathonTestHelper {
       def withIpAddress(ipAddress: IpAddress): AppDefinition = app.copy(ipAddress = Some(ipAddress))
 
       def withDockerNetwork(network: Mesos.ContainerInfo.DockerInfo.Network): AppDefinition = {
-        val container = app.container.getOrElse(Container())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(network = Some(network))
+        val docker = app.container.getOrElse(Container.Mesos()) match {
+          case docker: Docker => docker
+          case _ => Docker(image = "busybox")
+        }
 
-        app.copy(container = Some(container.copy(docker = Some(docker))))
+        app.copy(container = Some(docker.copy(network = Some(network))))
       }
 
-      def withPortMappings(portMappings: Seq[PortMapping]): AppDefinition = {
-        val container = app.container.getOrElse(Container())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(portMappings))
+      def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
+        val container = app.container.getOrElse(Container.Mesos())
+        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(newPortMappings))
 
-        app.copy(container = Some(container.copy(docker = Some(docker))))
+        app.copy(container = Some(docker))
       }
     }
 

@@ -44,8 +44,7 @@ class PortsMatcher(
     val portMappings: Option[Seq[Container.Docker.PortMapping]] =
       for {
         c <- runSpec.container
-        d <- c.docker
-        pms <- d.portMappings if pms.nonEmpty
+        pms <- c.portMappings if pms.nonEmpty
       } yield pms
 
     (runSpec.portNumbers, portMappings) match {

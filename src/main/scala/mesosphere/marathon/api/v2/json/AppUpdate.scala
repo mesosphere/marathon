@@ -31,6 +31,8 @@ case class AppUpdate(
 
     disk: Option[Double] = None,
 
+    gpus: Option[Int] = None,
+
     executor: Option[String] = None,
 
     constraints: Option[Set[Constraint]] = None,
@@ -110,6 +112,7 @@ case class AppUpdate(
     cpus = cpus.getOrElse(app.cpus),
     mem = mem.getOrElse(app.mem),
     disk = disk.getOrElse(app.disk),
+    gpus = gpus.getOrElse(app.gpus),
     executor = executor.getOrElse(app.executor),
     constraints = constraints.getOrElse(app.constraints),
     fetch = fetch.getOrElse(app.fetch),
@@ -119,7 +122,7 @@ case class AppUpdate(
     backoff = backoff.getOrElse(app.backoff),
     backoffFactor = backoffFactor.getOrElse(app.backoffFactor),
     maxLaunchDelay = maxLaunchDelay.getOrElse(app.maxLaunchDelay),
-    container = container.filterNot(_ == Container.Empty).orElse(app.container),
+    container = app.container,
     healthChecks = healthChecks.getOrElse(app.healthChecks),
     readinessChecks = readinessChecks.getOrElse(app.readinessChecks),
     dependencies = dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
@@ -158,6 +161,7 @@ object AppUpdate {
     appUp.cpus should optional(be >= 0.0)
     appUp.instances should optional(be >= 0)
     appUp.disk should optional(be >= 0.0)
+    appUp.gpus should optional(be >= 0)
     appUp.env is optional(valid(EnvVarValue.envValidator))
     appUp.secrets is optional(valid(Secret.secretsValidator))
     appUp.secrets is optional(empty) or featureEnabled(Features.SECRETS)
