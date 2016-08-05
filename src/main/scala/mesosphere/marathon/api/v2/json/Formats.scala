@@ -994,8 +994,14 @@ trait AppAndGroupFormats {
       if (runSpec.ipAddress.isEmpty) {
         appJson = appJson ++ Json.obj(
           "ports" -> runSpec.servicePorts,
-          "portDefinitions" -> runSpec.portDefinitions.zip(runSpec.servicePorts).map {
-            case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
+          "portDefinitions" -> {
+            if (runSpec.servicePorts.nonEmpty) {
+              runSpec.portDefinitions.zip(runSpec.servicePorts).map {
+                case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
+              }
+            } else {
+              runSpec.portDefinitions
+            }
           },
           // requirePorts only makes sense when allocating hostPorts, which you can't do in IP/CT mode
           "requirePorts" -> runSpec.requirePorts

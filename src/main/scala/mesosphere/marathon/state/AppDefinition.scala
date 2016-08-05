@@ -101,16 +101,16 @@ case class AppDefinition(
     ipAddress.isEmpty || portDefinitions.isEmpty,
     s"IP address ($ipAddress) and ports ($portDefinitions) are not allowed at the same time")
 
-  lazy val portNumbers: Seq[Int] = portDefinitions.map(_.port)
+  val portNumbers: Seq[Int] = portDefinitions.map(_.port)
 
-  def isResident: Boolean = residency.isDefined
+  val isResident: Boolean = residency.isDefined
 
-  def isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
-  def volumes: Iterable[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
-  def persistentVolumes: Iterable[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
-  def externalVolumes: Iterable[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
+  val isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
+  val volumes: Iterable[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
+  val persistentVolumes: Iterable[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
+  val externalVolumes: Iterable[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
 
-  def diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
+  val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
@@ -153,7 +153,7 @@ case class AppDefinition(
       .addAllDependencies(dependencies.map(_.toString).asJava)
       .addAllStoreUrls(storeUrls.asJava)
       .addAllLabels(appLabels.asJava)
-      .addAllSecrets(secrets.toIterable.map(SecretsSerializer.toProto).asJava)
+      .addAllSecrets(secrets.map(SecretsSerializer.toProto).asJava)
       .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
 
     ipAddress.foreach { ip => builder.setIpAddress(ip.toProto) }
@@ -274,18 +274,18 @@ case class AppDefinition(
     )
   }
 
-  private def portIndices: Range = container.flatMap(_.hostPorts).getOrElse(portNumbers).indices
+  private val portIndicies: Range = container.flatMap(_.hostPorts).getOrElse(portNumbers).indices
 
-  def hostPorts: Seq[Option[Int]] = container.flatMap(_.hostPorts).getOrElse(portNumbers.map(Some(_)))
+  val hostPorts: Seq[Option[Int]] = container.flatMap(_.hostPorts).getOrElse(portNumbers.map(Some(_)))
 
-  def servicePorts: Seq[Int] = container.flatMap(_.servicePorts).getOrElse(portNumbers)
+  val servicePorts: Seq[Int] = container.flatMap(_.servicePorts).getOrElse(portNumbers)
 
-  def hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
+  val hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
-  def networkModeBridge: Boolean =
+  val networkModeBridge: Boolean =
     container.exists(_.docker.exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
 
-  def networkModeUser: Boolean =
+  val networkModeUser: Boolean =
     container.exists(_.docker.exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.USER)))
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
@@ -293,7 +293,7 @@ case class AppDefinition(
     mergeFromProto(proto)
   }
 
-  def version: Timestamp = versionInfo.version
+  val version: Timestamp = versionInfo.version
 
   /**
     * Returns whether this is a scaling change only.
@@ -419,7 +419,7 @@ case class AppDefinition(
     else fromPortDefinitions
   }
 
-  def portNames: Seq[String] = {
+  val portNames: Seq[String] = {
     def fromDiscoveryInfo = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
     def fromPortMappings = container.map(_.portMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
     def fromPortDefinitions = portDefinitions.flatMap(_.name)
@@ -576,7 +576,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer
-    appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
+    appDef.healthChecks is every(portIndexIsValid(appDef.portIndicies))
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     appDef.mem should be >= 0.0

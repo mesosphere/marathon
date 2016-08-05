@@ -140,7 +140,7 @@ object DockerSerializer {
       volumes = proto.getVolumesList.asScala.map(Volume(_)).to[Seq],
       image = d.getImage,
       network = if (d.hasNetwork) Some(d.getNetwork) else None,
-      portMappings = Some(pms.map(PortMappingSerializer.fromProto).to[Seq]),
+      portMappings = if (pms.nonEmpty) Some(pms.map(PortMappingSerializer.fromProto).to[Seq]) else None,
       privileged = d.getPrivileged,
       parameters = d.getParametersList.asScala.map(Parameter(_)).to[Seq],
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
