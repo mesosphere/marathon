@@ -205,7 +205,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     MarathonTestHelper.validateJsonSchema(app)
   }
 
-  test("container and cmd") {
+  test("docker container and cmd") {
     val f = new Fixture
     val app = AppDefinition(
       id = PathId("/test"),
@@ -215,12 +215,32 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     MarathonTestHelper.validateJsonSchema(app)
   }
 
-  test("container and args") {
+  test("docker container and args") {
     val f = new Fixture
     val app = AppDefinition(
       id = PathId("/test"),
       args = Some("test" :: Nil),
       container = Some(f.validDockerContainer))
+    assert(validate(app).isSuccess)
+    MarathonTestHelper.validateJsonSchema(app)
+  }
+
+  test("mesos container and cmd") {
+    val f = new Fixture
+    val app = AppDefinition(
+      id = PathId("/test"),
+      cmd = Some("true"),
+      container = Some(f.validMesosDockerContainer))
+    assert(validate(app).isSuccess)
+    MarathonTestHelper.validateJsonSchema(app)
+  }
+
+  test("mesos container and args") {
+    val f = new Fixture
+    val app = AppDefinition(
+      id = PathId("/test"),
+      args = Some("test" :: Nil),
+      container = Some(f.validMesosDockerContainer))
     assert(validate(app).isSuccess)
     MarathonTestHelper.validateJsonSchema(app)
   }
@@ -700,6 +720,11 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
 
     def validMesosContainer: Container.Mesos = Container.Mesos(
       volumes = Nil
+    )
+
+    def validMesosDockerContainer: Container.MesosDocker = Container.MesosDocker(
+      volumes = Nil,
+      image = "foo/bar:latest"
     )
 
     // scalastyle:off magic.number
