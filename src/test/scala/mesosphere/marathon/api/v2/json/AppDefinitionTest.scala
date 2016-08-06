@@ -281,7 +281,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     shouldViolate(
       app,
       "/",
-      "AppDefinition must either contain one of 'cmd' or 'args', and/or a non-Mesos 'container'."
+      "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
     MarathonTestHelper.validateJsonSchema(app, false)
 
@@ -289,7 +289,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     shouldNotViolate(
       app,
       "/",
-      "AppDefinition must either contain one of 'cmd' or 'args', and/or a non-Mesos 'container'."
+      "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
     )
     MarathonTestHelper.validateJsonSchema(app)
 
