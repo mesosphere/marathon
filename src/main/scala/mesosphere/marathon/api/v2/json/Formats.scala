@@ -237,7 +237,7 @@ trait ContainerFormats {
   )(Container.Credential.apply, unlift(Container.Credential.unapply))
 
   implicit lazy val ModeFormat: Format[mesos.Volume.Mode] =
-    enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mde")
+    enumFormat(mesos.Volume.Mode.valueOf, str => s"$str is not a valid mode")
 
   implicit lazy val PersistentVolumeInfoFormat: Format[PersistentVolumeInfo] = Json.format[PersistentVolumeInfo]
 

@@ -93,7 +93,7 @@ final case class DeploymentPlan(
     def appString(app: AppDefinition): String = {
       val cmdString = app.cmd.fold("")(cmd => ", cmd=\"" + cmd + "\"")
       val argsString = app.args.fold("")(args => ", args=\"" + args.mkString(" ") + "\"")
-      val maybeDockerImage: Option[String] = app.container.flatMap(_.docker.map(_.image))
+      val maybeDockerImage: Option[String] = app.container.flatMap(_.docker().map(_.image))
       val dockerImageString = maybeDockerImage.fold("")(image => ", image=\"" + image + "\"")
 
       s"App(${app.id}$dockerImageString$cmdString$argsString))"

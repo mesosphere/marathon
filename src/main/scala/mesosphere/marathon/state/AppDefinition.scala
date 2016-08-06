@@ -283,10 +283,10 @@ case class AppDefinition(
   val hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
   val networkModeBridge: Boolean =
-    container.exists(_.docker.exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
+    container.exists(_.docker().exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.BRIDGE)))
 
   val networkModeUser: Boolean =
-    container.exists(_.docker.exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.USER)))
+    container.exists(_.docker().exists(_.network.exists(_ == mesos.ContainerInfo.DockerInfo.Network.USER)))
 
   def mergeFromProto(bytes: Array[Byte]): AppDefinition = {
     val proto = Protos.ServiceDefinition.parseFrom(bytes)
@@ -569,35 +569,6 @@ object AppDefinition extends GeneralPurposeCombinators {
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
 
-  private val validBasicAppDefinition = validator[AppDefinition] { appDef =>
-    appDef.upgradeStrategy is valid
-    appDef.container.each is valid
-    appDef.storeUrls is every(urlCanBeResolvedValidator)
-    appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
-    appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
-    appDef is containsCmdArgsOrContainer
-    appDef.healthChecks is every(portIndexIsValid(appDef.portIndicies))
-    appDef.instances should be >= 0
-    appDef.fetch is every(fetchUriIsValid)
-    appDef.mem should be >= 0.0
-    appDef.cpus should be >= 0.0
-    appDef.instances should be >= 0
-    appDef.disk should be >= 0.0
-    appDef.gpus should be >= 0
-    appDef.secrets is valid(Secret.secretsValidator)
-    appDef.secrets is empty or featureEnabled(Features.SECRETS)
-    appDef.env is valid(EnvVarValue.envValidator)
-    appDef.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appDef.isResident))
-    appDef must complyWithResidencyRules
-    appDef must complyWithMigrationAPI
-    appDef must complyWithSingleInstanceLabelRules
-    appDef must complyWithReadinessCheckRules
-    appDef must complyWithUpgradeStrategyRules
-    appDef must complyWithGpuRules
-    appDef.constraints.each must complyWithConstraintRules
-    appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
-  } and ExternalVolumes.validApp and EnvVarValue.validApp
-
   /**
     * We cannot validate HealthChecks here, because it would break backwards compatibility in weird ways.
     * If users had already one invalid app definition, each deployment would cause a complete revalidation of
@@ -634,7 +605,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     import mesos.ContainerInfo.DockerInfo.Network.{ BRIDGE, USER }
     isTrue[IpAddress]("ipAddress/discovery is not allowed for Docker containers using BRIDGE or USER networks") { ip =>
       !(ip.discoveryInfo.nonEmpty &&
-        app.container.exists(_.docker.exists(_.network.exists(Set(BRIDGE, USER)))))
+        app.container.exists(_.docker().exists(_.network.exists(Set(BRIDGE, USER)))))
     }
   }
 
@@ -754,6 +725,35 @@ object AppDefinition extends GeneralPurposeCombinators {
       }
     }
   }
+
+  private val validBasicAppDefinition = validator[AppDefinition] { appDef =>
+    appDef.upgradeStrategy is valid
+    appDef.container.each is valid
+    appDef.storeUrls is every(urlCanBeResolvedValidator)
+    appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
+    appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
+    appDef is containsCmdArgsOrContainer
+    appDef.healthChecks is every(portIndexIsValid(appDef.portIndicies))
+    appDef.instances should be >= 0
+    appDef.fetch is every(fetchUriIsValid)
+    appDef.mem should be >= 0.0
+    appDef.cpus should be >= 0.0
+    appDef.instances should be >= 0
+    appDef.disk should be >= 0.0
+    appDef.gpus should be >= 0
+    appDef.secrets is valid(Secret.secretsValidator)
+    appDef.secrets is empty or featureEnabled(Features.SECRETS)
+    appDef.env is valid(EnvVarValue.envValidator)
+    appDef.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appDef.isResident))
+    appDef must complyWithResidencyRules
+    appDef must complyWithMigrationAPI
+    appDef must complyWithSingleInstanceLabelRules
+    appDef must complyWithReadinessCheckRules
+    appDef must complyWithUpgradeStrategyRules
+    appDef must complyWithGpuRules
+    appDef.constraints.each must complyWithConstraintRules
+    appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
+  } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") { hc =>
