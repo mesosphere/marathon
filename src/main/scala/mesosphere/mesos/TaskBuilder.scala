@@ -443,7 +443,7 @@ object TaskBuilder {
         "MESOS_TASK_ID" -> taskId.map(_.idString),
         "MARATHON_APP_ID" -> Some(runSpec.id.toString),
         "MARATHON_APP_VERSION" -> Some(runSpec.version.toString),
-        "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.flatMap(_.docker.map(_.image)),
+        "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.flatMap(_.docker().map(_.image)),
         "MARATHON_APP_RESOURCE_CPUS" -> Some(runSpec.cpus.toString),
         "MARATHON_APP_RESOURCE_MEM" -> Some(runSpec.mem.toString),
         "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.disk.toString),

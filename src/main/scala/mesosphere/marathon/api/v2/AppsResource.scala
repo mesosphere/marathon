@@ -71,7 +71,7 @@ class AppsResource @Inject() (
       val app = appDef.copy(
         ipAddress = appDef.ipAddress.map { ipAddress =>
           config.defaultNetworkName.get.collect {
-            case (defaultName: String) if (defaultName.nonEmpty && !ipAddress.networkName.isDefined) =>
+            case (defaultName: String) if defaultName.nonEmpty && ipAddress.networkName.isEmpty =>
               ipAddress.copy(networkName = Some(defaultName))
           }.getOrElse(ipAddress)
         },
@@ -81,7 +81,7 @@ class AppsResource @Inject() (
       checkAuthorization(CreateRunSpec, app)
 
       def createOrThrow(opt: Option[AppDefinition]) = opt
-        .map(_ => throw new ConflictingChangeException(s"An app with id [${app.id}] already exists."))
+        .map(_ => throw ConflictingChangeException(s"An app with id [${app.id}] already exists."))
         .getOrElse(app)
 
       val plan = result(groupManager.updateApp(app.id, createOrThrow, app.version, force))
