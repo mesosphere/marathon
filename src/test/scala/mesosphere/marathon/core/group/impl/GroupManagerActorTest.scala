@@ -53,6 +53,13 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     update.transitiveApps.flatMap(_.servicePorts) should be(empty)
   }
 
+  test("apps with port definitions should keep them") {
+    val app = AppDefinition("/app".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(1)))
+    val group = Group(PathId.empty, Map(app.id -> app))
+    val update = manager(10 to 20).assignDynamicServicePorts(Group.empty, group)
+    update.apps(app.id).portDefinitions should contain theSameElementsAs app.portDefinitions
+  }
+
   test("Assign dynamic app ports") {
     val app1 = AppDefinition("/app1".toPath, container = container(0, 0, 0))
     val app2 = AppDefinition("/app2".toPath, container = container(1, 2, 3))

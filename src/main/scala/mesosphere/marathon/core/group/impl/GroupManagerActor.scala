@@ -248,7 +248,7 @@ private[impl] class GroupManagerActor(
       // defined only if there are port mappings
       val newContainer: Option[Container] = for {
         c <- app.container
-        d <- c.docker if !d.portMappings.isEmpty
+        d <- c.docker() if d.portMappings.isDefined
       } yield {
         val newPortMappings = d.portMappings.get.zip(servicePorts).map {
           case (portMapping, servicePort) =>
@@ -268,11 +268,13 @@ private[impl] class GroupManagerActor(
       to.transitiveApps.map {
         // assign values for service ports that the user has left "blank" (set to zero)
         case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
-        case app: AppDefinition =>
+        case app: AppDefinition if app.servicePorts.nonEmpty =>
           // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
+          // TODO: This is almost definitely wrong.
           app.copy(
             portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
           )
+        case app: AppDefinition => app
       }
 
     dynamicApps.foldLeft(to) { (group, app) =>
