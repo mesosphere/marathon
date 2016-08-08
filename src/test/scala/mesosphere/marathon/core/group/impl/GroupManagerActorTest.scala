@@ -13,8 +13,7 @@ import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
-import mesosphere.marathon._
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException, _ }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
@@ -53,11 +52,24 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     update.transitiveApps.flatMap(_.servicePorts) should be(empty)
   }
 
-  test("apps with port definitions should keep them") {
+  test("apps with port definitions should map dynamic ports to a non-0 value") {
     val app = AppDefinition("/app".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(1)))
     val group = Group(PathId.empty, Map(app.id -> app))
     val update = manager(10 to 20).assignDynamicServicePorts(Group.empty, group)
-    update.apps(app.id).portDefinitions should contain theSameElementsAs app.portDefinitions
+    update.apps(app.id).portDefinitions.size should equal(2)
+    update.apps(app.id).portDefinitions should contain(PortDefinition(1))
+    update.apps(app.id).portDefinitions should not contain PortDefinition(0)
+  }
+
+  test("apps with dynamic port definitions should keep them and reserve the port from the service ports") {
+    val dynamicApp = AppDefinition("/app1".toRootPath, portDefinitions = Seq(PortDefinition(0)))
+    val serviceApp = AppDefinition("/app2".toRootPath, container = container(0))
+    val group = Group(PathId.empty, Map(dynamicApp.id -> dynamicApp, serviceApp.id -> serviceApp))
+    val update = manager(10 to 20).assignDynamicServicePorts(Group.empty, group)
+    update.apps(dynamicApp.id).portDefinitions.exists(_.port == 0) should be(false)
+    update.apps(serviceApp.id).portDefinitions.size should equal(1)
+    update.apps(serviceApp.id).portDefinitions.exists(_.port == 0) should be(false)
+    update.apps(dynamicApp.id).portDefinitions should not equal update.apps(serviceApp.id).portDefinitions
   }
 
   test("Assign dynamic app ports") {

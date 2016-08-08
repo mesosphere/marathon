@@ -274,7 +274,25 @@ private[impl] class GroupManagerActor(
           app.copy(
             portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
           )
-        case app: AppDefinition => app
+        case app: AppDefinition if app.portDefinitions.exists(_.port == AppDefinition.RandomPortValue) =>
+          synchronized {
+            app.portDefinitions.filter(_.port != AppDefinition.RandomPortValue).foreach { portDef =>
+              taken += portDef.port
+            }
+          }
+          app.copy(
+            portDefinitions = app.portDefinitions.map {
+              case portDef: PortDefinition if portDef.port == AppDefinition.RandomPortValue =>
+                // we're reserving these ports _away_ from the set of reservable ports.
+                portDef.copy(port = nextGlobalFreePort)
+              case portDef: PortDefinition => portDef
+            }
+          )
+        case app: AppDefinition =>
+          synchronized {
+            app.portDefinitions.foreach(portDef => taken += portDef.port)
+          }
+          app
       }
 
     dynamicApps.foldLeft(to) { (group, app) =>
