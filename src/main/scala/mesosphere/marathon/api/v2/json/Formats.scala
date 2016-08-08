@@ -993,7 +993,7 @@ trait AppAndGroupFormats {
       // top-level ports fields are incompatible with IP/CT
       if (runSpec.ipAddress.isEmpty) {
         appJson = appJson ++ Json.obj(
-          "ports" -> runSpec.servicePorts,
+          "ports" -> runSpec.portDefinitions.map(_.port),
           "portDefinitions" -> {
             if (runSpec.servicePorts.nonEmpty) {
               runSpec.portDefinitions.zip(runSpec.servicePorts).map {

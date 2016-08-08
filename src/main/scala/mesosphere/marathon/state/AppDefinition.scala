@@ -278,7 +278,7 @@ case class AppDefinition(
 
   val hostPorts: Seq[Option[Int]] = container.flatMap(_.hostPorts).getOrElse(portNumbers.map(Some(_)))
 
-  val servicePorts: Seq[Int] = container.flatMap(_.servicePorts).getOrElse(portNumbers)
+  val servicePorts: Seq[Int] = container.flatMap(_.servicePorts).getOrElse(Nil)
 
   val hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
