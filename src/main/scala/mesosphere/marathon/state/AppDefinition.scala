@@ -274,11 +274,12 @@ case class AppDefinition(
     )
   }
 
-  private val portIndicies: Range = container.flatMap(_.hostPorts).getOrElse(portNumbers).indices
+  private val portIndices: Range = container.flatMap(_.hostPorts.filter(_.nonEmpty)).getOrElse(portNumbers).indices
 
-  val hostPorts: Seq[Option[Int]] = container.flatMap(_.hostPorts).getOrElse(portNumbers.map(Some(_)))
+  val hostPorts: Seq[Option[Int]] =
+    container.flatMap(_.hostPorts.filter(_.nonEmpty)).getOrElse(portNumbers.map(Some(_)))
 
-  val servicePorts: Seq[Int] = container.flatMap(_.servicePorts).getOrElse(portNumbers)
+  val servicePorts: Seq[Int] = container.flatMap(_.servicePorts.filter(_.nonEmpty)).getOrElse(portNumbers)
 
   val hasDynamicServicePorts: Boolean = servicePorts.contains(AppDefinition.RandomPortValue)
 
@@ -733,7 +734,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer
-    appDef.healthChecks is every(portIndexIsValid(appDef.portIndicies))
+    appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     appDef.mem should be >= 0.0
