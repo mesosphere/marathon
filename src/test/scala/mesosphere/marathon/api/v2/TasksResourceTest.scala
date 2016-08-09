@@ -9,10 +9,13 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.Identity
+import mesosphere.marathon.state.Container.Docker
+import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
+import org.apache.mesos.Protos.ContainerInfo
 import org.mockito.Mockito._
 import org.scalatest.{ GivenWhenThen, Matchers }
 
@@ -21,10 +24,20 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers with Mockito {
+  def container(servicePorts: Int*): Option[Container] = {
+    Some(
+      Docker.withDefaultPortMappings(Nil, "",
+        network = Some(ContainerInfo.DockerInfo.Network.BRIDGE),
+        portMappings = Option(
+          servicePorts.map(port => PortMapping(servicePort = port)).toVector
+        )
+      )
+    )
+  }
   test("list (txt) tasks with less ports than the current app version") {
     // Regression test for #234
     Given("one app with one task with less ports than required")
-    val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)))
+    val app = AppDefinition("/foo".toRootPath, container = container(0, 0))
 
     val taskId = Task.Id.forRunSpec(app.id).idString
     val task = MarathonTestHelper.runningTask(taskId)

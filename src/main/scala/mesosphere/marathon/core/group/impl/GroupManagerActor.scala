@@ -224,7 +224,9 @@ private[impl] class GroupManagerActor(
       servicePorts: Seq[Int]): Seq[PortDefinition] =
       if (portDefinitions.nonEmpty)
         portDefinitions.zipAll(servicePorts, AppDefinition.RandomPortDefinition, AppDefinition.RandomPortValue).map {
-          case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
+          case (portDefinition, servicePort) =>
+
+            portDefinition.copy(port = servicePort)
         }
       else Seq.empty
 
@@ -248,7 +250,7 @@ private[impl] class GroupManagerActor(
       // defined only if there are port mappings
       val newContainer: Option[Container] = for {
         c <- app.container
-        d <- c.docker if !d.portMappings.isEmpty
+        d <- c.docker() if d.portMappings.isDefined
       } yield {
         val newPortMappings = d.portMappings.get.zip(servicePorts).map {
           case (portMapping, servicePort) =>
@@ -266,13 +268,30 @@ private[impl] class GroupManagerActor(
 
     val dynamicApps: Set[AppDefinition] =
       to.transitiveApps.map {
-        // assign values for service ports that the user has left "blank" (set to zero)
-        case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
-        case app: AppDefinition =>
-          // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
+        case app: AppDefinition if app.servicePorts.nonEmpty =>
+          synchronized {
+            app.servicePorts.withFilter(_ != AppDefinition.RandomPortValue).foreach { port => taken += port }
+          }
+          assignPorts(app)
+        case app: AppDefinition if app.portDefinitions.exists(_.port == AppDefinition.RandomPortValue) =>
+          synchronized {
+            app.portDefinitions.filter(_.port != AppDefinition.RandomPortValue).foreach { portDef =>
+              taken += portDef.port
+            }
+          }
           app.copy(
-            portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
+            portDefinitions = app.portDefinitions.map {
+              case portDef: PortDefinition if portDef.port == AppDefinition.RandomPortValue =>
+                // we're reserving these ports _away_ from the set of reservable service ports.
+                portDef.copy(port = nextGlobalFreePort)
+              case portDef: PortDefinition => portDef
+            }
           )
+        case app: AppDefinition =>
+          synchronized {
+            app.portDefinitions.foreach(portDef => taken += portDef.port)
+          }
+          app
       }
 
     dynamicApps.foldLeft(to) { (group, app) =>
