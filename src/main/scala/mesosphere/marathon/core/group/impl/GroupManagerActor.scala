@@ -208,7 +208,7 @@ private[impl] class GroupManagerActor(
     val portRange = Range(config.localPortMin(), config.localPortMax())
     var taken = from.transitiveApps.flatMap(_.servicePorts) ++ to.transitiveApps.flatMap(_.servicePorts)
 
-    def nextGlobalFreePort: Int = synchronized {
+    def nextGlobalFreePort: Int = {
       val port = portRange.find(!taken.contains(_))
         .getOrElse(throw new PortRangeExhaustedException(
           config.localPortMin(),
@@ -248,7 +248,7 @@ private[impl] class GroupManagerActor(
       // defined only if there are port mappings
       val newContainer: Option[Container] = for {
         c <- app.container
-        d <- c.docker if !d.portMappings.isEmpty
+        d <- c.docker() if d.portMappings.isDefined
       } yield {
         val newPortMappings = d.portMappings.get.zip(servicePorts).map {
           case (portMapping, servicePort) =>

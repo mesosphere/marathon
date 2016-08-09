@@ -19,6 +19,7 @@ sealed trait Container {
     }
   }
 
+  // TODO(jdef): Someone should really fix this to not be Option[Seq[]] - we can't express that in protos anyways!
   def portMappings: Option[Seq[Container.Docker.PortMapping]] = None
 
   def hostPorts: Option[Seq[Option[Int]]] =
