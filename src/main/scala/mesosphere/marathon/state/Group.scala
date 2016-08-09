@@ -253,9 +253,9 @@ object Group {
 
   private def servicePortsDontOverlap: Validator[Group] =
     isTrue("Service ports are unique") { group =>
-      val portGroups = group.transitiveApps
-        .map(apps => apps.servicePorts.filter(_ != AppDefinition.RandomPortValue).toSet)
-      val allPorts = portGroups.fold(Set.empty)(_.union(_))
+      val portGroups: Seq[Seq[Int]] = group.transitiveApps.toSeq
+        .map(apps => apps.servicePorts.filter(_ != AppDefinition.RandomPortValue))
+      val allPorts = portGroups.fold(Set.empty)((a, b) => a.toSet.union(b.toSet))
       portGroups.map(_.size).sum == allPorts.size
     }
 }
