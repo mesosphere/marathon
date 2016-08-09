@@ -21,7 +21,7 @@ import org.mockito.Matchers.any
 import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Matchers
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._

@@ -10,7 +10,7 @@ import mesosphere.marathon.core.event.impl.stream.HttpEventStreamActor._
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.test._
 import org.mockito.Mockito.{ when => call, _ }
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
