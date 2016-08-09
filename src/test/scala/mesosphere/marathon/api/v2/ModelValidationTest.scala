@@ -1,10 +1,9 @@
 package mesosphere.marathon.api.v2
 
-import java.util.UUID
-
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.Container._
@@ -12,8 +11,6 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
 import org.scalatest.{ BeforeAndAfterAll, Matchers, OptionValues }
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep, StartApplication }
 import play.api.libs.json.{ JsObject, Json }
 
 import scala.collection.immutable.Seq
@@ -49,21 +46,6 @@ class ModelValidationTest
     successfulResult.isSuccess should be(true)
   }
 
-  test("Model validation should catch new apps that conflict with service ports in existing apps") {
-    val existingApp = createServicePortApp("/app1".toPath, 3200)
-    val conflictingApp = createServicePortApp("/app2".toPath, 3200)
-
-    val group = Group(id = PathId.empty, apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
-
-    val steps = Seq(DeploymentStep(Seq(StartApplication(existingApp, 1))))
-    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, group, group, steps, Timestamp.now())
-
-    val result = validate(deploymentPlan)(DeploymentPlan.deploymentPlanValidator(MarathonTestHelper.defaultConfig()))
-
-    ValidationHelper.getAllRuleConstrains(result).exists(v =>
-      v.message.contains("Requested service port 3200 is used by more than 1 app")) should be(true)
-  }
-
   test("Model validation should allow new apps that do not conflict with service ports in existing apps") {
 
     val existingApp = createServicePortApp("/app1".toPath, 3200)
@@ -73,20 +55,6 @@ class ModelValidationTest
     val result = validate(group)(Group.validRootGroup(maxApps = None))
 
     result.isSuccess should be(true)
-  }
-
-  test("Model validation should check for application conflicts") {
-    val existingApp = createServicePortApp("/app1".toPath, 3200)
-    val conflictingApp = existingApp.copy(id = "/app2".toPath)
-
-    val group = Group(id = PathId.empty, apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
-    val steps = Seq(DeploymentStep(Seq(StartApplication(existingApp, 1))))
-    val deploymentPlan = DeploymentPlan(UUID.randomUUID().toString, group, group, steps, Timestamp.now())
-
-    val result = validate(deploymentPlan)(DeploymentPlan.deploymentPlanValidator(MarathonTestHelper.defaultConfig()))
-
-    ValidationHelper.getAllRuleConstrains(result).exists(v =>
-      v.message.contains("Requested service port 3200 is used by more than 1 app")) should be(true)
   }
 
   test("Multiple errors within one field of a validator should be grouped into one array") {
