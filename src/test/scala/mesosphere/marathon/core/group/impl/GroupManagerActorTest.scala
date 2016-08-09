@@ -75,7 +75,7 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
   test("Assign dynamic app ports") {
     val app1 = AppDefinition("/app1".toPath, container = container(0, 0, 0))
     val app2 = AppDefinition("/app2".toPath, container = container(1, 2, 3))
-    val app3 = AppDefinition("/app3".toPath, container = container(0, 2, 0))
+    val app3 = AppDefinition("/app3".toPath, container = container(0, 4, 0))
     val group = Group(PathId.empty, Map(
       app1.id -> app1,
       app2.id -> app2,

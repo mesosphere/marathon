@@ -231,6 +231,7 @@ object Group {
       group is noAppsAndGroupsWithSameName
       group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
+      group is servicePortsDontOverlap
     }
 
     // We do not want a "/value" prefix, therefore we do not create nested validators with validator[Group]
@@ -250,4 +251,11 @@ object Group {
   private def noCyclicDependencies: Validator[Group] =
     isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
 
+  private def servicePortsDontOverlap: Validator[Group] =
+    isTrue("Service ports are unique") { group =>
+      val portGroups = group.transitiveApps
+        .map(apps => apps.servicePorts.filter(_ != AppDefinition.RandomPortValue).toSet)
+      val allPorts = portGroups.fold(Set.empty)(_.union(_))
+      portGroups.map(_.size).sum == allPorts.size
+    }
 }

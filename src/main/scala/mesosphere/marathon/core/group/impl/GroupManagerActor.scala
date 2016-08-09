@@ -224,7 +224,9 @@ private[impl] class GroupManagerActor(
       servicePorts: Seq[Int]): Seq[PortDefinition] =
       if (portDefinitions.nonEmpty)
         portDefinitions.zipAll(servicePorts, AppDefinition.RandomPortDefinition, AppDefinition.RandomPortValue).map {
-          case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
+          case (portDefinition, servicePort) =>
+
+            portDefinition.copy(port = servicePort)
         }
       else Seq.empty
 
@@ -266,14 +268,11 @@ private[impl] class GroupManagerActor(
 
     val dynamicApps: Set[AppDefinition] =
       to.transitiveApps.map {
-        // assign values for service ports that the user has left "blank" (set to zero)
-        case app: AppDefinition if app.hasDynamicServicePorts => assignPorts(app)
         case app: AppDefinition if app.servicePorts.nonEmpty =>
-          // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-          // TODO: This is almost definitely wrong.
-          app.copy(
-            portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
-          )
+          synchronized {
+            app.servicePorts.withFilter(_ != AppDefinition.RandomPortValue).foreach { port => taken += port }
+          }
+          assignPorts(app)
         case app: AppDefinition if app.portDefinitions.exists(_.port == AppDefinition.RandomPortValue) =>
           synchronized {
             app.portDefinitions.filter(_.port != AppDefinition.RandomPortValue).foreach { portDef =>
@@ -283,7 +282,7 @@ private[impl] class GroupManagerActor(
           app.copy(
             portDefinitions = app.portDefinitions.map {
               case portDef: PortDefinition if portDef.port == AppDefinition.RandomPortValue =>
-                // we're reserving these ports _away_ from the set of reservable ports.
+                // we're reserving these ports _away_ from the set of reservable service ports.
                 portDef.copy(port = nextGlobalFreePort)
               case portDef: PortDefinition => portDef
             }
