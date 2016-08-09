@@ -147,6 +147,7 @@ object MarathonBuild extends Build {
     resolvers ++= Seq(
       "Mesosphere Public Repo"    at "http://downloads.mesosphere.com/maven",
       "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
+      "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository",
       "Spray Maven Repository"    at "http://repo.spray.io/"
     ),
     cancelable in Global := true,
@@ -318,7 +319,7 @@ object Dependency {
     val Chaos = "0.8.7"
     val Guava = "19.0"
     // FIXME (gkleiman): reenable deprecation checks after Mesos 1.0.0-rc2 deprecations are handled
-    val MesosUtils = "1.0.0"
+    val MesosUtils = "1.1.0-SNAPSHOT"
     val Akka = "2.4.8"
     val AsyncAwait = "0.9.6-RC2"
     val Spray = "1.3.3"
