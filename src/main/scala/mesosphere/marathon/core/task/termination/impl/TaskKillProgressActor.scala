@@ -50,7 +50,7 @@ private[this] class TaskKillProgressActor(
       // we don't expect to be stopped without all tasks being killed, so the promise should fail:
       val msg = s"$name was stopped before all tasks are killed. Outstanding: ${taskIds.mkString(",")}"
       log.error(msg)
-      promise.failure(new KillingTasksFailedException(msg))
+      promise.tryFailure(new KillingTasksFailedException(msg))
     }
   }
 
