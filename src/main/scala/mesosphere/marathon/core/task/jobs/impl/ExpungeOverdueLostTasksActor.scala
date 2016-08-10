@@ -55,7 +55,7 @@ class ExpungeOverdueLostTasksActor(
         age > config.taskLostExpungeGC
       }
     }
-    tasks.values.flatMap(_.tasks.filter(task => isTimedOut(task.mesosStatus)))
+    tasks.values.flatMap(_.tasks.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))
   }
 }
 

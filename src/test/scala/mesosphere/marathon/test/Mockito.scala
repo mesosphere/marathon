@@ -20,6 +20,7 @@ trait Mockito extends MockitoSugar {
   def times(num: Int) = M.times(num)
   def timeout(millis: Int) = M.timeout(millis.toLong)
   def atLeastOnce = M.atLeastOnce()
+  def once = M.times(1)
   def atLeast(num: Int) = M.atLeast(num)
   def atMost(num: Int) = M.atMost(num)
   def never = M.never()
