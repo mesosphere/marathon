@@ -1,20 +1,20 @@
 package mesosphere.marathon.core.task.jobs
 
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Terminated}
+import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Terminated }
 import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
-import mesosphere.marathon.core.task.tracker.{TaskStateOpProcessor, TaskTracker}
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.GivenWhenThen
 import org.scalatest.concurrent.ScalaFutures
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration.Duration
 
 class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
