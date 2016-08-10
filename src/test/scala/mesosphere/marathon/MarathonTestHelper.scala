@@ -358,7 +358,7 @@ object MarathonTestHelper {
   }
 
   def minimalUnreachableTask(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Unreachable, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
-    val lostTask = mininimalLostTask(appId, since)
+    val lostTask = mininimalLostTask(appId, since = since)
     lostTask.copy(status = lostTask.status.copy(taskStatus = marathonTaskStatus))
   }
 
