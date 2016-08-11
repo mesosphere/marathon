@@ -46,7 +46,6 @@ object MarathonBuild extends Build {
       Seq(
         unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
         libraryDependencies ++= Dependencies.root,
-        parallelExecution in Test := false,
         buildInfoKeys := Seq[BuildInfoKey](
           name, version, scalaVersion,
           BuildInfoKey.action("buildref") {
@@ -102,7 +101,8 @@ object MarathonBuild extends Build {
 
   lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
     Seq(
-      testOptions in IntegrationTest := Seq(formattingTestArg, Tests.Argument("-n", "mesosphere.marathon.IntegrationTest"))
+      testOptions in IntegrationTest := Seq(formattingTestArg, Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
+      parallelExecution in IntegrationTest := false
     )
 
   lazy val testSettings = Seq(
