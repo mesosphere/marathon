@@ -224,6 +224,15 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     MarathonTestHelper.validateJsonSchema(app)
   }
 
+  test("mesos container only") {
+    val f = new Fixture
+    val app = AppDefinition(
+      id = PathId("/test"),
+      container = Some(f.validMesosDockerContainer))
+    assert(validate(app).isSuccess)
+    MarathonTestHelper.validateJsonSchema(app)
+  }
+
   test("mesos container and cmd") {
     val f = new Fixture
     val app = AppDefinition(
