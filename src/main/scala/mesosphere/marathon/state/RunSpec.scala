@@ -53,7 +53,7 @@ trait RunSpec extends plugin.RunSpec {
 
   def container: Option[Container]
 
-  def healthChecks: Set[HealthCheck]
+  def healthChecks: Set[_ <: HealthCheck]
 
   def readinessChecks: Seq[ReadinessCheck]
 

@@ -1,11 +1,6 @@
 <scalastyle commentFilter="enabled">
  <name>Mesosphere Marathon configuration</name>
  <check level="error" class="org.scalastyle.file.FileTabChecker" enabled="true"/>
- <check level="error" class="org.scalastyle.file.FileLengthChecker" enabled="true">
-  <parameters>
-   <parameter name="maxFileLength"><![CDATA[800]]></parameter>
-  </parameters>
- </check>
  <check level="error" class="org.scalastyle.file.HeaderMatchesChecker" enabled="false">
   <parameters>
    <parameter name="header"><![CDATA[]]></parameter>

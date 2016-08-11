@@ -6,17 +6,16 @@ import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.state.Container.Docker
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 // scalastyle:on
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
@@ -72,7 +71,7 @@ case class AppDefinition(
 
   container: Option[Container] = AppDefinition.DefaultContainer,
 
-  healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
+  healthChecks: Set[_ <: HealthCheck] = AppDefinition.DefaultHealthChecks,
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
@@ -257,7 +256,7 @@ case class AppDefinition(
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
       container = containerOption,
-      healthChecks = proto.getHealthChecksList.iterator().asScala.map(new HealthCheck().mergeFromProto).toSet,
+      healthChecks = proto.getHealthChecksList.iterator().asScala.map(HealthCheck.fromProto).toSet,
       readinessChecks =
         proto.getReadinessCheckDefinitionList.iterator().asScala.map(ReadinessCheckSerializer.fromProto).to[Seq],
       taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
@@ -756,11 +755,13 @@ object AppDefinition extends GeneralPurposeCombinators {
   } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
-    isTrue("Health check port indices must address an element of the ports array or container port mappings.") { hc =>
-      hc.protocol == Protocol.COMMAND || (hc.portIndex match {
-        case Some(idx) => hostPortsIndices contains idx
-        case None => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
-      })
+    isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
+      case hc: MarathonHealthCheck =>
+        hc.portIndex match {
+          case Some(idx) => hostPortsIndices.contains(idx)
+          case None => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
+        }
+      case _ => true
     }
 
   def residentUpdateIsValid(from: AppDefinition): Validator[AppDefinition] = {
