@@ -102,7 +102,8 @@ object MarathonBuild extends Build {
   lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
     Seq(
       testOptions in IntegrationTest := Seq(formattingTestArg, Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
-      parallelExecution in IntegrationTest := false
+      parallelExecution in IntegrationTest := false,
+      testListeners in IntegrationTest := Seq(new JUnitXmlTestsListener((target.value / "integration").getAbsolutePath()))
     )
 
   lazy val testSettings = Seq(

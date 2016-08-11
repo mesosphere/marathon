@@ -8,8 +8,8 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.Mockito
-import org.apache.mesos.{Protos => mesos}
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.apache.mesos.{ Protos => mesos }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 
