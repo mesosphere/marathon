@@ -60,10 +60,9 @@ class PostToEventStreamStepImplTest extends FunSuite
       )
     ))
     And("only sending event info gets logged")
-    logs should have size 1
-    logs.map(_.toString) should be (Seq(
+    logs.map(_.toString) should contain (
       s"[INFO] Sending event notification for $taskId of app [$appId]: ${status.getState}"
-    ))
+    )
   }
 
   test("ignore running notification of already running task") {
@@ -83,7 +82,7 @@ class PostToEventStreamStepImplTest extends FunSuite
     Then("no event is posted to the event stream")
     events should be (empty)
     And("and nothing of importance is logged")
-    logs.filter(_.getLevel != Level.DEBUG) should be (empty)
+    logs.filter(l => l.getLevel != Level.DEBUG && l.getMessage.contains(appId)) should be (empty)
   }
 
   test("terminate existing task with TASK_ERROR") { testExistingTerminatedTask(TaskState.TASK_ERROR) }
@@ -123,10 +122,9 @@ class PostToEventStreamStepImplTest extends FunSuite
       )
     ))
     And("only sending event info gets logged")
-    logs should have size 1
-    logs.map(_.toString) should be (Seq(
+    logs.map(_.toString) should contain (
       s"[INFO] Sending event notification for $taskId of app [$appId]: ${status.getState}"
-    ))
+    )
   }
 
   private[this] val slaveId = SlaveID.newBuilder().setValue("slave1")
