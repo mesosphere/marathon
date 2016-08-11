@@ -4,8 +4,7 @@ import java.net.{ InetAddress, ServerSocket }
 
 import akka.actor.Props
 import akka.testkit.{ ImplicitSender, TestActorRef }
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.core.health.{ HealthCheck, HealthResult, Healthy }
+import mesosphere.marathon.core.health.{ HealthResult, Healthy, TcpHealthCheck }
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.test.MarathonActorSupport
@@ -42,7 +41,7 @@ class HealthCheckWorkerActorTest
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = "test_id".toPath)
-    ref ! HealthCheckJob(app, task, task.launched.get, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
+    ref ! HealthCheckJob(app, task, task.launched.get, TcpHealthCheck(portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }
@@ -67,7 +66,7 @@ class HealthCheckWorkerActorTest
 
     val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor]))
     val app = AppDefinition(id = "test_id".toPath)
-    ref ! HealthCheckJob(app, task, task.launched.get, HealthCheck(protocol = Protocol.TCP, portIndex = Some(0)))
+    ref ! HealthCheckJob(app, task, task.launched.get, TcpHealthCheck(portIndex = Some(0)))
 
     try { Await.result(res, 1.seconds) }
     finally { socket.close() }

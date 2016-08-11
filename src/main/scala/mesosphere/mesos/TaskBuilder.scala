@@ -1,14 +1,12 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.health.MesosHealthCheck
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state.{ AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
-
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
@@ -152,17 +150,16 @@ class TaskBuilder(
       builder.setKillPolicy(killPolicy)
     }
 
-    // Mesos supports at most one health check, and only COMMAND checks
-    // are currently implemented in the Mesos health check helper program.
+    // Mesos supports at most one health check
     val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
       runSpec.healthChecks.collect {
-        case healthCheck: HealthCheck if healthCheck.protocol == Protocol.COMMAND => healthCheck.toMesos
+        case mesosHealthCheck: MesosHealthCheck => mesosHealthCheck.toMesos
       }
 
     if (mesosHealthChecks.size > 1) {
       val numUnusedChecks = mesosHealthChecks.size - 1
       log.warn(
-        "Mesos supports one command health check per task.\n" +
+        "Mesos supports up to one health check per task.\n" +
           s"Task [$taskId] will run without " +
           s"$numUnusedChecks of its defined health checks."
       )

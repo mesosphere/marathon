@@ -3,7 +3,7 @@ package mesosphere.marathon.integration.setup
 import java.io.File
 import java.util
 
-import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.health.{ HealthCheck, HttpHealthCheck }
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import org.apache.commons.io.FileUtils
@@ -228,7 +228,7 @@ trait SingleMarathonIntegrationTest
   }
 
   private lazy val appProxyHealthChecks = Set(
-    HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10))
+    HttpHealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10, portIndex = Some(0)))
 
   def dockerAppProxy(appId: PathId, versionId: String, instances: Int, withHealth: Boolean = true, dependencies: Set[PathId] = Set.empty): AppDefinition = {
     val targetDirs = sys.env.getOrElse("TARGET_DIRS", "/marathon")
