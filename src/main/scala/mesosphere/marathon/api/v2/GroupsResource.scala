@@ -151,7 +151,7 @@ class GroupsResource @Inject() (
         rootGroup.findGroup(_.id == effectivePath),
         s"Group $effectivePath is already created. Use PUT to change this group.")
       throwIfConflicting(
-        rootGroup.transitiveApps.find(_.id == effectivePath),
+        rootGroup.transitiveAppsById.get(effectivePath),
         s"An app with the path $effectivePath already exists.")
 
       val (deployment, path) = updateOrCreate(id.toRootPath, groupUpdate, force)

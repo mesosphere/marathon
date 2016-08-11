@@ -3,31 +3,32 @@ package mesosphere.marathon.core.group.impl
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Provider
 
+import akka.Done
 import akka.actor.ActorSystem
 import akka.event.EventStream
 import akka.pattern.ask
+import akka.stream.ActorMaterializer
 import akka.testkit.TestActorRef
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException }
-import mesosphere.marathon._
-import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
-import org.mockito.Matchers.any
-import org.mockito.Mockito.{ times, verify, when }
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
+import mesosphere.marathon.test.Mockito
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, MarathonSpec, PortRangeExhaustedException, _ }
+import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import org.mockito.Mockito.when
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Matchers
-import org.scalatest.mockito.MockitoSugar
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec {
+class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
 
   val actorId = new AtomicInteger(0)
 
@@ -270,14 +271,13 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val app1 = AppDefinition("/app1".toPath)
     val group = Group(PathId.empty, Map(app1.id -> app1), Set(Group("/group1".toPath)))
 
-    when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
-    when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
+    when(f.groupRepo.root()).thenReturn(Future.successful(Group.empty))
 
     intercept[ValidationFailedException] {
       Await.result(f.manager ? update(group.id, _ => group), 3.seconds)
     }.printStackTrace()
 
-    verify(f.groupRepo, times(0)).store(any(), any())
+    verify(f.groupRepo, times(0)).storeRoot(any, any, any)
   }
 
   test("Store new apps with correct version infos in groupRepo and appRepo") {
@@ -285,19 +285,17 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
 
     val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
     val group = Group(PathId.empty, Map(app.id -> app)).copy(version = Timestamp(1))
-    when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
-    when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(None))
-    when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
+    when(f.groupRepo.root()).thenReturn(Future.successful(Group.empty))
+    when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
     val appWithVersionInfo = app.copy(versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1)))
+
     val groupWithVersionInfo = Group(PathId.empty, Map(
       appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))
-    when(f.appRepo.store(any())).thenReturn(Future.successful(appWithVersionInfo))
-    when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupWithVersionInfo))
+    when(f.groupRepo.storeRoot(any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager ? update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).store(GroupRepository.zkRootName, groupWithVersionInfo)
-    verify(f.appRepo).store(appWithVersionInfo)
+    verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
   }
 
   test("Expunge removed apps from appRepo") {
@@ -306,22 +304,23 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
     val group = Group(PathId.empty, Map(app.id -> app)).copy(version = Timestamp(1))
     val groupEmpty = group.copy(apps = Map(), version = Timestamp(2))
-    when(f.groupRepo.zkRootName).thenReturn(GroupRepository.zkRootName)
-    when(f.groupRepo.group(GroupRepository.zkRootName)).thenReturn(Future.successful(Some(group)))
-    when(f.scheduler.deploy(any(), any())).thenReturn(Future.successful(()))
-    when(f.appRepo.expunge(any())).thenReturn(Future.successful(Seq(true)))
-    when(f.groupRepo.store(any(), any())).thenReturn(Future.successful(groupEmpty))
+    when(f.groupRepo.root()).thenReturn(Future.successful(group))
+    when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
+    when(f.appRepo.delete(any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRoot(any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager ? update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).store(GroupRepository.zkRootName, groupEmpty)
-    verify(f.appRepo).expunge(app.id)
+    verify(f.groupRepo).storeRoot(groupEmpty, Nil, Seq(app.id))
+    verify(f.appRepo, atMost(1)).delete(app.id)
+    verify(f.appRepo, atMost(1)).deleteCurrent(app.id)
   }
 
   private[this] implicit val timeout: Timeout = 3.seconds
 
   class Fixture {
     implicit val system = ActorSystem()
+    implicit val mat = ActorMaterializer()
     lazy val scheduler = mock[MarathonSchedulerService]
     lazy val appRepo = mock[AppRepository]
     lazy val groupRepo = mock[GroupRepository]
@@ -341,7 +340,7 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
       capMetrics,
       system,
       s"serializeGroupUpdates${actorId.incrementAndGet()}",
-      maxParallel = 1,
+      maxConcurrent = 1,
       maxQueued = 10
     )
 

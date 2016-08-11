@@ -53,7 +53,7 @@ class InfoResource @Inject() (
     "zk" -> s"zk://${config.zkHosts}${config.zkPath}",
     "zk_timeout" -> config.zooKeeperTimeout(),
     "zk_session_timeout" -> config.zooKeeperSessionTimeout(),
-    "zk_max_versions" -> config.zooKeeperMaxVersions()
+    "zk_max_versions" -> config.maxVersions()
   )
 
   private[this] lazy val eventHandlerConfigValues = {

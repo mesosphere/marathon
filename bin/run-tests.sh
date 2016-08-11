@@ -159,8 +159,7 @@ fi
 
 DOCKER_IMAGE="marathon-buildbase:$BUILD_ID"
 
-DOCKER_CMD='sbt -Dsbt.log.format=false test integration:test &&
-  sbt -Dsbt.log.format=false "project mesos-simulation" integration:test "test:runMain mesosphere.mesos.scale.DisplayAppScalingResults"'
+DOCKER_CMD='sbt -Dsbt.log.format=false "; test; integration:test; mesos-simulation/test; mesos-simulation/integration:test; mesos-simulation/test:runMain mesosphere.mesos.scale.DisplayAppScalingResults"'
 
 DOCKER_ARGS=( ${DOCKER_OPTIONS[@]} "$DOCKER_IMAGE" -c "$DOCKER_CMD" )
 

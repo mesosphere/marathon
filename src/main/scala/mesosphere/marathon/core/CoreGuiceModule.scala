@@ -2,7 +2,12 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
+import mesosphere.marathon.storage.migration.Migration
+import mesosphere.marathon.storage.repository._
+
+// scalastyle:off
 import akka.actor.{ ActorRef, ActorRefFactory, Props }
+import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
 import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
@@ -26,13 +31,18 @@ import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpd
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
 import mesosphere.marathon.plugin.http.HttpRequestHandler
-import mesosphere.marathon.{ MarathonConf, ModuleNames }
+import mesosphere.marathon.{ MarathonConf, ModuleNames, PrePostDriverCallback }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 import org.eclipse.jetty.servlets.EventSourceServlet
+
+import scala.collection.immutable
+import scala.concurrent.ExecutionContext
+// scalastyle:on
 
 /**
   * Provides the glue between guice and the core modules.
   */
+// scalastyle:off
 class CoreGuiceModule extends AbstractModule {
 
   // Export classes used outside of core to guice
@@ -100,6 +110,38 @@ class CoreGuiceModule extends AbstractModule {
   @Provides @Singleton
   def readinessCheckExecutor(coreModule: CoreModule): ReadinessCheckExecutor = coreModule.readinessModule.readinessCheckExecutor //scalastyle:ignore
 
+  @Provides
+  @Singleton
+  def materializer(coreModule: CoreModule): Materializer = coreModule.actorsModule.materializer
+
+  @Provides
+  @Singleton
+  def provideLeadershipInitializers(coreModule: CoreModule): immutable.Seq[PrePostDriverCallback] = {
+    coreModule.storageModule.leadershipInitializers
+  }
+
+  @Provides
+  @Singleton
+  def appRepository(coreModule: CoreModule): ReadOnlyAppRepository = coreModule.storageModule.appRepository
+
+  @Provides
+  @Singleton
+  def deploymentRepository(coreModule: CoreModule): DeploymentRepository = coreModule.storageModule.deploymentRepository
+
+  @Provides
+  @Singleton
+  def taskFailureRepository(coreModule: CoreModule): TaskFailureRepository =
+    coreModule.storageModule.taskFailureRepository
+
+  @Provides
+  @Singleton
+  def groupRepository(coreModule: CoreModule): GroupRepository =
+    coreModule.storageModule.groupRepository
+
+  @Provides @Singleton
+  def framworkIdRepository(coreModule: CoreModule): FrameworkIdRepository =
+    coreModule.storageModule.frameworkIdRepository
+
   @Provides @Singleton
   def groupManager(coreModule: CoreModule): GroupManager = coreModule.groupManagerModule.groupManager
 
@@ -164,10 +206,14 @@ class CoreGuiceModule extends AbstractModule {
       capMetrics,
       actorRefFactory,
       "serializeTaskStatusUpdates",
-      maxParallel = config.internalMaxParallelStatusUpdates(),
+      maxConcurrent = config.internalMaxParallelStatusUpdates(),
       maxQueued = config.internalMaxQueuedStatusUpdates()
-    )
+    )(ExecutionContext.global)
   }
+
+  @Provides
+  @Singleton
+  def provideExecutionContext: ExecutionContext = ExecutionContext.global
 
   @Provides @Singleton
   def httpCallbackSubscriptionService(coreModule: CoreModule): HttpCallbackSubscriptionService = {
@@ -182,6 +228,10 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def httpEventStreamServlet(coreModule: CoreModule): EventSourceServlet = coreModule.eventModule.httpEventStreamServlet
+
+  @Provides
+  @Singleton
+  def migration(coreModule: CoreModule): Migration = coreModule.storageModule.migration
 
   @Provides @Singleton
   def healthCheckManager(coreModule: CoreModule): HealthCheckManager = coreModule.healthModule.healthCheckManager

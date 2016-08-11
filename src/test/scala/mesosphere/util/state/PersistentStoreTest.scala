@@ -3,6 +3,7 @@ package mesosphere.util.state
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.integration.setup.IntegrationFunSuite
 import mesosphere.FutureTestSupport._
+import mesosphere.marathon.storage.repository.legacy.store.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
 import org.scalatest.time.{ Seconds, Span }
 import org.scalatest.{ BeforeAndAfter, Matchers }
 

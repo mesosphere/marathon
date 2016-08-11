@@ -188,7 +188,7 @@ object ProcessKeeper {
 
   def startProcess(name: String, processBuilder: ProcessBuilder, upWhen: String => Boolean, timeout: Duration = 30.seconds): Process = {
     require(!processes.contains(name), s"Process with $name already started")
-
+    log.info(s"Starting: $name $processBuilder")
     sealed trait ProcessState
     case object ProcessIsUp extends ProcessState
     case object ProcessExited extends ProcessState

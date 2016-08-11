@@ -10,12 +10,13 @@ import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
@@ -1121,8 +1122,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     useRealGroupManager()
     val appA = AppDefinition("/a".toRootPath)
     val group = Group(PathId.empty, apps = Map(appA.id -> appA))
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    groupRepository.root() returns Future.successful(group)
 
     Given("An unauthorized request")
     auth.authenticated = true
@@ -1198,8 +1198,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     When("We try to remove a non-existing application")
     useRealGroupManager()
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(Group.empty))
-    groupRepository.rootGroup returns Future.successful(Some(Group.empty))
+    groupRepository.root returns Future.successful(Group.empty)
 
     Then("A 404 is returned")
     intercept[UnknownAppException] { appsResource.delete(false, "/foo", req) }

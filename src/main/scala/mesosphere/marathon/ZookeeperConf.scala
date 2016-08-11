@@ -30,12 +30,6 @@ trait ZookeeperConf extends ScallopConf {
     default = Some("zk://localhost:2181/marathon")
   )
 
-  lazy val zooKeeperMaxVersions = opt[Int](
-    "zk_max_versions",
-    descr = "Limit the number of versions, stored for one entity.",
-    default = Some(25)
-  )
-
   lazy val zooKeeperCompressionEnabled = toggle(
     "zk_compression",
     descrYes =
