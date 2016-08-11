@@ -4,7 +4,7 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.{ Answer, OngoingStubbing }
 import org.mockito.verification.VerificationMode
 import org.mockito.{ Mockito => M }
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 
 /**
   * ScalaTest mockito support is quite limited and ugly.
@@ -20,6 +20,7 @@ trait Mockito extends MockitoSugar {
   def times(num: Int) = M.times(num)
   def timeout(millis: Int) = M.timeout(millis.toLong)
   def atLeastOnce = M.atLeastOnce()
+  def once = M.times(1)
   def atLeast(num: Int) = M.atLeast(num)
   def atMost(num: Int) = M.atMost(num)
   def never = M.never()

@@ -21,7 +21,7 @@ import org.mockito.Matchers.any
 import org.mockito.Mockito.{ times, verify, when }
 import org.rogach.scallop.ScallopConf
 import org.scalatest.Matchers
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -44,6 +44,15 @@ class GroupManagerActorTest extends MockitoSugar with Matchers with MarathonSpec
     val update = manager(servicePortsRange).assignDynamicServicePorts(Group.empty, group)
     update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
     update.transitiveApps.flatMap(_.portNumbers.filter(servicePortsRange.contains)) should have size 5
+  }
+
+  test("apps with port definitions should map dynamic ports to a non-0 value") {
+    val app = AppDefinition("/app".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(1)))
+    val group = Group(PathId.empty, Map(app.id -> app))
+    val update = manager(10 to 20).assignDynamicServicePorts(Group.empty, group)
+    update.apps(app.id).portDefinitions.size should equal(2)
+    update.apps(app.id).portDefinitions should contain(PortDefinition(1))
+    update.apps(app.id).portDefinitions should not contain PortDefinition(0)
   }
 
   test("Assign dynamic service ports specified in the container") {
