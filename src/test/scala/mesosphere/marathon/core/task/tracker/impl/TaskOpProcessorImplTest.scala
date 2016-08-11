@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ ActorRef, Status }
 import akka.event.EventStream
 import akka.testkit.TestProbe
+import ch.qos.logback.classic.Level
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.Provider
 import mesosphere.marathon.core.CoreGuiceModule
@@ -108,9 +109,7 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).store(taskProto)
 
     And("logs a warning after detecting the error")
-    logs should have size 1
-    logs.head.getLevel should be(ch.qos.logback.classic.Level.WARN)
-    logs.head.getMessage should include(s"[${taskProto.getId}]")
+    logs.filter(l => l.getLevel == Level.WARN && l.getMessage.contains(s"[${taskProto.getId}]")) should have size 1
 
     And("loads the task")
     verify(f.taskRepository).task(taskProto.getId)
@@ -157,9 +156,7 @@ class TaskOpProcessorImplTest
     verify(f.taskRepository).store(taskProto)
 
     And("logs a warning after detecting the error")
-    logs should have size 1
-    logs.head.getLevel should be(ch.qos.logback.classic.Level.WARN)
-    logs.head.getMessage should include(s"[${taskProto.getId}]")
+    logs.filter(l => l.getLevel == Level.WARN && l.getMessage.contains(s"[${taskProto.getId}]")) should have size 1
 
     And("loads the task")
     verify(f.taskRepository).task(taskProto.getId)
@@ -207,11 +204,7 @@ class TaskOpProcessorImplTest
     result.failed.get.getCause.getMessage should be(storeFailed.getMessage)
 
     And("logs a two warnings, for store and for task")
-    logs should have size 2
-    logs.head.getLevel should be(ch.qos.logback.classic.Level.WARN)
-    logs.head.getMessage should include(s"[${taskProto.getId}]")
-    logs(1).getLevel should be(ch.qos.logback.classic.Level.WARN)
-    logs(1).getMessage should include(s"[${taskProto.getId}]")
+    logs.filter(l => l.getLevel == Level.WARN && l.getMessage.contains(s"[${taskProto.getId}]")) should have size 2
 
     And("no more interactions")
     f.verifyNoMoreInteractions()
