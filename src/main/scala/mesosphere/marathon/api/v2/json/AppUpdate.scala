@@ -54,7 +54,7 @@ case class AppUpdate(
 
     container: Option[Container] = None,
 
-    healthChecks: Option[Set[HealthCheck]] = None,
+    healthChecks: Option[Set[_ <: HealthCheck]] = None,
 
     readinessChecks: Option[Seq[ReadinessCheck]] = None,
 
