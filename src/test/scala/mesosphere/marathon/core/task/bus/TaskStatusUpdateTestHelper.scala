@@ -56,10 +56,11 @@ object TaskStatusUpdateTestHelper {
         TaskStateChange.Expunge(task)))
   }
 
-  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None) = {
+  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, timestamp: Long = 0) = {
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
+      .setTimestamp(1.0 * timestamp / 1000)
     maybeHealth.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
     mesosStatus.build()
