@@ -1,24 +1,24 @@
 package mesosphere.marathon.storage.repository.legacy.store
 
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import com.twitter.util.Await
-import com.twitter.zk.ZkClient
-import mesosphere.FutureTestSupport._
-import mesosphere.marathon.integration.setup.StartedZookeeper
+import mesosphere.marathon.integration.setup.ZookeeperServerTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.util.state.PersistentStoreTest
 import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.KeeperException.NoNodeException
 import org.apache.zookeeper.ZooDefs.Ids
 import org.scalatest._
+import org.scalatest.concurrent.ScalaFutures
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matchers with BeforeAndAfter {
+class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matchers with ScalaFutures {
   import ZKStore._
 
   implicit val metrics = new Metrics(new MetricRegistry)
@@ -101,30 +101,26 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
   lazy val persistentStore: ZKStore = {
     implicit val timer = com.twitter.util.Timer.Nil
     val timeout = com.twitter.util.TimeConversions.intToTimeableNumber(10).minutes
-    val client = ZkClient(config.zkHostAndPort, timeout).withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
-    new ZKStore(client, client(config.zkPath), conf, 8, 1024)
+    val client = twitterZkClient().withAcl(Ids.OPEN_ACL_UNSAFE.asScala)
+    new ZKStore(client, client(root), conf, 8, 1024)
   }
 
   lazy val mesosStore: MesosStateStore = {
     val duration = 30.seconds
     val state = new ZooKeeperState(
-      config.zkHostAndPort,
+      zkServer.connectUri,
       duration.toMillis,
       TimeUnit.MILLISECONDS,
-      config.zkPath
+      root
     )
     new MesosStateStore(state, duration)
   }
 
+  val root = s"/${UUID.randomUUID}"
   val conf = CompressionConf(false, 0)
 
-  override protected def beforeAll(configMap: ConfigMap): Unit = {
-    super.beforeAll(configMap + ("zkPort" -> "2185"))
-  }
-
-  override protected def afterAll(configMap: ConfigMap): Unit = {
+  override def afterAll(): Unit = {
     Await.ready(persistentStore.client.release())
     system.terminate().futureValue
-    super.afterAll(configMap)
   }
 }

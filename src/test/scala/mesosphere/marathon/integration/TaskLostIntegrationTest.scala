@@ -75,7 +75,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     waitForTasks(app.id, 1).head should be(task)
   }
 
-  test("A task lost with mesos master failover will expunge the task after gc timeout - https://github.com/mesosphere/marathon/issues/4212") {
+  ignore("A task lost with mesos master failover will expunge the task after gc timeout - https://github.com/mesosphere/marathon/issues/4212") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app)
