@@ -396,13 +396,11 @@ trait ContainerFormats {
         "appc" -> appcValues(appc)
       )
     }
-    Writes { container =>
-      container match {
-        case m: Container.Mesos => MesosContainerWrites.writes(m)
-        case d: Container.Docker => DockerContainerWrites.writes(d)
-        case c: Container.MesosDocker => MesosDockerContainerWrites.writes(c)
-        case c: Container.MesosAppC => AppCContainerWrites.writes(c)
-      }
+    Writes {
+      case m: Container.Mesos => MesosContainerWrites.writes(m)
+      case d: Container.Docker => DockerContainerWrites.writes(d)
+      case c: Container.MesosDocker => MesosDockerContainerWrites.writes(c)
+      case c: Container.MesosAppC => AppCContainerWrites.writes(c)
     }
   }
 }
@@ -733,7 +731,7 @@ trait AppAndGroupFormats {
         json.asOpt[Seq[String]] match {
           case Some(seq) if seq.size >= 2 && seq.size <= 3 =>
             if (validOperators.contains(seq(1))) {
-              val builder = Constraint.newBuilder().setField(seq(0)).setOperator(Operator.valueOf(seq(1)))
+              val builder = Constraint.newBuilder().setField(seq.head).setOperator(Operator.valueOf(seq(1)))
               if (seq.size == 3) builder.setValue(seq(2))
               JsSuccess(builder.build())
             } else {
@@ -934,12 +932,11 @@ trait AppAndGroupFormats {
 
       Option(TaskLostBehavior.valueOf(behaviorString)) match {
         case Some(taskLostBehavior) => JsSuccess(taskLostBehavior)
-        case None => {
+        case None =>
           val allowedTaskLostBehaviorString =
             TaskLostBehavior.values().toSeq.map(_.getDescriptorForType.getName).mkString(", ")
 
           JsError(s"'$behaviorString' is not a valid taskLostBehavior. Allowed values: $allowedTaskLostBehaviorString")
-        }
       }
 
     }
