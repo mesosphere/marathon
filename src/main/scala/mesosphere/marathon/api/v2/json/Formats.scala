@@ -10,7 +10,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.health.{ Health, HealthCheck }
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -628,22 +628,61 @@ trait HealthCheckFormats {
   implicit lazy val HealthCheckProtocolFormat: Format[Protocol] =
     enumFormat(Protocol.valueOf, str => s"$str is not a valid protocol")
 
-  implicit lazy val HealthCheckFormat: Format[HealthCheck] = {
+  val BasicHealthCheckFormatBuilder = {
     import mesosphere.marathon.core.health.HealthCheck._
 
-    (
-      (__ \ "path").formatNullable[String] ~
-      (__ \ "protocol").formatNullable[Protocol].withDefault(DefaultProtocol) ~
-      (__ \ "portIndex").formatNullable[Int] ~
-      (__ \ "command").formatNullable[Command] ~
-      (__ \ "gracePeriodSeconds").formatNullable[Long].withDefault(DefaultGracePeriod.toSeconds).asSeconds ~
+    (__ \ "gracePeriodSeconds").formatNullable[Long].withDefault(DefaultGracePeriod.toSeconds).asSeconds ~
       (__ \ "intervalSeconds").formatNullable[Long].withDefault(DefaultInterval.toSeconds).asSeconds ~
       (__ \ "timeoutSeconds").formatNullable[Long].withDefault(DefaultTimeout.toSeconds).asSeconds ~
-      (__ \ "maxConsecutiveFailures").formatNullable[Int].withDefault(DefaultMaxConsecutiveFailures) ~
-      (__ \ "ignoreHttp1xx").formatNullable[Boolean].withDefault(DefaultIgnoreHttp1xx) ~
-      (__ \ "port").formatNullable[Int]
-    )(HealthCheck.apply, unlift(HealthCheck.unapply))
+      (__ \ "maxConsecutiveFailures").formatNullable[Int].withDefault(DefaultMaxConsecutiveFailures)
   }
+
+  val HealthCheckWithPortsFormatBuilder =
+    BasicHealthCheckFormatBuilder ~
+      (__ \ "portIndex").formatNullable[Int] ~
+      (__ \ "port").formatNullable[Int]
+
+  implicit val HttpHealthCheckFormat: Format[HttpHealthCheck] = {
+    import mesosphere.marathon.core.health.HttpHealthCheck._
+    (
+      HealthCheckWithPortsFormatBuilder ~
+      (__ \ "path").formatNullable[String] ~
+      (__ \ "ignoreHttp1xx").formatNullable[Boolean].withDefault(DefaultIgnoreHttp1xx) ~
+      (__ \ "protocol").formatNullable[Protocol].withDefault(Protocol.HTTP)
+    )(HttpHealthCheck.apply, unlift(HttpHealthCheck.unapply))
+  }
+
+  implicit val CommandHealthCheckFormat: Format[CommandHealthCheck] = (
+    BasicHealthCheckFormatBuilder ~
+    (__ \ "command").format[Command]
+  )(CommandHealthCheck.apply, unlift(CommandHealthCheck.unapply))
+
+  implicit val TcpHealthCheckFormat: Format[TcpHealthCheck] =
+    HealthCheckWithPortsFormatBuilder(TcpHealthCheck.apply, unlift(TcpHealthCheck.unapply))
+
+  implicit val HealthCheckFormat: Format[HealthCheck] = Format[HealthCheck] (
+    new Reads[HealthCheck] {
+      override def reads(json: JsValue): JsResult[HealthCheck] = {
+        val protocol = (json \ "protocol").validateOpt[Protocol](HealthCheckProtocolFormat)
+
+        protocol.flatMap {
+          case None => json.validate[HttpHealthCheck]
+          case Some(Protocol.COMMAND) => json.validate[CommandHealthCheck]
+          case Some(Protocol.HTTP | Protocol.HTTPS) => json.validate[HttpHealthCheck]
+          case Some(Protocol.TCP) => json.validate[TcpHealthCheck]
+          case _ => JsError("Invalid health check protocol.")
+        }
+      }
+    },
+    Writes[HealthCheck] {
+      case tcp: TcpHealthCheck =>
+        Json.toJson(tcp)(TcpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "TCP")
+      case http: HttpHealthCheck =>
+        Json.toJson(http)(HttpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> Json.toJson(http.protocol))
+      case command: CommandHealthCheck =>
+        Json.toJson(command)(CommandHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "COMMAND")
+    }
+  )
 }
 
 trait ReadinessCheckFormats {
@@ -901,26 +940,29 @@ trait AppAndGroupFormats {
     * In the past, healthCheck.portIndex was required and had a default value 0. When we introduced healthCheck.port, we
     * made it optional (also with ip-per-container in mind) and we have to re-add it in cases where it makes sense.
     */
+  private[this] def addHealthCheckPortIndexIfNecessary(healthChecks: Set[_ <: HealthCheck]): Set[_ <: HealthCheck] =
+    healthChecks.map {
+      case healthCheck: TcpHealthCheck =>
+        def needsDefaultPortIndex = healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty
+        if (needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
+        else healthCheck
+      case healthCheck: HttpHealthCheck =>
+        def needsDefaultPortIndex = healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty
+        if (needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
+        else healthCheck
+      case healthCheck: HealthCheck => healthCheck
+    }
+
   private[this] def addHealthCheckPortIndexIfNecessary(app: AppDefinition): AppDefinition = {
     val hasPortMappings = app.container.exists(_.portMappings.nonEmpty)
     val portIndexesMakeSense = app.portDefinitions.nonEmpty || hasPortMappings
-    app.copy(healthChecks = app.healthChecks.map { healthCheck =>
-      def needsDefaultPortIndex =
-        healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty && healthCheck.protocol != Protocol.COMMAND
-      if (portIndexesMakeSense && needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
-      else healthCheck
-    })
+
+    if (portIndexesMakeSense) app.copy(healthChecks = addHealthCheckPortIndexIfNecessary(app.healthChecks))
+    else app
   }
 
   private[this] def addHealthCheckPortIndexIfNecessary(appUpdate: AppUpdate): AppUpdate = {
-    appUpdate.copy(healthChecks = appUpdate.healthChecks.map { healthChecks =>
-      healthChecks.map { healthCheck =>
-        def needsDefaultPortIndex =
-          healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty && healthCheck.protocol != Protocol.COMMAND
-        if (needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
-        else healthCheck
-      }
-    })
+    appUpdate.copy(healthChecks = appUpdate.healthChecks.map(addHealthCheckPortIndexIfNecessary))
   }
 
   implicit lazy val taskLostBehaviorWrites = Writes[TaskLostBehavior] { taskLostBehavior =>

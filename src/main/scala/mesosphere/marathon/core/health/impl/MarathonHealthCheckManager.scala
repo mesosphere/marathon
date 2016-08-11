@@ -4,7 +4,6 @@ import akka.actor.{ ActorRef, ActorRefFactory }
 import akka.event.EventStream
 import akka.pattern.ask
 import akka.util.Timeout
-import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.ZookeeperConf
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.health._
@@ -113,7 +112,7 @@ class MarathonHealthCheckManager(
     }
 
   override def reconcileWith(appId: PathId): Future[Unit] =
-    appRepository.get(appId) flatMap {
+    appRepository.get(appId).flatMap {
       case None => Future(())
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
@@ -172,9 +171,9 @@ class MarathonHealthCheckManager(
       // compute the app ID for the incoming task status
       val appId = Task.Id(taskStatus.getTaskId).runSpecId
 
-      // collect health check actors for the associated app's command checks.
+      // collect health check actors for the associated app's Mesos checks.
       val healthCheckActors: Iterable[ActorRef] = listActive(appId, version).collect {
-        case ActiveHealthCheck(hc, ref) if hc.protocol == Protocol.COMMAND => ref
+        case ActiveHealthCheck(hc: MesosHealthCheck, ref) => ref
       }
 
       // send the result to each health check actor
