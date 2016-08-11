@@ -1,19 +1,20 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ ActorLogging, ActorRef, Actor }
+import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
+import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.health.CommandHealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
-import mesosphere.marathon.core.readiness.{ ReadinessCheckResult, ReadinessCheck, ReadinessCheckExecutor }
+import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.event.{ HealthStatusChanged, MesosStatusUpdateEvent, DeploymentStatus }
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import rx.lang.scala.Observable
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
@@ -46,7 +47,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(CommandHealthCheck(command = Command("true"))),
       readinessChecks = Seq(ReadinessCheck("test")))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
@@ -67,7 +68,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
-      healthChecks = Set(HealthCheck()))
+      healthChecks = Set(CommandHealthCheck(command = Command("true"))))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes healthy")
@@ -103,7 +104,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
-      healthChecks = Set(HealthCheck()),
+      healthChecks = Set(CommandHealthCheck(command = Command("true"))),
       readinessChecks = Seq(ReadinessCheck("test")))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 

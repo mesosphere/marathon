@@ -69,7 +69,7 @@ object V2TestFormats {
       "backoffFactor" -> update.backoffFactor,
       "maxLaunchDelaySeconds" -> update.maxLaunchDelay.map(_.toSeconds),
       "container" -> update.container,
-      "healthChecks" -> update.healthChecks,
+      "healthChecks" -> update.healthChecks.map(_.map(Json.toJson(_)(HealthCheckFormat))),
       "readinessChecks" -> update.readinessChecks,
       "taskKillGracePeriodSeconds" -> update.taskKillGracePeriod.map(_.toSeconds),
       "dependencies" -> update.dependencies,
