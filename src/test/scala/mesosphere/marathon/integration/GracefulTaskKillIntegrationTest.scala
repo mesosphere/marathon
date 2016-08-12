@@ -14,8 +14,9 @@ class GracefulTaskKillIntegrationTest
     with BeforeAndAfter
     with GivenWhenThen {
 
-  //clean up state before running the test case
-  before(cleanUp())
+  after {
+    cleanUp()
+  }
 
   // this command simulates a 'long terminating' application
   // note: Integration test does not interpret symbolic names (SIGTERM=15), therefore signal 15 is used.

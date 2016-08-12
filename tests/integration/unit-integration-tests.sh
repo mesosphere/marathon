@@ -14,7 +14,7 @@ export DOCKER_HUB_EMAIL
 TAGGED_IMAGE=$($WORKSPACE/bin/build-base-image.sh)
 
 if [[ -z ${RUN_DOCKER_INTEGRATION_TESTS+x} ]]; then
-  if [[ -n "$JENKINS_HOME"]]; then
+  if [[ -n "$JENKINS_HOME" ]]; then
     # velocity can't run these tests (docker in docker in docker)
     RUN_DOCKER_INTEGRATION_TESTS="false"
   else
