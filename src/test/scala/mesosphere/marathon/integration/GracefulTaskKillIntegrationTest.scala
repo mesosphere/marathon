@@ -14,7 +14,7 @@ class GracefulTaskKillIntegrationTest
     with BeforeAndAfter
     with GivenWhenThen {
 
-  after {
+  before {
     cleanUp()
   }
 
@@ -24,7 +24,7 @@ class GracefulTaskKillIntegrationTest
   val taskKillGracePeriod = taskKillGraceDuration.seconds
   val appCommand: String = s"""trap \"sleep ${taskKillGraceDuration + 1}\" 15 && sleep 100000"""
 
-  test("create a 'long terminating' app with custom taskKillGracePeriod duration") {
+  ignore("create a 'long terminating' app with custom taskKillGracePeriod duration - https://github.com/mesosphere/marathon/issues/4214") {
     Given("a new 'long terminating' app with taskKillGracePeriod set to 10 seconds")
     val app = AppDefinition(
       testBasePath / "app",
@@ -56,7 +56,7 @@ class GracefulTaskKillIntegrationTest
     waitedForTaskKilledEvent.toMillis should be >= taskKillGracePeriod.toMillis
   }
 
-  test("create a 'short terminating' app with custom taskKillGracePeriod duration") {
+  ignore("create a 'short terminating' app with custom taskKillGracePeriod duration - https://github.com/mesosphere/marathon/issues/4214") {
     Given("a new 'short terminating' app with taskKillGracePeriod set to 10 seconds")
     val app = AppDefinition(
       testBasePath / "app",

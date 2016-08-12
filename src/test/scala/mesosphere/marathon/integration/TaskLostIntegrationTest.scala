@@ -16,7 +16,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     if (!ProcessKeeper.hasProcess(slave1)) startSlave(slave1)
   }
 
-  test("A task lost with mesos master failover will not kill the task") {
+  ignore("A task lost with mesos master failover will not kill the task - https://github.com/mesosphere/marathon/issues/4214") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app)
