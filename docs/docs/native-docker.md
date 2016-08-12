@@ -4,13 +4,13 @@ title: Running Docker Containers on Marathon
 
 # Running Docker Containers on Marathon
 
-This document describes how to run [Docker](https://docker.com/) containers on
-Marathon using the native Docker support added in Apache Mesos version 0.20.0
-(released August 2014).
+You can run Docker containers on Marathon either by configuring your application to run the Docker containerizer or by configuring the Mesos containerizer to provision the Docker container.
+
+# Configure Your Application to use the Docker Containerizer
 
 ## Configuration
 
-Note that DC/OS clusters are already configured to run Docker containers, so 
+DC/OS clusters are already configured to run Docker containers, so 
 DC/OS users do not need to follow the configuration steps below.
 
 #### Prerequisites
