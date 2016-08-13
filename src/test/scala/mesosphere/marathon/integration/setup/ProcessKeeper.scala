@@ -64,7 +64,7 @@ object ProcessKeeper {
       sys.env, _.contains("binding to port"))
   }
 
-  def startMesosLocal(): Process = {
+  def startMesosLocal(port: Int): Process = {
     val mesosWorkDirForMesos: String = "/tmp/marathon-itest-mesos"
     val mesosWorkDirFile: File = new File(mesosWorkDirForMesos)
     FileUtils.deleteDirectory(mesosWorkDirFile)
@@ -73,7 +73,7 @@ object ProcessKeeper {
     val mesosEnv = setupMesosEnv(mesosWorkDirFile, mesosWorkDirForMesos)
     startProcess(
       "mesos",
-      Process(Seq("mesos-local", "--ip=127.0.0.1"), cwd = None, mesosEnv: _*),
+      Process(Seq("mesos-local", "--ip=127.0.0.1", s"--port=$port"), cwd = None, mesosEnv: _*),
       upWhen = _.toLowerCase.contains("registered with master"))
   }
 

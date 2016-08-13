@@ -57,7 +57,7 @@ class LeaderIntegrationTest extends IntegrationFunSuite
     WaitTestSupport.waitUntil("the leader changes", 30.seconds) { marathon.leader().value != leader }
   }
 
-  test("it survives a small burn-in reelection test") {
+  ignore("it survives a small burn-in reelection test - https://github.com/mesosphere/marathon/issues/4215") {
     val random = new scala.util.Random
     for (_ <- 1 to 10) {
       Given("a leader")
