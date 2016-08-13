@@ -2,12 +2,12 @@ package mesosphere.mesos.scale
 
 import java.io.File
 
-import mesosphere.marathon.api.v2.json.{ AppUpdate }
-import mesosphere.marathon.integration.facades.{ ITDeploymentResult, MarathonFacade }
+import mesosphere.marathon.api.v2.json.AppUpdate
+import mesosphere.marathon.integration.facades.ITDeploymentResult
+import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup._
-import MarathonFacade._
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
+import org.scalatest.{ BeforeAndAfter, ConfigMap, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
@@ -29,6 +29,14 @@ class SingleAppScalingTest
 
   //clean up state before running the test case
   before(cleanUp())
+
+  override def afterAll(configMap: ConfigMap): Unit = {
+    super.afterAll(configMap)
+    println()
+    DisplayAppScalingResults.displayMetrics(SingleAppScalingTest.metricsFile)
+    println()
+    DisplayAppScalingResults.displayAppInfoScaling(SingleAppScalingTest.appInfosFile)
+  }
 
   override def startMarathon(port: Int, args: String*): Unit = {
     val cwd = new File(".")

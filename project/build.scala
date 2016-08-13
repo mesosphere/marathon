@@ -1,19 +1,20 @@
-import com.amazonaws.auth.{ EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider }
+import com.amazonaws.auth.{EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider}
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import ohnosequences.sbt.SbtS3Resolver.autoImport._
-import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
+import org.scalastyle.sbt.ScalastylePlugin.{buildSettings => styleSettings}
 import sbt.Keys._
+import sbt.Tests.SubProcess
 import sbt._
 import sbtassembly.AssemblyKeys._
 import sbtassembly.MergeStrategy
 import sbtbuildinfo.BuildInfoKeys._
-import sbtbuildinfo.{ BuildInfoKey, BuildInfoPlugin }
+import sbtbuildinfo.{BuildInfoKey, BuildInfoPlugin}
 import sbtrelease.ReleasePlugin.autoImport._
 import sbtrelease.ReleaseStateTransformations._
 import sbtrelease._
-import scala.util.Try
 
+import scala.util.Try
 import scalariform.formatter.preferences._
 
 object MarathonBuild extends Build {
@@ -99,10 +100,22 @@ object MarathonBuild extends Build {
       fork in Benchmark := true
     )
 
+  // Someday, these may be able to run in parallel but the integration tests in particular have places
+  // where they can kill each other _even_ when in different processes.
   lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
     Seq(
       testOptions in IntegrationTest := Seq(formattingTestArg, Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
-      parallelExecution in IntegrationTest := false
+      parallelExecution in IntegrationTest := false,
+      testForkedParallel in IntegrationTest := false,
+      testListeners in IntegrationTest := Seq(new JUnitXmlTestsListener((target.value / "integration").getAbsolutePath)),
+      testGrouping in IntegrationTest := (definedTests in IntegrationTest).value.map { test =>
+        Tests.Group(name = test.name, tests = Seq(test),
+          runPolicy = SubProcess(ForkOptions((javaHome in IntegrationTest).value,
+            (outputStrategy in IntegrationTest).value, Nil, Some(baseDirectory.value),
+            (javaOptions in IntegrationTest).value, (connectInput in IntegrationTest).value,
+            (envVars in IntegrationTest).value
+          )))
+      }
     )
 
   lazy val testSettings = Seq(

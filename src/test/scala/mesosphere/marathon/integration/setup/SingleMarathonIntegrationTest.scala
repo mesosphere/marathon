@@ -110,7 +110,7 @@ trait SingleMarathonIntegrationTest
     }
   }
 
-  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal()
+  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal(config.mesosPort)
 
   protected def createConfig(configMap: ConfigMap): IntegrationTestConfig = IntegrationTestConfig(configMap)
 
