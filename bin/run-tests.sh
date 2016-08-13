@@ -134,8 +134,6 @@ DOCKER_OPTIONS=(
     run
     --rm=$CLEANUP_CONTAINERS_ON_EXIT
     --name marathon-itests-$BUILD_ID
-    --memory 4g
-    --memory-swap 6g
     --net host
     -e "BUILD_ID=$BUILD_ID"
     -e "IVY2_DIR=$IVY2_DIR"
