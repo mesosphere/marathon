@@ -20,7 +20,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
   )
 
   test("submit successful futures after each other") {
-    val serialize = CapConcurrentExecutions(capMetrics, system, "serialize1", maxParallel = 1, maxQueued = 10)
+    val serialize = CapConcurrentExecutions(capMetrics, system, "serialize1", maxConcurrent = 1, maxQueued = 10)
     try {
       val result1 = serialize(Future.successful(1)).futureValue
       result1 should be(1)
@@ -34,7 +34,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
   }
 
   test("submit successful futures after a failure") {
-    val serialize = CapConcurrentExecutions(capMetrics, system, "serialize2", maxParallel = 1, maxQueued = 10)
+    val serialize = CapConcurrentExecutions(capMetrics, system, "serialize2", maxConcurrent = 1, maxQueued = 10)
     try {
       serialize(Future.failed(new IllegalStateException())).failed.futureValue.getClass should be(classOf[IllegalStateException])
       val result2 = serialize(Future.successful(2)).futureValue
@@ -47,7 +47,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
   }
 
   test("submit successful futures after a failure to return future") {
-    val serialize = CapConcurrentExecutions(capMetrics, system, "serialize3", maxParallel = 1, maxQueued = 10)
+    val serialize = CapConcurrentExecutions(capMetrics, system, "serialize3", maxConcurrent = 1, maxQueued = 10)
     try {
       serialize(throw new IllegalStateException()).failed.futureValue.getClass should be(classOf[IllegalStateException])
 
@@ -62,7 +62,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
 
   test("concurrent executions are serialized if maxParallel has been reached") {
     val metrics = capMetrics
-    val serialize = CapConcurrentExecutions(metrics, system, "serialize4", maxParallel = 2, maxQueued = 10)
+    val serialize = CapConcurrentExecutions(metrics, system, "serialize4", maxConcurrent = 2, maxQueued = 10)
     def submitPromise(): (Promise[Unit], Future[Unit]) = {
       val promise = Promise[Unit]()
       val result = serialize.apply(promise.future)
@@ -115,7 +115,7 @@ class CapConcurrentExecutionsTest extends MarathonActorSupport with MarathonSpec
 
   test("queued executions are failed on stop, results of already executing futures are left untouched") {
     val metrics = capMetrics
-    val serialize = CapConcurrentExecutions(metrics, system, "serialize5", maxParallel = 2, maxQueued = 10)
+    val serialize = CapConcurrentExecutions(metrics, system, "serialize5", maxConcurrent = 2, maxQueued = 10)
     def submitPromise(): (Promise[Unit], Future[Unit]) = {
       val promise = Promise[Unit]()
       val result = serialize.apply(promise.future)

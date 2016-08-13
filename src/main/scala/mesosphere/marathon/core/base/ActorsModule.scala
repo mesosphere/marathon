@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.base
 
 import akka.actor.{ ActorRefFactory, ActorSystem }
+import akka.stream.ActorMaterializer
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
@@ -13,6 +14,7 @@ class ActorsModule(shutdownHooks: ShutdownHooks, actorSystem: ActorSystem = Acto
   private[this] val log = LoggerFactory.getLogger(getClass)
 
   def actorRefFactory: ActorRefFactory = actorSystem
+  val materializer = ActorMaterializer()(actorRefFactory)
 
   shutdownHooks.onShutdown {
     log.info("Shutting down actor system {}", actorSystem)

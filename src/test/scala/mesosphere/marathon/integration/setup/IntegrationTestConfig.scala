@@ -46,6 +46,7 @@ case class IntegrationTestConfig(
     //mesosLib: path to the native mesos lib. Defaults to /usr/local/lib/libmesos.dylib
     mesosLib: String,
 
+    // port mesos listens on
     mesosPort: Int,
 
     //the marathon host to use.

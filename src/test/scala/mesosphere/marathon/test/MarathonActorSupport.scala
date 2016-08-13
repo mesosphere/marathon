@@ -1,6 +1,7 @@
 package mesosphere.marathon.test
 
 import akka.actor.ActorSystem
+import akka.stream.{ ActorMaterializer, Materializer }
 import akka.testkit.{ TestKit, TestKitBase }
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{ BeforeAndAfterAll, Suite }
@@ -19,6 +20,7 @@ trait MarathonActorSupport extends Suite with TestKitBase with BeforeAndAfterAll
   private[this] lazy val stoppingConfig = ConfigFactory.parseString(stoppingConfigStr)
 
   implicit lazy val system: ActorSystem = ActorSystem(getClass.getSimpleName, stoppingConfig)
+  implicit lazy val mat: Materializer = ActorMaterializer()
   log.info("actor system {}: starting", system.name)
 
   override protected def afterAll(): Unit = {

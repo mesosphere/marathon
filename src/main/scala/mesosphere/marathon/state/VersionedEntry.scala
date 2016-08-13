@@ -31,7 +31,7 @@ trait VersionedEntry {
 
 }
 
-object VersionedEntry {
+object VersionedEntry extends VersionedEntry {
 
   /**
     * Separator to separate key and version.

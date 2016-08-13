@@ -317,9 +317,15 @@ message EventSubscribers {
 }
 
 message StorageVersion {
+  enum StorageFormat {
+    LEGACY = 0;
+    PERSISTENCE_STORE = 1;
+  }
   required uint32 major = 1;
   required uint32 minor = 2;
   required uint32 patch = 3;
+  // when we read old formats, we always assume legacy.
+  optional StorageFormat format = 4 [default=LEGACY];
 }
 
 message UpgradeStrategyDefinition {
@@ -328,18 +334,29 @@ message UpgradeStrategyDefinition {
 }
 
 message GroupDefinition {
+  message AppReference {
+    required string id = 1;
+    required string version = 2;
+  }
   required string id = 1;
   required string version = 2;
-  repeated ServiceDefinition apps = 3;
+  // legacy: new storage uses AppReferences
+  repeated ServiceDefinition deprecated_apps = 3;
   repeated GroupDefinition groups = 4;
   repeated string dependencies = 5;
+  repeated AppReference apps = 6;
 }
 
 message DeploymentPlanDefinition {
   required string id = 1;
-  required string version = 2;
-  required GroupDefinition original = 4;
-  required GroupDefinition target = 5;
+  optional string timestamp = 2;
+  // Note: deprecated_* can't be read by legacy persistent stores if they aren't set (since they were required)
+  // They are no longer read by PersistenceStores
+  optional GroupDefinition deprecated_original = 4;
+  optional GroupDefinition deprecated_target = 5;
+  // The new original and target are required by PersistenceStores
+  optional string original_root_version = 6;
+  optional string target_root_version = 7;
 }
 
 message TaskFailure {

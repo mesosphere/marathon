@@ -50,13 +50,13 @@ class AuthorizedZooKeeperTest extends IntegrationFunSuite
   test("/marathon has OPEN_ACL_UNSAFE acls") {
     val watcher = new Watcher { override def process(event: WatchedEvent): Unit = {} }
     val zooKeeper = new ZooKeeper(config.zkHostAndPort, 30 * 1000, watcher)
+    zooKeeper.addAuthInfo("digest", digest.getBytes("UTF-8"))
+
     try {
       Given("a leader has been elected")
       WaitTestSupport.waitUntil("a leader has been elected", 30.seconds) {
         marathon.leader().code == 200
       }
-
-      zooKeeper.addAuthInfo("digest", digest.getBytes("UTF-8"))
 
       Then("the /leader node exists")
       var stat = zooKeeper.exists(config.zkPath + "/leader", false)

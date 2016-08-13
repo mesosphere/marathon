@@ -31,7 +31,7 @@ trait MarathonCallbackTestSupport extends ExternalMarathonIntegrationTest {
 
   override def handleEvent(event: CallbackEvent): Unit = events.add(event)
 
-  def waitForEvent(kind: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
+  def waitForEvent(kind: String, maxWait: FiniteDuration = 60.seconds): CallbackEvent = waitForEventWith(kind, _ => true, maxWait)
 
   def waitForDeploymentId(deploymentId: String, maxWait: FiniteDuration = 30.seconds): CallbackEvent = {
     waitForEventWith("deployment_success", _.id == deploymentId, maxWait)
