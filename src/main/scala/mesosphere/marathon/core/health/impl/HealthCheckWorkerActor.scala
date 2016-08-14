@@ -47,28 +47,20 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
     app: AppDefinition, task: Task, launched: Task.Launched, check: MarathonHealthCheck): Future[Option[HealthResult]] =
     task.effectiveIpAddress(app) match {
       case Some(host) =>
-        check.effectivePort(app, task) match {
-          case None => Future.successful {
-            Some(
-              Unhealthy(
-                task.taskId,
-                launched.runSpecVersion,
-                "Missing/invalid port index and no explicit port specified"))
-          }
-          case Some(port) => check match {
-            case hc: HttpHealthCheck =>
-              hc.protocol match {
-                case Protos.HealthCheckDefinition.Protocol.HTTPS => https(task, launched, hc, host, port)
-                case Protos.HealthCheckDefinition.Protocol.HTTP => http(task, launched, hc, host, port)
-                case invalidProtocol: Protos.HealthCheckDefinition.Protocol =>
-                  Future.failed {
-                    val message = s"Health check failed: HTTP health check contains invalid protocol: $invalidProtocol"
-                    log.warning(message)
-                    new UnsupportedOperationException(message)
-                  }
-              }
-            case hc: TcpHealthCheck => tcp(task, launched, hc, host, port)
-          }
+        val port = check.effectivePort(app, task)
+        check match {
+          case hc: MarathonHttpHealthCheck =>
+            hc.protocol match {
+              case Protos.HealthCheckDefinition.Protocol.HTTPS => https(task, launched, hc, host, port)
+              case Protos.HealthCheckDefinition.Protocol.HTTP => http(task, launched, hc, host, port)
+              case invalidProtocol: Protos.HealthCheckDefinition.Protocol =>
+                Future.failed {
+                  val message = s"Health check failed: HTTP health check contains invalid protocol: $invalidProtocol"
+                  log.warning(message)
+                  new UnsupportedOperationException(message)
+                }
+            }
+          case hc: MarathonTcpHealthCheck => tcp(task, launched, hc, host, port)
         }
       case None =>
         Future.failed {
@@ -81,7 +73,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   def http(
     task: Task,
     launched: Task.Launched,
-    check: HttpHealthCheck,
+    check: MarathonHttpHealthCheck,
     host: String,
     port: Int): Future[Option[HealthResult]] = {
     val rawPath = check.path.getOrElse("")
@@ -110,7 +102,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   def tcp(
     task: Task,
     launched: Task.Launched,
-    check: TcpHealthCheck,
+    check: MarathonTcpHealthCheck,
     host: String,
     port: Int): Future[Option[HealthResult]] = {
     val address = s"$host:$port"
@@ -131,7 +123,7 @@ class HealthCheckWorkerActor extends Actor with ActorLogging {
   def https(
     task: Task,
     launched: Task.Launched,
-    check: HttpHealthCheck,
+    check: MarathonHttpHealthCheck,
     host: String,
     port: Int): Future[Option[HealthResult]] = {
     val rawPath = check.path.getOrElse("")

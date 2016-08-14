@@ -2,10 +2,16 @@ package mesosphere.marathon.state
 
 /**
   * @param portName name of the port
-  * @param effectiveIpAddress ip address on which the port can be reached (can be an agent's IP or an IP-per-Task)
+  * @param effectiveIpAddress ip address on which the port can be reached (can be an agent's IP, an IP-per-Task
+  *                           or None if its not known yet)
   * @param effectivePort resolved non-dynamic port. The task is reachable under effectiveIpAddress:effectivePort.
   */
-case class PortAssignment(portName: Option[String], effectiveIpAddress: String, effectivePort: Int)
+case class PortAssignment(
+  portName: Option[String],
+  effectiveIpAddress: Option[String],
+  effectivePort: Int,
+  hostPort: Option[Int] = None,
+  containerPort: Option[Int] = None)
 
 object PortAssignment {
   /**

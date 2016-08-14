@@ -5,7 +5,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats
-import mesosphere.marathon.core.health.{ CommandHealthCheck, HttpHealthCheck }
+import mesosphere.marathon.core.health.{ MarathonHttpHealthCheck, MesosCommandHealthCheck }
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state._
@@ -152,7 +152,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
       id = PathId("/test"),
       cmd = Some("true"),
       healthChecks = Set(
-        CommandHealthCheck(
+        MesosCommandHealthCheck(
           command = Command("curl http://localhost:$PORT")
         )
       )
@@ -624,7 +624,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
       )),
       portDefinitions = List.empty,
       healthChecks = Set(
-        HttpHealthCheck(
+        MarathonHttpHealthCheck(
           path = Some("/"),
           protocol = Protos.HealthCheckDefinition.Protocol.HTTP,
           port = Some(8000),
