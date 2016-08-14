@@ -32,11 +32,12 @@ sealed trait HealthCheck extends MarathonState[Protos.HealthCheckDefinition, Hea
 sealed trait HealthCheckWithPort { this: HealthCheck =>
   def portIndex: Option[Int]
   def port: Option[Int]
-
-  def effectivePort(app: AppDefinition, task: Task): Option[Int]
 }
 
 object HealthCheckWithPort {
+  val DefaultPortIndex = None
+  val DefaultPort = None
+
   import mesosphere.marathon.api.v2.Validation.isTrue
 
   implicit val Validator: Validator[HealthCheckWithPort] =
@@ -49,12 +50,12 @@ sealed trait MarathonHealthCheck extends HealthCheckWithPort { this: HealthCheck
   def portIndex: Option[Int]
   def port: Option[Int]
 
-  def effectivePort(app: AppDefinition, task: Task): Option[Int] = {
-    def portViaIndex: Option[Int] = portIndex.flatMap { portIndex =>
-      app.portAssignments(task).flatMap(_.lift(portIndex)).map(_.effectivePort)
+  def effectivePort(app: AppDefinition, task: Task): Int = {
+    def portViaIndex: Option[Int] = portIndex.map { portIndex =>
+      app.portAssignments(task)(portIndex).effectivePort
     }
 
-    port.orElse(portViaIndex)
+    port.orElse(portViaIndex).get
   }
 }
 
@@ -64,19 +65,30 @@ sealed trait MesosHealthCheck { this: HealthCheck =>
   def timeout: FiniteDuration
   def maxConsecutiveFailures: Int
 
-  def toMesos: MesosProtos.HealthCheck
+  def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): MesosProtos.HealthCheck
 }
 
-case class HttpHealthCheck(
+sealed trait MesosHealthCheckWithPorts extends HealthCheckWithPort { this: HealthCheck =>
+  def effectivePort(portAssignments: Seq[PortAssignment]): Int = {
+    port match {
+      case Some(port) => port
+      case None =>
+        val portAssignment = portIndex.map(portAssignments(_))
+        portAssignment.flatMap(_.containerPort).getOrElse(portAssignment.flatMap(_.hostPort).get)
+    }
+  }
+}
+
+case class MarathonHttpHealthCheck(
   gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
   interval: FiniteDuration = HealthCheck.DefaultInterval,
   timeout: FiniteDuration = HealthCheck.DefaultTimeout,
   maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
-  portIndex: Option[Int] = HealthCheck.DefaultPortIndex,
-  port: Option[Int] = HealthCheck.DefaultPort,
-  path: Option[String] = HttpHealthCheck.DefaultPath,
-  ignoreHttp1xx: Boolean = HttpHealthCheck.DefaultIgnoreHttp1xx,
-  protocol: Protocol = HttpHealthCheck.DefaultProtocol)
+  portIndex: Option[Int] = HealthCheckWithPort.DefaultPortIndex,
+  port: Option[Int] = HealthCheckWithPort.DefaultPort,
+  path: Option[String] = MarathonHttpHealthCheck.DefaultPath,
+  protocol: Protocol = MarathonHttpHealthCheck.DefaultProtocol,
+  ignoreHttp1xx: Boolean = MarathonHttpHealthCheck.DefaultIgnoreHttp1xx)
     extends HealthCheck with MarathonHealthCheck {
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder
@@ -92,13 +104,13 @@ case class HttpHealthCheck(
   }
 }
 
-object HttpHealthCheck {
+object MarathonHttpHealthCheck {
   val DefaultPath = None
   val DefaultIgnoreHttp1xx = false
   val DefaultProtocol = Protocol.HTTP
 
-  def mergeFromProto(proto: Protos.HealthCheckDefinition): HttpHealthCheck =
-    HttpHealthCheck(
+  def mergeFromProto(proto: Protos.HealthCheckDefinition): MarathonHttpHealthCheck =
+    MarathonHttpHealthCheck(
       gracePeriod = proto.getGracePeriodSeconds.seconds,
       timeout = proto.getTimeoutSeconds.seconds,
       interval = proto.getIntervalSeconds.seconds,
@@ -108,7 +120,7 @@ object HttpHealthCheck {
       portIndex =
       if (proto.hasPortIndex)
         Some(proto.getPortIndex)
-      else if (!proto.hasPort && proto.getProtocol != Protocol.COMMAND)
+      else if (!proto.hasPort)
         Some(0) // backward compatibility, this used to be the default value in marathon.proto
       else
         None,
@@ -117,13 +129,13 @@ object HttpHealthCheck {
     )
 }
 
-case class TcpHealthCheck(
+case class MarathonTcpHealthCheck(
   gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
   interval: FiniteDuration = HealthCheck.DefaultInterval,
   timeout: FiniteDuration = HealthCheck.DefaultTimeout,
   maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
-  portIndex: Option[Int] = HealthCheck.DefaultPortIndex,
-  port: Option[Int] = HealthCheck.DefaultPort)
+  portIndex: Option[Int] = HealthCheckWithPort.DefaultPortIndex,
+  port: Option[Int] = HealthCheckWithPort.DefaultPort)
     extends HealthCheck with MarathonHealthCheck {
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder.setProtocol(Protos.HealthCheckDefinition.Protocol.TCP)
@@ -135,9 +147,9 @@ case class TcpHealthCheck(
   }
 }
 
-object TcpHealthCheck {
-  def mergeFromProto(proto: Protos.HealthCheckDefinition): TcpHealthCheck =
-    TcpHealthCheck(
+object MarathonTcpHealthCheck {
+  def mergeFromProto(proto: Protos.HealthCheckDefinition): MarathonTcpHealthCheck =
+    MarathonTcpHealthCheck(
       gracePeriod = proto.getGracePeriodSeconds.seconds,
       timeout = proto.getTimeoutSeconds.seconds,
       interval = proto.getIntervalSeconds.seconds,
@@ -145,7 +157,7 @@ object TcpHealthCheck {
       portIndex =
       if (proto.hasPortIndex)
         Some(proto.getPortIndex)
-      else if (!proto.hasPort && proto.getProtocol != Protocol.COMMAND)
+      else if (!proto.hasPort)
         Some(0) // backward compatibility, this used to be the default value in marathon.proto
       else
         None,
@@ -153,7 +165,7 @@ object TcpHealthCheck {
     )
 }
 
-case class CommandHealthCheck(
+case class MesosCommandHealthCheck(
   gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
   interval: FiniteDuration = HealthCheck.DefaultInterval,
   timeout: FiniteDuration = HealthCheck.DefaultTimeout,
@@ -167,8 +179,9 @@ case class CommandHealthCheck(
       .build
   }
 
-  def toMesos: MesosProtos.HealthCheck = {
+  def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): MesosProtos.HealthCheck = {
     MesosProtos.HealthCheck.newBuilder
+      .setType(MesosProtos.HealthCheck.Type.COMMAND)
       .setIntervalSeconds(this.interval.toSeconds.toDouble)
       .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
       .setConsecutiveFailures(this.maxConsecutiveFailures)
@@ -178,14 +191,125 @@ case class CommandHealthCheck(
   }
 }
 
-object CommandHealthCheck {
-  def mergeFromProto(proto: Protos.HealthCheckDefinition): CommandHealthCheck =
-    CommandHealthCheck(
+object MesosCommandHealthCheck {
+  def mergeFromProto(proto: Protos.HealthCheckDefinition): MesosCommandHealthCheck =
+    MesosCommandHealthCheck(
       gracePeriod = proto.getGracePeriodSeconds.seconds,
       timeout = proto.getTimeoutSeconds.seconds,
       interval = proto.getIntervalSeconds.seconds,
       maxConsecutiveFailures = proto.getMaxConsecutiveFailures,
       command = Command("").mergeFromProto(proto.getCommand)
+    )
+}
+
+case class MesosHttpHealthCheck(
+  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+  interval: FiniteDuration = HealthCheck.DefaultInterval,
+  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+  maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
+  portIndex: Option[Int] = HealthCheckWithPort.DefaultPortIndex,
+  port: Option[Int] = HealthCheckWithPort.DefaultPort,
+  path: Option[String] = MarathonHttpHealthCheck.DefaultPath,
+  protocol: Protocol = MarathonHttpHealthCheck.DefaultProtocol)
+    extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
+  override def toProto: Protos.HealthCheckDefinition = {
+    val builder = protoBuilder
+      .setProtocol(protocol)
+
+    path.foreach(builder.setPath)
+
+    portIndex.foreach { p => builder.setPortIndex(p) }
+    port.foreach { p => builder.setPort(p) }
+
+    builder.build
+  }
+
+  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): MesosProtos.HealthCheck = {
+    val httpInfoBuilder = MesosProtos.HealthCheck.HTTPCheckInfo.newBuilder()
+      .setScheme(if (protocol == Protocol.MESOS_HTTP) "http" else "https")
+      .setPort(effectivePort(portAssignments))
+    path.foreach(httpInfoBuilder.setPath)
+
+    MesosProtos.HealthCheck.newBuilder
+      .setType(MesosProtos.HealthCheck.Type.HTTP)
+      .setIntervalSeconds(this.interval.toSeconds.toDouble)
+      .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
+      .setConsecutiveFailures(this.maxConsecutiveFailures)
+      .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
+      .setHttp(httpInfoBuilder)
+      .build()
+  }
+}
+
+object MesosHttpHealthCheck {
+  val DefaultPath = None
+  val DefaultProtocol = Protocol.MESOS_HTTP
+
+  def mergeFromProto(proto: Protos.HealthCheckDefinition): MesosHttpHealthCheck =
+    MesosHttpHealthCheck(
+      gracePeriod = proto.getGracePeriodSeconds.seconds,
+      timeout = proto.getTimeoutSeconds.seconds,
+      interval = proto.getIntervalSeconds.seconds,
+      maxConsecutiveFailures = proto.getMaxConsecutiveFailures,
+      path = if (proto.hasPath) Some(proto.getPath) else None,
+      portIndex =
+      if (proto.hasPortIndex)
+        Some(proto.getPortIndex)
+      else if (!proto.hasPort)
+        Some(0) // backward compatibility, this used to be the default value in marathon.proto
+      else
+        None,
+      port = if (proto.hasPort) Some(proto.getPort) else None,
+      protocol = proto.getProtocol
+    )
+}
+
+case class MesosTcpHealthCheck(
+  gracePeriod: FiniteDuration = HealthCheck.DefaultGracePeriod,
+  interval: FiniteDuration = HealthCheck.DefaultInterval,
+  timeout: FiniteDuration = HealthCheck.DefaultTimeout,
+  maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
+  portIndex: Option[Int] = HealthCheckWithPort.DefaultPortIndex,
+  port: Option[Int] = HealthCheckWithPort.DefaultPort)
+    extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
+  override def toProto: Protos.HealthCheckDefinition = {
+    val builder = protoBuilder.setProtocol(Protos.HealthCheckDefinition.Protocol.MESOS_TCP)
+
+    portIndex.foreach { p => builder.setPortIndex(p) }
+    port.foreach { p => builder.setPort(p) }
+
+    builder.build
+  }
+
+  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): MesosProtos.HealthCheck = {
+    val tcpInfoBuilder = MesosProtos.HealthCheck.TCPCheckInfo.newBuilder().setPort(effectivePort(portAssignments))
+
+    MesosProtos.HealthCheck.newBuilder
+      .setType(MesosProtos.HealthCheck.Type.TCP)
+      .setIntervalSeconds(this.interval.toSeconds.toDouble)
+      .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
+      .setConsecutiveFailures(this.maxConsecutiveFailures)
+      .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
+      .setTcp(tcpInfoBuilder)
+      .build()
+  }
+}
+
+object MesosTcpHealthCheck {
+  def mergeFromProto(proto: Protos.HealthCheckDefinition): MesosTcpHealthCheck =
+    MesosTcpHealthCheck(
+      gracePeriod = proto.getGracePeriodSeconds.seconds,
+      timeout = proto.getTimeoutSeconds.seconds,
+      interval = proto.getIntervalSeconds.seconds,
+      maxConsecutiveFailures = proto.getMaxConsecutiveFailures,
+      portIndex =
+      if (proto.hasPortIndex)
+        Some(proto.getPortIndex)
+      else if (!proto.hasPort)
+        Some(0) // backward compatibility, this used to be the default value in marathon.proto
+      else
+        None,
+      port = if (proto.hasPort) Some(proto.getPort) else None
     )
 }
 
@@ -196,8 +320,6 @@ object HealthCheck {
   val DefaultInterval = 1.minute
   val DefaultTimeout = 20.seconds
   val DefaultMaxConsecutiveFailures = 3
-  val DefaultPortIndex = None
-  val DefaultPort = None
 
   implicit val Validator: Validator[HealthCheck] = new Validator[HealthCheck] {
     override def apply(hc: HealthCheck): Result = {
@@ -210,9 +332,11 @@ object HealthCheck {
 
   def mergeFromProto(proto: Protos.HealthCheckDefinition): HealthCheck = {
     proto.getProtocol match {
-      case Protocol.COMMAND => CommandHealthCheck.mergeFromProto(proto)
-      case Protocol.TCP => TcpHealthCheck.mergeFromProto(proto)
-      case Protocol.HTTP | Protocol.HTTPS => HttpHealthCheck.mergeFromProto(proto)
+      case Protocol.COMMAND => MesosCommandHealthCheck.mergeFromProto(proto)
+      case Protocol.TCP => MarathonTcpHealthCheck.mergeFromProto(proto)
+      case Protocol.HTTP | Protocol.HTTPS => MarathonHttpHealthCheck.mergeFromProto(proto)
+      case Protocol.MESOS_TCP => MesosTcpHealthCheck.mergeFromProto(proto)
+      case Protocol.MESOS_HTTP | Protocol.MESOS_HTTPS => MesosHttpHealthCheck.mergeFromProto(proto)
     }
   }
 }

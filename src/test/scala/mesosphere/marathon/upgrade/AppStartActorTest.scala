@@ -2,7 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.health.HttpHealthCheck
+import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
@@ -56,7 +56,7 @@ class AppStartActorTest
     val app = AppDefinition(
       id = PathId("app"),
       instances = 10,
-      healthChecks = Set(HttpHealthCheck(portIndex = Some(0))))
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))))
     val promise = Promise[Unit]()
     val ref = f.startActor(app, scaleTo = 2, promise)
     watch(ref)
@@ -108,7 +108,7 @@ class AppStartActorTest
     val app = AppDefinition(
       id = PathId("app"),
       instances = 10,
-      healthChecks = Set(HttpHealthCheck(portIndex = Some(0))))
+      healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(0))))
     val promise = Promise[Unit]()
     val ref = f.startActor(app, scaleTo = 0, promise)
     watch(ref)

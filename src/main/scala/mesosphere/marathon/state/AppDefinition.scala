@@ -6,18 +6,17 @@ import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.core.health.MarathonHealthCheck
-import mesosphere.marathon.state.Container.{ Mesos, MesosAppC, MesosDocker }
 import mesosphere.marathon.api.serialization._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.health.{ HealthCheck, MarathonHealthCheck, MesosHealthCheck }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
 import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
+import mesosphere.marathon.state.Container.{ Mesos, MesosAppC, MesosDocker }
 import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
@@ -371,47 +370,66 @@ case class AppDefinition(
     copy(id = baseId, dependencies = dependencies.map(_.canonicalPath(baseId)))
   }
 
-  def portAssignments(task: Task): Option[Seq[PortAssignment]] = {
-    def fromDiscoveryInfo: Option[Seq[PortAssignment]] = ipAddress.flatMap {
+  def portAssignments(task: Task): Seq[PortAssignment] = {
+    def fromDiscoveryInfo: Seq[PortAssignment] = ipAddress.flatMap {
       case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
         for {
           launched <- task.launched
           effectiveIpAddress <- task.effectiveIpAddress(this)
         } yield appPorts.zip(launched.hostPorts).map {
           case (appPort, hostPort) =>
-            PortAssignment(Some(appPort.name), effectiveIpAddress, hostPort)
+            PortAssignment(
+              portName = Some(appPort.name),
+              effectiveIpAddress = Some(effectiveIpAddress),
+              effectivePort = hostPort,
+              hostPort = Some(hostPort))
         }.toList
-    }
+    }.getOrElse(Seq.empty)
 
-    def fromPortMappings: Option[Seq[PortAssignment]] = {
+    def fromPortMappings: Seq[PortAssignment] = {
       for {
         c <- container
         pms <- c.portMappings
         launched <- task.launched
-        effectiveIpAddress <- task.effectiveIpAddress(this)
       } yield {
         var hostPorts = launched.hostPorts
         pms.map { portMapping =>
+          val hostPort: Option[Int] =
+            if (portMapping.hostPort.isEmpty) {
+              None
+            } else {
+              val hostPort = hostPorts.head
+              hostPorts = hostPorts.drop(1)
+              Some(hostPort)
+            }
+
           val effectivePort =
             if (ipAddress.isDefined || portMapping.hostPort.isEmpty) {
               portMapping.containerPort
             } else {
-              val hostPort = hostPorts.head
-              hostPorts = hostPorts.drop(1)
-              hostPort
+              hostPort.get
             }
 
-          PortAssignment(portMapping.name, effectiveIpAddress, effectivePort)
+          PortAssignment(
+            portName = portMapping.name,
+            effectiveIpAddress = task.effectiveIpAddress(this),
+            effectivePort = effectivePort,
+            hostPort = hostPort,
+            containerPort = Some(portMapping.containerPort))
         }
       }.toList
-    }
+    }.getOrElse(Seq.empty)
 
-    def fromPortDefinitions: Option[Seq[PortAssignment]] = task.launched.map { launched =>
+    def fromPortDefinitions: Seq[PortAssignment] = task.launched.map { launched =>
       portDefinitions.zip(launched.hostPorts).map {
         case (portDefinition, hostPort) =>
-          PortAssignment(portDefinition.name, task.agentInfo.host, hostPort)
+          PortAssignment(
+            portName = portDefinition.name,
+            effectiveIpAddress = Some(task.agentInfo.host),
+            effectivePort = hostPort,
+            hostPort = Some(hostPort))
       }
-    }
+    }.getOrElse(Seq.empty)
 
     if (networkModeBridge || networkModeUser) fromPortMappings
     else if (ipAddress.isDefined) fromDiscoveryInfo
@@ -728,6 +746,11 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
   }
 
+  private val haveAtMostOneMesosHealtCheck: Validator[AppDefinition] =
+    isTrue[AppDefinition]("AppDefinition can contain at most one Mesos health check") { appDef =>
+      appDef.healthChecks.filter(_.isInstanceOf[MesosHealthCheck]).size <= 1
+    }
+
   private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
     appDef.container.each is valid(Container.validContainer(enabledFeatures))
@@ -736,6 +759,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer
     appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
+    appDef must haveAtMostOneMesosHealtCheck
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     appDef.mem should be >= 0.0
@@ -747,12 +771,12 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     appDef.env is valid(EnvVarValue.envValidator)
     appDef.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appDef.isResident))
-    appDef must complyWithResidencyRules
-    appDef must complyWithMigrationAPI
-    appDef must complyWithSingleInstanceLabelRules
-    appDef must complyWithReadinessCheckRules
-    appDef must complyWithUpgradeStrategyRules
     appDef must complyWithGpuRules(enabledFeatures)
+    appDef must complyWithMigrationAPI
+    appDef must complyWithReadinessCheckRules
+    appDef must complyWithResidencyRules
+    appDef must complyWithSingleInstanceLabelRules
+    appDef must complyWithUpgradeStrategyRules
     appDef.constraints.each must complyWithConstraintRules
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
   } and ExternalVolumes.validApp and EnvVarValue.validApp
