@@ -54,16 +54,16 @@ object ReadinessCheckExecutor {
             case ReadinessCheck.Protocol.HTTPS => "https"
           }
 
-          val portAssignmentsByName = runSpec.portAssignments(task).getOrElse(
-            throw new IllegalStateException(s"no ports assignments for RunSpec: [$runSpec] - Task: [$task]")
-          ).map(portAssignment => portAssignment.portName -> portAssignment).toMap
+          val portAssignmentsByName = runSpec.portAssignments(task)
+            .map(portAssignment => portAssignment.portName -> portAssignment).toMap
 
           val effectivePortAssignment = portAssignmentsByName.getOrElse(
             Some(checkDef.portName),
             throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found")
           )
 
-          val host = effectivePortAssignment.effectiveIpAddress
+          val host = effectivePortAssignment.effectiveIpAddress.getOrElse(
+            throw new IllegalArgumentException(s"no effective IP address for '${checkDef.portName}' was found"))
           val port = effectivePortAssignment.effectivePort
 
           s"$schema://$host:$port${checkDef.path}"

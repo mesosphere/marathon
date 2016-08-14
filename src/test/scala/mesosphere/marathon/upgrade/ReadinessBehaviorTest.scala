@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.health.CommandHealthCheck
+import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
@@ -47,7 +47,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
-      healthChecks = Set(CommandHealthCheck(command = Command("true"))),
+      healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))),
       readinessChecks = Seq(ReadinessCheck("test")))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
@@ -68,7 +68,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
-      healthChecks = Set(CommandHealthCheck(command = Command("true"))))
+      healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
     When("The task becomes healthy")
@@ -104,7 +104,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
       f.appId,
       portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
       versionInfo = VersionInfo.OnlyVersion(f.version),
-      healthChecks = Set(CommandHealthCheck(command = Command("true"))),
+      healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))),
       readinessChecks = Seq(ReadinessCheck("test")))
     val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
