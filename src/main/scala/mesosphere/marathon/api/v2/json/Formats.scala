@@ -642,45 +642,63 @@ trait HealthCheckFormats {
       (__ \ "portIndex").formatNullable[Int] ~
       (__ \ "port").formatNullable[Int]
 
-  implicit val HttpHealthCheckFormat: Format[HttpHealthCheck] = {
-    import mesosphere.marathon.core.health.HttpHealthCheck._
-    (
-      HealthCheckWithPortsFormatBuilder ~
+  val HttpHealthCheckFormatBuilder =
+    HealthCheckWithPortsFormatBuilder ~
       (__ \ "path").formatNullable[String] ~
-      (__ \ "ignoreHttp1xx").formatNullable[Boolean].withDefault(DefaultIgnoreHttp1xx) ~
       (__ \ "protocol").formatNullable[Protocol].withDefault(Protocol.HTTP)
-    )(HttpHealthCheck.apply, unlift(HttpHealthCheck.unapply))
+
+  // Marathon health checks formats
+  implicit val MarathonHttpHealthCheckFormat: Format[MarathonHttpHealthCheck] = {
+    import mesosphere.marathon.core.health.MarathonHttpHealthCheck._
+    (
+      HttpHealthCheckFormatBuilder ~
+      (__ \ "ignoreHttp1xx").formatNullable[Boolean].withDefault(DefaultIgnoreHttp1xx)
+    )(MarathonHttpHealthCheck.apply, unlift(MarathonHttpHealthCheck.unapply))
   }
 
-  implicit val CommandHealthCheckFormat: Format[CommandHealthCheck] = (
+  implicit val MarathonTcpHealthCheckFormat: Format[MarathonTcpHealthCheck] =
+    HealthCheckWithPortsFormatBuilder(MarathonTcpHealthCheck.apply, unlift(MarathonTcpHealthCheck.unapply))
+
+  // Mesos health checks formats
+  implicit val MesosHttpHealthCheckFormat: Format[MesosHttpHealthCheck] =
+    HttpHealthCheckFormatBuilder(MesosHttpHealthCheck.apply, unlift(MesosHttpHealthCheck.unapply))
+
+  implicit val MesosCommandHealthCheckFormat: Format[MesosCommandHealthCheck] = (
     BasicHealthCheckFormatBuilder ~
     (__ \ "command").format[Command]
-  )(CommandHealthCheck.apply, unlift(CommandHealthCheck.unapply))
+  )(MesosCommandHealthCheck.apply, unlift(MesosCommandHealthCheck.unapply))
 
-  implicit val TcpHealthCheckFormat: Format[TcpHealthCheck] =
-    HealthCheckWithPortsFormatBuilder(TcpHealthCheck.apply, unlift(TcpHealthCheck.unapply))
+  implicit val MesosTcpHealthCheckFormat: Format[MesosTcpHealthCheck] =
+    HealthCheckWithPortsFormatBuilder(MesosTcpHealthCheck.apply, unlift(MesosTcpHealthCheck.unapply))
 
   implicit val HealthCheckFormat: Format[HealthCheck] = Format[HealthCheck] (
     new Reads[HealthCheck] {
       override def reads(json: JsValue): JsResult[HealthCheck] = {
-        val protocol = (json \ "protocol").validateOpt[Protocol](HealthCheckProtocolFormat)
+        val result = (json \ "protocol").validateOpt[Protocol](HealthCheckProtocolFormat)
 
-        protocol.flatMap {
-          case None => json.validate[HttpHealthCheck]
-          case Some(Protocol.COMMAND) => json.validate[CommandHealthCheck]
-          case Some(Protocol.HTTP | Protocol.HTTPS) => json.validate[HttpHealthCheck]
-          case Some(Protocol.TCP) => json.validate[TcpHealthCheck]
-          case _ => JsError("Invalid health check protocol.")
+        result.flatMap {
+          _.getOrElse(HealthCheck.DefaultProtocol) match {
+            case Protocol.COMMAND => json.validate[MesosCommandHealthCheck]
+            case Protocol.HTTP | Protocol.HTTPS => json.validate[MarathonHttpHealthCheck]
+            case Protocol.TCP => json.validate[MarathonTcpHealthCheck]
+            case Protocol.MESOS_HTTP | Protocol.MESOS_HTTPS => json.validate[MesosHttpHealthCheck]
+            case Protocol.MESOS_TCP => json.validate[MesosTcpHealthCheck]
+          }
         }
       }
     },
     Writes[HealthCheck] {
-      case tcp: TcpHealthCheck =>
-        Json.toJson(tcp)(TcpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "TCP")
-      case http: HttpHealthCheck =>
-        Json.toJson(http)(HttpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> Json.toJson(http.protocol))
-      case command: CommandHealthCheck =>
-        Json.toJson(command)(CommandHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "COMMAND")
+      case tcp: MarathonTcpHealthCheck =>
+        Json.toJson(tcp)(MarathonTcpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "TCP")
+      case http: MarathonHttpHealthCheck =>
+        Json.toJson(http)(MarathonHttpHealthCheckFormat).as[JsObject] ++
+          Json.obj("protocol" -> Json.toJson(http.protocol))
+      case command: MesosCommandHealthCheck =>
+        Json.toJson(command)(MesosCommandHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "COMMAND")
+      case tcp: MesosTcpHealthCheck =>
+        Json.toJson(tcp)(MesosTcpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "MESOS_TCP")
+      case http: MesosHttpHealthCheck =>
+        Json.toJson(http)(MesosHttpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> Json.toJson(http.protocol))
     }
   )
 }
@@ -942,11 +960,11 @@ trait AppAndGroupFormats {
     */
   private[this] def addHealthCheckPortIndexIfNecessary(healthChecks: Set[_ <: HealthCheck]): Set[_ <: HealthCheck] =
     healthChecks.map {
-      case healthCheck: TcpHealthCheck =>
+      case healthCheck: MarathonTcpHealthCheck =>
         def needsDefaultPortIndex = healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty
         if (needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
         else healthCheck
-      case healthCheck: HttpHealthCheck =>
+      case healthCheck: MarathonHttpHealthCheck =>
         def needsDefaultPortIndex = healthCheck.port.isEmpty && healthCheck.portIndex.isEmpty
         if (needsDefaultPortIndex) healthCheck.copy(portIndex = Some(0))
         else healthCheck
