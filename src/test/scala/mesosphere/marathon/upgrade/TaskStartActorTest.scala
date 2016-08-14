@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.health.CommandHealthCheck
+import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.core.launcher.impl.LaunchQueueTestHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -127,7 +127,7 @@ class TaskStartActorTest
     val app = AppDefinition(
       "/myApp".toPath,
       instances = 5,
-      healthChecks = Set(CommandHealthCheck(command = Command("true")))
+      healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
     )
     when(f.launchQueue.get(app.id)).thenReturn(None)
 
@@ -150,7 +150,7 @@ class TaskStartActorTest
     val app = AppDefinition(
       "/myApp".toPath,
       instances = 0,
-      healthChecks = Set(CommandHealthCheck(command = Command("true")))
+      healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
     )
     when(f.launchQueue.get(app.id)).thenReturn(None)
 
