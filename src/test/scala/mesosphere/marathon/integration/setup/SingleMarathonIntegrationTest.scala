@@ -110,7 +110,7 @@ trait SingleMarathonIntegrationTest
     }
   }
 
-  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal()
+  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal(config.mesosPort)
 
   protected def createConfig(configMap: ConfigMap): IntegrationTestConfig = IntegrationTestConfig(configMap)
 
@@ -126,11 +126,13 @@ trait SingleMarathonIntegrationTest
       log.info("Setting up local mesos/marathon infrastructure...")
       startZooKeeperProcess()
       startMesos()
+
       cleanMarathonState()
+
+      waitForCleanSlateInMesos()
 
       startMarathon(config.marathonBasePort, marathonParameters: _*)
 
-      waitForCleanSlateInMesos()
       log.info("Setting up local mesos/marathon infrastructure: done.")
     } else {
       log.info("Using already running Marathon at {}", config.marathonUrl)
@@ -152,8 +154,11 @@ trait SingleMarathonIntegrationTest
   }
 
   def cleanMarathonState() {
-    val watcher = new Watcher { override def process(event: WatchedEvent): Unit = println(event) }
+    val watcher = new Watcher { override def process(event: WatchedEvent): Unit = {} }
     val zooKeeper = new ZooKeeper(config.zkHostAndPort, 30 * 1000, watcher)
+    config.zkCredentials.foreach { credentials =>
+      zooKeeper.addAuthInfo("digest", org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(credentials).getBytes("UTF-8"))
+    }
     def deletePath(path: String) {
       if (zooKeeper.exists(path, false) != null) {
         val children = zooKeeper.getChildren(path, false)
@@ -308,7 +313,7 @@ trait SingleMarathonIntegrationTest
 
   def waitForCleanSlateInMesos(): Boolean = {
     require(mesos.state.value.agents.size == 1, "one agent expected")
-    WaitTestSupport.waitUntil("clean slate in Mesos", 30.seconds) {
+    WaitTestSupport.waitUntil("clean slate in Mesos", 45.seconds) {
       val agent = mesos.state.value.agents.head
       val empty = agent.usedResources.isEmpty && agent.reservedResourcesByRole.isEmpty
       if (!empty) {

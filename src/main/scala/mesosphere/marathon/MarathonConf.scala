@@ -14,6 +14,7 @@ import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.ResourceRole
+import mesosphere.marathon.storage.StorageConf
 import mesosphere.marathon.upgrade.UpgradeConfig
 import org.rogach.scallop.ScallopConf
 
@@ -23,8 +24,8 @@ trait MarathonConf
     extends ScallopConf
     with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
     with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
-    with PluginManagerConfiguration with ReviveOffersConfig with TaskJobsConfig with TaskStatusUpdateConfig
-    with TaskTrackerConfig with UpgradeConfig with ZookeeperConf with TaskKillConfig {
+    with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with TaskKillConfig
+    with TaskJobsConfig with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
 
   //scalastyle:off magic.number
 
@@ -286,27 +287,11 @@ trait MarathonConf
   )
 
   //Internal settings, that are not intended for external use
-  lazy val internalStoreBackend = opt[String](
-    "internal_store_backend",
-    descr = "The backend storage system to use. One of zk, mesos_zk, mem.",
-    hidden = true,
-    validate = Set("zk", "mesos_zk", "mem").contains,
-    default = Some("zk")
-  )
 
   lazy val maxApps = opt[Int](
     "max_apps",
     descr = "The maximum number of applications that may be created.",
     noshort = true
-  )
-
-  lazy val storeCache = toggle(
-    "store_cache",
-    default = Some(true),
-    noshort = true,
-    descrYes = "(Default) Enable an in-memory cache for the storage layer.",
-    descrNo = "Disable the in-memory cache for the storage layer. ",
-    prefix = "disable_"
   )
 
   lazy val onElectedPrepareTimeout = opt[Long] (

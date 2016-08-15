@@ -802,7 +802,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   def updateIsValid(from: Group): Validator[AppDefinition] = {
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
-        from.transitiveApps.find(_.id == app.id) match {
+        from.transitiveAppsById.get(app.id) match {
           case (Some(last)) if last.isResident || app.isResident => residentUpdateIsValid(last)(app)
           case _ => Success
         }

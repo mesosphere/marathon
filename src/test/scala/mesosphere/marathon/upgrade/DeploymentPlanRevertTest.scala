@@ -37,8 +37,8 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
         }
       }
 
-      val actualAppIds = actual.transitiveApps.map(_.id)
-      val expectedAppIds = expected.transitiveApps.map(_.id)
+      val actualAppIds = actual.transitiveAppIds
+      val expectedAppIds = expected.transitiveAppIds
 
       val unexpectedAppIds = actualAppIds -- expectedAppIds
       val missingAppIds = expectedAppIds -- actualAppIds
