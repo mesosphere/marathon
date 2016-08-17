@@ -28,7 +28,6 @@ def test_default_user():
     tasks = client.get_tasks("unique-sleep")
     host = tasks[0]['host']
 
-    # need a solution from shakedown "run_command_on_agent" is broken IMO
     # response = run_command_on_agent(host,"ps aux | grep '[s]leep 42000' | awk '{print $1}'")
     assert run_command_on_agent(host,"ps aux | grep '[s]leep ' | awk '{if ($1 != 'root') exit 1;}'")
 
