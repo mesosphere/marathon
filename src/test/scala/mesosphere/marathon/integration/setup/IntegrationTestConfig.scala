@@ -46,6 +46,9 @@ case class IntegrationTestConfig(
     //mesosLib: path to the native mesos lib. Defaults to /usr/local/lib/libmesos.dylib
     mesosLib: String,
 
+    // port mesos listens on
+    mesosPort: Int,
+
     //the marathon host to use.
     marathonHost: String,
 
@@ -118,24 +121,25 @@ object IntegrationTestConfig {
     val zkHost = string("zkHost", unusedForExternalSetup("localhost"))
     val zkPort = int("zkPort", PortAllocator.ephemeralPort())
     val zkCredentials = config.getOptional[String]("zkCredentials")
-    val master = string("master", unusedForExternalSetup("127.0.0.1:5050"))
+    val mesosPort = int("mesosPort", PortAllocator.ephemeralPort())
+    val master = string("master", unusedForExternalSetup(s"127.0.0.1:$mesosPort"))
     val mesosLib = string("mesosLib", unusedForExternalSetup(defaultMesosLibConfig))
     val httpPort = int("httpPort", PortAllocator.ephemeralPort())
     val marathonHost = string("marathonHost", "localhost")
     val marathonBasePort = int("marathonPort", PortAllocator.ephemeralPort())
     val clusterSize = int("clusterSize", 3)
-    val marathonPorts = 0.to(clusterSize - 1).map(_ + marathonBasePort)
+    val marathonPorts = 0.until(clusterSize).map(_ => PortAllocator.ephemeralPort())
     val marathonGroup = PathId(string("marathonGroup", "/marathon_integration_test"))
 
     IntegrationTestConfig(
       cwd,
       useExternalSetup,
       zkHost, zkPort, zkCredentials,
-      master, mesosLib,
+      master, mesosLib, mesosPort,
       marathonHost, marathonBasePort, marathonGroup,
       httpPort,
       clusterSize,
-      marathonPorts)
+      marathonBasePort +: marathonPorts)
   }
 }
 

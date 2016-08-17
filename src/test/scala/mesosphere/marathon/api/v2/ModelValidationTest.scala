@@ -10,8 +10,8 @@ import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues}
-import play.api.libs.json.{JsObject, Json}
+import org.scalatest.{ BeforeAndAfterAll, Matchers, OptionValues }
+import play.api.libs.json.{ JsObject, Json }
 
 import scala.collection.immutable.Seq
 

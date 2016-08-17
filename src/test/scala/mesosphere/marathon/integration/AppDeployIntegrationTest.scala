@@ -357,7 +357,7 @@ class AppDeployIntegrationTest
 
   test("list app versions") {
     Given("a new app")
-    val v1 = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+    val v1 = appProxy(testBasePath / s"${UUID.randomUUID()}", "v1", instances = 1, withHealth = false)
     val createResponse = marathon.createAppV2(v1)
     createResponse.code should be (201)
     waitForEvent("deployment_success")

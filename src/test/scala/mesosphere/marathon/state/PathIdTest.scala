@@ -28,6 +28,15 @@ class PathIdTest extends FunSpec with GivenWhenThen with Matchers {
       PathId.empty should be(reference)
     }
 
+    it("can parse safePath from itself") {
+      When("The path is empty")
+      PathId.fromSafePath(PathId.empty.safePath) should equal(PathId.empty)
+
+      When("The path isn't empty")
+      val reference = PathId("a" :: "b" :: "c" :: "d" :: Nil)
+      PathId.fromSafePath(reference.safePath) should equal(reference)
+    }
+
     it("can be written and parsed from string") {
       Given("A base id")
       val path = PathId("a/b/c/d")

@@ -1,19 +1,20 @@
-import com.amazonaws.auth.{ EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider }
+import com.amazonaws.auth.{EnvironmentVariableCredentialsProvider, InstanceProfileCredentialsProvider}
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import ohnosequences.sbt.SbtS3Resolver.autoImport._
-import org.scalastyle.sbt.ScalastylePlugin.{ buildSettings => styleSettings }
+import org.scalastyle.sbt.ScalastylePlugin.{buildSettings => styleSettings}
 import sbt.Keys._
+import sbt.Tests.SubProcess
 import sbt._
 import sbtassembly.AssemblyKeys._
 import sbtassembly.MergeStrategy
 import sbtbuildinfo.BuildInfoKeys._
-import sbtbuildinfo.{ BuildInfoKey, BuildInfoPlugin }
+import sbtbuildinfo.{BuildInfoKey, BuildInfoPlugin}
 import sbtrelease.ReleasePlugin.autoImport._
 import sbtrelease.ReleaseStateTransformations._
 import sbtrelease._
-import scala.util.Try
 
+import scala.util.Try
 import scalariform.formatter.preferences._
 
 object MarathonBuild extends Build {
@@ -52,8 +53,7 @@ object MarathonBuild extends Build {
             val suffix = Try(Process("git diff --shortstat").lines.headOption.map(_ => "-dev")).toOption.flatten.getOrElse("")
             Try(Process("git rev-parse HEAD").lines.headOption).toOption.flatten.getOrElse("unknown") + suffix
           }),
-        buildInfoPackage := "mesosphere.marathon",
-        fork in Test := true
+        buildInfoPackage := "mesosphere.marathon"
       )
   )
     .configs(IntegrationTest, Benchmark)
@@ -75,17 +75,6 @@ object MarathonBuild extends Build {
 
   /**
    * Determine scala test runner output. `-e` for reporting on standard error.
-   *
-   * W - without color
-   * D - show all durations
-   * S - show short stack traces
-   * F - show full stack traces
-   * U - unformatted mode
-   * I - show reminder of failed and canceled tests without stack traces
-   * T - show reminder of failed and canceled tests with short stack traces
-   * G - show reminder of failed and canceled tests with full stack traces
-   * K - exclude TestCanceled events from reminder
-   *
    * http://scalatest.org/user_guide/using_the_runner
    */
   lazy val formattingTestArg = Tests.Argument("-eDFG")
@@ -99,14 +88,28 @@ object MarathonBuild extends Build {
       fork in Benchmark := true
     )
 
+  // Someday, these may be able to run in parallel but the integration tests in particular have places
+  // where they can kill each other _even_ when in different processes.
   lazy val integrationTestSettings = inConfig(IntegrationTest)(Defaults.testTasks) ++
     Seq(
+      fork in IntegrationTest := true,
       testOptions in IntegrationTest := Seq(formattingTestArg, Tests.Argument("-n", "mesosphere.marathon.IntegrationTest")),
-      parallelExecution in IntegrationTest := false
+      parallelExecution in IntegrationTest := false,
+      testForkedParallel in IntegrationTest := false,
+      testListeners in IntegrationTest := Seq(new JUnitXmlTestsListener((target.value / "integration").getAbsolutePath)),
+      testGrouping in IntegrationTest := (definedTests in IntegrationTest).value.map { test =>
+        Tests.Group(name = test.name, tests = Seq(test),
+          runPolicy = SubProcess(ForkOptions((javaHome in IntegrationTest).value,
+            (outputStrategy in IntegrationTest).value, Nil, Some(baseDirectory.value),
+            (javaOptions in IntegrationTest).value, (connectInput in IntegrationTest).value,
+            (envVars in IntegrationTest).value
+          )))
+      }
     )
 
   lazy val testSettings = Seq(
-    parallelExecution in Test := false,
+    parallelExecution in Test := true,
+    testForkedParallel in Test := true,
     testOptions in Test := Seq(formattingTestArg, Tests.Argument("-l", "mesosphere.marathon.IntegrationTest")),
     fork in Test := true
   )
@@ -117,7 +120,7 @@ object MarathonBuild extends Build {
     testScalaStyle := {
       org.scalastyle.sbt.ScalastylePlugin.scalastyle.in(Compile).toTask("").value
     },
-    (test in Test) <<= (test in Test) dependsOn testScalaStyle
+    (compile in Test) <<= (compile in Test) dependsOn testScalaStyle
   )
 
   lazy val IntegrationTest = config("integration") extend Test
@@ -147,8 +150,7 @@ object MarathonBuild extends Build {
       "Spray Maven Repository"    at "http://repo.spray.io/"
     ),
     cancelable in Global := true,
-    fork in Test := true,
-    javaOptions += "-Xmx4G"
+    javaOptions += "-Xmx8G"
   )
 
   lazy val asmSettings = Seq(
@@ -267,6 +269,7 @@ object Dependencies {
     akkaActor % "compile",
     akkaSlf4j % "compile",
     akkaStream % "compile",
+    akkaHttp % "compile",
     asyncAwait % "compile",
     sprayClient % "compile",
     sprayHttpx % "compile",
@@ -296,6 +299,7 @@ object Dependencies {
     curatorClient % "compile",
     curatorFramework % "compile",
     java8Compat % "compile",
+    scalaLogging % "compile",
     logstash % "compile",
 
     // test
@@ -339,7 +343,8 @@ object Dependency {
     val Logstash = "4.7"
     val WixAccord = "0.5"
     val Curator = "2.11.0"
-    val Java8Compat = "0.8.0-RC1"
+    val Java8Compat = "0.8.0-RC3"
+    val ScalaLogging = "3.4.0"
 
     // test deps versions
     val Mockito = "1.10.19"
@@ -354,6 +359,7 @@ object Dependency {
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
+  val akkaHttp = "com.typesafe.akka" %% "akka-http-experimental" % V.Akka
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
@@ -386,6 +392,7 @@ object Dependency {
   val curatorClient = "org.apache.curator" % "curator-client" % V.Curator
   val curatorFramework = "org.apache.curator" % "curator-framework" % V.Curator
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
+  val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
 
   object Test {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest

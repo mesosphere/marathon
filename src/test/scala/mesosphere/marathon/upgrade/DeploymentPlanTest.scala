@@ -7,9 +7,10 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.AppDefinition.VersionInfo.FullVersionInfo
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.TwitterZk
 import mesosphere.marathon.test.Mockito
-import org.apache.mesos.{Protos => mesos}
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.apache.mesos.{ Protos => mesos }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 
@@ -418,7 +419,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
 
     When("We update the upgrade strategy to the default strategy")
     val app2 = f.validResident.copy(upgradeStrategy = AppDefinition.DefaultUpgradeStrategy)
-    val group2 = f.group.copy(apps = Map(app2.id -> app2))
+    val group2 = f.group.copy(groups = Set(f.group.group(PathId("/test")).get.copy(apps = Map(app2.id -> app2))))
     val plan2 = DeploymentPlan(f.group, group2)
 
     Then("The deployment is not valid")
@@ -428,7 +429,9 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
   test("Deployment plan validation fails if the deployment plan is too big") {
     Given("All options are supplied and we have a valid group change, but the deployment plan size limit is small")
     val f = new Fixture()
-    val validator = DeploymentPlan.deploymentPlanValidator(MarathonTestHelper.defaultConfig(maxZkNodeSize = Some(1)))
+    val validator = DeploymentPlan.deploymentPlanValidator(MarathonTestHelper.defaultConfig(
+      internalStorageBackend = Some(TwitterZk.StoreName),
+      maxZkNodeSize = Some(1)))
 
     When("We create a scale deployment")
     val app = f.validResident.copy(instances = 123)
