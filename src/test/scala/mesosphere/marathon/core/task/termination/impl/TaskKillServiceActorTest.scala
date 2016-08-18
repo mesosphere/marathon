@@ -1,22 +1,22 @@
 package mesosphere.marathon.core.task.termination.impl
 
 import akka.Done
-import akka.actor.{ ActorRef, ActorSystem }
-import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
+import akka.actor.{ActorRef, ActorSystem}
+import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.termination.TaskKillConfig
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.tracker.{TaskStateOpProcessor, TaskTracker}
+import mesosphere.marathon.core.task.{Task, TaskStateOp}
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{ Millis, Span }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FunSuiteLike, GivenWhenThen, Matchers }
+import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuiteLike, GivenWhenThen, Matchers}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -83,6 +83,9 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
   }
 
   test("Kill single known LOST task") {
+    //this parameter is used for futureValue timeouts
+    implicit val patienceConfig = PatienceConfig(Span(10, Seconds))
+
     val f = new Fixture
     val actor = f.createTaskKillActor()
 
