@@ -16,6 +16,7 @@ import mesosphere.FutureTestSupport._
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import ZKStore._
+import org.scalatest.time.{Seconds, Span}
 
 class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matchers {
 
@@ -57,6 +58,9 @@ class ZKStoreTest extends PersistentStoreTest with StartedZookeeper with Matcher
   }
 
   test("Already existing paths are not created") {
+    //this parameter is used for futureValue timeouts
+    implicit val patienceConfig = PatienceConfig(Span(10, Seconds))
+
     val client = persistentStore.client
     val path = client("/some/deeply/nested/path")
     path.exists().asScala.failed.futureValue shouldBe a[NoNodeException]
