@@ -569,7 +569,7 @@ class AppDeployIntegrationTest
     val deploymentId = extractDeploymentIds(create).head
 
     Then("the deployment gets created")
-    WaitTestSupport.validFor("deployment visible", 1.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
+    WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForBaseGroup().value.size == 1)
 
     When("the deployment is rolled back")
     val delete = marathon.deleteDeployment(deploymentId, force = false)
