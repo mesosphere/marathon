@@ -924,15 +924,4 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     roundTripped should equal(appDef)
     roundTripped.container.map(_.portMappings) should equal(appDef.container.map(_.portMappings))
   }
-
-  test("container change in AppUpdate should be stored") {
-    val appDef = AppDefinition(container = Some(Docker(portMappings = None)))
-    val appUpdate = AppUpdate(container = Some(Docker(portMappings = Some(Seq(
-      Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
-    )))))
-    val roundTrip = appUpdate(appDef)
-    roundTrip.container.get.portMappings should not be None
-    roundTrip.container.get.portMappings.get should have size 1
-    roundTrip.container.get.portMappings.get.head.containerPort should be (4000)
-  }
 }
