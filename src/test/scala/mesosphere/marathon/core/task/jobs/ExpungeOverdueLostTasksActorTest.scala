@@ -47,8 +47,8 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
 
   test("running tasks with more than 24 hours with no status update should not be killed") {
     Given("two running tasks")
-    val running1 = MarathonTestHelper.minimalRunning("/running1".toPath, since = Timestamp.apply(0))
-    val running2 = MarathonTestHelper.minimalRunning("/running2".toPath, since = Timestamp.apply(0))
+    val running1 = MarathonTestHelper.minimalRunning("/running1".toPath, since = Timestamp(0))
+    val running2 = MarathonTestHelper.minimalRunning("/running2".toPath, since = Timestamp(0))
 
     taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.forTasks(running1, running2))
 
@@ -63,8 +63,8 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
 
   test("an unreachable task with more than 24 hours with no status update should be killed") {
     Given("one unreachable, one running tasks")
-    val running = MarathonTestHelper.minimalRunning("/running".toPath, since = Timestamp.apply(0))
-    val unreachable = MarathonTestHelper.minimalUnreachableTask("/unreachable".toPath, since = Timestamp.apply(0))
+    val running = MarathonTestHelper.minimalRunning("/running".toPath, since = Timestamp(0))
+    val unreachable = MarathonTestHelper.minimalUnreachableTask("/unreachable".toPath, since = Timestamp(0))
 
     taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.forTasks(running, unreachable))
 
