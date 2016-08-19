@@ -45,7 +45,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     Await.result(actorSystem.terminate(), Duration.Inf)
   }
 
-  test("running tasks with more then 24 hours with no status update should not be killed") {
+  test("running tasks with more than 24 hours with no status update should not be killed") {
     Given("two running tasks")
     val running1 = MarathonTestHelper.minimalRunning("/running1".toPath, since = Timestamp.apply(0))
     val running2 = MarathonTestHelper.minimalRunning("/running2".toPath, since = Timestamp.apply(0))
@@ -61,7 +61,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     noMoreInteractions(stateOpProcessor)
   }
 
-  test("an unreachable task with more then 24 hours with no status update should be killed") {
+  test("an unreachable task with more than 24 hours with no status update should be killed") {
     Given("one unreachable, one running tasks")
     val running = MarathonTestHelper.minimalRunning("/running".toPath, since = Timestamp.apply(0))
     val unreachable = MarathonTestHelper.minimalUnreachableTask("/unreachable".toPath, since = Timestamp.apply(0))
@@ -78,9 +78,9 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     noMoreInteractions(stateOpProcessor)
   }
 
-  test("an unreachable task with less then 24 hours with no status update should not be killed") {
+  test("an unreachable task with less than 24 hours with no status update should not be killed") {
     Given("two unreachable tasks, one overdue")
-    val unreachable1 = MarathonTestHelper.minimalUnreachableTask("/unreachable1".toPath, since = Timestamp.apply(0))
+    val unreachable1 = MarathonTestHelper.minimalUnreachableTask("/unreachable1".toPath, since = Timestamp(0))
     val unreachable2 = MarathonTestHelper.minimalUnreachableTask("/unreachable2".toPath, since = Timestamp.now())
 
     taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.forTasks(unreachable1, unreachable2))
