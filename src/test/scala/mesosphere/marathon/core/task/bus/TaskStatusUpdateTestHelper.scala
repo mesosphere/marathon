@@ -1,5 +1,7 @@
 package mesosphere.marathon.core.task.bus
 
+import java.util.concurrent.TimeUnit
+
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
@@ -56,10 +58,11 @@ object TaskStatusUpdateTestHelper {
         TaskStateChange.Expunge(task)))
   }
 
-  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None) = {
+  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, timestamp: Timestamp = Timestamp.zero) = {
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
+      .setTimestamp(TimeUnit.MILLISECONDS.convert(timestamp.toDateTime.getMillis, TimeUnit.MICROSECONDS).toDouble)
     maybeHealth.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
     mesosStatus.build()
