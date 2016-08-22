@@ -145,6 +145,7 @@ object MarathonBuild extends Build {
     ),
     javacOptions in Compile ++= Seq("-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"),
     resolvers ++= Seq(
+      "Twitter  Public Repo"    at "http://maven.twttr.com/",
       "Mesosphere Public Repo"    at "http://downloads.mesosphere.com/maven",
       "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/",
       "Spray Maven Repository"    at "http://repo.spray.io/"
