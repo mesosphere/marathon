@@ -260,7 +260,7 @@ object CuratorZk {
       zkPath = conf.zooKeeperStatePath,
       zkAcls = conf.zkDefaultCreationACL,
       username = conf.zkUsername,
-      password = conf.zkUsername,
+      password = conf.zkPassword,
       enableCompression = conf.zooKeeperCompressionEnabled(),
       retryConfig = RetryConfig(),
       maxConcurrent = conf.zkMaxConcurrency(),
