@@ -18,9 +18,15 @@ object MesosTaskStatus {
 
   val WontComeBack: Set[TaskStatus.Reason] = TaskStatus.Reason.values().toSet.diff(MightComeBack)
 
+  def wontComeBack(status: TaskStatus): Boolean = {
+    // FIXME (gkleiman): comparing against a string is ugly and fragile, we shouldn't do it, but there's no better way
+    // for now
+    WontComeBack(status.getReason) || status.getMessage.startsWith("Reconciliation: Task is unknown to the")
+  }
+
   object Terminal {
     def unapply(taskStatus: TaskStatus): Option[TaskStatus] = taskStatus.getState match {
-      case TASK_LOST if WontComeBack(taskStatus.getReason) => Some(taskStatus)
+      case TASK_LOST if wontComeBack(taskStatus) => Some(taskStatus)
       case TASK_ERROR | TASK_FAILED | TASK_KILLED | TASK_FINISHED => Some(taskStatus)
       case _ => None
     }

@@ -94,6 +94,14 @@ object TaskStatusUpdateTestHelper {
     )
   )
 
+  def lost(reason: Reason, message: String) = TaskStatusUpdateTestHelper(
+    TaskStatusUpdate(
+      timestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 31, 0, 0)),
+      taskId = taskId,
+      status = MarathonTaskStatusTestHelper.lost(reason, Some(message))
+    )
+  )
+
   val killed = TaskStatusUpdateTestHelper(
     TaskStatusUpdate(
       timestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 31, 0, 0)),
