@@ -74,6 +74,17 @@ class StatusUpdateActionResolverTest
     }
   }
 
+  test("a TASK_LOST update with a message saying that the task is unknown to the slave is mapped to an expunge") {
+    val f = new Fixture
+    val update = TaskStatusUpdateTestHelper.lost(
+      TaskStatus.Reason.REASON_RECONCILIATION, "Reconciliation: Task is unknown to the slave")
+    val task: MarathonTask = MarathonTestHelper.runningTask(update.wrapped.taskId.getValue)
+    val status: TaskStatus = update.taskStatus
+
+    val action = f.actionResolver.resolveForExistingTask(task, status)
+    action shouldEqual Action.Expunge
+  }
+
   test("a subsequent TASK_LOST update with another reason is mapped to a noop and will not update the timestamp") {
     val f = new Fixture
     val update = TaskStatusUpdateTestHelper.lost(TaskStatus.Reason.REASON_SLAVE_DISCONNECTED)
@@ -82,6 +93,17 @@ class StatusUpdateActionResolverTest
 
     val action = f.actionResolver.resolveForExistingTask(task, status)
     action shouldEqual Action.Noop
+  }
+
+  test("a subsequent TASK_LOST update with a message saying that the task is unknown to the agent is mapped to an expunge") {
+    val f = new Fixture
+    val update = TaskStatusUpdateTestHelper.lost(
+      TaskStatus.Reason.REASON_RECONCILIATION, "Reconciliation: Task is unknown to the agent")
+    val task: MarathonTask = MarathonTestHelper.lostTask(update.wrapped.taskId.getValue, TaskStatus.Reason.REASON_RECONCILIATION)
+    val status: TaskStatus = update.taskStatus
+
+    val action = f.actionResolver.resolveForExistingTask(task, status)
+    action shouldEqual Action.Expunge
   }
 
   class Fixture {
