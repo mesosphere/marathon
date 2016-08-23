@@ -1,3 +1,14 @@
+## Changes from 0.15.6 to 0.15.7
+
+- Marathon will now expunge a lost task if the task update message
+  indicates that it won't come back.
+- Marathon will not consider lost tasks when evaluating constraints.
+  This change lets Marathon start a new task to replace a lost one, even
+  if an app is pinned to an agent. This could potentially lead to more than
+  one task running on the same agent, violating a UNIQUE constraint.
+  Marathon will in that case try to remedy it by killing tasks until the
+  desired instance count is reached.
+
 ## Changes from 0.15.5 to 0.15.6
 
 Updated Mesos to 0.26.2 which fixes a memory leak in libmesos.
