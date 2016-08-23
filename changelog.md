@@ -1,7 +1,6 @@
-## Changes from 1.2.0 to (unreleased version)
+## Changes from 1.3.0 to (unreleased version)
 
-
-## Changes from 1.1.0 to 1.2.0
+## Changes from 1.1.0 to 1.3.0
 
 ### Recommended Mesos version is 1.0.0
 
@@ -25,6 +24,8 @@ This toggle is disabled by default. You must now supply this flag to use framewo
 
 
 ### Overview
+#### Universal Containerizer
+Starting with version 1.3.0, Marathon supports docker container images without having the Docker Containerizer depend on a Docker Engine. Instead the Mesos containerizer with native AppC support added in Apache Mesos version 1.0 (released July 2016) directly uses native OS features to configure and start Docker containers and to provide isolation.
 
 #### TASK_LOST behavior
 If Mesos agents get detached from the Mesos master, all tasks are assumed LOST.
@@ -83,7 +84,8 @@ __Caution: this change might lead to Marathon rejecting app definitions that use
 - Fixes #3991 - Use suppressOffers (#3992)
 
 ### Fixed issues
-
+- Fixed lost tasks garbage collection (#4203)
+- Fix container changes on app update. (#4185)
 - #3972 - network/cni support (#3974)
 - #4129 - TaskOpProcessorImplTest is flaky (#4148)
 - #4093 - Refactor MigrationTo1_2Test using async/wait (#4128)
@@ -110,6 +112,12 @@ __Caution: this change might lead to Marathon rejecting app definitions that use
 - #3723 - Fix validation of duplicate volume names (#3737)
 - #3505 - Adding documentation for ReadinessChecks (#3711)
 - #3648 - LaunchQueue: Do not defer TaskChanged (#3721) 
+
+## Version 1.2.0 skipped
+__Caution: Will not be promoting a Marathon v1.2 RC to a final release.__
+
+We have been focusing our efforts on two big new features for the upcoming DC/OS v1.8 release and had to work around the feature freeze in the Marathon v1.2 release candidates. Therefore, we discontinued work on the v1.2 release in favor of a new Marathon v1.3 release candidate.
+See: https://groups.google.com/forum/#!topic/marathon-framework/j6fNc4xk5tQ
 
 
 ## Changes from 1.0.0 to 1.1.0
