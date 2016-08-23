@@ -55,16 +55,17 @@ object TaskStatusUpdateTestHelper {
         TaskStateChange.Expunge(task)))
   }
 
-  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None) = {
+  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, maybeMessage: Option[String] = None) = {
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
     maybeHealth.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
+    maybeMessage.foreach(mesosStatus.setMessage)
     mesosStatus.build()
   }
-  def makeTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None) = {
-    val mesosStatus = makeMesosTaskStatus(taskId, state, maybeHealth, maybeReason)
+  def makeTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, maybeMessage: Option[String] = None) = {
+    val mesosStatus = makeMesosTaskStatus(taskId, state, maybeHealth, maybeReason, maybeMessage)
     MarathonTaskStatus(mesosStatus)
   }
 
@@ -78,8 +79,8 @@ object TaskStatusUpdateTestHelper {
 
   def finished(task: Task = defaultTask) = taskExpungeFor(task, makeTaskStatus(task.taskId, TaskState.TASK_FINISHED))
 
-  def lost(reason: Reason, task: Task = defaultTask) = {
-    val taskStatus = makeTaskStatus(task.taskId, TaskState.TASK_LOST, maybeReason = Some(reason))
+  def lost(reason: Reason, task: Task = defaultTask, maybeMessage: Option[String] = None) = {
+    val taskStatus = makeTaskStatus(task.taskId, TaskState.TASK_LOST, maybeReason = Some(reason), maybeMessage = maybeMessage)
 
     taskStatus match {
       case MarathonTaskStatus.Terminal(status) =>
