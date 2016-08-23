@@ -4,6 +4,7 @@ import akka.actor.{ ActorContext, ActorRef, ActorSystem, Cancellable, Props, Ter
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
+import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.OfferReviver
@@ -16,9 +17,10 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatus, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.tasks.TaskFactory
+import mesosphere.marathon.tasks.TaskFactory.CreatedTask
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos, SameAsSeq }
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.mockito
 import org.mockito.Mockito
 import org.scalatest.GivenWhenThen
@@ -139,6 +141,49 @@ class AppTaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
     Mockito.verify(taskTracker).appTasksSync(app.id)
     Mockito.verify(taskFactory).newTask(m.eq(app), m.eq(offer), m.argThat(SameAsSeq(Seq.empty)))
+  }
+
+  test("Don't pass the task factory lost tasks when asking for new tasks") {
+    val uniqueConstraint = Protos.Constraint.newBuilder
+      .setField("hostname")
+      .setOperator(Operator.UNIQUE)
+      .setValue("")
+      .build
+    val constraintApp = app.copy(constraints = Set(uniqueConstraint))
+    val offer = MarathonTestHelper.makeBasicOffer().build()
+
+    val taskId = "test_task.9876543"
+    val lostTask = Protos.MarathonTask
+      .newBuilder
+      .setHost(offer.getHostname)
+      .setId(taskId)
+      .setVersion(constraintApp.version.toString)
+      .setStatus(
+        MesosProtos.TaskStatus.newBuilder()
+          .setTaskId(MesosProtos.TaskID.newBuilder().setValue(taskId))
+          .setState(MesosProtos.TaskState.TASK_LOST)
+          .setReason(MesosProtos.TaskStatus.Reason.REASON_SLAVE_DISCONNECTED)
+      )
+      .build()
+
+    Mockito.when(taskTracker.appTasksSync(constraintApp.id)).thenReturn(Seq(lostTask))
+    Mockito.when(taskFactory.newTask(m.any(), m.any(), m.eq(Seq.empty))).thenReturn(Some(CreatedTask(task, marathonTask)))
+
+    val launcherRef = createLauncherRef(instances = 1)
+    launcherRef ! RateLimiterActor.DelayUpdate(constraintApp, clock.now())
+
+    Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedTasks]
+
+    val counts = Await.result(launcherRef ? AppTaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskCount]
+
+    assert(counts.tasksLaunchedOrRunning == 1)
+
+    assert(counts.waiting)
+    assert(counts.taskLaunchesInFlight == 1)
+    assert(counts.tasksLeftToLaunch == 0)
+
+    Mockito.verify(taskTracker).appTasksSync(constraintApp.id)
+    Mockito.verify(taskFactory).newTask(m.eq(constraintApp), m.eq(offer), m.eq(Seq.empty))
   }
 
   test("Wait for inflight task launches on stop") {

@@ -332,7 +332,11 @@ private class AppTaskLauncherActor(
       sender ! MatchedTasks(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val newTaskOpt: Option[CreatedTask] = taskFactory.newTask(app, offer, tasksMap.values)
+      val newTaskOpt: Option[CreatedTask] = taskFactory.newTask(
+        app,
+        offer,
+        tasksMap.values.filterNot(_.getStatus.getState == TaskState.TASK_LOST))
+
       newTaskOpt match {
         case Some(CreatedTask(mesosTask, marathonTask)) =>
           def updateActorState(): Unit = {

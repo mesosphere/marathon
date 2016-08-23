@@ -86,11 +86,11 @@ object TaskStatusUpdateTestHelper {
     )
   )
 
-  def lost(reason: Reason) = TaskStatusUpdateTestHelper(
+  def lost(reason: Reason, maybeMessage: Option[String] = None) = TaskStatusUpdateTestHelper(
     TaskStatusUpdate(
       timestamp = Timestamp.apply(new DateTime(2015, 2, 3, 12, 31, 0, 0)),
       taskId = taskId,
-      status = MarathonTaskStatusTestHelper.lost(reason)
+      status = MarathonTaskStatusTestHelper.lost(reason, maybeMessage)
     )
   )
 
