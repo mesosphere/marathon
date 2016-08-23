@@ -3,8 +3,8 @@ package mesosphere.util.state
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.integration.setup.IntegrationFunSuite
-import mesosphere.marathon.storage.repository.legacy.store.{PersistentEntity, PersistentStore, PersistentStoreManagement}
-import org.scalatest.{BeforeAndAfter, Matchers}
+import mesosphere.marathon.storage.repository.legacy.store.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
+import org.scalatest.{ BeforeAndAfter, Matchers }
 
 /**
   * Common  tests for all persistent stores.

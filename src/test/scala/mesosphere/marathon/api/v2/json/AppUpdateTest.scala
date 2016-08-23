@@ -10,7 +10,7 @@ import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import play.api.data.validation.ValidationError
-import play.api.libs.json.{JsError, JsPath, Json}
+import play.api.libs.json.{ JsError, JsPath, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -19,7 +19,7 @@ import org.scalatest.Matchers
 
 import scala.util.Try
 
-class AppUpdateTest extends MarathonSpec with Matchers  {
+class AppUpdateTest extends MarathonSpec with Matchers {
   import Formats._
   import mesosphere.marathon.integration.setup.V2TestFormats._
 
