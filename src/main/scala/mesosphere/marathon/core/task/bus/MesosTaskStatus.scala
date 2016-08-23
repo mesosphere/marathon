@@ -18,6 +18,8 @@ object MesosTaskStatus {
 
   val WontComeBack: Set[TaskStatus.Reason] = TaskStatus.Reason.values().toSet.diff(MightComeBack)
 
+  // Mesos will send a TASK_LOST update with the message "Reconciliation: Task is unknown to the slave" if a task is
+  // unknown, but the slave is registered. This state is terminal.
   def wontComeBack(status: TaskStatus): Boolean = {
     // FIXME (gkleiman): comparing against a string is ugly and fragile, we shouldn't do it, but there's no better way
     // for now
@@ -36,7 +38,7 @@ object MesosTaskStatus {
   object TemporarilyUnreachable {
     def isUnreachable(task: MarathonTask): Boolean = isUnreachable(task.getStatus)
     def isUnreachable(taskStatus: TaskStatus): Boolean = {
-      taskStatus.getState == TASK_LOST && MightComeBack(taskStatus.getReason)
+      taskStatus.getState == TASK_LOST && MightComeBack(taskStatus.getReason) && !wontComeBack(taskStatus)
     }
     def unapply(task: MarathonTask): Option[MarathonTask] = {
       if (isUnreachable(task)) Some(task) else None

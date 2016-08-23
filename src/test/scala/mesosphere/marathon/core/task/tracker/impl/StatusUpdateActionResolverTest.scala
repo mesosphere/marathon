@@ -77,7 +77,7 @@ class StatusUpdateActionResolverTest
   test("a TASK_LOST update with a message saying that the task is unknown to the slave is mapped to an expunge") {
     val f = new Fixture
     val update = TaskStatusUpdateTestHelper.lost(
-      TaskStatus.Reason.REASON_SLAVE_DISCONNECTED, "Reconciliation: Task is unknown to the slave")
+      TaskStatus.Reason.REASON_RECONCILIATION, "Reconciliation: Task is unknown to the slave")
     val task: MarathonTask = MarathonTestHelper.runningTask(update.wrapped.taskId.getValue)
     val status: TaskStatus = update.taskStatus
 
@@ -98,7 +98,7 @@ class StatusUpdateActionResolverTest
   test("a subsequent TASK_LOST update with a message saying that the task is unknown to the agent is mapped to an expunge") {
     val f = new Fixture
     val update = TaskStatusUpdateTestHelper.lost(
-      TaskStatus.Reason.REASON_SLAVE_DISCONNECTED, "Reconciliation: Task is unknown to the agent")
+      TaskStatus.Reason.REASON_RECONCILIATION, "Reconciliation: Task is unknown to the agent")
     val task: MarathonTask = MarathonTestHelper.lostTask(update.wrapped.taskId.getValue, TaskStatus.Reason.REASON_RECONCILIATION)
     val status: TaskStatus = update.taskStatus
 
