@@ -1,10 +1,6 @@
-## Changes from 1.2.0 to (unreleased version)
+## Changes from 1.3.0 to (unreleased version)
 
 ## Changes from 1.1.0 to 1.3.0
-__Caution: Will not be promoting a Marathon v1.2 RC to a final release.__
-
-We have been focusing our efforts on two big new features for the upcoming DC/OS v1.8 release and had to work around the feature freeze in the Marathon v1.2 release candidates. Therefore, we discontinued work on the v1.2 release in favor of a new Marathon v1.3 release candidate.
-See: https://groups.google.com/forum/#!topic/marathon-framework/j6fNc4xk5tQ
 
 ### Recommended Mesos version is 1.0.0
 
@@ -116,6 +112,12 @@ __Caution: this change might lead to Marathon rejecting app definitions that use
 - #3723 - Fix validation of duplicate volume names (#3737)
 - #3505 - Adding documentation for ReadinessChecks (#3711)
 - #3648 - LaunchQueue: Do not defer TaskChanged (#3721) 
+
+## Version 1.2.0 skipped
+__Caution: Will not be promoting a Marathon v1.2 RC to a final release.__
+
+We have been focusing our efforts on two big new features for the upcoming DC/OS v1.8 release and had to work around the feature freeze in the Marathon v1.2 release candidates. Therefore, we discontinued work on the v1.2 release in favor of a new Marathon v1.3 release candidate.
+See: https://groups.google.com/forum/#!topic/marathon-framework/j6fNc4xk5tQ
 
 
 ## Changes from 1.0.0 to 1.1.0
