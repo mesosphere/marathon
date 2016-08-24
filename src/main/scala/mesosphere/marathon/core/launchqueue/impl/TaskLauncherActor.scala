@@ -355,7 +355,9 @@ private class TaskLauncherActor(
       sender ! MatchedTaskOps(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val matchRequest = TaskOpFactory.Request(runSpec, offer, tasksMap, tasksToLaunch)
+      import org.apache.mesos.Protos.TaskState
+      val reachableTasks = tasksMap.values.filterNot(_.mesosStatus.exists(_.getState == TaskState.TASK_LOST))
+      val matchRequest = TaskOpFactory.Request(runSpec, offer, reachableTasks, tasksToLaunch)
       val taskOp: Option[TaskOp] = taskOpFactory.buildTaskOp(matchRequest)
       taskOp match {
         case Some(op) => handleTaskOp(op, offer)
