@@ -1,0 +1,30 @@
+#%RAML 1.0 DataType
+type: object
+description: Resource Allocations
+properties:
+  cpus:
+    displayName: cpu shares
+    description: The number of CPU shares this pod needs per instance. This number does not have to be integer, but can be a fraction.
+    type: number
+    minimum: 0
+    format: float
+    example: 0.1
+  mem:
+    displayName: memory shares
+    type: number
+    minimum: 0
+    description: The amount of memory in MB that is needed for the pod instance
+    example: 512
+  disk?:
+    displayName: disk space
+    type: number
+    minimum: 0
+    format: float
+    description: How much disk space is needed for this application. This number does not have to be an integer, but can be a fraction.
+    example: 0.2
+  gpus?:
+    displayName: gpu shares
+    type: integer
+    minimum: 0
+    description: The amount of GPU cores that are needed for the pod
+    example: 1
