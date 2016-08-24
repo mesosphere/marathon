@@ -455,7 +455,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app (that uses secrets) successfully") {
     Given("The secrets feature is enabled")
-    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+    configArgs = Seq("--enable_features", "secrets")
+    resetAppsResource
 
     And("An app with a secret and an envvar secret-ref")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -483,7 +484,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app (that uses undefined secrets) and fails") {
     Given("The secrets feature is enabled")
-    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+    configArgs = Seq("--enable_features", "secrets")
+    resetAppsResource()
 
     And("An app with an envvar secret-ref that does not point to an undefined secret")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -502,7 +504,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create the secrets feature is NOT enabled an app (that uses secrets) fails") {
     Given("The secrets feature is NOT enabled")
-    AllConf.enabledFeatures should not contain Features.SECRETS
+    configArgs = Seq("--enable_features", "secrets")
+    resetAppsResource()
+    config.isFeatureSet(Features.SECRETS) should be(false)
 
     And("An app with an envvar secret-ref that does not point to an undefined secret")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -1223,8 +1227,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   def resetAppsResource(): Unit = {
     //enable feature external volumes
-    AllConf.withTestConfig(configArgs)
-    config = AllConf.config.get.asInstanceOf[MarathonConf] // TODO(jdef) any better ideas here?
+    config = AllConf.withTestConfig(configArgs: _*)
     appsResource = new AppsResource(
       clock,
       eventBus,

@@ -1,7 +1,6 @@
 package mesosphere.marathon.core.externalvolume.impl.providers
 
 import com.wix.accord.{ RuleViolation, Success, Failure, Result }
-import mesosphere.marathon.AllConf
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state._
@@ -73,10 +72,6 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
   }
 
   class Fixture {
-
-    //enable feature external volumes
-    AllConf.withTestConfig(Seq("--enable_features", "external_volumes"))
-
     def appWithDVDIVolume(appId: PathId, volumeName: String, provider: String = DVDIProvider.name): AppDefinition = {
       AppDefinition(
         id = appId,
@@ -125,7 +120,7 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
       withClue(jsonResult(externalVolumesResult)) { externalVolumesResult.isFailure should be(expectFailure) }
 
       And("global validation agrees")
-      val globalResult: Result = Group.validRootGroup(maxApps = None)(rootGroup)
+      val globalResult: Result = Group.validRootGroup(maxApps = None, Set("external_volumes"))(rootGroup)
       withClue(jsonResult(globalResult)) { globalResult.isFailure should be(expectFailure) }
 
       val ruleViolations = globalResult match {

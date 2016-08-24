@@ -1,6 +1,5 @@
 package mesosphere.marathon.api.v2
 
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon._
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.election.ElectionService
@@ -45,11 +44,10 @@ class LeaderResourceTest extends MarathonSpec with Matchers with Mockito with Gi
   }
 
   class Fixture {
-    AllConf.withTestConfig(Seq("--event_subscriber", "http_callback"))
     val schedulerService = mock[MarathonSchedulerService]
     val electionService = mock[ElectionService]
     val auth = new TestAuthFixture
-    val config = mock[MarathonConf with HttpConf]
+    val config = AllConf.withTestConfig("--event_subscriber", "http_callback")
     def leaderResource() = new LeaderResource(schedulerService, electionService, config, auth.auth, auth.auth)
   }
 }

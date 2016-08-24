@@ -42,7 +42,8 @@ class AppsResource @Inject() (
     pluginManager: PluginManager) extends RestResource with AuthResource {
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
-  implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(pluginManager)
+  implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
+  implicit lazy val appUpdateValidator = AppUpdate.appUpdateValidator(config.availableFeatures)
 
   @GET
   @Timed

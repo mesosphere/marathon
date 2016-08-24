@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v2.json
 import com.wix.accord._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.{ AllConf, Protos, MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.{ Protos, MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
@@ -23,11 +23,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
-  before {
-    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
-  }
-
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
+  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set("secrets"))(PluginManager.None)
 
   test("Validation") {
     def shouldViolate(app: AppDefinition, path: String, template: String): Unit = {
@@ -399,9 +395,10 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     shouldViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
-    AllConf.withTestConfig(Seq("--enable_features", "gpu_resources"))
-
-    shouldNotViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+    {
+      implicit val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
+      shouldNotViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+    }
 
     app = correct.copy(
       gpus = 1,
