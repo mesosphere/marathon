@@ -17,7 +17,7 @@ import org.scalatest.concurrent.ScalaFutures
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{ Seconds, Span }
 
 class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matchers with ScalaFutures {
   import ZKStore._
