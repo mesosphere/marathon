@@ -26,7 +26,7 @@ def test_default_user():
     tasks = client.get_tasks("unique-sleep")
     host = tasks[0]['host']
 
-    assert run_command_on_agent(host,"ps aux | grep '[s]leep ' | awk '{if ($1 != 'root') exit 1;}'")
+    assert run_command_on_agent(host,"ps aux | grep '[s]leep ' | awk '{if ($1 !=\"root\") exit 1;}'")
 
 
 def teardown_module(module):
