@@ -1,5 +1,7 @@
 import os
+
 from dcos import http, util
+
 
 def fixture_dir():
     """Gets the path to the shakedown dcos fixture directory"""

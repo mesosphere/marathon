@@ -1,11 +1,10 @@
 """Marathon acceptance tests for DC/OS."""
 
-from shakedown import *
-
 import pytest
-from utils import fixture_dir, get_resource
-
 from dcos import marathon
+
+from shakedown import *
+from utils import fixture_dir, get_resource
 
 PACKAGE_NAME = 'marathon'
 DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)
