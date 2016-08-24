@@ -3,7 +3,6 @@
 from shakedown import *
 
 import pytest
-import os
 from utils import fixture_dir, get_resource
 
 from dcos import marathon
