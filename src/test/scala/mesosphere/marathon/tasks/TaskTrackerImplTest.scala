@@ -21,7 +21,6 @@ import org.apache.mesos.Protos
 import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.mockito.Matchers.any
 import org.mockito.Mockito.{ reset, spy, times, verify }
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
@@ -219,12 +218,8 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     // don't call taskTracker.created, but directly running
     val runningTaskStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
     val res = stateOpProcessor.process(runningTaskStatus)
-    ScalaFutures.whenReady(res.failed) { e =>
-      assert(
-        e.getCause.getMessage == s"${sampleTask.taskId} of app [/foo] does not exist",
-        s"Got message: ${e.getCause.getMessage}"
-      )
-    }
+    res.failed.futureValue.getCause.getMessage should equal(s"${sampleTask.taskId} of app [/foo] does not exist")
+
     shouldNotContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
     stateShouldNotContainKey(state, sampleTask.taskId)
   }
