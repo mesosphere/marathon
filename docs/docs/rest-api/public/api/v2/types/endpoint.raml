@@ -1,0 +1,29 @@
+#%RAML 1.0 DataType
+type: object
+usage:|
+  Endpoints accept connections from outside of a pod.
+  Endpoints may also be advertised outside of a cluster.
+properties:
+  name:
+    type: !include name.raml
+    description: Name of this port.
+  containerPort?:
+    type: !include port.raml
+    description: |
+      The container port that a task's process is actually listening on.
+      Required if the network mode is container
+  hostPort?:
+    type: !include port.raml
+    description: |
+      Mapped port on the host
+      All host ports are allocated from resource offers
+  protocol?:
+    type: string
+    enum: [UDP, TCP]
+    description: The protocol of this port
+  labels:
+    type: array
+    items: !include label.raml
+    description:|
+      Metadata as key/value pair. Possible uses include VIPs,
+      per-network-interface binding

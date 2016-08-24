@@ -1,0 +1,15 @@
+#%RAML 1.0 DataType
+type: object
+properties:
+  kind:
+    enum: [ DOCKER, APPC ]
+  id:
+    type: string
+    minLength: 1
+    maxLength: 1024
+    description: address/identifier of the file system image
+    example: mesosphere/marathon:1.3.0
+  forcePull?:
+    type: boolean
+    description: true if the image should always be pulled
+    

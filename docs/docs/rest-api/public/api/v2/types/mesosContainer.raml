@@ -1,2 +1,33 @@
 #%RAML 1.0 DataType
 type: object
+description: Mesos Container
+properties:
+  name:
+    type: !include name.raml
+    description: The name of this container
+  command?:
+    type: !include mesosCommand.raml
+    description: command line executed by the default shell, not parsed by marathon
+  endpoints?:
+    type: array
+    items: !include endpoint.raml
+    description: The ports needed to run this container
+  image?:
+    type: !include image.raml
+    description: The filesystem image to populate the container with
+  environment?:
+    type: array
+    items: !include environmentVariable.raml
+    description: Environment variables to set, defined as key/value pairs
+  healthCheck?:
+    type: !include healthCheck.raml
+    description: All healthchecks to perform on the container
+  volumeMounts?:
+    type: array
+    items: !include volumeMount.raml
+    description: All volume mounts
+  artifacts?:
+    type: array
+    items: !include artifact.raml
+    description:
+      All artifacts to download before the task runs 
