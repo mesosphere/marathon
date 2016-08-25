@@ -128,7 +128,7 @@ private[impl] class GroupManagerActor(
         from <- groupRepo.root()
         (toUnversioned, resolve) <- resolveStoreUrls(assignDynamicServicePorts(from, change(from)))
         to = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, toUnversioned)
-        _ = validateOrThrow(to)(Group.validRootGroup(config.maxApps.get))
+        _ = validateOrThrow(to)(Group.validRootGroup(config.maxApps.get, config.availableFeatures))
         plan = DeploymentPlan(from, to, resolve, version, toKill)
         _ = validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator(config))
         _ = log.info(s"Computed new deployment plan:\n$plan")

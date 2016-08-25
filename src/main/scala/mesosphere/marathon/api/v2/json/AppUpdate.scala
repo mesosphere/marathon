@@ -1,5 +1,6 @@
 package mesosphere.marathon.api.v2.json
 
+import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.Features
 import mesosphere.marathon.Protos.Constraint
@@ -148,23 +149,24 @@ case class AppUpdate(
 }
 
 object AppUpdate {
-  implicit val appUpdateValidator = validator[AppUpdate] { appUp =>
-    appUp.id is valid
-    appUp.dependencies is valid
-    appUp.upgradeStrategy is valid
-    appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
-    appUp.portDefinitions is optional(PortDefinitions.portDefinitionsValidator)
-    appUp.fetch is optional(every(fetchUriIsValid))
-    appUp.container.each is valid
-    appUp.residency is valid
-    appUp.mem should optional(be >= 0.0)
-    appUp.cpus should optional(be >= 0.0)
-    appUp.instances should optional(be >= 0)
-    appUp.disk should optional(be >= 0.0)
-    appUp.gpus should optional(be >= 0)
-    appUp.env is optional(valid(EnvVarValue.envValidator))
-    appUp.secrets is optional(valid(Secret.secretsValidator))
-    appUp.secrets is optional(empty) or featureEnabled(Features.SECRETS)
-    appUp.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appUp.isResident))
-  }
+  def appUpdateValidator(enabledFeatures: Set[String]): Validator[AppUpdate] =
+    validator[AppUpdate] { appUp =>
+      appUp.id is valid
+      appUp.dependencies is valid
+      appUp.upgradeStrategy is valid
+      appUp.storeUrls is optional(every(urlCanBeResolvedValidator))
+      appUp.portDefinitions is optional(PortDefinitions.portDefinitionsValidator)
+      appUp.fetch is optional(every(fetchUriIsValid))
+      appUp.container.each is Container.validContainer(enabledFeatures)
+      appUp.residency is valid
+      appUp.mem should optional(be >= 0.0)
+      appUp.cpus should optional(be >= 0.0)
+      appUp.instances should optional(be >= 0)
+      appUp.disk should optional(be >= 0.0)
+      appUp.gpus should optional(be >= 0)
+      appUp.env is optional(valid(EnvVarValue.envValidator))
+      appUp.secrets is optional(valid(Secret.secretsValidator))
+      appUp.secrets is optional(empty) or featureEnabled(enabledFeatures, Features.SECRETS)
+      appUp.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appUp.isResident))
+    }
 }

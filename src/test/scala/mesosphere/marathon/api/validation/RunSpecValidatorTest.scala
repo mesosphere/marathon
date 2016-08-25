@@ -18,7 +18,8 @@ import scala.reflect.ClassTag
 
 class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen {
 
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
+  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
+  implicit lazy val validContainer = Container.validContainer(Set())
 
   test("only cmd") {
     val app = AppDefinition(
@@ -677,7 +678,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
       }
       def definitions: PluginDefinitions = PluginDefinitions.None
     }
-    AppDefinition.validAppDefinition(pm)(app).isFailure shouldBe true
+    AppDefinition.validAppDefinition(Set())(pm)(app).isFailure shouldBe true
 
     Given("An app without an invalid label")
     val app2 = AppDefinition(
@@ -688,7 +689,7 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
       ))
     )
     Then("the validation succeeds")
-    AppDefinition.validAppDefinition(pm)(app2).isSuccess shouldBe true
+    AppDefinition.validAppDefinition(Set())(pm)(app2).isSuccess shouldBe true
   }
 
   class Fixture {

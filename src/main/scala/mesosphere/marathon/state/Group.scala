@@ -215,7 +215,7 @@ object Group {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validRootGroup(maxApps: Option[Int]): Validator[Group] = {
+  def validRootGroup(maxApps: Option[Int], enabledFeatures: Set[String]): Validator[Group] = {
     case object doesNotExceedMaxApps extends Validator[Group] {
       override def apply(group: Group): Result = {
         maxApps.filter(group.transitiveAppsById.size > _).map { num =>
@@ -229,7 +229,8 @@ object Group {
 
     def validNestedGroup(base: PathId): Validator[Group] = validator[Group] { group =>
       group.id is validPathWithBase(base)
-      group.apps.values as "apps" is every(AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base)))
+      group.apps.values as "apps" is every(
+        AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
       group is noAppsAndGroupsWithSameName
       group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
