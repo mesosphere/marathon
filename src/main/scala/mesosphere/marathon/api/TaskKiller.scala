@@ -12,6 +12,7 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
 import org.slf4j.LoggerFactory
 
+import scala.async.Async.{ async, await }
 import scala.concurrent.{ ExecutionContext, Future }
 
 class TaskKiller @Inject() (
@@ -39,12 +40,13 @@ class TaskKiller @Inject() (
           val foundTasks = findToKill(allTasks)
           val expungeTasks = if (wipe) expunge(foundTasks) else Future.successful(())
 
-          expungeTasks.map { _ =>
+          async {
+            await(expungeTasks)
             val launchedTasks = foundTasks.filter(_.launched.isDefined)
-            if (launchedTasks.nonEmpty) {
-              service.killTasks(appId, launchedTasks)
-              foundTasks
-            } else foundTasks
+            if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
+            // For some reasons tasks returned by service.killTasks !=
+            // foundTasks in some cases. What should be returned?
+            foundTasks
           }
         }
 
