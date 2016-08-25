@@ -35,19 +35,20 @@ class TaskKiller @Inject() (
       case Some(app) =>
         checkAuthorization(UpdateRunSpec, app)
 
+        // We probably want to use the same execution context as the actors.
         import scala.concurrent.ExecutionContext.Implicits.global
-        taskTracker.appTasks(appId).flatMap { allTasks =>
-          val foundTasks = findToKill(allTasks)
-          val expungeTasks = if (wipe) expunge(foundTasks) else Future.successful(())
 
-          async {
-            await(expungeTasks)
-            val launchedTasks = foundTasks.filter(_.launched.isDefined)
-            if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
-            // For some reasons tasks returned by service.killTasks !=
-            // foundTasks in some cases. What should be returned?
-            foundTasks
-          }
+        async {
+          val allTasks = await(taskTracker.appTasks(appId))
+          val foundTasks = findToKill(allTasks)
+
+          if (wipe) await(expunge(foundTasks))
+
+          val launchedTasks = foundTasks.filter(_.launched.isDefined)
+          if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
+          // For some reasons tasks returned by service.killTasks !=
+          // foundTasks in some cases. What should be returned?
+          foundTasks
         }
 
       case None => Future.failed(UnknownAppException(appId))
