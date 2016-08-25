@@ -59,6 +59,12 @@ Please note: there is no native Mesos support for secrets at the moment.
 We have defined a plugin interface to handle secrets.
 You need a plugin in order to use this feature effectively.
 
+#### Support for Nvidia GPU
+It is now possible to use `gpus` as Nvidia GPU resource required in your AppDefinition.
+`gpus` is defined as a first-class entity and can be supported by Mesos containerizer when
+`--enable_features gpu_resources` flag is set in Marathon.
+Please note: this feature is valid only when Mesos is compiled with Nvidia GPU support.
+
 #### Support all attribute types with constraints 
 Non-text type attributes (such as scalar or range) are now supported.
 
@@ -86,6 +92,7 @@ __Caution: this change might lead to Marathon rejecting app definitions that use
 ### Fixed issues
 - Fixed lost tasks garbage collection (#4203)
 - Fix container changes on app update. (#4185)
+- #3795 - Added GPU support for Marathon API (#4112)
 - #3972 - network/cni support (#3974)
 - #4129 - TaskOpProcessorImplTest is flaky (#4148)
 - #4093 - Refactor MigrationTo1_2Test using async/wait (#4128)
