@@ -21,11 +21,24 @@ traits: !include ../traits.raml
           application/json:
             type: Pod
 
+  get:
+    is: [ secured ]
+    description:|
+      List all the pod-based services in the system.
+      TODO(jdef) do we really need this?
+    responses:
+      200:
+        description: A list of all pods in the system.
+        body:
+          application/json:
+            type: Pod[]
+
 /{id}:
   uriParameters:
     id:
       type: PathId
       description: The path of the pod
+
   delete:
     is: [ secured, objectLocator, deployable ]
     description: |
