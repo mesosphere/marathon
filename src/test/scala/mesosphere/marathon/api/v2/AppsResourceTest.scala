@@ -504,7 +504,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create the secrets feature is NOT enabled an app (that uses secrets) fails") {
     Given("The secrets feature is NOT enabled")
-    configArgs = Seq("--enable_features", "secrets")
+    configArgs = Seq()
     resetAppsResource()
     config.isFeatureSet(Features.SECRETS) should be(false)
 
@@ -1226,7 +1226,6 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   var configArgs: Seq[String] = _
 
   def resetAppsResource(): Unit = {
-    //enable feature external volumes
     config = AllConf.withTestConfig(configArgs: _*)
     appsResource = new AppsResource(
       clock,

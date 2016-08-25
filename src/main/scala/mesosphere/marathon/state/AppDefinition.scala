@@ -732,7 +732,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
-    appDef.container.each is Container.validContainer(enabledFeatures)
+    appDef.container.each is valid(Container.validContainer(enabledFeatures))
     appDef.storeUrls is every(urlCanBeResolvedValidator)
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")

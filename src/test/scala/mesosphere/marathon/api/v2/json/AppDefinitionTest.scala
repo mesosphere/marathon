@@ -23,10 +23,10 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set("secrets"))(PluginManager.None)
+  val validAppDefinition = AppDefinition.validAppDefinition(Set("secrets"))(PluginManager.None)
 
   test("Validation") {
-    def shouldViolate(app: AppDefinition, path: String, template: String): Unit = {
+    def shouldViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
       validate(app) match {
         case Success => fail(s"expected failure '$template'")
         case f: Failure =>
@@ -41,7 +41,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       }
     }
 
-    def shouldNotViolate(app: AppDefinition, path: String, template: String): Unit = {
+    def shouldNotViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
       validate(app) match {
         case Success =>
         case f: Failure =>
@@ -397,7 +397,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     {
       implicit val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
-      shouldNotViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+      shouldNotViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")(appValidator)
     }
 
     app = correct.copy(
