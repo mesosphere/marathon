@@ -1,13 +1,13 @@
 #%RAML 1.0 DataType
 type: object
-description:|
+description: |
   A pod allows one to launch a collection co-located (on the same agent) containers
   that share the same network namespace and that may share the same volumes.
   Resources are specified on a per-container basis.
 properties:
   id:
     type: !include pathId.raml
-    description:|
+    description: |
       Unique identifier for the pod consisting of a series of names separated by slashes.
       Each name must be at least 1 character and may only contain digits (`0-9`), dashes
       (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
@@ -16,7 +16,7 @@ properties:
   labels?:
     type: array
     items: !include label.raml
-    description:|
+    description: |
       Metadata as key/value pair.
       Useful when passing directives to be interpreted by Mesos modules.
   version?:
@@ -24,13 +24,13 @@ properties:
     description: The version of the definition, immutable
   user?:
     type: string
-    description:|
+    description: |
       The OS user to use to run the tasks on the agent.
       May be overridden by a container.
   environment?:
     type: array
     items: !include environmentVariable.raml
-    description:|
+    description: |
       Environment Variables to set at the pod level.
       Individual containers may override them
     example: |
@@ -46,7 +46,7 @@ properties:
   networks?:
     type: array
     items: !include network.raml
-    description:|
+    description: |
       Network settings are defined on a pod level. All containers share the same network stack.
       At this time, only one stack is supported.
   scaling?:
@@ -64,7 +64,7 @@ properties:
             minimum: 0
           maxInstances?:
             type: integer
-            description:|
+            description: |
               The maximum number of instances of this pod that should
               be running at a given time.
             minimum: 0
@@ -73,7 +73,7 @@ properties:
     properties:
       backoffStrategy?:
         type: object
-        description:|
+        description: |
           Configures exponential backoff behavior when launching potentially sick apps.
           This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos slaves.
           The backoff period is multiplied by the factor for each consecutive failure until it reaches maxLaunchDelaySeconds.
@@ -81,46 +81,46 @@ properties:
         properties:
           backoff?:
             type: number
-            description: Configures exponential backoff behavior when launching potentially sick apps. 
+            description: Configures exponential backoff behavior when launching potentially sick apps.
             minimum: 0
           backoffFactor?:
             type: number
-            description: Configures exponential backoff behavior when launching potentially sick apps. 
+            description: Configures exponential backoff behavior when launching potentially sick apps.
             minimum: 0
-          maxLaunchDelay?: 
+          maxLaunchDelay?:
             type: number
             description: Amount of time (seconds) until a pod is reported running
             minimum: 0
       upgradeStrategy?:
         type: object
-        description:|
+        description: |
           During an upgrade all instances of an application get replaced by a new version.
           The upgradeStrategy controls how Marathon stops old versions and launches new versions.
         properties:
           minimumHealthCapacity?:
             type: number
-            description:|
+            description: |
               A number between 0and 1 that is multiplied with the instance count.
               This is the minimum number of healthy nodes that do not sacrifice overall application purpose.
               Marathon will make sure, during the upgrade process, that at any point of time this number of healthy instances are up.
             default: 1
             minimum: 0
-            maxumum: 1
+            maximum: 1
           maximumOverCapacity?:
             type: number
-            description:|
+            description: |
               A number between 0 and 1 which is multiplied with the instance count.
               This is the maximum number of additional instances launched at any point of time during the upgrade process.
             default: 1
             minimum: 0
-            maxumum: 1
+            maximum: 1
       placement?:
         type: object
         properties:
           constraints?:
             type: array
             items: !include constraint.raml
-            description:|
+            description: |
               Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE, MAX_PER
           acceptedResourceRoles?:
             type: string[]

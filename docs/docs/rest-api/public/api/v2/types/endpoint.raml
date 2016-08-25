@@ -1,6 +1,6 @@
 #%RAML 1.0 DataType
 type: object
-description:|
+description: |
   Endpoints accept connections from outside of a pod.
   Endpoints may also be advertised outside of a cluster.
 properties:
@@ -27,6 +27,6 @@ properties:
   labels?:
     type: array
     items: !include label.raml
-    description:|
+    description: |
       Metadata as key/value pair. Possible uses include VIPs,
       per-network-interface binding

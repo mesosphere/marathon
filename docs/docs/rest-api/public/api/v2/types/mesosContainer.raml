@@ -21,12 +21,12 @@ properties:
   environment?:
     type: array
     items: !include environmentVariable.raml
-    description:|
+    description: |
       Environment variables to set, defined as key/value pairs.
       Variables defined here override those specified in the pod definition.
   user?:
     type: string
-    description:|
+    description: |
       The OS user to use to run the tasks on the agent.
       Values here override a "user" value specified in the pod definition.
   healthCheck?:
@@ -40,10 +40,10 @@ properties:
     type: array
     items: !include artifact.raml
     description:
-      All artifacts to download before the task runs 
+      All artifacts to download before the task runs
   labels?:
     type: array
     items: !include label.raml
-    description:|
+    description: |
       Metadata as key/value pair.
       Useful when passing directives to be interpreted by Mesos modules.
