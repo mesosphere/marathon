@@ -22,7 +22,7 @@ def test_default_user():
     app = client.get_app(application_json['id'])
     assert app['user'] == None
 
-    # wait for deployment
+    # wait for deployment to finish
     tasks = client.get_tasks("unique-sleep")
     host = tasks[0]['host']
 
