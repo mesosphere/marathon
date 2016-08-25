@@ -14,6 +14,54 @@
             example: |
               { "message": "Not Authorized to perform this action!" }
 
+- jsonValidator:
+  responses:
+    400:
+      description: Invalid JSON syntax.
+      body:
+        application/json:
+          example: |
+            {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+
+- objectValidator:
+    422:
+      description:|
+        Invalid object specification, one or more specification rules have been violated.
+      body:
+        application/json:
+          example: |
+            {
+              "message": "Object is not valid",
+              "details": [
+                {
+                  "path": "/upgradeStrategy/minimumHealthCapacity",
+                  "errors": [
+                    "is greater than 1"
+                  ]
+                }
+              ]
+            }
+
+- objectCreator:
+  responses:
+    409:
+      description:|
+        Duplicate object ID. Another app, group, or pod already exists for the specified ID.
+      body:
+        application/json:
+          example: |
+            {"message":"An app with id [/existing_app] already exists."}
+
+- objectLocator:
+  responses:
+    404:
+      description:|
+        Unknown object ID. No such app, group, or pod exists for the specified ID.
+      body:
+        application/json:
+          example: |
+            {"message":"An app with id [/existing_app] already exists."}
+
 - deployable:
     description:
       Note&#58;  This operation will create a deployment. The operation finishes, if the deployment succeeds.

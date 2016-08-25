@@ -4,13 +4,42 @@ mediaType: application/json
 types:
   Pod: !include types/pod.raml
   PathId: !include types/pathId.raml
+
+post:
+  is: [ secured, jsonValidator, objectValidator, objectCreator ]
+  description:|
+    Create and start a new pod-based service.
+  body:
+    application/json:
+      type: Pod
+  responses:
+    201:
+      description: Pod created successfully.
+      body:
+        application/json:
+          type: Pod
+
 /{id}:
   uriParameters:
     id:
       type: PathId
       description: The path of the pod
-  # TODO: traits.raml needs to be updated... is: [ secured ]
+  delete:
+    is: [ secured, objectLocator, deployable ]
+    description:|
+      Update an existing pod-based service.
+
+  put:
+    is: [ secured, jsonValidator, objectValidator, objectLocator, deployable ]
+    usage: TODO(jdef) separate error code when update of an immutable field fails?
+    description:|
+      Update an existing pod-based service.
+    body:
+      application/json:
+        type: Pod
+
   get:
+    is: [ secured, objectLocator ]
     description:
       Get the pod at the given id
     responses:
@@ -18,5 +47,3 @@ types:
         body:
           application/json:
             type: Pod
-      404:
-        description: No pod found with this `id`
