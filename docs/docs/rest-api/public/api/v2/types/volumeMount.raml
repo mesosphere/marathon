@@ -1,62 +1,11 @@
 #%RAML 1.0 DataType
 type: object
-maxProperties: 2
-minProperties: 2
 properties:
   name:
     type: !include name.raml
     description: The name of the volume to reference.
-  host?:
+  mountPath:
     type: string
-    description: |
-      Absolute path of the file or directory on the agent, or else the relative
-      path of the directory in the executor's sandbox
-
-      Host volumes are useful for mapping directories that exist on the agent apriori,
-      or within the executor sandbox. No resources (Mesos or otherwise) are allocated for
-      these types of volumes.
-  request?:
-    type: object
-    description: |
-      Volume requests would be used, for example, with persistent and external volumes.
-    properties:
-      provider:
-        type: string
-        enum: [external, resident]
-        description: |
-          the system providing the volume; `resident` will request a persistent volume
-        example: external
-      providerName?:
-        type: !include name.raml
-        usage: required for `external` providers
-        example: dvdi
-      shareMode:
-        type: string
-        enum: [ READ_ONE_WRITE_ONE ]
-        description: Possible future values are READ_ALL_WRITE_ONE and READ_ALL_WRITE_ALL
-        default: READ_ONE_WRITE_ONE
-      volumeName?:
-        type: !include name.raml
-      volumeOptions?:
-        type: object
-        description: key-value pairs, provider and marathon specific options
-        properties:
-          category?:
-            type: !include name.raml
-            usage: could be the name of a volume provider, or something like marathon
-          name?:
-            type: string
-            pattern: ^[A-Za-z0-9](?:[-A-za-z0-9\._:]*[A-Za-z0-9])?$
-            minLength: 1
-            maxLength: 128
-          value?:
-            type: string
-            maxLength: 1024
-          resource?:
-            type: integer
-            description: Disk size in MB
-            minimum: 1
-          labels?:
-            type: array
-            items: !include label.raml
-            
+    description: The path inside the container at which the volume is mounted.
+  readOnly?:
+    type: boolean

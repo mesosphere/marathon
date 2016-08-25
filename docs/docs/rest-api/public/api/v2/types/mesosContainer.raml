@@ -8,6 +8,9 @@ properties:
   command?:
     type: !include mesosCommand.raml
     description: command line executed by the default shell, not parsed by marathon
+  resources:
+    type: !include resources.raml
+    description: The resources to allocate to the container.
   endpoints?:
     type: array
     items: !include endpoint.raml
@@ -18,7 +21,14 @@ properties:
   environment?:
     type: array
     items: !include environmentVariable.raml
-    description: Environment variables to set, defined as key/value pairs
+    description:|
+      Environment variables to set, defined as key/value pairs.
+      Variables defined here override those specified in the pod definition.
+  user?:
+    type: string
+    description:|
+      The OS user to use to run the tasks on the agent.
+      Values here override a "user" value specified in the pod definition.
   healthCheck?:
     type: !include healthCheck.raml
     description: All healthchecks to perform on the container

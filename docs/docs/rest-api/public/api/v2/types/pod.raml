@@ -1,18 +1,21 @@
 #%RAML 1.0 DataType
 type: object
-description: How much disk space is needed for this application. This number does not have to be an integer, but can be a fraction.
+description:|
+  A pod allows one to launch a collection co-located (on the same agent) containers
+  that share the same network namespace and that may share the same volumes.
+  Resources are specified on a per-container basis.
 properties:
   id:
     type: !include pathId.raml
-    description: Unique identifier for the pod consisting of a series of names separated by slashes. Each name must be at least 1 character and may only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
+    description:|
+      Unique identifier for the pod consisting of a series of names separated by slashes.
+      Each name must be at least 1 character and may only contain digits (`0-9`), dashes
+      (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
     required: true
     example: /ops/audit
   containers:
     type: array
     items: !include mesosContainer.raml
-  resources:
-    type: !include resources.raml
-    description: The resources to allocate to the pod
   instances:
     type: integer
     description: The number of instances of this pod to start.
@@ -31,15 +34,17 @@ properties:
     example: [hostname:UNIQUE]
   user?:
     type: string
-    description: The user to use to run the tasks on the agent
+    description:|
+      The OS user to use to run the tasks on the agent.
+      May be overridden by a container.
   version?:
     type: datetime-only
     description: The version of the definition, immutable
-  versionInfo?: !include versionInfo.raml
-  env?:
+  versionInfo?:
+    type: !include versionInfo.raml
+  environment?:
     type: array
     items: !include environmentVariable.raml
-    displayName: environment
     description:|
       Environment Variables to set at the pod level.
       Individual containers may override them
@@ -48,7 +53,7 @@ properties:
         { "name" : "MASTER_PASSWORD", "secret": "/master/secret1" } ]
   volumes?:
     type: array
-    items: !include volumes.raml
+    items: !include volume.raml
     description: Volumes defined on a pod level that are mounted into containers
   networks?:
     type: array

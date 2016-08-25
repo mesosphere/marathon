@@ -5,6 +5,8 @@ properties:
     type: string
     minLength: 1
     maxLength: 255
-    pattern: (?!^((MARATHON_)|(DCOS_)|(MESOS_)).*)
+    usage:|
+      Users should avoid inventing labels prefixed with MARATHON_ MESOS_
+      or DCOS_ since those may be defined by Marathon, Mesos, or DC/OS.
   value?:
     type: string

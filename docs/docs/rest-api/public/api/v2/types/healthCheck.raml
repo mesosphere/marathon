@@ -12,7 +12,6 @@ properties:
         description:|
           The endpoint name to use.
           In "host" mode health checks use the hostPort. In other modes use the containerPort.
-          If an integer is specified then it should match hostPort or containerPort when in "host"
       path?:
         type: string
         minLength: 1
@@ -24,10 +23,10 @@ properties:
   tcp?:
     type: object
     properties:
-      type: !include name.raml
-      description:|
-        The endpoint name to use.
-        In "host" mode health checks use the hostPort. In other modes use the containerPort.
-        If an integer is specified then it should match hostPort or containerPort when in "host"
+      endpoint:
+        type: !include name.raml
+        description:|
+          The endpoint name to use.
+          In "host" mode health checks use the hostPort. In other modes use the containerPort.
   command?:
     type: !include mesosCommand.raml
