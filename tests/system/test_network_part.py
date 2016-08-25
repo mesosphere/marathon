@@ -1,10 +1,11 @@
 """Marathon acceptance tests for DC/OS regarding network partitioning"""
 
-from shakedown import *
+import os
 
 import pytest
-import os
 import requests
+
+from shakedown import *
 
 PACKAGE_NAME = 'marathon'
 PACKAGE_APP_ID = 'marathon-user'

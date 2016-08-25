@@ -9,8 +9,8 @@ import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathI
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
 import org.apache.zookeeper.ZooDefs.Perms
-import org.apache.zookeeper.data.{ ACL, Id }
 import org.apache.zookeeper._
+import org.apache.zookeeper.data.{ ACL, Id }
 import org.scalatest.{ BeforeAndAfterAllConfigMap, ConfigMap, Suite }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
@@ -166,7 +166,11 @@ trait SingleMarathonIntegrationTest
         zooKeeper.delete(path, -1)
       }
     }
-    deletePath(config.zkPath)
+    try {
+      deletePath(config.zkPath)
+    } catch {
+      case _: Exception =>
+    }
     zooKeeper.close()
   }
 
