@@ -1,0 +1,48 @@
+#%RAML 1.0 DataType
+type: object
+additionalProperties: false
+properties:
+  id:
+    type: !include name.raml
+    description:|
+      Unique ID of this pod instance in the cluster.
+      TODO(jdef) Probably represents the Mesos executor ID.
+  status:
+    type: string
+    enum: [ PENDING, STAGING, STABLE, DEGRADED, TERMINAL ]
+    description:|
+      PENDING  - Instance is queued for launch.
+      STAGING  - Instance has been launched but is not yet running.
+      STABLE   - Instance is running and, if health checks were specified, is healthy.
+      DEGRADED - One or more of the instance's containers are not stable.
+      TERMINAL - Instance is in the process of shutting down.
+  message?:
+    type: string
+    description:|
+      Human-friendly explanation for reason of the current status.
+  agent?:
+    type: string
+    description: agent that this instance was launched on
+  resources?:
+    type: !include resources.raml
+    description:|
+      Sum of all resources allocated for this pod instance.
+      May include additional, system-allocated resources for the default executor.
+  networks?:
+    type: array
+    description:|
+      Status of the networks to which this instance is attached.
+    item:
+      type: object
+      additionalProperties: false
+      properties:
+        name?:
+          type: !include name.raml
+          description: name of the network
+        addresses?:
+          type: string[]
+  containers?:
+    type: array
+    description: status for each running container of this instance.
+    items:
+      type: !include container-status.raml

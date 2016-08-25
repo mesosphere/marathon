@@ -1,0 +1,58 @@
+#%RAML 1.0 DataType
+type: object
+description: |
+  A pod allows one to launch a collection co-located (on the same agent) containers
+  that share the same network namespace and that may share the same volumes.
+  Resources are specified on a per-container basis.
+additionalProperties: false
+properties:
+  id:
+    type: !include pathId.raml
+    description:|
+      Fully qualified name of the pod that this status object is describing.
+  spec:
+    type: !include pod.raml
+    description:|
+      The latest version of the pod specification (that has the same pod ID).
+  status:
+    type: string
+    enum: [ DEGRADED, STABLE, TERMINAL ]
+    description:|
+      DEGRADED - The number of stable pod instances is less than the number of target instances.
+      STABLE   - All launched pod instances have started and, if health checks were specified, are all healthy.
+      TERMINAL - Marathon is tearing down all of the instances for this pod.
+  message?:
+    type: string
+    description:|
+      Human-friendly explanation for reason of the current status.
+  instances?:
+    type: array
+    items:
+      type: !include pod-instance-status.raml
+  terminationHistory?:
+    type: array
+    description:|
+      List of most recent instance terminations.
+      TODO(jdef) determine how many items might show up here; current thinking is .. not many
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        instanceID:
+          type: string
+        startedAt:
+          type: datetime-only
+        terminatedAt:
+          type: datetime-only
+        message?:
+          type: string
+          description:|
+            Human-friendly explanation for termination.
+  lastUpdated:
+    type: datetime-only
+    description:|
+      Time that this status was last checked and updated (even if nothing changed)
+  lastChanged:
+    type: datetime-only
+    description:|
+      Time that this status was last modified (some aspect of status did change)

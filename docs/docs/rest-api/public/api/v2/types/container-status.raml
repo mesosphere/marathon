@@ -1,0 +1,56 @@
+#%RAML 1.0 DataType
+type: object
+additionalProperties: false
+properties:
+  name:
+    type: !include name.raml
+    description: name of the container specification (within the pod)
+  status:
+    type: string
+    enum: [ STAGING, STABLE, DEGRADED, TERMINAL ]
+    description:|
+      STAGING  - Container has been launched but is not yet running.
+      STABLE   - Container is running and, if health checks were specified, is healthy.
+      DEGRADED - Container is running but is not stable.
+      TERMINAL - Container is in the process of terminating or else has terminated.
+  message?:
+    type: string
+    description:|
+      Human-friendly explanation for the container's current status.
+  containerId?:
+    type: string
+    description:|
+      Unique ID of this container in the cluster.
+      TODO(jdef) Probably represents the Mesos task ID.
+  endpoints?:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: !include name.raml
+          description: name of the endpoint
+        allocatedHostPort?:
+          type: !include port.raml
+        healthy?:
+          type: boolean
+          usage: should only be present if a health check is defined for this endpoint
+          description: true if a health check is defined for this endpoint and is passing
+  termination?:
+    type: object
+    additionalProperies: false
+    properties:
+      exitCode?:
+        type: integer
+      message?:
+        type: string
+        description: Human-explanation for container termination.
+  lastUpdated:
+    type: datetime-only
+    description:|
+      Time that this status was last checked and updated (even if nothing changed)
+  lastChanged:
+    type: datetime-only
+    description:|
+      Time that this status was last modified (some aspect of status did change)
