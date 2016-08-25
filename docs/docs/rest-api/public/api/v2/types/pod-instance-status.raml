@@ -46,3 +46,17 @@ properties:
     description: status for each running container of this instance.
     items:
       type: !include container-status.raml
+  startedAt?:
+    type: datetime-only
+    description: time at which this instance was marked PENDING
+  terminatedAt?:
+    type: datetime-only
+    description: time at which this instance was marked TERMINAL
+  lastUpdated:
+    type: datetime-only
+    description:|
+      Time that this status was last checked and updated (even if nothing changed)
+  lastChanged:
+    type: datetime-only
+    description:|
+      Time that this status was last modified (some aspect of status did change)
