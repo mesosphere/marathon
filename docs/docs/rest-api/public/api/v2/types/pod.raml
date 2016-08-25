@@ -6,12 +6,13 @@ description: |
   Resources are specified on a per-container basis.
 properties:
   id:
-    type: !include pathId.raml
+    type: string
+    pattern: ^(\/?((\.{2})|([a-z0-9][a-z0-9\-.]*[a-z0-9]+)|([a-z0-9]*))($|\/))+$
+    minLength: 1
     description: |
       Unique identifier for the pod consisting of a series of names separated by slashes.
       Each name must be at least 1 character and may only contain digits (`0-9`), dashes
       (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
-    required: true
     example: /ops/audit
   labels?:
     type: array

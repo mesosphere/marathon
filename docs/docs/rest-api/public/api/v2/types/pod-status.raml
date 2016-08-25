@@ -8,22 +8,22 @@ additionalProperties: false
 properties:
   id:
     type: !include pathId.raml
-    description:|
+    description: |
       Fully qualified name of the pod that this status object is describing.
   spec:
     type: !include pod.raml
-    description:|
+    description: |
       The latest version of the pod specification (that has the same pod ID).
   status:
     type: string
     enum: [ DEGRADED, STABLE, TERMINAL ]
-    description:|
+    description: |
       DEGRADED - The number of stable pod instances is less than the number of target instances.
       STABLE   - All launched pod instances have started and, if health checks were specified, are all healthy.
       TERMINAL - Marathon is tearing down all of the instances for this pod.
   message?:
     type: string
-    description:|
+    description: |
       Human-friendly explanation for reason of the current status.
   instances?:
     type: array
@@ -31,7 +31,7 @@ properties:
       type: !include pod-instance-status.raml
   terminationHistory?:
     type: array
-    description:|
+    description: |
       List of most recent instance terminations.
       TODO(jdef) determine how many items might show up here; current thinking is .. not many
     items:
@@ -46,13 +46,13 @@ properties:
           type: datetime-only
         message?:
           type: string
-          description:|
+          description: |
             Human-friendly explanation for termination.
   lastUpdated:
     type: datetime-only
-    description:|
+    description: |
       Time that this status was last checked and updated (even if nothing changed)
   lastChanged:
     type: datetime-only
-    description:|
+    description: |
       Time that this status was last modified (some aspect of status did change)
