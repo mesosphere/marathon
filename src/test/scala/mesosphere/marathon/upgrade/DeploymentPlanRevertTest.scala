@@ -8,7 +8,7 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhenThen {
   private def normalizeVersions(group: Group): Group = {
     group.withNormalizedVersion.copy(
-      apps = group.apps.map(_.copy(versionInfo = AppDefinition.VersionInfo.NoVersion)),
+      apps = group.apps.mapValues(((_.copy(versionInfo = AppDefinition.VersionInfo.NoVersion)))),
       groups = group.groups.map(normalizeVersions)
     )
   }
@@ -37,8 +37,8 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
         }
       }
 
-      val actualAppIds = actual.transitiveApps.map(_.id)
-      val expectedAppIds = expected.transitiveApps.map(_.id)
+      val actualAppIds = actual.transitiveAppIds
+      val expectedAppIds = expected.transitiveAppIds
 
       val unexpectedAppIds = actualAppIds -- expectedAppIds
       val missingAppIds = expectedAppIds -- actualAppIds
@@ -62,11 +62,13 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     Given("an unrelated group")
     val unrelatedGroup = {
       val id = "unrelated".toRootPath
+      val app1 = AppDefinition(id / "app1")
+      val app2 = AppDefinition(id / "app2")
       Group(
         id,
-        apps = Set(
-          AppDefinition(id / "app1"),
-          AppDefinition(id / "app2")
+        apps = Map(
+          app1.id -> app1,
+          app2.id -> app2
         )
       )
     }
@@ -89,11 +91,13 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     Given("an existing group with apps")
     val changeme = {
       val id = "changeme".toRootPath
+      val app1 = AppDefinition(id / "app1")
+      val app2 = AppDefinition(id / "app2")
       Group(
         id,
-        apps = Set(
-          AppDefinition(id / "app1"),
-          AppDefinition(id / "app2")
+        apps = Map(
+          app1.id -> app1,
+          app2.id -> app2
         )
       )
     }
@@ -118,11 +122,13 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     Given("an unrelated group")
     val unrelatedGroup = {
       val id = "unrelated".toRootPath
+      val app1 = AppDefinition(id / "app1")
+      val app2 = AppDefinition(id / "app2")
       Group(
         id,
-        apps = Set(
-          AppDefinition(id / "app1"),
-          AppDefinition(id / "app2")
+        apps = Map(
+          app1.id -> app1,
+          app2.id -> app2
         )
       )
     }
@@ -147,7 +153,7 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
       val id = "changeme".toRootPath
       Group(
         id,
-        apps = Set()
+        apps = Map()
       )
     }
 
@@ -169,11 +175,13 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     Given("a group")
     val changeme = {
       val id = "changeme".toRootPath
+      val app1 = AppDefinition(id / "app1")
+      val app2 = AppDefinition(id / "app2")
       Group(
         id,
-        apps = Set(
-          AppDefinition(id / "app1"),
-          AppDefinition(id / "app2")
+        apps = Map(
+          app1.id -> app1,
+          app2.id -> app2
         )
       )
     }
@@ -196,15 +204,17 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
     Given("an existing group with apps")
     val existingGroup = {
       val id = "changeme".toRootPath
+      val app1 = AppDefinition(id / "app1")
+      val app2 = AppDefinition(id / "app2")
       Group(
         id,
         dependencies = Set(
           "othergroup1".toRootPath,
           "othergroup2".toRootPath
         ),
-        apps = Set(
-          AppDefinition(id / "app1"),
-          AppDefinition(id / "app2")
+        apps = Map(
+          app1.id -> app1,
+          app2.id -> app2
         )
       )
     }
@@ -236,15 +246,17 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
 
   val existingGroup = {
     val id = "changeme".toRootPath
+    val app1 = AppDefinition(id / "app1")
+    val app2 = AppDefinition(id / "app2")
     Group(
       id,
       dependencies = Set(
         "othergroup1".toRootPath,
         "othergroup2".toRootPath
       ),
-      apps = Set(
-        AppDefinition(id / "app1"),
-        AppDefinition(id / "app2")
+      apps = Map(
+        app1.id -> app1,
+        app2.id -> app2
       )
     )
   }
@@ -274,23 +286,26 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
           Group("othergroup3".toRootPath),
           {
             val id = "other".toRootPath
+            val app4 = AppDefinition(id / "app4")
             Group(
               id,
-              apps = Set(AppDefinition(id / "app4")) // app4 was added
+              apps = Map(app4.id -> app4) // app4 was added
             )
           },
           {
             val id = "changeme".toRootPath
+            val app1 = AppDefinition(id / "app1")
+            val app3 = AppDefinition(id / "app3")
             Group(
               id,
               dependencies = Set(
                 "othergroup1".toRootPath,
                 "othergroup2".toRootPath
               ),
-              apps = Set(
-                AppDefinition(id / "app1"), // app1 was kept
+              apps = Map(
+                app1.id -> app1, // app1 was kept
                 // app2 was removed
-                AppDefinition(id / "app3") // app3 was added
+                app3.id -> app3 // app3 was added
               )
             )
           }
@@ -320,15 +335,17 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
           },
           {
             val id = "changeme".toRootPath
+            val app1 = AppDefinition(id / "app1")
+            val app2 = AppDefinition(id / "app2")
             Group(
               id,
               dependencies = Set(
                 "othergroup1".toRootPath,
                 "othergroup2".toRootPath
               ),
-              apps = Set(
-                AppDefinition(id / "app1"),
-                AppDefinition(id / "app2")
+              apps = Map(
+                app1.id -> app1,
+                app2.id -> app2
               )
             )
           }
@@ -350,6 +367,8 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
           Group("othergroup3".toRootPath),
           {
             val id = "changeme".toRootPath
+            val app1 = AppDefinition(id / "app1")
+            val app2 = AppDefinition(id / "app2")
             Group(
               id,
               dependencies = Set(
@@ -357,9 +376,9 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
                 "othergroup1".toRootPath,
                 "othergroup4".toRootPath
               ),
-              apps = Set(
-                AppDefinition(id / "app1"),
-                AppDefinition(id / "app2")
+              apps = Map(
+                app1.id -> app1,
+                app2.id -> app2
               )
             )
           }
@@ -381,6 +400,8 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
           Group("othergroup3".toRootPath),
           {
             val id = "changeme".toRootPath
+            val app1 = AppDefinition(id / "app1")
+            val app2 = AppDefinition(id / "app2")
             Group(
               id,
               dependencies = Set(
@@ -388,9 +409,9 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
                 "othergroup1".toRootPath,
                 "othergroup4".toRootPath
               ),
-              apps = Set(
-                AppDefinition(id / "app1"),
-                AppDefinition(id / "app2")
+              apps = Map(
+                app1.id -> app1,
+                app2.id -> app2
               )
             )
           }
@@ -416,15 +437,17 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
             Group("othergroup3".toRootPath),
             {
               val id = "changeme".toRootPath
+              val app1 = AppDefinition(id / "app1")
+              val app2 = AppDefinition(id / "app2")
               Group(
                 id,
                 dependencies = Set(
                   "othergroup1".toRootPath,
                   "othergroup2".toRootPath
                 ),
-                apps = Set(
-                  AppDefinition(id / "app1"),
-                  AppDefinition(id / "app2")
+                apps = Map(
+                  app1.id -> app1,
+                  app2.id -> app2
                 ),
                 groups = Set(
                   Group(
@@ -459,15 +482,20 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
           Group("othergroup3".toRootPath),
           {
             val id = "changeme".toRootPath
+            val app1 = AppDefinition(id / "app1")
+            val app2 = AppDefinition(id / "app2")
+            val appBA = AppDefinition(id / "some" / "b" / "a")
+            val appBB = AppDefinition(id / "some" / "b" / "b")
+            val appBC = AppDefinition(id / "some" / "b" / "c")
             Group(
               id,
               dependencies = Set(
                 "othergroup1".toRootPath,
                 "othergroup2".toRootPath
               ),
-              apps = Set(
-                AppDefinition(id / "app1"),
-                AppDefinition(id / "app2")
+              apps = Map(
+                app1.id -> app1,
+                app2.id -> app2
               ),
               groups = Set(
                 Group(
@@ -475,10 +503,10 @@ class DeploymentPlanRevertTest extends MarathonSpec with Matchers with GivenWhen
                   groups = Set(
                     Group(
                       id / "some" / "b",
-                      apps = Set(
-                        AppDefinition(id / "some" / "b" / "a"),
-                        AppDefinition(id / "some" / "b" / "b"),
-                        AppDefinition(id / "some" / "b" / "c")
+                      apps = Map(
+                        appBA.id -> appBA,
+                        appBB.id -> appBB,
+                        appBC.id -> appBC
                       )
                     )
                   )

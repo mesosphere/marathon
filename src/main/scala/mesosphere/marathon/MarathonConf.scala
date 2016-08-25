@@ -1,25 +1,31 @@
 package mesosphere.marathon
 
-import mesosphere.marathon.core.flow.{ ReviveOffersConfig, LaunchTokenConfig }
+import mesosphere.marathon.core.event.EventConf
+import mesosphere.marathon.core.flow.{ LaunchTokenConfig, ReviveOffersConfig }
+import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
+import mesosphere.marathon.core.group.GroupManagerConfig
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
+import mesosphere.marathon.core.task.termination.TaskKillConfig
 import mesosphere.marathon.core.task.tracker.TaskTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
+import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.ResourceRole
+import mesosphere.marathon.storage.StorageConf
 import mesosphere.marathon.upgrade.UpgradeConfig
 import org.rogach.scallop.ScallopConf
+
 import scala.sys.SystemProperties
 
-import mesosphere.marathon.io.storage.StorageProvider
-
 trait MarathonConf
-    extends ScallopConf with ZookeeperConf with LeaderProxyConf
-    with LaunchTokenConfig with OfferMatcherManagerConfig with OfferProcessorConfig with ReviveOffersConfig
-    with MarathonSchedulerServiceConfig with LaunchQueueConfig with PluginManagerConfiguration
-    with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with TaskJobsConfig {
+    extends ScallopConf
+    with EventConf with GroupManagerConfig with LaunchQueueConfig with LaunchTokenConfig with LeaderProxyConf
+    with MarathonSchedulerServiceConfig with OfferMatcherManagerConfig with OfferProcessorConfig
+    with PluginManagerConfiguration with ReviveOffersConfig with StorageConf with TaskKillConfig
+    with TaskJobsConfig with TaskStatusUpdateConfig with TaskTrackerConfig with UpgradeConfig with ZookeeperConf {
 
   //scalastyle:off magic.number
 
@@ -129,14 +135,6 @@ trait MarathonConf
       "\"http://localhost:8888, http://domain.com\"",
     noshort = true,
     default = None)
-
-  lazy val eventStreamMaxOutstandingMessages = opt[Int](
-    "event_stream_max_outstanding_messages",
-    descr = "The event stream buffers events, that are not already consumed by clients. " +
-      "This number defines the number of events that get buffered on the server side, before messages are dropped.",
-    noshort = true,
-    default = Some(50)
-  )
 
   def executor: Executor = Executor.dispatch(defaultExecutor())
 
@@ -289,27 +287,11 @@ trait MarathonConf
   )
 
   //Internal settings, that are not intended for external use
-  lazy val internalStoreBackend = opt[String](
-    "internal_store_backend",
-    descr = "The backend storage system to use. One of zk, mesos_zk, mem.",
-    hidden = true,
-    validate = Set("zk", "mesos_zk", "mem").contains,
-    default = Some("zk")
-  )
 
   lazy val maxApps = opt[Int](
     "max_apps",
     descr = "The maximum number of applications that may be created.",
     noshort = true
-  )
-
-  lazy val storeCache = toggle(
-    "store_cache",
-    default = Some(true),
-    noshort = true,
-    descrYes = "(Default) Enable an in-memory cache for the storage layer.",
-    descrNo = "Disable the in-memory cache for the storage layer. ",
-    prefix = "disable_"
   )
 
   lazy val onElectedPrepareTimeout = opt[Long] (
@@ -335,4 +317,19 @@ trait MarathonConf
     default = Some(500)
   )
 
+  lazy val mesosHeartbeatInterval = opt[Long](
+    "mesos_heartbeat_interval",
+    descr = "(milliseconds) in the absence of receiving a message from the mesos master " +
+      "during a time window of this duration, attempt to coerce mesos into communicating with marathon.",
+    noshort = true,
+    hidden = true,
+    default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_INTERVAL_MS))
+
+  lazy val mesosHeartbeatFailureThreshold = opt[Int](
+    "mesos_heartbeat_failure_threshold",
+    descr = "after missing this number of expected communications from the mesos master, " +
+      "infer that marathon has become disconnected from the master.",
+    noshort = true,
+    hidden = true,
+    default = Some(MesosHeartbeatMonitor.DEFAULT_HEARTBEAT_FAILURE_THRESHOLD))
 }

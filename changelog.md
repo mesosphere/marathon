@@ -1,8 +1,124 @@
-## Changes from 1.1.0 to (unreleased version)
+## Changes from 1.3.0 to (unreleased version)
+
+## Changes from 1.1.0 to 1.3.0
+
+### Recommended Mesos version is 1.0.0
+
+### Breaking Changes
+
+#### You need Mesos 1.0.0 or higher
+Starting with Marathon 1.2.0, Mesos 1.0.0 or later is required.
+
+#### New leader election library
+The leader election code has been greatly improved and is based on [Curator](http://curator.apache.org),a well-known, well-tested library. The new leader election functionality is now more robust.
+
+__Caution: the new leader election library is not compatible with Marathon versions prior to 1.2.0__
+To upgrade to this version, stop all older Marathon instances before the new version starts.
+Otherwise, there is a risk of more than one leading master.
+
+
+#### Framework authentication command line flags
+Prior versions of Marathon have tried to authenticate whenever a principal has been provided via the command line.
+Framework authentication is now explicit. There is a command line toggle option for authentication: `--mesos_authentication`.
+This toggle is disabled by default. You must now supply this flag to use framework authentication.
+
+
+### Overview
+#### Universal Containerizer
+Starting with version 1.3.0, Marathon supports docker container images without having the Docker Containerizer depend on a Docker Engine. Instead the Mesos containerizer with native AppC support added in Apache Mesos version 1.0 (released July 2016) directly uses native OS features to configure and start Docker containers and to provide isolation.
+
+#### TASK_LOST behavior
+If Mesos agents get detached from the Mesos master, all tasks are assumed LOST.
+The reaction of Marathon in the past was to kill LOST tasks. Under certain configurations, however, those agents were able to rejoin the cluster, so LOST was not a terminal state.
+
+In this version, Marathon will wait until a LOST task is assumed dead. This amount of time is configurable. The default timeout is 24 hours. LOST tasks after that timeout get killed by Marathon.
+
+This change was so important that we back ported this functionality to prior versions of Marathon.
+
+#### Task Kill Grace Period
+Every application can now define a kill grace period. 
+When killing a task, the agent will wait in a best-effort manner for the grace period specified before forcibly destroying the task. 
+The task must not assume that it will always be allotted the full grace period, as the agent may decide to allot a shorter period and failures/forcible terminations may occur.
+
+#### MAX_PER constraint
+Applications in Marathon can now be constrained by MAX_PER operators.
+It can be used, for example, to limit tasks across racks or data centers.
+
+#### Virtual heartbeat monitor 
+Previous versions of Marathon did not recognize when it had been detached from Mesos master during network partitions.
+The virtual heart beat will make sure that Marathon recognizes this situation and abdicates.
+
+#### Authorization to system endpoints
+Marathon already has authorization hooks for AppDefinition and Group changes.
+We added authorization hooks for system endpoints: `/v2/leader`, `/v2/info`, `/v2/events` , `/v2/eventSubscriptions`.
+
+#### Support for secrets API
+It is now possible to use secrets in your AppDefinition. 
+Secrets are defined as a first-class entity and are used inside environment variables.
+Please note: there is no native Mesos support for secrets at the moment.
+We have defined a plugin interface to handle secrets.
+You need a plugin in order to use this feature effectively.
+
+#### Support all attribute types with constraints 
+Non-text type attributes (such as scalar or range) are now supported.
+
+#### ZooKeeper digest authentication support
+The ZK client now supports ZK authentication and ACLs.
+
+#### Support for virtual networking for docker containers.
+Added support for Docker `USER` networking.
+
+#### CNI networking support
+Added the optional field `ipAddress.Name`, which can be used to start a task using CNI networking.
+
+#### Enforce the uniqueness of service ports
+Marathon will now ensure for newly created or updated applications, that the services ports are not used by another application.
+
+__Caution: this change might lead to Marathon rejecting app definitions that used to be accepted by previous versions.__
+
+
+### Performance improvements
+- Fixes #4095 - Used Map instead of Set to store apps in Group. (#4096)
+- Improve servicePort validation performance. (#4115)
+- Made `dependencyGraph` only be called once per `Group` instance. (#4116)
+- Fixes #3991 - Use suppressOffers (#3992)
 
 ### Fixed issues
+- Fixed lost tasks garbage collection (#4203)
+- Fix container changes on app update. (#4185)
+- #3972 - network/cni support (#3974)
+- #4129 - TaskOpProcessorImplTest is flaky (#4148)
+- #4093 - Refactor MigrationTo1_2Test using async/wait (#4128)
+- #4095 - Used Map instead of Set to store apps in Group. (#4096)
+- #4085 - Stopping all running deployments instead of cancelling  (#4086)
+- #4071 - Service Port validations are not consistently enforced (#4077)
+- #3991 - Use suppressOffers (#3992)
+- #3515 - Create MAX_PER constraint. (#3989)
+- #3515 - Update AppDefinition.json schema (#3993)
+- #3970 - Validate constraints
+- #3926 - Create PORT_NAME environment variable when we defined portDefinitions with name (#3982)
+- #3981 and #3963 - Allow health-checks to be performed directly against specified ports
+- #3977 - Add jenkins shell script for Velocity Integration
+- #3970 - Improve docs for LIKE/UNLIKE
+- #3851 - Allow dynamically reserved resources for normal task matching (#3855)
+- #3848 - Size check for deployments (#3852)
+- #3843 - Fixing the upgradeStrategy/residency defaults (#3846)
+- #3291 - Event subscriptions validation (#3787)
+- #3261 - http_event_request_timeout set the HTTP timeout (#3827)
+- #3813 - handling TASK_KILLING status updates (#3829)
+- #3694 - enabling chaos gzip handling. - use chaos 0.8.6 with gzip handling - add http_compression flag - bump version of scallop to 1.0 - deprecate asset_path property
+- #3806 - Do not silently fail on reservations (#3808)
+- #3472 - Remove MarathonTask from most code (#3778)
+- #3723 - Fix validation of duplicate volume names (#3737)
+- #3505 - Adding documentation for ReadinessChecks (#3711)
+- #3648 - LaunchQueue: Do not defer TaskChanged (#3721) 
 
-- #3926 - Create PORT_NAME environment variable when we define portDefinitions with name
+## Version 1.2.0 skipped
+__Caution: Will not be promoting a Marathon v1.2 RC to a final release.__
+
+We have been focusing our efforts on two big new features for the upcoming DC/OS v1.8 release and had to work around the feature freeze in the Marathon v1.2 release candidates. Therefore, we discontinued work on the v1.2 release in favor of a new Marathon v1.3 release candidate.
+See: https://groups.google.com/forum/#!topic/marathon-framework/j6fNc4xk5tQ
+
 
 ## Changes from 1.0.0 to 1.1.0
 

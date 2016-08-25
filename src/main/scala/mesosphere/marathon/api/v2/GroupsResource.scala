@@ -11,13 +11,15 @@ import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.v2.json.GroupUpdate
 import mesosphere.marathon.api.{ AuthResource, MarathonMediaType }
-import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupSelector, GroupInfoService }
+import mesosphere.marathon.core.appinfo.{ GroupInfo, GroupInfoService, GroupSelector }
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ UnknownGroupException, ConflictingChangeException, MarathonConf }
+import mesosphere.marathon.{ ConflictingChangeException, MarathonConf, UnknownGroupException }
 import play.api.libs.json.Json
+
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
@@ -149,7 +151,7 @@ class GroupsResource @Inject() (
         rootGroup.findGroup(_.id == effectivePath),
         s"Group $effectivePath is already created. Use PUT to change this group.")
       throwIfConflicting(
-        rootGroup.transitiveApps.find(_.id == effectivePath),
+        rootGroup.transitiveAppsById.get(effectivePath),
         s"An app with the path $effectivePath already exists.")
 
       val (deployment, path) = updateOrCreate(id.toRootPath, groupUpdate, force)
@@ -209,7 +211,7 @@ class GroupsResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     def clearRootGroup(rootGroup: Group): Group = {
       checkAuthorization(DeleteGroup, rootGroup)
-      rootGroup.copy(apps = Set.empty, groups = Set.empty)
+      rootGroup.copy(apps = Map.empty, groups = Set.empty)
     }
 
     val deployment = result(groupManager.update(

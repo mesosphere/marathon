@@ -60,7 +60,7 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends MarathonSpec with Match
   for ((testParams, idx) <- testParameters.zipWithIndex) {
     test(s"toUnifiedMesosVolume $idx") {
       assertResult(testParams.wantsVol, "generated volume doesn't match expectations") {
-        DVDIProvider.Builders.toUnifiedMesosVolume(testParams.externalVolume)
+        DVDIProvider.Builders.toUnifiedContainerVolume(testParams.externalVolume)
       }
     }
   }

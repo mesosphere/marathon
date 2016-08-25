@@ -69,7 +69,8 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
     path.zip(definition.path).forall { case (left, right) => left == right }
   }
 
-  override def toString: String = toString("/")
+  override val toString: String = toString("/")
+
   private def toString(delimiter: String): String = path.mkString(if (absolute) delimiter else "", delimiter, "")
 
   override def compare(that: PathId): Int = {
@@ -77,10 +78,22 @@ case class PathId(path: List[String], absolute: Boolean = true) extends Ordered[
     val seqOrder = implicitly(Ordering[List[String]])
     seqOrder.compare(canonicalPath().path, that.canonicalPath().path)
   }
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case that: PathId => (that eq this) || (that.toString == toString)
+      case _ => false
+    }
+  }
+
+  override def hashCode(): Int = toString.hashCode()
 }
 
 object PathId {
-  def fromSafePath(in: String): PathId = PathId(in.split("_").toList, absolute = true)
+  def fromSafePath(in: String): PathId = {
+    if (in.isEmpty) PathId.empty
+    else PathId(in.split("_").toList, absolute = true)
+  }
   def apply(in: String): PathId =
     PathId(in.replaceAll("""(^/+)|(/+$)""", "").split("/").filter(_.nonEmpty).toList, in.startsWith("/"))
   def empty: PathId = PathId(Nil)

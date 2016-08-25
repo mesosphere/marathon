@@ -2,19 +2,18 @@ package mesosphere.marathon.core.task.update.impl.steps
 
 import com.google.inject.{ Inject, Provider }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.bus.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.state.AppRepository
-import org.apache.mesos.Protos
+import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import org.apache.mesos.Protos.TaskStatus
 
 import scala.concurrent.Future
 
 class NotifyRateLimiterStepImpl @Inject() (
     launchQueueProvider: Provider[LaunchQueue],
-    appRepositoryProvider: Provider[AppRepository]) extends TaskUpdateStep {
+    appRepositoryProvider: Provider[ReadOnlyAppRepository]) extends TaskUpdateStep {
 
   private[this] lazy val launchQueue = launchQueueProvider.get()
   private[this] lazy val appRepository = appRepositoryProvider.get()
@@ -24,27 +23,17 @@ class NotifyRateLimiterStepImpl @Inject() (
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
     // if MesosUpdate and status terminal != killed
     taskChanged.stateOp match {
-      case TaskStateOp.MesosUpdate(task, TerminalNotKilled(status), _) =>
-        notifyRateLimiter(status, task)
+      case TaskStateOp.MesosUpdate(task, status: MarathonTaskStatus.Terminal, mesosStatus, _) //
+      if status != MarathonTaskStatus.Killed =>
+        notifyRateLimiter(mesosStatus, task)
       case _ => Future.successful(())
-    }
-  }
-
-  // it's only relevant for the rate limiter if we received a terminal Mesos Update that's not TASK_KILLED
-  private[this] object TerminalNotKilled {
-    def unapply(status: MarathonTaskStatus): Option[Protos.TaskStatus] = {
-      status match {
-        case terminal: MarathonTaskStatus.Terminal if !terminal.killed =>
-          status.mesosStatus
-        case _ => None
-      }
     }
   }
 
   private[this] def notifyRateLimiter(status: TaskStatus, task: Task): Future[_] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     task.launched.fold(Future.successful(())) { launched =>
-      appRepository.app(task.runSpecId, launched.runSpecVersion).map { maybeApp =>
+      appRepository.getVersion(task.runSpecId, launched.runSpecVersion.toOffsetDateTime).map { maybeApp =>
         // It would be nice if we could make sure that the delay gets send
         // to the AppTaskLauncherActor before we continue but that would require quite some work.
         //

@@ -4,13 +4,15 @@ import akka.actor.SupervisorStrategy.Stop
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.MarathonSchedulerActor.{ RetrieveRunningDeployments, RunningDeployments }
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ PathId, AppRepository, Group, Timestamp }
+import mesosphere.marathon.state.{ Group, PathId, Timestamp }
+import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import mesosphere.marathon.upgrade.DeploymentActor.Cancel
 import mesosphere.marathon.{ ConcurrentTaskUpgradeException, DeploymentCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
@@ -21,8 +23,9 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.control.NonFatal
 
 class DeploymentManager(
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     taskTracker: TaskTracker,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
@@ -63,9 +66,8 @@ class DeploymentManager(
             } else Seq(plan))
       }
 
-    case CancelAllDeployments =>
-      for ((_, DeploymentInfo(ref, _)) <- runningDeployments)
-        ref ! Cancel(new DeploymentCanceledException("The upgrade has been cancelled"))
+    case StopAllDeployments =>
+      for ((_, DeploymentInfo(ref, _)) <- runningDeployments) context.stop(ref)
       runningDeployments.clear()
       deploymentStatus.clear()
 
@@ -92,6 +94,7 @@ class DeploymentManager(
           self,
           sender(),
           driver,
+          killService,
           scheduler,
           plan,
           taskTracker,
@@ -129,7 +132,7 @@ class DeploymentManager(
 object DeploymentManager {
   final case class PerformDeployment(driver: SchedulerDriver, plan: DeploymentPlan)
   final case class CancelDeployment(id: String)
-  case object CancelAllDeployments
+  case object StopAllDeployments
   final case class CancelConflictingDeployments(plan: DeploymentPlan)
 
   final case class DeploymentStepInfo(
@@ -154,8 +157,9 @@ object DeploymentManager {
 
   //scalastyle:off
   def props(
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     taskTracker: TaskTracker,
+    killService: TaskKillService,
     launchQueue: LaunchQueue,
     scheduler: SchedulerActions,
     storage: StorageProvider,
@@ -163,7 +167,7 @@ object DeploymentManager {
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     config: UpgradeConfig): Props = {
-    Props(new DeploymentManager(appRepository, taskTracker, launchQueue,
+    Props(new DeploymentManager(appRepository, taskTracker, killService, launchQueue,
       scheduler, storage, healthCheckManager, eventBus, readinessCheckExecutor, config))
   }
 

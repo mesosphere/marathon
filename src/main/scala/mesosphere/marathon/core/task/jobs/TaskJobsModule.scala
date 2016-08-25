@@ -3,8 +3,9 @@ package mesosphere.marathon.core.task.jobs
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.jobs.impl.{ ExpungeOverdueLostTasksActor, OverdueTasksActor }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskReservationTimeoutHandler, TaskTracker }
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
+import mesosphere.marathon.core.task.termination.TaskKillService
+import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.MarathonConf
 
 /**
   * This module contains periodically running jobs interacting with the task tracker.
@@ -13,13 +14,13 @@ class TaskJobsModule(config: MarathonConf, leadershipModule: LeadershipModule, c
   def handleOverdueTasks(
     taskTracker: TaskTracker,
     taskReservationTimeoutHandler: TaskReservationTimeoutHandler,
-    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder): Unit = {
+    killService: TaskKillService): Unit = {
     leadershipModule.startWhenLeader(
       OverdueTasksActor.props(
         config,
         taskTracker,
         taskReservationTimeoutHandler,
-        marathonSchedulerDriverHolder,
+        killService,
         clock
       ),
       "killOverdueStagedTasks")

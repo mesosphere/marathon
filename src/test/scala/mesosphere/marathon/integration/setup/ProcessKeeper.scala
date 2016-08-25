@@ -64,7 +64,7 @@ object ProcessKeeper {
       sys.env, _.contains("binding to port"))
   }
 
-  def startMesosLocal(): Process = {
+  def startMesosLocal(port: Int): Process = {
     val mesosWorkDirForMesos: String = "/tmp/marathon-itest-mesos"
     val mesosWorkDirFile: File = new File(mesosWorkDirForMesos)
     FileUtils.deleteDirectory(mesosWorkDirFile)
@@ -73,11 +73,19 @@ object ProcessKeeper {
     val mesosEnv = setupMesosEnv(mesosWorkDirFile, mesosWorkDirForMesos)
     startProcess(
       "mesos",
-      Process(Seq("mesos-local", "--ip=127.0.0.1"), cwd = None, mesosEnv: _*),
+      Process(Seq("mesos-local", "--ip=127.0.0.1", s"--port=$port"), cwd = None, mesosEnv: _*),
       upWhen = _.toLowerCase.contains("registered with master"))
   }
 
-  def setupMesosEnv(workDirFile: File, workDir: String, containerizers: String = "docker,mesos") = {
+  private[this] def defaultContainerizers: String = {
+    if (sys.env.getOrElse("RUN_DOCKER_INTEGRATION_TESTS", "true") == "true") {
+      "docker,mesos"
+    } else {
+      "mesos"
+    }
+  }
+  def setupMesosEnv(workDirFile: File, workDir: String, containerizers: Option[String] = None) = {
+    val effectiveContainerizers = containerizers.getOrElse(defaultContainerizers)
     val credentialsPath = write(workDirFile, fileName = "credentials", content = "principal1 secret1")
     val aclsPath = write(workDirFile, fileName = "acls.json", content =
       """
@@ -106,7 +114,7 @@ object ProcessKeeper {
     Seq(
       ENV_MESOS_WORK_DIR -> workDir,
       "MESOS_LAUNCHER" -> "posix",
-      "MESOS_CONTAINERIZERS" -> containerizers,
+      "MESOS_CONTAINERIZERS" -> effectiveContainerizers,
       "MESOS_ROLES" -> "public,foo",
       "MESOS_ACLS" -> s"file://$aclsPath",
       "MESOS_CREDENTIALS" -> s"file://$credentialsPath")
@@ -117,7 +125,7 @@ object ProcessKeeper {
     if (wipe) FileUtils.deleteDirectory(workDirFile)
     FileUtils.forceMkdir(workDirFile)
 
-    val mesosEnv = setupMesosEnv(workDirFile, workDir, containerizers = "mesos")
+    val mesosEnv = setupMesosEnv(workDirFile, workDir, containerizers = Some("mesos"))
     startProcess(
       processName,
       Process(args, cwd = None, mesosEnv: _*),
@@ -180,7 +188,7 @@ object ProcessKeeper {
 
   def startProcess(name: String, processBuilder: ProcessBuilder, upWhen: String => Boolean, timeout: Duration = 30.seconds): Process = {
     require(!processes.contains(name), s"Process with $name already started")
-
+    log.info(s"Starting: $name $processBuilder")
     sealed trait ProcessState
     case object ProcessIsUp extends ProcessState
     case object ProcessExited extends ProcessState

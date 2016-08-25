@@ -2,27 +2,32 @@ package mesosphere.marathon
 
 import java.util.UUID
 
+import akka.stream.Materializer
 import com.codahale.metrics.MetricRegistry
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.core.report.ProcessingReport
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
+import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
-import mesosphere.util.state.{ FrameworkId, PersistentStore }
-import mesosphere.util.state.memory.InMemoryStore
+import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Protos => Mesos }
@@ -31,6 +36,8 @@ import play.api.libs.json.Json
 import scala.collection.JavaConverters
 import scala.collection.immutable.Seq
 import scala.util.Random
+
+//scalastyle:off number.of.methods
 
 object MarathonTestHelper {
 
@@ -53,7 +60,8 @@ object MarathonTestHelper {
     acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None,
     principal: Option[String] = None,
-    maxZkNodeSize: Option[Int] = None): AllConf = {
+    maxZkNodeSize: Option[Int] = None,
+    internalStorageBackend: Option[String] = None): AllConf = {
 
     var args = Seq(
       "--master", "127.0.0.1:5050",
@@ -66,6 +74,7 @@ object MarathonTestHelper {
     acceptedResourceRoles.foreach(v => args ++= Seq("--default_accepted_resource_roles", v.mkString(",")))
     maxZkNodeSize.foreach(size => args ++= Seq("--zk_max_node_size", size.toString))
     envVarsPrefix.foreach(args ++= Seq("--env_vars_prefix", _))
+    internalStorageBackend.foreach(backend => args ++= Seq("--internal_store_backend", backend))
     makeConfig(args: _*)
   }
 
@@ -155,15 +164,9 @@ object MarathonTestHelper {
   }
 
   def reservation(principal: String, labels: Map[String, String] = Map.empty): Mesos.Resource.ReservationInfo = {
-    val labelsBuilder = Mesos.Labels.newBuilder()
-    labels.foreach {
-      case (k, v) =>
-        labelsBuilder.addLabels(Mesos.Label.newBuilder().setKey(k).setValue(v))
-    }
-
     Mesos.Resource.ReservationInfo.newBuilder()
       .setPrincipal(principal)
-      .setLabels(labelsBuilder)
+      .setLabels(LabelsSerializer.toMesosLabelsBuilder(labels))
       .build()
   }
 
@@ -246,7 +249,8 @@ object MarathonTestHelper {
   def makeTaskFromTaskInfo(
     taskInfo: TaskInfo,
     offer: Offer = makeBasicOffer().build(),
-    version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10)): Task.LaunchedEphemeral =
+    version: Timestamp = Timestamp(10), now: Timestamp = Timestamp(10),
+    marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Staging): Task.LaunchedEphemeral =
     {
       import scala.collection.JavaConverters._
 
@@ -259,7 +263,8 @@ object MarathonTestHelper {
         ),
         runSpecVersion = version,
         status = Task.Status(
-          stagedAt = now
+          stagedAt = now,
+          taskStatus = marathonTaskStatus
         ),
         hostPorts = Seq(1, 2, 3)
       )
@@ -299,17 +304,16 @@ object MarathonTestHelper {
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
     config: MarathonConf = defaultConfig(),
-    metrics: Metrics = new Metrics(new MetricRegistry)): TaskTrackerModule = {
+    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): TaskTrackerModule = {
 
     val metrics = new Metrics(new MetricRegistry)
-    val taskRepo = new TaskRepository(
+    val taskRepo = new TaskEntityRepository(
       new MarathonStore[MarathonTaskState](
         store = store,
         metrics = metrics,
         newState = () => MarathonTaskState(MarathonTask.newBuilder().setId(UUID.randomUUID().toString).build()),
-        prefix = TaskRepository.storePrefix),
-      metrics
-    )
+        prefix = TaskEntityRepository.storePrefix)
+    )(metrics = metrics)
     val updateSteps = Seq.empty[TaskUpdateStep]
 
     new TaskTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo, updateSteps) {
@@ -322,13 +326,16 @@ object MarathonTestHelper {
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
     config: MarathonConf = defaultConfig(),
-    metrics: Metrics = new Metrics(new MetricRegistry)): TaskTracker = {
+    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): TaskTracker = {
     createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
   }
 
   def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Task.Id.forRunSpec(appId).idString)
   def mininimalTask(taskId: Task.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
   def mininimalTask(taskId: String, now: Timestamp = clock.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
+    mininimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) MarathonTaskStatus(mesosStatus.get) else MarathonTaskStatus.Created)
+  }
+  def mininimalTask(taskId: String, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: MarathonTaskStatus): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
@@ -336,25 +343,46 @@ object MarathonTestHelper {
       status = Task.Status(
         stagedAt = now,
         startedAt = None,
-        mesosStatus = mesosStatus
+        mesosStatus = mesosStatus,
+        taskStatus = marathonTaskStatus
       ),
       hostPorts = Seq.empty
     )
   }
 
-  def mininimalLostTask(appId: PathId): Task.LaunchedEphemeral = {
+  def mininimalLostTask(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Gone, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
     val taskId = Task.Id.forRunSpec(appId)
-    val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION))
+    val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_LOST, maybeReason = Some(TaskStatus.Reason.REASON_RECONCILIATION), timestamp = since)
     mininimalTask(
       taskId = taskId.idString,
-      mesosStatus = Some(status))
+      now = since,
+      mesosStatus = Some(status),
+      marathonTaskStatus = marathonTaskStatus
+    )
+  }
+
+  def minimalUnreachableTask(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Unreachable, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
+    val lostTask = mininimalLostTask(appId = appId, since = since)
+    lostTask.copy(status = lostTask.status.copy(taskStatus = marathonTaskStatus))
+  }
+
+  def minimalRunning(appId: PathId, marathonTaskStatus: MarathonTaskStatus = MarathonTaskStatus.Running, since: Timestamp = clock.now()): Task.LaunchedEphemeral = {
+    val taskId = Task.Id.forRunSpec(appId)
+    val status = TaskStatusUpdateTestHelper.makeMesosTaskStatus(taskId, TaskState.TASK_RUNNING, maybeHealth = Option(true))
+    mininimalTask(
+      taskId = taskId.idString,
+      now = since,
+      mesosStatus = Some(status),
+      marathonTaskStatus = marathonTaskStatus
+    )
   }
 
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
       taskId = Task.Id.forRunSpec(appId),
       Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
-      reservation = reservation)
+      reservation = reservation,
+      status = Task.Status(Timestamp.now(), taskStatus = MarathonTaskStatus.Reserved))
 
   def newReservation: Task.Reservation = Task.Reservation(Seq.empty, taskReservationStateNew)
 
@@ -362,12 +390,12 @@ object MarathonTestHelper {
 
   def taskLaunched: Task.Launched = {
     val now = Timestamp.now()
-    Task.Launched(now, status = Task.Status(now), hostPorts = Seq.empty)
+    Task.Launched(now, status = Task.Status(stagedAt = now, taskStatus = MarathonTaskStatus.Running), hostPorts = Seq.empty)
   }
 
   def taskLaunchedOp(taskId: Task.Id): TaskStateOp.LaunchOnReservation = {
     val now = Timestamp.now()
-    TaskStateOp.LaunchOnReservation(taskId = taskId, runSpecVersion = now, status = Task.Status(now), hostPorts = Seq.empty)
+    TaskStateOp.LaunchOnReservation(taskId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = MarathonTaskStatus.Running), hostPorts = Seq.empty)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
@@ -384,7 +412,8 @@ object MarathonTestHelper {
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
         startedAt = None,
-        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STARTING))
+        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STARTING)),
+        taskStatus = MarathonTaskStatus.Starting
       ),
       hostPorts = Seq.empty
     )
@@ -404,7 +433,8 @@ object MarathonTestHelper {
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
         startedAt = None,
-        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STAGING))
+        mesosStatus = Some(statusForState(taskId, Mesos.TaskState.TASK_STAGING)),
+        taskStatus = MarathonTaskStatus.Staging
       ),
       hostPorts = Seq.empty
     )
@@ -529,22 +559,21 @@ object MarathonTestHelper {
       status = Task.Status(
         stagedAt = now,
         startedAt = None,
-        mesosStatus = None
+        mesosStatus = None,
+        taskStatus = MarathonTaskStatus.Running
       ),
       hostPorts = Seq.empty,
       reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.Launched))
   }
 
-  def mesosContainerWithPersistentVolume = Container(
-    `type` = Mesos.ContainerInfo.Type.MESOS,
+  def mesosContainerWithPersistentVolume = Container.Mesos(
     volumes = Seq[mesosphere.marathon.state.Volume](
       PersistentVolume(
         containerPath = "persistent-volume",
         persistent = PersistentVolumeInfo(10), // must match persistentVolumeResources
         mode = Mesos.Volume.Mode.RW
       )
-    ),
-    docker = None
+    )
   )
 
   def mesosIpAddress(ipAddress: String) = {
@@ -569,17 +598,19 @@ object MarathonTestHelper {
       def withIpAddress(ipAddress: IpAddress): AppDefinition = app.copy(ipAddress = Some(ipAddress))
 
       def withDockerNetwork(network: Mesos.ContainerInfo.DockerInfo.Network): AppDefinition = {
-        val container = app.container.getOrElse(Container())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(network = Some(network))
+        val docker = app.container.getOrElse(Container.Mesos()) match {
+          case docker: Docker => docker
+          case _ => Docker(image = "busybox")
+        }
 
-        app.copy(container = Some(container.copy(docker = Some(docker))))
+        app.copy(container = Some(docker.copy(network = Some(network))))
       }
 
-      def withPortMapings(portMappings: Seq[PortMapping]): AppDefinition = {
-        val container = app.container.getOrElse(Container())
-        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(portMappings))
+      def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
+        val container = app.container.getOrElse(Container.Mesos())
+        val docker = container.docker.getOrElse(Docker(image = "busybox")).copy(portMappings = Some(newPortMappings))
 
-        app.copy(container = Some(container.copy(docker = Some(docker))))
+        app.copy(container = Some(docker))
       }
     }
 

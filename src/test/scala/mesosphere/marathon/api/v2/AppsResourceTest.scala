@@ -5,16 +5,18 @@ import javax.ws.rs.core.Response
 
 import akka.event.EventStream
 import mesosphere.marathon._
-import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture, TestGroupManagerFixture }
+import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.health.HealthCheckManager
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
@@ -32,7 +34,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   import mesosphere.marathon.api.v2.json.Formats._
 
   def prepareApp(app: AppDefinition): (Array[Byte], DeploymentPlan) = {
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -144,9 +146,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
       portDefinitions = Seq.empty[PortDefinition],
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.MESOS
-      ))
+      container = Some(Container.Mesos())
     )
     val (body, plan) = prepareApp(app)
 
@@ -304,14 +304,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
       id = PathId("/app"),
       cmd = Some("cmd"),
       ipAddress = Some(IpAddress(networkName = Some("foo"))),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+        image = "jdef/helpme",
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         ))
       )),
       portDefinitions = Seq.empty
@@ -338,23 +335,22 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app in BRIDGE mode w/ Docker") {
     Given("An app and group")
+    val container = Container.Docker(
+      network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
+      image = "jdef/helpme",
+      portMappings = Some(Seq(
+        Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
+      ))
+    )
+
     val app = AppDefinition(
       id = PathId("/app"),
       cmd = Some("cmd"),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
-        ))
-      )),
+      container = Some(container),
       portDefinitions = Seq.empty
     )
 
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     val body = Json.stringify(Json.toJson(app).as[JsObject] - "ports").getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -373,11 +369,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     val expected = AppInfo(
       app.copy(
         versionInfo = AppDefinition.VersionInfo.OnlyVersion(clock.now()),
-        container = Some(app.container.get.copy(docker = Some(app.container.get.docker.get.copy(
+        container = Some(container.copy(
           portMappings = Some(Seq(
             Container.Docker.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
           ))
-        ))))
+        ))
       ),
       maybeTasks = Some(immutable.Seq.empty),
       maybeCounts = Some(TaskCounts.zero),
@@ -397,16 +393,14 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
-          image = "jdef/helpme",
-          portMappings = Some(Seq(
-            Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
-          ))
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.USER),
+        image = "jdef/helpme",
+        portMappings = Some(Seq(
+          Container.Docker.PortMapping(containerPort = 0, protocol = "tcp")
         ))
-      )),
+      )
+      ),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -432,13 +426,11 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
           DiscoveryInfo.Port(number = 1, name = "bob", protocol = "tcp")
         ))
       )),
-      container = Some(Container(
-        `type` = Mesos.ContainerInfo.Type.DOCKER,
-        docker = Some(Container.Docker(
-          network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
-          image = "jdef/helpme"
-        ))
-      )),
+      container = Some(Container.Docker(
+        network = Some(Mesos.ContainerInfo.DockerInfo.Network.HOST),
+        image = "jdef/helpme"
+      )
+      ),
       portDefinitions = Seq.empty
     )
     val (body, plan) = prepareApp(app)
@@ -604,7 +596,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Create a new app with float instance count fails") {
     Given("The json of an invalid application")
     val invalidAppJson = Json.stringify(Json.obj("id" -> "/foo", "cmd" -> "cmd", "instances" -> 0.1))
-    val group = Group(PathId("/"), Set.empty)
+    val group = Group(PathId("/"), Map.empty)
     val plan = DeploymentPlan(group, group)
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
     groupManager.rootGroup() returns Future.successful(group)
@@ -617,7 +609,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("Replace an existing application") {
     Given("An app and group")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
     groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -660,13 +652,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
         |  }
         |}""".stripMargin.getBytes("UTF-8")
 
-    When("The application is updated")
-    val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
-
-    Then("The return code indicates a validation error for container.docker")
-    response.getStatus should be(422)
-    response.getEntity.toString should include("/container/docker")
-    response.getEntity.toString should include("must not be empty")
+    Then("A serialization exception is thrown")
+    intercept[SerializationFailedException] { appsResource.replace(app.id.toString, body, force = false, auth.request) }
   }
 
   def createAppWithVolumes(`type`: String, volumes: String): Response = {
@@ -995,8 +982,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     response.getStatus should be(201)
   }
 
-  test("Replace an existing application fails due to mesos container validation") {
-    Given("An app update with an invalid container (missing docker field)")
+  test("Replacing an existing application with a Mesos docker container passes validation") {
+    Given("An app update to a Mesos container with a docker image")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"))
     prepareApp(app)
 
@@ -1014,15 +1001,13 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     When("The application is updated")
     val response = appsResource.replace(app.id.toString, body, force = false, auth.request)
 
-    Then("The return code indicates a validation error for container.docker")
-    response.getStatus should be(422)
-    response.getEntity.toString should include("/container/docker")
-    response.getEntity.toString should include("must be empty")
+    Then("The return code indicates success")
+    response.getStatus should be(200)
   }
 
   test("Restart an existing app") {
     val app = AppDefinition(id = PathId("/app"))
-    val group = Group(PathId("/"), Set(app))
+    val group = Group(PathId("/"), Map(app.id -> app))
     val plan = DeploymentPlan(group, group)
     service.deploy(any, any) returns Future.successful(())
     groupManager.app(PathId("/app")) returns Future.successful(Some(app))
@@ -1135,9 +1120,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   test("access without authorization is denied") {
     Given("A real Group Manager with one app")
     useRealGroupManager()
-    val group = Group(PathId.empty, apps = Set(AppDefinition("/a".toRootPath)))
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    val appA = AppDefinition("/a".toRootPath)
+    val group = Group(PathId.empty, apps = Map(appA.id -> appA))
+    groupRepository.root() returns Future.successful(group)
 
     Given("An unauthorized request")
     auth.authenticated = true
@@ -1213,8 +1198,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     When("We try to remove a non-existing application")
     useRealGroupManager()
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(Group.empty))
-    groupRepository.rootGroup returns Future.successful(Some(Group.empty))
+    groupRepository.root returns Future.successful(Group.empty)
 
     Then("A 404 is returned")
     intercept[UnknownAppException] { appsResource.delete(false, "/foo", req) }

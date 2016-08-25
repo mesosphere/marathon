@@ -5,7 +5,7 @@ import java.io.FileInputStream
 import com.google.protobuf.ByteString
 import mesosphere.chaos.http.HttpConf
 import org.apache.mesos.Protos.{ Credential, FrameworkInfo, FrameworkID }
-import org.apache.mesos.{ MesosSchedulerDriver, SchedulerDriver }
+import org.apache.mesos.{ MesosSchedulerDriver, Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
 import FrameworkInfo.Capability
 
@@ -17,10 +17,10 @@ object MarathonSchedulerDriver {
   def newDriver(
     config: MarathonConf,
     httpConfig: HttpConf,
-    newScheduler: MarathonScheduler,
+    newScheduler: Scheduler,
     frameworkId: Option[FrameworkID]): SchedulerDriver = {
 
-    log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId")
+    log.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
 
     val frameworkInfoBuilder = FrameworkInfo.newBuilder()
       .setName(config.frameworkName())
@@ -68,6 +68,12 @@ object MarathonSchedulerDriver {
     // Mesos will implement a custom kill behavior, so this state can be used by Marathon as well.
     if (config.isFeatureSet(Features.TASK_KILLING))
       frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.TASK_KILLING_STATE))
+
+    // GPU Resources allows Marathon to get offers from Mesos agents with GPUs. For details, see MESOS-5634.
+    if (config.isFeatureSet(Features.GPU_RESOURCES)) {
+      frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.GPU_RESOURCES))
+      log.debug("GPU_RESOURCES feature enabled.")
+    }
 
     val frameworkInfo = frameworkInfoBuilder.build()
 

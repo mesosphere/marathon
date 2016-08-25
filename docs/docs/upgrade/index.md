@@ -25,6 +25,12 @@ Upgrading to a newer version of Marathon should be executed in the following ord
 1. Start all other instances of Marathon to build a quorum.
 
 
+## Upgrading to 1.2
+
+Release Notes: https://github.com/mesosphere/marathon/releases/tag/v1.2.0
+
+Library for leadership election was changed to curator. This change is incompatible with the previous leader election library. Therefore it is needed to shutdown your marathon cluster, upgrade to 1.2 and restart your cluster again.
+
 ## Upgrading to 0.13
 
 Release Notes: https://github.com/mesosphere/marathon/releases/tag/v0.13.0

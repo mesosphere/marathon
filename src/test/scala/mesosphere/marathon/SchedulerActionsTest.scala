@@ -1,25 +1,28 @@
 package mesosphere.marathon
 
+import akka.Done
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
-import mesosphere.marathon.health.HealthCheckManager
-import mesosphere.marathon.state.{ AppDefinition, AppRepository, GroupRepository, PathId }
+import mesosphere.marathon.state.{ AppDefinition, PathId }
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.mesos.protos
-import mesosphere.mesos.protos.Implicits.taskIDToProto
 import org.apache.mesos.Protos.{ TaskID, TaskState, TaskStatus }
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
-import org.scalatest.{ GivenWhenThen, Matchers }
 import org.scalatest.concurrent.{ PatienceConfiguration, ScalaFutures }
 import org.scalatest.time.{ Millis, Span }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -36,10 +39,10 @@ class SchedulerActionsTest
     val f = new Fixture
     val app = AppDefinition(id = PathId("/myapp"))
 
-    f.repo.expunge(app.id) returns Future.successful(Seq(true))
+    f.repo.delete(app.id) returns Future.successful(Done)
     f.taskTracker.appTasks(eq(app.id))(any) returns Future.successful(Iterable.empty[Task])
 
-    f.scheduler.stopApp(mock[SchedulerDriver], app).futureValue(1.second)
+    f.scheduler.stopApp(app).futureValue(1.second)
 
     verify(f.queue).purge(app.id)
     verify(f.queue).resetDelay(app)
@@ -60,7 +63,7 @@ class SchedulerActionsTest
 
     val tasks = Set(runningTask, stagedTask, stagedTaskWithSlaveId)
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(AppTasks.forTasks(app.id, tasks)))
-    f.repo.allPathIds() returns Future.successful(Seq(app.id))
+    f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
@@ -76,7 +79,7 @@ class SchedulerActionsTest
     val f = new Fixture
 
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.empty)
-    f.repo.allPathIds() returns Future.successful(Seq())
+    f.repo.ids() returns Source.empty
 
     f.scheduler.reconcileTasks(f.driver).futureValue
 
@@ -99,11 +102,11 @@ class SchedulerActionsTest
     val tasksOfOrphanedApp = AppTasks.forTasks(orphanedApp.id, Iterable(orphanedTask))
 
     f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(tasksOfApp, tasksOfOrphanedApp))
-    f.repo.allPathIds() returns Future.successful(Seq(app.id))
+    f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
 
-    verify(f.driver, times(1)).killTask(protos.TaskID(orphanedTask.taskId.idString))
+    verify(f.killService, times(1)).killTask(orphanedTask, TaskKillReason.Orphaned)
   }
 
   test("Scale up correctly in case of lost tasks (active queue)") {
@@ -163,13 +166,15 @@ class SchedulerActionsTest
 
     def stagedTask(id: String, stagedAt: Long) = MarathonTestHelper.stagedTask(id, stagedAt = stagedAt)
 
+    val staged_2 = stagedTask("staged-2", 2L)
+    val staged_3 = stagedTask("staged-3", 3L)
     val tasks = Seq(
       MarathonTestHelper.runningTask(s"running-1"),
       stagedTask("staged-1", 1L),
       MarathonTestHelper.runningTask(s"running-2"),
-      stagedTask("staged-3", 3L),
+      staged_3,
       MarathonTestHelper.runningTask(s"running-3"),
-      stagedTask("staged-2", 2L),
+      staged_2,
       MarathonTestHelper.runningTask(s"running-4")
     )
 
@@ -183,9 +188,9 @@ class SchedulerActionsTest
     verify(f.queue, times(1)).purge(app.id)
 
     And("the youngest STAGED tasks are killed")
-    verify(f.driver).killTask(protos.TaskID("staged-2"))
-    verify(f.driver).killTask(protos.TaskID("staged-3"))
+    verify(f.killService).killTasks(List(staged_3, staged_2), TaskKillReason.ScalingApp)
     verifyNoMoreInteractions(f.driver)
+    verifyNoMoreInteractions(f.killService)
   }
 
   test("Kill running tasks in correct order in case of lost tasks") {
@@ -196,13 +201,15 @@ class SchedulerActionsTest
 
     def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt)
 
+    val running_6 = runningTask(s"running-6", stagedAt = 6L)
+    val running_7 = runningTask(s"running-7", stagedAt = 7L)
     val tasks = Seq(
       runningTask(s"running-3", stagedAt = 3L),
-      runningTask(s"running-7", stagedAt = 7L),
+      running_7,
       runningTask(s"running-1", stagedAt = 1L),
       runningTask(s"running-4", stagedAt = 4L),
       runningTask(s"running-5", stagedAt = 5L),
-      runningTask(s"running-6", stagedAt = 6L),
+      running_6,
       runningTask(s"running-2", stagedAt = 2L)
     )
 
@@ -216,9 +223,9 @@ class SchedulerActionsTest
     verify(f.queue, times(1)).purge(app.id)
 
     And("the youngest RUNNING tasks are killed")
-    verify(f.driver).killTask(protos.TaskID("running-6"))
-    verify(f.driver).killTask(protos.TaskID("running-7"))
+    verify(f.killService).killTasks(List(running_7, running_6), TaskKillReason.ScalingApp)
     verifyNoMoreInteractions(f.driver)
+    verifyNoMoreInteractions(f.killService)
   }
 
   test("Kill staged and running tasks in correct order in case of lost tasks") {
@@ -238,12 +245,14 @@ class SchedulerActionsTest
     def stagedTask(id: String, stagedAt: Long) = MarathonTestHelper.stagedTask(id, stagedAt = stagedAt)
     def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt)
 
+    val staged_1 = stagedTask("staged-1", 1L)
+    val running_4 = runningTask("running-4", stagedAt = 4L)
     val tasks = Seq(
-      runningTask(s"running-3", stagedAt = 3L),
-      runningTask(s"running-4", stagedAt = 4L),
-      stagedTask("staged-1", 1L),
-      runningTask(s"running-1", stagedAt = 1L),
-      runningTask(s"running-2", stagedAt = 2L)
+      runningTask("running-3", stagedAt = 3L),
+      running_4,
+      staged_1,
+      runningTask("running-1", stagedAt = 1L),
+      runningTask("running-2", stagedAt = 2L)
     )
 
     f.queue.get(app.id) returns Some(queued)
@@ -256,9 +265,9 @@ class SchedulerActionsTest
     verify(f.queue, times(1)).purge(app.id)
 
     And("all STAGED tasks plus the youngest RUNNING tasks are killed")
-    verify(f.driver).killTask(protos.TaskID("staged-1"))
-    verify(f.driver).killTask(protos.TaskID("running-4"))
+    verify(f.killService).killTasks(List(staged_1, running_4), TaskKillReason.ScalingApp)
     verifyNoMoreInteractions(f.driver)
+    verifyNoMoreInteractions(f.killService)
   }
 
   import scala.language.implicitConversions
@@ -271,6 +280,7 @@ class SchedulerActionsTest
     val repo = mock[AppRepository]
     val taskTracker = mock[TaskTracker]
     val driver = mock[SchedulerDriver]
+    val killService = mock[TaskKillService]
     val clock = ConstantClock()
 
     val scheduler = new SchedulerActions(
@@ -281,6 +291,7 @@ class SchedulerActionsTest
       queue,
       system.eventStream,
       TestProbe().ref,
+      killService,
       mock[MarathonConf]
     )
   }

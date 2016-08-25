@@ -3,7 +3,7 @@ package mesosphere.marathon.state
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 
@@ -12,6 +12,7 @@ import scala.collection.immutable.Seq
 
 //scalastyle:off
 trait RunSpec extends plugin.RunSpec {
+
   def id: PathId
 
   def cmd: Option[String]
@@ -29,6 +30,8 @@ trait RunSpec extends plugin.RunSpec {
   def mem: Double
 
   def disk: Double
+
+  def gpus: Int
 
   def executor: String
 

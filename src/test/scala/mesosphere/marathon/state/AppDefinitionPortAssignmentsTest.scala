@@ -84,7 +84,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val app = MarathonTestHelper.makeBasicApp()
       .withNoPortDefinitions()
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.BRIDGE)
-      .withPortMapings(Seq(
+      .withPortMappings(Seq(
         Docker.PortMapping(containerPort = 80, hostPort = Some(0), servicePort = 0, protocol = "tcp",
           name = Some("http"))
       ))
@@ -102,19 +102,18 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
   test("portAssignments without IP-per-task using Docker BRIDGE network and no port mappings") {
     Given("An app using bridge network with no port mappings nor ports")
     val app = MarathonTestHelper.makeBasicApp().copy(
-      container = Some(Container(
-        docker = Some(Docker(
-          image = "mesosphere/marathon",
-          network = Some(Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
-          portMappings = Some(Seq.empty))))
-      ),
-      portDefinitions = Seq.empty)
+      container = Some(Container.Docker(
+        image = "mesosphere/marathon",
+        network = Some(Protos.ContainerInfo.DockerInfo.Network.BRIDGE)
+      )),
+      portDefinitions = Seq.empty
+    )
 
     Given("A task with a port")
     val task = MarathonTestHelper.mininimalTask(app.id)
 
     Then("The port assignments are empty")
-    app.portAssignments(task).value should be(empty)
+    app.portAssignments(task) should be(None)
   }
 
   test("portAssignments with IP-per-task using Docker USER networking and a port mapping NOT requesting a host port") {
@@ -123,7 +122,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withNoPortDefinitions()
       .withIpAddress(IpAddress.empty)
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
-      .withPortMapings(Seq(
+      .withPortMappings(Seq(
         Docker.PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp", name = Some("http"))
       ))
 
@@ -147,7 +146,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withNoPortDefinitions()
       .withIpAddress(IpAddress.empty)
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
-      .withPortMapings(Seq(
+      .withPortMappings(Seq(
         Docker.PortMapping(containerPort = 80, hostPort = Some(0), servicePort = 0, protocol = "tcp",
           name = Some("http"))
       ))
@@ -172,7 +171,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withNoPortDefinitions()
       .withIpAddress(IpAddress.empty)
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
-      .withPortMapings(Seq(
+      .withPortMappings(Seq(
         Docker.PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp", name = Some("http")),
         Docker.PortMapping(containerPort = 443, hostPort = Some(0), servicePort = 0, protocol = "tcp",
           name = Some("https"))
@@ -198,7 +197,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val app = MarathonTestHelper.makeBasicApp()
       .withNoPortDefinitions()
       .withDockerNetwork(Protos.ContainerInfo.DockerInfo.Network.USER)
-      .withPortMapings(Seq(
+      .withPortMappings(Seq(
         Docker.PortMapping(containerPort = 80, hostPort = None, servicePort = 0, protocol = "tcp",
           name = Some("http")),
         Docker.PortMapping(containerPort = 443, hostPort = Some(0), servicePort = 0, protocol = "tcp",

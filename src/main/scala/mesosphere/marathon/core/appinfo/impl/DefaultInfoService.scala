@@ -1,17 +1,19 @@
 package mesosphere.marathon.core.appinfo.impl
 
-import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
+import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.Future
 import scala.collection.immutable.Seq
 import scala.collection.mutable
+import scala.concurrent.Future
 
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
-    appRepository: AppRepository,
+    appRepository: ReadOnlyAppRepository,
     newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -19,7 +21,7 @@ private[appinfo] class DefaultInfoService(
 
   override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]] = {
     log.debug(s"queryForAppId $id")
-    appRepository.currentVersion(id).flatMap {
+    appRepository.get(id).flatMap {
       case Some(app) if selector.matches(app) => newBaseData().appInfoFuture(app, embed).map(Some(_))
       case None => Future.successful(None)
     }
@@ -83,7 +85,7 @@ private[appinfo] class DefaultInfoService(
             None
         def apps: Option[Seq[AppInfo]] =
           if (groupEmbed(GroupInfo.Embed.Apps))
-            Some(ref.apps.toIndexedSeq.flatMap(a => infoById.get(a.id)).sortBy(_.app.id))
+            Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id))
           else
             None
         //if a subgroup is allowed, we also have to allow all parents implicitly

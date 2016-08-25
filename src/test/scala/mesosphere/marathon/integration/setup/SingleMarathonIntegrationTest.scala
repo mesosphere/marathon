@@ -3,7 +3,7 @@ package mesosphere.marathon.integration.setup
 import java.io.File
 import java.util
 
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import org.apache.commons.io.FileUtils
@@ -110,7 +110,7 @@ trait SingleMarathonIntegrationTest
     }
   }
 
-  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal()
+  protected def startMesos(): Unit = ProcessKeeper.startMesosLocal(config.mesosPort)
 
   protected def createConfig(configMap: ConfigMap): IntegrationTestConfig = IntegrationTestConfig(configMap)
 
@@ -126,11 +126,13 @@ trait SingleMarathonIntegrationTest
       log.info("Setting up local mesos/marathon infrastructure...")
       startZooKeeperProcess()
       startMesos()
+
       cleanMarathonState()
+
+      waitForCleanSlateInMesos()
 
       startMarathon(config.marathonBasePort, marathonParameters: _*)
 
-      waitForCleanSlateInMesos()
       log.info("Setting up local mesos/marathon infrastructure: done.")
     } else {
       log.info("Using already running Marathon at {}", config.marathonUrl)
@@ -152,8 +154,11 @@ trait SingleMarathonIntegrationTest
   }
 
   def cleanMarathonState() {
-    val watcher = new Watcher { override def process(event: WatchedEvent): Unit = println(event) }
+    val watcher = new Watcher { override def process(event: WatchedEvent): Unit = {} }
     val zooKeeper = new ZooKeeper(config.zkHostAndPort, 30 * 1000, watcher)
+    config.zkCredentials.foreach { credentials =>
+      zooKeeper.addAuthInfo("digest", org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(credentials).getBytes("UTF-8"))
+    }
     def deletePath(path: String) {
       if (zooKeeper.exists(path, false) != null) {
         val children = zooKeeper.getChildren(path, false)
@@ -227,21 +232,17 @@ trait SingleMarathonIntegrationTest
     AppDefinition(
       id = appId,
       cmd = cmd,
-      container = Some(
-        new Container(
-          docker = Some(new mesosphere.marathon.state.Container.Docker(
-            image = s"""marathon-buildbase:${sys.env.getOrElse("BUILD_ID", "test")}""",
-            network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST)
-          )),
-          volumes = collection.immutable.Seq(
-            new DockerVolume(hostPath = env.getOrElse("IVY2_DIR", "/root/.ivy2"), containerPath = "/root/.ivy2", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = s"""$targetDirs/main""", containerPath = "/marathon/target", mode = Protos.Volume.Mode.RO),
-            new DockerVolume(hostPath = s"""$targetDirs/project""", containerPath = "/marathon/project/target", mode = Protos.Volume.Mode.RO)
-          )
+      container = Some(Container.Docker(
+        image = s"""marathon-buildbase:${sys.env.getOrElse("BUILD_ID", "test")}""",
+        network = Some(Protos.ContainerInfo.DockerInfo.Network.HOST),
+        volumes = collection.immutable.Seq(
+          new DockerVolume(hostPath = env.getOrElse("IVY2_DIR", "/root/.ivy2"), containerPath = "/root/.ivy2", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = env.getOrElse("SBT_DIR", "/root/.sbt"), containerPath = "/root/.sbt", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = s"""$targetDirs/main""", containerPath = "/marathon/target", mode = Protos.Volume.Mode.RO),
+          new DockerVolume(hostPath = s"""$targetDirs/project""", containerPath = "/marathon/project/target", mode = Protos.Volume.Mode.RO)
         )
-      ),
+      )),
       instances = instances,
       cpus = 0.5,
       mem = 128.0,
@@ -312,7 +313,7 @@ trait SingleMarathonIntegrationTest
 
   def waitForCleanSlateInMesos(): Boolean = {
     require(mesos.state.value.agents.size == 1, "one agent expected")
-    WaitTestSupport.waitUntil("clean slate in Mesos", 30.seconds) {
+    WaitTestSupport.waitUntil("clean slate in Mesos", 45.seconds) {
       val agent = mesos.state.value.agents.head
       val empty = agent.usedResources.isEmpty && agent.reservedResourcesByRole.isEmpty
       if (!empty) {

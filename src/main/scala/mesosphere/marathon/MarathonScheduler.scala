@@ -1,14 +1,15 @@
 package mesosphere.marathon
 
-import javax.inject.{ Inject, Named }
+import javax.inject.Inject
 
 import akka.actor.ActorSystem
 import akka.event.EventStream
-import mesosphere.marathon.core.base.{ CurrentRuntime, Clock }
+import mesosphere.marathon.core.base.{ Clock, CurrentRuntime }
+import mesosphere.marathon.core.event.{ SchedulerRegisteredEvent, _ }
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
-import mesosphere.marathon.event._
-import mesosphere.util.state.{ FrameworkIdUtil, MesosLeaderInfo }
+import mesosphere.marathon.storage.repository.FrameworkIdRepository
+import mesosphere.util.state.{ FrameworkId, MesosLeaderInfo }
 import org.apache.mesos.Protos._
 import org.apache.mesos.{ Scheduler, SchedulerDriver }
 import org.slf4j.LoggerFactory
@@ -16,20 +17,15 @@ import org.slf4j.LoggerFactory
 import scala.concurrent._
 import scala.util.control.NonFatal
 
-trait SchedulerCallbacks {
-  def disconnected(): Unit
-}
-
 class MarathonScheduler @Inject() (
-    @Named(EventModule.busName) eventBus: EventStream,
+    eventBus: EventStream,
     clock: Clock,
     offerProcessor: OfferProcessor,
     taskStatusProcessor: TaskStatusUpdateProcessor,
-    frameworkIdUtil: FrameworkIdUtil,
+    frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
     system: ActorSystem,
-    config: MarathonConf,
-    schedulerCallbacks: SchedulerCallbacks) extends Scheduler {
+    config: MarathonConf) extends Scheduler {
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
@@ -42,7 +38,7 @@ class MarathonScheduler @Inject() (
     frameworkId: FrameworkID,
     master: MasterInfo): Unit = {
     log.info(s"Registered as ${frameworkId.getValue} to master '${master.getId}'")
-    frameworkIdUtil.store(frameworkId)
+    Await.result(frameworkIdRepository.store(FrameworkId.fromProto(frameworkId)), zkTimeout)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerRegisteredEvent(frameworkId.getValue, master.getHostname))
   }
@@ -92,9 +88,11 @@ class MarathonScheduler @Inject() (
 
     eventBus.publish(SchedulerDisconnectedEvent())
 
-    // Disconnection from the Mesos master has occurred.
-    // Thus, call the scheduler callbacks.
-    schedulerCallbacks.disconnected()
+    // stop the driver. this avoids ambiguity and delegates leadership-abdication responsibility.
+    // this helps to clarify responsibility during leadership transitions: currently the
+    // **scheduler service** is responsible for integrating with leadership election.
+    // @see MarathonSchedulerService.startLeadership
+    driver.stop(true)
   }
 
   override def slaveLost(driver: SchedulerDriver, slave: SlaveID) {
@@ -139,7 +137,7 @@ class MarathonScheduler @Inject() (
   protected def suicide(removeFrameworkId: Boolean): Unit = {
     log.error(s"Committing suicide!")
 
-    if (removeFrameworkId) Await.ready(frameworkIdUtil.expunge(), config.zkTimeoutDuration)
+    if (removeFrameworkId) Await.ready(frameworkIdRepository.delete(), config.zkTimeoutDuration)
 
     // Asynchronously call asyncExit to avoid deadlock due to the JVM shutdown hooks
     CurrentRuntime.asyncExit()

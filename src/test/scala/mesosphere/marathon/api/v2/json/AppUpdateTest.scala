@@ -4,23 +4,22 @@ import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.health.HealthCheck
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import org.apache.mesos.{ Protos => mesos }
 import play.api.data.validation.ValidationError
-import play.api.libs.json.{ JsPath, JsError, Json }
+import play.api.libs.json.{ JsError, JsPath, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-
 import com.wix.accord._
+import org.scalatest.Matchers
 
 import scala.util.Try
 
-class AppUpdateTest extends MarathonSpec {
+class AppUpdateTest extends MarathonSpec with Matchers {
   import Formats._
   import mesosphere.marathon.integration.setup.V2TestFormats._
 
@@ -89,7 +88,15 @@ class AppUpdateTest extends MarathonSpec {
   }
 
   test("SerializationRoundtrip for empty definition") {
-    val update0 = AppUpdate(container = Some(Container.Empty))
+    val update0 = AppUpdate(container = Some(Container.Mesos()))
+    JsonTestHelper.assertSerializationRoundtripWorks(update0)
+  }
+
+  test("SerializationRoundtrip for definition with simple AppC container") {
+    val update0 = AppUpdate(container = Some(Container.MesosAppC(
+      image = "anImage",
+      labels = Map("key" -> "foo", "value" -> "bar")
+    )))
     JsonTestHelper.assertSerializationRoundtripWorks(update0)
   }
 
@@ -109,13 +116,10 @@ class AppUpdateTest extends MarathonSpec {
       backoff = Some(2.seconds),
       backoffFactor = Some(1.2),
       maxLaunchDelay = Some(1.minutes),
-      container = Some(
-        Container(
-          `type` = mesos.ContainerInfo.Type.DOCKER,
-          volumes = Nil,
-          docker = Some(Docker(image = "docker:///group/image"))
-        )
-      ),
+      container = Some(Docker(
+        volumes = Nil,
+        image = "docker:///group/image"
+      )),
       healthChecks = Some(Set[HealthCheck]()),
       taskKillGracePeriod = Some(2.seconds),
       dependencies = Some(Set[PathId]()),
@@ -453,5 +457,16 @@ class AppUpdateTest extends MarathonSpec {
     val update = fromJsonString(json)
     val strategy = update.empty("foo".toPath).upgradeStrategy
     assert(strategy == UpgradeStrategy.forResidentTasks)
+  }
+
+  test("container change in AppUpdate should be stored") {
+    val appDef = AppDefinition(container = Some(Docker(portMappings = None)))
+    val appUpdate = AppUpdate(container = Some(Docker(portMappings = Some(Seq(
+      Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
+    )))))
+    val roundTrip = appUpdate(appDef)
+    roundTrip.container.get.portMappings should not be None
+    roundTrip.container.get.portMappings.get should have size 1
+    roundTrip.container.get.portMappings.get.head.containerPort should be (4000)
   }
 }

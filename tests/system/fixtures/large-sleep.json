@@ -1,0 +1,8 @@
+{
+  "id": "sleep",
+  "cmd": "while :; do echo \"sandbox: $PWD\"; sleep 5; done",
+  "cpus": 3.5,
+  "mem": 128,
+  "disk": 0,
+  "instances": 1
+}

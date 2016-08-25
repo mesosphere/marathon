@@ -16,14 +16,16 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
   test("two volumes with different names should not result in an error") {
     val f = new Fixture
     Given("a root group with two apps and conflicting volumes")
+    val app1 = f.appWithDVDIVolume(appId = PathId("/nested/foo1"), volumeName = "vol1")
+    val app2 = f.appWithDVDIVolume(appId = PathId("/nested/foo2"), volumeName = "vol2")
     val rootGroup = Group(
       id = PathId.empty,
       groups = Set(
         Group(
           id = PathId("/nested"),
-          apps = Set(
-            f.appWithDVDIVolume(appId = PathId("/nested/foo1"), volumeName = "vol1"),
-            f.appWithDVDIVolume(appId = PathId("/nested/foo2"), volumeName = "vol2")
+          apps = Map(
+            app1.id -> app1,
+            app2.id -> app2
           )
         )
       )
@@ -45,7 +47,10 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
       groups = Set(
         Group(
           id = PathId("/nested"),
-          apps = Set(app1, app2)
+          apps = Map(
+            app1.id -> app1,
+            app2.id -> app2
+          )
         )
       )
     )
@@ -78,8 +83,7 @@ class DVDIProviderRootGroupValidationTest extends FunSuite with Matchers with Gi
         cmd = Some("sleep 123"),
         upgradeStrategy = UpgradeStrategy.forResidentTasks,
         container = Some(
-          Container(
-            `type` = MesosProtos.ContainerInfo.Type.MESOS,
+          Container.Mesos(
             volumes = Seq(
               ExternalVolume(
                 containerPath = "ignoreme",
