@@ -23,6 +23,8 @@ class AppUpdateTest extends MarathonSpec with Matchers {
   import Formats._
   import mesosphere.marathon.integration.setup.V2TestFormats._
 
+  implicit val appUpdateValidator = AppUpdate.appUpdateValidator(Set())
+
   def shouldViolate(update: AppUpdate, path: String, template: String): Unit = {
     val violations = validate(update)
     assert(violations.isFailure)

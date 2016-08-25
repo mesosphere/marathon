@@ -31,8 +31,6 @@ class MarathonApp extends App {
 
     log.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
 
-    AllConf.config = Some(conf)
-
     run(
       classOf[HttpService],
       classOf[MarathonSchedulerService],
