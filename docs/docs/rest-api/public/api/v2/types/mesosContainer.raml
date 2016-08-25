@@ -41,3 +41,9 @@ properties:
     items: !include artifact.raml
     description:
       All artifacts to download before the task runs 
+  labels?:
+    type: array
+    items: !include label.raml
+    description:|
+      Metadata as key/value pair.
+      Useful when passing directives to be interpreted by Mesos modules.
