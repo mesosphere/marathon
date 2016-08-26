@@ -2,8 +2,9 @@
 title: v2 pod API
 mediaType: application/json
 types:
-  Pod: !include types/pod.raml
   PathId: !include types/pathId.raml
+  Pod: !include types/pod.raml
+  PodStatus: !include types/pod-status.raml
 traits: !include ../traits.raml
 
 /:
@@ -62,3 +63,23 @@ traits: !include ../traits.raml
         body:
           application/json:
             type: Pod
+
+'/{id}::status':
+  usage: |
+    Implementations should probably generate do-not-cache headers because
+    status should always be live.
+
+  uriParameters:
+    id:
+      type: PathId
+      description: The path of the pod
+
+  get:
+    is: [ secured, objectLocator ]
+    description: |
+      Get the status of the pod with the given id
+    responses:
+      200:
+        body:
+          application/json:
+            type: PodStatus
