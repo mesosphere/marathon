@@ -17,7 +17,7 @@ properties:
     type: string
     enum: [ DEGRADED, STABLE, TERMINAL ]
     description: |
-      DEGRADED - The number of stable pod instances is less than the number of target instances.
+      DEGRADED - The number of STABLE pod instances is less than the number of desired instances.
       STABLE   - All launched pod instances have started and, if health checks were specified, are all healthy.
       TERMINAL - Marathon is tearing down all of the instances for this pod.
   message?:

@@ -14,7 +14,7 @@ properties:
       PENDING  - Instance is queued for launch.
       STAGING  - Instance has been launched but is not yet running.
       STABLE   - Instance is running and, if health checks were specified, is healthy.
-      DEGRADED - One or more of the instance's containers are not stable.
+      DEGRADED - One or more of the instance's containers has a health check that is not passing.
       TERMINAL - Instance is in the process of shutting down.
   message?:
     type: string
