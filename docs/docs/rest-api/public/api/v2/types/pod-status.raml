@@ -1,9 +1,8 @@
 #%RAML 1.0 DataType
 type: object
 description: |
-  A pod allows one to launch a collection co-located (on the same agent) containers
-  that share the same network namespace and that may share the same volumes.
-  Resources are specified on a per-container basis.
+  Pod status communicates the lifecycle phase of the pod, current instance and container
+  status, and recent termination status history.
 additionalProperties: false
 properties:
   id:
