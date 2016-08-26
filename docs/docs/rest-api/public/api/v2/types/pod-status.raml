@@ -20,6 +20,10 @@ properties:
       DEGRADED - The number of STABLE pod instances is less than the number of desired instances.
       STABLE   - All launched pod instances have started and, if health checks were specified, are all healthy.
       TERMINAL - Marathon is tearing down all of the instances for this pod.
+  statusSince:
+    type: datetime
+    description: |
+      Time at which the status code was last modified.
   message?:
     type: string
     description: |
@@ -50,8 +54,8 @@ properties:
   lastUpdated:
     type: datetime
     description: |
-      Time that this status was last checked and updated (even if nothing changed)
+      Time that this status object was last checked and updated (even if nothing changed)
   lastChanged:
     type: datetime
     description: |
-      Time that this status was last modified (some aspect of status did change)
+      Time that this status object was last modified (some aspect of status did change)

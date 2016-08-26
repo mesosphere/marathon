@@ -9,17 +9,27 @@ properties:
       TODO(jdef) Probably represents the Mesos executor ID.
   status:
     type: string
-    enum: [ PENDING, STAGING, STABLE, DEGRADED, TERMINAL ]
+    usage: |
+      TODO(jdef) this is not an enum because it reflects Marathon internal state that
+      could easily change going forward and I don't want breaking API changes that result
+      from a shifting enum here.
     description: |
-      PENDING  - Instance is queued for launch.
-      STAGING  - Instance has been launched but is not yet running.
-      STABLE   - Instance is running and, if health checks were specified, is healthy.
-      DEGRADED - One or more of the instance's containers has a health check that is not passing.
-      TERMINAL - Instance is in the process of shutting down.
+      Reflects the aggregate status of all containers for this pod instance.
+      For example RESERVED, CREATED, STAGING, STARTING, RUNNING, ERROR, FAILED, KILLING.
+  statusSince:
+    type: datetime
+    description: |
+      Time at which the status code was last modified.
   message?:
     type: string
     description: |
       Human-friendly explanation for reason of the current status.
+  conditions?:
+    type: array
+    description: |
+      Set of status conditions that apply to this pod instance.
+    items:
+      type: !include status-condition.raml
   agent?:
     type: string
     description: agent that this instance was launched on
@@ -46,12 +56,6 @@ properties:
     description: status for each running container of this instance.
     items:
       type: !include container-status.raml
-  startedAt?:
-    type: datetime
-    description: time at which this instance was marked PENDING
-  terminatedAt?:
-    type: datetime
-    description: time at which this instance was marked TERMINAL
   lastUpdated:
     type: datetime
     description: |

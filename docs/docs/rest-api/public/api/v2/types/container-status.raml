@@ -7,16 +7,26 @@ properties:
     description: name of the container specification (within the pod)
   status:
     type: string
-    enum: [ STAGING, STABLE, DEGRADED, TERMINAL ]
+    usage: |
+      TODO(jdef) this is not an enum because it reflects Marathon internal state that
+      could easily change going forward and I don't want breaking API changes that result
+      from a shifting enum here.
     description: |
-      STAGING  - Container has been launched but is not yet running.
-      STABLE   - Container is running and, if health checks were specified, is healthy.
-      DEGRADED - Container is running but its health check is not passing.
-      TERMINAL - Container is in the process of terminating or else has terminated.
+      Reflects the status of the associated Mesos task.
+  statusSince:
+    type: datetime
+    description: |
+      Time at which the status code was last modified.
   message?:
     type: string
     description: |
       Human-friendly explanation for the container's current status.
+  conditions?:
+    type: array
+    description: |
+      Set of status conditions that apply to this container.
+    items:
+      type: !include status-condition.raml
   containerId?:
     type: string
     description: |
