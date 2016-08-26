@@ -2,6 +2,7 @@ package mesosphere.marathon.api
 
 import javax.inject.Inject
 
+import akka.Done
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
@@ -35,18 +36,18 @@ class TaskKiller @Inject() (
       case Some(app) =>
         checkAuthorization(UpdateRunSpec, app)
 
-        // We probably want to use the same execution context as the actors.
+        // TODO: We probably want to pass the execution context as an implcit.
         import scala.concurrent.ExecutionContext.Implicits.global
 
         async {
           val allTasks = await(taskTracker.appTasks(appId))
           val foundTasks = findToKill(allTasks)
 
-          if (wipe) await(expunge(foundTasks))
+          if (wipe) expunge(foundTasks)
 
           val launchedTasks = foundTasks.filter(_.launched.isDefined)
           if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
-          // For some reasons tasks returned by service.killTasks !=
+          // TODO: For some reasons tasks returned by service.killTasks !=
           // foundTasks in some cases. What should be returned?
           foundTasks
         }
@@ -55,14 +56,20 @@ class TaskKiller @Inject() (
     }
   }
 
-  private[this] def expunge(tasks: Iterable[Task])(implicit ec: ExecutionContext): Future[Unit] = {
-    tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
-      resultSoFar.flatMap { _ =>
+  private[this] def expunge(tasks: Iterable[Task])(implicit ec: ExecutionContext): Unit = {
+    tasks.foreach { nextTask =>
+      async {
         log.info("Expunging {}", nextTask.taskId)
-        stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.taskId)).map(_ => ()).recover {
-          case NonFatal(cause) =>
-            log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.taskId, cause): _*)
-        }
+
+        val processNextTask = stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.taskId))
+          .map(_ => Done)
+          .recover {
+            case NonFatal(cause) =>
+              log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.taskId, cause): _*)
+              Done // Note, this error is swallowed.
+          }
+
+        await(processNextTask)
       }
     }
   }
