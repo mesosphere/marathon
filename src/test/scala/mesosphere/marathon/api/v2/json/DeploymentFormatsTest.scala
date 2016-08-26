@@ -78,7 +78,7 @@ class DeploymentFormatsTest extends MarathonSpec {
     group.apps should have size 1
     group.apps.head._1 should be("b".toPath)
     group.groups should have size 1
-    group.groups.head.id should be("c".toPath)
+    group.groupIds.head should be("c".toPath)
     group.dependencies.head should be("d".toPath)
     group.version should be(Timestamp("2015-06-03T13:18:25.640Z"))
   }
