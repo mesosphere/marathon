@@ -28,13 +28,27 @@ traits: !include ../traits.raml
     is: [ secured ]
     description: |
       List all the pod-based services in the system.
-      TODO(jdef) do we really need this?
     responses:
       200:
-        description: A list of all pods in the system.
+        description: |
+          Yields a list of all pods in the system.
+          Useful to perform backups of all pods registered with Marathon.
         body:
           application/json:
             type: Pod[]
+
+  put:
+    is: [ secured, jsonValidator, objectValidator, objectCreator ]
+    description: |
+      Create or update each pod in the list.
+      Useful to restore all pods previously backed up via GET /v2/pods.
+      TODO(jdef) this is a stretch goal for the MVP.
+    responses:
+      207:
+        description: |
+          A list of all created/updated pods.
+          TODO(jdef) format for the multi-status response type, see
+          https://tools.ietf.org/html/rfc4918#section-13
 
 /{id}:
   uriParameters:
@@ -71,7 +85,7 @@ traits: !include ../traits.raml
             type: Pod
 
 '/{id}::status':
-  usage: |
+  description: |
     Implementations should probably generate do-not-cache headers because
     status should always be live.
 
