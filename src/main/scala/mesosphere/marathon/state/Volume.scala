@@ -83,11 +83,11 @@ object Volume {
         Some((dockerVolume.containerPath, Some(dockerVolume.hostPath), dockerVolume.mode, None, None))
     }
 
-  implicit val validVolume: Validator[Volume] = new Validator[Volume] {
+  def validVolume(enabledFeatures: Set[String]): Validator[Volume] = new Validator[Volume] {
     override def apply(volume: Volume): Result = volume match {
       case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
       case dv: DockerVolume => validate(dv)(DockerVolume.validDockerVolume)
-      case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume)
+      case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(enabledFeatures))
     }
   }
 }
@@ -220,8 +220,8 @@ case class ExternalVolume(
   mode: Mesos.Volume.Mode) extends Volume
 
 object ExternalVolume {
-  val validExternalVolume = validator[ExternalVolume] { ev =>
-    ev is featureEnabled(Features.EXTERNAL_VOLUMES)
+  def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] = validator[ExternalVolume] { ev =>
+    ev is featureEnabled(enabledFeatures, Features.EXTERNAL_VOLUMES)
     ev.containerPath is notEmpty
     ev.external is valid(ExternalVolumeInfo.validExternalVolumeInfo)
   } and ExternalVolumes.validExternalVolume
