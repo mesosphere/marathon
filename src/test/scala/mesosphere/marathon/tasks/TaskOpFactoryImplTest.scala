@@ -1,6 +1,7 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
@@ -35,7 +36,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
 
     val expectedTask = Task.LaunchedEphemeral(
       taskId = inferredTaskOp.fold(Task.Id("failure"))(_.taskId),
-      agentInfo = Task.AgentInfo(
+      agentInfo = Instance.AgentInfo(
         host = "some_host",
         agentId = Some(offer.getSlaveId.getValue),
         attributes = List.empty

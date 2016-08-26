@@ -11,6 +11,7 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
@@ -256,7 +257,7 @@ object MarathonTestHelper {
 
       Task.LaunchedEphemeral(
         taskId = Task.Id(taskInfo.getTaskId),
-        agentInfo = Task.AgentInfo(
+        agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
           attributes = offer.getAttributesList.asScala
@@ -338,7 +339,7 @@ object MarathonTestHelper {
   def mininimalTask(taskId: String, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: MarathonTaskStatus): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(
       Task.Id(taskId),
-      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,
@@ -380,7 +381,7 @@ object MarathonTestHelper {
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
       taskId = Task.Id.forRunSpec(appId),
-      Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       reservation = reservation,
       status = Task.Status(Timestamp.now(), taskStatus = MarathonTaskStatus.Reserved))
 
@@ -407,7 +408,7 @@ object MarathonTestHelper {
   def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
-      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
@@ -428,7 +429,7 @@ object MarathonTestHelper {
     mesosStatus: Option[Mesos.TaskStatus] = None): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
       taskId = Task.Id(taskId),
-      agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+      agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
         stagedAt = Timestamp(stagedAt),
@@ -554,7 +555,7 @@ object MarathonTestHelper {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
       taskId = Task.Id.forRunSpec(appId),
-      agentInfo = Task.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
+      agentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       runSpecVersion = now,
       status = Task.Status(
         stagedAt = now,
@@ -615,7 +616,7 @@ object MarathonTestHelper {
     }
 
     implicit class TaskImprovements(task: Task) {
-      def withAgentInfo(update: Task.AgentInfo => Task.AgentInfo): Task = task match {
+      def withAgentInfo(update: Instance.AgentInfo => Instance.AgentInfo): Task = task match {
         case launchedEphemeral: Task.LaunchedEphemeral =>
           launchedEphemeral.copy(agentInfo = update(launchedEphemeral.agentInfo))
 

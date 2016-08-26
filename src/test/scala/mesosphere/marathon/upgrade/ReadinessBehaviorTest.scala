@@ -1,19 +1,21 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ ActorLogging, ActorRef, Actor }
+import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
-import mesosphere.marathon.core.readiness.{ ReadinessCheckResult, ReadinessCheck, ReadinessCheckExecutor }
+import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.event.{ HealthStatusChanged, MesosStatusUpdateEvent, DeploymentStatus }
+import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import rx.lang.scala.Observable
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
@@ -158,7 +160,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val tracker = mock[TaskTracker]
     val task = mock[Task]
     val launched = mock[Task.Launched]
-    val agentInfo = mock[Task.AgentInfo]
+    val agentInfo = mock[Instance.AgentInfo]
 
     val appId = PathId("/test")
     val taskId = Task.Id("app.task")

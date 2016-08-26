@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
@@ -194,7 +195,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val fullSampleTaskStateWithoutNetworking: Task.LaunchedOnReservation =
       Task.LaunchedOnReservation(
         taskId,
-        Task.AgentInfo(host = sampleHost, agentId = Some(sampleSlaveId.getValue), attributes = sampleAttributes),
+        Instance.AgentInfo(host = sampleHost, agentId = Some(sampleSlaveId.getValue), attributes = sampleAttributes),
         runSpecVersion = appVersion,
         status = Task.Status(
           stagedAt = Timestamp(stagedAtLong),
@@ -268,7 +269,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
       def reservedState = Task.Reserved(
         Task.Id(taskId.idString),
-        Task.AgentInfo(host = host, agentId = Some(agentId), attributes),
+        Instance.AgentInfo(host = host, agentId = Some(agentId), attributes),
         reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.New(Some(Task.Reservation.Timeout(
           initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout)))),
         status = Task.Status(stagedAt = Timestamp(0), taskStatus = MarathonTaskStatus.Reserved)
@@ -296,7 +297,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
       def launchedOnReservationState = Task.LaunchedOnReservation(
         taskId,
-        Task.AgentInfo(host = host, agentId = Some(agentId), attributes),
+        Instance.AgentInfo(host = host, agentId = Some(agentId), attributes),
         appVersion,
         status,
         hostPorts,

@@ -6,9 +6,10 @@ import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.{ AgentInfo, Status }
+import mesosphere.marathon.core.task.Task.Status
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
@@ -111,10 +112,10 @@ class MigrationTo1_4_PersistenceStoreTest extends AkkaUnitTest with Mockito {
         val tasks = Seq(
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), taskStatus = MarathonTaskStatus.Created), Nil),
+            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), taskStatus = MarathonTaskStatus.Created), Nil),
           Task.LaunchedEphemeral(
             Task.Id.forRunSpec("123".toRootPath),
-            AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), taskStatus = MarathonTaskStatus.Created), Nil)
+            Instance.AgentInfo("abc", None, Nil), Timestamp(0), Status(Timestamp(0), taskStatus = MarathonTaskStatus.Created), Nil)
         )
         tasks.foreach(oldRepo.store(_).futureValue)
 

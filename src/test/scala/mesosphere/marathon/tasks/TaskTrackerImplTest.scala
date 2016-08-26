@@ -466,10 +466,10 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       && t.launched.map(_.hostPorts) == task.launched.map(_.hostPorts))
   def shouldContainTask(tasks: Iterable[Instance], task: Instance) =
     assert(containsTask(tasks, task), s"Should contain ${task.id}")
-  def shouldNotContainTask(tasks: Iterable[Task], task: Task) =
-    assert(!containsTask(tasks, task), s"Should not contain ${task.taskId}")
+  def shouldNotContainTask(tasks: Iterable[Instance], task: Instance) =
+    assert(!containsTask(tasks, task), s"Should not contain ${task.id}")
 
-  def shouldHaveTaskStatus(task: Task, stateOp: TaskStateOp.MesosUpdate) {
+  def shouldHaveTaskStatus(task: Instance, stateOp: TaskStateOp.MesosUpdate) {
     assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
     assert(task.launched.isDefined)
     assert(
