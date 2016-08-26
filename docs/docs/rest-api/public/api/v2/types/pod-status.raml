@@ -40,18 +40,18 @@ properties:
         instanceID:
           type: string
         startedAt:
-          type: datetime-only
+          type: datetime
         terminatedAt:
-          type: datetime-only
+          type: datetime
         message?:
           type: string
           description: |
             Human-friendly explanation for termination.
   lastUpdated:
-    type: datetime-only
+    type: datetime
     description: |
       Time that this status was last checked and updated (even if nothing changed)
   lastChanged:
-    type: datetime-only
+    type: datetime
     description: |
       Time that this status was last modified (some aspect of status did change)
