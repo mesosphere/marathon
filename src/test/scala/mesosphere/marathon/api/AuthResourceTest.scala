@@ -45,8 +45,7 @@ class AuthResourceTest extends MarathonSpec with Matchers with Mockito with Give
   }
 
   class Fixture {
-    AllConf.withTestConfig(Seq("--zk_timeout", "1"))
-    val config = AllConf.config.get.asInstanceOf[MarathonConf]
+    val config = AllConf.withTestConfig("--zk_timeout", "1")
 
     val auth = new TestAuthFixture
 

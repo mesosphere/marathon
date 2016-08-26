@@ -3,7 +3,6 @@ package mesosphere.marathon.core.event.impl.stream
 import javax.servlet.http.HttpServletResponse
 
 import akka.actor.ActorRef
-import mesosphere.chaos.http.HttpConf
 import mesosphere.marathon._
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.test.Mockito
@@ -41,10 +40,9 @@ class HttpEventStreamServletTest extends MarathonSpec with Matchers with Mockito
   }
 
   class Fixture {
-    AllConf.withTestConfig(Seq("--event_subscriber", "http_callback"))
     val actor = mock[ActorRef]
     val auth = new TestAuthFixture
-    val config = mock[MarathonConf with HttpConf]
+    val config = AllConf.withTestConfig("--event_subscriber", "http_callback")
     def streamServlet() = new HttpEventStreamServlet(actor, config, auth.auth, auth.auth)
   }
 }

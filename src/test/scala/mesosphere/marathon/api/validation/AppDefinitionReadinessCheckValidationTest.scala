@@ -10,7 +10,7 @@ import scala.collection.immutable.Seq
 
 class AppDefinitionReadinessCheckValidationTest extends MarathonSpec with Matchers with GivenWhenThen {
 
-  lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
+  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
 
   test("app with 0 readinessChecks is valid") {
     val f = new Fixture

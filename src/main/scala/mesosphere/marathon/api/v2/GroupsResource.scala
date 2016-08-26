@@ -156,7 +156,7 @@ class GroupsResource @Inject() (
 
       val (deployment, path) = updateOrCreate(id.toRootPath, groupUpdate, force)
       deploymentResult(deployment, Response.created(new URI(path.toString)))
-    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath))
+    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath, config.availableFeatures))
   }
 
   @PUT
@@ -201,7 +201,7 @@ class GroupsResource @Inject() (
         val (deployment, _) = updateOrCreate(id.toRootPath, groupUpdate, force)
         deploymentResult(deployment)
       }
-    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath))
+    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath, config.availableFeatures))
   }
 
   @DELETE
