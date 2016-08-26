@@ -10,6 +10,7 @@ import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
@@ -33,10 +34,10 @@ class TaskReplaceActor(
 
   val tasksToKill = taskTracker.appTasksLaunchedSync(app.id)
   var newTasksStarted: Int = 0
-  var oldTaskIds = tasksToKill.map(_.taskId).to[SortedSet]
+  var oldTaskIds = tasksToKill.map(_.id).to[SortedSet]
   val toKill = tasksToKill.to[mutable.Queue]
   var maxCapacity = (app.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
-  var outstandingKills = Set.empty[Task.Id]
+  var outstandingKills = Set.empty[Instance.Id]
 
   override def preStart(): Unit = {
     super.preStart()
@@ -111,8 +112,9 @@ class TaskReplaceActor(
           log.info(s"Killing old $nextOldTask")
       }
 
-      outstandingKills += nextOldTask.taskId
-      killService.killTask(nextOldTask, TaskKillReason.Upgrading)
+      outstandingKills += nextOldTask.id
+      // TODO ju
+      killService.killTask(nextOldTask.asInstanceOf[Task], TaskKillReason.Upgrading)
     }
   }
 

@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -47,11 +48,11 @@ private[tracker] class TaskTrackerDelegate(
 
   override def countLaunchedAppTasksSync(appId: PathId): Int =
     tasksByAppSync.appTasks(appId).count(_.launched.isDefined)
-  override def countLaunchedAppTasksSync(appId: PathId, filter: Task => Boolean): Int =
+  override def countLaunchedAppTasksSync(appId: PathId, filter: Instance => Boolean): Int =
     tasksByAppSync.appTasks(appId).count { t =>
       t.launched.isDefined && filter(t)
     }
-  override def countAppTasksSync(appId: PathId, filter: Task => Boolean): Int =
+  override def countAppTasksSync(appId: PathId, filter: Instance => Boolean): Int =
     tasksByAppSync.appTasks(appId).count(filter)
 
   override def countAppTasksSync(appId: PathId): Int = tasksByAppSync.appTasks(appId).size
@@ -61,14 +62,16 @@ private[tracker] class TaskTrackerDelegate(
   override def hasAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     tasksByApp().map(_.hasAppTasks(appId))
 
-  override def appTasksSync(appId: PathId): Iterable[Task] =
+  override def appTasksSync(appId: PathId): Iterable[Instance] =
     tasksByAppSync.appTasks(appId)
-  override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]] =
+  override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Instance]] =
     tasksByApp().map(_.appTasks(appId))
-  override def appTasksLaunchedSync(appId: PathId): Iterable[Task] = appTasksSync(appId).filter(_.launched.isDefined)
+  override def appTasksLaunchedSync(appId: PathId): Iterable[Instance] =
+    appTasksSync(appId).filter(_.launched.isDefined)
 
-  override def task(taskId: Task.Id): Future[Option[Task]] =
-    (taskTrackerRef ? TaskTrackerActor.Get(taskId)).mapTo[Option[Task]]
+  override def task(taskId: Instance.Id): Future[Option[Instance]] =
+    // TODO ju
+    (taskTrackerRef ? TaskTrackerActor.Get(taskId.asInstanceOf[Task.Id])).mapTo[Option[Instance]]
 
   private[this] val tasksByAppTimer =
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))

@@ -5,6 +5,7 @@ import javax.inject.Inject
 import com.google.inject.name.Names
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
@@ -45,9 +46,14 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     val taskId = Task.Id(status.getTaskId)
 
     taskTracker.task(taskId).flatMap {
-      case Some(task) =>
+      case Some(task: Task) =>
         val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
         stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
+
+      // TODO ju POD
+      //      case Some(task) =>
+      //        val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
+      //        stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
       case None if killWhenUnknown(status) =>
         killUnknownTaskTimer {
@@ -56,7 +62,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
           acknowledge(status)
         }
 
-      case maybeTask: Option[Task] =>
+      case maybeTask: Option[Instance] =>
         val taskStr = taskKnownOrNotStr(maybeTask)
         log.info(s"Ignoring ${status.getState} update for $taskStr $taskId")
         acknowledge(status)
@@ -86,5 +92,5 @@ object TaskStatusUpdateProcessorImpl {
     !ignoreWhenUnknown.contains(status.getState)
   }
 
-  private def taskKnownOrNotStr(maybeTask: Option[Task]): String = if (maybeTask.isDefined) "known" else "unknown"
+  private def taskKnownOrNotStr(maybeTask: Option[Instance]): String = if (maybeTask.isDefined) "known" else "unknown"
 }

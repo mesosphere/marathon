@@ -4,6 +4,7 @@ import akka.actor._
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
@@ -91,7 +92,7 @@ private class TaskLauncherActor(
   private[this] var backOffUntil: Option[Timestamp] = None
 
   /** tasks that are in flight and those in the tracker */
-  private[this] var tasksMap: Map[Task.Id, Task] = _
+  private[this] var tasksMap: Map[Instance.Id, Instance] = _
 
   /** Decorator to use this actor as a [[base.OfferMatcher#TaskOpSource]] */
   private[this] val myselfAsLaunchSource = TaskOpSourceDelegate(self)
@@ -355,7 +356,8 @@ private class TaskLauncherActor(
       sender ! MatchedTaskOps(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val matchRequest = TaskOpFactory.Request(runSpec, offer, tasksMap, tasksToLaunch)
+      // TODO ju
+      val matchRequest = TaskOpFactory.Request(runSpec, offer, tasksMap.map(_.asInstanceOf[Task]), tasksToLaunch)
       val taskOp: Option[TaskOp] = taskOpFactory.buildTaskOp(matchRequest)
       taskOp match {
         case Some(op) => handleTaskOp(op, offer)

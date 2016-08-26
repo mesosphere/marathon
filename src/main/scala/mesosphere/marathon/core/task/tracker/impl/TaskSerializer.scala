@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
@@ -29,8 +30,8 @@ object TaskSerializer {
       }
     }
 
-    def agentInfo: Task.AgentInfo = {
-      Task.AgentInfo(
+    def agentInfo: Instance.AgentInfo = {
+      Instance.AgentInfo(
         host = required("host", opt(_.hasHost, _.getHost)),
         agentId = opt(_.hasSlaveId, _.getSlaveId).map(_.getValue),
         attributes = proto.getAttributesList.iterator().asScala.toVector
@@ -77,7 +78,7 @@ object TaskSerializer {
 
   private[this] def constructTask(
     taskId: Task.Id,
-    agentInfo: Task.AgentInfo,
+    agentInfo: Instance.AgentInfo,
     reservationOpt: Option[Reservation],
     launchedOpt: Option[Task.Launched],
     taskStatus: Task.Status): Task = {
@@ -105,7 +106,7 @@ object TaskSerializer {
     val builder = Protos.MarathonTask.newBuilder()
 
     def setId(taskId: Task.Id): Unit = builder.setId(taskId.idString)
-    def setAgentInfo(agentInfo: Task.AgentInfo): Unit = {
+    def setAgentInfo(agentInfo: Instance.AgentInfo): Unit = {
       builder.setHost(agentInfo.host)
       agentInfo.agentId.foreach { agentId =>
         builder.setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))

@@ -125,7 +125,8 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         for {
           task <- taskOption
           launched <- task.launched
-        } me ! ScheduleReadinessCheckFor(task, launched)
+          // TODO ju
+        } me ! ScheduleReadinessCheckFor(task.asInstanceOf[Task], launched)
       }
     }
 

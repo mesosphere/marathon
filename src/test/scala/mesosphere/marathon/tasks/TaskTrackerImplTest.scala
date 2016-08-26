@@ -3,6 +3,7 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -93,7 +94,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     testGetTasks(_.appTasks(TEST_APP_NAME).futureValue)
   }
 
-  private[this] def testGetTasks(call: TaskTracker => Iterable[Task]): Unit = {
+  private[this] def testGetTasks(call: TaskTracker => Iterable[Instance]): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME)
     val task2 = makeSampleTask(TEST_APP_NAME)
     val task3 = makeSampleTask(TEST_APP_NAME)
@@ -459,12 +460,12 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
       .build
   }
 
-  def containsTask(tasks: Iterable[Task], task: Task) =
-    tasks.exists(t => t.taskId == task.taskId
+  def containsTask(tasks: Iterable[Instance], task: Instance) =
+    tasks.exists(t => t.id == task.id
       && t.agentInfo.host == task.agentInfo.host
       && t.launched.map(_.hostPorts) == task.launched.map(_.hostPorts))
-  def shouldContainTask(tasks: Iterable[Task], task: Task) =
-    assert(containsTask(tasks, task), s"Should contain ${task.taskId}")
+  def shouldContainTask(tasks: Iterable[Instance], task: Instance) =
+    assert(containsTask(tasks, task), s"Should contain ${task.id}")
   def shouldNotContainTask(tasks: Iterable[Task], task: Task) =
     assert(!containsTask(tasks, task), s"Should not contain ${task.taskId}")
 

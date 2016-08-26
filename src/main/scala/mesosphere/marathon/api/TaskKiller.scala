@@ -36,7 +36,8 @@ class TaskKiller @Inject() (
 
         import scala.concurrent.ExecutionContext.Implicits.global
         taskTracker.appTasks(appId).flatMap { allTasks =>
-          val foundTasks = findToKill(allTasks)
+          // TODO ju
+          val foundTasks = findToKill(allTasks.map(_.asInstanceOf[Task]))
           val expungeTasks = if (wipe) expunge(foundTasks) else Future.successful(())
 
           expungeTasks.map { _ =>
@@ -68,7 +69,7 @@ class TaskKiller @Inject() (
     appId: PathId,
     findToKill: (Iterable[Task] => Iterable[Task]),
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId))), force)
+    killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId).map(_.asInstanceOf[Task]))), force)
   }
 
   def killAndScale(

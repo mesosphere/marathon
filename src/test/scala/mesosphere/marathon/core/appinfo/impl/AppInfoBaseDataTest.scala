@@ -3,6 +3,7 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -270,7 +271,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     f.taskTracker.tasksByApp()(global) returns
       Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, tasks)))
 
-    val statuses: Map[Task.Id, Seq[Health]] = Map(
+    val statuses: Map[Instance.Id, Seq[Health]] = Map(
       staged.taskId -> Seq(),
       running.taskId -> Seq(Health(running.taskId, lastFailure = Some(Timestamp(1)))),
       running2.taskId -> Seq(Health(running2.taskId, lastSuccess = Some(Timestamp(2))))

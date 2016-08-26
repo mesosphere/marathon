@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.tracker
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import org.slf4j.LoggerFactory
@@ -18,19 +19,19 @@ import scala.concurrent.{ ExecutionContext, Future }
   */
 trait TaskTracker {
 
-  def appTasksLaunchedSync(appId: PathId): Iterable[Task]
-  def appTasksSync(appId: PathId): Iterable[Task]
-  def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Task]]
+  def appTasksLaunchedSync(appId: PathId): Iterable[Instance]
+  def appTasksSync(appId: PathId): Iterable[Instance]
+  def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Instance]]
 
-  def task(taskId: Task.Id): Future[Option[Task]]
+  def task(taskId: Instance.Id): Future[Option[Instance]]
 
   def tasksByAppSync: TaskTracker.TasksByApp
   def tasksByApp()(implicit ec: ExecutionContext): Future[TaskTracker.TasksByApp]
 
   def countLaunchedAppTasksSync(appId: PathId): Int
-  def countLaunchedAppTasksSync(appId: PathId, filter: Task => Boolean): Int
+  def countLaunchedAppTasksSync(appId: PathId, filter: Instance => Boolean): Int
   def countAppTasksSync(appId: PathId): Int
-  def countAppTasksSync(appId: PathId, filter: Task => Boolean): Int
+  def countAppTasksSync(appId: PathId, filter: Instance => Boolean): Int
   def countAppTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Int]
 
   def hasAppTasksSync(appId: PathId): Boolean
@@ -92,7 +93,7 @@ object TaskTracker {
     * @param appId   The id of the app.
     * @param taskMap The tasks of this app by task ID. FIXME: change keys to Task.TaskID
     */
-  case class AppTasks(appId: PathId, taskMap: Map[Task.Id, Task] = Map.empty) {
+  case class AppTasks(appId: PathId, taskMap: Map[Instance.Id, Task] = Map.empty) {
 
     def isEmpty: Boolean = taskMap.isEmpty
     def contains(taskId: Task.Id): Boolean = taskMap.contains(taskId)

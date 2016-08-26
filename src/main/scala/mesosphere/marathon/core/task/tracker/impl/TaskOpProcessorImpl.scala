@@ -56,8 +56,11 @@ private[tracker] object TaskOpProcessorImpl {
 
     private[this] def updateExistingTask(op: TaskStateOp)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
       directTaskTracker.task(op.taskId).map {
-        case Some(existingTask) =>
+        case Some(existingTask: Task) =>
           existingTask.update(op)
+
+        // TODO ju POD
+        case Some(existingTask) => TaskStateChange.Failure("TODO")
 
         case None =>
           val taskId = op.taskId
@@ -67,8 +70,11 @@ private[tracker] object TaskOpProcessorImpl {
 
     private[this] def expungeTask(taskId: Task.Id)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
       directTaskTracker.task(taskId).map {
-        case Some(existingTask) =>
+        case Some(existingTask: Task) =>
           TaskStateChange.Expunge(existingTask)
+
+        // TODO ju POD
+        case Some(existingTask) => TaskStateChange.Failure("TODO")
 
         case None =>
           log.info("Ignoring ForceExpunge for [{}], task does not exist", taskId)

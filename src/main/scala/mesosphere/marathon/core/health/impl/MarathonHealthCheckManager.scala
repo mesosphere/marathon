@@ -9,6 +9,7 @@ import mesosphere.marathon.ZookeeperConf
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.TaskKillService
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -118,7 +119,7 @@ class MarathonHealthCheckManager(
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[Task] = taskTracker.appTasksSync(app.id)
+        val tasks: Iterable[Instance] = taskTracker.appTasksSync(app.id)
         val activeAppVersions: Set[Timestamp] =
           tasks.iterator.flatMap(_.launched.map(_.runSpecVersion)).toSet + app.version
 
@@ -207,7 +208,7 @@ class MarathonHealthCheckManager(
     }
   }
 
-  override def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]] =
+  override def statuses(appId: PathId): Future[Map[Instance.Id, Seq[Health]]] =
     appHealthChecks.readLock { ahcs =>
       implicit val timeout: Timeout = Timeout(2, SECONDS)
       val futureHealths = for {
@@ -215,13 +216,13 @@ class MarathonHealthCheckManager(
       } yield (actor ? GetAppHealth).mapTo[AppHealth]
 
       Future.sequence(futureHealths) flatMap { healths =>
-        val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
+        val groupedHealth: Map[Instance.Id, Vector[Health]] = healths.flatMap(_.health).groupBy(_.taskId)
 
         taskTracker.appTasks(appId).map { appTasks =>
           appTasks.iterator.map { task =>
-            groupedHealth.get(task.taskId) match {
-              case Some(xs) => task.taskId -> xs
-              case None => task.taskId -> Nil
+            groupedHealth.get(task.id) match {
+              case Some(xs) => task.id -> xs
+              case None => task.id -> Nil
             }
           }.toMap
         }

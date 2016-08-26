@@ -121,8 +121,9 @@ private class DeploymentActor(
     def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 
+    // TODO ju
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningTasks, toKill, killToMeetConstraints, scaleTo)
+      runningTasks.map(_.asInstanceOf[Task]), toKill, killToMeetConstraints, scaleTo)
 
     def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
       killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
@@ -143,7 +144,8 @@ private class DeploymentActor(
   def stopApp(app: AppDefinition): Future[Unit] = {
     val tasks = taskTracker.appTasksLaunchedSync(app.id)
     // TODO: the launch queue is purged in stopApp, but it would make sense to do that before calling kill(tasks)
-    killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
+    // TODO ju
+    killService.killTasks(tasks.map(_.asInstanceOf[Task]), TaskKillReason.DeletingApp).map(_ => ()).andThen {
       case Success(_) => scheduler.stopApp(app)
     }
   }

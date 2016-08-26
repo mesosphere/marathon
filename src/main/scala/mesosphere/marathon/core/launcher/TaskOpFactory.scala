@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launcher
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
 import mesosphere.util.state.FrameworkId
@@ -31,8 +32,9 @@ object TaskOpFactory {
   }
 
   object Request {
-    def apply(runSpec: RunSpec, offer: Mesos.Offer, tasks: Iterable[Task], additionalLaunches: Int): Request = {
-      new Request(runSpec, offer, Task.tasksById(tasks), additionalLaunches)
+    def apply(runSpec: RunSpec, offer: Mesos.Offer, tasks: Iterable[Instance], additionalLaunches: Int): Request = {
+      // TODO ju
+      new Request(runSpec, offer, Task.tasksById(tasks.map(_.asInstanceOf[Task])), additionalLaunches)
     }
   }
 }

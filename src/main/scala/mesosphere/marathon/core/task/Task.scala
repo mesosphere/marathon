@@ -1,6 +1,8 @@
 package mesosphere.marathon.core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
 import org.apache.mesos.Protos.TaskState
@@ -50,9 +52,8 @@ import scala.collection.immutable.Seq
   * Marathon will notice spurious tasks in the offer and create the appropriate
   * unreserve operations. See https://github.com/mesosphere/marathon/issues/3223
   */
-sealed trait Task {
+sealed trait Task extends Instance {
   def taskId: Task.Id
-  def agentInfo: Task.AgentInfo
   def reservationWithVolumes: Option[Task.Reservation]
   def launched: Option[Task.Launched]
 
@@ -96,6 +97,23 @@ sealed trait Task {
     * the type of task. Every Task should eventually have a version, then this can be removed.
     */
   def version: Option[Timestamp]
+
+  override def id: Id = taskId
+
+  def isReserved: Boolean = status.taskStatus == MarathonTaskStatus.Reserved
+  def isCreated: Boolean = status.taskStatus == MarathonTaskStatus.Created
+  def isError: Boolean = status.taskStatus == MarathonTaskStatus.Error
+  def isFailed: Boolean = status.taskStatus == MarathonTaskStatus.Failed
+  def isFinished: Boolean = status.taskStatus == MarathonTaskStatus.Finished
+  def isKilled: Boolean = status.taskStatus == MarathonTaskStatus.Killed
+  def isKilling: Boolean = status.taskStatus == MarathonTaskStatus.Killing
+  def isRunning: Boolean = status.taskStatus == MarathonTaskStatus.Running
+  def isStaging: Boolean = status.taskStatus == MarathonTaskStatus.Staging
+  def isStarting: Boolean = status.taskStatus == MarathonTaskStatus.Starting
+  def isUnreachable: Boolean = status.taskStatus == MarathonTaskStatus.Unreachable
+  def isGone: Boolean = status.taskStatus == MarathonTaskStatus.Gone
+  def isUnknown: Boolean = status.taskStatus == MarathonTaskStatus.Unknown
+  def isDropped: Boolean = status.taskStatus == MarathonTaskStatus.Dropped
 }
 
 object Task {
@@ -104,7 +122,7 @@ object Task {
     */
   case class LaunchedEphemeral(
       taskId: Task.Id,
-      agentInfo: AgentInfo,
+      agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
       hostPorts: Seq[Int]) extends Task {
@@ -183,7 +201,7 @@ object Task {
     */
   case class Reserved(
       taskId: Task.Id,
-      agentInfo: AgentInfo,
+      agentInfo: Instance.AgentInfo,
       reservation: Reservation,
       status: Status) extends Task {
 
@@ -223,7 +241,7 @@ object Task {
 
   case class LaunchedOnReservation(
       taskId: Task.Id,
-      agentInfo: AgentInfo,
+      agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
       hostPorts: Seq[Int],
@@ -329,11 +347,14 @@ object Task {
 
   def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
 
-  case class Id(idString: String) extends Ordered[Id] {
+  case class Id(idString: String) extends Instance.Id {
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
     lazy val runSpecId: PathId = Id.runSpecId(idString)
     override def toString: String = s"task [$idString]"
-    override def compare(that: Id): Int = idString.compare(that.idString)
+    override def compare(that: Instance.Id): Int = that match {
+      case t: Id => idString.compare(t.idString)
+      case _ => this.compareTo(that)
+    }
   }
 
   object Id {
@@ -443,14 +464,6 @@ object Task {
   }
 
   /**
-    * Info relating to the host on which the task has been launched.
-    */
-  case class AgentInfo(
-    host: String,
-    agentId: Option[String],
-    attributes: Iterable[MesosProtos.Attribute])
-
-  /**
     * Contains information about the status of a launched task including timestamps for important
     * state transitions.
     *
@@ -482,22 +495,5 @@ object Task {
         )
       else None
     }
-  }
-
-  implicit class TaskStatusComparison(val task: Task) extends AnyVal {
-    def isReserved: Boolean = task.status.taskStatus == MarathonTaskStatus.Reserved
-    def isCreated: Boolean = task.status.taskStatus == MarathonTaskStatus.Created
-    def isError: Boolean = task.status.taskStatus == MarathonTaskStatus.Error
-    def isFailed: Boolean = task.status.taskStatus == MarathonTaskStatus.Failed
-    def isFinished: Boolean = task.status.taskStatus == MarathonTaskStatus.Finished
-    def isKilled: Boolean = task.status.taskStatus == MarathonTaskStatus.Killed
-    def isKilling: Boolean = task.status.taskStatus == MarathonTaskStatus.Killing
-    def isRunning: Boolean = task.status.taskStatus == MarathonTaskStatus.Running
-    def isStaging: Boolean = task.status.taskStatus == MarathonTaskStatus.Staging
-    def isStarting: Boolean = task.status.taskStatus == MarathonTaskStatus.Starting
-    def isUnreachable: Boolean = task.status.taskStatus == MarathonTaskStatus.Unreachable
-    def isGone: Boolean = task.status.taskStatus == MarathonTaskStatus.Gone
-    def isUnknown: Boolean = task.status.taskStatus == MarathonTaskStatus.Unknown
-    def isDropped: Boolean = task.status.taskStatus == MarathonTaskStatus.Dropped
   }
 }

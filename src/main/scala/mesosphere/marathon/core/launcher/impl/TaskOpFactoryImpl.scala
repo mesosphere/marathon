@@ -2,6 +2,7 @@ package mesosphere.marathon.core.launcher.impl
 
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
@@ -51,7 +52,7 @@ class TaskOpFactoryImpl(
       case (taskInfo, ports) =>
         val task = Task.LaunchedEphemeral(
           taskId = Task.Id(taskInfo.getTaskId),
-          agentInfo = Task.AgentInfo(
+          agentInfo = Instance.AgentInfo(
             host = offer.getHostname,
             agentId = Some(offer.getSlaveId.getValue),
             attributes = offer.getAttributesList.asScala
@@ -174,7 +175,7 @@ class TaskOpFactoryImpl(
     )
     val task = Task.Reserved(
       taskId = Task.Id.forRunSpec(RunSpec.id),
-      agentInfo = Task.AgentInfo(
+      agentInfo = Instance.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),
         attributes = offer.getAttributesList.asScala

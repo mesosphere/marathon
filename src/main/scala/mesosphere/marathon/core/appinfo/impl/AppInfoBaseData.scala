@@ -4,6 +4,7 @@ import mesosphere.marathon.MarathonSchedulerService
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
@@ -100,7 +101,7 @@ class AppInfoBaseData(
 
     lazy val tasksFuture: Future[Iterable[Task]] = tasksByAppFuture.map(_.appTasks(app.id))
 
-    lazy val healthCountsFuture: Future[Map[Task.Id, Seq[Health]]] = {
+    lazy val healthCountsFuture: Future[Map[Instance.Id, Seq[Health]]] = {
       log.debug(s"retrieving health counts for app [${app.id}]")
       healthCheckManager.statuses(app.id)
     }.recover {
@@ -111,6 +112,7 @@ class AppInfoBaseData(
       for {
         tasks <- tasksFuture
         healthCounts <- healthCountsFuture
+        // TODO ju
       } yield TaskForStatistics.forTasks(now, tasks, healthCounts)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while calculating tasksForStats for app [${app.id}]", e)
@@ -134,8 +136,8 @@ class AppInfoBaseData(
 
     lazy val enrichedTasksFuture: Future[Seq[EnrichedTask]] = {
       def statusesToEnrichedTasks(
-        tasksById: Map[Task.Id, Task],
-        statuses: Map[Task.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
+        tasksById: Map[Instance.Id, Task],
+        statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         for {
           (taskId, healthResults) <- statuses.to[Seq]
           task <- tasksById.get(taskId)

@@ -11,6 +11,7 @@ import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
@@ -449,13 +450,12 @@ class SchedulerActions(
 
     log.info(s"Stopping app ${app.id}")
     taskTracker.appTasks(app.id).map { tasks =>
-      tasks.foreach { task =>
-        if (task.launchedMesosId.isDefined) {
-          log.info("Killing {}", task.taskId)
-          killService.killTask(task, TaskKillReason.DeletingApp)
-        }
-      }
-      tasks.flatMap(_.launchedMesosId).foreach { taskId =>
+      tasks.foreach {
+        case task: Task =>
+          if (task.launchedMesosId.isDefined) {
+            log.info("Killing {}", task.id)
+            killService.killTask(task, TaskKillReason.DeletingApp)
+          }
       }
       launchQueue.purge(app.id)
       launchQueue.resetDelay(app)
@@ -536,9 +536,9 @@ class SchedulerActions(
     */
   // FIXME: extract computation into a function that can be easily tested
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    import SchedulerActions._
+    //    import SchedulerActions._
 
-    def inQueueOrRunning(t: Task) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
+    def inQueueOrRunning(t: Instance) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
 
     val launchedCount = taskTracker.countAppTasksSync(app.id, inQueueOrRunning)
 
@@ -564,12 +564,14 @@ class SchedulerActions(
       launchQueue.purge(app.id)
 
       val toKill = taskTracker.appTasksSync(app.id).toSeq
-        .filter(t => t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
-        .sortWith(sortByStateAndTime)
+        // TODO ju
+        //        .filter(t => t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
+        //        .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)
 
-      log.info("Killing tasks {}", toKill.map(_.taskId))
-      killService.killTasks(toKill, TaskKillReason.ScalingApp)
+      log.info("Killing tasks {}", toKill.map(_.id))
+      // TODO ju
+      killService.killTasks(toKill.map(_.asInstanceOf[Task]), TaskKillReason.ScalingApp)
     } else {
       log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")
     }
