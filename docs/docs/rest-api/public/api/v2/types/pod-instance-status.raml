@@ -1,5 +1,6 @@
 #%RAML 1.0 DataType
 type: object
+(scalaType): PodInstanceStatus
 additionalProperties: false
 properties:
   id:
@@ -9,10 +10,8 @@ properties:
       TODO(jdef) Probably represents the Mesos executor ID.
   status:
     type: string
-    usage: |
-      TODO(jdef) this is not an enum because it reflects Marathon internal state that
-      could easily change going forward and I don't want breaking API changes that result
-      from a shifting enum here.
+    (scalaType): PodInstanceState
+    enum: [ PENDING, STAGING, STABLE, DEGRADED, TERMINAL ]
     description: |
       Reflects the aggregate status of all containers for this pod instance.
       For example RESERVED, CREATED, STAGING, STARTING, RUNNING, ERROR, FAILED, KILLING.
@@ -44,6 +43,7 @@ properties:
       Status of the networks to which this instance is attached.
     items:
       type: object
+      (scalaType): NetworkStatus
       additionalProperties: false
       properties:
         name?:

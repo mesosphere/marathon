@@ -1,5 +1,6 @@
 #%RAML 1.0 DataType
 type: object
+(scalaType): HealthCheck
 usage: Must specify a single type of check, http, tcp, or command
 maxProperties: 1
 minProperties: 1
@@ -18,6 +19,7 @@ properties:
         maxLength: 1024
       scheme?:
         type: string
+        (scalaType): HttpScheme
         enum: [ HTTP, HTTPS ]
         description: The http scheme to use
   tcp?:

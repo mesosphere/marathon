@@ -1,7 +1,9 @@
 #%RAML 1.0 DataType
 type: object
+(scalaType): Image
 properties:
   kind:
+    (scalaType): ImageType
     enum: [ DOCKER, APPC ]
   id:
     type: string
@@ -12,4 +14,3 @@ properties:
   forcePull?:
     type: boolean
     description: true if the image should always be pulled
-    

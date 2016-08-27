@@ -1,11 +1,13 @@
 #%RAML 1.0 DataType
 type: object
+(scalaType): ContainerStatus
 additionalProperties: false
 properties:
   name:
     type: !include name.raml
     description: name of the container specification (within the pod)
   status:
+    (scalaType): ContainerState
     type: string
     usage: |
       TODO(jdef) this is not an enum because it reflects Marathon internal state that
@@ -35,6 +37,7 @@ properties:
   endpoints?:
     type: array
     items:
+      (scalaType): ContainerEndpointStatus
       type: object
       additionalProperties: false
       properties:
@@ -48,6 +51,7 @@ properties:
           usage: should only be present if a health check is defined for this endpoint
           description: true if a health check is defined for this endpoint and is passing
   termination?:
+    (scalaType): ContainerTerminationState
     type: object
     additionalProperties: false
     properties:

@@ -1,5 +1,6 @@
 #%RAML 1.0 DataType
 type: object
+(scalaType): PodDef
 description: |
   A pod allows one to launch a collection co-located (on the same agent) containers
   that share the same network namespace and that may share the same volumes.
@@ -55,6 +56,7 @@ properties:
     minProperties: 1
     maxProperties: 1
     additionalProperties: false
+    (scalaType): PodScalingPolicy
     properties:
       fixed?:
         type: object
@@ -71,9 +73,11 @@ properties:
             minimum: 0
   scheduling?:
     type: object
+    (scalaType): PodSchedulingPolicy
     properties:
       backoffStrategy?:
         type: object
+        (scalaType): PodSchedulingBackoffStrategy
         description: |
           Configures exponential backoff behavior when launching potentially sick apps.
           This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos slaves.
@@ -94,6 +98,7 @@ properties:
             minimum: 0
       upgradeStrategy?:
         type: object
+        (scalaType): PodSchedulingUpgradeStrategy
         description: |
           During an upgrade all instances of an application get replaced by a new version.
           The upgradeStrategy controls how Marathon stops old versions and launches new versions.
@@ -117,6 +122,7 @@ properties:
             maximum: 1
       placement?:
         type: object
+        (scalaType): PodSchedulingPlacementPolicy
         properties:
           constraints?:
             type: array

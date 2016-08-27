@@ -1,5 +1,6 @@
 #%RAML 1.0 DataType
 type: object
+(scalaType): PodStatus
 description: |
   Pod status communicates the lifecycle phase of the pod, current instance and container
   status, and recent termination status history.
@@ -15,6 +16,7 @@ properties:
       The latest version of the pod specification (that has the same pod ID).
   status:
     type: string
+    (scalaType): PodState
     enum: [ DEGRADED, STABLE, TERMINAL ]
     description: |
       DEGRADED - The number of STABLE pod instances is less than the number of desired instances.
@@ -31,6 +33,7 @@ properties:
   instances?:
     type: array
     items:
+      (scalaType): PodInstanceStatus
       type: !include pod-instance-status.raml
   terminationHistory?:
     type: array
@@ -38,6 +41,7 @@ properties:
       List of most recent instance terminations.
       TODO(jdef) determine how many items might show up here; current thinking is .. not many
     items:
+      (scalaType): TerminationHistory
       type: object
       additionalProperties: false
       properties:
