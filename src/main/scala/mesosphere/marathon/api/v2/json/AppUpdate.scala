@@ -92,10 +92,12 @@ case class AppUpdate(
   def empty(appId: PathId): AppDefinition = {
     def volumes: Iterable[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
     def externalVolumes: Iterable[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
-    val residency = if (persistentVolumes.nonEmpty) Some(Residency.defaultResidency) else None
-    val upgradeStrategy = if (residency.isDefined || isResident
-      || externalVolumes.nonEmpty) UpgradeStrategy.forResidentTasks
-    else UpgradeStrategy.empty
+    val defaultResidency = if (persistentVolumes.nonEmpty) Some(Residency.defaultResidency) else None
+    val residency = this.residency.orElse(defaultResidency)
+    val defaultUpgradeStrategy =
+      if (residency.isDefined || isResident || externalVolumes.nonEmpty) UpgradeStrategy.forResidentTasks
+      else UpgradeStrategy.empty
+    val upgradeStrategy = this.upgradeStrategy.getOrElse(defaultUpgradeStrategy)
     apply(AppDefinition(appId, residency = residency, upgradeStrategy = upgradeStrategy))
   }
 
