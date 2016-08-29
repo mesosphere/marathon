@@ -1,0 +1,318 @@
+#%RAML 1.0 DataType
+# TODO: This is almost a direct conversion from the original json schema
+# and does not fully and accurately describe the exact behavior we have
+# today. We should attempt to align this with the actual validation code.
+type: object
+(scalaType): AppDefinition
+properties:
+  id:
+    type: string
+    pattern: ^(\/?((\.{2})|([a-z0-9][a-z0-9\-.]*[a-z0-9]+)|([a-z0-9]*))($|\/))+$
+    minLength: 1
+    description: |
+      Unique identifier for the pod consisting of a series of names separated by slashes.
+      Each name must be at least 1 character and may only contain digits (`0-9`), dashes
+      (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
+    example: /ops/audit
+  acceptedResourceRoles?:
+    type: array
+    items: string
+    example: [public-facing]
+    description: |
+      A list of resource roles.
+      Marathon considers only resource offers with roles in this list for
+      launching tasks of this app. If you do not specify this,
+      Marathon considers all resource offers with roles that have been
+      configured by the `--default_accepted_resource_roles` command line flag.
+      If no `--default_accepted_resource_roles` was given on startup,
+      Marathon considers all resource offers. To register Marathon for a role,
+      you need to specify the `--mesos_role` command line flag on startup.
+      If you want to assign all resources of a slave to a role,
+      you can use the `--default_role` argument when starting up the slave.
+      If you need a more fine-grained configuration, you can use the
+      `--resources` argument to specify resource shares per role.
+      See [the Mesos attribute and resources documentation](http://mesos.apache.org/documentation/latest/attributes-resources/) for details
+  args?:
+    type: array
+    items: string
+    description: |
+      An array of strings that represents an alternative mode of specifying the
+      command to run. This was motivated by safe usage of containerizer features
+      like a custom Docker ENTRYPOINT. This args field may be used in place of
+      cmd even when using the default command executor.
+      This change mirrors API and semantics changes in the Mesos CommandInfo
+      protobuf message starting with version `0.20.0`.
+      Either `cmd` or `args` must be supplied.
+      It is invalid to supply both `cmd` and `args` in the same app.
+  backoffFactor?:
+    type: number
+    format: double
+    minimum: 1.0
+    description: |
+      Configures exponential backoff behavior when launching potentially sick
+      apps. This prevents sandboxes associated with consecutively failing tasks
+      from filling up the hard disk on Mesos slaves.
+      The backoff period is multiplied by the factor for each consecutive
+      failure until it reaches maxLaunchDelaySeconds.
+      This applies also to tasks that are killed due to failing too
+      many health checks.
+  backoffSeconds?:
+    type: integer
+    format: int32
+    minimum: 0
+    description: |
+      Configures exponential backoff behavior when launching potentially sick
+      apps. This prevents sandboxes associated with consecutively failing tasks
+      from filling up the hard disk on Mesos slaves.
+      The backoff period is multiplied by the factor for each consecutive
+      failure until it reaches maxLaunchDelaySeconds.
+      This applies also to tasks that are killed due to failing too
+      many health checks.
+  cmd?:
+    type: string
+    minLength: 1
+    description: |
+      The command that is executed.  This value is wrapped by Mesos via
+      `/bin/sh -c ${app.cmd}`.
+      Either `cmd` or `args` must be supplied.
+      It is invalid to supply both `cmd` and `args` in the same app.
+  constraints?:
+    type: array
+    # TODO: Unclear how to do an inline enum here.
+    items:
+      type: array
+      items: string
+  container?: !include appContainer.raml
+  cpus?:
+    type: number
+    format: double
+    description: |
+      The number of CPU shares this application needs per instance. This number does not have to be integer, but can be a fraction.",
+    minimum: 0.001
+  dependencies?:
+    type: array
+    items:
+      type: string
+      pattern: ^(\/?((\.{2})|([a-z0-9][a-z0-9\-.]*[a-z0-9]+)|([a-z0-9]*))($|\/))+$
+      description: |
+        A list of services upon which this application depends
+        An order is derived from the dependencies for performing start/stop and
+        upgrade of the application. For example, an application /a relies on the
+        services /b which itself relies on /c. To start all 3 applications, first
+        /c is started than /b than /a.
+  disk?:
+    type: number
+    description: |
+      How much disk space is needed for this application.
+      This number does not have to be an integer, but can be a fraction.
+    format: double
+  env?:
+    type: object
+    properties:
+      # TODO: How do we get secretRef.raml in here?
+      /.*/: string
+  executor?:
+    type: string
+    pattern: ^(|\/\/cmd|\/?[^\/]+(\/[^\/]+)*)$
+    description: |
+      The executor to use to launch this application.
+      Different executors are available.
+      The simplest one (and the default if none is given) is //cmd,
+      which takes the cmd and executes that on the shell level.
+  fetch?:
+    type: array
+    description: Provided URIs are passed to Mesos fetcher module and resolved in runtime.
+    items: !include artifact.raml
+  healthChecks?:
+    type: array
+    items: !include appHealthChecks.raml
+  instances?:
+    type: integer
+    format: int32
+    minimum: 0
+    description: |
+      The number of instances of this application to start.
+      Please note: this number can be changed any time as needed to
+      scale the application.
+  labels?:
+    type: object
+    properties:
+      /.*/:
+        type: string
+        required: false
+  maxLaunchDelaySeconds?:
+    type: integer
+    format: int32
+    minimum: 0
+    description: |
+      Configures exponential backoff behavior when launching potentially sick
+      apps. This prevents sandboxes associated with consecutively failing tasks
+      from filling up the hard disk on Mesos slaves.
+      The backoff period is multiplied by the factor for each consecutive
+      failure until it reaches maxLaunchDelaySeconds.
+      This applies also to tasks that are killed due to failing too many health checks.
+  mem?:
+    type: number
+    format: double
+    minimum: 0
+    description: |
+      The amount of memory in MB that is needed for the application per instance.
+  gpus?:
+    type: integer
+    format: int32
+    minimum: 0
+    description: |
+      The amount of GPU cores that is needed for the application per instance.
+  ipAddress?: !include appIpAddress.raml
+  ports?:
+    type: array
+    items:
+      type: integer
+      minimum: 0
+      maximum: 65535
+      format: int32
+    description: |
+      An array of required port resources on the agent host.
+      The number of items in the array determines how many dynamic ports are
+      allocated for every task.
+      For every port that is zero, a globally unique (cluster-wide) port is
+      assigned and provided as part of the app definition to be used in load
+      balancing definitions.
+  portDefinitions?:
+    type: array
+    description: |
+      An array of required port resources on the agent host.
+      The number of items in the array determines how many dynamic ports are
+      allocated for every task. For every port definition with port number zero,
+      a globally unique (cluster-wide) service port is assigned and provided as
+      part of the app definition to be used in load balancing definitions.
+    items: !include portDefinitions.raml
+  readinessChecks?:
+    type: array
+    items: !include readinessCheck.raml
+  residency?:
+    type: object
+    description: |
+      When using local persistent volumes that pin tasks onto agents,
+      these values define how Marathon handles terminal states of these tasks.
+    additionalProperties: false
+    properties:
+      relaunchEscalationTimeoutSeconds?:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 3600
+        description: |
+          When a task using persistent local volumes cannot be restarted on the
+          agent it's been pinned to, Marathon will try to launch this task on
+          another node after this timeout. Defaults to 3600 (one hour).",
+      taskLostBehavior?:
+        type: string
+        enum: [WAIT_FOREVER, RELAUNCH_AFTER_TIMEOUT]
+        default: WAIT_FOREVER
+        description: |
+          When Marathon receives a TASK_LOST status update indicating that the
+          agent running the task is gone, this property defines whether Marathon
+          will launch the task on another node or not. Defaults to WAIT_FOREVER"
+  requirePorts?:
+    type: boolean
+    description: |
+      Normally, the host ports of your tasks are automatically assigned.
+      This corresponds to the requirePorts value false which is the default.
+      If you need more control and want to specify your host ports in advance,
+      you can set requirePorts to true. This way the ports you have specified
+      are used as host ports. That also means that Marathon can schedule the
+      associated tasks only on hosts that have the specified ports available.
+  secrets?:
+    type: object
+    description: |
+      A map with named secret declarations.
+      The key is used to reference the values from other places in the app definition.
+    properties:
+      /.*/:
+        type: object
+        description: A secret declaration
+        additionalProperties: false
+        properties:
+          source:
+            type: string
+            description: |
+              The source of the secrets value.
+              The format dependes on the secret store
+            minLength: 1
+  storeUrls?:
+    type: array
+    description: |
+      URL's that have to be resolved and put into the artifact store,
+      before the task will be started.
+    items:
+      type: string
+      minLength: 1
+  taskKillGracePeriodSeconds?:
+    type: integer
+    format: int32
+    minimum: 0
+    description: |
+      Configures the number of seconds between escalating from SIGTERM to
+      SIGKILL when signalling tasks to terminate.
+      Using this grace period, tasks should perform orderly shut down
+      immediately upon receiving SIGTERM.
+  upgradeStrategy?:
+    type: object
+    description: |
+      During an upgrade all instances of an application get replaced by a new
+      version.
+      The upgradeStrategy controls how Marathon stops old versions and
+      launches new versions.
+    additionalProperties: false
+    properties:
+      maximumOverCapacity?:
+        type: number
+        format: double
+        minimum: 0.0
+        maximum: 1.0
+        description: |
+          A number between 0 and 1 which is multiplied with the instance count.
+          This is the maximum number of additional instances launched at any
+          point of time during the upgrade process.
+      minimumHealthCapacity?:
+        type: number
+        format: double
+        minimum: 0.0
+        maximum: 1.0
+        description: |
+          A number between 0 and 1 that is multiplied with the instance count.
+          This is the minimum number of healthy nodes that do not sacrifice
+          overall application purpose. Marathon will make sure, during the
+          upgrade process, that at any point of time this number of healthy
+          instances are up.
+  uris?:
+    type: array
+    items:
+      type: string
+      minLength: 1
+    description: |
+      URIs defined here are resolved, before the application gets started.
+      If the application has external dependencies, they should be defined here.
+  user?:
+    type: string
+    description: The user to use to run the tasks on the agent.
+  version?:
+    type: string
+    description: The version of this definition
+  versionInfo?:
+    type: object
+    description: Detailed version information
+    additionalProperties: false
+    properties:
+      lastScalingAt?:
+        type: datetime
+        description: |
+          Contains the time stamp of the last change to this app which was not
+          simply a scaling or a restarting configuration.
+      lastConfigChangeAt?:
+        type: datetime
+        description: |
+          Contains the time stamp of the last change including changes like
+          scaling or restarting the app. Since our versions are time based,
+          this is currently equal to version.
