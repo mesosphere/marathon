@@ -21,18 +21,18 @@ object TaskStateOp {
   /** Launch (aka create) an ephemeral task*/
   // FIXME (3221): The type should be LaunchedEphemeral but that needs a lot of test adjustments
   case class LaunchEphemeral(task: Task) extends TaskStateOp {
-    override def taskId: Instance.Id = task.taskId
+    override def taskId: Instance.Id = task.id
     override def possibleNewState: Option[Instance] = Some(task)
   }
 
   /** Revert a task to the given state. Used in case TaskOps are rejected. */
   case class Revert(task: Task) extends TaskStateOp {
-    override def taskId: Instance.Id = task.taskId
+    override def taskId: Instance.Id = task.id
     override def possibleNewState: Option[Instance] = Some(task)
   }
 
   case class Reserve(task: Task.Reserved) extends TaskStateOp {
-    override def taskId: Instance.Id = task.taskId
+    override def taskId: Instance.Id = task.id
     override def possibleNewState: Option[Instance] = Some(task)
   }
 
@@ -44,7 +44,7 @@ object TaskStateOp {
 
   case class MesosUpdate(task: Task, status: MarathonTaskStatus,
       mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends TaskStateOp {
-    override def taskId: Instance.Id = task.taskId
+    override def taskId: Instance.Id = task.id
   }
 
   object MesosUpdate {

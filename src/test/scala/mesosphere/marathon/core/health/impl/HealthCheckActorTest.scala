@@ -76,7 +76,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val actor = f.actor(HealthCheck(maxConsecutiveFailures = 3))
 
-    actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.taskId, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.id, consecutiveFailures = 3))
     verify(f.killService).killTask(f.task, TaskKillReason.FailedHealthChecks)
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
@@ -85,7 +85,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val actor = f.actor(HealthCheck(maxConsecutiveFailures = 3))
 
-    actor.underlyingActor.checkConsecutiveFailures(f.unreachableTask, Health(f.unreachableTask.taskId, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(f.unreachableTask, Health(f.unreachableTask.id, consecutiveFailures = 3))
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
 

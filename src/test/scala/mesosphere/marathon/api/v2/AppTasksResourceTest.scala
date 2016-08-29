@@ -75,7 +75,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
     val response = appsTaskResource.deleteOne(
-      appId.toString, task1.taskId.idString, scale = false, force = false, wipe = false, auth.request
+      appId.toString, task1.id.idString, scale = false, force = false, wipe = false, auth.request
     )
     response.getStatus shouldEqual 200
     JsonTestHelper
@@ -111,7 +111,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
     val response = appsTaskResource.deleteOne(
-      appId.toString, task1.taskId.idString, scale = false, force = false, wipe = true, auth.request
+      appId.toString, task1.id.idString, scale = false, force = false, wipe = true, auth.request
     )
     response.getStatus shouldEqual 200
     JsonTestHelper

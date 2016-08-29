@@ -17,7 +17,7 @@ class TaskOpFactoryHelper(
     taskInfo: Mesos.TaskInfo,
     newTask: Task.LaunchedEphemeral): TaskOp.Launch = {
 
-    assume(newTask.taskId.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
+    assume(newTask.id.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 

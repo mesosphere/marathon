@@ -130,8 +130,8 @@ class TaskKillerTest extends MarathonSpec
     val reservedTask = MarathonTestHelper.residentReservedTask(appId)
     val tasksToKill = Set(runningTask, reservedTask)
     val launchedTasks = Set(runningTask)
-    val stateOp1 = TaskStateOp.ForceExpunge(runningTask.taskId)
-    val stateOp2 = TaskStateOp.ForceExpunge(reservedTask.taskId)
+    val stateOp1 = TaskStateOp.ForceExpunge(runningTask.id)
+    val stateOp2 = TaskStateOp.ForceExpunge(reservedTask.id)
 
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.appTasks(appId)).thenReturn(Future.successful(tasksToKill))
@@ -147,8 +147,8 @@ class TaskKillerTest extends MarathonSpec
     // only task1 is killed
     verify(f.service, times(1)).killTasks(appId, launchedTasks)
     // both tasks are expunged from the repo
-    verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(runningTask.taskId))
-    verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(reservedTask.taskId))
+    verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(runningTask.id))
+    verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(reservedTask.id))
   }
 
   class Fixture {

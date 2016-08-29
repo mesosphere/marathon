@@ -105,19 +105,19 @@ private[health] class HealthCheckActor(
     // ignore failures if maxFailures == 0
     if (consecutiveFailures >= maxFailures && maxFailures > 0) {
       log.info(
-        s"Detected unhealthy ${task.taskId} of app [${app.id}] version [${app.version}] on host ${task.agentInfo.host}"
+        s"Detected unhealthy ${task.id} of app [${app.id}] version [${app.version}] on host ${task.agentInfo.host}"
       )
 
       // kill the task, if it is reachable
       if (task.isUnreachable) {
-        val id = task.taskId
+        val id = task.id
         log.info(s"Task $id on host ${task.agentInfo.host} is temporarily unreachable. Performing no kill.")
       } else {
-        log.info(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
+        log.info(s"Send kill request for ${task.id} on host ${task.agentInfo.host} to driver")
         eventBus.publish(
           UnhealthyTaskKillEvent(
             appId = task.runSpecId,
-            taskId = task.taskId,
+            taskId = task.id,
             version = app.version,
             reason = health.lastFailureCause.getOrElse("unknown"),
             host = task.agentInfo.host,

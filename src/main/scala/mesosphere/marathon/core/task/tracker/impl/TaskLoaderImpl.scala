@@ -23,7 +23,7 @@ private[tracker] class TaskLoaderImpl(repo: TaskRepository)(implicit val mat: Ma
       tasks <- Future.sequence(names.map(repo.get)).map(_.flatten)
     } yield {
       log.info(s"Loaded ${tasks.size} tasks")
-      val tasksByApp = tasks.groupBy(_.taskId.runSpecId)
+      val tasksByApp = tasks.groupBy(_.id.runSpecId)
       val map = tasksByApp.map {
         case (appId, appTasks) => appId -> TaskTracker.AppTasks.forTasks(appId, appTasks)
       }

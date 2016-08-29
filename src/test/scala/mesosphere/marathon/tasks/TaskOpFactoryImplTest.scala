@@ -35,7 +35,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val inferredTaskOp = f.taskOpFactory.buildTaskOp(request)
 
     val expectedTask = Task.LaunchedEphemeral(
-      taskId = inferredTaskOp.fold(Instance.Id("failure"))(_.taskId),
+      id = inferredTaskOp.fold(Instance.Id("failure"))(_.taskId),
       agentInfo = Instance.AgentInfo(
         host = "some_host",
         agentId = Some(offer.getSlaveId.getValue),
@@ -136,7 +136,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val localVolumeIdMatch = LocalVolumeId(app.id, "persistent-volume", "uuidMatch")
     val reservedTask = f.residentReservedTask(app.id, localVolumeIdMatch)
     val offer = f.offerWithVolumes(
-      reservedTask.taskId.idString, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
+      reservedTask.id.idString, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
     )
     val runningTasks = Seq(
       f.residentLaunchedTask(app.id, localVolumeIdLaunched),
@@ -166,7 +166,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val usedVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid1")
     val offeredVolumeId = LocalVolumeId(app.id, "unwanted-persistent-volume", "uuid2")
     val runningTasks = Seq(f.residentLaunchedTask(app.id, usedVolumeId))
-    val offer = f.offerWithVolumes(runningTasks.head.taskId.idString, offeredVolumeId)
+    val offer = f.offerWithVolumes(runningTasks.head.id.idString, offeredVolumeId)
 
     When("We infer the taskOp")
     val request = TaskOpFactory.Request(app, offer, runningTasks, additionalLaunches = 1)

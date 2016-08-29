@@ -74,7 +74,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       expectMsg(5.seconds, TasksReconciled)
 
       awaitAssert({
-        killService.killed should contain (task.taskId)
+        killService.killed should contain (task.id)
       }, 5.seconds, 10.millis)
     } finally {
       stopActor(schedulerActor)
@@ -138,7 +138,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val taskA = MarathonTestHelper.stagedTaskForApp(app.id)
     val statusUpdateEvent = MesosStatusUpdateEvent(
       slaveId = "",
-      taskId = taskA.taskId,
+      taskId = taskA.id,
       taskStatus = "TASK_FAILED",
       message = "",
       appId = app.id,
@@ -147,7 +147,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       ports = Nil,
       version = app.version.toString
     )
-    f.killService.customStatusUpdates.put(taskA.taskId, statusUpdateEvent)
+    f.killService.customStatusUpdates.put(taskA.id, statusUpdateEvent)
 
     queue.get(app.id) returns Some(LaunchQueueTestHelper.zeroCounts)
     repo.ids() returns Source.single(app.id)
@@ -162,7 +162,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! KillTasks(app.id, Set(taskA))
 
-      expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.taskId)))
+      expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.id)))
 
       val Some(taskFailureEvent) = TaskFailure.FromMesosStatusUpdateEvent(statusUpdateEvent)
 
@@ -196,7 +196,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       schedulerActor ! LocalLeadershipEvent.ElectedAsLeader
       schedulerActor ! KillTasks(app.id, Set(taskA))
 
-      expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.taskId)))
+      expectMsg(5.seconds, TasksKilled(app.id, Set(taskA.id)))
 
       awaitAssert(verify(queue).add(app, 1), 5.seconds, 10.millis)
     } finally {

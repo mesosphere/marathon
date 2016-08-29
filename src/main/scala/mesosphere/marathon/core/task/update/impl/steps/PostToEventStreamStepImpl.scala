@@ -78,7 +78,7 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) 
     task: Task,
     version: Timestamp): Unit = {
 
-    val taskId = task.taskId
+    val taskId = task.id
     val slaveId = maybeStatus.fold("n/a")(_.getSlaveId.getValue)
     val message = maybeStatus.fold("")(status => if (status.hasMessage) status.getMessage else "")
     val host = task.agentInfo.host

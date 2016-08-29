@@ -172,7 +172,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val taskIsHealthy = HealthStatusChanged(appId, taskId, version, alive = true)
 
     agentInfo.host returns "some.host"
-    task.taskId returns taskId
+    task.id returns taskId
     task.launched returns Some(launched)
     task.runSpecId returns appId
     task.effectiveIpAddress(any) returns Some("some.host")

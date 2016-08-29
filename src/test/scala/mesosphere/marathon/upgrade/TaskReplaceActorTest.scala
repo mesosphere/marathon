@@ -48,8 +48,8 @@ class TaskReplaceActorTest
 
     Await.result(promise.future, 5.seconds)
     verify(f.queue).resetDelay(app)
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
 
     expectTerminated(ref)
   }
@@ -76,8 +76,8 @@ class TaskReplaceActorTest
 
     Await.result(promise.future, 5.seconds)
     verify(f.queue).resetDelay(app)
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
 
     expectTerminated(ref)
   }
@@ -152,9 +152,9 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
 
     expectTerminated(ref)
   }
@@ -204,9 +204,9 @@ class TaskReplaceActorTest
 
     // all old tasks are killed
     verify(f.queue).resetDelay(app)
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
 
     expectTerminated(ref)
   }
@@ -254,9 +254,9 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
 
     expectTerminated(ref)
   }
@@ -304,9 +304,9 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
 
     expectTerminated(ref)
   }
@@ -334,7 +334,7 @@ class TaskReplaceActorTest
 
     // one task is killed directly because we are over capacity
     val order = org.mockito.Mockito.inOrder(f.queue)
-    f.killService.killed should contain (taskA.taskId)
+    f.killService.killed should contain (taskA.id)
 
     // the kill is confirmed (see answer above) and the first new task is queued
     eventually { order.verify(f.queue).add(app, 1) }
@@ -358,9 +358,9 @@ class TaskReplaceActorTest
     Await.result(promise.future, 5.seconds)
 
     // all remaining old tasks are killed
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
-    f.killService.killed should contain (taskD.taskId)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
+    f.killService.killed should contain (taskD.id)
 
     expectTerminated(ref)
   }
@@ -404,8 +404,8 @@ class TaskReplaceActorTest
       ref.receive(MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString))
 
     verify(f.queue, Mockito.timeout(1000)).resetDelay(app)
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
 
     Await.result(promise.future, 0.second)
     promise.isCompleted should be(true)

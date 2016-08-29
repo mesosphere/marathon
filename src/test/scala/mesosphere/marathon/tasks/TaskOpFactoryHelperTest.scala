@@ -30,7 +30,7 @@ class TaskOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with Mocki
 
     Given("a task and a taskInfo")
     val task = MarathonTestHelper.mininimalTask("123")
-    val taskInfo = MarathonTestHelper.makeOneCPUTask(task.taskId.idString).build()
+    val taskInfo = MarathonTestHelper.makeOneCPUTask(task.id.idString).build()
 
     When("We create a launch operation")
     val launch = f.helper.launchEphemeral(taskInfo, task)

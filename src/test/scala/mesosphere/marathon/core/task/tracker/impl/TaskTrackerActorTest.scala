@@ -142,7 +142,7 @@ class TaskTrackerActorTest
 
     When("staged task transitions to running")
     val probe = TestProbe()
-    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.taskId.idString)
+    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.id.idString)
     val mesosStatus = stagedTaskNowRunning.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedTask,

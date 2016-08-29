@@ -495,7 +495,7 @@ class SchedulerActions(
               "The app was likely terminated. Will now expunge."
           )
           tasksByApp.appTasks(unknownAppId).foreach { orphanTask =>
-            log.info(s"Killing ${orphanTask.taskId}")
+            log.info(s"Killing ${orphanTask.id}")
             killService.killTask(orphanTask, TaskKillReason.Orphaned)
           }
         }

@@ -274,7 +274,7 @@ class TaskRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(i
   ir: IdResolver[Instance.Id, Task, C, K],
   marshaller: Marshaller[Task, S],
   unmarshaller: Unmarshaller[S, Task])
-    extends PersistenceStoreRepository[Instance.Id, Task, K, C, S](persistenceStore, _.taskId)
+    extends PersistenceStoreRepository[Instance.Id, Task, K, C, S](persistenceStore, _.id)
     with TaskRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(

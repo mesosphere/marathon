@@ -112,7 +112,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     val tasksWithSource = tasks.map { task =>
       val dummyTask = MarathonTestHelper.residentReservedTask(appId)
       val taskStateOp = TaskStateOp.LaunchOnReservation(
-        taskId = dummyTask.taskId,
+        taskId = dummyTask.id,
         runSpecVersion = clock.now(),
         status = Task.Status(clock.now(), taskStatus = MarathonTaskStatus.Running),
         hostPorts = Seq.empty)

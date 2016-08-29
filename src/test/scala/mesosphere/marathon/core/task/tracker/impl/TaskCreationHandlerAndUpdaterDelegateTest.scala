@@ -26,7 +26,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.taskId, stateOp)
+      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.id, stateOp)
     )
 
     When("the request is acknowledged")
@@ -46,7 +46,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.taskId, stateOp)
+      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.id, stateOp)
     )
 
     When("the response is an error")
@@ -55,7 +55,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     Then("The reply is the value of task")
     val createValue = create.failed.futureValue
     createValue.getMessage should include(appId.toString)
-    createValue.getMessage should include(task.taskId.idString)
+    createValue.getMessage should include(task.id.idString)
     createValue.getMessage should include("Launch")
     createValue.getCause should be(cause)
   }
@@ -64,7 +64,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = TaskStateOp.ForceExpunge(task.taskId)
+    val stateOp = TaskStateOp.ForceExpunge(task.id)
     val expectedStateChange = TaskStateChange.Expunge(task)
 
     When("terminated is called")
@@ -72,7 +72,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.taskId, stateOp)
+      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.id, stateOp)
     )
 
     When("the request is acknowledged")
@@ -85,14 +85,14 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = TaskStateOp.ForceExpunge(task.taskId)
+    val stateOp = TaskStateOp.ForceExpunge(task.id)
 
     When("terminated is called")
     val terminated = f.delegate.terminated(stateOp)
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
-      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.taskId, stateOp)
+      TaskTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.id, stateOp)
     )
 
     When("the response is an error")
@@ -101,7 +101,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     Then("The reply is the value of task")
     val terminatedValue = terminated.failed.futureValue
     terminatedValue.getMessage should include(appId.toString)
-    terminatedValue.getMessage should include(task.taskId.idString)
+    terminatedValue.getMessage should include(task.id.idString)
     terminatedValue.getMessage should include("Expunge")
     terminatedValue.getCause should be(cause)
   }
@@ -110,7 +110,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val taskId = task.taskId
+    val taskId = task.id
     val taskIdString = taskId.idString
     val now = f.clock.now()
 
@@ -136,7 +136,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val taskId = task.taskId
+    val taskId = task.id
     val now = f.clock.now()
 
     val update = TaskStatus.newBuilder().setTaskId(taskId.mesosTaskId).buildPartial()

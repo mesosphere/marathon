@@ -120,7 +120,7 @@ trait Formats
   implicit lazy val TaskWrites: Writes[Instance] = Writes {
     case task: Task =>
       val base = Json.obj(
-        "id" -> task.taskId,
+        "id" -> task.id,
         "slaveId" -> task.agentInfo.agentId,
         "host" -> task.agentInfo.host,
         "state" -> task.mesosStatus.fold(mesos.TaskState.TASK_STAGING)(_.getState)

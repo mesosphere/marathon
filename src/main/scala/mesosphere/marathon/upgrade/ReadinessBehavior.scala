@@ -133,9 +133,9 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
 
     def readinessCheckBehavior: Receive = {
       case ScheduleReadinessCheckFor(task, launched) =>
-        log.debug(s"Schedule readiness check for task: ${task.taskId}")
+        log.debug(s"Schedule readiness check for task: ${task.id}")
         ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task, launched).foreach { spec =>
-          val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
+          val subscriptionName = ReadinessCheckSubscriptionKey(task.id, spec.checkName)
           val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
           subscriptions += subscriptionName -> subscription
         }

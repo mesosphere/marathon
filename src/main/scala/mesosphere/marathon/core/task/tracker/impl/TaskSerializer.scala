@@ -127,7 +127,7 @@ object TaskSerializer {
       builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus))
     }
 
-    setId(task.taskId)
+    setId(task.id)
     setAgentInfo(task.agentInfo)
     setMarathonTaskStatus(task.status.taskStatus)
 

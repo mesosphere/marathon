@@ -23,7 +23,7 @@ object TaskLabels {
   }
 
   def labelsForTask(frameworkId: FrameworkId, task: Task): ReservationLabels =
-    labelsForTask(frameworkId, task.taskId)
+    labelsForTask(frameworkId, task.id)
 
   def labelsForTask(frameworkId: FrameworkId, taskId: Instance.Id): ReservationLabels =
     ReservationLabels(Map(

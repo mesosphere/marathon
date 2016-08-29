@@ -23,7 +23,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
     )
 
     val taskWithoutIp = new Task.LaunchedEphemeral(
-      taskId = Instance.Id("/foo/bar"),
+      id = Instance.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
       status = Task.Status(time, None, taskStatus = MarathonTaskStatus.Running),
@@ -40,7 +40,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
     }
 
     val taskWithMultipleIPs = new Task.LaunchedEphemeral(
-      taskId = Instance.Id("/foo/bar"),
+      id = Instance.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
       status = Task.Status(
@@ -52,7 +52,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
     )
 
     val taskWithLocalVolumes = new Task.LaunchedOnReservation(
-      taskId = Instance.Id("/foo/bar"),
+      id = Instance.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
       status = Task.Status(time, Some(time), taskStatus = MarathonTaskStatus.Running),

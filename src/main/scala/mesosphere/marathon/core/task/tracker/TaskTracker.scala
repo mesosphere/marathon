@@ -99,13 +99,13 @@ object TaskTracker {
     def contains(taskId: Instance.Id): Boolean = taskMap.contains(taskId)
     def tasks: Iterable[Task] = taskMap.values
 
-    private[tracker] def withTask(task: Task): AppTasks = copy(taskMap = taskMap + (task.taskId -> task))
+    private[tracker] def withTask(task: Task): AppTasks = copy(taskMap = taskMap + (task.id -> task))
 
     private[tracker] def withoutTask(taskId: Instance.Id): AppTasks = copy(taskMap = taskMap - taskId)
   }
 
   object AppTasks {
     def forTasks(appId: PathId, tasks: Iterable[Task]): AppTasks =
-      AppTasks(appId, tasks.map(task => task.taskId -> task).toMap)
+      AppTasks(appId, tasks.map(task => task.id -> task).toMap)
   }
 }

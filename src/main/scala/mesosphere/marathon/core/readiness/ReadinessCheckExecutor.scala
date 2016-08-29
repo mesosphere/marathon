@@ -71,7 +71,7 @@ object ReadinessCheckExecutor {
         }
 
         ReadinessCheckSpec(
-          taskId = task.taskId,
+          taskId = task.id,
           checkName = checkDef.name,
           url = url,
           interval = checkDef.interval,

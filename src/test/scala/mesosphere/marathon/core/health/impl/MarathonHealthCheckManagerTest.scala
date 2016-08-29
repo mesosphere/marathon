@@ -226,7 +226,7 @@ class MarathonHealthCheckManagerTest
     def taskStatus(task: Task, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
       mesos.TaskStatus.newBuilder
         .setTaskId(mesos.TaskID.newBuilder()
-          .setValue(task.taskId.idString)
+          .setValue(task.id.idString)
           .build)
         .setState(state)
         .setHealthy(false)
@@ -250,7 +250,7 @@ class MarathonHealthCheckManagerTest
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: Task) =
-      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.taskId)).futureValue
+      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.id)).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath

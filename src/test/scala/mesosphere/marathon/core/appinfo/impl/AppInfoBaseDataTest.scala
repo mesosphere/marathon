@@ -73,14 +73,14 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     f.taskTracker.tasksByApp()(global) returns
       Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Iterable(running1, running2, running3))))
 
-    val alive = Health(running2.taskId, lastSuccess = Some(Timestamp(1)))
-    val unhealthy = Health(running3.taskId, lastFailure = Some(Timestamp(1)))
+    val alive = Health(running2.id, lastSuccess = Some(Timestamp(1)))
+    val unhealthy = Health(running3.id, lastFailure = Some(Timestamp(1)))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
-        running1.taskId -> Seq.empty,
-        running2.taskId -> Seq(alive),
-        running3.taskId -> Seq(unhealthy)
+        running1.id -> Seq.empty,
+        running2.id -> Seq(alive),
+        running3.id -> Seq(unhealthy)
       )
     )
 
@@ -90,7 +90,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     Then("we get a tasks object in the appInfo")
     appInfo.maybeTasks should not be empty
     appInfo.maybeTasks.get.map(_.appId.toString) should have size 3
-    appInfo.maybeTasks.get.map(_.task.taskId.idString).toSet should be (Set("task1", "task2", "task3"))
+    appInfo.maybeTasks.get.map(_.task.id.idString).toSet should be (Set("task1", "task2", "task3"))
 
     appInfo should be(AppInfo(app, maybeTasks = Some(
       Seq(
@@ -272,9 +272,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
       Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, tasks)))
 
     val statuses: Map[Instance.Id, Seq[Health]] = Map(
-      staged.taskId -> Seq(),
-      running.taskId -> Seq(Health(running.taskId, lastFailure = Some(Timestamp(1)))),
-      running2.taskId -> Seq(Health(running2.taskId, lastSuccess = Some(Timestamp(2))))
+      staged.id -> Seq(),
+      running.id -> Seq(Health(running.id, lastFailure = Some(Timestamp(1)))),
+      running2.id -> Seq(Health(running2.id, lastSuccess = Some(Timestamp(2))))
     )
     f.healthCheckManager.statuses(app.id) returns Future.successful(statuses)
 

@@ -104,7 +104,7 @@ class TaskStatusUpdateProcessorImplTest
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(task.taskId)
+    verify(f.taskTracker).task(task.id)
 
     And("the task kill gets initiated")
     verify(f.killService).killTask(task, TaskKillReason.Unknown)

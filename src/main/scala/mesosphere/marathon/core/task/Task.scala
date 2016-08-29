@@ -2,7 +2,6 @@ package mesosphere.marathon.core.task
 
 import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
 import org.apache.mesos.Protos.TaskState
@@ -53,7 +52,7 @@ import scala.collection.immutable.Seq
   * unreserve operations. See https://github.com/mesosphere/marathon/issues/3223
   */
 sealed trait Task extends Instance {
-  def taskId: Instance.Id
+  def id: Instance.Id
   def reservationWithVolumes: Option[Task.Reservation]
   def launched: Option[Task.Launched]
 
@@ -98,8 +97,6 @@ sealed trait Task extends Instance {
     */
   def version: Option[Timestamp]
 
-  override def id: Id = taskId
-
   override def isLaunched: Boolean = launched.isDefined
 
   def isReserved: Boolean = status.taskStatus == MarathonTaskStatus.Reserved
@@ -123,7 +120,7 @@ object Task {
     * A LaunchedEphemeral task is a stateless task that does not consume reserved resources or persistent volumes.
     */
   case class LaunchedEphemeral(
-      taskId: Instance.Id,
+      id: Instance.Id,
       agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
@@ -164,8 +161,8 @@ object Task {
               taskStatus = taskStatus))
             TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
           case None =>
-            log.debug("Ignoring status update for {}. Status did not change.", taskId)
-            TaskStateChange.NoChange(taskId)
+            log.debug("Ignoring status update for {}. Status did not change.", id)
+            TaskStateChange.NoChange(id)
         }
 
       case TaskStateOp.ForceExpunge(_) =>
@@ -198,11 +195,11 @@ object Task {
     * A Reserved task carries the information of reserved resources and persistent volumes
     * and is currently not launched.
     *
-    * @param taskId The task Id
+    * @param id The task Id
     * @param reservation Information about the reserved resources and persistent volumes
     */
   case class Reserved(
-      taskId: Instance.Id,
+      id: Instance.Id,
       agentInfo: Instance.AgentInfo,
       reservation: Reservation,
       status: Status) extends Task {
@@ -213,7 +210,7 @@ object Task {
 
     override def update(update: TaskStateOp): TaskStateChange = update match {
       case TaskStateOp.LaunchOnReservation(_, runSpecVersion, taskStatus, hostPorts) =>
-        val updatedTask = LaunchedOnReservation(taskId, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
+        val updatedTask = LaunchedOnReservation(id, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
 
       case _: TaskStateOp.ReservationTimeout =>
@@ -223,7 +220,7 @@ object Task {
         TaskStateChange.Expunge(this)
 
       case _: TaskStateOp.Reserve =>
-        TaskStateChange.NoChange(taskId)
+        TaskStateChange.NoChange(id)
 
       // failure case
       case _: TaskStateOp.Revert =>
@@ -242,7 +239,7 @@ object Task {
   }
 
   case class LaunchedOnReservation(
-      taskId: Instance.Id,
+      id: Instance.Id,
       agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
@@ -272,7 +269,7 @@ object Task {
       // FIXME (3221): handle task_lost, kill etc differently and set appropriate timeouts (if any)
       case TaskStateOp.MesosUpdate(task, taskStatus: MarathonTaskStatus.Terminal, mesosStatus, now) =>
         val updatedTask = Task.Reserved(
-          taskId = taskId,
+          id = id,
           agentInfo = agentInfo,
           reservation = reservation.copy(state = Task.Reservation.State.Suspended(timeout = None)),
           status = Task.Status(
@@ -292,8 +289,8 @@ object Task {
             taskStatus = taskStatus))
           TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
         } getOrElse {
-          log.debug("Ignoring status update for {}. Status did not change.", taskId)
-          TaskStateChange.NoChange(taskId)
+          log.debug("Ignoring status update for {}. Status did not change.", id)
+          TaskStateChange.NoChange(id)
         }
 
       case _: TaskStateOp.ForceExpunge =>

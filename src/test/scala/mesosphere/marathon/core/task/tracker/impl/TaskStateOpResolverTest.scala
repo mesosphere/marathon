@@ -69,7 +69,7 @@ class TaskStateOpResolverTest
   test("MesosUpdate fails if task does not exist") {
     val f = new Fixture
     Given("a non existing taskId")
-    f.taskTracker.task(f.existingTask.taskId) returns Future.successful(None)
+    f.taskTracker.task(f.existingTask.id) returns Future.successful(None)
 
     When("A MesosUpdate is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(TaskStateOp.MesosUpdate(
@@ -78,7 +78,7 @@ class TaskStateOpResolverTest
       now = Timestamp(0))).futureValue
 
     Then("taskTracker.task is called")
-    verify(f.taskTracker).task(f.existingTask.taskId)
+    verify(f.taskTracker).task(f.existingTask.id)
 
     And("the result is a Failure")
     stateChange shouldBe a[TaskStateChange.Failure]
@@ -94,14 +94,14 @@ class TaskStateOpResolverTest
       val f = new Fixture
 
       Given("an existing task")
-      f.taskTracker.task(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
+      f.taskTracker.task(f.existingTask.id) returns Future.successful(Some(f.existingTask))
 
       When("A TASK_LOST update is received with a reason indicating it might come back")
       val stateOp = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).wrapped.stateOp
       val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
       Then("taskTracker.task is called")
-      verify(f.taskTracker).task(f.existingTask.taskId)
+      verify(f.taskTracker).task(f.existingTask.id)
 
       And("the result is an Update")
       stateChange shouldBe a[TaskStateChange.Update]
@@ -122,14 +122,14 @@ class TaskStateOpResolverTest
       val f = new Fixture
 
       Given("an existing task")
-      f.taskTracker.task(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
+      f.taskTracker.task(f.existingTask.id) returns Future.successful(Some(f.existingTask))
 
       When("A TASK_LOST update is received with a reason indicating it won't come back")
       val stateOp: TaskStateOp.MesosUpdate = TaskStatusUpdateTestHelper.lost(reason, f.existingTask).wrapped.stateOp.asInstanceOf[TaskStateOp.MesosUpdate]
       val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
       Then("taskTracker.task is called")
-      verify(f.taskTracker).task(f.existingTask.taskId)
+      verify(f.taskTracker).task(f.existingTask.id)
 
       And("the result is an Expunge")
       stateChange shouldBe a[TaskStateChange.Expunge]
@@ -153,7 +153,7 @@ class TaskStateOpResolverTest
     val f = new Fixture
 
     Given("an existing lost task")
-    f.taskTracker.task(f.existingLostTask.taskId) returns Future.successful(Some(f.existingLostTask))
+    f.taskTracker.task(f.existingLostTask.id) returns Future.successful(Some(f.existingLostTask))
 
     When("A subsequent TASK_LOST update is received")
     val reason = mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DISCONNECTED
@@ -161,7 +161,7 @@ class TaskStateOpResolverTest
     val stateChange = f.stateOpResolver.resolve(stateOp).futureValue
 
     Then("taskTracker.task is called")
-    verify(f.taskTracker).task(f.existingLostTask.taskId)
+    verify(f.taskTracker).task(f.existingLostTask.id)
 
     And("the result is an noop")
     stateChange shouldBe a[TaskStateChange.NoChange]
@@ -190,13 +190,13 @@ class TaskStateOpResolverTest
   test("Launch fails if task already exists") {
     val f = new Fixture
     Given("an existing task")
-    f.taskTracker.task(f.existingTask.taskId) returns Future.successful(Some(f.existingTask))
+    f.taskTracker.task(f.existingTask.id) returns Future.successful(Some(f.existingTask))
 
     When("A LaunchEphemeral is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(TaskStateOp.LaunchEphemeral(f.existingTask)).futureValue
 
     Then("taskTracker.task is called")
-    verify(f.taskTracker).task(f.existingTask.taskId)
+    verify(f.taskTracker).task(f.existingTask.id)
 
     And("the result is a Failure")
     stateChange shouldBe a[TaskStateChange.Failure]
@@ -208,13 +208,13 @@ class TaskStateOpResolverTest
   test("Reserve fails if task already exists") {
     val f = new Fixture
     Given("an existing task")
-    f.taskTracker.task(f.existingReservedTask.taskId) returns Future.successful(Some(f.existingReservedTask))
+    f.taskTracker.task(f.existingReservedTask.id) returns Future.successful(Some(f.existingReservedTask))
 
     When("A Reserve is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(TaskStateOp.Reserve(f.existingReservedTask)).futureValue
 
     Then("taskTracker.task is called")
-    verify(f.taskTracker).task(f.existingReservedTask.taskId)
+    verify(f.taskTracker).task(f.existingReservedTask.id)
 
     And("the result is a Failure")
     stateChange shouldBe a[TaskStateChange.Failure]

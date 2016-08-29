@@ -256,7 +256,7 @@ object MarathonTestHelper {
       import scala.collection.JavaConverters._
 
       Task.LaunchedEphemeral(
-        taskId = Instance.Id(taskInfo.getTaskId),
+        id = Instance.Id(taskInfo.getTaskId),
         agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
@@ -380,7 +380,7 @@ object MarathonTestHelper {
 
   def minimalReservedTask(appId: PathId, reservation: Task.Reservation): Task.Reserved =
     Task.Reserved(
-      taskId = Instance.Id.forRunSpec(appId),
+      id = Instance.Id.forRunSpec(appId),
       Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       reservation = reservation,
       status = Task.Status(Timestamp.now(), taskStatus = MarathonTaskStatus.Reserved))
@@ -407,7 +407,7 @@ object MarathonTestHelper {
     )
   def startingTask(taskId: String, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
-      taskId = Instance.Id(taskId),
+      id = Instance.Id(taskId),
       agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
@@ -428,7 +428,7 @@ object MarathonTestHelper {
     stagedAt: Long = 2,
     mesosStatus: Option[Mesos.TaskStatus] = None): Task.LaunchedEphemeral =
     Task.LaunchedEphemeral(
-      taskId = Instance.Id(taskId),
+      id = Instance.Id(taskId),
       agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
       runSpecVersion = appVersion,
       status = Task.Status(
@@ -554,7 +554,7 @@ object MarathonTestHelper {
   def residentLaunchedTask(appId: PathId, localVolumeIds: Task.LocalVolumeId*) = {
     val now = Timestamp.now()
     Task.LaunchedOnReservation(
-      taskId = Instance.Id.forRunSpec(appId),
+      id = Instance.Id.forRunSpec(appId),
       agentInfo = Instance.AgentInfo(host = "host.some", agentId = None, attributes = Iterable.empty),
       runSpecVersion = now,
       status = Task.Status(
