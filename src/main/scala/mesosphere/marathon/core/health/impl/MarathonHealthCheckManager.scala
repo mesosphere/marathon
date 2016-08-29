@@ -121,7 +121,8 @@ class MarathonHealthCheckManager(
 
         val tasks: Iterable[Instance] = taskTracker.appTasksSync(app.id)
         val activeAppVersions: Set[Timestamp] =
-          tasks.iterator.flatMap(_.launched.map(_.runSpecVersion)).toSet + app.version
+          // TODO ju fixme
+          tasks.iterator.flatMap(_.asInstanceOf[Task].launched.map(_.runSpecVersion)).toSet + app.version
 
         val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
           // remove health checks for which the app version is not current and no tasks remain
@@ -159,7 +160,7 @@ class MarathonHealthCheckManager(
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
     appHealthChecks.readLock { ahcs =>
       // construct a health result from the incoming task status
-      val taskId = Task.Id(taskStatus.getTaskId.getValue)
+      val taskId = Instance.Id(taskStatus.getTaskId.getValue)
       val maybeResult: Option[HealthResult] =
         if (taskStatus.hasHealthy) {
           val healthy = taskStatus.getHealthy
@@ -171,7 +172,7 @@ class MarathonHealthCheckManager(
         }
 
       // compute the app ID for the incoming task status
-      val appId = Task.Id(taskStatus.getTaskId).runSpecId
+      val appId = Instance.Id(taskStatus.getTaskId).runSpecId
 
       // collect health check actors for the associated app's command checks.
       val healthCheckActors: Iterable[ActorRef] = listActive(appId, version).collect {
@@ -188,13 +189,14 @@ class MarathonHealthCheckManager(
       }
     }
 
-  override def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]] = {
+  override def status(appId: PathId, taskId: Instance.Id): Future[Seq[Health]] = {
     import HealthCheckActor.GetTaskHealth
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
       maybeTaskState <- taskTracker.task(taskId)
-    } yield maybeTaskState.flatMap(_.launched).map(_.runSpecVersion)
+      // TODO ju fixme
+    } yield maybeTaskState.flatMap(_.asInstanceOf[Task].launched).map(_.runSpecVersion)
 
     futureAppVersion.flatMap {
       case None => Future.successful(Nil)

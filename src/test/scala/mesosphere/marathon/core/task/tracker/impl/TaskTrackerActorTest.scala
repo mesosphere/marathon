@@ -4,7 +4,8 @@ import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.{ Task, TaskStateChange }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.TaskStateChange
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerUpdateStepProcessor }
@@ -172,7 +173,7 @@ class TaskTrackerActorTest
 
     When("a new staged task gets added")
     val probe = TestProbe()
-    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId).toString)
+    val newStagedTask = MarathonTestHelper.stagedTask(Instance.Id.forRunSpec(appId).toString)
     val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).wrapped
 
     val ack = TaskTrackerActor.Ack(probe.ref, update.stateChange)

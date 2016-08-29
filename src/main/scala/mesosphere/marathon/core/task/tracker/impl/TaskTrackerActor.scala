@@ -5,9 +5,10 @@ import akka.actor._
 import akka.event.LoggingReceive
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.appinfo.TaskCounts
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.{ TaskTrackerUpdateStepProcessor, TaskTracker }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerUpdateStepProcessor }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
@@ -26,10 +27,10 @@ object TaskTrackerActor {
   /** Query the current [[TaskTracker.AppTasks]] from the [[TaskTrackerActor]]. */
   private[impl] case object List
 
-  private[impl] case class Get(taskId: Task.Id)
+  private[impl] case class Get(taskId: Instance.Id)
 
   /** Forward an update operation to the child [[TaskUpdateActor]]. */
-  private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Task.Id, taskStateOp: TaskStateOp)
+  private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Instance.Id, taskStateOp: TaskStateOp)
 
   /** Describes where and what to send after an update event has been processed by the [[TaskTrackerActor]]. */
   private[impl] case class Ack(initiator: ActorRef, stateChange: TaskStateChange) {
@@ -109,7 +110,7 @@ private class TaskTrackerActor(
 
   private[this] def withTasks(appTasks: TaskTracker.TasksByApp, counts: TaskCounts): Receive = {
 
-    def becomeWithUpdatedApp(appId: PathId)(taskId: Task.Id, newTask: Option[Task]): Unit = {
+    def becomeWithUpdatedApp(appId: PathId)(taskId: Instance.Id, newTask: Option[Task]): Unit = {
       val updatedAppTasks = newTask match {
         case None => appTasks.updateApp(appId)(_.withoutTask(taskId))
         case Some(task) => appTasks.updateApp(appId)(_.withTask(task))

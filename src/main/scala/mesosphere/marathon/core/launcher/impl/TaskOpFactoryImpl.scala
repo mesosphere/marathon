@@ -48,25 +48,27 @@ class TaskOpFactoryImpl(
   private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
     val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values).map {
-      case (taskInfo, ports) =>
-        val task = Task.LaunchedEphemeral(
-          taskId = Task.Id(taskInfo.getTaskId),
-          agentInfo = Instance.AgentInfo(
-            host = offer.getHostname,
-            agentId = Some(offer.getSlaveId.getValue),
-            attributes = offer.getAttributesList.asScala
-          ),
-          runSpecVersion = runSpec.version,
-          status = Task.Status(
-            stagedAt = clock.now(),
-            taskStatus = MarathonTaskStatus.Created
-          ),
-          hostPorts = ports.flatten
-        )
+    new TaskBuilder(runSpec, Instance.Id.forRunSpec, config, Some(appTaskProc)).
+      // TODO ju fixme
+      buildIfMatches(offer, tasks.values.map(i => i.asInstanceOf[Task])).map {
+        case (taskInfo, ports) =>
+          val task = Task.LaunchedEphemeral(
+            taskId = Instance.Id(taskInfo.getTaskId),
+            agentInfo = Instance.AgentInfo(
+              host = offer.getHostname,
+              agentId = Some(offer.getSlaveId.getValue),
+              attributes = offer.getAttributesList.asScala
+            ),
+            runSpecVersion = runSpec.version,
+            status = Task.Status(
+              stagedAt = clock.now(),
+              taskStatus = MarathonTaskStatus.Created
+            ),
+            hostPorts = ports.flatten
+          )
 
-        taskOperationFactory.launchEphemeral(taskInfo, task)
-    }
+          taskOperationFactory.launchEphemeral(taskInfo, task)
+      }
   }
 
   private[this] def inferForResidents(request: TaskOpFactory.Request): Option[TaskOp] = {
@@ -101,8 +103,9 @@ class TaskOpFactoryImpl(
         val rolesToConsider = config.mesosRole.get.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
         val matchingReservedResourcesWithoutVolumes =
+          // TODO ju fixme
           ResourceMatcher.matchResources(
-            offer, runSpec, tasksToConsiderForConstraints.values,
+            offer, runSpec, tasksToConsiderForConstraints.values.map(t => t.asInstanceOf[Task]),
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
           )
 
@@ -122,8 +125,9 @@ class TaskOpFactoryImpl(
       }
 
       val matchingResourcesForReservation =
+        // TODO ju fixme
         ResourceMatcher.matchResources(
-          offer, runSpec, tasks.values,
+          offer, runSpec, tasks.values.map(t => t.asInstanceOf[Task]),
           ResourceSelector.reservable
         )
       matchingResourcesForReservation.map { resourceMatch =>
@@ -174,7 +178,7 @@ class TaskOpFactoryImpl(
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
     val task = Task.Reserved(
-      taskId = Task.Id.forRunSpec(RunSpec.id),
+      taskId = Instance.Id.forRunSpec(RunSpec.id),
       agentInfo = Instance.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),

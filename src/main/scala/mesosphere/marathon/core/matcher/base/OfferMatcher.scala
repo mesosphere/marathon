@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.matcher.base
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.TaskOp
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -16,7 +16,7 @@ object OfferMatcher {
     * (e.g. by throttling logic).
     */
   case class TaskOpWithSource(source: TaskOpSource, op: TaskOp) {
-    def taskId: Task.Id = op.taskId
+    def taskId: Instance.Id = op.taskId
     def accept(): Unit = source.taskOpAccepted(op)
     def reject(reason: String): Unit = source.taskOpRejected(op, reason)
   }

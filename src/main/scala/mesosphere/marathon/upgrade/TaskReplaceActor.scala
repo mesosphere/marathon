@@ -6,7 +6,6 @@ import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
@@ -85,7 +84,7 @@ class TaskReplaceActor(
     case x: Any => log.debug(s"Received $x")
   }
 
-  override def taskStatusChanged(taskId: Id): Unit = {
+  override def taskStatusChanged(taskId: Instance.Id): Unit = {
     killNextOldTask(Some(taskId))
     checkFinished()
   }
@@ -101,12 +100,12 @@ class TaskReplaceActor(
     }
   }
 
-  def killNextOldTask(maybeNewTaskId: Option[Task.Id] = None): Unit = {
+  def killNextOldTask(maybeNewTaskId: Option[Instance.Id] = None): Unit = {
     if (toKill.nonEmpty) {
       val nextOldTask = toKill.dequeue()
 
       maybeNewTaskId match {
-        case Some(newTaskId: Task.Id) =>
+        case Some(newTaskId: Instance.Id) =>
           log.info(s"Killing old $nextOldTask because $newTaskId became reachable")
         case _ =>
           log.info(s"Killing old $nextOldTask")

@@ -1,16 +1,17 @@
 package mesosphere.marathon.upgrade
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 
-case class ScalingProposition(tasksToKill: Option[Seq[Task]], tasksToStart: Option[Int])
+case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
 
 object ScalingProposition {
   def propose(
-    runningTasks: Iterable[Task],
-    toKill: Option[Iterable[Task]],
-    meetConstraints: ((Iterable[Task], Int) => Iterable[Task]),
+    runningTasks: Iterable[Instance],
+    toKill: Option[Iterable[Instance]],
+    meetConstraints: ((Iterable[Instance], Int) => Iterable[Instance]),
     scaleTo: Int): ScalingProposition = {
 
     // TODO: tasks in state KILLING shouldn't be killed and should decrease the amount to kill
@@ -29,11 +30,11 @@ object ScalingProposition {
       killCount - sentencedAndRunningMap.size
     )
     // rest are tasks that are not sentenced and need not be killed to meet constraints
-    val rest = notSentencedAndRunningMap -- killToMeetConstraints.map(_.taskId)
+    val rest = notSentencedAndRunningMap -- killToMeetConstraints.map(_.id)
 
     // TODO: this should evaluate a task's health as well
     // If we need to kill tasks, the order should be LOST - UNREACHABLE - UNHEALTHY - STAGING - (EVERYTHING ELSE)
-    def sortByStatusAndDate(a: Task, b: Task): Boolean = {
+    def sortByStatusAndDate(a: Instance, b: Instance): Boolean = {
       import SortHelper._
       val weightA = weight(a.status.taskStatus)
       val weightB = weight(b.status.taskStatus)
@@ -67,7 +68,10 @@ private[this] object SortHelper {
     MarathonTaskStatus.Starting -> 3,
     MarathonTaskStatus.Running -> 4).withDefaultValue(5)
 
-  def startedAt(task: Task): Timestamp = {
-    task.launched.flatMap(_.status.startedAt).getOrElse(Timestamp.zero)
+  def startedAt(instance: Instance): Timestamp = {
+    instance match {
+      case task: Task => task.launched.flatMap(_.status.startedAt).getOrElse(Timestamp.zero)
+      case _ => Timestamp.zero // TODO ju PODs
+    }
   }
 }

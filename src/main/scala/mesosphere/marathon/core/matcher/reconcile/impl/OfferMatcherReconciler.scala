@@ -1,10 +1,10 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
@@ -39,7 +39,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
 
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 
-    val resourcesByTaskId: Map[Id, Iterable[Resource]] = {
+    val resourcesByTaskId: Map[Instance.Id, Iterable[Resource]] = {
       import scala.collection.JavaConverters._
       offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
         case (Some(taskId), resources) => taskId -> resources
@@ -50,13 +50,13 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
   }
 
   private[this] def processResourcesByTaskId(
-    offer: Offer, resourcesByTaskId: Map[Id, Iterable[Resource]]): Future[MatchedTaskOps] =
+    offer: Offer, resourcesByTaskId: Map[Instance.Id, Iterable[Resource]]): Future[MatchedTaskOps] =
     {
       // do not query taskTracker in the common case
       if (resourcesByTaskId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
       else {
         def createTaskOps(tasksByApp: TasksByApp, rootGroup: Group): MatchedTaskOps = {
-          def spurious(taskId: Id): Boolean =
+          def spurious(taskId: Instance.Id): Boolean =
             tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.runSpecId).isEmpty
 
           val taskOps = resourcesByTaskId.iterator.collect {

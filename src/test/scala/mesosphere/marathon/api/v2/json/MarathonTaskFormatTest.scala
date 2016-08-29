@@ -23,13 +23,13 @@ class MarathonTaskFormatTest extends MarathonSpec {
     )
 
     val taskWithoutIp = new Task.LaunchedEphemeral(
-      taskId = Task.Id("/foo/bar"),
+      taskId = Instance.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
       status = Task.Status(time, None, taskStatus = MarathonTaskStatus.Running),
       hostPorts = Seq.empty)
 
-    def mesosStatus(taskId: Task.Id) = {
+    def mesosStatus(taskId: Instance.Id) = {
       import scala.collection.JavaConverters._
       MesosProtos.TaskStatus.newBuilder()
         .setTaskId(taskId.mesosTaskId)
@@ -40,19 +40,19 @@ class MarathonTaskFormatTest extends MarathonSpec {
     }
 
     val taskWithMultipleIPs = new Task.LaunchedEphemeral(
-      taskId = Task.Id("/foo/bar"),
+      taskId = Instance.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
       status = Task.Status(
         stagedAt = time,
         startedAt = None,
-        mesosStatus = Some(mesosStatus(Task.Id("/foo/bar"))),
+        mesosStatus = Some(mesosStatus(Instance.Id("/foo/bar"))),
         taskStatus = MarathonTaskStatus.Running),
       hostPorts = Seq.empty
     )
 
     val taskWithLocalVolumes = new Task.LaunchedOnReservation(
-      taskId = Task.Id("/foo/bar"),
+      taskId = Instance.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
       status = Task.Status(time, Some(time), taskStatus = MarathonTaskStatus.Running),

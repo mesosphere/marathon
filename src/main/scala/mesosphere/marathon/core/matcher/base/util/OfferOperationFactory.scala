@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.matcher.base.util
 
 import mesosphere.marathon.WrongConfigurationException
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.impl.TaskLabels
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.ReservationInfo
@@ -36,7 +36,8 @@ class OfferOperationFactory(
       .build()
   }
 
-  def reserve(frameworkId: FrameworkId, taskId: Task.Id, resources: Iterable[Mesos.Resource]): Mesos.Offer.Operation = {
+  def reserve(frameworkId: FrameworkId, taskId: Instance.Id, resources: Iterable[Mesos.Resource]): //
+  Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
     val reservedResources = resources.map { resource =>
 
@@ -62,7 +63,7 @@ class OfferOperationFactory(
 
   def createVolumes(
     frameworkId: FrameworkId,
-    taskId: Task.Id,
+    taskId: Instance.Id,
     localVolumes: Iterable[LocalVolume]): Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
 

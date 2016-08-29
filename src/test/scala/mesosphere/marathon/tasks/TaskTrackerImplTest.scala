@@ -463,7 +463,8 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
   def containsTask(tasks: Iterable[Instance], task: Instance) =
     tasks.exists(t => t.id == task.id
       && t.agentInfo.host == task.agentInfo.host
-      && t.launched.map(_.hostPorts) == task.launched.map(_.hostPorts))
+      // TODO ju fixme
+      && t.asInstanceOf[Task].launched.map(_.hostPorts) == task.asInstanceOf[Task].launched.map(_.hostPorts))
   def shouldContainTask(tasks: Iterable[Instance], task: Instance) =
     assert(containsTask(tasks, task), s"Should contain ${task.id}")
   def shouldNotContainTask(tasks: Iterable[Instance], task: Instance) =
@@ -471,18 +472,20 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   def shouldHaveTaskStatus(task: Instance, stateOp: TaskStateOp.MesosUpdate) {
     assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
-    assert(task.launched.isDefined)
+    // TODO ju fixme
+    assert(task.asInstanceOf[Task].launched.isDefined)
     assert(
-      task.launched.get.status.mesosStatus.get == stateOp.mesosStatus,
+      // TODO ju fixme
+      task.asInstanceOf[Task].launched.get.status.mesosStatus.get == stateOp.mesosStatus,
       s"Should have task status ${stateOp.mesosStatus}")
   }
 
-  def stateShouldNotContainKey(state: PersistentStore, key: Task.Id) {
+  def stateShouldNotContainKey(state: PersistentStore, key: Instance.Id) {
     val keyWithPrefix = TaskEntityRepository.storePrefix + key.idString
     assert(!state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was found in state")
   }
 
-  def stateShouldContainKey(state: PersistentStore, key: Task.Id) {
+  def stateShouldContainKey(state: PersistentStore, key: Instance.Id) {
     val keyWithPrefix = TaskEntityRepository.storePrefix + key.idString
     assert(state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was not found in state")
   }

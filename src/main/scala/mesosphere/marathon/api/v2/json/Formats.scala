@@ -11,6 +11,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -106,7 +107,7 @@ trait Formats
     )(toIpAddress, toTuple)
   }
 
-  implicit lazy val TaskIdWrite: Writes[Task.Id] = Writes { id => JsString(id.idString) }
+  implicit lazy val InstanceIdWrite: Writes[Instance.Id] = Writes { id => JsString(id.idString) }
   implicit lazy val LocalVolumeIdWrite: Writes[Task.LocalVolumeId] = Writes { id =>
     Json.obj(
       "containerPath" -> id.containerPath,
@@ -116,34 +117,36 @@ trait Formats
   implicit lazy val TaskStateFormat: Format[mesos.TaskState] =
     enumFormat(mesos.TaskState.valueOf, str => s"$str is not a valid TaskState type")
 
-  implicit lazy val TaskWrites: Writes[Task] = Writes { task =>
-    val base = Json.obj(
-      "id" -> task.taskId,
-      "slaveId" -> task.agentInfo.agentId,
-      "host" -> task.agentInfo.host,
-      "state" -> task.mesosStatus.fold(mesos.TaskState.TASK_STAGING)(_.getState)
-    )
-
-    val launched = task.launched.map { launched =>
-      launched.ipAddresses.foldLeft(
-        base ++ Json.obj (
-          "startedAt" -> launched.status.startedAt,
-          "stagedAt" -> launched.status.stagedAt,
-          "ports" -> launched.hostPorts,
-          "version" -> launched.runSpecVersion
-        )
-      ){
-          case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
-        }
-    }.getOrElse(base)
-
-    val reservation = task.reservationWithVolumes.map { reservation =>
-      launched ++ Json.obj(
-        "localVolumes" -> reservation.volumeIds
+  implicit lazy val TaskWrites: Writes[Instance] = Writes {
+    case task: Task =>
+      val base = Json.obj(
+        "id" -> task.taskId,
+        "slaveId" -> task.agentInfo.agentId,
+        "host" -> task.agentInfo.host,
+        "state" -> task.mesosStatus.fold(mesos.TaskState.TASK_STAGING)(_.getState)
       )
-    }.getOrElse(launched)
 
-    reservation
+      val launched = task.launched.map { launched =>
+        launched.ipAddresses.foldLeft(
+          base ++ Json.obj (
+            "startedAt" -> launched.status.startedAt,
+            "stagedAt" -> launched.status.stagedAt,
+            "ports" -> launched.hostPorts,
+            "version" -> launched.runSpecVersion
+          )
+        ){
+            case (launchedJs, ipAddresses) => launchedJs ++ Json.obj("ipAddresses" -> ipAddresses)
+          }
+      }.getOrElse(base)
+
+      val reservation = task.reservationWithVolumes.map { reservation =>
+        launched ++ Json.obj(
+          "localVolumes" -> reservation.volumeIds
+        )
+      }.getOrElse(launched)
+
+      reservation
+    case _ => JsString("") // TODO ju PODs
   }
 
   implicit lazy val EnrichedTaskWrites: Writes[EnrichedTask] = Writes { task =>
@@ -169,9 +172,9 @@ trait Formats
     Writes[PathId] { id => JsString(id.toString) }
   )
 
-  implicit lazy val TaskIdFormat: Format[Task.Id] = Format(
-    Reads.of[String](Reads.minLength[String](3)).map(Task.Id(_)),
-    Writes[Task.Id] { id => JsString(id.idString) }
+  implicit lazy val InstanceIdFormat: Format[Instance.Id] = Format(
+    Reads.of[String](Reads.minLength[String](3)).map(Instance.Id(_)),
+    Writes[Instance.Id] { id => JsString(id.idString) }
   )
 
   implicit lazy val TimestampFormat: Format[Timestamp] = Format(

@@ -35,7 +35,7 @@ class TaskOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Mockito
     val inferredTaskOp = f.taskOpFactory.buildTaskOp(request)
 
     val expectedTask = Task.LaunchedEphemeral(
-      taskId = inferredTaskOp.fold(Task.Id("failure"))(_.taskId),
+      taskId = inferredTaskOp.fold(Instance.Id("failure"))(_.taskId),
       agentInfo = Instance.AgentInfo(
         host = "some_host",
         agentId = Some(offer.getSlaveId.getValue),

@@ -1,6 +1,7 @@
 package mesosphere.marathon
 
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.TaskOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
@@ -9,7 +10,7 @@ import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.{ MarathonShutdownHookSupport, Mockito }
@@ -247,7 +248,7 @@ class LaunchQueueModuleTest
     val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
 
     val offer = MarathonTestHelper.makeBasicOffer().build()
-    val taskId = Task.Id.forRunSpec(PathId("/test"))
+    val taskId = Instance.Id.forRunSpec(PathId("/test"))
     val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
     val marathonTask = MarathonTestHelper.runningTask(taskId.idString)
     val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)

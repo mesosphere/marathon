@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.termination
 
 import akka.Done
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 
 import scala.concurrent.Future
 
@@ -18,7 +18,7 @@ trait TaskKillService {
     * @param reason the reason why the task shall be killed.
     * @return a future that is completed when all tasks are killed.
     */
-  def killTasks(tasks: Iterable[Task], reason: TaskKillReason): Future[Done]
+  def killTasks(tasks: Iterable[Instance], reason: TaskKillReason): Future[Done]
 
   /**
     * Kill the given task. The implementation should add the task onto
@@ -28,7 +28,7 @@ trait TaskKillService {
     * @param reason the reason why the task shall be killed.
     * @return a future that is completed when all tasks are killed.
     */
-  def killTask(task: Task, reason: TaskKillReason): Future[Done]
+  def killTask(task: Instance, reason: TaskKillReason): Future[Done]
 
   /**
     * Kill the given unknown task by ID and do not try to fetch its state
@@ -38,5 +38,5 @@ trait TaskKillService {
     * @param reason the reason why the task shall be killed.
     * @return a future that is completed when all tasks are killed.
     */
-  def killUnknownTask(taskId: Task.Id, reason: TaskKillReason): Future[Done]
+  def killUnknownTask(taskId: Instance.Id, reason: TaskKillReason): Future[Done]
 }

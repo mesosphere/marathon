@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.update.impl
 import akka.actor.ActorSystem
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
@@ -117,7 +118,7 @@ class TaskStatusUpdateProcessorImplTest
   test("TASK_KILLING is processed like a normal StatusUpdate") {
     fOpt = Some(new Fixture)
 
-    val taskId = Task.Id.forRunSpec(appId)
+    val taskId = Instance.Id.forRunSpec(appId)
     val task = MarathonTestHelper.runningTask(taskId.idString)
     val origUpdate = TaskStatusUpdateTestHelper.killing(task)
     val status = origUpdate.status

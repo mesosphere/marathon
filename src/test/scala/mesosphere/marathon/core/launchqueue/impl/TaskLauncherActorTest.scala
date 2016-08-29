@@ -6,6 +6,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.flow.OfferReviver
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launcher.TaskOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
@@ -421,7 +422,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     import org.apache.mesos.{ Protos => Mesos }
     val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
     val app = AppDefinition(id = PathId("/testapp"))
-    val taskId = Task.Id.forRunSpec(app.id)
+    val taskId = Instance.Id.forRunSpec(app.id)
     val task = MarathonTestHelper.makeOneCPUTask(taskId.idString).build()
     val marathonTask = MarathonTestHelper.mininimalTask(task.getTaskId.getValue).copy(
       runSpecVersion = app.version, status = Task.Status(app.version, None, None, taskStatus = MarathonTaskStatus.Running), hostPorts = Seq.empty)

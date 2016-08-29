@@ -3,7 +3,7 @@ package mesosphere.marathon.core.task
 import akka.Done
 import akka.actor.ActorSystem
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.task.Task.Id
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 
 import scala.collection.mutable
@@ -15,16 +15,16 @@ import scala.concurrent.Future
 class TaskKillServiceMock(system: ActorSystem) extends TaskKillService {
 
   var numKilled = 0
-  val customStatusUpdates = mutable.Map.empty[Task.Id, MesosStatusUpdateEvent]
-  val killed = mutable.Set.empty[Task.Id]
+  val customStatusUpdates = mutable.Map.empty[Instance.Id, MesosStatusUpdateEvent]
+  val killed = mutable.Set.empty[Instance.Id]
 
-  override def killTasks(tasks: Iterable[Task], reason: TaskKillReason): Future[Done] = {
+  override def killTasks(tasks: Iterable[Instance], reason: TaskKillReason): Future[Done] = {
     tasks.foreach { task =>
-      killTaskById(task.taskId, reason)
+      killTaskById(task.id, reason)
     }
     Future.successful(Done)
   }
-  private[this] def killTaskById(taskId: Task.Id, reason: TaskKillReason): Future[Done] = {
+  private[this] def killTaskById(taskId: Instance.Id, reason: TaskKillReason): Future[Done] = {
     val appId = taskId.runSpecId
     val update = customStatusUpdates.getOrElse(taskId, MesosStatusUpdateEvent("", taskId, "TASK_KILLED", "", appId, "", None, Nil, "no-version"))
     system.eventStream.publish(update)
@@ -33,8 +33,8 @@ class TaskKillServiceMock(system: ActorSystem) extends TaskKillService {
     Future.successful(Done)
   }
 
-  override def killTask(task: Task, reason: TaskKillReason): Future[Done] = killTaskById(task.taskId, reason)
+  override def killTask(task: Instance, reason: TaskKillReason): Future[Done] = killTaskById(task.id, reason)
 
-  override def killUnknownTask(taskId: Id, reason: TaskKillReason): Future[Done] = killTaskById(taskId, reason)
+  override def killUnknownTask(taskId: Instance.Id, reason: TaskKillReason): Future[Done] = killTaskById(taskId, reason)
 }
 

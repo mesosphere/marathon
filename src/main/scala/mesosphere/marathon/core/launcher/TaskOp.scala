@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launcher
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.tasks.ResourceUtil
@@ -10,7 +11,7 @@ import org.apache.mesos.{ Protos => MesosProtos }
   */
 sealed trait TaskOp {
   /** The ID of the affected task. */
-  def taskId: Task.Id = stateOp.taskId
+  def taskId: Instance.Id = stateOp.taskId
   /** The MarathonTask state before this operation has been applied. */
   def oldTask: Option[Task]
   /** The TaskStateOp that will lead to the new state after this operation has been applied. */

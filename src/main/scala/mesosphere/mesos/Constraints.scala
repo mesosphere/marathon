@@ -2,6 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
 import org.apache.mesos.Protos.{ Attribute, Offer, Value }
@@ -169,7 +170,7 @@ object Constraints {
     */
   //scalastyle:off return
   def selectTasksToKill(
-    app: AppDefinition, runningTasks: Iterable[Task], toKillCount: Int): Iterable[Task] = {
+    app: AppDefinition, runningTasks: Iterable[Instance], toKillCount: Int): Iterable[Instance] = {
 
     require(toKillCount <= runningTasks.size, "Can not kill more instances than running")
 
@@ -178,11 +179,11 @@ object Constraints {
 
     //currently, only the GROUP_BY operator is able to select tasks to kill
     val distributions = app.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
-      def groupFn(task: Task): Option[String] = constraint.getField match {
+      def groupFn(task: Instance): Option[String] = constraint.getField match {
         case "hostname" => Some(task.agentInfo.host)
         case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
       }
-      val taskGroups: Seq[Map[Task.Id, Task]] =
+      val taskGroups: Seq[Map[Instance.Id, Instance]] =
         runningTasks.groupBy(groupFn).values.map(Task.tasksById(_)).toSeq
       GroupByDistribution(constraint, taskGroups)
     }
@@ -190,7 +191,7 @@ object Constraints {
     //short circuit, if there are no constraints to align with
     if (distributions.isEmpty) return Set.empty
 
-    var toKillTasks = Map.empty[Task.Id, Task]
+    var toKillTasks = Map.empty[Instance.Id, Instance]
     var flag = true
     while (flag && toKillTasks.size != toKillCount) {
       val tried = distributions
@@ -199,13 +200,13 @@ object Constraints {
         //select tasks to kill (without already selected ones)
         .flatMap(_.tasksToKillIterator(toKillTasks)) ++
         //fallback: if the distributions did not select a task, choose one of the not chosen ones
-        runningTasks.iterator.filterNot(task => toKillTasks.contains(task.taskId))
+        runningTasks.iterator.filterNot(task => toKillTasks.contains(task.id))
 
       val matchingTask =
-        tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + (tryTask.taskId -> tryTask))))
+        tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + (tryTask.id -> tryTask))))
 
       matchingTask match {
-        case Some(task) => toKillTasks += task.taskId -> task
+        case Some(task) => toKillTasks += task.id -> task
         case None => flag = false
       }
     }
@@ -214,7 +215,7 @@ object Constraints {
     if (log.isInfoEnabled) {
       val taskDesc = toKillTasks.values.map { task =>
         val attrs = task.agentInfo.attributes.map(a => s"${a.getName}=${getValueString(a)}").mkString(", ")
-        s"${task.taskId} host:${task.agentInfo.host} attrs:$attrs"
+        s"${task.id} host:${task.agentInfo.host} attrs:$attrs"
       }.mkString("Selected Tasks to kill:\n", "\n", "\n")
       val distDesc = distributions.map { d =>
         val (before, after) = (d.distributionDifference(), d.distributionDifference(toKillTasks))
@@ -229,21 +230,21 @@ object Constraints {
   /**
     * Helper class for easier distribution computation.
     */
-  private case class GroupByDistribution(constraint: Constraint, distribution: Seq[Map[Task.Id, Task]]) {
-    def isMoreEvenWithout(selected: Map[Task.Id, Task]): Boolean = {
+  private case class GroupByDistribution(constraint: Constraint, distribution: Seq[Map[Instance.Id, Instance]]) {
+    def isMoreEvenWithout(selected: Map[Instance.Id, Instance]): Boolean = {
       val diffAfterKill = distributionDifference(selected)
       //diff after kill is 0=perfect, 1=tolerated or minimizes the difference
       diffAfterKill <= 1 || distributionDifference() > diffAfterKill
     }
 
-    def tasksToKillIterator(without: Map[Task.Id, Task]): Iterator[Task] = {
+    def tasksToKillIterator(without: Map[Instance.Id, Instance]): Iterator[Instance] = {
       val updated = distribution.map(_ -- without.keys).groupBy(_.size)
       if (updated.size == 1) /* even distributed */ Iterator.empty else {
         updated.maxBy(_._1)._2.iterator.flatten.map { case (taskId, task) => task }
       }
     }
 
-    def distributionDifference(without: Map[Task.Id, Task] = Map.empty): Int = {
+    def distributionDifference(without: Map[Instance.Id, Instance] = Map.empty): Int = {
       val updated = distribution.map(_ -- without.keys).groupBy(_.size).keySet
       updated.max - updated.min
     }

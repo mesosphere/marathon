@@ -8,6 +8,7 @@ import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.health._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 
@@ -22,7 +23,7 @@ private[health] class HealthCheckActor(
   import HealthCheckWorker.HealthCheckJob
 
   var nextScheduledCheck: Option[Cancellable] = None
-  var taskHealth = Map[Task.Id, Health]()
+  var taskHealth = Map[Instance.Id, Health]()
 
   val workerProps = Props[HealthCheckWorkerActor]
 
@@ -84,16 +85,16 @@ private[health] class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.appTasksSync(app.id).foreach { task =>
-
-      task.launched.foreach { launched =>
-        // TODO ju
-        if (launched.runSpecVersion == app.version && task.asInstanceOf[Task].isRunning) {
-          log.debug("Dispatching health check job for {}", task.id)
-          val worker: ActorRef = context.actorOf(workerProps)
-          worker ! HealthCheckJob(app, task.asInstanceOf[Task], launched, healthCheck)
+    taskTracker.appTasksSync(app.id).foreach {
+      case task: Task =>
+        task.launched.foreach { launched =>
+          if (launched.runSpecVersion == app.version && task.isRunning) {
+            log.debug("Dispatching health check job for {}", task.id)
+            val worker: ActorRef = context.actorOf(workerProps)
+            worker ! HealthCheckJob(app, task.asInstanceOf[Task], launched, healthCheck)
+          }
         }
-      }
+      case _ => () // TODO ju PODs
     }
   }
 
@@ -214,7 +215,7 @@ object HealthCheckActor {
 
   // self-sent every healthCheck.intervalSeconds
   case object Tick
-  case class GetTaskHealth(taskId: Task.Id)
+  case class GetTaskHealth(taskId: Instance.Id)
   case object GetAppHealth
 
   case class AppHealth(health: Seq[Health])

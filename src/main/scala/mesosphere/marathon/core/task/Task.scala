@@ -53,20 +53,20 @@ import scala.collection.immutable.Seq
   * unreserve operations. See https://github.com/mesosphere/marathon/issues/3223
   */
 sealed trait Task extends Instance {
-  def taskId: Task.Id
+  def taskId: Instance.Id
   def reservationWithVolumes: Option[Task.Reservation]
   def launched: Option[Task.Launched]
 
   /** update the task based on the given trigger - depending on its state the task will decide what should happen */
   def update(update: TaskStateOp): TaskStateChange
 
-  def runSpecId: PathId = taskId.runSpecId
+  def runSpecId: PathId = id.runSpecId
 
   def status: Task.Status
 
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task
-    taskId.mesosTaskId
+    id.mesosTaskId
   }
 
   def mesosStatus: Option[MesosProtos.TaskStatus] = {
@@ -100,6 +100,8 @@ sealed trait Task extends Instance {
 
   override def id: Id = taskId
 
+  override def isLaunched: Boolean = launched.isDefined
+
   def isReserved: Boolean = status.taskStatus == MarathonTaskStatus.Reserved
   def isCreated: Boolean = status.taskStatus == MarathonTaskStatus.Created
   def isError: Boolean = status.taskStatus == MarathonTaskStatus.Error
@@ -121,7 +123,7 @@ object Task {
     * A LaunchedEphemeral task is a stateless task that does not consume reserved resources or persistent volumes.
     */
   case class LaunchedEphemeral(
-      taskId: Task.Id,
+      taskId: Instance.Id,
       agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
@@ -200,7 +202,7 @@ object Task {
     * @param reservation Information about the reserved resources and persistent volumes
     */
   case class Reserved(
-      taskId: Task.Id,
+      taskId: Instance.Id,
       agentInfo: Instance.AgentInfo,
       reservation: Reservation,
       status: Status) extends Task {
@@ -240,7 +242,7 @@ object Task {
   }
 
   case class LaunchedOnReservation(
-      taskId: Task.Id,
+      taskId: Instance.Id,
       agentInfo: Instance.AgentInfo,
       runSpecVersion: Timestamp,
       status: Status,
@@ -343,39 +345,10 @@ object Task {
     }
   }
 
-  def reservedTasks(tasks: Iterable[Task]): Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
+  def reservedTasks(tasks: Iterable[Instance]): Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
 
-  def tasksById(tasks: Iterable[Task]): Map[Task.Id, Task] = tasks.iterator.map(task => task.taskId -> task).toMap
-
-  case class Id(idString: String) extends Instance.Id {
-    lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
-    lazy val runSpecId: PathId = Id.runSpecId(idString)
-    override def toString: String = s"task [$idString]"
-    override def compare(that: Instance.Id): Int = that match {
-      case t: Id => idString.compare(t.idString)
-      case _ => this.compareTo(that)
-    }
-  }
-
-  object Id {
-    private val runSpecDelimiter = "."
-    private val TaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
-    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
-
-    def runSpecId(taskId: String): PathId = {
-      taskId match {
-        case TaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
-        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
-      }
-    }
-
-    def apply(mesosTaskId: MesosProtos.TaskID): Id = new Id(mesosTaskId.getValue)
-
-    def forRunSpec(id: PathId): Id = {
-      val taskId = id.safePath + runSpecDelimiter + uuidGenerator.generate()
-      Task.Id(taskId)
-    }
-  }
+  def tasksById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
+    tasks.iterator.map(task => task.id -> task).toMap
 
   /**
     * Represents a reservation for all resources that are needed for launching a task

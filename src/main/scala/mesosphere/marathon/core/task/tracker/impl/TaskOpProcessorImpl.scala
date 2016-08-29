@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
@@ -43,7 +44,7 @@ private[tracker] object TaskOpProcessorImpl {
       }
     }
 
-    private[this] def updateIfNotExists(taskId: Task.Id, updatedTask: Task)(
+    private[this] def updateIfNotExists(taskId: Instance.Id, updatedTask: Task)(
       implicit
       ec: ExecutionContext): Future[TaskStateChange] = {
       directTaskTracker.task(taskId).map {
@@ -68,7 +69,7 @@ private[tracker] object TaskOpProcessorImpl {
       }
     }
 
-    private[this] def expungeTask(taskId: Task.Id)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
+    private[this] def expungeTask(taskId: Instance.Id)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
       directTaskTracker.task(taskId).map {
         case Some(existingTask: Task) =>
           TaskStateChange.Expunge(existingTask)

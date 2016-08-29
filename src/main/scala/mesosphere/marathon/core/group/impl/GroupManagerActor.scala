@@ -11,7 +11,7 @@ import akka.stream.scaladsl.Sink
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinition, _ }
@@ -46,7 +46,7 @@ private[group] object GroupManagerActor {
     change: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[Task]] = Map.empty) extends Request
+    toKill: Map[PathId, Iterable[Instance]] = Map.empty) extends Request
 
   // Replies with Iterable[Timestamp]
   case class GetAllVersions(id: PathId) extends Request
@@ -120,7 +120,7 @@ private[impl] class GroupManagerActor(
     change: Group => Group,
     version: Timestamp,
     force: Boolean,
-    toKill: Map[PathId, Iterable[Task]]): Future[DeploymentPlan] = {
+    toKill: Map[PathId, Iterable[Instance]]): Future[DeploymentPlan] = {
     serializeUpdates {
       log.info(s"Upgrade group id:$gid version:$version with force:$force")
 

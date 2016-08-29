@@ -43,7 +43,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     import TaskStatusUpdateProcessorImpl._
 
     val now = clock.now()
-    val taskId = Task.Id(status.getTaskId)
+    val taskId = Instance.Id(status.getTaskId)
 
     taskTracker.task(taskId).flatMap {
       case Some(task: Task) =>

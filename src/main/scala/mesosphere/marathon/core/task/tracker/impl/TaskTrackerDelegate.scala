@@ -7,7 +7,6 @@ import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerConfig }
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.PathId
@@ -67,11 +66,10 @@ private[tracker] class TaskTrackerDelegate(
   override def appTasks(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Instance]] =
     tasksByApp().map(_.appTasks(appId))
   override def appTasksLaunchedSync(appId: PathId): Iterable[Instance] =
-    appTasksSync(appId).filter(_.launched.isDefined)
+    appTasksSync(appId).filter(_.isLaunched)
 
   override def task(taskId: Instance.Id): Future[Option[Instance]] =
-    // TODO ju
-    (taskTrackerRef ? TaskTrackerActor.Get(taskId.asInstanceOf[Task.Id])).mapTo[Option[Instance]]
+    (taskTrackerRef ? TaskTrackerActor.Get(taskId)).mapTo[Option[Instance]]
 
   private[this] val tasksByAppTimer =
     metrics.map(metrics => metrics.timer(metrics.name(MetricPrefixes.SERVICE, getClass, "tasksByApp")))

@@ -163,7 +163,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val agentInfo = mock[Instance.AgentInfo]
 
     val appId = PathId("/test")
-    val taskId = Task.Id("app.task")
+    val taskId = Instance.Id("app.task")
     val version = Timestamp.now()
     val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
@@ -180,7 +180,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     launched.hostPorts returns Seq(1, 2, 3)
     tracker.task(any) returns Future.successful(Some(task))
 
-    def readinessActor(appDef: AppDefinition, readinessCheckResults: Seq[ReadinessCheckResult], taskReadyFn: Task.Id => Unit) = {
+    def readinessActor(appDef: AppDefinition, readinessCheckResults: Seq[ReadinessCheckResult], taskReadyFn: Instance.Id => Unit) = {
       val executor = new ReadinessCheckExecutor {
         override def execute(readinessCheckInfo: ReadinessCheckSpec): Observable[ReadinessCheckResult] = {
           Observable.from(readinessCheckResults)
@@ -199,7 +199,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }
-        override def taskStatusChanged(taskId: Task.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
+        override def taskStatusChanged(taskId: Instance.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
       }
       )
     }

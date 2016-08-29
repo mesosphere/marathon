@@ -8,6 +8,7 @@ import akka.util.ByteString
 import mesosphere.marathon.Protos
 import mesosphere.marathon.Protos.{ DeploymentPlanDefinition, MarathonTask, ServiceDefinition }
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
 import mesosphere.marathon.core.task.Task
@@ -42,12 +43,12 @@ trait ZkStoreSerialization {
         AppDefinition.fromProto(proto)
     }
 
-  implicit val taskResolver: IdResolver[Task.Id, Task, String, ZkId] =
-    new IdResolver[Task.Id, Task, String, ZkId] {
-      override def toStorageId(id: Task.Id, version: Option[OffsetDateTime]): ZkId =
+  implicit val taskResolver: IdResolver[Instance.Id, Task, String, ZkId] =
+    new IdResolver[Instance.Id, Task, String, ZkId] {
+      override def toStorageId(id: Instance.Id, version: Option[OffsetDateTime]): ZkId =
         ZkId(category, id.idString, version)
       override val category: String = "task"
-      override def fromStorageId(key: ZkId): Task.Id = Task.Id(key.id)
+      override def fromStorageId(key: ZkId): Instance.Id = Instance.Id(key.id)
       override val hasVersions = false
       override def version(v: Task): OffsetDateTime = OffsetDateTime.MIN
     }

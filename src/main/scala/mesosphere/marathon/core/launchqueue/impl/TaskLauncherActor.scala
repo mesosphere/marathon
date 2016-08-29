@@ -86,7 +86,7 @@ private class TaskLauncherActor(
     private[this] var tasksToLaunch: Int) extends Actor with ActorLogging with Stash {
   // scalastyle:on parameter.number
 
-  private[this] var inFlightTaskOperations = Map.empty[Task.Id, Cancellable]
+  private[this] var inFlightTaskOperations = Map.empty[Instance.Id, Cancellable]
 
   private[this] var recheckBackOff: Option[Cancellable] = None
   private[this] var backOffUntil: Option[Timestamp] = None
@@ -283,7 +283,7 @@ private class TaskLauncherActor(
       replyWithQueuedTaskCount()
   }
 
-  private[this] def removeTask(taskId: Task.Id): Unit = {
+  private[this] def removeTask(taskId: Instance.Id): Unit = {
     inFlightTaskOperations.get(taskId).foreach(_.cancel())
     inFlightTaskOperations -= taskId
     tasksMap -= taskId
@@ -336,9 +336,9 @@ private class TaskLauncherActor(
   }
 
   private[this] def replyWithQueuedTaskCount(): Unit = {
-    val tasksLaunched = tasksMap.values.count(_.launched.isDefined)
+    val tasksLaunched = tasksMap.values.count(_.isLaunched)
     val taskLaunchesInFlight = inFlightTaskOperations.keys
-      .count(taskId => tasksMap.get(taskId).exists(_.launched.isDefined))
+      .count(taskId => tasksMap.get(taskId).exists(_.isLaunched))
     sender() ! QueuedTaskInfo(
       runSpec,
       inProgress = tasksToLaunch > 0 || inFlightTaskOperations.nonEmpty,
@@ -421,7 +421,7 @@ private class TaskLauncherActor(
     }
 
     val inFlight = inFlightTaskOperations.size
-    val tasksLaunchedOrRunning = tasksMap.values.count(_.launched.isDefined) - inFlight
+    val tasksLaunchedOrRunning = tasksMap.values.count(_.isLaunched) - inFlight
     val instanceCountDelta = tasksMap.size + tasksToLaunch - runSpec.instances
     val matchInstanceStr = if (instanceCountDelta == 0) "" else s"instance count delta $instanceCountDelta."
     s"$tasksToLaunch tasksToLaunch, $inFlight in flight, " +

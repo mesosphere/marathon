@@ -4,7 +4,7 @@ import akka.actor.{ ActorRef, Props }
 import akka.testkit.{ ImplicitSender, TestActorRef }
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.event.{ MesosStatusUpdateEvent, UnhealthyTaskKillEvent }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ TaskFailure, Timestamp }
 import mesosphere.marathon.storage.repository.TaskFailureRepository
@@ -102,7 +102,7 @@ class HistoryActorTest
 
     MesosStatusUpdateEvent(
       slaveId = "slaveId",
-      taskId = Task.Id("taskId"),
+      taskId = Instance.Id("taskId"),
       taskStatus = state.name(),
       message = "message",
       appId = "appId".toPath,
@@ -114,7 +114,7 @@ class HistoryActorTest
   }
 
   private def unhealthyTaskKilled() = {
-    val taskId = Task.Id("taskId")
+    val taskId = Instance.Id("taskId")
     UnhealthyTaskKillEvent(
       appId = StringPathId("app").toPath,
       taskId = taskId,

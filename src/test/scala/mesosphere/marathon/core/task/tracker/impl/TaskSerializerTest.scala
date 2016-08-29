@@ -174,7 +174,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
   class Fixture {
     private[this] val appId = PathId.fromSafePath("/test")
-    val taskId = Task.Id("task")
+    val taskId = Instance.Id("task")
     val sampleHost: String = "host.some"
     private[this] val sampleAttributes: Iterable[Attribute] = Iterable(attribute("label1", "value1"))
     private[this] val stagedAtLong: Long = 1
@@ -237,7 +237,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       import scala.concurrent.duration._
 
       private[this] val appId = PathId("/test")
-      private[this] val taskId = Task.Id("reserved1")
+      private[this] val taskId = Instance.Id("reserved1")
       private[this] val host = "some.host"
       private[this] val agentId = "agent-1"
       private[this] val now = MarathonTestHelper.clock.now()
@@ -268,7 +268,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .build()
 
       def reservedState = Task.Reserved(
-        Task.Id(taskId.idString),
+        Instance.Id(taskId.idString),
         Instance.AgentInfo(host = host, agentId = Some(agentId), attributes),
         reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.New(Some(Task.Reservation.Timeout(
           initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout)))),

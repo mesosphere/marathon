@@ -12,6 +12,7 @@ import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillServi
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
@@ -115,10 +116,10 @@ private class DeploymentActor(
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int,
-    toKill: Option[Iterable[Task]],
+    toKill: Option[Iterable[Instance]],
     status: DeploymentStatus): Future[Unit] = {
     val runningTasks = taskTracker.appTasksLaunchedSync(app.id)
-    def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
+    def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 
     // TODO ju

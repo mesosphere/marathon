@@ -3,8 +3,8 @@ package mesosphere.marathon.api.v2.json
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.appinfo.{ AppInfo, TaskCounts }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, Identifiable, PathId, TaskFailure, Timestamp }
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.GivenWhenThen
@@ -25,7 +25,7 @@ class AppDefinitionAppInfoTest extends MarathonSpec with GivenWhenThen {
   )
 
   val readinessCheckResults = Seq(
-    ReadinessCheckResult("foo", Task.Id("foo"), false, Some(HttpResponse(503, "text/plain", "n/a")))
+    ReadinessCheckResult("foo", Instance.Id("foo"), false, Some(HttpResponse(503, "text/plain", "n/a")))
   )
 
   val deployments = Seq(

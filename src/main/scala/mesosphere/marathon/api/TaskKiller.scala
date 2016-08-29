@@ -4,7 +4,8 @@ import javax.inject.Inject
 
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
@@ -27,8 +28,8 @@ class TaskKiller @Inject() (
 
   def kill(
     appId: PathId,
-    findToKill: (Iterable[Task] => Iterable[Task]),
-    wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Task]] = {
+    findToKill: (Iterable[Instance] => Iterable[Instance]),
+    wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Instance]] = {
 
     result(groupManager.app(appId)) match {
       case Some(app) =>
@@ -36,12 +37,11 @@ class TaskKiller @Inject() (
 
         import scala.concurrent.ExecutionContext.Implicits.global
         taskTracker.appTasks(appId).flatMap { allTasks =>
-          // TODO ju
-          val foundTasks = findToKill(allTasks.map(_.asInstanceOf[Task]))
+          val foundTasks = findToKill(allTasks)
           val expungeTasks = if (wipe) expunge(foundTasks) else Future.successful(())
 
           expungeTasks.map { _ =>
-            val launchedTasks = foundTasks.filter(_.launched.isDefined)
+            val launchedTasks = foundTasks.filter(_.isLaunched)
             if (launchedTasks.nonEmpty) {
               service.killTasks(appId, launchedTasks)
               foundTasks
@@ -53,13 +53,13 @@ class TaskKiller @Inject() (
     }
   }
 
-  private[this] def expunge(tasks: Iterable[Task])(implicit ec: ExecutionContext): Future[Unit] = {
+  private[this] def expunge(tasks: Iterable[Instance])(implicit ec: ExecutionContext): Future[Unit] = {
     tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
       resultSoFar.flatMap { _ =>
-        log.info("Expunging {}", nextTask.taskId)
-        stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.taskId)).map(_ => ()).recover {
+        log.info("Expunging {}", nextTask.id)
+        stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.id)).map(_ => ()).recover {
           case NonFatal(cause) =>
-            log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.taskId, cause): _*)
+            log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.id, cause): _*)
         }
       }
     }
@@ -67,13 +67,13 @@ class TaskKiller @Inject() (
 
   def killAndScale(
     appId: PathId,
-    findToKill: (Iterable[Task] => Iterable[Task]),
+    findToKill: (Iterable[Instance] => Iterable[Instance]),
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId).map(_.asInstanceOf[Task]))), force)
+    killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId))), force)
   }
 
   def killAndScale(
-    appTasks: Map[PathId, Iterable[Task]],
+    appTasks: Map[PathId, Iterable[Instance]],
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
       checkAuthorization(UpdateRunSpec, app)

@@ -15,6 +15,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
@@ -113,7 +114,7 @@ class TasksResource @Inject() (
 
     val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
     val tasksToAppId = taskIds.map { id =>
-      try { id -> Task.Id.runSpecId(id) }
+      try { id -> Instance.Id.runSpecId(id) }
       catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'.") }
     }.toMap
 
@@ -130,12 +131,14 @@ class TasksResource @Inject() (
       val killed = result(Future.sequence(toKill.map {
         case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe)
       })).flatten
-      ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.runSpecId, task, Seq.empty))))
+      // TODO ju fixme
+      ok(jsonObjString("tasks" -> killed.map(task =>
+        EnrichedTask(task.id.runSpecId, task.asInstanceOf[Task], Seq.empty))))
     }
 
     val tasksByAppId = tasksToAppId
-      .flatMap { case (taskId, appId) => taskTracker.tasksByAppSync.task(Task.Id(taskId)) }
-      .groupBy { task => task.taskId.runSpecId }
+      .flatMap { case (taskId, appId) => taskTracker.tasksByAppSync.task(Instance.Id(taskId)) }
+      .groupBy { task => task.id.runSpecId }
       .map{ case (appId, tasks) => appId -> tasks }
 
     if (scale) scaleAppWithKill(tasksByAppId)

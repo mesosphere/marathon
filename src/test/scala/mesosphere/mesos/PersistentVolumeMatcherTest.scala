@@ -1,5 +1,6 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.Mockito
@@ -59,7 +60,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
       f.makeTask(app.id, Task.Reservation(Seq(localVolumeId2), f.taskReservationStateNew)),
       f.makeTask(app.id, Task.Reservation(Seq(localVolumeId3), f.taskReservationStateNew))
     )
-    val unknownTaskId = Task.Id.forRunSpec(app.id)
+    val unknownTaskId = Instance.Id.forRunSpec(app.id)
     val offer =
       f.offerWithVolumes(unknownTaskId, localVolumeId1)
         .toBuilder
@@ -97,7 +98,7 @@ class PersistentVolumeMatcherTest extends MarathonSpec with GivenWhenThen with M
   class Fixture {
     def makeTask(appId: PathId) = MarathonTestHelper.mininimalTask(appId)
     def makeTask(appId: PathId, reservation: Task.Reservation) = MarathonTestHelper.minimalReservedTask(appId, reservation)
-    def offerWithVolumes(taskId: Task.Id, localVolumeIds: Task.LocalVolumeId*) =
+    def offerWithVolumes(taskId: Instance.Id, localVolumeIds: Task.LocalVolumeId*) =
       MarathonTestHelper.offerWithVolumesOnly(taskId, localVolumeIds: _*)
     def appWithPersistentVolume(): AppDefinition = MarathonTestHelper.appWithPersistentVolume()
     val taskReservationStateNew = MarathonTestHelper.taskReservationStateNew

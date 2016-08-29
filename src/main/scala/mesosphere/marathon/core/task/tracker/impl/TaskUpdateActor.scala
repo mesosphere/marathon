@@ -5,7 +5,7 @@ import java.util.concurrent.TimeoutException
 import akka.actor.{ Actor, Props, Status }
 import akka.event.LoggingReceive
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.tracker.impl.TaskUpdateActor.{ ActorMetrics, FinishedTaskOp, ProcessTaskOp }
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
@@ -62,7 +62,7 @@ private[impl] class TaskUpdateActor(
 
   // this has to be a mutable field because we need to access it in postStop()
   private[impl] var operationsByTaskId =
-    Map.empty[Task.Id, Queue[TaskOpProcessor.Operation]].withDefaultValue(Queue.empty)
+    Map.empty[Instance.Id, Queue[TaskOpProcessor.Operation]].withDefaultValue(Queue.empty)
 
   override def preStart(): Unit = {
     metrics.numberOfActiveOps.setValue(0)
@@ -117,7 +117,7 @@ private[impl] class TaskUpdateActor(
       throw new IllegalStateException("received failure", cause)
   }
 
-  private[this] def processNextOpIfExists(taskId: Task.Id): Unit = {
+  private[this] def processNextOpIfExists(taskId: Instance.Id): Unit = {
     operationsByTaskId(taskId).headOption foreach { op =>
       val queuedCount = metrics.numberOfQueuedOps.decrement()
       val activeCount = metrics.numberOfActiveOps.increment()

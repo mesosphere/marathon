@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import mesosphere.marathon.core.group.{ GroupManager, GroupManagerConfig }
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
@@ -33,7 +33,7 @@ private[group] class GroupManagerDelegate(
     fn: (Option[AppDefinition]) => AppDefinition,
     version: Timestamp,
     force: Boolean,
-    toKill: Iterable[Task]): Future[DeploymentPlan] =
+    toKill: Iterable[Instance]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
         appId.parent,
@@ -63,7 +63,7 @@ private[group] class GroupManagerDelegate(
     fn: (Group) => Group,
     version: Timestamp,
     force: Boolean,
-    toKill: Map[PathId, Iterable[Task]]): Future[DeploymentPlan] =
+    toKill: Map[PathId, Iterable[Instance]]): Future[DeploymentPlan] =
     askGroupManagerActor(
       GroupManagerActor.GetUpgrade(
         gid,

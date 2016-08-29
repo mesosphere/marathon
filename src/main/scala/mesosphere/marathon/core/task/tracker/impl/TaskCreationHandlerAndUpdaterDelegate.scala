@@ -3,8 +3,9 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.TaskStateOp.ReservationTimeout
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.impl.TaskTrackerActor.ForwardTaskOp
 import mesosphere.marathon.core.task.tracker.{
   TaskReservationTimeoutHandler,
@@ -44,7 +45,7 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
     process(stateOp)
   }
 
-  private[this] def taskUpdate(taskId: Task.Id, taskStateOp: TaskStateOp): Future[TaskStateChange] = {
+  private[this] def taskUpdate(taskId: Instance.Id, taskStateOp: TaskStateOp): Future[TaskStateChange] = {
     import akka.pattern.ask
     val deadline = clock.now + timeout.duration
     val op: ForwardTaskOp = TaskTrackerActor.ForwardTaskOp(deadline, taskId, taskStateOp)

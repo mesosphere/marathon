@@ -53,7 +53,7 @@ object TaskTracker {
       appTasksMap.get(appId).map(_.tasks).getOrElse(Iterable.empty)
     }
 
-    def task(taskId: Task.Id): Option[Task] = for {
+    def task(taskId: Instance.Id): Option[Task] = for {
       app <- appTasksMap.get(taskId.runSpecId)
       task <- app.taskMap.get(taskId)
     } yield task
@@ -96,12 +96,12 @@ object TaskTracker {
   case class AppTasks(appId: PathId, taskMap: Map[Instance.Id, Task] = Map.empty) {
 
     def isEmpty: Boolean = taskMap.isEmpty
-    def contains(taskId: Task.Id): Boolean = taskMap.contains(taskId)
+    def contains(taskId: Instance.Id): Boolean = taskMap.contains(taskId)
     def tasks: Iterable[Task] = taskMap.values
 
     private[tracker] def withTask(task: Task): AppTasks = copy(taskMap = taskMap + (task.taskId -> task))
 
-    private[tracker] def withoutTask(taskId: Task.Id): AppTasks = copy(taskMap = taskMap - taskId)
+    private[tracker] def withoutTask(taskId: Instance.Id): AppTasks = copy(taskMap = taskMap - taskId)
   }
 
   object AppTasks {

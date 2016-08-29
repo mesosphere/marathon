@@ -123,9 +123,9 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
-        Task.Id("task1") -> Seq(),
-        Task.Id("task2") -> Seq(Health(Task.Id("task2"), lastFailure = Some(Timestamp(1)))),
-        Task.Id("task3") -> Seq(Health(Task.Id("task3"), lastSuccess = Some(Timestamp(2))))
+        Instance.Id("task1") -> Seq(),
+        Instance.Id("task2") -> Seq(Health(Instance.Id("task2"), lastFailure = Some(Timestamp(1)))),
+        Instance.Id("task3") -> Seq(Health(Instance.Id("task3"), lastSuccess = Some(Timestamp(2))))
       )
     )
 
@@ -200,7 +200,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     Given("One related and one unrelated deployment")
     val emptyGroup = Group.empty
     val deployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Map(app.id -> app)))
-    val taskId: Task.Id = Task.Id.forRunSpec(app.id)
+    val taskId: Instance.Id = Instance.Id.forRunSpec(app.id)
     val result = ReadinessCheckResult("foo", taskId, ready = false, None)
     f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
       DeploymentStepInfo(deployment, DeploymentStep(Seq.empty), 1, Map(taskId -> result))

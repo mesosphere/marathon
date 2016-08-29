@@ -1,10 +1,10 @@
 package mesosphere.marathon.core.launcher.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.PathId
 import mesosphere.util.state.FrameworkId
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import org.apache.mesos.{ Protos => MesosProtos }
 
 class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
@@ -45,7 +45,7 @@ class TaskLabelsTest extends FunSuite with GivenWhenThen with Matchers {
     import scala.collection.JavaConverters._
 
     val appId = PathId("/test")
-    val taskId = Task.Id.forRunSpec(appId)
+    val taskId = Instance.Id.forRunSpec(appId)
     val frameworkId = MarathonTestHelper.frameworkId
     val otherFrameworkId = FrameworkId("very other different framework id")
 

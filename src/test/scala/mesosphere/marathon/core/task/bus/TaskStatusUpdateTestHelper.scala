@@ -3,6 +3,7 @@ package mesosphere.marathon.core.task.bus
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
@@ -32,7 +33,7 @@ object TaskStatusUpdateTestHelper {
     new TaskStatusUpdateTestHelper(taskChanged)
 
   private def newTaskID(appId: String) = {
-    Task.Id.forRunSpec(PathId(appId))
+    Instance.Id.forRunSpec(PathId(appId))
   }
 
   val taskId = newTaskID("/app")
@@ -58,7 +59,7 @@ object TaskStatusUpdateTestHelper {
         TaskStateChange.Expunge(task)))
   }
 
-  def makeMesosTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, timestamp: Timestamp = Timestamp.zero) = {
+  def makeMesosTaskStatus(taskId: Instance.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None, timestamp: Timestamp = Timestamp.zero) = {
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
@@ -67,7 +68,7 @@ object TaskStatusUpdateTestHelper {
     maybeReason.foreach(mesosStatus.setReason)
     mesosStatus.build()
   }
-  def makeTaskStatus(taskId: Task.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None) = {
+  def makeTaskStatus(taskId: Instance.Id, state: TaskState, maybeHealth: Option[Boolean] = None, maybeReason: Option[TaskStatus.Reason] = None) = {
     makeMesosTaskStatus(taskId, state, maybeHealth, maybeReason)
   }
 

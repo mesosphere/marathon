@@ -6,6 +6,7 @@ import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.TaskKillConfig
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
@@ -40,7 +41,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     val actor = f.createTaskKillActor()
 
     Given("a single, known running task")
-    val task = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
+    val task = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
 
     When("the service is asked to kill that task")
     val promise = Promise[Done]()
@@ -62,7 +63,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     val actor = f.createTaskKillActor()
 
     Given("an unknown taskId")
-    val taskId = Task.Id.forRunSpec(PathId("/unknown"))
+    val taskId = Instance.Id.forRunSpec(PathId("/unknown"))
 
     When("the service is asked to kill that taskId")
     val promise = Promise[Done]()
@@ -87,7 +88,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     val actor = f.createTaskKillActor()
 
     Given("a single, known running task")
-    val task = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_LOST)
+    val task = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_LOST)
 
     When("the service is asked to kill that task")
     val promise = Promise[Done]()
@@ -111,9 +112,9 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     val actor = f.createTaskKillActor()
 
     Given("a list of tasks")
-    val runningTask = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
-    val lostTask = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_LOST)
-    val stagingTask = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_STAGING)
+    val runningTask = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
+    val lostTask = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_LOST)
+    val stagingTask = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_STAGING)
 
     When("the service is asked to kill those tasks")
     val promise = Promise[Done]()
@@ -163,9 +164,9 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     val actor = f.createTaskKillActor()
 
     Given("multiple tasks")
-    val task1 = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
-    val task2 = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
-    val task3 = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
+    val task1 = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
+    val task2 = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
+    val task3 = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
 
     val promise1 = Promise[Done]()
     val promise2 = Promise[Done]()
@@ -198,8 +199,8 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     val actor = f.createTaskKillActor()
 
     Given("multiple tasks")
-    val tasks: Map[Task.Id, Task] = (1 to 10).map { index =>
-      val task = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
+    val tasks: Map[Instance.Id, Task] = (1 to 10).map { index =>
+      val task = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
       task.taskId -> task
     }(collection.breakOut)
 
@@ -215,7 +216,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
 
     And("after receiving terminal messages for the requested kills, 5 additional tasks are killed")
     captor.getAllValues.asScala.foreach { id =>
-      val taskId = Task.Id(id)
+      val taskId = Instance.Id(id)
       tasks.get(taskId).foreach { task =>
         f.publishStatusUpdate(task.taskId, mesos.Protos.TaskState.TASK_KILLED)
       }
@@ -230,8 +231,8 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     val actor = f.createTaskKillActor()
 
     Given("multiple tasks")
-    val tasks: Map[Task.Id, Task] = (1 to 10).map { index =>
-      val task = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
+    val tasks: Map[Instance.Id, Task] = (1 to 10).map { index =>
+      val task = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
       task.taskId -> task
     }(collection.breakOut)
 
@@ -246,7 +247,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
 
     And("after receiving terminal messages for the requested kills, 5 additional tasks are killed")
     captor.getAllValues.asScala.foreach { id =>
-      val taskId = Task.Id(id)
+      val taskId = Instance.Id(id)
       tasks.get(taskId).foreach { task =>
         f.publishStatusUpdate(task.taskId, mesos.Protos.TaskState.TASK_KILLED)
       }
@@ -261,7 +262,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     val actor = f.createTaskKillActor(f.retryConfig)
 
     Given("a single, known running task")
-    val task = f.mockTask(Task.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
+    val task = f.mockTask(Instance.Id.forRunSpec(f.appId), f.now(), mesos.Protos.TaskState.TASK_RUNNING)
     val promise = Promise[Done]()
 
     When("the service is asked to kill that task")
@@ -338,7 +339,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
       actorRef
     }
 
-    def mockTask(taskId: Task.Id, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Task.LaunchedEphemeral = {
+    def mockTask(taskId: Instance.Id, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Task.LaunchedEphemeral = {
       val status: Task.Status = mock[Task.Status]
       status.stagedAt returns stagedAt
       val mesosStatus: mesos.Protos.TaskStatus = mesos.Protos.TaskStatus.newBuilder()
@@ -351,7 +352,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
       task
     }
     def now(): Timestamp = Timestamp(0)
-    def publishStatusUpdate(taskId: Task.Id, state: mesos.Protos.TaskState): Unit = {
+    def publishStatusUpdate(taskId: Instance.Id, state: mesos.Protos.TaskState): Unit = {
       val appId = taskId.runSpecId
       val statusUpdateEvent =
         MesosStatusUpdateEvent(
