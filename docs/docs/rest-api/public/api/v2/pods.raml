@@ -4,8 +4,9 @@ mediaType: application/json
 annotationTypes:  !include ../annotations.raml
 types:
   PathId: !include types/pathId.raml
-  Pod: !include types/pod.raml
   PodStatus: !include types/pod-status.raml
+uses:
+  pod: types/pod.raml
 traits: !include ../traits.raml
 
 /:
@@ -27,13 +28,13 @@ traits: !include ../traits.raml
       (or some such) header.
     body:
       application/json:
-        type: Pod
+        type: pod.Pod
     responses:
       201:
         description: Pod created successfully.
         body:
           application/json:
-            type: Pod
+            type: pod.Pod
 
   get:
     is: [ secured ]
@@ -46,7 +47,7 @@ traits: !include ../traits.raml
           Useful to perform backups of all pods registered with Marathon.
         body:
           application/json:
-            type: Pod[]
+            type: pod.Pod[]
 
   put:
     is: [ secured, jsonValidator, objectValidator, objectCreator ]
@@ -83,7 +84,7 @@ traits: !include ../traits.raml
       (or some such) header.
     body:
       application/json:
-        type: Pod
+        type: pod.Pod
 
   get:
     is: [ secured, objectLocator ]
@@ -93,7 +94,7 @@ traits: !include ../traits.raml
       200:
         body:
           application/json:
-            type: Pod
+            type: pod.Pod
 
 '/{id}::status':
   description: |

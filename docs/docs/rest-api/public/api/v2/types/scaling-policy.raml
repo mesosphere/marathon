@@ -1,0 +1,30 @@
+#%RAML 1.0 Library
+usage: |
+  Defines scaling policy constructs.
+types:
+  AbstractScalingPolicy:
+    discriminator: kind
+    properties:
+      kind:
+        type: string
+        enum: [ fixed ]
+  ScalingPolicyFixed:
+    type: AbstractScalingPolicy
+    discriminatorValue: fixed
+    properties:
+      instances:
+        type: integer
+        format: int32
+        description: The number of instances of this pod to start.
+        minimum: 0
+        default: 1
+      maxInstances?:
+        type: integer
+        format: int32
+        description: |
+          The maximum number of instances of this pod that should
+          be running at a given time.
+        minimum: 0
+  ScalingPolicy:
+    type: [ ScalingPolicyFixed ]
+    description: Add new possible super-types as different scaling policies are supported.
