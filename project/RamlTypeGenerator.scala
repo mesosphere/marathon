@@ -9,7 +9,8 @@ import scala.annotation.tailrec
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
 
-object TypeGenerator {
+// scalastyle:off
+object RamlTypeGenerator {
   val baseTypeTable: Map[String, Symbol] =
     Map(
       "string" -> StringClass,
@@ -168,7 +169,7 @@ object TypeGenerator {
 
     val params = objectType.properties.map {
       case a:ArrayTypeDeclaration =>
-        if (Option(a.minItems()).map(_.intValue()).getOrElse(0) < 1) {
+        if (Option(a.minItems()).fold(0)(_.intValue()) < 1) {
           PARAM(a.name, paramDef(a.name(), a)) := NIL
         } else {
           PARAM(a.name, paramDef(a.name(), a)).tree
@@ -230,7 +231,7 @@ object TypeGenerator {
     }
 
     val obj = OBJECTDEF(name.capitalize) withParents DefaultJsonProtocol := BLOCK(
-      VAL(s"${name}JsonFormat") withFlags Flags.IMPLICIT := REF(s"jsonFormat") APPLY((REF(name.capitalize) DOT "apply").tree +: objectType.properties.map(p => LIT(p.name))(collection.breakOut))
+      VAL(s"${name}JsonFormat") withFlags Flags.IMPLICIT := REF(s"jsonFormat") APPLY((REF(name.capitalize) DOT "apply _").tree +: objectType.properties.map(p => LIT(p.name))(collection.breakOut))
     )
     val classDocs = Option(objectType.description()).map(_.value)
     if (classDocs.isDefined || paramDocs.nonEmpty) {
@@ -240,25 +241,27 @@ object TypeGenerator {
     }
   }
 
-  def generateTypes(types: Seq[TypeDeclaration]): List[Tree] = {
+  def generateTypes(pkg: String, types: Seq[TypeDeclaration]): Map[String, Tree] = {
     val typeTable = buildTypeTable(types)
     val generatedTypes = new java.util.HashSet[String]()
-    @tailrec def generate(remaining: List[TypeDeclaration], built: List[Tree]): List[Tree] = {
+    @tailrec def generate(remaining: List[TypeDeclaration], built: Map[String, Tree]): Map[String, Tree] = {
       remaining match {
         case head :: tail =>
           head match {
             case a: ArrayTypeDeclaration =>
               a.items() match {
                 case o: ObjectTypeDeclaration =>
-                  if (generatedTypes.add(objectName(o, Some(a.name())))) {
-                    val klass = createObjectType(typeTable, objectName(o, Some(a.name())), o)
-                    generate(o.properties().toList ::: tail, klass ::: built)
+                  val name = objectName(o, Some(a.name))
+                  if (generatedTypes.add(name)) {
+                    val klass = createObjectType(typeTable, name, o)
+                    generate(o.properties().toList ::: tail, built + (name -> BLOCK(klass).inPackage(pkg)))
                   } else {
                     generate(o.properties().toList ::: tail, built)
                   }
                 case s: StringTypeDeclaration if !s.enumValues().isEmpty =>
-                  if (generatedTypes.add(enumName(s, Some(a.name())))) {
-                    generate(tail, createEnumType(typeTable, a.name(), s) ::: built)
+                  val name = enumName(s, Some(a.name))
+                  if (generatedTypes.add(name)) {
+                    generate(tail, built + (name -> BLOCK(createEnumType(typeTable, name, s)).inPackage(pkg)))
                   } else {
                     generate(tail, built)
                   }
@@ -266,15 +269,17 @@ object TypeGenerator {
                   generate(tail, built)
               }
             case o: ObjectTypeDeclaration =>
-              if (generatedTypes.add(objectName(o))) {
+              val name = objectName(o)
+              if (generatedTypes.add(name)) {
                 val klass = createObjectType(typeTable, objectName(o), o)
-                generate(o.properties().toList ::: tail, klass ::: built)
+                generate(o.properties().toList ::: tail, built + (name -> BLOCK(klass).inPackage(pkg)))
               } else {
                 generate(o.properties.toList ::: tail, built)
               }
             case s: StringTypeDeclaration if !s.enumValues().isEmpty =>
-              if (generatedTypes.add(enumName(s))) {
-                generate(tail, createEnumType(typeTable, s.name(), s) ::: built)
+              val name = enumName(s)
+              if (generatedTypes.add(name)) {
+                generate(tail, built + (name -> BLOCK(createEnumType(typeTable, s.name(), s)).inPackage(pkg)))
               } else {
                 generate(tail, built)
               }
@@ -285,10 +290,10 @@ object TypeGenerator {
           built
       }
     }
-    generateBuiltInTypes() ::: generate(types.toList, Nil).map(_.withComment("scalastyle:off"))
+    generateBuiltInTypes(pkg) ++ generate(types.toList, Map.empty)
   }
 
-  def generateBuiltInTypes(): List[Tree] = {
+  def generateBuiltInTypes(pkg: String): Map[String, Tree] = {
     val OffsetDateTime = RootClass.newClass("java.time.OffsetDateTime")
     val LocalTime = RootClass.newClass("java.time.LocalTime")
     val LocalDate = RootClass.newClass("java.time.LocalDate")
@@ -346,6 +351,7 @@ object TypeGenerator {
       )
     )
     val jsonProtocolObj = OBJECTDEF("RamlJsonProtocol") withParents "RamlJsonProtocol"
-    List(jsonProtocolTrait, jsonProtocolObj)
+
+    Map("RamlJsonProtocol" -> BLOCK(jsonProtocolTrait, jsonProtocolObj).inPackage(pkg))
   }
 }
