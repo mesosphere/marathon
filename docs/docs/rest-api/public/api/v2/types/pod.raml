@@ -139,3 +139,67 @@ types:
                   If you need a more fine-grained configuration, you can use the
                   `--resources` argument to specify resource shares per role.
                   See [the Mesos attribute and resources documentation](http://mesos.apache.org/documentation/latest/attributes-resources/) for details
+  PodStatus:
+    (scalaType): PodStatus
+    description: |
+      Pod status communicates the lifecycle phase of the pod, current instance and container
+      status, and recent termination status history.
+    additionalProperties: false
+    properties:
+      id:
+        type: !include pathId.raml
+        description: |
+          Fully qualified name of the pod that this status object is describing.
+      spec:
+        type: Pod
+        description: |
+          The latest version of the pod specification (that has the same pod ID).
+      status:
+        type: string
+        (scalaType): PodState
+        enum: [ DEGRADED, STABLE, TERMINAL ]
+        description: |
+          DEGRADED - The number of STABLE pod instances is less than the number of desired instances.
+          STABLE   - All launched pod instances have started and, if health checks were specified, are all healthy.
+          TERMINAL - Marathon is tearing down all of the instances for this pod.
+      statusSince:
+        type: datetime
+        description: |
+          Time at which the status code was last modified.
+      message?:
+        type: string
+        description: |
+          Human-friendly explanation for reason of the current status.
+      instances?:
+        type: array
+        items:
+          (scalaType): PodInstanceStatus
+          type: !include pod-instance-status.raml
+      terminationHistory?:
+        type: array
+        description: |
+          List of most recent instance terminations.
+          TODO(jdef) determine how many items might show up here; current thinking is .. not many
+        items:
+          (scalaType): TerminationHistory
+          type: object
+          additionalProperties: false
+          properties:
+            instanceID:
+              type: string
+            startedAt:
+              type: datetime
+            terminatedAt:
+              type: datetime
+            message?:
+              type: string
+              description: |
+                Human-friendly explanation for termination.
+      lastUpdated:
+        type: datetime
+        description: |
+          Time that this status object was last checked and updated (even if nothing changed)
+      lastChanged:
+        type: datetime
+        description: |
+          Time that this status object was last modified (some aspect of status did change)
