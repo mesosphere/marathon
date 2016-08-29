@@ -13,8 +13,12 @@ properties:
     (scalaType): PodInstanceState
     enum: [ PENDING, STAGING, STABLE, DEGRADED, TERMINAL ]
     description: |
-      Reflects the aggregate status of all containers for this pod instance.
-      For example RESERVED, CREATED, STAGING, STARTING, RUNNING, ERROR, FAILED, KILLING.
+      PENDING  - Instance is queued for launch.
+      STAGING  - Instance has been launched but is not yet running.
+      STABLE   - Any terminated containers have completed successfully and any running containers
+                 are healthy (TBD by health checks, if enabled).
+      DEGRADED - One or more containers are running but the instance is not considered STABLE.
+      TERMINAL - Instance is in the process of shutting down.
   statusSince:
     type: datetime
     description: |
