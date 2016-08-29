@@ -1,0 +1,49 @@
+#%RAML 1.0 DataType
+type: object
+description: |
+  If an application definition includes the 'ipAddress' field, then Marathon
+  will request a per-task IP from Mesos.
+  A separate ports/portMappings configuration is then disallowed.
+properties:
+  discovery?:
+    (scalaType): AppIpDiscovery
+    type: object
+    description: Infromation useful for service discovery
+    properties:
+      ports?:
+        type: array
+        description: |
+          Array of objects describing the ports exposed by each task
+        items:
+          (scalaType): AppIpDiscoveryPorts
+          type: object
+          description: Port
+          properties:
+            number?:
+              type: integer
+              format: int32
+              minimum: 0
+              maximum: 65535
+              description: The port number
+            name?:
+              type: string
+              description: Name of the port
+              pattern: ^[a-z][a-z0-9-]*$
+            protocol?: !include networkProtocol.raml
+  groups?:
+    type: array
+    description: |
+      Array of network groups.
+      One IP address can belong to zero or more network groups.
+      The idea is that containers can only reach containers with which they
+      share at least one network group.
+    items: string
+  labels?:
+    type: array
+    items: !include label.raml
+  networkName?:
+    type: string
+    description: |
+      If present, declares the name of the network that the container should
+      join.
+      In practice it is up to the IPAM to decide how to interpret this field

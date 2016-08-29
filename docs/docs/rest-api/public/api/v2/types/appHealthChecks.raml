@@ -1,0 +1,75 @@
+#%RAML 1.0 DataType
+type: object
+(scalaType): AppHealthChecks
+additionalProperties: false
+properties:
+  command?:
+    type: object
+    properties:
+      items:
+        (scalaType): CommandHealthCheckItems
+        type: object
+        additionalProperties: false
+        properties:
+          value:
+            type: string
+            description: The health check command to execute
+  gracePeriodSeconds?:
+    type: integer
+    format: int32
+    description: |
+      Health check failures are ignored within this number of seconds of
+      the task being started or until the task becomes healthy for the
+      first time.
+    minimum: 0
+  ignoreHttp1xx?:
+    type: boolean
+    description: Ignore HTTP 1xx responses
+  intervalSeconds?:
+    type: integer
+    format: int32
+    description: Number of seconds to wait between health checks
+    minimum: 0
+  maxConsecutiveFailures?:
+    type: integer
+    format: int32
+    description: |
+      Number of consecutive health check failures after which the
+      unhealthy task should be killed.
+    minimum: 0
+  path?:
+    type: string
+    description: |
+      Path to endpoint exposed by the task that will provide health status.
+      Note: only used if protocol == HTTP[S]."
+    example: /path/to/health
+  port?:
+    type: integer
+    format: int32
+    minimum: 0
+    maximum: 65535
+    description: |
+      The specific port to connect to.
+      In case of dynamic ports, see portIndex.
+  portIndex?:
+    type: integer
+    format: int32
+    minimum: 0
+    maximum: 65535
+    description: |
+      Index in this app's ports array to be used for health requests.
+      An index is used so the app can use random ports,
+      like [0, 0, 0] for example, and tasks could be started with
+      port environment variables like $PORT1.
+  protocol?:
+    (scalaType): AppHealthCheckProtocol
+    type: string
+    enum: [HTTP, HTTPS, TCP, COMMAND]
+    description: |
+      Protocol of the requests to be performed. One of HTTP, HTTPS, TCP or COMMAND.
+  timeoutSeconds?:
+    type: integer
+    format: int32
+    description: |
+      Number of seconds after which a health check is considered a failure
+      regardless of the response.
