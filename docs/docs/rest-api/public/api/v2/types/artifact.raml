@@ -1,0 +1,25 @@
+#%RAML 1.0 DataType
+type: object
+(scalaType): Artifact
+properties:
+  uri:
+    type: string
+    minLength: 1
+    maxLength: 1024
+  extract?:
+    type: boolean
+  executable?:
+    type: boolean
+  cache?:
+    type: boolean
+  destPath?:
+    type: string
+    minLength: 1
+    maxLength: 1024
+example: |
+  {
+    "uri": "http://download.me/file.tgz",
+    "extract": true,
+    "executable": true,
+    "cache": false
+  }

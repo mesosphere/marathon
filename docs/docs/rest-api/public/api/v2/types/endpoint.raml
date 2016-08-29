@@ -1,0 +1,33 @@
+#%RAML 1.0 DataType
+type: object
+(scalaType): Endpoint
+description: |
+  Endpoints accept connections from outside of a pod.
+  Endpoints may also be advertised outside of a cluster.
+properties:
+  name:
+    type: !include name.raml
+    description: |
+      Name of this port. Should be unique in the context of the pod.
+  containerPort?:
+    type: !include port.raml
+    description: |
+      The container port that a task's process is actually listening on.
+      Required if the network mode is container
+  hostPort?:
+    type: !include port.raml
+    description: |
+      Mapped port on the host.
+      All host ports are allocated from resource offers.
+    usage: Specify 0 to tell Marathon to dynamically allocate a host port.
+    minimum: 0
+  protocol?:
+    type: !include name.raml
+    description: |
+      The protocol of this port, advertised in Mesos DiscoveryInfo.
+  labels?:
+    type: array
+    items: !include label.raml
+    description: |
+      Metadata as key/value pair. Possible uses include VIPs,
+      per-network-interface binding
