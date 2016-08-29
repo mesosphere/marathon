@@ -13,6 +13,7 @@ import sbtbuildinfo.{BuildInfoKey, BuildInfoPlugin}
 import sbtrelease.ReleasePlugin.autoImport._
 import sbtrelease.ReleaseStateTransformations._
 import sbtrelease._
+import mesosphere.raml.RamlGeneratorPlugin
 
 import scala.util.Try
 import scalariform.formatter.preferences._
@@ -57,7 +58,7 @@ object MarathonBuild extends Build {
       )
   )
     .configs(IntegrationTest, Benchmark)
-    .enablePlugins(BuildInfoPlugin)
+    .enablePlugins(BuildInfoPlugin, RamlGeneratorPlugin)
     .dependsOn(pluginInterface)
     // run mesos-simulation/test:test when running test
     .settings((test in Test) <<= (test in Test) dependsOn (test in Test in LocalProject("mesos-simulation")))
@@ -111,7 +112,8 @@ object MarathonBuild extends Build {
     parallelExecution in Test := true,
     testForkedParallel in Test := true,
     testOptions in Test := Seq(formattingTestArg, Tests.Argument("-l", "mesosphere.marathon.IntegrationTest")),
-    fork in Test := true
+    fork in Test := true,
+    concurrentRestrictions in Test := Seq(Tags.limitAll(4))
   )
 
   lazy val testScalaStyle = taskKey[Unit]("testScalaStyle")
@@ -301,6 +303,7 @@ object Dependencies {
     java8Compat % "compile",
     scalaLogging % "compile",
     logstash % "compile",
+    sprayJson % "compile",
 
     // test
     Test.diffson % "test",
@@ -363,6 +366,7 @@ object Dependency {
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
+  val sprayJson = "io.spray" %%  "spray-json" % "1.3.2"
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
   val guava = "com.google.guava" % "guava" % V.Guava
