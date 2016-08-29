@@ -5,6 +5,7 @@ properties:
   fieldName:
     type: string
   operator:
+    (scalaType): ConstraintOperator
     type: string
     enum: [UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE, MAX_PER]
   value?: string

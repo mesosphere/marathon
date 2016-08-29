@@ -41,6 +41,9 @@ object RamlTypeGenerator {
   val SeqClass = RootClass.newClass("scala.collection.immutable.Seq")
   def TYPE_SEQ(typ: Type): Type = SeqClass TYPE_OF typ
   def camelify(name : String): String = name.toLowerCase.capitalize
+  def underscoreToCamel(name: String) = "_([a-z\\d])".r.replaceAllIn(name, {m =>
+    m.group(1).toUpperCase()
+  })
 
   def objectName(o: ObjectTypeDeclaration, default: Option[String] = None): String = {
     o.annotations().find(_.name() == "(scalaType)").fold(default.getOrElse(o.name()).capitalize) { annotation =>
@@ -119,13 +122,13 @@ object RamlTypeGenerator {
     )
 
     val enumObjects = stringType.enumValues().map { enumValue =>
-      CASEOBJECTDEF(camelify(enumValue)) withParents typeTable(baseTraitName) := BLOCK(
+      CASEOBJECTDEF(underscoreToCamel(camelify(enumValue))) withParents typeTable(baseTraitName) := BLOCK(
         VAL("value") := LIT(enumValue.toLowerCase)
       )
     }.toVector
 
     val patternMatches = stringType.enumValues().map { enumValue =>
-      CASE (LIT (enumValue.toLowerCase)) ==> REF(camelify(enumValue))
+      CASE (LIT (enumValue.toLowerCase)) ==> REF(underscoreToCamel(camelify(enumValue)))
     }
     val wildcard = CASE(WILDCARD) ==>
       (REF("spray.json.deserializationError") APPLY LIT(s"Expected ${baseName.capitalize} (${stringType.enumValues().map(_.toLowerCase).mkString(", ")})"))
@@ -160,7 +163,7 @@ object RamlTypeGenerator {
           typeTable(objectName(o, Some(name)))
         case n: NumberTypeDeclaration =>
           typeTable(Option(n.format()).getOrElse("double"))
-        case s: StringTypeDeclaration =>
+        case s: StringTypeDeclaration if s.enumValues().isEmpty =>
           StringClass
         case b: TypeDeclaration =>
           typeTable(b.`type`())
@@ -180,7 +183,14 @@ object RamlTypeGenerator {
         } else {
           PARAM(o.name(), TYPE_OPTION(objectName(o))) := NONE
         }
-      case s: StringTypeDeclaration =>
+      case s: StringTypeDeclaration if !s.enumValues().isEmpty =>
+        val typeName = enumName(s)
+        if (s.required) {
+          PARAM(s.name(), typeTable(typeName)).tree
+        } else {
+          PARAM(s.name(), TYPE_OPTION(typeName)) := NONE
+        }
+      case s: StringTypeDeclaration if s.enumValues().isEmpty =>
         Option(s.defaultValue()).fold {
           if (s.required()) {
             PARAM(s.name(), StringClass).tree

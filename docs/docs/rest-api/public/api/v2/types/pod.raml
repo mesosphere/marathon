@@ -22,7 +22,7 @@ properties:
       Metadata as key/value pair.
       Useful when passing directives to be interpreted by Mesos modules.
   version?:
-    type: datetime-only
+    type: datetime
     description: The version of the definition, immutable
   user?:
     type: string
@@ -63,10 +63,12 @@ properties:
         properties:
           instances:
             type: integer
+            format: int32
             description: The number of instances of this pod to start.
             minimum: 0
           maxInstances?:
             type: integer
+            format: int32
             description: |
               The maximum number of instances of this pod that should
               be running at a given time.
