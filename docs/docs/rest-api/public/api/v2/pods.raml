@@ -9,6 +9,16 @@ types:
 traits: !include ../traits.raml
 
 /:
+  head:
+    is: [ secured ]
+    description: |
+      Determine if this variant of Marathon supports pods.
+      Always generates HTTP OK.
+    responses:
+      200:
+        description: |
+          The body of a successful response will be empty.
+
   post:
     is: [ secured, jsonValidator, objectValidator, objectCreator ]
     description: |
