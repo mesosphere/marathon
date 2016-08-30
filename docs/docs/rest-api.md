@@ -484,6 +484,18 @@ Kill tasks that belong to the application `appId`.
       <td>If <code>wipe=true</code> is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if <code>scale=false</code> or not specified.
         Default: <code>false</code>.</td>
     </tr>
+    <tr>
+      <td><code>killCount</code></td>
+      <td><code>integer</code></td>
+      <td>The number of tasks to kill. A negative value signifies killing all running tasks.
+        Default: <code>-1</code>.</td>
+    </tr>
+    <tr>
+      <td><code>noOp</code></td>
+      <td><code>boolean</code></td>
+      <td>If <code>noOp=true</code> is specified then the app's tasks aren't actually killed, instead the endpoint responds with a list of tasks that would have been killed.
+        Default: <code>false</code>.</td>
+    </tr>
   </tbody>
 </table>
 

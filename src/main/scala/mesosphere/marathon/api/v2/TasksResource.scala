@@ -128,7 +128,7 @@ class TasksResource @Inject() (
       affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
 
       val killed = result(Future.sequence(toKill.map {
-        case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe)
+        case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe, -1)
       })).flatten
       ok(jsonObjString("tasks" -> killed.map(task => EnrichedTask(task.taskId.runSpecId, task, Seq.empty))))
     }

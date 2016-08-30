@@ -8,8 +8,9 @@ import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
-import mesosphere.marathon.upgrade.DeploymentPlan
+import mesosphere.marathon.upgrade.{ DeploymentPlan, ScalingProposition }
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
+import mesosphere.mesos.Constraints
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -28,7 +29,8 @@ class TaskKiller @Inject() (
   def kill(
     appId: PathId,
     findToKill: (Iterable[Task] => Iterable[Task]),
-    wipe: Boolean = false)(implicit identity: Identity): Future[Iterable[Task]] = {
+    wipe: Boolean = false,
+    killCount: Integer = -1)(implicit identity: Identity): Future[Iterable[Task]] = {
 
     result(groupManager.app(appId)) match {
       case Some(app) =>
@@ -36,7 +38,7 @@ class TaskKiller @Inject() (
 
         import scala.concurrent.ExecutionContext.Implicits.global
         taskTracker.appTasks(appId).flatMap { allTasks =>
-          val foundTasks = findToKill(allTasks)
+          val foundTasks = getTasksToKill(appId, app, findToKill(allTasks), killCount)
           val expungeTasks = if (wipe) expunge(foundTasks) else Future.successful(())
 
           expungeTasks.map { _ =>
@@ -64,11 +66,36 @@ class TaskKiller @Inject() (
     }
   }
 
+  def getTasksToKill(
+    appId: PathId,
+    appInfo: AppDefinition,
+    tasks: Iterable[Task],
+    killCount: Integer = -1): Iterable[Task] = {
+
+    def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int): Iterable[Task] =
+      Constraints.selectTasksToKill(appInfo, notSentencedAndRunning, toKillCount)
+
+    val scaleTo = if (killCount >= 0) tasks.size - killCount else 0
+
+    val prop = ScalingProposition.propose(tasks, None, killToMeetConstraints, scaleTo)
+    prop.tasksToKill.getOrElse(Seq.empty[Task])
+  }
+
   def killAndScale(
     appId: PathId,
     findToKill: (Iterable[Task] => Iterable[Task]),
-    force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId))), force)
+    force: Boolean,
+    killCount: Integer = -1)(implicit identity: Identity): Future[DeploymentPlan] = {
+
+    var tasks = findToKill(taskTracker.appTasksLaunchedSync(appId))
+
+    result(groupManager.app(appId)) match {
+      case Some(appInfo) =>
+        tasks = getTasksToKill(appId, appInfo, tasks, killCount = killCount)
+      case None => Future.failed(UnknownAppException(appId))
+    }
+
+    killAndScale(Map(appId -> tasks), force)
   }
 
   def killAndScale(

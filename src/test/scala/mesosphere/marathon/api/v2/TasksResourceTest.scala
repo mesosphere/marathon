@@ -60,7 +60,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     config.zkTimeoutDuration returns 5.seconds
     taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.forTasks(task1, task2)
-    taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Task])
+    taskKiller.kill(any, any, any, any)(any) returns Future.successful(Iterable.empty[Task])
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
 
@@ -74,8 +74,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     response.getEntity shouldEqual """{"tasks":[]}"""
 
     And("Both tasks should be requested to be killed")
-    verify(taskKiller).kill(eq(app1), any, any)(any)
-    verify(taskKiller).kill(eq(app2), any, any)(any)
+    verify(taskKiller).kill(eq(app1), any, any, any)(any)
+    verify(taskKiller).kill(eq(app2), any, any, any)(any)
 
     And("nothing else should be called on the TaskKiller")
     noMoreInteractions(taskKiller)
