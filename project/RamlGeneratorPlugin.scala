@@ -31,9 +31,10 @@ object RamlGeneratorPlugin extends AutoPlugin {
       }
       model
     }
-    val types = RamlTypeGenerator.generateTypes(pkg, models.flatMap(m => m.getApiV10.types().toVector)(collection.breakOut))
+    val typesToGenerate = models.flatMap(m => m.getApiV10.types().toVector ++ m.getApiV10.uses().flatMap(_.types()))(collection.breakOut)
+    val types = RamlTypeGenerator.generateTypes(pkg, typesToGenerate)
     types.map { case (typeName, content) =>
-      val file = outputDir / pkg / s"$typeName.scala"
+      val file = outputDir / pkg.replaceAll("\\.", "/") / s"$typeName.scala"
       IO.write(file, treehugger.forest.treeToString(content))
       file
     }(collection.breakOut)

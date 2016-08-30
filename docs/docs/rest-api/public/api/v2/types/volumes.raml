@@ -1,0 +1,35 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+types:
+  Volume:
+    type: object
+    properties:
+      name:
+        type: strings.Name
+        description: The name of the volume to reference.
+      host?:
+        type: string
+        description: |
+          Absolute path of the file or directory on the agent, or else the relative
+          path of the directory in the executor's sandbox.
+          Host volumes are useful for mapping directories that exist on the agent apriori,
+          or within the executor sandbox. No resources (Mesos or otherwise) are allocated for
+          these types of volumes.
+  Volumes:
+    type: array
+    items: Volume
+  VolumeMount:
+    type: object
+    properties:
+      name:
+        type: strings.Name
+        description: The name of the volume to reference.
+      mountPath:
+        type: strings.Path
+        description: The path inside the container at which the volume is mounted.
+      readOnly?:
+        type: boolean
+  VolumeMounts:
+    type: array
+    items: VolumeMount

@@ -1,9 +1,10 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
-import mesosphere.marathon.Protos
-import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, EnvVar, Fixed, Label, MesosContainer, Network, PodDef, PodScalingPolicy, PodSchedulingPlacementPolicy, PodSchedulingPolicy, Volume }
-import mesosphere.marathon.state.{ EnvVarSecretRef, EnvVarString, EnvVarValue, MarathonState, PathId, RunnableSpec, Secret, Timestamp }
-import play.api.libs.json.{ Format, JsResult, JsValue }
+import java.time.OffsetDateTime
+
+import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.raml.{ ConstraintOperator, EnvVar, Label, MesosContainer, Network, PodDef, PodSchedulingPlacementPolicy, PodSchedulingPolicy, Volume, Constraint => RamlConstraint }
+import mesosphere.marathon.state.{ EnvVarSecretRef, EnvVarString, EnvVarValue, PathId, RunnableSpec, Secret }
 
 import scala.collection.immutable.Seq
 // scalastyle:on

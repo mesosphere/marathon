@@ -1,0 +1,33 @@
+#%RAML 1.0 Library
+types:
+  Name:
+    type: string
+    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+    maxLength: 63
+    minLength: 1
+  PathId:
+    type: string
+    pattern: ^(\/?((\.{2})|([a-z0-9][a-z0-9\-.]*[a-z0-9]+)|([a-z0-9]*))($|\/))+$
+    minLength: 1
+    example: /ops/audit
+    description: |
+      Unique identifier for the pod consisting of a series of names separated by slashes.
+      Each name must be at least 1 character and may only contain digits (`0-9`), dashes
+      (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
+  Uri:
+    type: string
+    minLength: 1
+    maxLength: 1024
+  Path:
+    type: string
+    minLength: 1
+    maxLength: 1024
+  EnvName:
+    type: string
+    minLength: 1
+    maxLength: 1024
+    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+  HttpScheme:
+    type: string
+    enum: [ HTTP, HTTPS ]
+    description: The http scheme to use
