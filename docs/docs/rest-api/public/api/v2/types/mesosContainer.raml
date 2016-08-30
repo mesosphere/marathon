@@ -1,64 +1,70 @@
-#%RAML 1.0 DataType
-type: object
-(scalaType): MesosContainer
-description: Mesos Container
-properties:
-  name:
-    type: !include name.raml
-    description: The name of this container
-  exec?:
+#%RAML 1.0 Library
+uses:
+  artifacts: artifact.raml
+  endpoint: endpoint.raml
+  env: environmentVariable.raml
+  health: healthCheck.raml
+  image: image.raml
+  labels: label.raml
+  mesosCommand: mesosCommand.raml
+  resources: resources.raml
+  strings: stringTypes.raml
+  volumes: volumes.raml
+types:
+  MesosContainer:
     type: object
+    description: Mesos Container
     properties:
-      command:
-        type: !include mesosCommand.raml
+      name:
+        type: strings.Name
+        description: The name of this container
+      exec?:
+        type: object
+        properties:
+          command:
+            type: mesosCommand.MesosCommand
+            description: |
+              Command specification executed by Mesos, not parsed by Marathon.
+              The presence of `command.shell` implies `overrideEntrypoint=true`.
+          overrideEntrypoint?:
+            type: boolean
+            usage: |
+              Applies only if a container image is specified AND that container image
+              defines a default entrypoint (Docker) or exec (appc) property.
+              It is an error to use `false` here when `command.shell` is set.
+            description: |
+              When true argv[0] will be used as the entrypoint/exec of the container.
+              Otherwise the contents of argv[] are appended as arguments.
+      resources:
+        type: resources.Resources
+        description: The resources to allocate to the container.
+      endpoints?:
+        type: endpoint.Endpoints
+        description: The ports needed to run this container
+      image?:
+        type: image.Image
+        description: The filesystem image to populate the container with
+      environment?: env.EnvVars
+      user?:
+        type: string
         description: |
-          Command specification executed by Mesos, not parsed by Marathon.
-          The presence of `command.shell` implies `overrideEntrypoint=true`.
-      overrideEntrypoint?:
-        type: boolean
-        usage: |
-          Applies only if a container image is specified AND that container image
-          defines a default entrypoint (Docker) or exec (appc) property.
-          It is an error to use `false` here when `command.shell` is set.
+          The OS user to use to run the tasks on the agent.
+          Values here override a "user" value specified in the pod definition.
+      healthCheck?:
+        type: health.HealthCheck
+        description: All healthchecks to perform on the container
+      volumeMounts?:
+        type: volumes.VolumeMounts
+        description: All volume mounts
+      artifacts?:
+        type: artifacts.Artifacts
+        description:
+          All artifacts to download before the task runs
+      labels?:
+        type: labels.Labels
         description: |
-          When true argv[0] will be used as the entrypoint/exec of the container.
-          Otherwise the contents of argv[] are appended as arguments.
-  resources:
-    type: !include resources.raml
-    description: The resources to allocate to the container.
-  endpoints?:
+          Metadata as key/value pair.
+          Useful when passing directives to be interpreted by Mesos modules.
+  MesosContainers:
     type: array
-    items: !include endpoint.raml
-    description: The ports needed to run this container
-  image?:
-    type: !include image.raml
-    description: The filesystem image to populate the container with
-  environment?:
-    type: array
-    items: !include environmentVariable.raml
-    description: |
-      Environment variables to set, defined as key/value pairs.
-      Variables defined here override those specified in the pod definition.
-  user?:
-    type: string
-    description: |
-      The OS user to use to run the tasks on the agent.
-      Values here override a "user" value specified in the pod definition.
-  healthCheck?:
-    type: !include healthCheck.raml
-    description: All healthchecks to perform on the container
-  volumeMounts?:
-    type: array
-    items: !include volumeMount.raml
-    description: All volume mounts
-  artifacts?:
-    type: array
-    items: !include artifact.raml
-    description:
-      All artifacts to download before the task runs
-  labels?:
-    type: array
-    items: !include label.raml
-    description: |
-      Metadata as key/value pair.
-      Useful when passing directives to be interpreted by Mesos modules.
+    items: MesosContainer

@@ -1,16 +1,21 @@
-#%RAML 1.0 DataType
-type: object
-(scalaType): Network
-properties:
-  name?:
-    type: !include name.raml
-    description: |
-      Defines the name of the container network to join.
-      Not for use with `host` mode networking
-  mode?:
+#%RAML 1.0 Library
+uses:
+  label: label.raml
+  strings: stringTypes.raml
+types:
+  NetworkMode:
     type: string
-    (scalaType): NetworkMode
     enum: [container, host]
-  labels?:
+  Network:
+    type: object
+    properties:
+      name?:
+        type: strings.Name
+        description: |
+          Defines the name of the container network to join.
+          Not for use with `host` mode networking
+      mode?: NetworkMode
+      labels?: label.Labels
+  Networks:
     type: array
-    items: !include label.raml
+    items: Network

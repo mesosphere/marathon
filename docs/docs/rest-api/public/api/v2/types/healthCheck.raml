@@ -1,34 +1,36 @@
-#%RAML 1.0 DataType
-type: object
-(scalaType): HealthCheck
-usage: Must specify a single type of check, http, tcp, or command
-maxProperties: 1
-minProperties: 1
-properties:
-  http?:
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+  command: mesosCommand.raml
+types:
+  HttpHealthCheck:
     type: object
     properties:
       endpoint:
-        type: !include name.raml
+        type: strings.Name
         description: |
           The endpoint name to use.
           In "host" mode health checks use the hostPort. In other modes use the containerPort.
-      path?:
-        type: string
-        minLength: 1
-        maxLength: 1024
-      scheme?:
-        type: string
-        (scalaType): HttpScheme
-        enum: [ HTTP, HTTPS ]
-        description: The http scheme to use
-  tcp?:
+      path?: strings.Path
+      scheme?: strings.HttpScheme
+      /^tcp$/:
+      /^command$/:
+  TcpHealthCheck:
     type: object
     properties:
       endpoint:
-        type: !include name.raml
+        type: strings.Name
         description: |
           The endpoint name to use.
           In "host" mode health checks use the hostPort. In other modes use the containerPort.
-  command?:
-    type: !include mesosCommand.raml
+      /^http$/:
+      /^command$/:
+  CommandHealthCheck:
+    type: object
+    properties:
+      command: command.MesosCommand
+      /^http$/:
+      /^tcp$/:
+  HealthCheck:
+    type: (HttpHealthCheck | TcpHealthCheck | CommandHealthCheck)
+    usage: Must specify a single type of check, http, tcp, or command

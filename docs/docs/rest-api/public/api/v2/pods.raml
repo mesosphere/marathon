@@ -1,11 +1,11 @@
 #%RAML 1.0
 title: v2 pod API
 mediaType: application/json
-annotationTypes:  !include ../annotations.raml
 types:
-  PathId: !include types/pathId.raml
 uses:
+  strings: types/stringTypes.raml
   pod: types/pod.raml
+  podStatus: types/podStatus.raml
 traits: !include ../traits.raml
 
 /:
@@ -54,7 +54,7 @@ traits: !include ../traits.raml
 /{id}:
   uriParameters:
     id:
-      type: PathId
+      type: strings.PathId
       description: The path of the pod
 
   delete:
@@ -92,7 +92,7 @@ traits: !include ../traits.raml
 
   uriParameters:
     id:
-      type: PathId
+      type: strings.PathId
       description: The path of the pod
 
   get:
@@ -103,4 +103,4 @@ traits: !include ../traits.raml
       200:
         body:
           application/json:
-            type: pod.PodStatus
+            type: podStatus.PodStatus
