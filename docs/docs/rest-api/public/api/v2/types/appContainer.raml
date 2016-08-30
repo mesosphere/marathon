@@ -1,0 +1,140 @@
+#%RAML 1.0 DataType
+type: object
+(scalaType): Container
+additionalProperties: false
+properties:
+  type:
+    type: string
+    enum: [MESOS, DOCKER]
+    description: |
+      Container engine type. Supported engine types at the moment are DOCKER and MESOS.
+  docker?:
+    type: object
+    additionalProperties: false
+    properties:
+      credential?:
+        type: object
+        (scalaType): DockerCredentials
+        description: Credential to authenticate with the docker registry
+        additionalProperties: false
+        properties:
+          principal:
+            type: string
+            description: Principal to authenticate with the docker registry
+          secret?:
+            type: string
+            description: Secret to authenticate with the docker registry
+      forcePullImage?:
+        type: boolean
+        description: |
+          The container will be pulled, regardless if it is already available on
+          the local system.
+      image:
+        type: string
+        minLength: 1
+        description: The name of the docker image to use
+      network?:
+        type: string
+        (scalaType): DockerNetwork
+        enum: [BRIDGE, HOST, NONE, USER]
+        description: |
+          The networking mode, this container should operate in.
+          One of BRIDGE|HOST|NONE|USER"
+      parameters?:
+        type: array
+        items:
+          (scalaType): DockerParameters
+          type: object
+          properties:
+            key:
+              type: string
+              description: key of this parameter
+              minLength: 1
+            value:
+              type: string
+              description: value of this parameter
+        description: |
+          Allowing arbitrary parameters to be passed to docker CLI.
+          Note that anything passed to this field is not guaranteed to be
+          supported moving forward, as we might move away from the docker CLI.
+      portMappings?:
+        type: array
+        items:
+          type: !include dockerPortMappings.raml
+      privileged?:
+        type: boolean
+        description: Run this docker image in privileged mode
+  appc?:
+    type: object
+    (scalaType): AppCContainer
+    additionalProperties: false
+    properties:
+      image:
+        type: string
+        minLength: 1
+        description: The name of the AppC image to use
+      id?:
+        type: string
+        minLength: 7
+        description: |
+          An image ID is a string of the format 'hash-value', where 'hash' is
+          the hash algorithm used and 'value' is the hex-encoded digest.
+          Currently the only permitted hash algorithm is sha512.
+      labels?:
+        type: array
+        items: !include label.raml
+        description: |
+          Optional labels. Suggested labels: 'version', 'os', 'arch'.
+      forcePullImage?:
+        type: boolean
+        description: |
+          The container will be pulled, regardless if it is already available
+          on the local system
+  volumes?:
+    type: array
+    items:
+      (scalaType): AppVolumes
+      type: object
+      additionalProperties: false
+      properties:
+        containerPath?:
+          type: string
+          minLength: 1
+          description: The ath of the volume in the container
+        hostPath?:
+          type: string
+          minLength: 1
+          description: The path of the volume on the host
+        persistent?:
+          (scalaType): AppPersistentVolume
+          type: object
+          additionalProperties: false
+          properties:
+            size:
+              type: integer
+              format: int32
+              minimum: 0
+              description: The size of the persistence volume in MB.
+        external?:
+          (scalaType): AppExternalVolume
+          type: object
+          additionalProperties: false
+          properties:
+            size?:
+              type: integer
+              format: int32
+              description: The size of the external volume in MB
+            name?:
+              type: string
+              description: The name of the volume
+            provider?:
+              type: string
+              description: The name of the volume provider
+            options?:
+              type: object
+              description: Provider specific volume configuration options
+        mode?:
+          (scalaType): DiskReadMode
+          type: string
+          enum: [RO, RW]
+          description: Possible values are RO for ReadOnly and RW for Read/Write
