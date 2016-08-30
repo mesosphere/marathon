@@ -2,22 +2,21 @@ package mesosphere.marathon.core.launcher.impl
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher, TaskOp }
+import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
+import mesosphere.marathon.core.launcher.{OfferProcessor, OfferProcessorConfig, TaskLauncher, TaskOp}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{MatchedTaskOps, TaskOpSource, TaskOpWithSource}
+import mesosphere.marathon.core.task.{Task, TaskStateOp}
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
 import org.scalatest.GivenWhenThen
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 
 class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockito {
   private[this] val offer = MarathonTestHelper.makeBasicOffer().build()
@@ -114,7 +113,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       val taskStateOp = TaskStateOp.LaunchOnReservation(
         taskId = dummyTask.id,
         runSpecVersion = clock.now(),
-        status = Task.Status(clock.now(), taskStatus = MarathonTaskStatus.Running),
+        status = Task.Status(clock.now(), taskStatus = InstanceStatus.Running),
         hostPorts = Seq.empty)
       val launch = f.launchWithOldTask(
         task,
@@ -162,7 +161,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, marathonTaskStatus = MarathonTaskStatus.Running))))
+      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, marathonTaskStatus = InstanceStatus.Running))))
 
     val offerProcessor = createProcessor()
 

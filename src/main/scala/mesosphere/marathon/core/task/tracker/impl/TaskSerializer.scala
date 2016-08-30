@@ -1,9 +1,8 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.{ Protos, SerializationFailedException }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -123,7 +122,7 @@ object TaskSerializer {
       status.mesosStatus.foreach(status => builder.setStatus(status))
       builder.addAllPorts(hostPorts.map(Integer.valueOf).asJava)
     }
-    def setMarathonTaskStatus(marathonTaskStatus: MarathonTaskStatus): Unit = {
+    def setMarathonTaskStatus(marathonTaskStatus: InstanceStatus): Unit = {
       builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus))
     }
 
@@ -149,7 +148,7 @@ object TaskSerializer {
 
 object MarathonTaskStatusSerializer {
 
-  import mesosphere.marathon.core.task.state.MarathonTaskStatus._
+  import mesosphere.marathon.core.instance.InstanceStatus._
   import mesosphere._
 
   private val proto2model = Map(
@@ -169,14 +168,14 @@ object MarathonTaskStatusSerializer {
     marathon.Protos.MarathonTask.MarathonTaskStatus.Dropped -> Dropped
   )
 
-  private val model2proto: Map[MarathonTaskStatus, marathon.Protos.MarathonTask.MarathonTaskStatus] =
+  private val model2proto: Map[InstanceStatus, marathon.Protos.MarathonTask.MarathonTaskStatus] =
     proto2model.map(_.swap)
 
-  def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): MarathonTaskStatus = {
+  def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): InstanceStatus = {
     proto2model.getOrElse(proto, throw new SerializationFailedException(s"Unable to parse $proto"))
   }
 
-  def toProto(marathonTaskStatus: MarathonTaskStatus): Protos.MarathonTask.MarathonTaskStatus = {
+  def toProto(marathonTaskStatus: InstanceStatus): Protos.MarathonTask.MarathonTaskStatus = {
     model2proto.getOrElse(
       marathonTaskStatus,
       throw new SerializationFailedException(s"Unable to serialize $marathonTaskStatus"))

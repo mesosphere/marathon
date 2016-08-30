@@ -1,8 +1,7 @@
 package mesosphere.marathon.upgrade
 
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 
 case class ScalingProposition(tasksToKill: Option[Seq[Instance]], tasksToStart: Option[Int])
@@ -62,11 +61,11 @@ object ScalingProposition {
 
 private[this] object SortHelper {
   /** tasks with lower weight should be killed first */
-  val weight: Map[MarathonTaskStatus, Int] = Map[MarathonTaskStatus, Int](
-    MarathonTaskStatus.Unreachable -> 1,
-    MarathonTaskStatus.Staging -> 2,
-    MarathonTaskStatus.Starting -> 3,
-    MarathonTaskStatus.Running -> 4).withDefaultValue(5)
+  val weight: Map[InstanceStatus, Int] = Map[InstanceStatus, Int](
+    InstanceStatus.Unreachable -> 1,
+    InstanceStatus.Staging -> 2,
+    InstanceStatus.Starting -> 3,
+    InstanceStatus.Running -> 4).withDefaultValue(5)
 
   def startedAt(instance: Instance): Timestamp = {
     instance match {

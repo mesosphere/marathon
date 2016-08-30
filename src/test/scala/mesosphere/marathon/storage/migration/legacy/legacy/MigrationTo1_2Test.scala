@@ -4,10 +4,9 @@ import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.tracker.impl.{ MarathonTaskStatusSerializer, TaskSerializer }
+import mesosphere.marathon.core.task.tracker.impl.{MarathonTaskStatusSerializer, TaskSerializer}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.storage.LegacyInMemConfig
@@ -15,8 +14,8 @@ import mesosphere.marathon.storage.repository.TaskRepository
 import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus
-import org.scalatest.time.{ Seconds, Span }
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{GivenWhenThen, Matchers}
 
 import scala.concurrent.ExecutionContext
 
@@ -62,7 +61,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
 
     store.store("/running1", makeMarathonTaskState("/running1", mesos.Protos.TaskState.TASK_RUNNING))
     store.store("/running2", makeMarathonTaskState("/running2", mesos.Protos.TaskState.TASK_RUNNING))
-    store.store("/running3", makeMarathonTaskState("/running3", mesos.Protos.TaskState.TASK_RUNNING, marathonTaskStatus = Some(MarathonTaskStatus.Running)))
+    store.store("/running3", makeMarathonTaskState("/running3", mesos.Protos.TaskState.TASK_RUNNING, marathonTaskStatus = Some(InstanceStatus.Running)))
     store.store("/unreachable1", makeMarathonTaskState("/unreachable1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_RECONCILIATION)))
     store.store("/gone1", makeMarathonTaskState("/gone1", mesos.Protos.TaskState.TASK_LOST, Some(TaskStatus.Reason.REASON_CONTAINER_LAUNCH_FAILED)))
 
@@ -76,14 +75,14 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
       task =>
         task.getMarathonTaskStatus should not be null
         val serializedTask = TaskSerializer.fromProto(task)
-        val expectedStatus = MarathonTaskStatus(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
+        val expectedStatus = InstanceStatus(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
         val currentStatus = MarathonTaskStatusSerializer.fromProto(task.getMarathonTaskStatus)
 
         currentStatus should be equals expectedStatus
     }
   }
 
-  private def makeMarathonTaskState(taskId: String, taskState: mesos.Protos.TaskState, maybeReason: Option[TaskStatus.Reason] = None, marathonTaskStatus: Option[MarathonTaskStatus] = None): MarathonTaskState = {
+  private def makeMarathonTaskState(taskId: String, taskState: mesos.Protos.TaskState, maybeReason: Option[TaskStatus.Reason] = None, marathonTaskStatus: Option[InstanceStatus] = None): MarathonTaskState = {
     val mesosStatus = TaskStatusUpdateTestHelper.makeMesosTaskStatus(Instance.Id.forRunSpec(taskId.toPath), taskState, maybeReason = maybeReason)
     val builder = MarathonTask.newBuilder()
       .setId(taskId)

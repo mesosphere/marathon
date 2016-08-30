@@ -1,11 +1,10 @@
 package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import org.scalatest.{ FunSuite, Matchers }
+import mesosphere.marathon.state.{PathId, Timestamp}
+import org.scalatest.{FunSuite, Matchers}
 
 import scala.concurrent.duration._
 
@@ -204,7 +203,7 @@ class ScalingPropositionTest extends FunSuite with Matchers {
 
   private def createTask(index: Long) = MarathonTestHelper.runningTask(s"task-$index", appVersion = Timestamp(index), startedAt = Timestamp.now().+(index.hours).toDateTime.getMillis)
 
-  private def createLostTask(index: Long): Task.LaunchedEphemeral = MarathonTestHelper.minimalUnreachableTask(PathId("/test"), MarathonTaskStatus.Unreachable)
+  private def createLostTask(index: Long): Task.LaunchedEphemeral = MarathonTestHelper.minimalUnreachableTask(PathId("/test"), InstanceStatus.Unreachable)
 
   private def createStagingTask(index: Long) = MarathonTestHelper.stagedTask(s"task-$index")
 

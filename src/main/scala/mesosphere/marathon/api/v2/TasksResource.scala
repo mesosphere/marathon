@@ -12,10 +12,9 @@ import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller,
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.{ BadRequestException, MarathonConf, MarathonSchedulerService }
@@ -145,9 +144,9 @@ class TasksResource @Inject() (
     else killTasks(tasksByAppId)
   }
 
-  private def toTaskState(state: String): Option[MarathonTaskStatus] = state.toLowerCase match {
-    case "running" => Some(MarathonTaskStatus.Running)
-    case "staging" => Some(MarathonTaskStatus.Staging)
+  private def toTaskState(state: String): Option[InstanceStatus] = state.toLowerCase match {
+    case "running" => Some(InstanceStatus.Running)
+    case "staging" => Some(InstanceStatus.Staging)
     case _ => None
   }
 }

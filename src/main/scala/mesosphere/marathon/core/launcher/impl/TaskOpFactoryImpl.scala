@@ -2,11 +2,10 @@ package mesosphere.marathon.core.launcher.impl
 
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
 import mesosphere.marathon.state.{ ResourceRole, RunSpec }
@@ -62,7 +61,7 @@ class TaskOpFactoryImpl(
             runSpecVersion = runSpec.version,
             status = Task.Status(
               stagedAt = clock.now(),
-              taskStatus = MarathonTaskStatus.Created
+              taskStatus = InstanceStatus.Created
             ),
             hostPorts = ports.flatten
           )
@@ -153,7 +152,7 @@ class TaskOpFactoryImpl(
           runSpecVersion = spec.version,
           status = Task.Status(
             stagedAt = clock.now(),
-            taskStatus = MarathonTaskStatus.Created
+            taskStatus = InstanceStatus.Created
           ),
           hostPorts = ports.flatten)
 
@@ -187,7 +186,7 @@ class TaskOpFactoryImpl(
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(
         stagedAt = now,
-        taskStatus = MarathonTaskStatus.Reserved
+        taskStatus = InstanceStatus.Reserved
       )
     )
     val taskStateOp = TaskStateOp.Reserve(task)

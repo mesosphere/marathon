@@ -1,12 +1,11 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
-import org.apache.mesos.{ Protos => MesosProtos }
+import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
+import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.collection.immutable.Seq
 
@@ -26,7 +25,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
       id = Instance.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
-      status = Task.Status(time, None, taskStatus = MarathonTaskStatus.Running),
+      status = Task.Status(time, None, taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty)
 
     def mesosStatus(taskId: Instance.Id) = {
@@ -47,7 +46,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
         stagedAt = time,
         startedAt = None,
         mesosStatus = Some(mesosStatus(Instance.Id("/foo/bar"))),
-        taskStatus = MarathonTaskStatus.Running),
+        taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty
     )
 
@@ -55,7 +54,7 @@ class MarathonTaskFormatTest extends MarathonSpec {
       id = Instance.Id("/foo/bar"),
       agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
-      status = Task.Status(time, Some(time), taskStatus = MarathonTaskStatus.Running),
+      status = Task.Status(time, Some(time), taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty,
       reservation = Task.Reservation(
         Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten,

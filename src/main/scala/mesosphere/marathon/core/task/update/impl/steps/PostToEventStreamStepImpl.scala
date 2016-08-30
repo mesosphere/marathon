@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ EffectiveTaskStateChange, Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.instance.InstanceStatus
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
@@ -52,28 +52,28 @@ class PostToEventStreamStepImpl @Inject() (eventBus: EventStream, clock: Clock) 
     newTask.version.getOrElse(oldTask.fold(Timestamp(0))(_.version.getOrElse(Timestamp(0))))
   }
 
-  private[this] def inferTaskState(taskChanged: TaskChanged): MarathonTaskStatus = {
+  private[this] def inferTaskState(taskChanged: TaskChanged): InstanceStatus = {
     (taskChanged.stateOp, taskChanged.stateChange) match {
       case (TaskStateOp.MesosUpdate(_, status, mesosStatus, _), _) => status
       case (_, TaskStateChange.Update(newState, maybeOldState)) => newState.status.taskStatus
 
       // TODO: the task status is not updated in this case, so we "assume" KILLED here
-      case (_, TaskStateChange.Expunge(task)) => MarathonTaskStatus.Killed
+      case (_, TaskStateChange.Expunge(task)) => InstanceStatus.Killed
 
       case _ => throw new IllegalStateException(s"received unexpected $taskChanged")
     }
   }
 
   object Terminal {
-    def unapply(status: MarathonTaskStatus): Option[MarathonTaskStatus] = status match {
-      case _: MarathonTaskStatus.Terminal => Some(status)
+    def unapply(status: InstanceStatus): Option[InstanceStatus] = status match {
+      case _: InstanceStatus.Terminal => Some(status)
       case _: Any => None
     }
   }
 
   private[this] def postEvent(
     timestamp: Timestamp,
-    taskStatus: MarathonTaskStatus,
+    taskStatus: InstanceStatus,
     maybeStatus: Option[TaskStatus],
     task: Task,
     version: Timestamp): Unit = {

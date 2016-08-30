@@ -3,7 +3,7 @@ package mesosphere.marathon.storage.migration.legacy.legacy
 import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.MarathonTaskStatus
 import mesosphere.marathon.core.task.tracker.impl.MarathonTaskStatusSerializer
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
