@@ -75,10 +75,6 @@ types:
         type: datetime
         description: |
           Time that this status was last modified (some aspect of status did change)
-  ContainerStatuses:
-    type: array
-    items: ContainerStatus
-
   PodState:
     type: string
     enum: [ DEGRADED, STABLE, TERMINAL ]
@@ -140,7 +136,7 @@ types:
         description: |
           Status of the networks to which this instance is attached.
       containers?:
-        type: containerStatus.ContainerStatuses
+        type: ContainerStatus[]
         description: status for each running container of this instance.
       lastUpdated:
         type: datetime

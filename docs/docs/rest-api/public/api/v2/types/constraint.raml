@@ -1,21 +1,8 @@
-<<<<<<< HEAD
 #%RAML 1.0 Library
 usage: |
   Defines Constraint types for new type definitions
 types:
   ConstraintOperator:
-=======
-#%RAML 1.0 DataType
-type: object
-(scalaType): Constraint
-description: |
-  Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE, MAX_PER
-properties:
-  fieldName:
-    type: string
-  operator:
-    (scalaType): ConstraintOperator
->>>>>>> jason/raml-10
     type: string
     enum: [UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE, MAX_PER]
   Constraint:
@@ -27,3 +14,9 @@ properties:
   Constraints:
     type: array
     items: Constraint
+  AppConstraint:
+    description: |
+      v2 App defined constraints as a 2 or 3 element array
+      with [fieldName, ConstraintOperator(,value?)].
+    type: array
+    items: string #(string | ConstraintOperator)

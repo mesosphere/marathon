@@ -1,9 +1,9 @@
 #%RAML 1.0
 title: v2 apps API
 mediaType: application/json
-annotationTypes: !include ../annotations.raml
-types:
-  AppDefinition: !include types/app.raml
+uses:
+  app: types/app.raml
+  error: types/error.raml
 traits: !include ../traits.raml
 
 /:
@@ -101,35 +101,39 @@ traits: !include ../traits.raml
     body:
       application/json:
         example: !include examples/apps_create.json
+        type: app.App[]
     responses:
       409:
         description: There is an already deployed application with this name
         body:
           application/json:
-            #example: |
-            #  {"message":"An app with id [/existing_app] already exists."}
+            type: error.Error
+            example: |
+              {"message":"An app with id [/existing_app] already exists."}
       400:
         description: The application definition provided in the body is not valid.
         body:
           application/json:
-            #example: |
-           #    {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+            type: error.Error
+            example: |
+               {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
       422:
         description: The entity send can not be preocessed, since there are validation errors
         body:
           application/json:
-            #example: |
-            #    {
-            #      "message": "Object is not valid",
-            #      "details": [
-            #        {
-            #          "path": "/upgradeStrategy/minimumHealthCapacity",
-            #          "errors": [
-            #            "is greater than 1"
-            #          ]
-            #        }
-            #      ]
-            #    }
+            type: error.Error
+            example: |
+                {
+                  "message": "Object is not valid",
+                  "details": [
+                    {
+                      "path": "/upgradeStrategy/minimumHealthCapacity",
+                      "errors": [
+                        "is greater than 1"
+                      ]
+                    }
+                  ]
+                }
 
 
 
@@ -146,8 +150,8 @@ traits: !include ../traits.raml
     is: [ secured ]
     body:
       application/json:
-        #example: !include examples/app.json
-        #schema: AppDefinition
+        example: !include examples/app.json
+        type: app.App
     responses:
       201:
         description: The application has been created and a deployment is started.
@@ -158,30 +162,33 @@ traits: !include ../traits.raml
         description: There is an already deployed application with this name
         body:
           application/json:
-            #example: |
-            #  {"message":"An app with id [/existing_app] already exists."}
+            type: error.Error
+            example: |
+              {"message":"An app with id [/existing_app] already exists."}
       400:
         description: The application definition provided in the body is not valid.
         body:
           application/json:
-            #example: |
-            #    {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+            type: error.Error
+            example: |
+                {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
       422:
         description: The entity send can not be preocessed, since there are validation errors
         body:
           application/json:
-            #example: |
-            #    {
-            #    "message": "Object is not valid",
-            #    "details": [
-            #      {
-            #        "path": "/upgradeStrategy/minimumHealthCapacity",
-            #        "errors": [
-            #          "is greater than 1"
-            #        ]
-            #      }
-            #    ]
-            #  }
+            type: error.Error
+            example: |
+                {
+                "message": "Object is not valid",
+                "details": [
+                  {
+                    "path": "/upgradeStrategy/minimumHealthCapacity",
+                    "errors": [
+                      "is greater than 1"
+                    ]
+                  }
+                ]
+                }
 
 
   /{app_id}:
@@ -229,13 +236,15 @@ traits: !include ../traits.raml
         200:
           body:
             application/json:
+              #type: app.AppList
               example: !include examples/app_list.json
         404:
           description: No task found with this `app_id`.
           body:
             application/json:
-              #example: |
-              #  { "message": "App '/not_existent' does not exist" }
+              type: error.Error
+              example: |
+                { "message": "App '/not_existent' does not exist" }
 
     ###
     # Update a specific app
@@ -252,37 +261,40 @@ traits: !include ../traits.raml
       is: [ secured, deployable ]
       body:
         application/json:
-          #example: !include examples/app.json
-          #schema: AppDefinition
+          example: !include examples/app.json
+          type: app.App
       responses:
         404:
           description: No task found with this `app_id`.
           body:
             application/json:
-              #example: |
-              #    { "message": "App '/not_existent' does not exist" }
+              type: error.Error
+              example: |
+                  { "message": "App '/not_existent' does not exist" }
         400:
           description: The application definition provided in the body is not valid.
           body:
             application/json:
-              #example: |
-              #  {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+              type: error.Error
+              example: |
+                {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
         422:
-          description: The entity send can not be preocessed, since there are validation errors
+          description: The entity sent can not be preocessed, since there are validation errors
           body:
             application/json:
-              #example: |
-              #  {
-              #    "message": "Object is not valid",
-              #    "details": [
-              #      {
-              #        "path": "/upgradeStrategy/minimumHealthCapacity",
-              #        "errors": [
-              #          "is greater than 1"
-              #        ]
-              #      }
-              #    ]
-              #  }
+              type: error.Error
+              example: |
+                {
+                  "message": "Object is not valid",
+                  "details": [
+                    {
+                      "path": "/upgradeStrategy/minimumHealthCapacity",
+                      "errors": [
+                        "is greater than 1"
+                      ]
+                   }
+                  ]
+                }
 
 
 
@@ -300,8 +312,9 @@ traits: !include ../traits.raml
           description: No app with this id known.
           body:
             application/json:
-              #example: |
-              #  {"message":"App '/not-existing' does not exist"}
+              type: error.Error
+              example: |
+                {"message":"App '/not-existing' does not exist"}
 
     /restart:
       ###
@@ -315,8 +328,9 @@ traits: !include ../traits.raml
             description: No task found with this `app_id`.
             body:
               application/json:
-                #example: |
-                #  { "message": "App '/not_existent' does not exist" }
+                type: error.Error
+                example: |
+                  { "message": "App '/not_existent' does not exist" }
 
     /tasks:
       ###
@@ -332,14 +346,14 @@ traits: !include ../traits.raml
               application/json:
                 example: !include examples/app_tasks.json
               text/plain:
-                #example: |
-                #    minecraft_survival-world	10013	srv7.hw.ca1.mesosphere.com:31756
+                example: |
+                    minecraft_survival-world 10013 srv7.hw.ca1.mesosphere.com:31756
           404:
             description: No task found with this `app_id`.
             body:
               application/json:
-                #example: |
-                #  { "message": "App '/not_existent' does not exist" }
+                example: |
+                  { "message": "App '/not_existent' does not exist" }
 
       ###
       # Kill tasks of an application
@@ -359,6 +373,7 @@ traits: !include ../traits.raml
             description: If `wipe=true` is specified and the app uses local persistent volumes, associated dynamic reservations will be unreserved, and persistent volumes will be destroyed. Only possible if `scale=false` or not specified.
             default: false
         responses:
+
           200:
             description: If scale=false, all tasks that were killed are returned.
               If scale=true, than a deployment is triggered and the deployment is returned.
@@ -369,8 +384,8 @@ traits: !include ../traits.raml
             description: No task found with this `app_id`.
             body:
               application/json:
-                #example: |
-                #  { "message": "App '/not_existent' does not exist" }
+                example: |
+                  { "message": "App '/not_existent' does not exist" }
 
       /{task_id}:
         ###
@@ -399,8 +414,9 @@ traits: !include ../traits.raml
               description: No task found with this task_id.
               body:
                 application/json:
-                  #example: |
-                  #  {"message":"Task 'not-existing' does not exist"}
+                  type: error.Error
+                  example: |
+                    {"message":"Task 'not-existing' does not exist"}
 
     ###
     # List versions
@@ -414,14 +430,15 @@ traits: !include ../traits.raml
             description: The list of versions of the application
             body:
               application/json:
-                #example: |
-                #  { "versions": [ "2014-03-01T23:42:20.938Z" ] }
+                example: |
+                  { "versions": [ "2014-03-01T23:42:20.938Z" ] }
           404:
             description: No task found with this `app_id`.
             body:
               application/json:
-                #example: |
-                #  { "message": "App '/not_existent' does not exist" }
+                type: error.Error
+                example: |
+                  { "message": "App '/not_existent' does not exist" }
 
       /{version}:
         get:
@@ -432,10 +449,11 @@ traits: !include ../traits.raml
               description: The application definition at that point in time.
               body:
                 application/json:
+                  type: app.App
                   example: !include examples/app.json
             404:
               description: No task found with this `app_id`.
               body:
                 application/json:
-                  #example: |
-                  #  { "message": "App '/not_existent' does not exist" }
+                  example: |
+                    { "message": "App '/not_existent' does not exist" }

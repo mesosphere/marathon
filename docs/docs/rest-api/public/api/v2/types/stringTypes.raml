@@ -31,3 +31,19 @@ types:
     type: string
     enum: [ HTTP, HTTPS ]
     description: The http scheme to use
+  ReadMode:
+    type: string
+    enum: [RO, RW]
+  NetworkProtocol:
+    type: string
+    enum: [tcp, udp]
+    description: Protocol of the port (tcp, udp)
+    default: tcp
+  TaskLostBehavior:
+    type: string
+    enum: [WAIT_FOREVER, RELAUNCH_AFTER_TIMEOUT]
+    default: WAIT_FOREVER
+    description: |
+      When Marathon receives a TASK_LOST status update indicating that the
+      agent running the task is gone, this property defines whether Marathon
+      will launch the task on another node or not. Defaults to WAIT_FOREVER"

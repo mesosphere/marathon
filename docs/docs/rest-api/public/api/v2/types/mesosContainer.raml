@@ -1,16 +1,29 @@
 #%RAML 1.0 Library
 uses:
   artifacts: artifact.raml
-  endpoint: endpoint.raml
   env: environmentVariable.raml
   health: healthCheck.raml
-  image: image.raml
   labels: label.raml
   mesosCommand: mesosCommand.raml
+  network: network.raml
   resources: resources.raml
   strings: stringTypes.raml
   volumes: volumes.raml
 types:
+  ImageType:
+    type: string
+    enum: [DOCKER, APPC]
+  Image:
+    type: object
+    properties:
+      kind: ImageType
+      id:
+        type: strings.Path
+        description: address/identifier of the file system image
+        example: mesosphere/marathon:1.3.0
+      forcePull?:
+        type: boolean
+        description: true if the image should always be pulled
   MesosContainer:
     type: object
     description: Mesos Container
@@ -39,10 +52,10 @@ types:
         type: resources.Resources
         description: The resources to allocate to the container.
       endpoints?:
-        type: endpoint.Endpoints
+        type: network.Endpoint[]
         description: The ports needed to run this container
       image?:
-        type: image.Image
+        type: Image
         description: The filesystem image to populate the container with
       environment?: env.EnvVars
       user?:
@@ -54,14 +67,14 @@ types:
         type: health.HealthCheck
         description: All healthchecks to perform on the container
       volumeMounts?:
-        type: volumes.VolumeMounts
+        type: volumes.VolumeMount[]
         description: All volume mounts
       artifacts?:
-        type: artifacts.Artifacts
+        type: artifacts.Artifact[]
         description:
           All artifacts to download before the task runs
       labels?:
-        type: labels.Labels
+        type: labels.KVLabels
         description: |
           Metadata as key/value pair.
           Useful when passing directives to be interpreted by Mesos modules.
