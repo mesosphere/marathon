@@ -302,7 +302,7 @@ container type "MESOS" and a "docker" object.
 }
 ```
 The Mesos containerizer does not support the same parameter options as the Docker containerizer yet.
-The only properties recognized by both containerizers are "image" and "forcePullImage,"
+The only properties recognized by both containerizers are "image" and "forcePullImage",
 with the same semantics. All other Docker container properties result in an error with the Mesos containerizer.
 
 However, the latest version of the Mesos containerizer introduces its own new property, "credential", with a "principal" and an optional "secret" field to authenticate when downloading the Docker image.
