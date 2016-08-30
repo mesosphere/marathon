@@ -269,7 +269,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val f = new Fixture
 
     val app1 = AppDefinition("/app1".toPath)
-    val group = Group(PathId.empty, Map(app1.id -> app1), Set(Group("/group1".toPath)))
+    val group = Group(PathId.empty, Map(app1.id -> app1), Map.empty, Set(Group("/group1".toPath)))
 
     when(f.groupRepo.root()).thenReturn(Future.successful(Group.empty))
 
@@ -277,7 +277,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
       Await.result(f.manager ? update(group.id, _ => group), 3.seconds)
     }.printStackTrace()
 
-    verify(f.groupRepo, times(0)).storeRoot(any, any, any)
+    verify(f.groupRepo, times(0)).storeRoot(any, any, any, any, any)
   }
 
   test("Store new apps with correct version infos in groupRepo and appRepo") {
@@ -291,11 +291,11 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
 
     val groupWithVersionInfo = Group(PathId.empty, Map(
       appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))
-    when(f.groupRepo.storeRoot(any, any, any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager ? update(group.id, _ => group, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
+    verify(f.groupRepo).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
   }
 
   test("Expunge removed apps from appRepo") {
@@ -307,11 +307,11 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     when(f.groupRepo.root()).thenReturn(Future.successful(group))
     when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
     when(f.appRepo.delete(any)).thenReturn(Future.successful(Done))
-    when(f.groupRepo.storeRoot(any, any, any)).thenReturn(Future.successful(Done))
+    when(f.groupRepo.storeRoot(any, any, any, any, any)).thenReturn(Future.successful(Done))
 
     Await.result(f.manager ? update(group.id, _ => groupEmpty, version = Timestamp(1)), 3.seconds)
 
-    verify(f.groupRepo).storeRoot(groupEmpty, Nil, Seq(app.id))
+    verify(f.groupRepo).storeRoot(groupEmpty, Nil, Seq(app.id), Nil, Nil)
     verify(f.appRepo, atMost(1)).delete(app.id)
     verify(f.appRepo, atMost(1)).deleteCurrent(app.id)
   }

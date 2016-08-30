@@ -2,11 +2,12 @@ package mesosphere.marathon.storage.migration.legacy.legacy
 
 import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, PortDefinitions, Timestamp }
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.legacy.store.MarathonStore
-import mesosphere.marathon.storage.repository.legacy.{ AppEntityRepository, GroupEntityRepository }
+import mesosphere.marathon.storage.repository.legacy.{ AppEntityRepository, GroupEntityRepository, PodEntityRepository }
 import mesosphere.marathon.test.MarathonActorSupport
 import mesosphere.marathon.{ MarathonSpec, Protos }
 import org.scalatest.time.{ Seconds, Span }
@@ -28,8 +29,11 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     lazy val appStore = new MarathonStore[AppDefinition](store, metrics, () => AppDefinition(), prefix = "app:")
     lazy val appRepo = new AppEntityRepository(appStore, maxVersions = maxVersions)(ExecutionContext.global, metrics)
 
+    lazy val podStore = new MarathonStore[PodDefinition](store, metrics, () => PodDefinition(), prefix = "pod:")
+    lazy val podRepo = new PodEntityRepository(podStore, maxVersions = maxVersions)(ExecutionContext.global, metrics)
+
     lazy val groupStore = new MarathonStore[Group](store, metrics, () => Group.empty, prefix = "group:")
-    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = maxVersions, appRepo)
+    lazy val groupRepo = new GroupEntityRepository(groupStore, maxVersions = maxVersions, appRepo, podRepo)
 
     lazy val migration = new MigrationTo0_16(Some(config))
   }
@@ -95,7 +99,7 @@ class MigrationTo0_16Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.store(appV2).futureValue
 
     val groupWithApp = emptyGroup.copy(apps = Map(appV2.id -> appV2), version = Timestamp(2))
-    f.groupRepo.storeRoot(groupWithApp, Nil, Nil).futureValue
+    f.groupRepo.storeRoot(groupWithApp, Nil, Nil, Nil, Nil).futureValue
 
     When("migrating")
     f.migration.migrate().futureValue

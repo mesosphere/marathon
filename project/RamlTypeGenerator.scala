@@ -47,9 +47,10 @@ object RamlTypeGenerator {
   val PlayJsValue = RootClass.newClass("play.api.libs.json.JsValue")
   val PlayJsString = RootClass.newClass("play.api.libs.json.JsString")
   val PlayJsArray = RootClass.newClass("play.api.libs.json.JsArray")
-  val PlayJsResultEx = RootClass.newClass("play.api.libs.json.JsResultException")
-  val PlayJsPath = RootClass.newClass("play.api.libs.json.JsPath")
   val PlayValidationError = RootClass.newClass("play.api.data.validation.ValidationError")
+  val PlayJsError = RootClass.newClass("play.api.libs.json.JsError")
+  val PlayJsSuccess = RootClass.newClass("play.api.libs.json.JsSuccess")
+
   def TYPE_SEQ(typ: Type): Type = SeqClass TYPE_OF typ
   def camelify(name : String): String = name.toLowerCase.capitalize
   def underscoreToCamel(name: String) = "_([a-z\\d])".r.replaceAllIn(name, {m =>
@@ -158,16 +159,22 @@ object RamlTypeGenerator {
     )
 
     val playWildcard = CASE(WILDCARD) ==>
-      (REF(PlayJsResultEx) APPLY (SEQ(TUPLE(REF(PlayJsPath) APPLY(), REF(PlayValidationError) APPLY (LIT("error.expected.jsstring"), LIT(s"${baseName.capitalize} (${stringType.enumValues().map(_.toLowerCase).mkString(", ")})"))))))
+      (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY (LIT("error.expected.jsstring"), LIT(s"${baseName.capitalize} (${stringType.enumValues().map(_.toLowerCase).mkString(", ")})"))))
+
+    val playPatternMatches = stringType.enumValues().map { enumValue =>
+      CASE (LIT (enumValue.toLowerCase)) ==> (REF(PlayJsSuccess) APPLY REF(underscoreToCamel(camelify(enumValue))))
+    }
+    playPatternMatches.append(playWildcard)
+
 
     val playJsonFormat = (OBJECTDEF(s"${baseTraitName}PlayJsonFormat") withParents PLAY_JSON_FORMAT(typeTable(baseTraitName)) withFlags Flags.IMPLICIT) := BLOCK(
-      DEF("read", typeTable(baseTraitName)) withParams PARAM("json", PlayJsValue) := {
+      DEF("reads", PLAY_JSON_RESULT(typeTable(baseTraitName))) withParams PARAM("json", PlayJsValue) := {
         REF("json") MATCH(
-          CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH patternMatches),
+          CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH playPatternMatches),
           playWildcard
           )
       },
-      DEF("write", PlayJsValue) withParams PARAM(baseName, baseTraitName) := {
+      DEF("writes", PlayJsValue) withParams PARAM(baseName, baseTraitName) := {
         REF(PlayJsString) APPLY (REF(baseName) DOT "value")
       }
     )
@@ -199,7 +206,7 @@ object RamlTypeGenerator {
     val params = objectType.properties.map {
       case a:ArrayTypeDeclaration =>
         if (Option(a.minItems()).fold(0)(_.intValue()) < 1) {
-          PARAM(a.name, paramDef(a.name(), a)) := NIL
+          PARAM(a.name, paramDef(a.name(), a)) := REF(SeqClass) DOT "empty"
         } else {
           PARAM(a.name, paramDef(a.name(), a)).tree
         }
@@ -266,7 +273,7 @@ object RamlTypeGenerator {
       Option(p.description()).map(c => DocTag.Param(p.name(), c.value))
     }
 
-    val obj = OBJECTDEF(name.capitalize) withParents(DefaultJsonProtocol) := BLOCK(
+    val obj = OBJECTDEF(name.capitalize) withParents DefaultJsonProtocol := BLOCK(
       VAL(s"${name}JsonFormat") withFlags Flags.IMPLICIT := REF(s"jsonFormat") APPLY((REF(name.capitalize) DOT "apply _").tree +: objectType.properties.map(p => LIT(p.name))(collection.breakOut)),
       VAL(s"${name}PlayJsonFormat") withFlags Flags.IMPLICIT := REF(s"play.api.libs.json.Json.format[${name.capitalize}]")
     )
@@ -337,7 +344,7 @@ object RamlTypeGenerator {
     val LocalDateTime = RootClass.newClass("java.time.LocalDateTime")
     val DateTimeFormatter = RootClass.newClass("java.time.format.DateTimeFormatter")
 
-    val jsonProtocolTrait = TRAITDEF("RamlJsonProtocol") withParents("spray.json.DefaultJsonProtocol", "play.api.libs.json.DefaultReads", "play.api.libs.json.DefaultWrites", "play.api.libs.json.DefaultFormat") := BLOCK(
+    val jsonProtocolTrait = TRAITDEF("RamlJsonProtocol") withParents("spray.json.DefaultJsonProtocol", "play.api.libs.json.DefaultReads", "play.api.libs.json.DefaultWrites") := BLOCK(
       VAL("dateTimeFormat") := REF(DateTimeFormatter) DOT "ISO_OFFSET_DATE_TIME",
       VAL("timeFormat") := REF(DateTimeFormatter) DOT "ISO_LOCAL_TIME",
       VAL("dateFormat") := REF(DateTimeFormatter) DOT "ISO_LOCAL_DATE",
@@ -387,6 +394,7 @@ object RamlTypeGenerator {
         }
       )
     )
+
     val jsonProtocolObj = OBJECTDEF("RamlJsonProtocol") withParents "RamlJsonProtocol"
 
     Map("RamlJsonProtocol" -> BLOCK(jsonProtocolTrait, jsonProtocolObj).inPackage(pkg))

@@ -265,14 +265,14 @@ class DefaultInfoServiceTest extends MarathonSpec with GivenWhenThen with Mockit
     val otherApp1 = AppDefinition(PathId("/other/app1"))
     val otherGroupApp1 = AppDefinition(PathId("/other/group/app1"))
 
-    Group(PathId.empty, Map(app1.id -> app1), Set(
-      Group(PathId("/visible"), Map(visibleApp1.id -> visibleApp1), Set(
+    Group(PathId.empty, Map(app1.id -> app1), Map.empty, Set(
+      Group(PathId("/visible"), Map(visibleApp1.id -> visibleApp1), Map.empty, Set(
         Group(PathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
       )),
-      Group(PathId("/secure"), Map(secureApp1.id -> secureApp1), Set(
+      Group(PathId("/secure"), Map(secureApp1.id -> secureApp1), Map.empty, Set(
         Group(PathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
       )),
-      Group(PathId("/other"), Map(otherApp1.id -> otherApp1), Set(
+      Group(PathId("/other"), Map(otherApp1.id -> otherApp1), Map.empty, Set(
         Group(PathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)
         ))
       )))

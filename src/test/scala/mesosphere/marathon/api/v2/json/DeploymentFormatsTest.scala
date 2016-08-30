@@ -141,7 +141,7 @@ class DeploymentFormatsTest extends MarathonSpec {
   def genGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    Group(genId, Map(app1.id -> app1, app2.id -> app2), children, Set(genId), genTimestamp)
+    Group(genId, Map(app1.id -> app1, app2.id -> app2), Map.empty, children, Set(genId), genTimestamp)
   }
 
   def genGroupUpdate(children: Set[GroupUpdate] = Set.empty) =
