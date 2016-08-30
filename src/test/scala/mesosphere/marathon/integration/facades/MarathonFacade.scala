@@ -8,6 +8,7 @@ import mesosphere.marathon.api.v2.json.{ AppUpdate, GroupUpdate }
 import mesosphere.marathon.core.event.{ EventSubscribers, Subscribe, Unsubscribe }
 import mesosphere.marathon.integration.setup.{ RestResult, SprayHttpResponse }
 import mesosphere.marathon.state._
+import mesosphere.marathon.util.Retry
 import org.slf4j.LoggerFactory
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
@@ -62,6 +63,7 @@ case class ITDeployment(id: String, affectedApps: Seq[String])
   * @param url the url of the remote marathon instance
   */
 class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.seconds)(implicit val system: ActorSystem) extends PlayJsonSupport {
+  implicit val scheduler = system.scheduler
   import SprayHttpResponse._
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -301,12 +303,12 @@ class MarathonFacade(url: String, baseGroup: PathId, waitTime: Duration = 30.sec
   //leader ----------------------------------------------
   def leader(): RestResult[ITLeaderResult] = {
     val pipeline = marathonSendReceive ~> read[ITLeaderResult]
-    result(pipeline(Get(s"$url/v2/leader")), waitTime)
+    result(Retry("leader") { pipeline(Get(s"$url/v2/leader")) }, waitTime)
   }
 
   def abdicate(): RestResult[HttpResponse] = {
     val pipeline = marathonSendReceive ~> responseResult
-    result(pipeline(Delete(s"$url/v2/leader")), waitTime)
+    result(Retry("abdicate") { pipeline(Delete(s"$url/v2/leader")) }, waitTime)
   }
 
   //info --------------------------------------------------

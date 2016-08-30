@@ -1,5 +1,15 @@
--mem 4096
+-mem 8192
 -J-XX:MaxMetaspaceSize=512m
 -J-XX:+UseConcMarkSweepGC
 -J-XX:+CMSClassUnloadingEnabled
-
+-J-server
+-J-XX:+CMSParallelRemarkEnabled
+-J-XX:+UseCMSInitiatingOccupancyOnly
+-J-XX:+ScavengeBeforeFullGC
+-J-XX:+CMSScavengeBeforeRemark
+-J-XX:+ScavengeBeforeFullGC
+-J-XX:+CMSScavengeBeforeRemark
+-J-XX:SoftRefLRUPolicyMSPerMB=50
+-J-XX:CMSInitiatingOccupancyFraction=70
+-J-XX:-OmitStackTraceInFastThrow
+-J-XX:+AggressiveOpts

@@ -1,33 +1,33 @@
 package mesosphere.util.state.mesos
 
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.integration.setup.StartedZookeeper
+import mesosphere.marathon.integration.setup.ZookeeperServerTest
+import mesosphere.marathon.storage.repository.legacy.store.MesosStateStore
 import mesosphere.util.state.PersistentStoreTest
 import org.apache.mesos.state.ZooKeeperState
-import org.scalatest.{ ConfigMap, Matchers }
+import org.scalatest.Matchers
+import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration._
 
-class MesosStateStoreTest extends PersistentStoreTest with StartedZookeeper with Matchers {
+class MesosStateStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matchers with ScalaFutures {
 
   //
   // See PersistentStoreTests for general store tests
   //
 
   lazy val persistentStore: MesosStateStore = {
+    // by creating a namespaced client, we know ZK is up
+    zkClient(namespace = Some(suiteName))
     val duration = 30.seconds
     val state = new ZooKeeperState(
-      config.zkHostAndPort,
+      zkServer.connectUri,
       duration.toMillis,
       TimeUnit.MILLISECONDS,
-      config.zkPath
+      s"/${UUID.randomUUID}"
     )
     new MesosStateStore(state, duration)
-  }
-
-  override protected def beforeAll(configMap: ConfigMap): Unit = {
-    super.beforeAll(configMap + ("zkPort" -> "2186"))
-    Thread.sleep(1000) //zookeeper is up and running. if I try to connect immediately, it will fail
   }
 }

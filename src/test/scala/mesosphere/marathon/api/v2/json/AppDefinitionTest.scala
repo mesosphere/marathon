@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v2.json
 import com.wix.accord._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.{ AllConf, Protos, MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.{ Protos, MarathonTestHelper, MarathonSpec }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
@@ -23,14 +23,10 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
-  before {
-    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
-  }
-
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
+  val validAppDefinition = AppDefinition.validAppDefinition(Set("secrets"))(PluginManager.None)
 
   test("Validation") {
-    def shouldViolate(app: AppDefinition, path: String, template: String): Unit = {
+    def shouldViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
       validate(app) match {
         case Success => fail(s"expected failure '$template'")
         case f: Failure =>
@@ -45,7 +41,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       }
     }
 
-    def shouldNotViolate(app: AppDefinition, path: String, template: String): Unit = {
+    def shouldNotViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
       validate(app) match {
         case Success =>
         case f: Failure =>
@@ -399,9 +395,10 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     shouldViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
-    AllConf.withTestConfig(Seq("--enable_features", "gpu_resources"))
-
-    shouldNotViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+    {
+      implicit val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
+      shouldNotViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")(appValidator)
+    }
 
     app = correct.copy(
       gpus = 1,
@@ -427,6 +424,13 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     app = correct.copy(
       gpus = 1,
       container = Some(Container.MesosAppC())
+    )
+
+    shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+
+    app = correct.copy(
+      gpus = 1,
+      container = None
     )
 
     shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")

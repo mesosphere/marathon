@@ -10,7 +10,7 @@ import org.scalatest.Matchers
 import scala.collection.immutable.Seq
 
 class AppUpdateValidatorTest extends MarathonSpec with Matchers {
-
+  implicit val appUpdateValidator = AppUpdate.appUpdateValidator(Set())
   test("test that Docker container is validated") {
     val f = new Fixture
     val update = AppUpdate(

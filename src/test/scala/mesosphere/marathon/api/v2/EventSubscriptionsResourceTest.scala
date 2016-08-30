@@ -54,9 +54,8 @@ class EventSubscriptionsResourceTest extends MarathonSpec with Matchers with Moc
   }
 
   class Fixture {
-    AllConf.withTestConfig(Seq("--event_subscriber", "http_callback"))
     val auth = new TestAuthFixture
-    val config = mock[MarathonConf]
+    val config = AllConf.withTestConfig("--event_subscriber", "http_callback")
     val subscriptionService = mock[HttpCallbackSubscriptionService]
     def eventResource() = new EventSubscriptionsResource(config, auth.auth, auth.auth, subscriptionService)
   }

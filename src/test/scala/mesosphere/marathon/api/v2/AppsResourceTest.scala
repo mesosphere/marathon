@@ -10,12 +10,13 @@ import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, TaskFailureRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.apache.mesos.{ Protos => Mesos }
@@ -454,7 +455,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app (that uses secrets) successfully") {
     Given("The secrets feature is enabled")
-    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+    configArgs = Seq("--enable_features", "secrets")
+    resetAppsResource
 
     And("An app with a secret and an envvar secret-ref")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -482,7 +484,8 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create a new app (that uses undefined secrets) and fails") {
     Given("The secrets feature is enabled")
-    AllConf.withTestConfig(Seq("--enable_features", "secrets"))
+    configArgs = Seq("--enable_features", "secrets")
+    resetAppsResource()
 
     And("An app with an envvar secret-ref that does not point to an undefined secret")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -501,7 +504,9 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
   test("Create the secrets feature is NOT enabled an app (that uses secrets) fails") {
     Given("The secrets feature is NOT enabled")
-    AllConf.enabledFeatures should not contain Features.SECRETS
+    configArgs = Seq()
+    resetAppsResource()
+    config.isFeatureSet(Features.SECRETS) should be(false)
 
     And("An app with an envvar secret-ref that does not point to an undefined secret")
     val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"), versionInfo = OnlyVersion(Timestamp.zero),
@@ -1121,8 +1126,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
     useRealGroupManager()
     val appA = AppDefinition("/a".toRootPath)
     val group = Group(PathId.empty, apps = Map(appA.id -> appA))
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(group))
-    groupRepository.rootGroup returns Future.successful(Some(group))
+    groupRepository.root() returns Future.successful(group)
 
     Given("An unauthorized request")
     auth.authenticated = true
@@ -1198,8 +1202,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     When("We try to remove a non-existing application")
     useRealGroupManager()
-    groupRepository.group(GroupRepository.zkRootName) returns Future.successful(Some(Group.empty))
-    groupRepository.rootGroup returns Future.successful(Some(Group.empty))
+    groupRepository.root returns Future.successful(Group.empty)
 
     Then("A 404 is returned")
     intercept[UnknownAppException] { appsResource.delete(false, "/foo", req) }
@@ -1223,9 +1226,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
   var configArgs: Seq[String] = _
 
   def resetAppsResource(): Unit = {
-    //enable feature external volumes
-    AllConf.withTestConfig(configArgs)
-    config = AllConf.config.get.asInstanceOf[MarathonConf] // TODO(jdef) any better ideas here?
+    config = AllConf.withTestConfig(configArgs: _*)
     appsResource = new AppsResource(
       clock,
       eventBus,

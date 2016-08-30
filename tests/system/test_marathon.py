@@ -1,8 +1,8 @@
 """Marathon acceptance tests for DC/OS."""
 
-from shakedown import *
-
 import pytest
+
+from shakedown import *
 
 PACKAGE_NAME = 'marathon'
 DCOS_SERVICE_URL = dcos_service_url(PACKAGE_NAME)

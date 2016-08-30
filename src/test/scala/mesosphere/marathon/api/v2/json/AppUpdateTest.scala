@@ -10,18 +10,20 @@ import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import play.api.data.validation.ValidationError
-import play.api.libs.json.{ JsPath, JsError, Json }
+import play.api.libs.json.{ JsError, JsPath, Json }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-
 import com.wix.accord._
+import org.scalatest.Matchers
 
 import scala.util.Try
 
-class AppUpdateTest extends MarathonSpec {
+class AppUpdateTest extends MarathonSpec with Matchers {
   import Formats._
   import mesosphere.marathon.integration.setup.V2TestFormats._
+
+  implicit val appUpdateValidator = AppUpdate.appUpdateValidator(Set())
 
   def shouldViolate(update: AppUpdate, path: String, template: String): Unit = {
     val violations = validate(update)
@@ -457,5 +459,16 @@ class AppUpdateTest extends MarathonSpec {
     val update = fromJsonString(json)
     val strategy = update.empty("foo".toPath).upgradeStrategy
     assert(strategy == UpgradeStrategy.forResidentTasks)
+  }
+
+  test("container change in AppUpdate should be stored") {
+    val appDef = AppDefinition(container = Some(Docker(portMappings = None)))
+    val appUpdate = AppUpdate(container = Some(Docker(portMappings = Some(Seq(
+      Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
+    )))))
+    val roundTrip = appUpdate(appDef)
+    roundTrip.container.get.portMappings should not be None
+    roundTrip.container.get.portMappings.get should have size 1
+    roundTrip.container.get.portMappings.get.head.containerPort should be (4000)
   }
 }

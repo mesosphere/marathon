@@ -170,9 +170,9 @@ object Container {
     }
   }
 
-  implicit val validContainer: Validator[Container] = {
+  def validContainer(enabledFeatures: Set[String]): Validator[Container] = {
     val validGeneralContainer = validator[Container] { container =>
-      container.volumes is every(valid)
+      container.volumes is every(Volume.validVolume(enabledFeatures))
     }
 
     new Validator[Container] {

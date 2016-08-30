@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.codahale.metrics.{ Gauge, MetricRegistry }
 import com.google.inject.Inject
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.metrics.Metrics.{ Counter, Histogram, Meter, Timer }
 import org.aopalliance.intercept.MethodInvocation
 
@@ -16,7 +17,7 @@ import scala.util.control.NonFatal
 /**
   * Utils for timer metrics collection.
   */
-class Metrics @Inject() (val registry: MetricRegistry) {
+class Metrics @Inject() (val registry: MetricRegistry) extends StrictLogging {
   private[this] val classNameCache = TrieMap[Class[_], String]()
 
   def timed[T](name: String)(block: => T): T = {
@@ -48,8 +49,14 @@ class Metrics @Inject() (val registry: MetricRegistry) {
 
   @throws[IllegalArgumentException]("if this function is called multiple times for the same name.")
   def gauge[G <: Gauge[_]](name: String, gauge: G): G = {
-    registry.register(name, gauge)
-    gauge
+    try {
+      registry.register(name, gauge)
+      gauge
+    } catch {
+      case _: IllegalArgumentException =>
+        logger.warn(s"$name already has a registered guage")
+        registry.getGauges.getOrDefault(name, gauge).asInstanceOf[G]
+    }
   }
 
   def name(prefix: String, clazz: Class[_], method: String): String = {

@@ -29,7 +29,7 @@ case class Group(
     GroupDefinition.newBuilder
       .setId(id.toString)
       .setVersion(version.toString)
-      .addAllApps(apps.values.map(_.toProto).asJava)
+      .addAllDeprecatedApps(apps.values.map(_.toProto).asJava)
       .addAllGroups(groups.map(_.toProto))
       .addAllDependencies(dependencies.map(_.toString))
       .build()
@@ -117,7 +117,9 @@ case class Group(
     }
   }
 
-  lazy val transitiveApps: Set[AppDefinition] = this.apps.values.toSet ++ groups.flatMap(_.transitiveApps)
+  lazy val transitiveAppsById: Map[PathId, AppDefinition] = this.apps ++ groups.flatMap(_.transitiveAppsById)
+  lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
+  lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
 
   lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
@@ -141,7 +143,7 @@ case class Group(
       group <- transitiveAppGroups
       app <- group.apps.values
       dependencyId <- app.dependencies
-      dependentApp = transitiveApps.find(_.id == dependencyId).map(a => Set(a))
+      dependentApp = transitiveAppsById.get(dependencyId).map(a => Set(a))
       dependentGroup = allGroups.find(_.id == dependencyId).map(_.transitiveApps)
       dependent <- dependentApp orElse dependentGroup getOrElse Set.empty
     } result ::= app -> dependent
@@ -201,7 +203,7 @@ object Group {
   def fromProto(msg: GroupDefinition): Group = {
     Group(
       id = msg.getId.toPath,
-      apps = msg.getAppsList.map(AppDefinition.fromProto).map { app => app.id -> app }(collection.breakOut),
+      apps = msg.getDeprecatedAppsList.map(AppDefinition.fromProto).map { app => app.id -> app }(collection.breakOut),
       groups = msg.getGroupsList.map(fromProto).toSet,
       dependencies = msg.getDependenciesList.map(PathId.apply).toSet,
       version = Timestamp(msg.getVersion)
@@ -213,10 +215,10 @@ object Group {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validRootGroup(maxApps: Option[Int]): Validator[Group] = {
+  def validRootGroup(maxApps: Option[Int], enabledFeatures: Set[String]): Validator[Group] = {
     case object doesNotExceedMaxApps extends Validator[Group] {
       override def apply(group: Group): Result = {
-        maxApps.filter(group.transitiveApps.size > _).map { num =>
+        maxApps.filter(group.transitiveAppsById.size > _).map { num =>
           Failure(Set(RuleViolation(
             group,
             s"""This Marathon instance may only handle up to $num Apps!
@@ -227,7 +229,8 @@ object Group {
 
     def validNestedGroup(base: PathId): Validator[Group] = validator[Group] { group =>
       group.id is validPathWithBase(base)
-      group.apps.values as "apps" is every(AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base)))
+      group.apps.values as "apps" is every(
+        AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
       group is noAppsAndGroupsWithSameName
       group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))

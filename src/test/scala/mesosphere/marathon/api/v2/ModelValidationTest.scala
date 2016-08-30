@@ -10,8 +10,8 @@ import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues}
-import play.api.libs.json.{JsObject, Json}
+import org.scalatest.{ BeforeAndAfterAll, Matchers, OptionValues }
+import play.api.libs.json.{ JsObject, Json }
 
 import scala.collection.immutable.Seq
 
@@ -20,6 +20,8 @@ class ModelValidationTest
     with Matchers
     with BeforeAndAfterAll
     with OptionValues {
+
+  implicit val groupUpdateValidator = GroupUpdate.groupUpdateValid(Set.empty[String])
 
   test("A group update should pass validation") {
     val update = GroupUpdate(id = Some("/a/b/c".toPath))
@@ -37,12 +39,12 @@ class ModelValidationTest
       appC.id -> appC
     ))
 
-    val failedResult = Group.validRootGroup(maxApps = Some(2)).apply(group)
+    val failedResult = Group.validRootGroup(maxApps = Some(2), Set()).apply(group)
     failedResult.isFailure should be(true)
     ValidationHelper.getAllRuleConstrains(failedResult)
       .find(v => v.message.contains("This Marathon instance may only handle up to 2 Apps!")) should be ('defined)
 
-    val successfulResult = Group.validRootGroup(maxApps = Some(10)).apply(group)
+    val successfulResult = Group.validRootGroup(maxApps = Some(10), Set()).apply(group)
     successfulResult.isSuccess should be(true)
   }
 
@@ -52,7 +54,7 @@ class ModelValidationTest
     val conflictingApp = createServicePortApp("/app2".toPath, 3201)
 
     val group = Group(id = PathId.empty, apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
-    val result = validate(group)(Group.validRootGroup(maxApps = None))
+    val result = validate(group)(Group.validRootGroup(maxApps = None, Set()))
 
     result.isSuccess should be(true)
   }
@@ -71,7 +73,7 @@ class ModelValidationTest
   }
 
   test("Validators should not produce 'value' string at the end of description.") {
-    val validApp = AppDefinition("/test/group1/valid".toPath, cmd = Some("foo"));
+    val validApp = AppDefinition("/test/group1/valid".toPath, cmd = Some("foo"))
     val invalidApp = AppDefinition("/test/group1/invalid".toPath)
     val group = Group("/test".toPath, groups = Set(
       Group("/test/group1".toPath, Map(
@@ -80,7 +82,7 @@ class ModelValidationTest
       ),
       Group("/test/group2".toPath)))
 
-    validate(group)(Group.validRootGroup(maxApps = None)) match {
+    validate(group)(Group.validRootGroup(maxApps = None, Set())) match {
       case Success => fail()
       case f: Failure =>
         val errors = (Json.toJson(f) \ "details").as[Seq[JsObject]]

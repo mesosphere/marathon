@@ -9,9 +9,9 @@ import mesosphere.marathon.core.group.{ GroupManager, GroupManagerModule }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppRepository, GroupRepository }
+import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ AllConf, DeploymentService, MarathonConf, MarathonSchedulerService }
+import mesosphere.marathon.{ AllConf, DeploymentService, MarathonSchedulerService }
 import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
 
 class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
@@ -21,8 +21,7 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
   val eventBus = mock[EventStream]
   val provider = mock[StorageProvider]
 
-  AllConf.withTestConfig(Seq("--zk_timeout", "1000"))
-  val config = AllConf.config.get.asInstanceOf[MarathonConf]
+  val config = AllConf.withTestConfig("--zk_timeout", "1000")
 
   val metricRegistry = new MetricRegistry()
   val metrics = new Metrics(metricRegistry)
@@ -33,11 +32,9 @@ class TestGroupManagerFixture extends Mockito with MarathonActorSupport {
     capMetrics,
     system,
     s"serializeGroupUpdates${actorId.incrementAndGet()}",
-    maxParallel = 1,
+    maxConcurrent = 1,
     maxQueued = 10
   )
-
-  groupRepository.zkRootName returns GroupRepository.zkRootName
 
   val schedulerProvider = new Provider[DeploymentService] {
     override def get() = service

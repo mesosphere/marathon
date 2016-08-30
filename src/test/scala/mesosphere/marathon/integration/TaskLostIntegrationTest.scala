@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 
 class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster with Matchers with GivenWhenThen with BeforeAndAfter {
 
-  before {
+  after {
     cleanUp()
     if (ProcessKeeper.hasProcess(slave2)) stopMesos(slave2)
     if (ProcessKeeper.hasProcess(master2)) stopMesos(master2)
@@ -16,7 +16,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     if (!ProcessKeeper.hasProcess(slave1)) startSlave(slave1)
   }
 
-  test("A task lost with mesos master failover will not kill the task") {
+  ignore("A task lost with mesos master failover will not kill the task - https://github.com/mesosphere/marathon/issues/4214") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app)
@@ -75,7 +75,7 @@ class TaskLostIntegrationTest extends IntegrationFunSuite with WithMesosCluster 
     waitForTasks(app.id, 1).head should be(task)
   }
 
-  test("A task lost with mesos master failover will expunge the task after gc timeout") {
+  ignore("A task lost with mesos master failover will expunge the task after gc timeout - https://github.com/mesosphere/marathon/issues/4212") {
     Given("a new app")
     val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
     marathon.createAppV2(app)

@@ -1,19 +1,15 @@
 package mesosphere.util.state
 
+import mesosphere.FutureTestSupport._
 import mesosphere.marathon.StoreCommandFailedException
 import mesosphere.marathon.integration.setup.IntegrationFunSuite
-import mesosphere.FutureTestSupport._
-import org.scalatest.time.{ Seconds, Span }
+import mesosphere.marathon.storage.repository.legacy.store.{ PersistentEntity, PersistentStore, PersistentStoreManagement }
 import org.scalatest.{ BeforeAndAfter, Matchers }
 
 /**
   * Common  tests for all persistent stores.
   */
 trait PersistentStoreTest extends IntegrationFunSuite with Matchers with BeforeAndAfter {
-
-  //this parameter is used for futureValue timeouts
-  implicit val patienceConfig = PatienceConfig(Span(10, Seconds))
-
   test("Root node gets read"){
     val store = persistentStore
     store.allIds().futureValue should be(Seq.empty)

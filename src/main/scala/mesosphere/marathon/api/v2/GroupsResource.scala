@@ -151,12 +151,12 @@ class GroupsResource @Inject() (
         rootGroup.findGroup(_.id == effectivePath),
         s"Group $effectivePath is already created. Use PUT to change this group.")
       throwIfConflicting(
-        rootGroup.transitiveApps.find(_.id == effectivePath),
+        rootGroup.transitiveAppsById.get(effectivePath),
         s"An app with the path $effectivePath already exists.")
 
       val (deployment, path) = updateOrCreate(id.toRootPath, groupUpdate, force)
       deploymentResult(deployment, Response.created(new URI(path.toString)))
-    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath))
+    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath, config.availableFeatures))
   }
 
   @PUT
@@ -201,7 +201,7 @@ class GroupsResource @Inject() (
         val (deployment, _) = updateOrCreate(id.toRootPath, groupUpdate, force)
         deploymentResult(deployment)
       }
-    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath))
+    }(GroupUpdate.validNestedGroupUpdateWithBase(id.toRootPath, config.availableFeatures))
   }
 
   @DELETE

@@ -7,7 +7,7 @@ import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.state.Container.{ Mesos, MesosAppC, MesosDocker }
+import mesosphere.marathon.state.Container.Docker
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 // scalastyle:on
@@ -577,12 +577,13 @@ object AppDefinition extends GeneralPurposeCombinators {
     * Until the user changed all invalid apps, the user would get weird validation
     * errors for every deployment potentially unrelated to the deployed apps.
     */
-  def validAppDefinition(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+  def validAppDefinition(
+    enabledFeatures: Set[String])(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
       app.id is valid
       app.id is PathId.absolutePathValidator
       app.dependencies is every(PathId.validPathWithBase(app.id.parent))
-    } and validBasicAppDefinition and pluginValidators
+    } and validBasicAppDefinition(enabledFeatures) and pluginValidators
 
   /**
     * Validator for apps, which are being part of a group.
@@ -590,9 +591,10 @@ object AppDefinition extends GeneralPurposeCombinators {
     * @param base Path of the parent group.
     * @return
     */
-  def validNestedAppDefinition(base: PathId): Validator[AppDefinition] = validator[AppDefinition] { app =>
-    app.id is PathId.validPathWithBase(base)
-  } and validBasicAppDefinition
+  def validNestedAppDefinition(base: PathId, enabledFeatures: Set[String]): Validator[AppDefinition] =
+    validator[AppDefinition] { app =>
+      app.id is PathId.validPathWithBase(base)
+    } and validBasicAppDefinition(enabledFeatures)
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     new Validator[AppDefinition] {
@@ -655,18 +657,15 @@ object AppDefinition extends GeneralPurposeCombinators {
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
   }
 
-  private val complyWithGpuRules: Validator[AppDefinition] = conditional[AppDefinition](_.gpus > 0) {
-    isTrue[AppDefinition]("GPU resources only work with the Mesos containerizer") { app =>
-      app.container.exists{
-        _ match {
-          case _: MesosDocker => true
-          case _: MesosAppC => true
-          case _: Mesos => true
-          case _ => false
+  private def complyWithGpuRules(enabledFeatures: Set[String]): Validator[AppDefinition] =
+    conditional[AppDefinition](_.gpus > 0) {
+      isTrue[AppDefinition]("GPU resources only work with the Mesos containerizer") { app =>
+        app.container match {
+          case Some(_: Docker) => false
+          case _ => true
         }
-      }
-    } and featureEnabled(Features.GPU_RESOURCES)
-  }
+      } and featureEnabled(enabledFeatures, Features.GPU_RESOURCES)
+    }
 
   private val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
     import Constraint.Operator._
@@ -727,9 +726,9 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
   }
 
-  private val validBasicAppDefinition = validator[AppDefinition] { appDef =>
+  private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
     appDef.upgradeStrategy is valid
-    appDef.container.each is valid
+    appDef.container.each is valid(Container.validContainer(enabledFeatures))
     appDef.storeUrls is every(urlCanBeResolvedValidator)
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
@@ -743,7 +742,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.disk should be >= 0.0
     appDef.gpus should be >= 0
     appDef.secrets is valid(Secret.secretsValidator)
-    appDef.secrets is empty or featureEnabled(Features.SECRETS)
+    appDef.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     appDef.env is valid(EnvVarValue.envValidator)
     appDef.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appDef.isResident))
     appDef must complyWithResidencyRules
@@ -751,7 +750,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef must complyWithSingleInstanceLabelRules
     appDef must complyWithReadinessCheckRules
     appDef must complyWithUpgradeStrategyRules
-    appDef must complyWithGpuRules
+    appDef must complyWithGpuRules(enabledFeatures)
     appDef.constraints.each must complyWithConstraintRules
     appDef.ipAddress must optional(complyWithIpAddressRules(appDef))
   } and ExternalVolumes.validApp and EnvVarValue.validApp
@@ -795,7 +794,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   def updateIsValid(from: Group): Validator[AppDefinition] = {
     new Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
-        from.transitiveApps.find(_.id == app.id) match {
+        from.transitiveAppsById.get(app.id) match {
           case (Some(last)) if last.isResident || app.isResident => residentUpdateIsValid(last)(app)
           case _ => Success
         }
