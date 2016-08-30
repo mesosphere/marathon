@@ -14,3 +14,9 @@ types:
   Constraints:
     type: array
     items: Constraint
+  AppConstraint:
+    description: |
+      v2 App defined constraints as a 2 or 3 element array
+      with [fieldName, ConstraintOperator(,value?)].
+    type: array
+    items: string #(string | ConstraintOperator)

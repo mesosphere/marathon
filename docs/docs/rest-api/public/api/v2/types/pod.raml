@@ -112,7 +112,7 @@ types:
     properties:
       id: strings.PathId
       labels?:
-        type: label.Labels
+        type: label.KVLabels
         description: |
           Metadata as key/value pair.
           Useful when passing directives to be interpreted by Mesos modules.
@@ -129,15 +129,12 @@ types:
         description: |
           Environment Variables to set at the pod level.
           Individual containers may override them
-        example: |
-          [ { "name" : "MASTER_URI", "value": "http://master.local" },
-            { "name" : "MASTER_PASSWORD", "secret": "/master/secret1" } ]
       containers: container.MesosContainers
       volumes?:
-        type: volumes.Volumes
+        type: volumes.Volume[]
         description: Volumes defined on a pod level that are mounted into containers
       networks?:
-        type: net.Networks
+        type: net.Network[]
         description: |
           Network settings are defined on a pod level. All containers share the same network stack.
           At this time, only one stack is supported.

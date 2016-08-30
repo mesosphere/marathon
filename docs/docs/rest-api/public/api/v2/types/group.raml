@@ -1,47 +1,30 @@
-#%RAML 1.0 DataType
-type: object
-(scalaType): GroupDef
-properties:
-  id:
-    type: string
-    pattern: ^(\/?((\.{2})|([a-z0-9][a-z0-9\-.]*[a-z0-9]+)|([a-z0-9]*))($|\/))+$
-    minLength: 1
-    description: |
-      Unique identifier for the pod consisting of a series of names separated by slashes.
-      Each name must be at least 1 character and may only contain digits (`0-9`), dashes
-      (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
-    example: /ops/audit
-  apps?:
-    type: array
-    items: !include app.raml
-  pods?:
-    type: array
-    items: !include pod-status.raml
-  groups?:
-    type: array
-    items:
-      # TODO: unclear how to define a recursive type
-      type: object
-      description: |
-          Groups can build a tree.
-          Each group can contain sub-groups.
-          The sub-groups are defined here.
-  dependencies?:
-    type: array
-    items:
-      type: string
-      pattern: ^(\/?((\.{2})|([a-z0-9][a-z0-9\-.]*[a-z0-9]+)|([a-z0-9]*))($|\/))+$
-      minLength: 1
-      description: |
-        Unique identifier for the pod consisting of a series of names separated by slashes.
-        Each name must be at least 1 character and may only contain digits (`0-9`), dashes
-        (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
-      example: /ops/audit
-    description: |
-      A list of services that this group depends on.
-      An order is derived from the dependencies for performing start/stop and
-      upgrade of the application. For example, an application /a relies on the
-      services /b which itself relies on /c. To start all 3 applications,
-      first /c is started than /b than /a.
-  version?:
-    type: datetime
+#%RAML 1.0 Library
+uses:
+  app: app.raml
+  podStatus: podStatus.raml
+  strings: stringTypes.raml
+types:
+  Group:
+    type: object
+    properties:
+      id: strings.PathId
+      apps?: app.App[]
+      pods?: pod.PodStatus[]
+      groups?:
+        type: array
+        items: Group
+        description: |
+            Groups can build a tree.
+            Each group can contain sub-groups.
+            The sub-groups are defined here.
+      dependencies?:
+        type: array
+        items: strings.PathId
+        description: |
+          A list of services that this group depends on.
+          An order is derived from the dependencies for performing start/stop and
+          upgrade of the application. For example, an application /a relies on the
+          services /b which itself relies on /c. To start all 3 applications,
+          first /c is started than /b than /a.
+      version?:
+        type: datetime
