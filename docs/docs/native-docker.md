@@ -17,10 +17,10 @@ DC/OS users do not need to follow the configuration steps below.
 
 + Docker version 1.0.0 or later installed on each agent node.
 
-#### Configure mesos-slave
+#### Configure mesos-agent
 
   <div class="alert alert-info">
-    <strong>Note:</strong> All commands below assume `mesos-slave` is being run
+    <strong>Note:</strong> All commands below assume `mesos-agent` is being run
     as a service using the package provided by 
     <a href="http://mesosphere.com/2014/07/17/mesosphere-package-repositories/">Mesosphere</a>
   </div>
@@ -42,7 +42,7 @@ DC/OS users do not need to follow the configuration steps below.
     $ echo '10mins' > /etc/mesos-slave/executor_registration_timeout
     ```
 
-3. Restart the `mesos-slave` process to load the new configuration.
+3. Restart the `mesos-agent` process to load the new configuration.
 
 #### Configure Marathon
 
