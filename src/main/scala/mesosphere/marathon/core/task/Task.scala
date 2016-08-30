@@ -63,7 +63,7 @@ sealed trait Task extends Instance {
 
   def status: Task.Status
 
-  override def state: InstanceState = InstanceState(status.taskStatus, status.stagedAt)
+  override def state: InstanceState = InstanceState(status.taskStatus, status.startedAt.getOrElse(status.stagedAt))
 
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task

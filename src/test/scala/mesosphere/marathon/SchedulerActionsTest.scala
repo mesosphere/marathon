@@ -199,7 +199,7 @@ class SchedulerActionsTest
     Given("an inactive queue, running tasks and some overCapacity")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 5)
 
-    def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt)
+    def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt, startedAt = stagedAt)
 
     val running_6 = runningTask(s"running-6", stagedAt = 6L)
     val running_7 = runningTask(s"running-7", stagedAt = 7L)
@@ -243,7 +243,7 @@ class SchedulerActionsTest
       backOffUntil = f.clock.now())
 
     def stagedTask(id: String, stagedAt: Long) = MarathonTestHelper.stagedTask(id, stagedAt = stagedAt)
-    def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt)
+    def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt, startedAt = stagedAt)
 
     val staged_1 = stagedTask("staged-1", 1L)
     val running_4 = runningTask("running-4", stagedAt = 4L)
