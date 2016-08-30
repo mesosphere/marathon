@@ -1,11 +1,12 @@
 package mesosphere.marathon.core.task
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.{Instance, InstanceStatus}
+import mesosphere.marathon.state.{PathId, PersistentVolume, RunSpec, Timestamp}
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
@@ -61,6 +62,8 @@ sealed trait Task extends Instance {
   def runSpecId: PathId = id.runSpecId
 
   def status: Task.Status
+
+  override def state: InstanceState = InstanceState(status.taskStatus, status.since)
 
   def launchedMesosId: Option[MesosProtos.TaskID] = launched.map { _ =>
     // it doesn't make sense for an unlaunched task
@@ -444,7 +447,9 @@ object Task {
     stagedAt: Timestamp,
     startedAt: Option[Timestamp] = None,
     mesosStatus: Option[MesosProtos.TaskStatus] = None,
-    taskStatus: InstanceStatus)
+    taskStatus: InstanceStatus) {
+    def since: Timestamp = startedAt.getOrElse(stagedAt)
+  }
 
   object Terminated {
     def isTerminated(state: TaskState): Boolean = state match {

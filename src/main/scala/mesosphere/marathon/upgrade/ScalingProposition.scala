@@ -35,8 +35,8 @@ object ScalingProposition {
     // If we need to kill tasks, the order should be LOST - UNREACHABLE - UNHEALTHY - STAGING - (EVERYTHING ELSE)
     def sortByStatusAndDate(a: Instance, b: Instance): Boolean = {
       import SortHelper._
-      val weightA = weight(a.status.taskStatus)
-      val weightB = weight(b.status.taskStatus)
+      val weightA = weight(a.state.status)
+      val weightB = weight(b.state.status)
 
       if (weightA < weightB) true
       else if (weightB < weightA) false

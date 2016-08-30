@@ -1,14 +1,14 @@
 package mesosphere.marathon.core.instance
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
+import com.fasterxml.uuid.{EthernetAddress, Generators}
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.state.{PathId, Timestamp}
 import org.apache._
 
 trait Instance {
   def id: Instance.Id
   def agentInfo: Instance.AgentInfo
-  def status: Task.Status
+  def state: InstanceState
 
   def isLaunched: Boolean
 
@@ -29,6 +29,7 @@ trait Instance {
 }
 
 object Instance {
+  case class InstanceState(status: InstanceStatus, since: Timestamp)
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
