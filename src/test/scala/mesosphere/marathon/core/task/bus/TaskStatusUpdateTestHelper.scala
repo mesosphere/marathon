@@ -3,12 +3,12 @@ package mesosphere.marathon.core.task.bus
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.{Task, TaskStateChange, TaskStateOp}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.TaskStatus.Reason
-import org.apache.mesos.Protos.{TaskState, TaskStatus}
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
@@ -83,7 +83,7 @@ object TaskStatusUpdateTestHelper {
 
   def lost(reason: Reason, task: Task = defaultTask) = {
     val mesosStatus = makeTaskStatus(task.id, TaskState.TASK_LOST, maybeReason = Some(reason))
-    val marathonTaskStatus = InstanceStatus(mesosStatus)
+    val marathonTaskStatus = MarathonTaskStatus(mesosStatus)
 
     marathonTaskStatus match {
       case _: InstanceStatus.Terminal =>

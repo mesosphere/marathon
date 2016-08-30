@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.instance
 
-import com.fasterxml.uuid.{EthernetAddress, Generators}
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache._
 
 trait Instance {

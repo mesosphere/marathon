@@ -11,26 +11,25 @@ import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.serialization.LabelsSerializer
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
-import mesosphere.marathon.core.launcher.impl.{ReservationLabels, TaskLabels}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.launcher.impl.{ ReservationLabels, TaskLabels }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{InMemoryStore, MarathonStore, PersistentStore}
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.tracker.{TaskTracker, TaskTrackerModule}
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.core.task.{Task, TaskStateOp}
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
+import mesosphere.mesos.protos.{ FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID }
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
+import org.apache.mesos.Protos.Resource.{ DiskInfo, ReservationInfo }
 import org.apache.mesos.Protos._
-import org.apache.mesos.{Protos => Mesos}
+import org.apache.mesos.{ Protos => Mesos }
 import play.api.libs.json.Json
 
 import scala.collection.JavaConverters
@@ -333,7 +332,7 @@ object MarathonTestHelper {
   def mininimalTask(appId: PathId): Task.LaunchedEphemeral = mininimalTask(Instance.Id.forRunSpec(appId).idString)
   def mininimalTask(taskId: Instance.Id): Task.LaunchedEphemeral = mininimalTask(taskId.idString)
   def mininimalTask(taskId: String, now: Timestamp = clock.now(), mesosStatus: Option[TaskStatus] = None): Task.LaunchedEphemeral = {
-    mininimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) InstanceStatus(mesosStatus.get) else InstanceStatus.Created)
+    mininimalTask(taskId, now, mesosStatus, if (mesosStatus.isDefined) MarathonTaskStatus(mesosStatus.get) else InstanceStatus.Created)
   }
   def mininimalTask(taskId: String, now: Timestamp, mesosStatus: Option[TaskStatus], marathonTaskStatus: InstanceStatus): Task.LaunchedEphemeral = {
     Task.LaunchedEphemeral(

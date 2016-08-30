@@ -1,19 +1,19 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import akka.actor.{Actor, ActorRef, Props, Terminated}
-import akka.testkit.{TestActorRef, TestProbe}
+import akka.actor.{ Actor, ActorRef, Props, Terminated }
+import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
-import mesosphere.marathon.core.task.TaskStateChange
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, TaskStateChange }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.tracker.{TaskTracker, TaskTrackerUpdateStepProcessor}
+import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{MarathonActorSupport, Mockito}
-import org.scalatest.{FunSuiteLike, GivenWhenThen, Matchers}
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 /**
   * Most of the functionality is tested at a higher level in [[mesosphere.marathon.tasks.TaskTrackerImplTest]].
@@ -145,7 +145,7 @@ class TaskTrackerActorTest
     val mesosStatus = stagedTaskNowRunning.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedTask,
-      InstanceStatus(mesosStatus), mesosStatus).wrapped
+      MarathonTaskStatus(mesosStatus), mesosStatus).wrapped
     val ack = TaskTrackerActor.Ack(probe.ref, update.stateChange)
 
     probe.send(f.taskTrackerActor, TaskTrackerActor.StateChanged(update, ack))

@@ -4,9 +4,10 @@ import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.task.MarathonTaskStatus
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.tracker.impl.{MarathonTaskStatusSerializer, TaskSerializer}
+import mesosphere.marathon.core.task.tracker.impl.{ MarathonTaskStatusSerializer, TaskSerializer }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.MarathonTaskState
 import mesosphere.marathon.storage.LegacyInMemConfig
@@ -14,8 +15,8 @@ import mesosphere.marathon.storage.repository.TaskRepository
 import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus
-import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext
 
@@ -75,7 +76,7 @@ class MigrationTo1_2Test extends MarathonSpec with GivenWhenThen with Matchers w
       task =>
         task.getMarathonTaskStatus should not be null
         val serializedTask = TaskSerializer.fromProto(task)
-        val expectedStatus = InstanceStatus(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
+        val expectedStatus = MarathonTaskStatus(serializedTask.mesosStatus.getOrElse(fail("Task has no mesos task status")))
         val currentStatus = MarathonTaskStatusSerializer.fromProto(task.getMarathonTaskStatus)
 
         currentStatus should be equals expectedStatus

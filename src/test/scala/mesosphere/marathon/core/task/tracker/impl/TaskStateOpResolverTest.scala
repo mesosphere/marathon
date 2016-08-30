@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.task.tracker.impl.TaskOpProcessorImpl.TaskStateOpResolver
@@ -52,7 +52,7 @@ class TaskStateOpResolverTest
     val stateChange = f.stateOpResolver.resolve(TaskStateOp.LaunchOnReservation(
       taskId = f.notExistingTaskId,
       runSpecVersion = Timestamp(0),
-      status = Task.Status(Timestamp(0), taskStatus = MarathonTaskStatus.Running),
+      status = Task.Status(Timestamp(0), taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty)).futureValue
 
     Then("taskTracker.task is called")
@@ -137,10 +137,10 @@ class TaskStateOpResolverTest
         status = f.existingTask.status.copy(
           mesosStatus = Option(stateOp.mesosStatus),
           taskStatus = reason match {
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Gone(reason) => MarathonTaskStatus.Gone
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unreachable(reason) => MarathonTaskStatus.Unreachable
-            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(state) => MarathonTaskStatus.Unknown
-            case _ => MarathonTaskStatus.Dropped
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Gone(reason) => InstanceStatus.Gone
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unreachable(reason) => InstanceStatus.Unreachable
+            case state: mesos.Protos.TaskStatus.Reason if MarathonTaskStatusMapping.Unknown(state) => InstanceStatus.Unknown
+            case _ => InstanceStatus.Dropped
           }))
       stateChange shouldEqual TaskStateChange.Expunge(expectedState)
 
@@ -242,7 +242,7 @@ class TaskStateOpResolverTest
     val stateOpResolver = new TaskStateOpResolver(taskTracker)
 
     val appId = PathId("/app")
-    val existingTask = MarathonTestHelper.mininimalTask(Instance.Id.forRunSpec(appId).idString, Timestamp.now(), None, MarathonTaskStatus.Running)
+    val existingTask = MarathonTestHelper.mininimalTask(Instance.Id.forRunSpec(appId).idString, Timestamp.now(), None, InstanceStatus.Running)
     val existingReservedTask = MarathonTestHelper.residentReservedTask(appId)
     val notExistingTaskId = Instance.Id.forRunSpec(appId)
     val existingLostTask = MarathonTestHelper.mininimalLostTask(appId)

@@ -1,11 +1,11 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
-import org.apache.mesos.{Protos => MesosProtos}
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import org.apache.mesos.{ Protos => MesosProtos }
 
 import scala.collection.immutable.Seq
 

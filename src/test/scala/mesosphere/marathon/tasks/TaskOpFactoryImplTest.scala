@@ -1,18 +1,18 @@
 package mesosphere.marathon.tasks
 
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryImpl
-import mesosphere.marathon.core.launcher.{TaskOp, TaskOpFactory}
-import mesosphere.marathon.core.task.{Task, TaskStateOp}
+import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{MarathonConf, MarathonSpec, MarathonTestHelper}
+import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 

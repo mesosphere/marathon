@@ -11,7 +11,7 @@ import mesosphere.marathon.api.v2.json.AppUpdate
 import mesosphere.marathon.core.election.{ ElectionService, LocalLeadershipEvent }
 import mesosphere.marathon.core.event.{ AppTerminatedEvent, DeploymentFailed, DeploymentSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
@@ -21,7 +21,7 @@ import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepos
 import mesosphere.marathon.stream.Sink
 import mesosphere.marathon.upgrade.DeploymentManager._
 import mesosphere.marathon.upgrade.{ DeploymentManager, DeploymentPlan, UpgradeConfig }
-import org.apache.mesos.Protos.{ Status, TaskState }
+import org.apache.mesos.Protos.Status
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
@@ -536,7 +536,7 @@ class SchedulerActions(
     */
   // FIXME: extract computation into a function that can be easily tested
   def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    //    import SchedulerActions._
+    import SchedulerActions._
 
     def inQueueOrRunning(t: Instance) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
 
@@ -564,9 +564,8 @@ class SchedulerActions(
       launchQueue.purge(app.id)
 
       val toKill = taskTracker.appTasksSync(app.id).toSeq
-        // TODO ju
-        //        .filter(t => t.mesosStatus.fold(false)(status => runningOrStaged.get(status.getState).nonEmpty))
-        //        .sortWith(sortByStateAndTime)
+        .filter(t => runningOrStaged.contains(t.state.status))
+        .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)
 
       log.info("Killing tasks {}", toKill.map(_.id))
@@ -588,25 +587,16 @@ class SchedulerActions(
 }
 
 private[this] object SchedulerActions {
-  def sortByStateAndTime(a: Task, b: Task): Boolean = {
-
-    def opt[T](a: Option[T], b: Option[T], default: Boolean)(fn: (T, T) => Boolean): Boolean = (a, b) match {
-      case (Some(av), Some(bv)) => fn(av, bv)
-      case _ => default
-    }
-    opt(a.mesosStatus, b.mesosStatus, a.mesosStatus.isDefined) { (aStatus, bStatus) =>
-      runningOrStaged(bStatus.getState) compareTo runningOrStaged(aStatus.getState) match {
-        case 0 => opt(a.launched, b.launched, a.launched.isDefined) { (aLaunched, bLaunched) =>
-          (aLaunched.status.stagedAt compareTo bLaunched.status.stagedAt) > 0
-        }
-        case value: Int => value > 0
-      }
+  def sortByStateAndTime(a: Instance, b: Instance): Boolean = {
+    runningOrStaged(b.state.status) compareTo runningOrStaged(a.state.status) match {
+      case 0 => (a.state.since compareTo b.state.since) > 0
+      case value: Int => value > 0
     }
 
   }
 
-  val runningOrStaged = Map(
-    TaskState.TASK_STAGING -> 1,
-    TaskState.TASK_STARTING -> 2,
-    TaskState.TASK_RUNNING -> 3)
+  val runningOrStaged: Map[InstanceStatus, Int] = Map(
+    InstanceStatus.Staging -> 1,
+    InstanceStatus.Starting -> 2,
+    InstanceStatus.Running -> 3)
 }

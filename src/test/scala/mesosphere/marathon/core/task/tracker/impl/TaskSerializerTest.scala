@@ -1,15 +1,15 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
-import mesosphere.marathon.{MarathonTestHelper, SerializationFailedException}
+import mesosphere.marathon.{ MarathonTestHelper, SerializationFailedException }
 import org.apache.mesos.Protos._
-import org.apache.mesos.{Protos => MesosProtos}
-import org.scalatest.{FunSuite, GivenWhenThen, Matchers}
+import org.apache.mesos.{ Protos => MesosProtos }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 

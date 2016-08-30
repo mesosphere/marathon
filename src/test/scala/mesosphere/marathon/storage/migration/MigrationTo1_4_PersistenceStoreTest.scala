@@ -6,14 +6,14 @@ import akka.stream.scaladsl.Sink
 import com.codahale.metrics.MetricRegistry
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.{Instance, InstanceStatus$}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Status
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.{LegacyInMemConfig, LegacyStorageConfig}
-import mesosphere.marathon.storage.repository.{AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, StoredGroupRepositoryImpl, TaskFailureRepository, TaskRepository}
+import mesosphere.marathon.storage.{ LegacyInMemConfig, LegacyStorageConfig }
+import mesosphere.marathon.storage.repository.{ AppRepository, DeploymentRepository, EventSubscribersRepository, FrameworkIdRepository, GroupRepository, StoredGroupRepositoryImpl, TaskFailureRepository, TaskRepository }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import mesosphere.util.state.FrameworkId
