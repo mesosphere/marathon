@@ -112,7 +112,6 @@ class AppInfoBaseData(
       for {
         tasks <- tasksFuture
         healthCounts <- healthCountsFuture
-        // TODO ju
       } yield TaskForStatistics.forTasks(now, tasks, healthCounts)
     }.recover {
       case NonFatal(e) => throw new RuntimeException(s"while calculating tasksForStats for app [${app.id}]", e)

@@ -16,7 +16,7 @@ import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSou
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.{ Task, TaskStateChange }
+import mesosphere.marathon.core.task.TaskStateChange
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -356,8 +356,7 @@ private class TaskLauncherActor(
       sender ! MatchedTaskOps(offer.getId, Seq.empty)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      // TODO ju
-      val matchRequest = TaskOpFactory.Request(runSpec, offer, tasksMap.map(_.asInstanceOf[Task]), tasksToLaunch)
+      val matchRequest = TaskOpFactory.Request(runSpec, offer, tasksMap, tasksToLaunch)
       val taskOp: Option[TaskOp] = taskOpFactory.buildTaskOp(matchRequest)
       taskOp match {
         case Some(op) => handleTaskOp(op, offer)

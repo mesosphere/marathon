@@ -7,7 +7,6 @@ import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
@@ -122,9 +121,8 @@ private class DeploymentActor(
     def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 
-    // TODO ju
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
-      runningTasks.map(_.asInstanceOf[Task]), toKill, killToMeetConstraints, scaleTo)
+      runningTasks, toKill, killToMeetConstraints, scaleTo)
 
     def killTasksIfNeeded: Future[Unit] = tasksToKill.fold(Future.successful(())) { tasks =>
       killService.killTasks(tasks, TaskKillReason.ScalingApp).map(_ => ())
@@ -145,8 +143,7 @@ private class DeploymentActor(
   def stopApp(app: AppDefinition): Future[Unit] = {
     val tasks = taskTracker.appTasksLaunchedSync(app.id)
     // TODO: the launch queue is purged in stopApp, but it would make sense to do that before calling kill(tasks)
-    // TODO ju
-    killService.killTasks(tasks.map(_.asInstanceOf[Task]), TaskKillReason.DeletingApp).map(_ => ()).andThen {
+    killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
       case Success(_) => scheduler.stopApp(app)
     }
   }

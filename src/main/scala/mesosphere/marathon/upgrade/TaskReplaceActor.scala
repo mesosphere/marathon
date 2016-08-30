@@ -5,7 +5,6 @@ import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
@@ -112,8 +111,7 @@ class TaskReplaceActor(
       }
 
       outstandingKills += nextOldTask.id
-      // TODO ju
-      killService.killTask(nextOldTask.asInstanceOf[Task], TaskKillReason.Upgrading)
+      killService.killTask(nextOldTask, TaskKillReason.Upgrading)
     }
   }
 
