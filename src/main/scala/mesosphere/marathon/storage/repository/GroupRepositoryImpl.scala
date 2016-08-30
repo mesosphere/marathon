@@ -11,6 +11,7 @@ import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersionedRepository
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
@@ -29,20 +30,30 @@ import scala.util.{ Failure, Success }
 private[storage] case class StoredGroup(
     id: PathId,
     appIds: Map[PathId, OffsetDateTime],
+    podIds: Map[PathId, OffsetDateTime],
     storedGroups: Seq[StoredGroup],
     dependencies: Set[PathId],
     version: OffsetDateTime) {
 
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
+  lazy val transitivePodIds: Map[PathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
 
   def resolve(
-    appRepository: AppRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
+    appRepository: AppRepository,
+    podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async {
     val appFutures = appIds.map { case (appId, appVersion) => appRepository.getVersion(appId, appVersion) }
-    val groupFutures = storedGroups.map(_.resolve(appRepository))
+    val podFutures = podIds.map { case (podId, podVersion) => podRepository.getVersion(podId, podVersion) }
+
+    val groupFutures = storedGroups.map(_.resolve(appRepository, podRepository))
 
     val apps: Map[PathId, AppDefinition] = await(Future.sequence(appFutures)).collect {
       case Some(app: AppDefinition) =>
         app.id -> app
+    }(collection.breakOut)
+
+    val pods: Map[PathId, PodDefinition] = await(Future.sequence(podFutures)).collect {
+      case Some(pod: PodDefinition) =>
+        pod.id -> pod
     }(collection.breakOut)
 
     val groups = await(Future.sequence(groupFutures)).toSet
@@ -50,6 +61,7 @@ private[storage] case class StoredGroup(
     Group(
       id = id,
       apps = apps,
+      pods = pods,
       groups = groups,
       dependencies = dependencies,
       version = Timestamp(version)
@@ -84,6 +96,7 @@ object StoredGroup {
     StoredGroup(
       id = group.id,
       appIds = group.apps.mapValues(_.version.toOffsetDateTime),
+      podIds = group.pods.mapValues(_.version.toOffsetDateTime),
       storedGroups = group.groups.map(StoredGroup(_))(collection.breakOut),
       dependencies = group.dependencies,
       version = group.version.toOffsetDateTime)
@@ -93,11 +106,16 @@ object StoredGroup {
       PathId.fromSafePath(appId.getId) -> OffsetDateTime.parse(appId.getVersion, DateFormat)
     }(collection.breakOut)
 
+    val pods: Map[PathId, OffsetDateTime] = proto.getPodsList.asScala.map { podId =>
+      PathId.fromSafePath(podId.getId) -> OffsetDateTime.parse(podId.getVersion, DateFormat)
+    }(collection.breakOut)
+
     val groups = proto.getGroupsList.asScala.map(StoredGroup(_))
 
     StoredGroup(
       id = PathId.fromSafePath(proto.getId),
       appIds = apps,
+      podIds = pods,
       storedGroups = groups.toVector,
       dependencies = proto.getDependenciesList.asScala.map(PathId.fromSafePath)(collection.breakOut),
       version = OffsetDateTime.parse(proto.getVersion, DateFormat)
@@ -107,7 +125,8 @@ object StoredGroup {
 
 class StoredGroupRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
-    appRepository: AppRepository)(
+    appRepository: AppRepository,
+    podRepository: PodRepository)(
     implicit
     ir: IdResolver[PathId, StoredGroup, C, K],
     marshaller: Marshaller[StoredGroup, S],
@@ -141,7 +160,7 @@ class StoredGroupRepositoryImpl[K, C, S](
 
   private[storage] def underlyingRoot(): Future[Group] = async {
     val root = await(storedRepo.get(RootId))
-    val resolved = root.map(_.resolve(appRepository))
+    val resolved = root.map(_.resolve(appRepository, podRepository))
     resolved match {
       case Some(x) => await(x)
       case None => Group.empty
@@ -157,7 +176,7 @@ class StoredGroupRepositoryImpl[K, C, S](
             rootFuture = promise.future
           }
           val unresolved = await(storedRepo.get(RootId))
-          val newRoot = unresolved.map(_.resolve(appRepository)) match {
+          val newRoot = unresolved.map(_.resolve(appRepository, podRepository)) match {
             case Some(group) =>
               await(group)
             case None =>
@@ -175,7 +194,7 @@ class StoredGroupRepositoryImpl[K, C, S](
 
   override def rootVersion(version: OffsetDateTime): Future[Option[Group]] = async {
     val unresolved = await(storedRepo.getVersion(RootId, version))
-    unresolved.map(_.resolve(appRepository)) match {
+    unresolved.map(_.resolve(appRepository, podRepository)) match {
       case Some(group) =>
         Some(await(group))
       case None =>
@@ -183,7 +202,8 @@ class StoredGroupRepositoryImpl[K, C, S](
     }
   }
 
-  override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId]): Future[Done] =
+  override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
+    updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] =
     async {
       val storedGroup = StoredGroup(group)
       beforeStore match {
@@ -198,9 +218,13 @@ class StoredGroupRepositoryImpl[K, C, S](
         old
       }
       val storeAppFutures = updatedApps.map(appRepository.store)
+      val storePodFutures = updatedPods.map(podRepository.store)
       val deleteAppFutures = deletedApps.map(appRepository.deleteCurrent)
+      val deletePodFutures = deletedPods.map(podRepository.deleteCurrent)
       val storedApps = await(Future.sequence(storeAppFutures).asTry)
+      val storedPods = await(Future.sequence(storePodFutures).asTry)
       await(Future.sequence(deleteAppFutures).recover { case NonFatal(e) => Done })
+      await(Future.sequence(deletePodFutures).recover { case NonFatal(e) => Done })
 
       def revertRoot(ex: Throwable): Done = {
         promise.completeWith(oldRootFuture)
@@ -219,7 +243,8 @@ class StoredGroupRepositoryImpl[K, C, S](
               revertRoot(ex)
           }
         case Failure(ex) =>
-          logger.error(s"Unable to store updated apps ${updatedApps.map(_.id).mkString}", ex)
+          logger.error(s"Unable to store updated apps or pods: " +
+            s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
           revertRoot(ex)
       }
     }

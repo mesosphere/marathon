@@ -4,6 +4,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.state._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.pod.PodDefinition
 
 import scala.reflect.ClassTag
 
@@ -40,7 +41,7 @@ case class GroupUpdate(
         .map(app => app.id -> app)(collection.breakOut)
 
     val effectiveDependencies = dependencies.fold(current.dependencies)(_.map(_.canonicalPath(current.id)))
-    Group(current.id, effectiveApps, effectiveGroups, effectiveDependencies, timestamp)
+    Group(current.id, effectiveApps, current.pods, effectiveGroups, effectiveDependencies, timestamp)
   }
 
   def toApp(gid: PathId, app: AppDefinition, version: Timestamp): AppDefinition = {
@@ -52,6 +53,7 @@ case class GroupUpdate(
   def toGroup(gid: PathId, version: Timestamp): Group = Group(
     gid,
     apps.getOrElse(Set.empty).map(toApp(gid, _, version)).map(app => app.id -> app)(collection.breakOut),
+    Map.empty[PathId, PodDefinition],
     groups.getOrElse(Set.empty).map(sub => sub.toGroup(sub.groupId.canonicalPath(gid), version)),
     dependencies.fold(Set.empty[PathId])(_.map(_.canonicalPath(gid))),
     version
