@@ -48,8 +48,8 @@ class TaskOpFactoryImpl(
     val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
 
     new TaskBuilder(runSpec, Instance.Id.forRunSpec, config, Some(appTaskProc)).
-      // TODO ju fixme
-      buildIfMatches(offer, tasks.values.map(i => i.asInstanceOf[Task])).map {
+      // TODO ju asInstance
+      buildIfMatches(offer, tasks.values.map(_.asInstanceOf[Task])).map {
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
             id = Instance.Id(taskInfo.getTaskId),
@@ -102,9 +102,9 @@ class TaskOpFactoryImpl(
         val rolesToConsider = config.mesosRole.get.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
         val matchingReservedResourcesWithoutVolumes =
-          // TODO ju fixme
+          // TODO ju asInstance
           ResourceMatcher.matchResources(
-            offer, runSpec, tasksToConsiderForConstraints.values.map(t => t.asInstanceOf[Task]),
+            offer, runSpec, tasksToConsiderForConstraints.values.map(_.asInstanceOf[Task]),
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
           )
 
@@ -124,9 +124,9 @@ class TaskOpFactoryImpl(
       }
 
       val matchingResourcesForReservation =
-        // TODO ju fixme
+        // TODO ju asInstance
         ResourceMatcher.matchResources(
-          offer, runSpec, tasks.values.map(t => t.asInstanceOf[Task]),
+          offer, runSpec, tasks.values.map(_.asInstanceOf[Task]),
           ResourceSelector.reservable
         )
       matchingResourcesForReservation.map { resourceMatch =>

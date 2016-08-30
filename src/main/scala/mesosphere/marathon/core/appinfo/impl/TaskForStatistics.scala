@@ -43,7 +43,7 @@ private[appinfo] object TaskForStatistics {
               maybeLifeTime = maybeTaskLifeTime
             )
           }
-        case _ => None // TODO ju PODs
+        case _ => None // TODO ju POD
       }
     }
 

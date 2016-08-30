@@ -444,10 +444,10 @@ object Task {
     *                 timestamp and kill them (See KillOverdueTasksActor).
     */
   case class Status(
-      stagedAt: Timestamp,
-      startedAt: Option[Timestamp] = None,
-      mesosStatus: Option[MesosProtos.TaskStatus] = None,
-      taskStatus: InstanceStatus)
+    stagedAt: Timestamp,
+    startedAt: Option[Timestamp] = None,
+    mesosStatus: Option[MesosProtos.TaskStatus] = None,
+    taskStatus: InstanceStatus)
 
   object Terminated {
     def isTerminated(state: TaskState): Boolean = state match {

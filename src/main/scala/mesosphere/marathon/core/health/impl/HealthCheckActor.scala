@@ -94,7 +94,7 @@ private[health] class HealthCheckActor(
             worker ! HealthCheckJob(app, task.asInstanceOf[Task], launched, healthCheck)
           }
         }
-      case _ => () // TODO ju PODs
+      case _ => () // TODO ju POD
     }
   }
 
