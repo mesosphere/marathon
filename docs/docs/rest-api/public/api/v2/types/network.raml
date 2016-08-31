@@ -49,9 +49,6 @@ types:
           Not for use with `host` mode networking
       mode?: NetworkMode
       labels?: label.KVLabels
-  Networks:
-    type: array
-    items: Network
   IpDiscoveryPort:
     type: object
     description: Port
@@ -67,18 +64,14 @@ types:
         description: Name of the port
         pattern: ^[a-z][a-z0-9-]*$
       protocol?: strings.NetworkProtocol
-  IpDiscoveryPorts:
-    type: array
-    items: IpDiscoveryPort
   IpDiscovery:
     type: object
     description: Information useful for service discovery
     properties:
       ports?:
-        type: array
+        type: IpDiscoveryPort[]
         description: |
           Array of objects describing the ports exposed by each task
-        items: IpDiscoveryPort
   IpAddress:
     type: object
     description: |
