@@ -6,7 +6,7 @@ title: Running Docker Containers on Marathon
 
 You can run Docker containers on Marathon either by configuring your application to run the Docker containerizer or by configuring the Mesos containerizer to provision the Docker container.
 
-# Configure Your Application to use the Docker Containerizer
+# Configure Your Application to Use the Docker Containerizer
 
 ## Configuration
 
@@ -279,10 +279,11 @@ the future, as Mesos may not always interact with Docker via the CLI.
 }
 ```
 
-#### Docker Container Support without Docker Engine
+# Configure Your Application to Use the Mesos Containerizer
 
 Starting with version 1.3.0, Marathon supports Docker container images without having the Docker containerizer
-depend on a Docker engine. Instead, the Mesos containerizer with native [AppC](https://github.com/appc/spec) support (added in [Apache Mesos version 1.0](http://mesos.apache.org/blog/mesos-1-0-0-released/), released July 2016) uses native OS features directly to configure and start Docker containers and provide isolation.
+depend on a Docker engine. Instead, the Mesos containerizer (added in [Apache Mesos version 1.0](http://mesos.apache.org/blog/mesos-1-0-0-released/), released July 2016) uses native OS features to configure and start Docker or [AppC](https://github.com/appc/spec) containers and provide isolation.
+
 Selected this setup by specifying the follow JSON combination, which previously provoked an error message:
 container type "MESOS" and a "docker" object.
 
