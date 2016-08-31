@@ -7,6 +7,7 @@ uses:
   mesosCommand: mesosCommand.raml
   network: network.raml
   resources: resources.raml
+  secrets: secrets.raml
   strings: stringTypes.raml
   volumes: volumes.raml
 types:
@@ -58,6 +59,7 @@ types:
         type: Image
         description: The filesystem image to populate the container with
       environment?: env.EnvVars
+      secrets?: secrets.Secrets
       user?:
         type: string
         description: |
@@ -78,6 +80,3 @@ types:
         description: |
           Metadata as key/value pair.
           Useful when passing directives to be interpreted by Mesos modules.
-  MesosContainers:
-    type: array
-    items: MesosContainer
