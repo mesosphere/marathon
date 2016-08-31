@@ -7,6 +7,7 @@ uses:
   net: network.raml
   resources: resources.raml
   strings: stringTypes.raml
+  secrets: secrets.raml
   volumes: volumes.raml
 types:
   PodScalingPolicy:
@@ -129,7 +130,8 @@ types:
         description: |
           Environment Variables to set at the pod level.
           Individual containers may override them
-      containers: container.MesosContainers
+      containers: container.MesosContainer[]
+      secrets?: secrets.Secrets
       volumes?:
         type: volumes.Volume[]
         description: Volumes defined on a pod level that are mounted into containers
