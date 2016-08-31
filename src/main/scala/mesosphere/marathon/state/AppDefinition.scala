@@ -7,7 +7,7 @@ import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.state.Container.{ Mesos, MesosAppC, MesosDocker }
+import mesosphere.marathon.state.Container.Docker
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 // scalastyle:on
@@ -684,18 +684,15 @@ object AppDefinition extends GeneralPurposeCombinators {
     (appDef.isResident is false) or (appDef.upgradeStrategy is UpgradeStrategy.validForResidentTasks)
   }
 
-  private val complyWithGpuRules: Validator[AppDefinition] = conditional[AppDefinition](_.gpus > 0) {
-    isTrue[AppDefinition]("GPU resources only work with the Mesos containerizer") { app =>
-      app.container.exists{
-        _ match {
-          case _: MesosDocker => true
-          case _: MesosAppC => true
-          case _: Mesos => true
-          case _ => false
+  private val complyWithGpuRules: Validator[AppDefinition] =
+    conditional[AppDefinition](_.gpus > 0) {
+      isTrue[AppDefinition]("GPU resources only work with the Mesos containerizer") { app =>
+        app.container match {
+          case Some(_: Docker) => false
+          case _ => true
         }
-      }
-    } and featureEnabled(Features.GPU_RESOURCES)
-  }
+      } and featureEnabled(Features.GPU_RESOURCES)
+    }
 
   private val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
     import Constraint.Operator._

@@ -430,6 +430,13 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
 
     shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
+
+    app = correct.copy(
+      gpus = 1,
+      container = None
+    )
+
+    shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
   }
 
   test("SerializationRoundtrip empty") {
