@@ -104,7 +104,6 @@ types:
       TERMINAL - Marathon is tearing down all of the instances for this pod.
   NetworkStatus:
     type: object
-    additionalProperties: false
     properties:
       name?:
         type: strings.Name
@@ -183,7 +182,6 @@ types:
     description: |
       Pod status communicates the lifecycle phase of the pod, current instance and container
       status, and recent termination status history.
-    additionalProperties: false
     properties:
       id: strings.PathId
       spec:
