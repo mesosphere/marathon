@@ -9,13 +9,14 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
+import com.wix.accord.{Result, Success, Validator}
 import mesosphere.marathon.{ConflictingChangeException, MarathonConf}
 import mesosphere.marathon.api.{AuthResource, MarathonMediaType, RestResource}
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{ Network, PodDef }
+import mesosphere.marathon.raml.{Network, PodDef}
 import spray.json._
 
 @Path("v2/pods")
@@ -30,6 +31,8 @@ class PodsResource @Inject() (
     val eventBus: EventStream) extends RestResource with AuthResource {
 
   import PodsResource._
+
+  private[this] val podDefaults = Config.from(config)
 
   /**
     * HEAD is used to determine whether some Marathon variant supports pods.
@@ -54,10 +57,9 @@ class PodsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    //TODO(jdef) define a validator for PodDef (and types on which it depends)
     withValid(unmarshalJson(decodeBytes(body, req))) { podDef =>
 
-      val pod = PodDefinition(withDefaults(podDef, Config.from(config))).withCanonizedIds()
+      val pod = PodDefinition(withDefaults(podDef, podDefaults)).withCanonizedIds()
 
       withAuthorization(CreateRunSpec, pod) {
 
@@ -71,7 +73,7 @@ class PodsResource @Inject() (
         // TODO(jdef) get the deployment plan ID and URI, stuff them in headers, and echo the pod back to the client
         // maybeDeployments = Some(Seq(Identifiable(plan.id)))
 
-        Events.maybePost(PodCreatedEvent(req.getRemoteAddr, req.getRequestURI, pod))
+        Events.maybePost(PodCreatedEvent(req.getRemoteAddr, req.getRequestURI))
 
         Response
           .created(new URI(pod.id.toString))
@@ -83,6 +85,11 @@ class PodsResource @Inject() (
 }
 
 object PodsResource {
+
+  protected implicit val podDefValidator: Validator[PodDef] = new Validator[PodDef] {
+    // TODO(jdef) implement me
+    override def apply(podDef: PodDef): Result = Success
+  }
 
   case class Config(defaultNetworkName: Option[String])
 

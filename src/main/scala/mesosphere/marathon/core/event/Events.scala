@@ -3,7 +3,6 @@ package mesosphere.marathon.core.event
 import akka.event.EventStream
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
@@ -28,7 +27,6 @@ case class ApiPostEvent(
 case class PodCreatedEvent(
   clientIp: String,
   uri: String,
-  podDefinition: PodDefinition,
   eventType: String = "pod_created_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
