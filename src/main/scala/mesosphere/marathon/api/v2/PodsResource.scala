@@ -9,7 +9,8 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
-import com.wix.accord.{Result, Success, Validator}
+import com.wix.accord.Validator
+import com.wix.accord.dsl._
 import mesosphere.marathon.{ConflictingChangeException, MarathonConf}
 import mesosphere.marathon.api.{AuthResource, MarathonMediaType, RestResource}
 import mesosphere.marathon.core.base.Clock
@@ -80,15 +81,17 @@ class PodsResource @Inject() (
           .entity(marshalJson(pod.asPodDef))
           .build()
       }
-    }
+    }(createPodValidator)
   }
 }
 
 object PodsResource {
 
-  protected implicit val podDefValidator: Validator[PodDef] = new Validator[PodDef] {
-    // TODO(jdef) implement me
-    override def apply(podDef: PodDef): Result = Success
+  import mesosphere.marathon.api.v2.validation.PodsValidation
+
+  val createPodValidator: Validator[PodDef] = validator[PodDef] { pod =>
+    pod is valid(PodsValidation.podDefValidator)
+    pod.version is empty
   }
 
   case class Config(defaultNetworkName: Option[String])
