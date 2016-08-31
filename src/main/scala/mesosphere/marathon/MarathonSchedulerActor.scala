@@ -588,8 +588,8 @@ class SchedulerActions(
 
 private[this] object SchedulerActions {
   def sortByStateAndTime(a: Instance, b: Instance): Boolean = {
-    runningOrStaged(b.state.status) compareTo runningOrStaged(a.state.status) match {
-      case 0 => (a.state.since compareTo b.state.since) > 0
+    runningOrStaged(b.state.status).compareTo(runningOrStaged(a.state.status)) match {
+      case 0 => a.state.since.compareTo(b.state.since) > 0
       case value: Int => value > 0
     }
 
