@@ -16,19 +16,21 @@ object PodsValidation {
   import Validation._
 
   val podDefValidator: Validator[PodDef] = validator[PodDef] { pod =>
-    pod.id is valid(new Validator[String] {
-      override def apply(path: String): Result = {
-        val validator = implicitly[Validator[PathId]]
-        val pathId = PathId(path)
-        validator(pathId) and PathId.absolutePathValidator(pathId)
-      }
-    })
+    pod.id is valid(idValidator)
     pod.networks is valid(networksValidator)
     pod.networks is every(networkValidator)
     // user -- no validation required, passed through to Mesos
     // TODO(jdef) volumes
     // TODO(jdef) environment (support pluggable validation for these?)
     // TODO(jdef) labels (support pluggable validation for these?)
+  }
+
+  val idValidator = new Validator[String] {
+    override def apply(path: String): Result = {
+      val validator = implicitly[Validator[PathId]]
+      val pathId = PathId(path)
+      validator(pathId) and PathId.absolutePathValidator(pathId)
+    }
   }
 
   val networkValidator: Validator[Network] = validator[Network] { network =>

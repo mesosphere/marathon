@@ -12,6 +12,7 @@ import com.codahale.metrics.annotation.Timed
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{AuthResource, MarathonMediaType, RestResource}
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event._
@@ -28,10 +29,12 @@ class PodsResource @Inject() (
     val authenticator: Authenticator,
     val authorizer: Authorizer)(
     implicit
+    val podSystem: PodsResource.System,
     val clock: Clock,
     val eventBus: EventStream) extends RestResource with AuthResource {
 
   import PodsResource._
+  import PodsResourceInternal._
 
   private[this] val podDefaults = Config.from(config)
 
@@ -62,22 +65,15 @@ class PodsResource @Inject() (
       val pod = PodDefinition(withDefaults(podDef, podDefaults)).withCanonizedIds()
 
       withAuthorization(CreateRunSpec, pod) {
-
-        // TODO(jdef) once pods are integrated into groups
-        // def createOrThrow(opt: Option[PodDefinition]) = opt
-        //   .map(_ => throw ConflictingChangeException(s"A pod with id [${pod.id}] already exists."))
-        //   .getOrElse(pod)
-        // val plan = result(groupManager.updatePod(app.id, createOrThrow, pod.version, force))
-
-        // TODO(jdef) get the deployment plan ID and URI, stuff them in headers, and echo the pod back to the client
-        // maybeDeployments = Some(Seq(Identifiable(plan.id)))
-
+        val (createdPod, deploymentId) = podSystem.create(pod, force)
         Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
 
-        Response
-          .created(new URI(pod.id.toString))
-          .entity(marshalJson(pod.asPodDef))
-          .build()
+        val builder = Response
+          .created(new URI(createdPod.id.toString))
+          .entity(marshalJson(createdPod.asPodDef))
+
+        deploymentId.foreach(did => builder.header(DEPLOYMENT_ID_HEADER, did))
+        builder.build()
       }
     }(createPodValidator)
   }
@@ -85,8 +81,10 @@ class PodsResource @Inject() (
   @GET @Timed
   def findAll(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    // TODO(jdef) build a "pod selector" (see AppSelector) that filters on authz for ViewRunSpec
-    val pods: Iterable[PodDefinition] = ???
+    val authSelector = Selector { pod =>
+      isAuthorized(ViewRunSpec, pod)
+    }
+    val pods: Iterable[PodDefinition] = podSystem.findAll(authSelector)
     ok(marshalJson(pods.map(_.asPodDef)))
   }
 
@@ -95,11 +93,12 @@ class PodsResource @Inject() (
     @PathParam("id") id:String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    val pod: PodDefinition = ???
-
-    withAuthorization(ViewRunSpec, pod) {
-      ok(marshalJson(pod.asPodDef))
-    }
+    withValid(id) { _ =>
+      val pod: PodDefinition = podSystem.find(id)
+      withAuthorization(ViewRunSpec, pod) {
+        ok(marshalJson(pod.asPodDef))
+      }
+    }(PodsValidation.idValidator)
   }
 
   @PUT @Timed @Path("""{id:.+}""")
@@ -111,20 +110,20 @@ class PodsResource @Inject() (
 
     withValid(unmarshalJson(decodeBytes(body, req))) { podDef =>
 
+      require(id == podDef.id)
       val pod = PodDefinition(withDefaults(podDef, podDefaults)).withCanonizedIds()
 
       withAuthorization(UpdateRunSpec, pod) {
 
-        val updatedPod: PodDefinition = ???
-
+        val (updatedPod, deploymentId) = podSystem.update(pod, force)
         Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))
 
-        // TODO(jdef) set deployment headers
-
-        Response
+        val builder = Response
           .ok(new URI(updatedPod.id.toString))
           .entity(marshalJson(updatedPod.asPodDef))
-          .build()
+
+        deploymentId.foreach(did => builder.header(DEPLOYMENT_ID_HEADER, did))
+        builder.build()
       }
     }(createPodValidator and updatePodValidator)
   }
@@ -135,18 +134,21 @@ class PodsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    val pod: PodDefinition = ???
+    withValid(id) { _ =>
+      val pod: PodDefinition = podSystem.find(id)
+      withAuthorization(DeleteRunSpec, pod) {
 
-    withAuthorization(DeleteRunSpec, pod) {
+        val (deletedPod, deploymentId) = podSystem.delete(id, force)
+        Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Deleted))
 
-      val deletedPod: PodDefinition = ???
+        val builder = Response
+          .ok(new URI(deletedPod.id.toString))
+          .entity(marshalJson(deletedPod.asPodDef))
 
-      // TODO(jdef) set deployment headers
-
-      Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Deleted))
-
-      ok(marshalJson(deletedPod.asPodDef))
-    }
+        deploymentId.foreach(did => builder.header(DEPLOYMENT_ID_HEADER, did))
+        builder.build()
+      }
+    }(PodsValidation.idValidator)
   }
 
   @GET @Timed @Path("""{id:.+}::status""")
@@ -154,20 +156,61 @@ class PodsResource @Inject() (
     @PathParam("id") id:String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    val pod: PodDefinition = ???
+    withValid(id) { _ =>
+      val pod: PodDefinition = podSystem.find(id)
+      withAuthorization(ViewRunSpec, pod) {
+        val status: PodStatus = podSystem.examine(id)
+        ok(marshalJson(status))
+      }
+    }(PodsValidation.idValidator)
+  }
+}
 
-    withAuthorization(ViewRunSpec, pod) {
+/**
+  * public interfaces, specific to the pods api, that other pieces of the system implement and/or interact with
+  */
+object PodsResource {
 
-      val status: PodStatus = ???
+  /**
+    * Pod operations that reach this interface have already been authenticated, authorized, and otherwise validated.
+    * TODO(jdef) does it really make sense that deployment ID's are returned an Option[String] instead of String?
+    */
+  trait System {
 
-      ok(marshalJson(status))
+    /** Create results in the deployment of a new pod
+      *
+      * @param p     is the new pod to deploy
+      * @param force TODO(jdef) not sure what this means for create
+      * @return the created pod and an optional, stringified deployment ID
+      */
+    def create(p: PodDefinition, force: Boolean): (PodDefinition, Option[String])
+
+    def findAll(s: Selector): Iterable[PodDefinition]
+
+    def find(id: String): PodDefinition
+
+    def update(p: PodDefinition, force: Boolean): (PodDefinition, Option[String])
+
+    def delete(id: String, force: Boolean): (PodDefinition, Option[String])
+
+    def examine(id: String): PodStatus
+  }
+
+  trait Selector extends Function1[PodDefinition, Boolean]
+
+  object Selector {
+    def apply(f: PodDefinition => Boolean): Selector = new Selector {
+      override def apply(p: PodDefinition): Boolean = f(p)
     }
   }
 }
 
-object PodsResource {
+/**
+  * Helpers for internal use (by PodsResource and related tests) only
+  */
+protected object PodsResourceInternal {
 
-  import mesosphere.marathon.api.v2.validation.PodsValidation
+  val DEPLOYMENT_ID_HEADER = "MARATHON-Deployment-ID"
 
   val createPodValidator: Validator[PodDef] = validator[PodDef] { pod =>
     pod is valid(PodsValidation.podDefValidator)

@@ -30,6 +30,7 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
       configArgs: Seq[String] = Seq.empty[String],
       auth: TestAuthFixture = new TestAuthFixture()
     )(implicit
+      podSystem: PodsResource.System = mock[PodsResource.System],
       clock: Clock = ConstantClock(),
       eventBus: EventStream = mock[EventStream]
     ): Fixture = {
