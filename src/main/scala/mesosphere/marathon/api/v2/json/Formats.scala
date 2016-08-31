@@ -525,7 +525,7 @@ trait EventFormats {
 
   implicit lazy val AppTerminatedEventWrites: Writes[AppTerminatedEvent] = Json.writes[AppTerminatedEvent]
 
-  implicit lazy val PodCreatedEventWrites: Writes[PodCreatedEvent] = Writes { event =>
+  implicit lazy val PodEventWrites: Writes[PodEvent] = Writes { event =>
     Json.obj(
       "clientIp" -> event.clientIp,
       "uri" -> event.uri,
@@ -605,7 +605,7 @@ trait EventFormats {
     case event: SchedulerDisconnectedEvent => Json.toJson(event)
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
-    case event: PodCreatedEvent => Json.toJson(event)
+    case event: PodEvent => Json.toJson(event)
   }
   //scalastyle:on
 }

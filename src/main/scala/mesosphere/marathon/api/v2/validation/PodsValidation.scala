@@ -27,8 +27,8 @@ object PodsValidation {
     pod.networks is every(networkValidator)
     // user -- no validation required, passed through to Mesos
     // TODO(jdef) volumes
-    // TODO(jdef) environment
-    // TODO(jdef) labels
+    // TODO(jdef) environment (support pluggable validation for these?)
+    // TODO(jdef) labels (support pluggable validation for these?)
   }
 
   val networkValidator: Validator[Network] = validator[Network] { network =>

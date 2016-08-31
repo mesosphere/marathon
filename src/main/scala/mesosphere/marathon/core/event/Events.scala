@@ -24,11 +24,28 @@ case class ApiPostEvent(
   eventType: String = "api_post_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
-case class PodCreatedEvent(
+case class PodEvent(
   clientIp: String,
   uri: String,
-  eventType: String = "pod_created_event",
-  timestamp: String = Timestamp.now().toString) extends MarathonEvent
+  podEventType: PodEvent.Kind,
+  timestamp: String = Timestamp.now().toString) extends MarathonEvent {
+  override val eventType = podEventType.label
+}
+
+object PodEvent {
+  sealed trait Kind {
+    val label: String
+  }
+  case object Created extends Kind {
+    val label = "pod_created_event"
+  }
+  case object Updated extends Kind {
+    val label = "pod_updated_event"
+  }
+  case object Deleted extends Kind {
+    val label = "pod_deleted_event"
+  }
+}
 
 // scheduler messages
 sealed trait MarathonSchedulerEvent extends MarathonEvent
