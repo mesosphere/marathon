@@ -10,14 +10,15 @@ uses:
   secrets: secrets.raml
   volumes: volumes.raml
 types:
+  PodScalingPolicyType:
+    type: string
+    enum: [ fixed ]
   PodScalingPolicy:
     discriminator: kind
     description: |
       Add new possible super-types as different scaling policies are supported.
     properties:
-      kind:
-        type: string
-        enum: [ fixed ]
+      kind: PodScalingPolicyType
   FixedPodScalingPolicy:
     type: PodScalingPolicy
     discriminatorValue: fixed
@@ -81,7 +82,7 @@ types:
   PodPlacementPolicy:
     type: object
     properties:
-      constraints?: constraint.Constraints
+      constraints?: constraint.Constraint[]
       acceptedResourceRoles?:
         type: string[]
         example: [public-facing]

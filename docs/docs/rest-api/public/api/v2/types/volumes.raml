@@ -1,5 +1,6 @@
 #%RAML 1.0 Library
 uses:
+  label: label.raml
   strings: stringTypes.raml
 types:
   Volume:
@@ -50,7 +51,7 @@ types:
         type: string
         description: The name of the volume provider
       options?:
-        type: object
+        type: label.KVLabels
         description: Provider specific volume configuration options
   AppVolume:
     type: object

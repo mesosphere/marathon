@@ -8,10 +8,31 @@ uses:
   numbers: numberTypes.raml
   pod: pod.raml
   resources: resources.raml
-  statusCondition: statusCondition.raml
   strings: stringTypes.raml
   volumes: volumes.raml
 types:
+  StatusCondition:
+    type: object
+    properties:
+      name:
+        type: strings.Name
+        description: |
+          Human and machine-readable name of this condition.
+          For example "healthy", "disk-full".
+      lastChanged:
+        type: datetime
+        description: last time the value field was changed for this condition
+      lastUpdated:
+        type: datetime
+        description: last time this condition was updated (value may not have changed)
+      value:
+        type: string
+        description: the state of the condition. may be boolean or some enumeration-derived value
+        maxLength: 64
+      reason?:
+        type: string
+        description: |
+          a machine-readable value that systems use to reason about the state of the condition
   ContainerState:
     type: string
     usage: |
@@ -54,10 +75,9 @@ types:
         description: |
           Human-friendly explanation for the container's current status.
       conditions?:
-        type: array
+        type: StatusCondition[]
         description: |
           Set of status conditions that apply to this container.
-        items: statusCondition.StatusCondition
       containerId?:
         type: string
         description: |
@@ -119,7 +139,7 @@ types:
         description: |
           Human-friendly explanation for reason of the current status.
       conditions?:
-        type: statusCondition.StatusConditions
+        type: StatusCondition[]
         description: |
           Set of status conditions that apply to this pod instance.
       agent?:

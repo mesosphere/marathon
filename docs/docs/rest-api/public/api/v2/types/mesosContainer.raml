@@ -25,6 +25,23 @@ types:
       forcePull?:
         type: boolean
         description: true if the image should always be pulled
+  MesosExec:
+    type: object
+    properties:
+      command:
+        type: mesosCommand.MesosCommand
+        description: |
+          Command specification executed by Mesos, not parsed by Marathon.
+          The presence of `command.shell` implies `overrideEntrypoint=true`.
+      overrideEntrypoint?:
+        type: boolean
+        usage: |
+          Applies only if a container image is specified AND that container image
+          defines a default entrypoint (Docker) or exec (appc) property.
+          It is an error to use `false` here when `command.shell` is set.
+        description: |
+          When true argv[0] will be used as the entrypoint/exec of the container.
+          Otherwise the contents of argv[] are appended as arguments.
   MesosContainer:
     type: object
     description: Mesos Container
@@ -32,23 +49,7 @@ types:
       name:
         type: strings.Name
         description: The name of this container
-      exec?:
-        type: object
-        properties:
-          command:
-            type: mesosCommand.MesosCommand
-            description: |
-              Command specification executed by Mesos, not parsed by Marathon.
-              The presence of `command.shell` implies `overrideEntrypoint=true`.
-          overrideEntrypoint?:
-            type: boolean
-            usage: |
-              Applies only if a container image is specified AND that container image
-              defines a default entrypoint (Docker) or exec (appc) property.
-              It is an error to use `false` here when `command.shell` is set.
-            description: |
-              When true argv[0] will be used as the entrypoint/exec of the container.
-              Otherwise the contents of argv[] are appended as arguments.
+      exec?: MesosExec
       resources:
         type: resources.Resources
         description: The resources to allocate to the container.
