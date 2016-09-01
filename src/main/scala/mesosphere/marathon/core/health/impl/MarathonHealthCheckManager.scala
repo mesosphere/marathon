@@ -190,7 +190,7 @@ class MarathonHealthCheckManager(
     }
 
   override def status(appId: PathId, taskId: Instance.Id): Future[Seq[Health]] = {
-    import HealthCheckActor.GetTaskHealth
+    import HealthCheckActor.GetInstanceHealth
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
@@ -204,7 +204,7 @@ class MarathonHealthCheckManager(
         Future.sequence(
           listActive(appId, appVersion).iterator.collect {
           case ActiveHealthCheck(_, actor) =>
-            (actor ? GetTaskHealth(taskId)).mapTo[Health]
+            (actor ? GetInstanceHealth(taskId)).mapTo[Health]
         }.to[Seq]
         )
     }

@@ -3,7 +3,7 @@ package mesosphere.marathon.core.matcher.manager.impl
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.TaskOp
+import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -183,11 +183,11 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     }
 
     object source extends TaskOpSource {
-      var acceptedOps = Vector.empty[TaskOp]
-      var rejectedOps = Vector.empty[TaskOp]
+      var acceptedOps = Vector.empty[InstanceOp]
+      var rejectedOps = Vector.empty[InstanceOp]
 
-      override def taskOpAccepted(taskOp: TaskOp): Unit = acceptedOps :+= taskOp
-      override def taskOpRejected(taskOp: TaskOp, reason: String): Unit = rejectedOps :+= taskOp
+      override def taskOpAccepted(taskOp: InstanceOp): Unit = acceptedOps :+= taskOp
+      override def taskOpRejected(taskOp: InstanceOp, reason: String): Unit = rejectedOps :+= taskOp
     }
   }
 

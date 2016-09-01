@@ -23,7 +23,7 @@ private[health] class HealthCheckActor(
   import HealthCheckWorker.HealthCheckJob
 
   var nextScheduledCheck: Option[Cancellable] = None
-  var taskHealth = Map[Instance.Id, Health]()
+  var instanceHealth = Map[Instance.Id, Health]()
 
   val workerProps = Props[HealthCheckWorkerActor]
 
@@ -65,7 +65,7 @@ private[health] class HealthCheckActor(
     val activeTaskIds = taskTracker.appTasksLaunchedSync(app.id).map(_.id).toSet
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
-    taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
+    instanceHealth = instanceHealth.filterKeys(activeTaskIds).iterator.toMap
   }
 
   def scheduleNextHealthCheck(): Unit =
@@ -91,7 +91,7 @@ private[health] class HealthCheckActor(
           if (launched.runSpecVersion == app.version && task.isRunning) {
             log.debug("Dispatching health check job for {}", task.id)
             val worker: ActorRef = context.actorOf(workerProps)
-            worker ! HealthCheckJob(app, task.asInstanceOf[Task], launched, healthCheck)
+            worker ! HealthCheckJob(app, task, launched, healthCheck)
           }
         }
       case _ => () // TODO ju POD
@@ -144,10 +144,10 @@ private[health] class HealthCheckActor(
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   def receive: Receive = {
-    case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
+    case GetInstanceHealth(taskId) => sender() ! instanceHealth.getOrElse(taskId, Health(taskId))
 
     case GetAppHealth =>
-      sender() ! AppHealth(taskHealth.values.toSeq)
+      sender() ! AppHealth(instanceHealth.values.toSeq)
 
     case Tick =>
       purgeStatusOfDoneTasks()
@@ -156,8 +156,8 @@ private[health] class HealthCheckActor(
 
     case result: HealthResult if result.version == app.version =>
       log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
-      val taskId = result.taskId
-      val health = taskHealth.getOrElse(taskId, Health(taskId))
+      val taskId = result.instanceId
+      val health = instanceHealth.getOrElse(taskId, Health(taskId))
 
       val newHealth = result match {
         case Healthy(_, _, _) =>
@@ -179,7 +179,7 @@ private[health] class HealthCheckActor(
           }
       }
 
-      taskHealth += (taskId -> newHealth)
+      instanceHealth += (taskId -> newHealth)
 
       if (health.alive != newHealth.alive) {
         eventBus.publish(
@@ -215,7 +215,7 @@ object HealthCheckActor {
 
   // self-sent every healthCheck.intervalSeconds
   case object Tick
-  case class GetTaskHealth(taskId: Instance.Id)
+  case class GetInstanceHealth(instanceId: Instance.Id)
   case object GetAppHealth
 
   case class AppHealth(health: Seq[Health])

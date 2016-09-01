@@ -36,13 +36,13 @@ class OfferOperationFactory(
       .build()
   }
 
-  def reserve(frameworkId: FrameworkId, taskId: Instance.Id, resources: Iterable[Mesos.Resource]): //
+  def reserve(frameworkId: FrameworkId, instanceId: Instance.Id, resources: Iterable[Mesos.Resource]): //
   Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
     val reservedResources = resources.map { resource =>
 
       val reservation = ReservationInfo.newBuilder()
-        .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
+        .setLabels(TaskLabels.labelsForTask(frameworkId, instanceId).mesosLabels)
         .setPrincipal(principal)
 
       Mesos.Resource.newBuilder(resource)
@@ -63,7 +63,7 @@ class OfferOperationFactory(
 
   def createVolumes(
     frameworkId: FrameworkId,
-    taskId: Instance.Id,
+    instanceId: Instance.Id,
     localVolumes: Iterable[LocalVolume]): Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
 
@@ -82,7 +82,7 @@ class OfferOperationFactory(
       }
 
       val reservation = Mesos.Resource.ReservationInfo.newBuilder()
-        .setLabels(TaskLabels.labelsForTask(frameworkId, taskId).mesosLabels)
+        .setLabels(TaskLabels.labelsForTask(frameworkId, instanceId).mesosLabels)
       principalOpt.foreach(reservation.setPrincipal)
 
       Mesos.Resource.newBuilder()

@@ -7,7 +7,7 @@ import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => Mesos }
 import org.scalatest.{ GivenWhenThen, Matchers }
 
-class TaskOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
+class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with Mockito with Matchers {
 
   test("exception when newTask.taskId and taskInfo.id don't match") {
     val f = new Fixture

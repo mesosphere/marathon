@@ -9,11 +9,11 @@ import org.apache.mesos.{ Protos => MesosProtos }
 /**
   * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.
   */
-sealed trait TaskOp {
+sealed trait InstanceOp {
   /** The ID of the affected task. */
-  def taskId: Instance.Id = stateOp.taskId
+  def instanceId: Instance.Id = stateOp.taskId
   /** The MarathonTask state before this operation has been applied. */
-  def oldTask: Option[Task]
+  def oldInstance: Option[Instance]
   /** The TaskStateOp that will lead to the new state after this operation has been applied. */
   def stateOp: TaskStateOp
   /** How would the offer change when Mesos executes this op? */
@@ -22,13 +22,13 @@ sealed trait TaskOp {
   def offerOperations: Iterable[org.apache.mesos.Protos.Offer.Operation]
 }
 
-object TaskOp {
+object InstanceOp {
   /** Launch a task on the offer. */
   case class Launch(
       taskInfo: MesosProtos.TaskInfo,
       stateOp: TaskStateOp,
-      oldTask: Option[Task] = None,
-      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends TaskOp {
+      oldInstance: Option[Instance] = None,
+      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
       import scala.collection.JavaConverters._
@@ -40,10 +40,10 @@ object TaskOp {
       stateOp: TaskStateOp.Reserve,
       resources: Iterable[MesosProtos.Resource],
       localVolumes: Iterable[LocalVolume],
-      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends TaskOp {
+      offerOperations: Iterable[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     // if the TaskOp is reverted, there should be no old state
-    override def oldTask: Option[Task] = None
+    override def oldInstance: Option[Task] = None
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer =
       ResourceUtil.consumeResourcesFromOffer(offer, resources)
@@ -52,7 +52,7 @@ object TaskOp {
   case class UnreserveAndDestroyVolumes(
       stateOp: TaskStateOp,
       resources: Iterable[MesosProtos.Resource],
-      oldTask: Option[Task] = None) extends TaskOp {
+      oldInstance: Option[Instance] = None) extends InstanceOp {
 
     override lazy val offerOperations: Iterable[MesosProtos.Offer.Operation] = {
       val (withDisk, withoutDisk) = resources.partition(_.hasDisk)

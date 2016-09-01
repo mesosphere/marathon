@@ -31,7 +31,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
 
-class TaskOpProcessorImplTest
+class InstanceOpProcessorImplTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
 
   import scala.concurrent.ExecutionContext.Implicits.global

@@ -12,7 +12,7 @@ trait TaskLauncher {
     *
     * @return `true` if we could communicate the acceptOffer call to Mesos and `false` otherwise
     */
-  def acceptOffer(offerID: OfferID, taskOps: Seq[TaskOp]): Boolean
+  def acceptOffer(offerID: OfferID, taskOps: Seq[InstanceOp]): Boolean
 
   /**
     * Decline the offer. We cannot use the offer afterwards anymore.

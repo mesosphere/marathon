@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
@@ -18,11 +18,11 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-class TaskOpFactoryImpl(
+class InstanceOpFactoryImpl(
   config: MarathonConf,
   clock: Clock,
   pluginManager: PluginManager = PluginManager.None)
-    extends TaskOpFactory {
+    extends InstanceOpFactory {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val taskOperationFactory = {
@@ -34,7 +34,7 @@ class TaskOpFactoryImpl(
 
   private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor])
 
-  override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
+  override def buildTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     log.debug("buildTaskOp")
 
     if (request.isForResidentRunSpec) {
@@ -44,8 +44,8 @@ class TaskOpFactoryImpl(
     }
   }
 
-  private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
-    val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
+  private[this] def inferNormalTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
+    val InstanceOpFactory.Request(runSpec, offer, tasks, _) = request
 
     new TaskBuilder(runSpec, Instance.Id.forRunSpec, config, Some(appTaskProc)).
       // TODO ju asInstance
@@ -70,8 +70,8 @@ class TaskOpFactoryImpl(
       }
   }
 
-  private[this] def inferForResidents(request: TaskOpFactory.Request): Option[TaskOp] = {
-    val TaskOpFactory.Request(runSpec, offer, tasks, additionalLaunches) = request
+  private[this] def inferForResidents(request: InstanceOpFactory.Request): Option[InstanceOp] = {
+    val InstanceOpFactory.Request(runSpec, offer, tasks, additionalLaunches) = request
 
     val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
     val needToReserve = request.numberOfWaitingReservations < additionalLaunches
@@ -142,7 +142,7 @@ class TaskOpFactoryImpl(
     offer: Mesos.Offer,
     task: Task.Reserved,
     resourceMatch: Option[ResourceMatcher.ResourceMatch],
-    volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
+    volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[InstanceOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
     new TaskBuilder(spec, (_) => task.id, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
@@ -164,7 +164,7 @@ class TaskOpFactoryImpl(
     frameworkId: FrameworkId,
     RunSpec: RunSpec,
     offer: Mesos.Offer,
-    resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
+    resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
     val localVolumes: Iterable[Task.LocalVolume] = RunSpec.persistentVolumes.map { volume =>
       Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume)

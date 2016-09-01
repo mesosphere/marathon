@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launchqueue
 import akka.actor.{ ActorRef, Props }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
-import mesosphere.marathon.core.launcher.TaskOpFactory
+import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launchqueue.impl.{
   TaskLauncherActor,
   LaunchQueueActor,
@@ -26,7 +26,7 @@ class LaunchQueueModule(
     subOfferMatcherManager: OfferMatcherManager,
     maybeOfferReviver: Option[OfferReviver],
     taskTracker: TaskTracker,
-    taskOpFactory: TaskOpFactory) {
+    taskOpFactory: InstanceOpFactory) {
 
   private[this] val launchQueueActorRef: ActorRef = {
     val props = LaunchQueueActor.props(config, runSpecActorProps)

@@ -2,7 +2,7 @@ package mesosphere.marathon
 
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.launcher.TaskOpFactory
+import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
@@ -173,7 +173,7 @@ class LaunchQueueModuleTest
     val matchedTasks = matchFuture.futureValue
 
     Then("the offer gets passed to the task factory and respects the answer")
-    val request = TaskOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
     verify(taskOpFactory).buildTaskOp(request)
     matchedTasks.offerId should equal(offer.getId)
     matchedTasks.opsWithSource should equal(Seq.empty)
@@ -200,7 +200,7 @@ class LaunchQueueModuleTest
     val matchedTasks = matchFuture.futureValue
 
     Then("the offer gets passed to the task factory and respects the answer")
-    val request = TaskOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
+    val request = InstanceOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
     verify(taskOpFactory).buildTaskOp(request)
     matchedTasks.offerId should equal (offer.getId)
     matchedTasks.launchedTaskInfos should equal (Seq(mesosTask))
@@ -261,7 +261,7 @@ class LaunchQueueModuleTest
     lazy val taskBusModule: TaskBusModule = new TaskBusModule()
     lazy val offerMatcherManager: DummyOfferMatcherManager = new DummyOfferMatcherManager()
     lazy val taskTracker: TaskTracker = mock[TaskTracker]
-    lazy val taskOpFactory: TaskOpFactory = mock[TaskOpFactory]
+    lazy val taskOpFactory: InstanceOpFactory = mock[InstanceOpFactory]
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val module: LaunchQueueModule = new LaunchQueueModule(
       config,

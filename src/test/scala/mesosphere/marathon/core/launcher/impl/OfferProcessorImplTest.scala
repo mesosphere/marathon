@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher, TaskOp }
+import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher, InstanceOp }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
@@ -43,7 +43,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     }
 
     And("a working taskLauncher")
-    val ops: Seq[TaskOp] = tasksWithSource.map(_.op)
+    val ops: Seq[InstanceOp] = tasksWithSource.map(_.op)
     taskLauncher.acceptOffer(offerId, ops) returns true
 
     When("processing the offer")
@@ -223,7 +223,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     Then("we saw the matchOffer request and the task launch attempt for the first task")
-    val firstTaskOp: Seq[TaskOp] = tasksWithSource.take(1).map(_.op)
+    val firstTaskOp: Seq[InstanceOp] = tasksWithSource.take(1).map(_.op)
 
     verify(offerMatcher).matchOffer(deadline, offer)
     verify(taskLauncher).acceptOffer(offerId, firstTaskOp)
@@ -297,10 +297,10 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   }
 
   class DummySource extends TaskOpSource {
-    var rejected = Vector.empty[(TaskOp, String)]
-    var accepted = Vector.empty[TaskOp]
+    var rejected = Vector.empty[(InstanceOp, String)]
+    var accepted = Vector.empty[InstanceOp]
 
-    override def taskOpRejected(op: TaskOp, reason: String): Unit = rejected :+= op -> reason
-    override def taskOpAccepted(op: TaskOp): Unit = accepted :+= op
+    override def taskOpRejected(op: InstanceOp, reason: String): Unit = rejected :+= op -> reason
+    override def taskOpAccepted(op: InstanceOp): Unit = accepted :+= op
   }
 }
