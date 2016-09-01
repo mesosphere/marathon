@@ -1,8 +1,6 @@
 #%RAML 1.0 Library
 uses:
   apps: app.raml
-  number: numberTypes.raml
-  strings: stringTypes.raml
   pods: pod.raml
 types:
   QueueDelay:
@@ -13,11 +11,7 @@ types:
       overdue?:
         type: boolean
   QueueObject:
-    discriminator: kind
     properties:
-      kind?:
-        type: string
-        enum: [ app, pod ]
       count?:
         type: number
         format: int32
@@ -25,13 +19,11 @@ types:
         type: QueueDelay
   QueueApp:
     type: QueueObject
-    discriminatorValue: app
     properties:
       app:
         type: apps.App
   QueuePod:
     type: QueueObject
-    discriminatorValue: pod
     properties:
       pod:
         type: pods.Pod
@@ -40,4 +32,4 @@ types:
       queue?:
         type: array
         items:
-          type: QueueObject[]
+          type: QueueApp | QueuePod

@@ -7,7 +7,6 @@
         "cpus": 1.0,
         "mem": 512.0,
         "disk": 0.0,
-        "executor": "",
         "constraints": [
           [
             "hostname",
@@ -23,7 +22,6 @@
         "maxLaunchDelaySeconds": 3600,
         "container": {
           "type": "DOCKER",
-          "volumes": [ ],
           "docker": {
             "image": "datadog/docker-dd-agent:latest",
             "network": "HOST",
@@ -88,7 +86,6 @@
           "minimumHealthCapacity": 1.0,
           "maximumOverCapacity": 1.0
         },
-        "acceptedResourceRoles": null,
         "version": "2015-09-30T09:09:17.614Z",
         "versionInfo": {
           "lastScalingAt": "2015-09-30T09:09:17.614Z",
