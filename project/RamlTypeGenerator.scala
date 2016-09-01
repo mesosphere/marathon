@@ -9,7 +9,7 @@ import org.raml.v2.api.model.v10.datamodel._
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
-import scala.collection.immutable.{Seq, SortedSet}
+import scala.collection.immutable.Seq
 
 // scalastyle:off
 object RamlTypeGenerator {
@@ -31,31 +31,29 @@ object RamlTypeGenerator {
     )
 
   val JsonFormat = RootClass.newClass("spray.json.JsonFormat")
+
   def JSON_FORMAT(typ: Type): Type = JsonFormat TYPE_OF typ
+
   val RootJsonFormat = RootClass.newClass("spray.json.RootJsonFormat")
+
   def ROOT_JSON_FORMAT(typ: Type): Type = RootJsonFormat TYPE_OF typ
+
   val JsValue = RootClass.newClass("spray.json.JsValue")
   val JsString = RootClass.newClass("spray.json.JsString")
+  val JsObject = RootClass.newClass("spray.json.JsObject")
   val DefaultJsonProtocol = RootClass.newClass("RamlJsonProtocol")
   val SeqClass = RootClass.newClass("scala.collection.immutable.Seq")
-
-  val PlayJsonFormat = RootClass.newClass("play.api.libs.json.Format")
-  def PLAY_JSON_FORMAT(typ: Type): Type = PlayJsonFormat TYPE_OF typ
-  val PlayJsonResult = RootClass.newClass("play.api.libs.json.JsResult")
-  def PLAY_JSON_RESULT(typ: Type): Type = PlayJsonResult TYPE_OF typ
-  val PlayJsValue = RootClass.newClass("play.api.libs.json.JsValue")
-  val PlayJsString = RootClass.newClass("play.api.libs.json.JsString")
-  val PlayJsArray = RootClass.newClass("play.api.libs.json.JsArray")
-  val PlayValidationError = RootClass.newClass("play.api.data.validation.ValidationError")
-  val PlayJsError = RootClass.newClass("play.api.libs.json.JsError")
-  val PlayJsSuccess = RootClass.newClass("play.api.libs.json.JsSuccess")
 
   def TYPE_SEQ(typ: Type): Type = SeqClass TYPE_OF typ
 
   val PlayJsonFormat = RootClass.newClass("play.api.libs.json.Format")
+
   def PLAY_JSON_FORMAT(typ: Type): Type = PlayJsonFormat TYPE_OF typ
+
   val PlayJsonResult = RootClass.newClass("play.api.libs.json.JsResult")
+
   def PLAY_JSON_RESULT(typ: Type): Type = PlayJsonResult TYPE_OF typ
+
   val PlayJsValue = RootClass.newClass("play.api.libs.json.JsValue")
   val PlayJsString = RootClass.newClass("play.api.libs.json.JsString")
   val PlayJsArray = RootClass.newClass("play.api.libs.json.JsArray")
@@ -63,9 +61,9 @@ object RamlTypeGenerator {
   val PlayJsError = RootClass.newClass("play.api.libs.json.JsError")
   val PlayJsSuccess = RootClass.newClass("play.api.libs.json.JsSuccess")
 
-  def camelify(name : String): String = name.toLowerCase.capitalize
+  def camelify(name: String): String = name.toLowerCase.capitalize
 
-  def underscoreToCamel(name: String) = "_([a-z\\d])".r.replaceAllIn(name, {m =>
+  def underscoreToCamel(name: String) = "_([a-z\\d])".r.replaceAllIn(name, { m =>
     m.group(1).toUpperCase()
   })
 
@@ -114,16 +112,16 @@ object RamlTypeGenerator {
     build(types, baseTypeTable)
   }
 
-
   sealed trait GeneratedClass {
     val name: String
-    def toTree(pkg: String): Tree
+
+    def toTree(): Seq[Tree]
   }
 
   case class EnumT(name: String, values: Set[String], default: Option[String], comments: Seq[String]) extends GeneratedClass {
     override def toString: String = s"Enum($name, $values)"
 
-    override def toTree(pkg: String): Tree = {
+    override def toTree(): Seq[Tree] = {
       val baseTrait = TRAITDEF(name) withFlags Flags.SEALED := BLOCK(
         VAL("value", StringClass),
         DEF("toString", StringClass) withFlags Flags.OVERRIDE := REF("value")
@@ -136,7 +134,7 @@ object RamlTypeGenerator {
       }.toVector
 
       val patternMatches = values.map { enumValue =>
-        CASE (LIT (enumValue.toLowerCase)) ==> REF(underscoreToCamel(camelify(enumValue)))
+        CASE(LIT(enumValue.toLowerCase)) ==> REF(underscoreToCamel(camelify(enumValue)))
       }
 
       val wildcard = CASE(WILDCARD) ==>
@@ -155,15 +153,15 @@ object RamlTypeGenerator {
       )
 
       val playWildcard = CASE(WILDCARD) ==>
-        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY (LIT("error.expected.jsstring"), LIT(s"$name (${values.mkString(", ")})"))))
+        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"$name (${values.mkString(", ")})"))))
       val playPatternMatches = values.map { enumValue =>
-        CASE (LIT (enumValue.toLowerCase)) ==> (REF(PlayJsSuccess) APPLY REF(underscoreToCamel(camelify(enumValue))))
+        CASE(LIT(enumValue.toLowerCase)) ==> (REF(PlayJsSuccess) APPLY REF(underscoreToCamel(camelify(enumValue))))
       }
 
       val playJsonFormat = (OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT) := BLOCK(
         DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
           REF("json") MATCH(
-            CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH(playPatternMatches.toVector ++ Vector(playWildcard))),
+            CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH (playPatternMatches.toVector ++ Vector(playWildcard))),
             playWildcard)
         },
         DEF("writes", PlayJsValue) withParams PARAM("o", name) := {
@@ -174,207 +172,169 @@ object RamlTypeGenerator {
       val obj = OBJECTDEF(name) := BLOCK(
         enumObjects ++ Seq(enumJsonFormat, playJsonFormat)
       )
-      BLOCK(baseTrait.withDoc(comments), obj).inPackage(pkg)
+      Seq(baseTrait.withDoc(comments), obj)
     }
   }
 
   case class FieldT(name: String, `type`: Type, comments: Seq[String], required: Boolean, default: Option[String], repeated: Boolean = false) {
     override def toString: String = s"$name: ${`type`}"
-  }
 
-  case class ObjectT(name: String, fields: Seq[FieldT], parentType: Option[String], comments: Seq[String], hasChildren: Boolean = false) extends GeneratedClass {
-    override def toString: String = parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
-
-    override def toTree(pkg: String): treehugger.forest.Tree = {
-      val params = fields.map { field =>
-        if (field.required) {
-          PARAM(field.name, field.`type`).tree
+    lazy val param: treehugger.forest.ValDef = {
+      if (required || default.isDefined) {
+        PARAM(name, `type`).tree
+      } else {
+        if (repeated) {
+          PARAM(name, `type`) := NIL
         } else {
-          if (field.repeated) {
-            PARAM(field.name, field.`type`) := NIL
-          } else {
-            PARAM(field.name, TYPE_OPTION(field.`type`)) := NONE
-          }
+          PARAM(name, TYPE_OPTION(`type`)) := NONE
         }
       }
+    }
 
-      val klass = if (hasChildren) {
-        parentType.fold(TRAITDEF(name) withParams params)(parent =>
-          TRAITDEF(name) withParams params withParents parent
+    lazy val comment: String = if (comments.nonEmpty) {
+      val lines = comments.flatMap(_.lines)
+      s"@$name ${lines.head} ${if (lines.tail.nonEmpty) "\n  " else ""}${lines.tail.mkString("\n  ")}"
+    } else {
+      ""
+    }
+
+    val defaultValue = default.map { d=>
+      `type`.toString() match {
+        case "Byte" => d.toByte
+        case "Short" => d.toShort
+        case "Int" => d.toInt
+        case "Long" => d.toLong
+        case "Float" => d.toFloat
+        case "Double" => d.toDouble
+        case "String" => d
+        case t =>
+          sys.error(s"Unable to understand the default of $name (${`type`}) - $d")
+      }
+    }.map { value => LIT(value) }
+
+    def sprayReader(parent: String) = {
+      // required fields never have defaults
+      if (required) {
+        VAL(name) := (REF("fields") DOT "get" APPLY(LIT(name)) DOT "map" APPLY (REF("_") DOT "convertTo" APPLYTYPE(`type`))) DOT "getOrElse" APPLY(THROW(REF("spray.json.deserializationError") APPLY LIT(s"$parent: missing required field: $name")))
+      } else {
+        defaultValue.fold {
+          if (repeated) {
+            VAL(name) := (REF("fields") DOT "getOrElse" APPLY((LIT(name) DOT "convertTo" APPLYTYPE(`type`)), NIL))
+          } else {
+            VAL(name) := (REF("fields") DOT "get" APPLY(LIT(name)) DOT "map" APPLY(REF("_") DOT "convertTo" APPLYTYPE(`type`)))
+          }
+        } { defaultValue =>
+          VAL(name) := (REF("fields") DOT "get" APPLY(LIT(name)) DOT "map" APPLY(REF("_") DOT "convertTo" APPLYTYPE(`type`)) DOT "getOrElse" APPLY defaultValue)
+        }
+      }
+    }
+
+    val playReader = {
+      // required fields never have defaults
+      if (required) {
+        TUPLE(REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`
+      } else {
+        if (defaultValue.isDefined) {
+          TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY(REF("Reads") DOT "pure" APPLY(defaultValue.get))
+        } else {
+          TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "readNullable" APPLYTYPE`type`)
+        }
+      }
+    }
+  }
+
+  case class ObjectT(name: String, fields: Seq[FieldT], parentType: Option[String], comments: Seq[String], childTypes: Seq[ObjectT] = Nil, discriminator: Option[String] = None, discriminatorValue: Option[String] = None) extends GeneratedClass {
+    override def toString: String = parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
+
+    override def toTree(): Seq[Tree] = {
+      val params = fields.map(_.param)
+      val klass = if (childTypes.nonEmpty) {
+        parentType.fold(TRAITDEF(name) := BLOCK(params))(parent =>
+          TRAITDEF(name) withParents parent := BLOCK(params)
         )
       } else {
         parentType.fold(CASECLASSDEF(name) withParams params)(parent =>
           CASECLASSDEF(name) withParams params withParents parent
+        ).tree
+      }
+
+      val sprayFormat = if (fields.exists(_.default.nonEmpty)) {
+        OBJECTDEF("SprayJsonFormat") withParents (ROOT_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
+          IMPORT("spray.json._"),
+          DEF("write", JsValue) withParams PARAM("o", name) := BLOCK(
+            REF(JsObject) APPLY fields.map(f => TUPLE(LIT(f.name), REF("o") DOT f.name DOT "toJson"))
+          ),
+          DEF("read", name) withParams PARAM("json", JsValue) := BLOCK(
+            Seq(VAL("fields") := (REF("json") DOT "asJsObject" DOT "fields")) ++
+              fields.map(_.sprayReader(name)) ++
+              Seq(REF(name) APPLY(fields.map(f => REF(f.name) := REF(f.name))))
+          )
+        )
+      } else {
+        VAL("sprayJsonFormat") withFlags Flags.IMPLICIT := REF(s"jsonFormat${fields.size}") APPLY(REF(name) DOT "apply")
+      }
+
+      val playFormat = if (fields.nonEmpty && fields.exists(_.default.nonEmpty)) {
+        Seq(
+          IMPORT("play.api.libs.json._"),
+          IMPORT("play.api.libs.functional.syntax._"),
+          VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
+            fields.map(_.playReader).reduce(_ DOT "and" APPLY(_))
+          ) APPLY(REF(name) DOT "apply _"),
+          VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF("play.api.libs.json.Json") DOT "writes" APPLYTYPE(name)
+        )
+      } else {
+        Seq(VAL("playJsonFormat") withFlags Flags.IMPLICIT := REF("play.api.libs.json.Json") DOT "format" APPLYTYPE(name))
+      }
+
+      val obj = if (childTypes.isEmpty) {
+        (OBJECTDEF(name) withParents DefaultJsonProtocol) := BLOCK(
+          sprayFormat +:
+            playFormat
+        )
+      } else {
+        if (discriminator.isEmpty)
+          sys.error("Attempted to use subclassing without a discrimantor defined")
+        val childDiscriminators: Map[String, ObjectT] = childTypes.map(ct => ct.discriminatorValue.getOrElse(ct.name) -> ct)(collection.breakOut)
+        (OBJECTDEF(name) withParents DefaultJsonProtocol) := BLOCK(
+          OBJECTDEF("SprayJsonFormat") withParents ROOT_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+            IMPORT("spray.json._"),
+            DEF("read", name) withParams PARAM("json", JsValue) := BLOCK(
+              REF("json") DOT "asJsObject" DOT "fields" DOT "get" APPLY(LIT(discriminator.get)) MATCH(
+                childDiscriminators.map { case (k, v) =>
+                  CASE(JsString APPLY LIT(k)) ==> (REF("json") DOT "convertTo" APPLYTYPE(v.name))
+                } ++
+                  Seq(CASE(WILDCARD) ==> THROW(REF("spray.json.deserializationError") APPLY LIT(s"$name: Unable to deserialize into any of the types: ${childTypes.map(_.name).mkString(", ")}")))
+                )
+            ),
+            DEF("write", JsValue) withParams PARAM("o", name) := BLOCK(
+              REF("o") MATCH
+                childDiscriminators.map { case (k, v) =>
+                  CASE(REF(s"f:${v.name}")) ==> (REF("f") DOT "toJson" APPLYTYPE(v.name))
+                }
+            )
+          )
         )
       }
 
-      BLOCK(Seq(klass)).inPackage(pkg)
+      val commentBlock = (comments ++ fields.map(_.comment)(collection.breakOut))
+      Seq(klass.withDoc(commentBlock), obj) ++ childTypes.flatMap(_.toTree())
     }
   }
 
   case object StringT extends GeneratedClass {
     val name = "value"
 
-    override def toTree(pkg: String): treehugger.forest.Tree = BLOCK().withoutPackage
+    override def toTree(): Seq[treehugger.forest.Tree] = Seq.empty[Tree]
   }
 
   case class UnionT(name: String, childTypes: Seq[GeneratedClass], comments: Seq[String]) extends GeneratedClass {
     override def toString: String = s"Union($name, $childTypes)"
 
-    override def toTree(pkg: String): treehugger.forest.Tree = BLOCK().withoutPackage
-  }
-
-  /*
-  def createObjectType(typeTable: Map[String, Symbol], name: String, objectType: ObjectTypeDeclaration): List[Tree] = {
-    def paramDef(name: String, param: TypeDeclaration): Type = {
-      param match {
-        case s: StringTypeDeclaration if !s.enumValues.isEmpty =>
-          typeTable(enumName(s, Some(name)))
-        case a: ArrayTypeDeclaration =>
-          TYPE_SEQ(paramDef(a.name, a.items))
-        case o: ObjectTypeDeclaration =>
-          typeTable(objectName(o)._1)
-        case n: NumberTypeDeclaration =>
-          typeTable(Option(n.format()).getOrElse("double"))
-        case s: StringTypeDeclaration if s.enumValues().isEmpty =>
-          StringClass
-        case b: TypeDeclaration =>
-          typeTable(b.`type`())
-      }
+    override def toTree(): Seq[Tree] = {
+      println(s"Union Type: $name (${childTypes.map(_.name)})")
+      Seq.empty[Tree]
     }
-
-    val params = objectType.properties.map {
-      case a:ArrayTypeDeclaration =>
-        if (Option(a.minItems()).fold(0)(_.intValue()) < 1) {
-          PARAM(a.name, paramDef(a.name(), a)) := REF(SeqClass) DOT "empty"
-        } else {
-          PARAM(a.name, paramDef(a.name(), a)).tree
-        }
-      case o: ObjectTypeDeclaration =>
-        if (o.required()) {
-          PARAM(o.name(), typeTable(objectName(o))).tree
-        } else {
-          PARAM(o.name(), TYPE_OPTION(objectName(o))) := NONE
-        }
-      case s: StringTypeDeclaration if !s.enumValues().isEmpty =>
-        val typeName = enumName(s)
-        if (s.required) {
-          PARAM(s.name(), typeTable(typeName)).tree
-        } else {
-          PARAM(s.name(), TYPE_OPTION(typeName)) := NONE
-        }
-      case s: StringTypeDeclaration if s.enumValues().isEmpty =>
-        Option(s.defaultValue()).fold {
-          if (s.required()) {
-            PARAM(s.name(), StringClass).tree
-          } else {
-            PARAM(s.name(), TYPE_OPTION(StringClass)) := NONE
-          }
-        } { defaultValue =>
-          if (s.required()) {
-            PARAM(s.name(), StringClass) := LIT(defaultValue)
-          } else {
-            PARAM(s.name(), TYPE_OPTION(StringClass)) := REF(SomeClass) APPLY LIT(defaultValue)
-          }
-        }
-      case n: NumberTypeDeclaration =>
-        val typeName = typeTable(Option(n.format()).getOrElse("double"))
-        Option(n.defaultValue()).fold {
-          if (n.required()) {
-            PARAM(n.name(), typeName).tree
-          } else {
-            PARAM(n.name, TYPE_OPTION(typeName)) := NONE
-          }
-        } { defaultValue =>
-          if (n.required()) {
-            PARAM(n.name(), typeName) := LIT(defaultValue)
-          } else {
-            val default = Option(n.format()).map {
-              case "int8" => defaultValue.toByte
-              case "int16" => defaultValue.toShort
-              case "int32" => defaultValue.toInt
-              case "int64" | "long" => defaultValue.toLong
-              case "float" => defaultValue.toFloat
-            }.getOrElse(defaultValue.toDouble)
-            PARAM(n.name, TYPE_OPTION(typeName)) := REF(SomeClass) APPLY LIT(default)
-          }
-        }
-
-      case arg: TypeDeclaration =>
-        if (arg.required()) {
-          PARAM(arg.name(), paramDef(arg.name(), arg)).tree
-        } else {
-          PARAM(arg.name(), TYPE_OPTION(typeTable(arg.`type`()))) := NONE
-        }
-    }
-
-    val klass = CASECLASSDEF(name.capitalize) withParams params
-    val paramDocs = objectType.properties.flatMap { p =>
-      Option(p.description()).map(c => DocTag.Param(p.name(), c.value))
-    }
-
-    val obj = OBJECTDEF(name.capitalize) withParents DefaultJsonProtocol := BLOCK(
-      VAL(s"${name}JsonFormat") withFlags Flags.IMPLICIT := REF(s"jsonFormat") APPLY((REF(name.capitalize) DOT "apply _").tree +: objectType.properties.map(p => LIT(p.name))(collection.breakOut)),
-      VAL(s"${name}PlayJsonFormat") withFlags Flags.IMPLICIT := REF(s"play.api.libs.json.Json.format[${name.capitalize}]")
-    )
-    val classDocs = Option(objectType.description()).map(_.value)
-    if (classDocs.isDefined || paramDocs.nonEmpty) {
-      List(klass.tree.withDoc(Option(objectType.description()).map(_.value), paramDocs : _*), obj)
-    } else {
-      List(klass, obj)
-    }
-  }
-
-  def generateTypes(pkg: String, types: Seq[TypeDeclaration]): Map[String, Tree] = {
-    val typeTable = buildTypeTable(types.toSet)
-    val generatedTypes = new java.util.HashSet[String]()
-    @tailrec def generate(remaining: List[TypeDeclaration], built: Map[String, Tree]): Map[String, Tree] = {
-      remaining match {
-        case head :: tail =>
-          head match {
-            case a: ArrayTypeDeclaration =>
-              a.items() match {
-                case o: ObjectTypeDeclaration =>
-                  val name = objectName(o)
-                  if (generatedTypes.add(name)) {
-                    val klass = createObjectType(typeTable, name, o)
-                    generate(o.properties().toList ::: tail, built + (name -> BLOCK(klass).inPackage(pkg)))
-                  } else {
-                    generate(o.properties().toList ::: tail, built)
-                  }
-                case s: StringTypeDeclaration if !s.enumValues().isEmpty =>
-                  val name = enumName(s, Some(a.name))
-                  if (generatedTypes.add(name)) {
-                    generate(tail, built + (name -> BLOCK(createEnumType(typeTable, name, s)).inPackage(pkg)))
-                  } else {
-                    generate(tail, built)
-                  }
-                case _ =>
-                  generate(tail, built)
-              }
-            case o: ObjectTypeDeclaration =>
-              val name = objectName(o)
-              if (generatedTypes.add(name)) {
-                val klass = createObjectType(typeTable, objectName(o), o)
-                generate(o.properties().toList ::: tail, built + (name -> BLOCK(klass).inPackage(pkg)))
-              } else {
-                generate(o.properties.toList ::: tail, built)
-              }
-            case s: StringTypeDeclaration if !s.enumValues().isEmpty =>
-              val name = enumName(s)
-              if (generatedTypes.add(name)) {
-                generate(tail, built + (name -> BLOCK(createEnumType(typeTable, s.name(), s)).inPackage(pkg)))
-              } else {
-                generate(tail, built)
-              }
-            case _ =>
-              generate(tail, built)
-          }
-        case Nil =>
-          built
-      }
-    }
-    generateBuiltInTypes(pkg) ++ generate(types.toList, Map.empty)
   }
 
   def generateBuiltInTypes(pkg: String): Map[String, Tree] = {
@@ -439,7 +399,6 @@ object RamlTypeGenerator {
 
     Map("RamlJsonProtocol" -> BLOCK(jsonProtocolTrait, jsonProtocolObj).inPackage(pkg))
   }
-*/
 
   @tailrec def libraryTypes(libraries: List[Library], result: Set[TypeDeclaration] = Set.empty): Set[TypeDeclaration] = {
     libraries match {
@@ -489,8 +448,9 @@ object RamlTypeGenerator {
     @tailrec def buildTypes(types: Set[TypeDeclaration], results: Set[GeneratedClass] = Set.empty[GeneratedClass]): Set[GeneratedClass] = {
       def createField(field: TypeDeclaration): FieldT = {
         val comments = comment(field)
-        val required = Option(field.required()).fold(false)(_.booleanValue())
         val defaultValue = Option(field.defaultValue())
+        // if a field has a default, its not required.
+        val required = defaultValue.fold(Option(field.required()).fold(false)(_.booleanValue()))(_ => false)
         field match {
           case a: ArrayTypeDeclaration =>
             a.items() match {
@@ -498,17 +458,9 @@ object RamlTypeGenerator {
                 sys.error("Nested Arrays are not yet supported")
               case o: ObjectTypeDeclaration =>
                 val typeName = objectName(o)._1
-                if (Option(a.uniqueItems()).fold(false)(_.booleanValue())) {
-                  FieldT(a.name(), TYPE_SET(typeTable(typeName)), comments, required, defaultValue, true)
-                } else {
-                  FieldT(a.name(), TYPE_SEQ(typeTable(typeName)), comments, required, defaultValue, true)
-                }
+                FieldT(a.name(), TYPE_SEQ(typeTable(typeName)), comments, required, defaultValue, true)
               case t: TypeDeclaration =>
-                if (Option(a.uniqueItems()).fold(false)(_.booleanValue())) {
-                  FieldT(a.name(), TYPE_SET(typeTable(t.`type`().replaceAll("\\[\\]", ""))), comments, required, defaultValue, true)
-                } else {
-                  FieldT(a.name(), TYPE_SEQ(typeTable(t.`type`().replaceAll("\\[\\]", ""))), comments, required, defaultValue, true)
-                }
+                FieldT(a.name(), TYPE_SEQ(typeTable(t.`type`().replaceAll("\\[\\]", ""))), comments, required, defaultValue, true)
             }
           case n: NumberTypeDeclaration =>
             FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue)
@@ -527,14 +479,14 @@ object RamlTypeGenerator {
             case a: ArrayTypeDeclaration if a.items().`type`() != "string" =>
               sys.error("Can't build array types")
             case u: UnionTypeDeclaration =>
-              if (results.find(_.name == u.name()).isEmpty) {
+              if (!results.exists(_.name == u.name())) {
                 val subTypeNames = u.`type`().split("\\|").map(_.trim)
                 val subTypeDeclarations = subTypeNames.flatMap { t => allTypes.find(_.name == t) }
                 val subTypes = subTypeDeclarations.map {
                   case o: ObjectTypeDeclaration =>
                     val (name, parent) = objectName(o)
                     val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(createField)(collection.breakOut)
-                    ObjectT(name, fields, parent, comment(o))
+                    ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
                   case s: StringTypeDeclaration =>
                     StringT
                   case t =>
@@ -546,10 +498,10 @@ object RamlTypeGenerator {
                 buildTypes(s.tail, results)
               }
             case o: ObjectTypeDeclaration =>
-              if (results.find(_.name == o.name()).isEmpty) {
+              if (!results.exists(_.name == o.name())) {
                 val (name, parent) = objectName(o)
                 val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(createField)(collection.breakOut)
-                val objectType = ObjectT(name, fields, parent, comment(o))
+                val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
                 buildTypes(s.tail, results + objectType)
               } else {
                 buildTypes(s.tail, results)
@@ -568,10 +520,16 @@ object RamlTypeGenerator {
       }
     }
     val all = buildTypes(allTypes)
-    val parentTypes = all.collect { case obj: ObjectT if obj.parentType.isDefined => obj }.flatMap(_.parentType)
-    all.map {
-      case obj: ObjectT if parentTypes.contains(obj.name) =>
-        obj.copy(hasChildren = true)
+    val childTypes = all.collect { case obj: ObjectT if obj.parentType.isDefined => obj }.groupBy(_.parentType.get)
+    val childNames = childTypes.values.flatMap(_.map(_.name)).toSet
+
+    val unionTypeNames = all.collect { case u: UnionT => u }.flatMap { t => t.childTypes.map(_.name) + t.name }
+    all.withFilter(t => !unionTypeNames.contains(t.name) && !childNames.contains(t.name) && t != StringT).map {
+      case obj: ObjectT if childTypes.containsKey(obj.name) =>
+        val children = childTypes(obj.name)/*.map { child =>
+          child.copy(fields = obj.fields ++ child.fields)
+        }*/
+        obj.copy(childTypes = children.to[Seq])
       case t => t
     }
   }
@@ -581,8 +539,13 @@ object RamlTypeGenerator {
     val typeTable = buildTypeTable(typeDeclarations)
     val types = buildTypes(typeTable, typeDeclarations)
 
-    types.map{ tpe =>
-      tpe.name -> tpe.toTree(pkg)
+    generateBuiltInTypes(pkg) ++ types.map { tpe =>
+      val tree = tpe.toTree()
+      if (tree.nonEmpty) {
+        tpe.name -> BLOCK(tree).inPackage(pkg)
+      } else {
+        tpe.name -> BLOCK().withComment(s"Unsupported: $tpe").inPackage(pkg)
+      }
     }(collection.breakOut)
   }
 }
