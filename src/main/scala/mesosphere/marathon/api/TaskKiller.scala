@@ -47,8 +47,7 @@ class TaskKiller @Inject() (
 
           val launchedTasks = foundTasks.filter(_.launched.isDefined)
           if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
-          // TODO: For some reasons tasks returned by service.killTasks !=
-          // foundTasks in some cases. What should be returned?
+          // Return killed *and* expunged tasks
           foundTasks
         }
 
@@ -56,20 +55,16 @@ class TaskKiller @Inject() (
     }
   }
 
-  private[this] def expunge(tasks: Iterable[Task])(implicit ec: ExecutionContext): Unit = {
-    tasks.foreach { nextTask =>
-      async {
+  private[this] def expunge(tasks: Iterable[Task])(implicit ec: ExecutionContext): Future[Unit] = {
+    // Note: We process all tasks sequentially.
+
+    tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
+      resultSoFar.flatMap { _ =>
         log.info("Expunging {}", nextTask.taskId)
-
-        val processNextTask = stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.taskId))
-          .map(_ => Done)
-          .recover {
-            case NonFatal(cause) =>
-              log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.taskId, cause): _*)
-              Done // Note, this error is swallowed.
-          }
-
-        await(processNextTask)
+        stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.taskId)).map(_ => ()).recover {
+          case NonFatal(cause) =>
+            log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.taskId, cause): _*)
+        }
       }
     }
   }
