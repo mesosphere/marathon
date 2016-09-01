@@ -11,9 +11,18 @@ types:
       fieldName: string
       operator: ConstraintOperator
       value?: string
+    examples:
+      onePerAgent:
+        fieldName: hostname
+        operator: UNIQUE
+  SimpleConstraint:
+    type: array
+    items: string
+    minItems: 2
+    maxItems: 3
+    example: ["hostname", "UNIQUE"]
   AppConstraint:
     description: |
       v2 App defined constraints as a 2 or 3 element array
       with [fieldName, ConstraintOperator(,value?)].
-    type: array
-    items: string #(string | ConstraintOperator)
+    type: SimpleConstraint | Constraint
