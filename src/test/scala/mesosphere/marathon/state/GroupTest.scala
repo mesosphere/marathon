@@ -56,7 +56,7 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       val current = Group.empty.copy(groups = Set(
         Group("/test".toPath, groups = Set(
           Group("/test/group1".toPath, Map(group1App1.id -> group1App1)),
-          Group("/test/group2".toPath, Map(group2App2.id -> group2App2), Set(
+          Group("/test/group2".toPath, Map(group2App2.id -> group2App2), Map.empty, Set(
             Group("/test/group2/a".toPath, Map(group2AApp1.id -> group2AApp1)),
             Group("/test/group2/b".toPath, Map(group2BApp1.id -> group2BApp1))
           ))

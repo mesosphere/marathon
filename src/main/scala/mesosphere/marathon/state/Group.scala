@@ -8,6 +8,7 @@ import mesosphere.marathon.Protos.GroupDefinition
 import mesosphere.marathon.state.Group._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.pod.PodDefinition
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
@@ -17,6 +18,7 @@ import scala.collection.JavaConversions._
 case class Group(
     id: PathId,
     apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
+    pods: Map[PathId, PodDefinition] = defaultPods,
     groups: Set[Group] = defaultGroups,
     dependencies: Set[PathId] = defaultDependencies,
     version: Timestamp = defaultVersion) extends MarathonState[GroupDefinition, Group] with IGroup {
@@ -121,6 +123,8 @@ case class Group(
   lazy val transitiveApps: Set[AppDefinition] = transitiveAppsById.values.toSet
   lazy val transitiveAppIds: Set[PathId] = transitiveAppsById.keySet
 
+  lazy val transitivePodsById: Map[PathId, PodDefinition] = this.pods ++ groups.flatMap(_.transitivePodsById)
+
   lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
   lazy val transitiveAppGroups: Set[Group] = transitiveGroups.filter(_.apps.nonEmpty)
@@ -204,6 +208,7 @@ object Group {
     Group(
       id = msg.getId.toPath,
       apps = msg.getDeprecatedAppsList.map(AppDefinition.fromProto).map { app => app.id -> app }(collection.breakOut),
+      pods = msg.getDeprecatedPodsList.map(PodDefinition.fromProto).map { pod => pod.id -> pod }(collection.breakOut),
       groups = msg.getGroupsList.map(fromProto).toSet,
       dependencies = msg.getDependenciesList.map(PathId.apply).toSet,
       version = Timestamp(msg.getVersion)
@@ -211,6 +216,7 @@ object Group {
   }
 
   def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
+  val defaultPods = Map.empty[PathId, PodDefinition]
   def defaultGroups: Set[Group] = Set.empty
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
