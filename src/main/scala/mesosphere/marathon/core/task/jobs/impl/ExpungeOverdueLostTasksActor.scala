@@ -5,8 +5,8 @@ import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
-import mesosphere.marathon.core.task.tracker.TaskTracker.AppTasks
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskStatus
 import org.joda.time.DateTime
@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 class ExpungeOverdueLostTasksActor(
     clock: Clock,
     config: TaskJobsConfig,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     stateOpProcessor: TaskStateOpProcessor) extends Actor with ActorLogging {
 
   import ExpungeOverdueLostTasksActor._
@@ -37,8 +37,8 @@ class ExpungeOverdueLostTasksActor(
   }
 
   override def receive: Receive = {
-    case Tick => taskTracker.tasksByApp() pipeTo self
-    case TaskTracker.TasksByApp(appTasks) => filterLostGCTasks(appTasks).foreach(expungeLostGCTask)
+    case Tick => taskTracker.instancessBySpec() pipeTo self
+    case InstanceTracker.InstancesBySpec(appTasks) => filterLostGCTasks(appTasks).foreach(expungeLostGCTask)
   }
 
   def expungeLostGCTask(task: Task): Unit = {
@@ -48,14 +48,14 @@ class ExpungeOverdueLostTasksActor(
     stateOpProcessor.process(stateOp)
   }
 
-  def filterLostGCTasks(tasks: Map[PathId, AppTasks]): Iterable[Task] = {
+  def filterLostGCTasks(tasks: Map[PathId, SpecInstances]): Iterable[Task] = {
     def isTimedOut(taskStatus: Option[TaskStatus]): Boolean = {
       taskStatus.fold(false) { status =>
         val age = clock.now().toDateTime.minus(status.getTimestamp.toLong * 1000).getMillis.millis
         age > config.taskLostExpungeGC
       }
     }
-    tasks.values.flatMap(_.tasks.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))
+    tasks.values.flatMap(_.instances.filter(task => task.isUnreachable && isTimedOut(task.mesosStatus)))
   }
 }
 
@@ -64,7 +64,7 @@ object ExpungeOverdueLostTasksActor {
   case object Tick
 
   def props(clock: Clock, config: TaskJobsConfig,
-    taskTracker: TaskTracker, stateOpProcessor: TaskStateOpProcessor): Props = {
+    taskTracker: InstanceTracker, stateOpProcessor: TaskStateOpProcessor): Props = {
     Props(new ExpungeOverdueLostTasksActor(clock, config, taskTracker, stateOpProcessor))
   }
 }

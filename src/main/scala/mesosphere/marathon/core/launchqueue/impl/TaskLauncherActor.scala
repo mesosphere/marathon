@@ -15,7 +15,7 @@ import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNot
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.TaskStateChange
 import mesosphere.marathon.state.{ RunSpec, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
@@ -30,7 +30,7 @@ private[launchqueue] object TaskLauncherActor {
     clock: Clock,
     taskOpFactory: InstanceOpFactory,
     maybeOfferReviver: Option[OfferReviver],
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     rateLimiterActor: ActorRef)(
     runSpec: RunSpec,
     initialCount: Int): Props = {
@@ -79,7 +79,7 @@ private class TaskLauncherActor(
     clock: Clock,
     taskOpFactory: InstanceOpFactory,
     maybeOfferReviver: Option[OfferReviver],
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
 
     private[this] var runSpec: RunSpec,
@@ -104,7 +104,7 @@ private class TaskLauncherActor(
       "Started taskLaunchActor for {} version {} with initial count {}",
       runSpec.id, runSpec.version, tasksToLaunch)
 
-    instanceMap = taskTracker.tasksByAppSync.appTasksMap(runSpec.id).taskMap
+    instanceMap = taskTracker.instancesBySpecSync.instancesMap(runSpec.id).instancekMap
     rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
   }
 

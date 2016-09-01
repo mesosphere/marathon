@@ -25,7 +25,7 @@ import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskTerminationModule
-import mesosphere.marathon.core.task.tracker.TaskTrackerModule
+import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
@@ -80,7 +80,7 @@ class CoreModuleImpl @Inject() (
 
   override lazy val taskBusModule = new TaskBusModule()
   override lazy val taskTrackerModule =
-    new TaskTrackerModule(clock, metrics, marathonConf, leadershipModule,
+    new InstanceTrackerModule(clock, metrics, marathonConf, leadershipModule,
       storageModule.taskRepository, taskStatusUpdateSteps)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
   override lazy val storageModule = StorageModule(

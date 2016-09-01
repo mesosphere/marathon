@@ -5,10 +5,10 @@ import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.termination.impl.{ TaskKillServiceActor, TaskKillServiceDelegate }
-import mesosphere.marathon.core.task.tracker.TaskTrackerModule
+import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 
 class TaskTerminationModule(
-    taskTrackerModule: TaskTrackerModule,
+    taskTrackerModule: InstanceTrackerModule,
     leadershipModule: LeadershipModule,
     driverHolder: MarathonSchedulerDriverHolder,
     config: TaskKillConfig,

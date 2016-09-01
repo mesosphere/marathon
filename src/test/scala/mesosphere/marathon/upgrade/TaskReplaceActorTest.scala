@@ -5,7 +5,7 @@ import akka.testkit.TestActorRef
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.TaskKillServiceMock
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
@@ -37,7 +37,7 @@ class TaskReplaceActorTest
     val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
     val ref = f.replaceActor(app, promise)
@@ -65,7 +65,7 @@ class TaskReplaceActorTest
     val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
     val ref = f.replaceActor(app, promise)
@@ -89,7 +89,7 @@ class TaskReplaceActorTest
     val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
     val ref = f.replaceActor(app, promise)
@@ -124,7 +124,7 @@ class TaskReplaceActorTest
     val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
 
@@ -172,7 +172,7 @@ class TaskReplaceActorTest
     val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
 
@@ -224,7 +224,7 @@ class TaskReplaceActorTest
     val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
 
@@ -274,7 +274,7 @@ class TaskReplaceActorTest
     val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
 
@@ -325,7 +325,7 @@ class TaskReplaceActorTest
     val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskD = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC, taskD))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC, taskD))
 
     val promise = Promise[Unit]()
 
@@ -371,7 +371,7 @@ class TaskReplaceActorTest
     val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
 
@@ -393,7 +393,7 @@ class TaskReplaceActorTest
     val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
     val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
 
@@ -417,7 +417,7 @@ class TaskReplaceActorTest
     private[this] val driver = mock[SchedulerDriver]
     val killService = new TaskKillServiceMock(system)
     val queue = mock[LaunchQueue]
-    val tracker = mock[TaskTracker]
+    val tracker = mock[InstanceTracker]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     def replaceActor(app: AppDefinition, promise: Promise[Unit]): TestActorRef[TaskReplaceActor] = TestActorRef(

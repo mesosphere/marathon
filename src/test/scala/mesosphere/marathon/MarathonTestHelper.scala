@@ -17,7 +17,7 @@ import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, MarathonStore, PersistentStore }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.tracker.{ TaskTracker, TaskTrackerModule }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerModule }
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
@@ -303,7 +303,7 @@ object MarathonTestHelper {
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
     config: MarathonConf = defaultConfig(),
-    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): TaskTrackerModule = {
+    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTrackerModule = {
 
     val metrics = new Metrics(new MetricRegistry)
     val taskRepo = new TaskEntityRepository(
@@ -315,7 +315,7 @@ object MarathonTestHelper {
     )(metrics = metrics)
     val updateSteps = Seq.empty[TaskUpdateStep]
 
-    new TaskTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo, updateSteps) {
+    new InstanceTrackerModule(clock, metrics, defaultConfig(), leadershipModule, taskRepo, updateSteps) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val taskTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
@@ -325,7 +325,7 @@ object MarathonTestHelper {
     leadershipModule: LeadershipModule,
     store: PersistentStore = new InMemoryStore,
     config: MarathonConf = defaultConfig(),
-    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): TaskTracker = {
+    metrics: Metrics = new Metrics(new MetricRegistry))(implicit mat: Materializer): InstanceTracker = {
     createTaskTrackerModule(leadershipModule, store, config, metrics).taskTracker
   }
 

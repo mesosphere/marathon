@@ -6,7 +6,7 @@ import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.AppDefinition
@@ -24,13 +24,13 @@ class TaskReplaceActor(
     val driver: SchedulerDriver,
     val killService: TaskKillService,
     val launchQueue: LaunchQueue,
-    val taskTracker: TaskTracker,
+    val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val app: AppDefinition,
     promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
 
-  val tasksToKill = taskTracker.appTasksLaunchedSync(app.id)
+  val tasksToKill = instanceTracker.specInstancesLaunchedSync(app.id)
   var newTasksStarted: Int = 0
   var oldTaskIds = tasksToKill.map(_.id).to[SortedSet]
   val toKill = tasksToKill.to[mutable.Queue]
@@ -146,7 +146,7 @@ object TaskReplaceActor {
     driver: SchedulerDriver,
     killService: TaskKillService,
     launchQueue: LaunchQueue,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: AppDefinition,

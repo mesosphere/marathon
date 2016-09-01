@@ -6,8 +6,8 @@ import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.task.TaskStateOp
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{ Group, Timestamp }
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.util.state.FrameworkId
@@ -28,7 +28,7 @@ import scala.concurrent.Future
   *   a delay
   * * and creating unreserved/destroy operations for tasks in state "garbage" only
   */
-private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupRepository: GroupRepository)
+private[reconcile] class OfferMatcherReconciler(taskTracker: InstanceTracker, groupRepository: GroupRepository)
     extends OfferMatcher {
 
   private val log = LoggerFactory.getLogger(getClass)
@@ -56,7 +56,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
       // do not query taskTracker in the common case
       if (resourcesByInstanceId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
       else {
-        def createTaskOps(tasksByApp: TasksByApp, rootGroup: Group): MatchedTaskOps = {
+        def createTaskOps(tasksByApp: InstancesBySpec, rootGroup: Group): MatchedTaskOps = {
           def spurious(taskId: Instance.Id): Boolean =
             tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.runSpecId).isEmpty
 
@@ -76,7 +76,7 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
         }
 
         // query in parallel
-        val tasksByAppFuture = taskTracker.tasksByApp()
+        val tasksByAppFuture = taskTracker.instancessBySpec()
         val rootGroupFuture = groupRepository.root()
 
         for { tasksByApp <- tasksByAppFuture; rootGroup <- rootGroupFuture } yield createTaskOps(tasksByApp, rootGroup)

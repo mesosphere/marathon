@@ -8,7 +8,7 @@ import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.storage.repository.legacy.store.InMemoryStore
 import mesosphere.marathon.core.task.TaskStateOp
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, InstanceTracker }
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
@@ -224,7 +224,7 @@ class TaskStartActorTest
     Mockito.reset(f.launchQueue)
 
     // let existing task die
-    when(f.taskTracker.countLaunchedAppTasksSync(app.id)).thenReturn(0)
+    when(f.taskTracker.countLaunchedSpecInstancesSync(app.id)).thenReturn(0)
     when(f.launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 4, finalTaskCount = 4)))
     system.eventStream.publish(MesosStatusUpdateEvent(
       slaveId = "", taskId = taskId, taskStatus = "TASK_ERROR", message = "", appId = app.id, host = "",
@@ -244,7 +244,7 @@ class TaskStartActorTest
 
     // launch 4 of the tasks
     when(f.launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = app.instances, finalTaskCount = 4)))
-    when(f.taskTracker.countLaunchedAppTasksSync(app.id)).thenReturn(4)
+    when(f.taskTracker.countLaunchedSpecInstancesSync(app.id)).thenReturn(4)
     List(0, 1, 2, 3) foreach { i =>
       system.eventStream.publish(MesosStatusUpdateEvent("", Instance.Id(s"task-$i"), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString))
     }
@@ -266,7 +266,7 @@ class TaskStartActorTest
     val leadershipModule = AlwaysElectedLeadershipModule.forActorSystem(system)
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(
       leadershipModule, store = new InMemoryStore, metrics = metrics)
-    val taskTracker: TaskTracker = spy(taskTrackerModule.taskTracker)
+    val taskTracker: InstanceTracker = spy(taskTrackerModule.taskTracker)
     val taskCreationHandler: TaskCreationHandler = taskTrackerModule.taskCreationHandler
     val deploymentManager = TestProbe()
     val status: DeploymentStatus = mock[DeploymentStatus]

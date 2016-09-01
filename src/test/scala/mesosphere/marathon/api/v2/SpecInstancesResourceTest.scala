@@ -5,7 +5,7 @@ import mesosphere.marathon.api.{ JsonTestHelper, TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state.PathId._
@@ -21,7 +21,7 @@ import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito {
+class SpecInstancesResourceTest extends MarathonSpec with Matchers with GivenWhenThen with Mockito {
 
   test("deleteMany") {
     val appId = "/my/app"
@@ -70,7 +70,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.appTasks(appId) returns Future.successful(Set(task1, task2))
+    taskTracker.specInstances(appId) returns Future.successful(Set(task1, task2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -106,7 +106,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val toKill = Set(task1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.appTasks(appId) returns Future.successful(Set(task1, task2))
+    taskTracker.specInstances(appId) returns Future.successful(Set(task1, task2))
     taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -128,7 +128,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
     val task2 = MarathonTestHelper.mininimalTask("task2")
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(appId, Iterable(task1, task2)))
+    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(appId, Iterable(task1, task2)))
     healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
 
@@ -330,7 +330,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
   }
 
   var service: MarathonSchedulerService = _
-  var taskTracker: TaskTracker = _
+  var taskTracker: InstanceTracker = _
   var stateOpProcessor: TaskStateOpProcessor = _
   var taskKiller: TaskKiller = _
   var healthCheckManager: HealthCheckManager = _
@@ -343,7 +343,7 @@ class AppTasksResourceTest extends MarathonSpec with Matchers with GivenWhenThen
   before {
     auth = new TestAuthFixture
     service = mock[MarathonSchedulerService]
-    taskTracker = mock[TaskTracker]
+    taskTracker = mock[InstanceTracker]
     stateOpProcessor = mock[TaskStateOpProcessor]
     taskKiller = mock[TaskKiller]
     healthCheckManager = mock[HealthCheckManager]

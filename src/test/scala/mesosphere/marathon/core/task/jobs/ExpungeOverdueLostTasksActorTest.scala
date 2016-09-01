@@ -6,8 +6,8 @@ import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
-import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.GivenWhenThen
 import org.scalatest.concurrent.ScalaFutures
@@ -20,7 +20,7 @@ import scala.concurrent.duration.Duration
 
 class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
   implicit var actorSystem: ActorSystem = _
-  val taskTracker: TaskTracker = mock[TaskTracker]
+  val taskTracker: InstanceTracker = mock[InstanceTracker]
   val clock = ConstantClock()
   val config = MarathonTestHelper.defaultConfig(maxTasksPerOffer = 10)
   val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
@@ -50,7 +50,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     val running1 = MarathonTestHelper.minimalRunning("/running1".toPath, since = Timestamp(0))
     val running2 = MarathonTestHelper.minimalRunning("/running2".toPath, since = Timestamp(0))
 
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.forTasks(running1, running2))
+    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(running1, running2))
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -66,7 +66,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     val running = MarathonTestHelper.minimalRunning("/running".toPath, since = Timestamp(0))
     val unreachable = MarathonTestHelper.minimalUnreachableTask("/unreachable".toPath, since = Timestamp(0))
 
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.forTasks(running, unreachable))
+    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(running, unreachable))
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -83,7 +83,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     val unreachable1 = MarathonTestHelper.minimalUnreachableTask("/unreachable1".toPath, since = Timestamp(0))
     val unreachable2 = MarathonTestHelper.minimalUnreachableTask("/unreachable2".toPath, since = Timestamp.now())
 
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.forTasks(unreachable1, unreachable2))
+    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(unreachable1, unreachable2))
 
     When("a check is performed")
     val testProbe = TestProbe()

@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
@@ -16,7 +16,7 @@ private[health] class HealthCheckActor(
     app: AppDefinition,
     killService: TaskKillService,
     healthCheck: HealthCheck,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
@@ -62,7 +62,7 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.appTasksLaunchedSync(app.id).map(_.id).toSet
+    val activeTaskIds = taskTracker.specInstancesLaunchedSync(app.id).map(_.id).toSet
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
     instanceHealth = instanceHealth.filterKeys(activeTaskIds).iterator.toMap
@@ -85,7 +85,7 @@ private[health] class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.appTasksSync(app.id).foreach {
+    taskTracker.specInstancesSync(app.id).foreach {
       case task: Task =>
         task.launched.foreach { launched =>
           if (launched.runSpecVersion == app.version && task.isRunning) {
@@ -163,7 +163,7 @@ private[health] class HealthCheckActor(
         case Healthy(_, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _) =>
-          taskTracker.tasksByAppSync.task(taskId) match {
+          taskTracker.instancesBySpecSync.task(taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
                 // Don't update health
@@ -202,7 +202,7 @@ object HealthCheckActor {
     app: AppDefinition,
     killService: TaskKillService,
     healthCheck: HealthCheck,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     eventBus: EventStream): Props = {
 
     Props(new HealthCheckActor(

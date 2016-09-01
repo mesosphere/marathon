@@ -6,7 +6,7 @@ import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonConf, MarathonSpec, MarathonTestHelper }
@@ -34,7 +34,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val inferredTaskOp = f.taskOpFactory.buildTaskOp(request)
 
     val expectedTask = Task.LaunchedEphemeral(
-      id = inferredTaskOp.fold(Instance.Id("failure"))(_.taskId),
+      id = inferredTaskOp.fold(Instance.Id("failure"))(_.instanceId),
       agentInfo = Instance.AgentInfo(
         host = "some_host",
         agentId = Some(offer.getSlaveId.getValue),
@@ -177,7 +177,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
 
   class Fixture {
     import mesosphere.marathon.{ MarathonTestHelper => MTH }
-    val taskTracker = mock[TaskTracker]
+    val taskTracker = mock[InstanceTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"), principal = Some("principal"))
     val clock = ConstantClock()
     val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(config, clock)

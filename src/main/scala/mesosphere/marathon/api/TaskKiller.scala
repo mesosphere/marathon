@@ -6,7 +6,7 @@ import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.TaskStateOp
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ ExecutionContext, Future }
 
 class TaskKiller @Inject() (
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     stateOpProcessor: TaskStateOpProcessor,
     groupManager: GroupManager,
     service: MarathonSchedulerService,
@@ -36,7 +36,7 @@ class TaskKiller @Inject() (
         checkAuthorization(UpdateRunSpec, app)
 
         import scala.concurrent.ExecutionContext.Implicits.global
-        taskTracker.appTasks(appId).flatMap { allTasks =>
+        taskTracker.specInstances(appId).flatMap { allTasks =>
           val foundTasks = findToKill(allTasks)
           val expungeTasks = if (wipe) expunge(foundTasks) else Future.successful(())
 
@@ -69,7 +69,7 @@ class TaskKiller @Inject() (
     appId: PathId,
     findToKill: (Iterable[Instance] => Iterable[Instance]),
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
-    killAndScale(Map(appId -> findToKill(taskTracker.appTasksLaunchedSync(appId))), force)
+    killAndScale(Map(appId -> findToKill(taskTracker.specInstancesLaunchedSync(appId))), force)
   }
 
   def killAndScale(
@@ -92,7 +92,7 @@ class TaskKiller @Inject() (
       toKill = appTasks
     )
 
-    appTasks.keys.find(id => !taskTracker.hasAppTasksSync(id))
+    appTasks.keys.find(id => !taskTracker.hasSpecInstancesSync(id))
       .map(id => Future.failed(UnknownAppException(id)))
       .getOrElse(killTasks)
   }

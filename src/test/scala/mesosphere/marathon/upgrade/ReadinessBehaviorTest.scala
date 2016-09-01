@@ -5,7 +5,7 @@ import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
@@ -157,7 +157,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val step = DeploymentStep(Seq.empty)
     val plan = DeploymentPlan("deploy", Group.empty, Group.empty, Seq(step), Timestamp.now())
     val deploymentStatus = DeploymentStatus(plan, step)
-    val tracker = mock[TaskTracker]
+    val tracker = mock[InstanceTracker]
     val task = mock[Task]
     val launched = mock[Task.Launched]
     val agentInfo = mock[Instance.AgentInfo]
@@ -178,7 +178,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     task.effectiveIpAddress(any) returns Some("some.host")
     task.agentInfo returns agentInfo
     launched.hostPorts returns Seq(1, 2, 3)
-    tracker.task(any) returns Future.successful(Some(task))
+    tracker.instance(any) returns Future.successful(Some(task))
 
     def readinessActor(appDef: AppDefinition, readinessCheckResults: Seq[ReadinessCheckResult], taskReadyFn: Instance.Id => Unit) = {
       val executor = new ReadinessCheckExecutor {
@@ -195,7 +195,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
         override def deploymentManager: ActorRef = deploymentManagerProbe.ref
         override def status: DeploymentStatus = deploymentStatus
         override def readinessCheckExecutor: ReadinessCheckExecutor = executor
-        override def taskTracker: TaskTracker = tracker
+        override def instanceTracker: InstanceTracker = tracker
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }

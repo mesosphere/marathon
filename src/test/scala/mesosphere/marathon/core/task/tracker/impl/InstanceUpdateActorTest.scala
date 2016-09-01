@@ -17,7 +17,7 @@ import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 
-class TaskUpdateActorTest
+class InstanceUpdateActorTest
     extends MarathonActorSupport with FunSuiteLike with Mockito with GivenWhenThen with Matchers {
 
   test("process failures are escalated") {
@@ -26,14 +26,14 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val taskId = Instance.Id.forRunSpec(appId)
-    val op = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
+    val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that fails immediately")
     val processingFailure: RuntimeException = new scala.RuntimeException("processing failed")
     f.processor.process(eq(op))(any) returns Future.failed(processingFailure)
 
     When("the op is passed to the actor for processing")
-    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(op))
+    f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op))
 
     Then("process op was called")
     verify(f.processor).process(eq(op))(any)
@@ -52,13 +52,13 @@ class TaskUpdateActorTest
     Given("an op with an already reached deadline")
     val appId = PathId("/app")
     val taskId = Instance.Id.forRunSpec(appId)
-    val op = TaskOpProcessor.Operation(f.clock.now(), f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
+    val op = InstanceOpProcessor.Operation(f.clock.now(), f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that succeeds immediately")
     f.processor.process(eq(op))(any) returns Future.successful(())
 
     When("the op is passed to the actor for processing")
-    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(op))
+    f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op))
 
     Then("we the sender gets a timeout exception")
     val failure = f.opInitiator.expectMsgClass(classOf[Status.Failure])
@@ -72,7 +72,7 @@ class TaskUpdateActorTest
     f.processor.process(eq(anotherOp))(any) returns Future.successful(())
 
     When("we process another op, it is not effected")
-    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(anotherOp))
+    f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(anotherOp))
 
     Then("process op was called")
     verify(f.processor).process(eq(anotherOp))(any)
@@ -87,13 +87,13 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val taskId = Instance.Id.forRunSpec(appId)
-    val op = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
+    val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that processes it immediately")
     f.processor.process(eq(op))(any) returns Future.successful(())
 
     When("the op is passed to the actor for processing")
-    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(op))
+    f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op))
 
     Then("process op was called")
     verify(f.processor).process(eq(op))(any)
@@ -112,13 +112,13 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val taskId = Instance.Id.forRunSpec(appId)
-    val op = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
+    val op = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, taskId, TaskStateOp.ForceExpunge(taskId))
 
     And("a processor that does not return")
     f.processor.process(eq(op))(any) returns Promise[Unit]().future
 
     When("the op is passed to the actor for processing")
-    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(op))
+    f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op))
 
     Then("process op was called")
     verify(f.processor).process(eq(op))(any)
@@ -137,9 +137,9 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val task1Id = Instance.Id.forRunSpec(appId)
-    val op1 = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskStateOp.ForceExpunge(task1Id))
+    val op1 = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskStateOp.ForceExpunge(task1Id))
     val task2Id = Instance.Id.forRunSpec(appId)
-    val op2 = TaskOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task2Id, TaskStateOp.ForceExpunge(task2Id))
+    val op2 = InstanceOpProcessor.Operation(f.oneSecondInFuture, f.opInitiator.ref, task2Id, TaskStateOp.ForceExpunge(task2Id))
 
     And("a processor that does not return")
     val op1Promise: Promise[Unit] = Promise[Unit]()
@@ -148,8 +148,8 @@ class TaskUpdateActorTest
     f.processor.process(eq(op2))(any) returns op2Promise.future
 
     When("the ops are passed to the actor for processing")
-    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(op1))
-    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(op2))
+    f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op1))
+    f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op2))
 
     Then("process op was called for both ops")
     verify(f.processor).process(eq(op1))(any)
@@ -169,10 +169,10 @@ class TaskUpdateActorTest
     WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.getValue == 1)
 
     And("the second task doesn't have queue anymore")
-    f.updateActor.underlyingActor.operationsByTaskId should have size 1
+    f.updateActor.underlyingActor.operationsByInstanceId should have size 1
 
     And("but the first task still does have a queue")
-    f.updateActor.underlyingActor.operationsByTaskId(task1Id) should have size 1
+    f.updateActor.underlyingActor.operationsByInstanceId(task1Id) should have size 1
   }
 
   test("ops for the same task are processed sequentially") {
@@ -181,10 +181,10 @@ class TaskUpdateActorTest
     Given("an op")
     val appId = PathId("/app")
     val task1Id = Instance.Id.forRunSpec(appId)
-    val op1 = TaskOpProcessor.Operation(
+    val op1 = InstanceOpProcessor.Operation(
       f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskStateOp.ForceExpunge(task1Id)
     )
-    val op2 = TaskOpProcessor.Operation(
+    val op2 = InstanceOpProcessor.Operation(
       f.oneSecondInFuture, f.opInitiator.ref, task1Id, TaskStateOp.ForceExpunge(task1Id)
     )
 
@@ -193,8 +193,8 @@ class TaskUpdateActorTest
     f.processor.process(eq(op1))(any) returns op1Promise.future
 
     When("the ops are passed to the actor for processing")
-    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(op1))
-    f.updateActor.receive(TaskUpdateActor.ProcessTaskOp(op2))
+    f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op1))
+    f.updateActor.receive(InstanceUpdateActor.ProcessInstanceOp(op2))
 
     Then("process op was called for op1")
     verify(f.processor).process(eq(op1))(any)
@@ -228,7 +228,7 @@ class TaskUpdateActorTest
     WaitTestSupport.waitUntil("actor reacts to op2 finishing", 1.second)(f.actorMetrics.numberOfActiveOps.getValue == 0)
 
     And("our queue will be empty")
-    f.updateActor.underlyingActor.operationsByTaskId should be(empty)
+    f.updateActor.underlyingActor.operationsByInstanceId should be(empty)
 
     And("there are no more interactions")
     f.verifyNoMoreInteractions()
@@ -238,9 +238,9 @@ class TaskUpdateActorTest
     lazy val clock = ConstantClock()
     lazy val opInitiator = TestProbe()
     lazy val metrics = new Metrics(new MetricRegistry)
-    lazy val actorMetrics = new TaskUpdateActor.ActorMetrics(metrics)
-    lazy val processor = mock[TaskOpProcessor]
-    lazy val updateActor = TestActorRef(new TaskUpdateActor(clock, actorMetrics, processor))
+    lazy val actorMetrics = new InstanceUpdateActor.ActorMetrics(metrics)
+    lazy val processor = mock[InstanceOpProcessor]
+    lazy val updateActor = TestActorRef(new InstanceUpdateActor(clock, actorMetrics, processor))
 
     def oneSecondInFuture: Timestamp = clock.now() + 1.second
 

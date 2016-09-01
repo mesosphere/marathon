@@ -5,8 +5,8 @@ import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
-import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
+import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, InstanceTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.{ MarathonSchedulerDriverHolder, MarathonSpec, MarathonTestHelper }
@@ -21,7 +21,7 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 
 class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
   implicit var actorSystem: ActorSystem = _
-  var taskTracker: TaskTracker = _
+  var taskTracker: InstanceTracker = _
   var taskReservationTimeoutHandler: TaskReservationTimeoutHandler = _
   var driver: SchedulerDriver = _
   var killService: TaskKillService = _
@@ -30,7 +30,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
   before {
     actorSystem = ActorSystem()
-    taskTracker = mock[TaskTracker]
+    taskTracker = mock[InstanceTracker]
     taskReservationTimeoutHandler = mock[TaskReservationTimeoutHandler]
     driver = mock[SchedulerDriver]
     killService = mock[TaskKillService]
@@ -61,7 +61,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
   test("no overdue tasks") {
     Given("no tasks")
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.empty)
+    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.empty)
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -69,7 +69,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     testProbe.expectMsg(3.seconds, ())
 
     Then("eventually list was called")
-    verify(taskTracker).tasksByApp()(any[ExecutionContext])
+    verify(taskTracker).instancessBySpec()(any[ExecutionContext])
     And("no kill calls are issued")
     noMoreInteractions(driver)
   }
@@ -77,14 +77,14 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
   test("some overdue tasks") {
     Given("one overdue task")
     val mockTask = MarathonTestHelper.stagedTask("someId")
-    val app = TaskTracker.AppTasks.forTasks(PathId("/some"), Iterable(mockTask))
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.of(app))
+    val app = InstanceTracker.SpecInstances.forInstances(PathId("/some"), Iterable(mockTask))
+    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
 
     When("the check is initiated")
     checkActor ! OverdueTasksActor.Check(maybeAck = None)
 
     Then("the task kill gets initiated")
-    verify(taskTracker, Mockito.timeout(1000)).tasksByApp()(any[ExecutionContext])
+    verify(taskTracker, Mockito.timeout(1000)).instancessBySpec()(any[ExecutionContext])
     verify(killService, Mockito.timeout(1000)).killTask(mockTask, TaskKillReason.Overdue)
   }
 
@@ -126,7 +126,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
 
     Given("Several somehow overdue tasks plus some not overdue tasks")
     val appId = PathId("/ignored")
-    val app = TaskTracker.AppTasks.forTasks(
+    val app = InstanceTracker.SpecInstances.forInstances(
       appId,
       Iterable(
         unconfirmedOverdueTask,
@@ -137,7 +137,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
         runningTask
       )
     )
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.of(app))
+    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
 
     When("We check which tasks should be killed because they're not yet staged or unconfirmed")
     val testProbe = TestProbe()
@@ -145,7 +145,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     testProbe.expectMsg(3.seconds, ())
 
     Then("The task tracker gets queried")
-    verify(taskTracker).tasksByApp()(any[ExecutionContext])
+    verify(taskTracker).instancessBySpec()(any[ExecutionContext])
 
     And("All somehow overdue tasks are killed")
     verify(killService).killTask(unconfirmedOverdueTask, TaskKillReason.Overdue)
@@ -161,8 +161,8 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     val appId = PathId("/test")
     val overdueReserved = reservedWithTimeout(appId, deadline = clock.now() - 1.second)
     val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
-    val app = TaskTracker.AppTasks.forTasks(appId, Iterable(recentReserved, overdueReserved))
-    taskTracker.tasksByApp()(any[ExecutionContext]) returns Future.successful(TasksByApp.of(app))
+    val app = InstanceTracker.SpecInstances.forInstances(appId, Iterable(recentReserved, overdueReserved))
+    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.of(app))
     taskReservationTimeoutHandler.timeout(TaskStateOp.ReservationTimeout(overdueReserved.id)).asInstanceOf[Future[Unit]] returns
       Future.successful(())
 
@@ -172,7 +172,7 @@ class OverdueTasksActorTest extends MarathonSpec with GivenWhenThen with maratho
     testProbe.expectMsg(3.seconds, ())
 
     Then("the reservation gets processed")
-    verify(taskTracker).tasksByApp()(any[ExecutionContext])
+    verify(taskTracker).instancessBySpec()(any[ExecutionContext])
     verify(taskReservationTimeoutHandler).timeout(TaskStateOp.ReservationTimeout(overdueReserved.id))
 
   }

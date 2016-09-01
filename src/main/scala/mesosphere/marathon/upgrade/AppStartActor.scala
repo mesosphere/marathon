@@ -4,7 +4,7 @@ import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
@@ -19,7 +19,7 @@ class AppStartActor(
     val driver: SchedulerDriver,
     val scheduler: SchedulerActions,
     val launchQueue: LaunchQueue,
-    val taskTracker: TaskTracker,
+    val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val app: AppDefinition,
@@ -59,7 +59,7 @@ object AppStartActor {
     driver: SchedulerDriver,
     scheduler: SchedulerActions,
     launchQueue: LaunchQueue,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: AppDefinition,

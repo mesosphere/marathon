@@ -4,7 +4,7 @@ import akka.actor._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, InstanceTracker }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.MarathonConf
 import org.apache.mesos.Protos.TaskState
@@ -18,7 +18,7 @@ import scala.util.control.NonFatal
 private[jobs] object OverdueTasksActor {
   def props(
     config: MarathonConf,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     reservationTimeoutHandler: TaskReservationTimeoutHandler,
     killService: TaskKillService,
     clock: Clock): Props = {
@@ -30,7 +30,7 @@ private[jobs] object OverdueTasksActor {
     */
   private class Support(
       config: MarathonConf,
-      taskTracker: TaskTracker,
+      taskTracker: InstanceTracker,
       reservationTimeoutHandler: TaskReservationTimeoutHandler,
       killService: TaskKillService,
       clock: Clock) {
@@ -41,7 +41,7 @@ private[jobs] object OverdueTasksActor {
     def check(): Future[Unit] = {
       val now = clock.now()
       log.debug("checking for overdue tasks")
-      taskTracker.tasksByApp().flatMap { tasksByApp =>
+      taskTracker.instancessBySpec().flatMap { tasksByApp =>
         val tasks = tasksByApp.allTasks
 
         killOverdueTasks(now, tasks)

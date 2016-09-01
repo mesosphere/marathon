@@ -15,7 +15,7 @@ import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{ DeploymentRepository, GroupRepository, ReadOnlyAppRepository }
 import mesosphere.marathon.stream.Sink
@@ -43,7 +43,7 @@ class MarathonSchedulerActor private (
   appRepository: ReadOnlyAppRepository,
   deploymentRepository: DeploymentRepository,
   healthCheckManager: HealthCheckManager,
-  taskTracker: TaskTracker,
+  taskTracker: InstanceTracker,
   killService: TaskKillService,
   launchQueue: LaunchQueue,
   marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
@@ -342,7 +342,7 @@ object MarathonSchedulerActor {
     appRepository: ReadOnlyAppRepository,
     deploymentRepository: DeploymentRepository,
     healthCheckManager: HealthCheckManager,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     killService: TaskKillService,
     launchQueue: LaunchQueue,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
@@ -429,7 +429,7 @@ class SchedulerActions(
     appRepository: ReadOnlyAppRepository,
     groupRepository: GroupRepository,
     healthCheckManager: HealthCheckManager,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     eventBus: EventStream,
     val schedulerActor: ActorRef,
@@ -449,7 +449,7 @@ class SchedulerActions(
     healthCheckManager.removeAllFor(app.id)
 
     log.info(s"Stopping app ${app.id}")
-    taskTracker.appTasks(app.id).map { tasks =>
+    taskTracker.specInstances(app.id).map { tasks =>
       tasks.foreach {
         case task: Task =>
           if (task.launchedMesosId.isDefined) {
@@ -484,17 +484,17 @@ class SchedulerActions(
     */
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
     appRepository.ids().runWith(Sink.set).flatMap { appIds =>
-      taskTracker.tasksByApp().map { tasksByApp =>
+      taskTracker.instancessBySpec().map { tasksByApp =>
         val knownTaskStatuses = appIds.flatMap { appId =>
-          tasksByApp.appTasks(appId).flatMap(_.mesosStatus)
+          tasksByApp.specInstances(appId).flatMap(_.mesosStatus)
         }
 
-        (tasksByApp.allAppIdsWithTasks -- appIds).foreach { unknownAppId =>
+        (tasksByApp.allSpecIdsWithInstances -- appIds).foreach { unknownAppId =>
           log.warn(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          tasksByApp.appTasks(unknownAppId).foreach { orphanTask =>
+          tasksByApp.specInstances(unknownAppId).foreach { orphanTask =>
             log.info(s"Killing ${orphanTask.id}")
             killService.killTask(orphanTask, TaskKillReason.Orphaned)
           }
@@ -540,7 +540,7 @@ class SchedulerActions(
 
     def inQueueOrRunning(t: Instance) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
 
-    val launchedCount = taskTracker.countAppTasksSync(app.id, inQueueOrRunning)
+    val launchedCount = taskTracker.countSpecInstancesSync(app.id, inQueueOrRunning)
 
     val targetCount = app.instances
 
@@ -563,7 +563,7 @@ class SchedulerActions(
       log.info(s"Scaling ${app.id} from $launchedCount down to $targetCount instances")
       launchQueue.purge(app.id)
 
-      val toKill = taskTracker.appTasksSync(app.id).toSeq
+      val toKill = taskTracker.specInstancesSync(app.id).toSeq
         .filter(t => runningOrStaged.contains(t.state.status))
         .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)

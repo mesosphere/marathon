@@ -12,7 +12,7 @@ import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetApp
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import mesosphere.util.RWLock
@@ -28,7 +28,7 @@ class MarathonHealthCheckManager(
     actorRefFactory: ActorRefFactory,
     killService: TaskKillService,
     eventBus: EventStream,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     appRepository: ReadOnlyAppRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
 
@@ -119,7 +119,7 @@ class MarathonHealthCheckManager(
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[Instance] = taskTracker.appTasksSync(app.id)
+        val tasks: Iterable[Instance] = taskTracker.specInstancesSync(app.id)
         val activeAppVersions: Set[Timestamp] =
           // TODO ju asInstance
           tasks.iterator.flatMap(_.asInstanceOf[Task].launched.map(_.runSpecVersion)).toSet + app.version
@@ -194,7 +194,7 @@ class MarathonHealthCheckManager(
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
-      maybeTaskState <- taskTracker.task(taskId)
+      maybeTaskState <- taskTracker.instance(taskId)
       // TODO ju asInstance
     } yield maybeTaskState.flatMap(_.asInstanceOf[Task].launched).map(_.runSpecVersion)
 
@@ -220,7 +220,7 @@ class MarathonHealthCheckManager(
       Future.sequence(futureHealths) flatMap { healths =>
         val groupedHealth: Map[Instance.Id, Vector[Health]] = healths.flatMap(_.health).groupBy(_.taskId)
 
-        taskTracker.appTasks(appId).map { appTasks =>
+        taskTracker.specInstances(appId).map { appTasks =>
           appTasks.iterator.map { task =>
             groupedHealth.get(task.id) match {
               case Some(xs) => task.id -> xs

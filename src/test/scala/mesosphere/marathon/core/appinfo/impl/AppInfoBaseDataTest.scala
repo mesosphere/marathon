@@ -6,7 +6,7 @@ import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 import mesosphere.marathon.test.Mockito
@@ -25,7 +25,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
   class Fixture {
     lazy val clock = ConstantClock()
-    lazy val taskTracker = mock[TaskTracker]
+    lazy val taskTracker = mock[InstanceTracker]
     lazy val healthCheckManager = mock[HealthCheckManager]
     lazy val marathonSchedulerService = mock[MarathonSchedulerService]
     lazy val taskFailureRepository = mock[TaskFailureRepository]
@@ -70,8 +70,8 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running3 = MarathonTestHelper.runningTask("task3")
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Iterable(running1, running2, running3))))
+    f.taskTracker.instancessBySpec()(global) returns
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(running1, running2, running3))))
 
     val alive = Health(running2.id, lastSuccess = Some(Timestamp(1)))
     val unhealthy = Health(running3.id, lastFailure = Some(Timestamp(1)))
@@ -101,7 +101,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).tasksByApp()(global)
+    verify(f.taskTracker, times(1)).instancessBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -118,8 +118,8 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running2 = MarathonTestHelper.runningTask("task3")
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Iterable(staged, running, running2))))
+    f.taskTracker.instancessBySpec()(global) returns
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(staged, running, running2))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
@@ -138,7 +138,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).tasksByApp()(global)
+    verify(f.taskTracker, times(1)).instancessBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -268,8 +268,8 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val tasks: Set[Task] = Set(staged, running, running2)
-    f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, tasks)))
+    f.taskTracker.instancessBySpec()(global) returns
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, tasks)))
 
     val statuses: Map[Instance.Id, Seq[Health]] = Map(
       staged.id -> Seq(),
@@ -298,7 +298,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     }
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).tasksByApp()(global)
+    verify(f.taskTracker, times(1)).instancessBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)

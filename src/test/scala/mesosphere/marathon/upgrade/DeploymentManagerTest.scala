@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId._
@@ -124,7 +124,7 @@ class DeploymentManagerTest
       verify()
     }
     val metrics: Metrics = new Metrics(new MetricRegistry)
-    val taskTracker: TaskTracker = MarathonTestHelper.createTaskTracker (
+    val taskTracker: InstanceTracker = MarathonTestHelper.createTaskTracker (
       AlwaysElectedLeadershipModule.forActorSystem(system), new InMemoryStore, config, metrics
     )
     val taskKillService: TaskKillService = mock[TaskKillService]

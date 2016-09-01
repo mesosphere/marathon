@@ -10,35 +10,35 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.repository.TaskRepository
 
 /**
-  * Provides the interfaces to query the current task state ([[TaskTracker]]) and to
+  * Provides the interfaces to query the current task state ([[InstanceTracker]]) and to
   * update the task state ([[TaskStateOpProcessor]]).
   */
-class TaskTrackerModule(
+class InstanceTrackerModule(
     clock: Clock,
     metrics: Metrics,
-    config: TaskTrackerConfig,
+    config: InstanceTrackerConfig,
     leadershipModule: LeadershipModule,
     taskRepository: TaskRepository,
     updateSteps: Seq[TaskUpdateStep])(implicit mat: Materializer) {
-  lazy val taskTracker: TaskTracker = new TaskTrackerDelegate(Some(metrics), config, taskTrackerActorRef)
-  lazy val taskTrackerUpdateStepProcessor: TaskTrackerUpdateStepProcessor =
-    new TaskTrackerUpdateStepProcessorImpl(updateSteps, metrics)
+  lazy val taskTracker: InstanceTracker = new InstanceTrackerDelegate(Some(metrics), config, taskTrackerActorRef)
+  lazy val taskTrackerUpdateStepProcessor: InstanceTrackerUpdateStepProcessor =
+    new InstanceTrackerUpdateStepProcessorImpl(updateSteps, metrics)
 
   def taskCreationHandler: TaskCreationHandler = taskStateOpProcessor
   def stateOpProcessor: TaskStateOpProcessor = taskStateOpProcessor
   def taskReservationTimeoutHandler: TaskReservationTimeoutHandler = taskStateOpProcessor
 
-  private[this] def stateOpResolver(taskTrackerRef: ActorRef): TaskOpProcessorImpl.TaskStateOpResolver =
-    new TaskOpProcessorImpl.TaskStateOpResolver(new TaskTrackerDelegate(None, config, taskTrackerRef))
-  private[this] def taskOpProcessor(taskTrackerRef: ActorRef): TaskOpProcessor =
-    new TaskOpProcessorImpl(taskTrackerRef, taskRepository, stateOpResolver(taskTrackerRef), config)
-  private[this] lazy val taskUpdaterActorMetrics = new TaskUpdateActor.ActorMetrics(metrics)
+  private[this] def stateOpResolver(taskTrackerRef: ActorRef): InstanceOpProcessorImpl.TaskStateOpResolver =
+    new InstanceOpProcessorImpl.TaskStateOpResolver(new InstanceTrackerDelegate(None, config, taskTrackerRef))
+  private[this] def taskOpProcessor(taskTrackerRef: ActorRef): InstanceOpProcessor =
+    new InstanceOpProcessorImpl(taskTrackerRef, taskRepository, stateOpResolver(taskTrackerRef), config)
+  private[this] lazy val taskUpdaterActorMetrics = new InstanceUpdateActor.ActorMetrics(metrics)
   private[this] def taskUpdaterActorProps(taskTrackerRef: ActorRef) =
-    TaskUpdateActor.props(clock, taskUpdaterActorMetrics, taskOpProcessor(taskTrackerRef))
-  private[this] lazy val taskLoader = new TaskLoaderImpl(taskRepository)
-  private[this] lazy val taskTrackerMetrics = new TaskTrackerActor.ActorMetrics(metrics)
+    InstanceUpdateActor.props(clock, taskUpdaterActorMetrics, taskOpProcessor(taskTrackerRef))
+  private[this] lazy val taskLoader = new InstancesLoaderImpl(taskRepository)
+  private[this] lazy val taskTrackerMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
   private[this] lazy val taskTrackerActorProps =
-    TaskTrackerActor.props(taskTrackerMetrics, taskLoader, taskTrackerUpdateStepProcessor, taskUpdaterActorProps)
+    InstanceTrackerActor.props(taskTrackerMetrics, taskLoader, taskTrackerUpdateStepProcessor, taskUpdaterActorProps)
   protected lazy val taskTrackerActorName = "taskTracker"
   private[this] lazy val taskTrackerActorRef = leadershipModule.startWhenLeader(
     taskTrackerActorProps, taskTrackerActorName

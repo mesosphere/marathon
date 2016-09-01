@@ -10,7 +10,7 @@ import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth._
@@ -25,7 +25,7 @@ import scala.concurrent.Future
 @Produces(Array(MarathonMediaType.PREFERRED_APPLICATION_JSON))
 class AppTasksResource @Inject() (
     service: MarathonSchedulerService,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     taskKiller: TaskKiller,
     healthCheckManager: HealthCheckManager,
     val config: MarathonConf,
@@ -41,13 +41,13 @@ class AppTasksResource @Inject() (
   def indexJson(
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
-    val taskMap = taskTracker.tasksByAppSync
+    val taskMap = taskTracker.instancesBySpecSync
 
     def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
-      runningApps <- appIds.filter(taskMap.hasAppTasks)
+      runningApps <- appIds.filter(taskMap.hasSpecInstances)
       id <- appIds
       health = result(healthCheckManager.statuses(id))
-      task <- taskMap.appTasks(id)
+      task <- taskMap.specInstances(id)
     } yield EnrichedTask(id, task, health.getOrElse(task.id, Nil))
 
     id match {

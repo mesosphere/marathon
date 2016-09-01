@@ -38,7 +38,7 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
     Then("The result is as expected")
     launch.stateOp shouldEqual TaskStateOp.LaunchEphemeral(task)
     launch.taskInfo shouldEqual taskInfo
-    launch.oldTask shouldBe empty
+    launch.oldInstance shouldBe empty
     launch.offerOperations should have size 1
     launch.offerOperations.head.getType shouldEqual Mesos.Offer.Operation.Type.LAUNCH
   }

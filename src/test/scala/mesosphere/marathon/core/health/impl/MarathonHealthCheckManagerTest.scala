@@ -14,7 +14,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
@@ -34,7 +34,7 @@ class MarathonHealthCheckManagerTest
     extends MarathonSpec with ScalaFutures with Logging with MarathonShutdownHookSupport {
 
   var hcManager: MarathonHealthCheckManager = _
-  var taskTracker: TaskTracker = _
+  var taskTracker: InstanceTracker = _
   var taskCreationHandler: TaskCreationHandler = _
   var stateOpProcessor: TaskStateOpProcessor = _
   var appRepository: AppRepository = _

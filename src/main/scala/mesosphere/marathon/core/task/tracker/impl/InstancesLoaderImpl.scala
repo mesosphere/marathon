@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.stream.Materializer
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.TaskRepository
 import mesosphere.marathon.stream.Sink
 import org.slf4j.LoggerFactory
@@ -9,14 +9,15 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.Future
 
 /**
-  * Loads all task data into an [[TaskTracker.TasksByApp]] from a [[TaskRepository]].
+  * Loads all task data into an [[InstanceTracker.InstancesBySpec]] from a [[TaskRepository]].
   */
-private[tracker] class TaskLoaderImpl(repo: TaskRepository)(implicit val mat: Materializer) extends TaskLoader {
+private[tracker] class InstancesLoaderImpl(repo: TaskRepository)(implicit val mat: Materializer)
+    extends InstancesLoader {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val log = LoggerFactory.getLogger(getClass.getName)
 
-  override def loadTasks(): Future[TaskTracker.TasksByApp] = {
+  override def loadTasks(): Future[InstanceTracker.InstancesBySpec] = {
     for {
       names <- repo.ids().runWith(Sink.seq)
       _ = log.info(s"About to load ${names.size} tasks")
@@ -25,9 +26,9 @@ private[tracker] class TaskLoaderImpl(repo: TaskRepository)(implicit val mat: Ma
       log.info(s"Loaded ${tasks.size} tasks")
       val tasksByApp = tasks.groupBy(_.id.runSpecId)
       val map = tasksByApp.map {
-        case (appId, appTasks) => appId -> TaskTracker.AppTasks.forTasks(appId, appTasks)
+        case (appId, appTasks) => appId -> InstanceTracker.SpecInstances.forInstances(appId, appTasks)
       }
-      TaskTracker.TasksByApp.of(map)
+      InstanceTracker.InstancesBySpec.of(map)
     }
   }
 }

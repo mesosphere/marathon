@@ -7,7 +7,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.TaskKillConfig
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.core.task.TaskStateOp
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 import mesosphere.marathon.core.instance.Instance
 
@@ -32,7 +32,7 @@ import scala.concurrent.Promise
   * See [[TaskKillConfig]] for configuration options.
   */
 private[impl] class TaskKillServiceActor(
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
     config: TaskKillConfig,
@@ -170,7 +170,7 @@ private[termination] object TaskKillServiceActor {
   case class TaskToKill(taskId: Instance.Id, maybeTask: Option[Instance], issued: Timestamp, attempts: Int)
 
   def props(
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     driverHolder: MarathonSchedulerDriverHolder,
     stateOpProcessor: TaskStateOpProcessor,
     config: TaskKillConfig,

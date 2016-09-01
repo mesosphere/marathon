@@ -6,7 +6,7 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.{ TaskKiller, TestAuthFixture }
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.auth.Identity
@@ -32,8 +32,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     config.zkTimeoutDuration returns 5.seconds
 
-    val tasksByApp = TaskTracker.TasksByApp.forTasks(task)
-    taskTracker.tasksByAppSync returns tasksByApp
+    val tasksByApp = InstanceTracker.InstancesBySpec.forTasks(task)
+    taskTracker.instancesBySpecSync returns tasksByApp
 
     val rootGroup = Group("/".toRootPath, apps = Map(app.id -> app))
     groupManager.rootGroup() returns Future.successful(rootGroup)
@@ -60,7 +60,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val task2 = MarathonTestHelper.runningTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.forTasks(task1, task2)
+    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forTasks(task1, task2)
     taskKiller.kill(any, any, any)(any) returns Future.successful(Iterable.empty[Task])
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
@@ -96,7 +96,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val task2 = MarathonTestHelper.stagedTask(taskId2)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.forTasks(task1, task2)
+    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forTasks(task1, task2)
     taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
     groupManager.app(app2) returns Future.successful(Some(AppDefinition(app2)))
@@ -145,8 +145,8 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
     val task1 = MarathonTestHelper.runningTask(taskId1)
 
     config.zkTimeoutDuration returns 5.seconds
-    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.forTasks(task1)
-    taskTracker.appTasks(app1) returns Future.successful(Seq(task1))
+    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forTasks(task1)
+    taskTracker.specInstances(app1) returns Future.successful(Seq(task1))
     groupManager.app(app1) returns Future.successful(Some(AppDefinition(app1)))
 
     When("we send the request")
@@ -241,7 +241,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
 
     Given("the app exists")
     groupManager.app(appId) returns Future.successful(Some(AppDefinition(appId)))
-    taskTracker.tasksByAppSync returns TaskTracker.TasksByApp.empty
+    taskTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.empty
 
     When(s"kill task is called")
     val killTasks = taskResource.killTasks(scale = false, force = false, wipe = false, body, req)
@@ -269,7 +269,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
   }
 
   var service: MarathonSchedulerService = _
-  var taskTracker: TaskTracker = _
+  var taskTracker: InstanceTracker = _
   var stateOpProcessor: TaskStateOpProcessor = _
   var taskKiller: TaskKiller = _
   var config: MarathonConf = _
@@ -282,7 +282,7 @@ class TasksResourceTest extends MarathonSpec with GivenWhenThen with Matchers wi
   before {
     auth = new TestAuthFixture
     service = mock[MarathonSchedulerService]
-    taskTracker = mock[TaskTracker]
+    taskTracker = mock[InstanceTracker]
     stateOpProcessor = mock[TaskStateOpProcessor]
     taskKiller = mock[TaskKiller]
     config = mock[MarathonConf]

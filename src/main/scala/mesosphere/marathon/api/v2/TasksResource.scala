@@ -12,7 +12,7 @@ import mesosphere.marathon.api.{ EndpointsHelper, MarathonMediaType, TaskKiller,
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec }
@@ -28,7 +28,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 @Path("v2/tasks")
 class TasksResource @Inject() (
     service: MarathonSchedulerService,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     taskKiller: TaskKiller,
     val config: MarathonConf,
     groupManager: GroupManager,
@@ -49,13 +49,13 @@ class TasksResource @Inject() (
     Option(status).map(statuses.add)
     val statusSet = statuses.asScala.flatMap(toTaskState).toSet
 
-    val taskList = taskTracker.tasksByAppSync
+    val taskList = taskTracker.instancesBySpecSync
 
-    val tasks = taskList.appTasksMap.values.view.flatMap { appTasks =>
-      appTasks.tasks.view.map(t => appTasks.appId -> t)
+    val tasks = taskList.instancesMap.values.view.flatMap { appTasks =>
+      appTasks.instances.view.map(t => appTasks.specId -> t)
     }
 
-    val appIds = taskList.allAppIdsWithTasks
+    val appIds = taskList.allSpecIdsWithInstances
 
     val appIdsToApps = appIds.map(appId => appId -> result(groupManager.app(appId))).toMap
 
@@ -136,7 +136,7 @@ class TasksResource @Inject() (
     }
 
     val tasksByAppId = tasksToAppId
-      .flatMap { case (taskId, appId) => taskTracker.tasksByAppSync.task(Instance.Id(taskId)) }
+      .flatMap { case (taskId, appId) => taskTracker.instancesBySpecSync.task(Instance.Id(taskId)) }
       .groupBy { task => task.id.runSpecId }
       .map{ case (appId, tasks) => appId -> tasks }
 

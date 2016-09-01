@@ -4,8 +4,8 @@ import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.task.Task.LocalVolumeId
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -40,7 +40,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     And("no groups")
     f.groupRepository.root() returns Future.successful(Group.empty)
     And("no tasks")
-    f.taskTracker.tasksByApp()(any) returns Future.successful(TasksByApp.empty)
+    f.taskTracker.instancessBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
     When("reconciling")
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
@@ -50,7 +50,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
       Iterable(
         InstanceOp.UnreserveAndDestroyVolumes(
           TaskStateOp.ForceExpunge(taskId),
-          oldTask = None,
+          oldInstance = None,
           resources = offer.getResourcesList.asScala.to[Seq]
         )
       )
@@ -72,7 +72,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val app = AppDefinition(appId)
     f.groupRepository.root() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
     And("no tasks")
-    f.taskTracker.tasksByApp()(any) returns Future.successful(TasksByApp.empty)
+    f.taskTracker.instancessBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
     When("reconciling")
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
@@ -81,7 +81,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val expectedOps = Iterable(
       InstanceOp.UnreserveAndDestroyVolumes(
         TaskStateOp.ForceExpunge(taskId),
-        oldTask = None,
+        oldInstance = None,
         resources = offer.getResourcesList.asScala.to[Seq]
       )
     )
@@ -103,7 +103,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     f.groupRepository.root() returns Future.successful(Group.empty)
     And("a matching bogus task")
     val bogusTask = MarathonTestHelper.mininimalTask(taskId.idString)
-    f.taskTracker.tasksByApp()(any) returns Future.successful(TasksByApp.forTasks(bogusTask))
+    f.taskTracker.instancessBySpec()(any) returns Future.successful(InstancesBySpec.forTasks(bogusTask))
 
     When("reconciling")
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
@@ -112,7 +112,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val expectedOps = Iterable(
       InstanceOp.UnreserveAndDestroyVolumes(
         TaskStateOp.ForceExpunge(taskId),
-        oldTask = Some(bogusTask),
+        oldInstance = Some(bogusTask),
         resources = offer.getResourcesList.asScala.to[Seq]
       )
     )
@@ -134,8 +134,8 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val app = AppDefinition(appId)
     f.groupRepository.root() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
     And("a matching bogus task")
-    f.taskTracker.tasksByApp()(any) returns Future.successful(
-      TasksByApp.forTasks(MarathonTestHelper.mininimalTask(taskId.idString))
+    f.taskTracker.instancessBySpec()(any) returns Future.successful(
+      InstancesBySpec.forTasks(MarathonTestHelper.mininimalTask(taskId.idString))
     )
 
     When("reconciling")
@@ -146,7 +146,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
   }
 
   class Fixture {
-    lazy val taskTracker = mock[TaskTracker]
+    lazy val taskTracker = mock[InstanceTracker]
     lazy val groupRepository = mock[GroupRepository]
     lazy val reconciler = new OfferMatcherReconciler(taskTracker, groupRepository)
   }

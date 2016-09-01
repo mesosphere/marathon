@@ -13,7 +13,7 @@ import mesosphere.marathon.core.launchqueue.impl.{
 }
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 
 /**
@@ -25,7 +25,7 @@ class LaunchQueueModule(
     clock: Clock,
     subOfferMatcherManager: OfferMatcherManager,
     maybeOfferReviver: Option[OfferReviver],
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     taskOpFactory: InstanceOpFactory) {
 
   private[this] val launchQueueActorRef: ActorRef = {

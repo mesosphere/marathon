@@ -4,7 +4,7 @@ import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
@@ -118,7 +118,7 @@ class AppStartActorTest
     val driver: SchedulerDriver = mock[SchedulerDriver]
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val launchQueue: LaunchQueue = mock[LaunchQueue]
-    val taskTracker: TaskTracker = MarathonTestHelper.createTaskTracker(AlwaysElectedLeadershipModule.forActorSystem(system))
+    val taskTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(AlwaysElectedLeadershipModule.forActorSystem(system))
     val deploymentManager: TestProbe = TestProbe()
     val deploymentStatus: DeploymentStatus = mock[DeploymentStatus]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]

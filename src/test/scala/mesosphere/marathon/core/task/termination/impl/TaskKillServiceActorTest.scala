@@ -8,7 +8,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.termination.TaskKillConfig
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateOp }
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
@@ -311,7 +311,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     import scala.concurrent.duration._
 
     val appId = PathId("/test")
-    val taskTracker: TaskTracker = mock[TaskTracker]
+    val taskTracker: InstanceTracker = mock[InstanceTracker]
     val driver = mock[SchedulerDriver]
     val driverHolder: MarathonSchedulerDriverHolder = {
       val holder = new MarathonSchedulerDriverHolder

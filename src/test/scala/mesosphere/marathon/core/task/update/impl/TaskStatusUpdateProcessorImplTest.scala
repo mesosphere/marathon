@@ -6,7 +6,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
@@ -38,13 +38,13 @@ class TaskStatusUpdateProcessorImplTest
       val taskId = update.wrapped.stateOp.taskId
 
       Given("an unknown task")
-      f.taskTracker.task(taskId) returns Future.successful(None)
+      f.taskTracker.instance(taskId) returns Future.successful(None)
 
       When("we process the updated")
       f.updateProcessor.publish(status).futureValue
 
       Then("we expect that the appropriate taskTracker methods have been called")
-      verify(f.taskTracker).task(taskId)
+      verify(f.taskTracker).instance(taskId)
 
       And("no kill is issued")
       noMoreInteractions(f.killService)
@@ -65,13 +65,13 @@ class TaskStatusUpdateProcessorImplTest
     val taskId = update.wrapped.stateOp.taskId
 
     Given("an unknown task")
-    f.taskTracker.task(taskId) returns Future.successful(None)
+    f.taskTracker.instance(taskId) returns Future.successful(None)
 
     When("we process the updated")
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(taskId)
+    verify(f.taskTracker).instance(taskId)
 
     And("the task kill gets initiated")
     verify(f.killService).killUnknownTask(taskId, TaskKillReason.Unknown)
@@ -94,8 +94,8 @@ class TaskStatusUpdateProcessorImplTest
     val update = origUpdate
 
     Given("an unknown task")
-    f.taskTracker.task(origUpdate.wrapped.taskId) returns Future.successful(Some(task))
-    f.taskTracker.task(any) returns {
+    f.taskTracker.instance(origUpdate.wrapped.taskId) returns Future.successful(Some(task))
+    f.taskTracker.instance(any) returns {
       println("WTF")
       Future.successful(None)
     }
@@ -104,7 +104,7 @@ class TaskStatusUpdateProcessorImplTest
     f.updateProcessor.publish(status).futureValue
 
     Then("we expect that the appropriate taskTracker methods have been called")
-    verify(f.taskTracker).task(task.id)
+    verify(f.taskTracker).instance(task.id)
 
     And("the task kill gets initiated")
     verify(f.killService).killTask(task, TaskKillReason.Unknown)
@@ -125,14 +125,14 @@ class TaskStatusUpdateProcessorImplTest
     val expectedTaskStateOp = TaskStateOp.MesosUpdate(task, status, f.clock.now())
 
     Given("a task")
-    f.taskTracker.task(taskId) returns Future.successful(Some(task))
+    f.taskTracker.instance(taskId) returns Future.successful(Some(task))
     f.stateOpProcessor.process(expectedTaskStateOp) returns Future.successful(TaskStateChange.Update(task, Some(task)))
 
     When("receive a TASK_KILLING update")
     f.updateProcessor.publish(status).futureValue
 
     Then("the task is loaded from the taskTracker")
-    verify(f.taskTracker).task(taskId)
+    verify(f.taskTracker).instance(taskId)
 
     And("a MesosStatusUpdateEvent is passed to the stateOpProcessor")
     verify(f.stateOpProcessor).process(expectedTaskStateOp)
@@ -158,7 +158,7 @@ class TaskStatusUpdateProcessorImplTest
     implicit lazy val actorSystem: ActorSystem = ActorSystem()
     lazy val clock: ConstantClock = ConstantClock()
 
-    lazy val taskTracker: TaskTracker = mock[TaskTracker]
+    lazy val taskTracker: InstanceTracker = mock[InstanceTracker]
     lazy val stateOpProcessor: TaskStateOpProcessor = mock[TaskStateOpProcessor]
     lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
     lazy val killService: TaskKillService = mock[TaskKillService]

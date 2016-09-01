@@ -131,7 +131,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     for (task <- tasksWithSource) {
       val op = task.op
       taskCreationHandler.created(op.stateOp) returns Future.successful(op.stateOp)
-      taskCreationHandler.created(TaskStateOp.Revert(op.oldTask.get)) returns Future.successful(op.oldTask.get)
+      taskCreationHandler.created(TaskStateOp.Revert(op.oldInstance.get.asInstanceOf[Task])) returns Future.successful(op.oldInstance.get)
     }
 
     And("a dysfunctional taskLauncher")
@@ -153,7 +153,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       val op = task.op
       val ordered = inOrder(taskCreationHandler)
       ordered.verify(taskCreationHandler).created(op.stateOp)
-      ordered.verify(taskCreationHandler).created(TaskStateOp.Revert(op.oldTask.get))
+      ordered.verify(taskCreationHandler).created(TaskStateOp.Revert(op.oldInstance.get.asInstanceOf[Task]))
     }
   }
 
@@ -215,8 +215,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
         clock += 1.hour
         Future.successful(task.op.stateOp)
       }
-      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.op.taskId)).asInstanceOf[Future[Unit]] returns
-        Future.successful(Some(task.op.taskId))
+      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.op.instanceId)).asInstanceOf[Future[Unit]] returns
+        Future.successful(Some(task.op.instanceId))
     }
 
     When("processing the offer")

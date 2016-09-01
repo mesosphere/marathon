@@ -1,6 +1,6 @@
 package mesosphere.marathon.api
 
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.AppDefinition
 
 object EndpointsHelper {
@@ -10,14 +10,14 @@ object EndpointsHelper {
     * the supplied delimiter string.
     */
   def appsToEndpointString(
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     apps: Seq[AppDefinition],
     delimiter: String): String = {
-    val tasksMap = taskTracker.tasksByAppSync
+    val tasksMap = taskTracker.instancesBySpecSync
 
     val sb = new StringBuilder
     for (app <- apps if app.ipAddress.isEmpty) {
-      val tasks = tasksMap.appTasks(app.id)
+      val tasks = tasksMap.specInstances(app.id)
       val cleanId = app.id.safePath
 
       val servicePorts = app.servicePorts

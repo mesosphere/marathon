@@ -3,7 +3,7 @@ package mesosphere.marathon.upgrade
 import akka.actor.{ Actor, ActorLogging, ActorRef }
 import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
@@ -27,7 +27,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
   def app: AppDefinition
   def readinessCheckExecutor: ReadinessCheckExecutor
   def deploymentManager: ActorRef
-  def taskTracker: TaskTracker
+  def instanceTracker: InstanceTracker
   def status: DeploymentStatus
 
   //computed values to have stable identifier in pattern matcher
@@ -122,7 +122,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
     def initiateReadinessCheck(taskId: Instance.Id): Unit = {
       log.debug(s"Initiate readiness check for task: $taskId")
       val me = self
-      taskTracker.task(taskId).map {
+      instanceTracker.instance(taskId).map {
         case Some(task: Task) =>
           for {
             launched <- task.launched
