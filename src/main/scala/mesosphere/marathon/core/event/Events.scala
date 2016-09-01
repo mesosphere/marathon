@@ -25,10 +25,10 @@ case class ApiPostEvent(
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
 case class PodEvent(
-  clientIp: String,
-  uri: String,
-  podEventType: PodEvent.Kind,
-  timestamp: String = Timestamp.now().toString) extends MarathonEvent {
+    clientIp: String,
+    uri: String,
+    podEventType: PodEvent.Kind,
+    timestamp: String = Timestamp.now().toString) extends MarathonEvent {
   override val eventType = podEventType.label
 }
 

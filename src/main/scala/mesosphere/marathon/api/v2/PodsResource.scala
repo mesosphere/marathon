@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
-import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import com.codahale.metrics.annotation.Timed
@@ -13,12 +13,12 @@ import com.wix.accord.Validator
 import com.wix.accord.dsl._
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
-import mesosphere.marathon.api.{AuthResource, MarathonMediaType, RestResource}
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{Network, PodDef, PodStatus}
+import mesosphere.marathon.raml.{ Network, PodDef, PodStatus }
 import spray.json._
 
 @Path("v2/pods")
@@ -90,7 +90,7 @@ class PodsResource @Inject() (
 
   @GET @Timed @Path("""{id:.+}""")
   def find(
-    @PathParam("id") id:String,
+    @PathParam("id") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
     withValid(id) { _ =>
@@ -103,7 +103,7 @@ class PodsResource @Inject() (
 
   @PUT @Timed @Path("""{id:.+}""")
   def update(
-    @PathParam("id") id:String,
+    @PathParam("id") id: String,
     body: Array[Byte],
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
@@ -131,7 +131,7 @@ class PodsResource @Inject() (
 
   @DELETE @Timed @Path("""{id:.+}""")
   def remove(
-    @PathParam("id") id:String,
+    @PathParam("id") id: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
@@ -154,7 +154,7 @@ class PodsResource @Inject() (
 
   @GET @Timed @Path("""{id:.+}::status""")
   def examine(
-    @PathParam("id") id:String,
+    @PathParam("id") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
     withValid(id) { _ =>
@@ -178,7 +178,8 @@ object PodsResource {
     */
   trait System {
 
-    /** Create results in the deployment of a new pod
+    /**
+      * Create results in the deployment of a new pod
       *
       * @param p     is the new pod to deploy
       * @param force TODO(jdef) not sure what this means for create
@@ -252,15 +253,15 @@ protected object PodsResourceInternal {
     new String(data, charset)
   }
 
-  def unmarshalJson[T : JsonReader](data: String): T = {
+  def unmarshalJson[T: JsonReader](data: String): T = {
     data.parseJson.convertTo[T]
   }
 
-  def marshalJson[T : JsonWriter](t: T): String = {
+  def marshalJson[T: JsonWriter](t: T): String = {
     t.toJson.prettyPrint
   }
 
-  def marshalJson[T : JsonFormat](it: Iterable[T]): String = {
+  def marshalJson[T: JsonFormat](it: Iterable[T]): String = {
     import DefaultJsonProtocol._
     it.toJson.prettyPrint
   }

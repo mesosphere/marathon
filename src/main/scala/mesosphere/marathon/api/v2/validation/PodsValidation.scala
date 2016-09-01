@@ -1,9 +1,9 @@
 package mesosphere.marathon.api.v2.validation
 
-import com.wix.accord.{Result, Validator}
+import com.wix.accord.{ Result, Validator }
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{Network, PodDef}
+import mesosphere.marathon.raml.{ Network, PodDef }
 import mesosphere.marathon.state.PathId
 
 import scala.collection.immutable.Seq
@@ -45,7 +45,8 @@ object PodsValidation {
 
   val namePattern = """^[a-z0-9]([-a-z0-9]*[a-z0-9])?$""".r
   val validName: Validator[String] = validator[String] { name =>
-    name should matchRegexWithFailureMessage(namePattern,
+    name should matchRegexWithFailureMessage(
+      namePattern,
       "must contain only alphanumeric chars or hyphens, and must begin with a letter")
     name.length should be > 0
     name.length should be < 64
