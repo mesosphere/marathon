@@ -2,7 +2,6 @@ package mesosphere.marathon.api
 
 import javax.inject.Inject
 
-import akka.Done
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
