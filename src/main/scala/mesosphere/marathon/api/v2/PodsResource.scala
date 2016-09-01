@@ -110,6 +110,7 @@ class PodsResource @Inject() (
 
     withValid(unmarshalJson(decodeBytes(body, req))) { podDef =>
 
+      // podDef.id has just been validated, requiring equality for id validates it
       require(id == podDef.id)
       val pod = PodDefinition(withDefaults(podDef, podDefaults)).withCanonizedIds()
 
