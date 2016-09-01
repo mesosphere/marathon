@@ -60,7 +60,7 @@ class PodsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    withValid(unmarshalJson(decodeBytes(body, req))) { podDef =>
+    withValid(unmarshalJson[PodDef](decodeBytes(body, req))) { podDef =>
 
       val pod = PodDefinition(withDefaults(podDef, podDefaults)).withCanonizedIds()
 
@@ -108,7 +108,7 @@ class PodsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    withValid(unmarshalJson(decodeBytes(body, req))) { podDef =>
+    withValid(unmarshalJson[PodDef](decodeBytes(body, req))) { podDef =>
 
       // podDef.id has just been validated, requiring equality for id validates it
       require(id == podDef.id)
@@ -251,17 +251,16 @@ protected object PodsResourceInternal {
     new String(data, charset)
   }
 
-  def unmarshalJson(data: String): PodDef =
-    data.parseJson.convertTo[PodDef]
-
-  def marshalJson(p: PodDef): String =
-    p.toJson.prettyPrint
-
-  def marshalJson(p: Iterable[PodDef]): String = {
-    import DefaultJsonProtocol._
-    p.toJson.prettyPrint
+  def unmarshalJson[T : JsonReader](data: String): T = {
+    data.parseJson.convertTo[T]
   }
 
-  def marshalJson(s: PodStatus): String =
-    s.toJson.prettyPrint
+  def marshalJson[T : JsonWriter](t: T): String = {
+    t.toJson.prettyPrint
+  }
+
+  def marshalJson[T : JsonFormat](it: Iterable[T]): String = {
+    import DefaultJsonProtocol._
+    it.toJson.prettyPrint
+  }
 }
