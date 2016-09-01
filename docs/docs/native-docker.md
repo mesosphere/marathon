@@ -171,7 +171,7 @@ default. This can be overridden; for example to also expose ports in the range
 --resources="ports(*):[8000-9000, 31000-32000]"
 ```
 
-See the [network configuration](https://docs.docker.com/articles/networking/)
+See the [network configuration](https://docs.docker.com/engine/userguide/networking/)
 documentation for more details on how Docker handles networking.
 
 ### Using a Private Docker Repository
