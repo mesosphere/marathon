@@ -21,12 +21,8 @@ types:
     minItems: 2
     maxItems: 3
     example: ["hostname", "UNIQUE"]
-  StringifiedConstraint:
-    type: string
-    pattern: ^[^:]+:[^:]+(:[^:]+)?$
-    example: 'hostname:UNIQUE'
   AppConstraint:
     description: |
       v2 App defined constraints as a 2 or 3 element array
       with [fieldName, ConstraintOperator(,value?)].
-    type: StringifiedConstraint | SimpleConstraint | Constraint
+    type: SimpleConstraint | Constraint
