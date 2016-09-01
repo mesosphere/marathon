@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
+import akka.util.ByteString
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, EnvVar, Fixed, Label, MesosContainer, Network, PodDef, PodScalingPolicy, PodSchedulingPlacementPolicy, PodSchedulingPolicy, Volume }
@@ -81,8 +82,7 @@ case class PodDefinition(
   }
 
   override def mergeFromProto(message: Protos.PodDefinition): PodDefinition = {
-    import spray.json._
-    PodDefinition(message.getJson.parseJson.convertTo[PodDef])
+    PodDefinition.fromProto(message)
   }
 
   override def mergeFromProto(bytes: Array[Byte]): PodDefinition = {
@@ -97,6 +97,8 @@ case class PodDefinition(
 }
 
 object PodDefinition {
+  implicit val defaultClock: Clock = Clock()
+
   def apply(podDef: PodDef)(implicit clock: Clock): PodDefinition = {
     val env: Map[String, EnvVarValue] =
       podDef.environment.withFilter(e => e.value.isDefined || e.secret.isDefined).map { env =>
@@ -149,6 +151,16 @@ object PodDefinition {
       PodDef.PodDefPlayJsonFormat.reads(json).map(PodDefinition(_))
 
     override def writes(o: PodDefinition): JsValue = PodDef.PodDefPlayJsonFormat.writes(o.asPodDef)
+  }
+
+  def fromByteString(bs: ByteString): PodDefinition = {
+    import spray.json._
+    PodDefinition(bs.utf8String.parseJson.convertTo[PodDef])
+  }
+
+  def toByteString(podDef: PodDefinition): ByteString = {
+    import spray.json._
+    ByteString(podDef.asPodDef.toJson.compactPrint, ByteString.UTF_8)
   }
 
   val DefaultId = PathId.empty
