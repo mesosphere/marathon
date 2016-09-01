@@ -1,6 +1,8 @@
 package mesosphere.marathon.api
 
 import java.net.URI
+import java.nio.charset.StandardCharsets
+import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.{ ResponseBuilder, Status }
 
@@ -9,8 +11,7 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import play.api.libs.json.Json.JsValueWrapper
-import play.api.libs.json.{ Writes, Json }
-
+import play.api.libs.json.{ Json, Writes }
 import com.wix.accord._
 import mesosphere.marathon.api.v2.Validation._
 
@@ -72,5 +73,16 @@ trait RestResource {
       //scalastyle:on
       case Success => fn(t)
     }
+  }
+
+  def decodeBytes(data: Array[Byte], req: HttpServletRequest): String = {
+    val maybeEncoding = Option(req.getCharacterEncoding())
+    val charset = maybeEncoding match {
+      case Some(charsetName) =>
+        java.nio.charset.Charset.forName(charsetName)
+      case None =>
+        StandardCharsets.UTF_8 // TODO(jdef) should this be configurable somewhere?
+    }
+    new String(data, charset)
   }
 }

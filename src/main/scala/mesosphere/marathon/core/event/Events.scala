@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.event
 
+import akka.event.EventStream
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
@@ -22,6 +23,29 @@ case class ApiPostEvent(
   appDefinition: AppDefinition,
   eventType: String = "api_post_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+case class PodEvent(
+    clientIp: String,
+    uri: String,
+    podEventType: PodEvent.Kind,
+    timestamp: String = Timestamp.now().toString) extends MarathonEvent {
+  override val eventType = podEventType.label
+}
+
+object PodEvent {
+  sealed trait Kind {
+    val label: String
+  }
+  case object Created extends Kind {
+    val label = "pod_created_event"
+  }
+  case object Updated extends Kind {
+    val label = "pod_updated_event"
+  }
+  case object Deleted extends Kind {
+    val label = "pod_deleted_event"
+  }
+}
 
 // scheduler messages
 sealed trait MarathonSchedulerEvent extends MarathonEvent
@@ -192,3 +216,8 @@ case class MesosFrameworkMessageEvent(
   message: Array[Byte],
   eventType: String = "framework_message_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
+case object Events {
+  def maybePost(event: MarathonEvent)(implicit eventBus: EventStream): Unit =
+    eventBus.publish(event)
+}

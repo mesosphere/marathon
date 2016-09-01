@@ -1,6 +1,8 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
+import akka.util.ByteString
 import mesosphere.marathon.Protos
+import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.raml.{ Constraint, ConstraintOperator, EnvVar, Fixed, Label, MesosContainer, Network, PodDef, PodScalingPolicy, PodSchedulingPlacementPolicy, PodSchedulingPolicy, Volume }
 import mesosphere.marathon.state.{ EnvVarSecretRef, EnvVarString, EnvVarValue, MarathonState, PathId, RunnableSpec, Secret, Timestamp }
 import play.api.libs.json.{ Format, JsResult, JsValue }
@@ -30,6 +32,11 @@ case class PodDefinition(
   lazy val mem: Double = containers.map(_.resources.mem.toDouble).sum
   lazy val disk: Double = containers.flatMap(_.resources.disk.map(_.toDouble)).sum
   lazy val gpus: Int = containers.flatMap(_.resources.gpus).sum
+
+  def withCanonizedIds(base: PathId = PathId.empty): PodDefinition = {
+    val baseId = id.canonicalPath(base)
+    copy(id = baseId)
+  }
 
   lazy val asPodDef: PodDef = {
     val envVars: Seq[EnvVar] = env.map {
@@ -75,8 +82,7 @@ case class PodDefinition(
   }
 
   override def mergeFromProto(message: Protos.PodDefinition): PodDefinition = {
-    import spray.json._
-    PodDefinition(message.getJson.parseJson.convertTo[PodDef])
+    PodDefinition.fromProto(message)
   }
 
   override def mergeFromProto(bytes: Array[Byte]): PodDefinition = {
@@ -91,7 +97,9 @@ case class PodDefinition(
 }
 
 object PodDefinition {
-  def apply(podDef: PodDef): PodDefinition = {
+  implicit val defaultClock: Clock = Clock()
+
+  def apply(podDef: PodDef)(implicit clock: Clock): PodDefinition = {
     val env: Map[String, EnvVarValue] =
       podDef.environment.withFilter(e => e.value.isDefined || e.secret.isDefined).map { env =>
         if (env.secret.isDefined)
@@ -127,7 +135,7 @@ object PodDefinition {
       instances = podDef.scaling.flatMap(_.fixed).fold(1)(_.instances),
       maxInstances = podDef.scaling.flatMap(_.fixed.flatMap(_.maxInstances)),
       constraints = constraints,
-      version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
+      version = podDef.version.fold(clock.now())(Timestamp(_)),
       volumes = podDef.volumes,
       networks = podDef.networks
     )
@@ -143,6 +151,16 @@ object PodDefinition {
       PodDef.PodDefPlayJsonFormat.reads(json).map(PodDefinition(_))
 
     override def writes(o: PodDefinition): JsValue = PodDef.PodDefPlayJsonFormat.writes(o.asPodDef)
+  }
+
+  def fromByteString(bs: ByteString): PodDefinition = {
+    import spray.json._
+    PodDefinition(bs.utf8String.parseJson.convertTo[PodDef])
+  }
+
+  def toByteString(podDef: PodDefinition): ByteString = {
+    import spray.json._
+    ByteString(podDef.asPodDef.toJson.compactPrint, ByteString.UTF_8)
   }
 
   val DefaultId = PathId.empty

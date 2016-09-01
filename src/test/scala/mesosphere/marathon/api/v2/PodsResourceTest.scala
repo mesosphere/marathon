@@ -1,7 +1,11 @@
 package mesosphere.marathon.api.v2
 
+import javax.servlet.http.HttpServletResponse
+
+import akka.event.EventStream
 import mesosphere.marathon._
 import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.core.base.{Clock, ConstantClock}
 import mesosphere.marathon.test.Mockito
 import org.scalatest.Matchers
 
@@ -10,7 +14,7 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
   test("Marathon supports pods") {
     val f = Fixture.create()
     val response = f.podsResource.capability(f.auth.request)
-    response.getStatus should be(200)
+    response.getStatus should be(HttpServletResponse.SC_OK)
 
     val body = Option(response.getEntity.asInstanceOf[String])
     body should be(None)
@@ -25,8 +29,11 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
     def create(
       configArgs: Seq[String] = Seq.empty[String],
       auth: TestAuthFixture = new TestAuthFixture()
+    )(implicit
+      podSystem: PodsResource.System = mock[PodsResource.System],
+      clock: Clock = ConstantClock(),
+      eventBus: EventStream = mock[EventStream]
     ): Fixture = {
-
       val config = AllConf.withTestConfig(configArgs: _*)
       new Fixture(
         new PodsResource(config, auth.auth, auth.auth),
