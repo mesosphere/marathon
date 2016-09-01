@@ -2,6 +2,7 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
+import mesosphere.marathon.api.v2.PodsResource
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
 
@@ -144,6 +145,9 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def groupManager(coreModule: CoreModule): GroupManager = coreModule.groupManagerModule.groupManager
+
+  @Provides @Singleton
+  def podSystem(coreModule: CoreModule): PodsResource.System = coreModule.podModule.podSystem
 
   @Provides @Singleton
   def taskStatusUpdateSteps(

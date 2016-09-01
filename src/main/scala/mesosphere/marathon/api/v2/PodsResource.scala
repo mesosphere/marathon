@@ -194,6 +194,7 @@ object PodsResource {
 
     def delete(id: String, force: Boolean): (PodDefinition, Option[String])
 
+    // TODO(jdef) leaky! We need a non-API status return type that converts to PodStatus
     def examine(id: String): PodStatus
   }
 
