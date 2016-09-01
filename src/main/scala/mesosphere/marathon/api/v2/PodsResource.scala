@@ -1,7 +1,6 @@
 package mesosphere.marathon.api.v2
 
 import java.net.URI
-import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
@@ -72,7 +71,7 @@ class PodsResource @Inject() (
           .created(new URI(createdPod.id.toString))
           .entity(marshalJson(createdPod.asPodDef))
 
-        deploymentId.foreach(did => builder.header(DEPLOYMENT_ID_HEADER, did))
+        deploymentId.foreach(id => builder.header(DEPLOYMENT_ID_HEADER, id))
         builder.build()
       }
     }(createPodValidator)
@@ -123,7 +122,7 @@ class PodsResource @Inject() (
           .ok(new URI(updatedPod.id.toString))
           .entity(marshalJson(updatedPod.asPodDef))
 
-        deploymentId.foreach(did => builder.header(DEPLOYMENT_ID_HEADER, did))
+        deploymentId.foreach(id => builder.header(DEPLOYMENT_ID_HEADER, id))
         builder.build()
       }
     }(createPodValidator and updatePodValidator)
@@ -146,7 +145,7 @@ class PodsResource @Inject() (
           .ok(new URI(deletedPod.id.toString))
           .entity(marshalJson(deletedPod.asPodDef))
 
-        deploymentId.foreach(did => builder.header(DEPLOYMENT_ID_HEADER, did))
+        deploymentId.foreach(id => builder.header(DEPLOYMENT_ID_HEADER, id))
         builder.build()
       }
     }(PodsValidation.idValidator)
@@ -241,17 +240,6 @@ protected object PodsResourceInternal {
         }.getOrElse(network)
       }
     )
-
-  def decodeBytes(data: Array[Byte], req: HttpServletRequest): String = {
-    val maybeEncoding = Option(req.getCharacterEncoding())
-    val charset = maybeEncoding match {
-      case Some(charsetName) =>
-        java.nio.charset.Charset.forName(charsetName)
-      case None =>
-        StandardCharsets.UTF_8 // TODO(jdef) should this be configurable somewhere?
-    }
-    new String(data, charset)
-  }
 
   def unmarshalJson[T: JsonReader](data: String): T = {
     data.parseJson.convertTo[T]
