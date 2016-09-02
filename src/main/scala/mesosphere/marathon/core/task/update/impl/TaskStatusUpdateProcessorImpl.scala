@@ -5,8 +5,9 @@ import javax.inject.Inject
 import com.google.inject.name.Names
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics.Timer
@@ -22,7 +23,7 @@ import scala.concurrent.Future
 class TaskStatusUpdateProcessorImpl @Inject() (
     metrics: Metrics,
     clock: Clock,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     stateOpProcessor: TaskStateOpProcessor,
     driverHolder: MarathonSchedulerDriverHolder,
     killService: TaskKillService) extends TaskStatusUpdateProcessor {
@@ -42,12 +43,17 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     import TaskStatusUpdateProcessorImpl._
 
     val now = clock.now()
-    val taskId = Task.Id(status.getTaskId)
+    val taskId = Instance.Id(status.getTaskId)
 
-    taskTracker.task(taskId).flatMap {
-      case Some(task) =>
+    taskTracker.instance(taskId).flatMap {
+      case Some(task: Task) =>
         val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
         stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
+
+      // TODO POD support
+      //      case Some(task) =>
+      //        val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
+      //        stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
       case None if killWhenUnknown(status) =>
         killUnknownTaskTimer {
@@ -56,7 +62,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
           acknowledge(status)
         }
 
-      case maybeTask: Option[Task] =>
+      case maybeTask: Option[Instance] =>
         val taskStr = taskKnownOrNotStr(maybeTask)
         log.info(s"Ignoring ${status.getState} update for $taskStr $taskId")
         acknowledge(status)
@@ -86,5 +92,5 @@ object TaskStatusUpdateProcessorImpl {
     !ignoreWhenUnknown.contains(status.getState)
   }
 
-  private def taskKnownOrNotStr(maybeTask: Option[Task]): String = if (maybeTask.isDefined) "known" else "unknown"
+  private def taskKnownOrNotStr(maybeTask: Option[Instance]): String = if (maybeTask.isDefined) "known" else "unknown"
 }

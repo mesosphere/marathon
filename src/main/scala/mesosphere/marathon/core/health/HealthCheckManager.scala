@@ -1,13 +1,12 @@
 package mesosphere.marathon.core.health
 
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
-
 import org.apache.mesos.Protos.TaskStatus
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
-import scala.collection.immutable.{ Seq, Map }
+import scala.collection.immutable.{ Map, Seq }
 
 trait HealthCheckManager {
 
@@ -57,10 +56,10 @@ trait HealthCheckManager {
   /**
     * Returns the health status of the supplied task.
     */
-  def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]]
+  def status(appId: PathId, taskId: Instance.Id): Future[Seq[Health]]
 
   /**
     * Returns the health status of all tasks of the supplied app.
     */
-  def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]]
+  def statuses(appId: PathId): Future[Map[Instance.Id, Seq[Health]]]
 }

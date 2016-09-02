@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.matcher.base
 
-import mesosphere.marathon.core.launcher.TaskOp
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
@@ -10,15 +10,15 @@ import scala.concurrent.Future
 object OfferMatcher {
 
   /**
-    * A TaskOp with a [[TaskOpSource]].
+    * A TaskOp with a [[InstanceOpSource]].
     *
-    * The [[TaskOpSource]] is informed whether the op is ultimately send to Mesos or if it is rejected
+    * The [[InstanceOpSource]] is informed whether the op is ultimately send to Mesos or if it is rejected
     * (e.g. by throttling logic).
     */
-  case class TaskOpWithSource(source: TaskOpSource, op: TaskOp) {
-    def taskId: Task.Id = op.taskId
-    def accept(): Unit = source.taskOpAccepted(op)
-    def reject(reason: String): Unit = source.taskOpRejected(op, reason)
+  case class TaskOpWithSource(source: InstanceOpSource, op: InstanceOp) {
+    def taskId: Instance.Id = op.instanceId
+    def accept(): Unit = source.instanceOpAccepted(op)
+    def reject(reason: String): Unit = source.instanceOpRejected(op, reason)
   }
 
   /**
@@ -47,11 +47,11 @@ object OfferMatcher {
       resendThisOffer: Boolean = false) {
 
     /** all included [TaskOp] without the source information. */
-    def ops: Iterable[TaskOp] = opsWithSource.view.map(_.op)
+    def ops: Iterable[InstanceOp] = opsWithSource.view.map(_.op)
 
     /** All TaskInfos of launched tasks. */
     def launchedTaskInfos: Iterable[Mesos.TaskInfo] = ops.view.collect {
-      case TaskOp.Launch(taskInfo, _, _, _) => taskInfo
+      case InstanceOp.Launch(taskInfo, _, _, _) => taskInfo
     }
   }
 
@@ -60,9 +60,9 @@ object OfferMatcher {
       new MatchedTaskOps(offerId, Seq.empty, resendThisOffer = resendThisOffer)
   }
 
-  trait TaskOpSource {
-    def taskOpAccepted(taskOp: TaskOp)
-    def taskOpRejected(taskOp: TaskOp, reason: String)
+  trait InstanceOpSource {
+    def instanceOpAccepted(taskOp: InstanceOp)
+    def instanceOpRejected(taskOp: InstanceOp, reason: String)
   }
 }
 

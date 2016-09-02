@@ -2,7 +2,7 @@ package mesosphere.marathon.core.launcher
 
 import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.impl.{ OfferProcessorImpl, TaskLauncherImpl, TaskOpFactoryImpl }
+import mesosphere.marathon.core.launcher.impl.{ OfferProcessorImpl, TaskLauncherImpl, InstanceOpFactoryImpl }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.core.plugin.PluginManager
@@ -32,5 +32,5 @@ class LauncherModule(
     marathonSchedulerDriverHolder,
     clock)
 
-  lazy val taskOpFactory: TaskOpFactory = new TaskOpFactoryImpl(conf, clock, pluginManager)
+  lazy val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(conf, clock, pluginManager)
 }

@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.group
 
-import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
@@ -62,7 +62,7 @@ trait GroupManager {
     fn: Group => Group,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Iterable[Task]] = Map.empty): Future[DeploymentPlan]
+    toKill: Map[PathId, Iterable[Instance]] = Map.empty): Future[DeploymentPlan]
 
   /**
     * Update application with given identifier and update function.
@@ -80,6 +80,6 @@ trait GroupManager {
     fn: Option[AppDefinition] => AppDefinition,
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Iterable[Task] = Iterable.empty): Future[DeploymentPlan]
+    toKill: Iterable[Instance] = Iterable.empty): Future[DeploymentPlan]
 
 }

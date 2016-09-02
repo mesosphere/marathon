@@ -3,11 +3,11 @@ package mesosphere.marathon.core.matcher.manager.impl
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.TaskOp
-import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
+import mesosphere.marathon.core.launcher.InstanceOp
+import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
@@ -136,7 +136,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
 
   object f {
     import org.apache.mesos.{ Protos => Mesos }
-    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
+    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
   }
 
   private[this] var module: OfferMatcherManagerModule = _
@@ -182,12 +182,12 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
       Future.successful(result)
     }
 
-    object source extends TaskOpSource {
-      var acceptedOps = Vector.empty[TaskOp]
-      var rejectedOps = Vector.empty[TaskOp]
+    object source extends InstanceOpSource {
+      var acceptedOps = Vector.empty[InstanceOp]
+      var rejectedOps = Vector.empty[InstanceOp]
 
-      override def taskOpAccepted(taskOp: TaskOp): Unit = acceptedOps :+= taskOp
-      override def taskOpRejected(taskOp: TaskOp, reason: String): Unit = rejectedOps :+= taskOp
+      override def instanceOpAccepted(taskOp: InstanceOp): Unit = acceptedOps :+= taskOp
+      override def instanceOpRejected(taskOp: InstanceOp, reason: String): Unit = rejectedOps :+= taskOp
     }
   }
 

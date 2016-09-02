@@ -6,7 +6,7 @@ import mesosphere.marathon.core.appinfo.impl.{ AppInfoBaseData, DefaultInfoServi
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.{ ReadOnlyAppRepository, TaskFailureRepository }
 
 /**
@@ -16,7 +16,7 @@ class AppInfoModule @Inject() (
     clock: Clock,
     groupManager: GroupManager,
     appRepository: ReadOnlyAppRepository,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     healthCheckManager: HealthCheckManager,
     marathonSchedulerService: MarathonSchedulerService,
     taskFailureRepository: TaskFailureRepository) {

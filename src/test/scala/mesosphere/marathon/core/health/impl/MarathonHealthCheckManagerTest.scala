@@ -10,10 +10,11 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
@@ -33,7 +34,7 @@ class MarathonHealthCheckManagerTest
     extends MarathonSpec with ScalaFutures with Logging with MarathonShutdownHookSupport {
 
   var hcManager: MarathonHealthCheckManager = _
-  var taskTracker: TaskTracker = _
+  var taskTracker: InstanceTracker = _
   var taskCreationHandler: TaskCreationHandler = _
   var stateOpProcessor: TaskStateOpProcessor = _
   var appRepository: AppRepository = _
@@ -84,7 +85,7 @@ class MarathonHealthCheckManagerTest
   }
 
   def makeRunningTask(appId: PathId, version: Timestamp) = {
-    val taskId = Task.Id.forRunSpec(appId)
+    val taskId = Instance.Id.forRunSpec(appId)
 
     val taskStatus = MarathonTestHelper.runningTask(taskId.idString).launched.get.status.mesosStatus.get
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = version)
@@ -96,7 +97,7 @@ class MarathonHealthCheckManagerTest
     taskId
   }
 
-  def updateTaskHealth(taskId: Task.Id, version: Timestamp, healthy: Boolean): Unit = {
+  def updateTaskHealth(taskId: Instance.Id, version: Timestamp, healthy: Boolean): Unit = {
     val taskStatus = mesos.TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(mesos.TaskState.TASK_RUNNING)
@@ -129,7 +130,7 @@ class MarathonHealthCheckManagerTest
     val app: AppDefinition = AppDefinition(id = appId)
     appRepository.store(app).futureValue
 
-    val taskId = Task.Id.forRunSpec(appId)
+    val taskId = Instance.Id.forRunSpec(appId)
 
     val taskStatus = MarathonTestHelper.unhealthyTask(taskId.idString).launched.get.status.mesosStatus.get
     val marathonTask = MarathonTestHelper.stagedTask(taskId.idString, appVersion = app.version)
@@ -225,7 +226,7 @@ class MarathonHealthCheckManagerTest
     def taskStatus(task: Task, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
       mesos.TaskStatus.newBuilder
         .setTaskId(mesos.TaskID.newBuilder()
-          .setValue(task.taskId.idString)
+          .setValue(task.id.idString)
           .build)
         .setState(state)
         .setHealthy(false)
@@ -249,7 +250,7 @@ class MarathonHealthCheckManagerTest
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: Task) =
-      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.taskId)).futureValue
+      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.id)).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath

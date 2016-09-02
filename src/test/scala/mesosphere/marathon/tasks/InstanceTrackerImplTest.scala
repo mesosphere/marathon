@@ -3,12 +3,13 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
@@ -25,13 +26,13 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 
-class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
+class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     with Matchers with GivenWhenThen with MarathonShutdownHookSupport {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val TEST_APP_NAME = "foo".toRootPath
-  var taskTracker: TaskTracker = null
+  var taskTracker: InstanceTracker = null
   var stateOpProcessor: TaskStateOpProcessor = null
   var state: PersistentStore = null
   val config = MarathonTestHelper.defaultConfig()
@@ -50,21 +51,21 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
 
-    val deserializedTask = taskTracker.task(sampleTask.taskId).futureValue
+    val deserializedTask = taskTracker.instance(sampleTask.id).futureValue
 
     deserializedTask should not be empty
     deserializedTask should equal(Some(sampleTask))
   }
 
   test("List") {
-    testList(_.tasksByAppSync)
+    testList(_.instancesBySpecSync)
   }
 
   test("List Async") {
-    testList(_.tasksByApp().futureValue)
+    testList(_.instancessBySpec().futureValue)
   }
 
-  private[this] def testList(call: TaskTracker => TaskTracker.TasksByApp): Unit = {
+  private[this] def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
     val task2 = makeSampleTask(TEST_APP_NAME / "b")
     val task3 = makeSampleTask(TEST_APP_NAME / "b")
@@ -75,25 +76,25 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     val testAppTasks = call(taskTracker)
 
-    testAppTasks.allAppIdsWithTasks should be(Set(TEST_APP_NAME / "a", TEST_APP_NAME / "b"))
+    testAppTasks.allSpecIdsWithInstances should be(Set(TEST_APP_NAME / "a", TEST_APP_NAME / "b"))
 
-    testAppTasks.appTasksMap(TEST_APP_NAME / "a").appId should equal(TEST_APP_NAME / "a")
-    testAppTasks.appTasksMap(TEST_APP_NAME / "b").appId should equal(TEST_APP_NAME / "b")
-    testAppTasks.appTasksMap(TEST_APP_NAME / "a").tasks should have size 1
-    testAppTasks.appTasksMap(TEST_APP_NAME / "b").tasks should have size 2
-    testAppTasks.appTasksMap(TEST_APP_NAME / "a").taskMap.keySet should equal(Set(task1.taskId))
-    testAppTasks.appTasksMap(TEST_APP_NAME / "b").taskMap.keySet should equal(Set(task2.taskId, task3.taskId))
+    testAppTasks.instancesMap(TEST_APP_NAME / "a").specId should equal(TEST_APP_NAME / "a")
+    testAppTasks.instancesMap(TEST_APP_NAME / "b").specId should equal(TEST_APP_NAME / "b")
+    testAppTasks.instancesMap(TEST_APP_NAME / "a").instances should have size 1
+    testAppTasks.instancesMap(TEST_APP_NAME / "b").instances should have size 2
+    testAppTasks.instancesMap(TEST_APP_NAME / "a").instancekMap.keySet should equal(Set(task1.id))
+    testAppTasks.instancesMap(TEST_APP_NAME / "b").instancekMap.keySet should equal(Set(task2.id, task3.id))
   }
 
   test("GetTasks") {
-    testGetTasks(_.appTasksSync(TEST_APP_NAME))
+    testGetTasks(_.specInstancesSync(TEST_APP_NAME))
   }
 
   test("GetTasks Async") {
-    testGetTasks(_.appTasks(TEST_APP_NAME).futureValue)
+    testGetTasks(_.specInstances(TEST_APP_NAME).futureValue)
   }
 
-  private[this] def testGetTasks(call: TaskTracker => Iterable[Task]): Unit = {
+  private[this] def testGetTasks(call: InstanceTracker => Iterable[Instance]): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME)
     val task2 = makeSampleTask(TEST_APP_NAME)
     val task3 = makeSampleTask(TEST_APP_NAME)
@@ -111,14 +112,14 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("Count") {
-    testCount(_.countLaunchedAppTasksSync(_))
+    testCount(_.countLaunchedSpecInstancesSync(_))
   }
 
   test("Count Async") {
-    testCount(_.countAppTasks(_).futureValue)
+    testCount(_.countSpecInstances(_).futureValue)
   }
 
-  private[this] def testCount(count: (TaskTracker, PathId) => Int): Unit = {
+  private[this] def testCount(count: (InstanceTracker, PathId) => Int): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task1)).futureValue
@@ -128,14 +129,14 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("Contains") {
-    testContains(_.hasAppTasksSync(_))
+    testContains(_.hasSpecInstancesSync(_))
   }
 
   test("Contains Async") {
-    testContains(_.hasAppTasks(_).futureValue)
+    testContains(_.hasSpecInstances(_).futureValue)
   }
 
-  private[this] def testContains(count: (TaskTracker, PathId) => Boolean): Unit = {
+  private[this] def testContains(count: (InstanceTracker, PathId) => Boolean): Unit = {
     val task1 = makeSampleTask(TEST_APP_NAME / "a")
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(task1)).futureValue
@@ -150,39 +151,39 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     // CREATE TASK
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
 
-    shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.taskId)
+    shouldContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
+    stateShouldContainKey(state, sampleTask.id)
 
     // TASK STATUS UPDATE
     val startingTaskStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_STARTING), clock.now())
 
     stateOpProcessor.process(startingTaskStatus).futureValue
 
-    shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.taskId)
-    taskTracker.appTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
+    shouldContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
+    stateShouldContainKey(state, sampleTask.id)
+    taskTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, startingTaskStatus))
 
     // TASK RUNNING
     val runningTaskStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
 
     stateOpProcessor.process(runningTaskStatus).futureValue
 
-    shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.taskId)
-    taskTracker.appTasksSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
+    shouldContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
+    stateShouldContainKey(state, sampleTask.id)
+    taskTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK STILL RUNNING
     val updatedRunningTaskStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
     stateOpProcessor.process(updatedRunningTaskStatus).futureValue
-    shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    taskTracker.appTasksSync(TEST_APP_NAME).headOption.foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
+    shouldContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
+    taskTracker.specInstancesSync(TEST_APP_NAME).headOption.foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK TERMINATED
-    stateOpProcessor.process(TaskStateOp.ForceExpunge(sampleTask.taskId)).futureValue
-    stateShouldNotContainKey(state, sampleTask.taskId)
+    stateOpProcessor.process(TaskStateOp.ForceExpunge(sampleTask.id)).futureValue
+    stateShouldNotContainKey(state, sampleTask.id)
 
     // APP SHUTDOWN
-    assert(!taskTracker.hasAppTasksSync(TEST_APP_NAME), "App was not removed")
+    assert(!taskTracker.hasSpecInstancesSync(TEST_APP_NAME), "App was not removed")
 
     // ERRONEOUS MESSAGE, TASK DOES NOT EXIST ANYMORE
     val erroneousStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_LOST), clock.now())
@@ -203,13 +204,13 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val terminalStatusUpdate = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, taskState), clock.now())
 
     stateOpProcessor.process(TaskStateOp.LaunchEphemeral(sampleTask)).futureValue
-    shouldContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldContainKey(state, sampleTask.taskId)
+    shouldContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
+    stateShouldContainKey(state, sampleTask.id)
 
     stateOpProcessor.process(terminalStatusUpdate).futureValue
 
-    shouldNotContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldNotContainKey(state, sampleTask.taskId)
+    shouldNotContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
+    stateShouldNotContainKey(state, sampleTask.id)
   }
 
   test("UnknownTasks") {
@@ -218,10 +219,10 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     // don't call taskTracker.created, but directly running
     val runningTaskStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
     val res = stateOpProcessor.process(runningTaskStatus)
-    res.failed.futureValue.getCause.getMessage should equal(s"${sampleTask.taskId} of app [/foo] does not exist")
+    res.failed.futureValue.getCause.getMessage should equal(s"${sampleTask.id} of app [/foo] does not exist")
 
-    shouldNotContainTask(taskTracker.appTasksSync(TEST_APP_NAME), sampleTask)
-    stateShouldNotContainKey(state, sampleTask.taskId)
+    shouldNotContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
+    stateShouldNotContainKey(state, sampleTask.id)
   }
 
   test("MultipleApps") {
@@ -256,18 +257,18 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
     assert(state.allIds().futureValue.size == 6, "Incorrect number of tasks in state")
 
-    val app1Tasks = taskTracker.appTasksSync(appName1).toSet
+    val app1Tasks = taskTracker.specInstancesSync(appName1).toSet
 
     shouldContainTask(app1Tasks, app1_task1)
     shouldContainTask(app1Tasks, app1_task2)
     assert(app1Tasks.size == 2, "Incorrect number of tasks")
 
-    val app2Tasks = taskTracker.appTasksSync(appName2).toSet
+    val app2Tasks = taskTracker.specInstancesSync(appName2).toSet
 
     shouldContainTask(app2Tasks, app2_task1)
     assert(app2Tasks.size == 1, "Incorrect number of tasks")
 
-    val app3Tasks = taskTracker.appTasksSync(appName3).toSet
+    val app3Tasks = taskTracker.specInstancesSync(appName3).toSet
 
     shouldContainTask(app3Tasks, app3_task1)
     shouldContainTask(app3Tasks, app3_task2)
@@ -368,7 +369,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val status = Protos.TaskStatus
       .newBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(sampleTask.taskId.mesosTaskId)
+      .setTaskId(sampleTask.id.mesosTaskId)
       .setHealthy(true)
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
@@ -396,7 +397,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val status = Protos.TaskStatus
       .newBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(sampleTask.taskId.mesosTaskId)
+      .setTaskId(sampleTask.id.mesosTaskId)
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
 
@@ -422,7 +423,7 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
     val status = Protos.TaskStatus
       .newBuilder
       .setState(Protos.TaskState.TASK_RUNNING)
-      .setTaskId(sampleTask.taskId.mesosTaskId)
+      .setTaskId(sampleTask.id.mesosTaskId)
       .build()
     val update = TaskStateOp.MesosUpdate(sampleTask, status, clock.now())
 
@@ -454,34 +455,34 @@ class TaskTrackerImplTest extends MarathonSpec with MarathonActorSupport
 
   def makeTaskStatus(task: Task, state: TaskState = TaskState.TASK_RUNNING) = {
     TaskStatus.newBuilder
-      .setTaskId(task.taskId.mesosTaskId)
+      .setTaskId(task.id.mesosTaskId)
       .setState(state)
       .build
   }
 
-  def containsTask(tasks: Iterable[Task], task: Task) =
-    tasks.exists(t => t.taskId == task.taskId
+  def containsTask(tasks: Iterable[Instance], task: Instance) =
+    tasks.exists(t => t.id == task.id
       && t.agentInfo.host == task.agentInfo.host
-      && t.launched.map(_.hostPorts) == task.launched.map(_.hostPorts))
-  def shouldContainTask(tasks: Iterable[Task], task: Task) =
-    assert(containsTask(tasks, task), s"Should contain ${task.taskId}")
-  def shouldNotContainTask(tasks: Iterable[Task], task: Task) =
-    assert(!containsTask(tasks, task), s"Should not contain ${task.taskId}")
+      && t.asInstanceOf[Task].launched.map(_.hostPorts) == task.asInstanceOf[Task].launched.map(_.hostPorts))
+  def shouldContainTask(tasks: Iterable[Instance], task: Instance) =
+    assert(containsTask(tasks, task), s"Should contain ${task.id}")
+  def shouldNotContainTask(tasks: Iterable[Instance], task: Instance) =
+    assert(!containsTask(tasks, task), s"Should not contain ${task.id}")
 
-  def shouldHaveTaskStatus(task: Task, stateOp: TaskStateOp.MesosUpdate) {
+  def shouldHaveTaskStatus(task: Instance, stateOp: TaskStateOp.MesosUpdate) {
     assert(Option(stateOp.mesosStatus).isDefined, "mesos status is None")
-    assert(task.launched.isDefined)
+    assert(task.asInstanceOf[Task].launched.isDefined)
     assert(
-      task.launched.get.status.mesosStatus.get == stateOp.mesosStatus,
+      task.asInstanceOf[Task].launched.get.status.mesosStatus.get == stateOp.mesosStatus,
       s"Should have task status ${stateOp.mesosStatus}")
   }
 
-  def stateShouldNotContainKey(state: PersistentStore, key: Task.Id) {
+  def stateShouldNotContainKey(state: PersistentStore, key: Instance.Id) {
     val keyWithPrefix = TaskEntityRepository.storePrefix + key.idString
     assert(!state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was found in state")
   }
 
-  def stateShouldContainKey(state: PersistentStore, key: Task.Id) {
+  def stateShouldContainKey(state: PersistentStore, key: Instance.Id) {
     val keyWithPrefix = TaskEntityRepository.storePrefix + key.idString
     assert(state.allIds().futureValue.toSet.contains(keyWithPrefix), s"Key $keyWithPrefix was not found in state")
   }

@@ -8,9 +8,9 @@ import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, TaskStateOp }
 import mesosphere.marathon.core.event.{ MarathonEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.{ CaptureEvents, CaptureLogEvents }
 import org.apache.mesos.Protos.{ SlaveID, TaskState, TaskStatus }
@@ -129,7 +129,7 @@ class PostToEventStreamStepImplTest extends FunSuite
 
   private[this] val slaveId = SlaveID.newBuilder().setValue("slave1")
   private[this] val appId = PathId("/test")
-  private[this] val taskId = Task.Id.forRunSpec(appId)
+  private[this] val taskId = Instance.Id.forRunSpec(appId)
   private[this] val host = "some.host.local"
   private[this] val ipAddress = MarathonTestHelper.mesosIpAddress("127.0.0.1")
   private[this] val portsList = Seq(10, 11, 12)

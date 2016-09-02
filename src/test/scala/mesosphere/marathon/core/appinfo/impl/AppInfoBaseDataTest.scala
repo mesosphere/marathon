@@ -3,9 +3,10 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.core.appinfo.{ AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion }
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheckManager }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 import mesosphere.marathon.test.Mockito
@@ -24,7 +25,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
   class Fixture {
     lazy val clock = ConstantClock()
-    lazy val taskTracker = mock[TaskTracker]
+    lazy val taskTracker = mock[InstanceTracker]
     lazy val healthCheckManager = mock[HealthCheckManager]
     lazy val marathonSchedulerService = mock[MarathonSchedulerService]
     lazy val taskFailureRepository = mock[TaskFailureRepository]
@@ -69,17 +70,17 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running3 = MarathonTestHelper.runningTask("task3")
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Iterable(running1, running2, running3))))
+    f.taskTracker.instancessBySpec()(global) returns
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(running1, running2, running3))))
 
-    val alive = Health(running2.taskId, lastSuccess = Some(Timestamp(1)))
-    val unhealthy = Health(running3.taskId, lastFailure = Some(Timestamp(1)))
+    val alive = Health(running2.id, lastSuccess = Some(Timestamp(1)))
+    val unhealthy = Health(running3.id, lastFailure = Some(Timestamp(1)))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
-        running1.taskId -> Seq.empty,
-        running2.taskId -> Seq(alive),
-        running3.taskId -> Seq(unhealthy)
+        running1.id -> Seq.empty,
+        running2.id -> Seq(alive),
+        running3.id -> Seq(unhealthy)
       )
     )
 
@@ -89,7 +90,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     Then("we get a tasks object in the appInfo")
     appInfo.maybeTasks should not be empty
     appInfo.maybeTasks.get.map(_.appId.toString) should have size 3
-    appInfo.maybeTasks.get.map(_.task.taskId.idString).toSet should be (Set("task1", "task2", "task3"))
+    appInfo.maybeTasks.get.map(_.task.id.idString).toSet should be (Set("task1", "task2", "task3"))
 
     appInfo should be(AppInfo(app, maybeTasks = Some(
       Seq(
@@ -100,7 +101,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).tasksByApp()(global)
+    verify(f.taskTracker, times(1)).instancessBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -117,14 +118,14 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running2 = MarathonTestHelper.runningTask("task3")
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, Iterable(staged, running, running2))))
+    f.taskTracker.instancessBySpec()(global) returns
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(staged, running, running2))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
       Map(
-        Task.Id("task1") -> Seq(),
-        Task.Id("task2") -> Seq(Health(Task.Id("task2"), lastFailure = Some(Timestamp(1)))),
-        Task.Id("task3") -> Seq(Health(Task.Id("task3"), lastSuccess = Some(Timestamp(2))))
+        Instance.Id("task1") -> Seq(),
+        Instance.Id("task2") -> Seq(Health(Instance.Id("task2"), lastFailure = Some(Timestamp(1)))),
+        Instance.Id("task3") -> Seq(Health(Instance.Id("task3"), lastSuccess = Some(Timestamp(2))))
       )
     )
 
@@ -137,7 +138,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).tasksByApp()(global)
+    verify(f.taskTracker, times(1)).instancessBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -199,7 +200,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     Given("One related and one unrelated deployment")
     val emptyGroup = Group.empty
     val deployment = DeploymentPlan(emptyGroup, emptyGroup.copy(apps = Map(app.id -> app)))
-    val taskId: Task.Id = Task.Id.forRunSpec(app.id)
+    val taskId: Instance.Id = Instance.Id.forRunSpec(app.id)
     val result = ReadinessCheckResult("foo", taskId, ready = false, None)
     f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
       DeploymentStepInfo(deployment, DeploymentStep(Seq.empty), 1, Map(taskId -> result))
@@ -267,13 +268,13 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val tasks: Set[Task] = Set(staged, running, running2)
-    f.taskTracker.tasksByApp()(global) returns
-      Future.successful(TaskTracker.TasksByApp.of(TaskTracker.AppTasks.forTasks(app.id, tasks)))
+    f.taskTracker.instancessBySpec()(global) returns
+      Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, tasks)))
 
-    val statuses: Map[Task.Id, Seq[Health]] = Map(
-      staged.taskId -> Seq(),
-      running.taskId -> Seq(Health(running.taskId, lastFailure = Some(Timestamp(1)))),
-      running2.taskId -> Seq(Health(running2.taskId, lastSuccess = Some(Timestamp(2))))
+    val statuses: Map[Instance.Id, Seq[Health]] = Map(
+      staged.id -> Seq(),
+      running.id -> Seq(Health(running.id, lastFailure = Some(Timestamp(1)))),
+      running2.id -> Seq(Health(running2.id, lastSuccess = Some(Timestamp(2))))
     )
     f.healthCheckManager.statuses(app.id) returns Future.successful(statuses)
 
@@ -297,7 +298,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     }
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).tasksByApp()(global)
+    verify(f.taskTracker, times(1)).instancessBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)

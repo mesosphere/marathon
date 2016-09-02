@@ -4,7 +4,7 @@ import akka.actor._
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, TaskTracker }
+import mesosphere.marathon.core.task.tracker.{ TaskReservationTimeoutHandler, InstanceTracker }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.MarathonConf
 import org.apache.mesos.Protos.TaskState
@@ -18,7 +18,7 @@ import scala.util.control.NonFatal
 private[jobs] object OverdueTasksActor {
   def props(
     config: MarathonConf,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     reservationTimeoutHandler: TaskReservationTimeoutHandler,
     killService: TaskKillService,
     clock: Clock): Props = {
@@ -30,7 +30,7 @@ private[jobs] object OverdueTasksActor {
     */
   private class Support(
       config: MarathonConf,
-      taskTracker: TaskTracker,
+      taskTracker: InstanceTracker,
       reservationTimeoutHandler: TaskReservationTimeoutHandler,
       killService: TaskKillService,
       clock: Clock) {
@@ -41,7 +41,7 @@ private[jobs] object OverdueTasksActor {
     def check(): Future[Unit] = {
       val now = clock.now()
       log.debug("checking for overdue tasks")
-      taskTracker.tasksByApp().flatMap { tasksByApp =>
+      taskTracker.instancessBySpec().flatMap { tasksByApp =>
         val tasks = tasksByApp.allTasks
 
         killOverdueTasks(now, tasks)
@@ -52,7 +52,7 @@ private[jobs] object OverdueTasksActor {
 
     private[this] def killOverdueTasks(now: Timestamp, tasks: Iterable[Task]): Unit = {
       overdueTasks(now, tasks).foreach { overdueTask =>
-        log.info("Killing overdue {}", overdueTask.taskId)
+        log.info("Killing overdue {}", overdueTask.id)
         killService.killTask(overdueTask, TaskKillReason.Overdue)
       }
     }
@@ -66,13 +66,13 @@ private[jobs] object OverdueTasksActor {
         task.launched.fold(false) { launched =>
           launched.status.mesosStatus.map(_.getState) match {
             case None | Some(TaskState.TASK_STARTING) if launched.status.stagedAt < unconfirmedExpire =>
-              log.warn(s"Should kill: ${task.taskId} was launched " +
+              log.warn(s"Should kill: ${task.id} was launched " +
                 s"${(launched.status.stagedAt.until(now).toSeconds)}s ago and was not confirmed yet"
               )
               true
 
             case Some(TaskState.TASK_STAGING) if launched.status.stagedAt < stagedExpire =>
-              log.warn(s"Should kill: ${task.taskId} was staged ${(launched.status.stagedAt.until(now).toSeconds)}s" +
+              log.warn(s"Should kill: ${task.id} was staged ${(launched.status.stagedAt.until(now).toSeconds)}s" +
                 s" ago and has not yet started"
               )
               true
@@ -89,8 +89,8 @@ private[jobs] object OverdueTasksActor {
 
     private[this] def timeoutOverdueReservations(now: Timestamp, tasks: Iterable[Task]): Future[Unit] = {
       val taskTimeoutResults = overdueReservations(now, tasks).map { task =>
-        log.warn("Scheduling ReservationTimeout for {}", task.taskId)
-        reservationTimeoutHandler.timeout(TaskStateOp.ReservationTimeout(task.taskId))
+        log.warn("Scheduling ReservationTimeout for {}", task.id)
+        reservationTimeoutHandler.timeout(TaskStateOp.ReservationTimeout(task.id))
       }
       Future.sequence(taskTimeoutResults).map(_ => ())
     }

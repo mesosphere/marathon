@@ -4,10 +4,11 @@ import akka.actor.ActorRef
 import akka.testkit.TestActorRef
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.TaskKillServiceMock
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, UpgradeStrategy }
 import mesosphere.marathon.test.MarathonActorSupport
@@ -33,22 +34,22 @@ class TaskReplaceActorTest
   test("Replace without health checks") {
     val f = new Fixture
     val app = AppDefinition(id = "/myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
     val ref = f.replaceActor(app, promise)
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref ! MesosStatusUpdateEvent("", Task.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString)
+      ref ! MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString)
 
     Await.result(promise.future, 5.seconds)
     verify(f.queue).resetDelay(app)
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
 
     expectTerminated(ref)
   }
@@ -61,22 +62,22 @@ class TaskReplaceActorTest
       healthChecks = Set(HealthCheck()),
       upgradeStrategy = UpgradeStrategy(0.0))
 
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
     val ref = f.replaceActor(app, promise)
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+      ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
 
     Await.result(promise.future, 5.seconds)
     verify(f.queue).resetDelay(app)
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
 
     expectTerminated(ref)
   }
@@ -84,11 +85,11 @@ class TaskReplaceActorTest
   test("Replace and scale down from more than new minCapacity") {
     val f = new Fixture
     val app = AppDefinition(id = "/myApp".toPath, instances = 2, upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1.0))
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskC = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
     val ref = f.replaceActor(app, promise)
@@ -96,10 +97,10 @@ class TaskReplaceActorTest
 
     eventually { f.killService.numKilled should be (1) }
 
-    ref ! MesosStatusUpdateEvent("", Task.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString)
+    ref ! MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString)
     eventually { f.killService.numKilled should be (2) }
 
-    ref ! MesosStatusUpdateEvent("", Task.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString)
+    ref ! MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString)
     eventually { app: AppDefinition => verify(f.queue, times(2)).add(app) }
 
     Await.result(promise.future, 5.seconds)
@@ -119,11 +120,11 @@ class TaskReplaceActorTest
       upgradeStrategy = UpgradeStrategy(0.5)
     )
 
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskC = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
 
@@ -137,23 +138,23 @@ class TaskReplaceActorTest
     assert(f.killService.numKilled == 1)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(2) }
 
     // second new task becomes healthy and the last old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(3) }
 
     // third new task becomes healthy
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     f.killService.numKilled should be(3)
 
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
 
     expectTerminated(ref)
   }
@@ -167,11 +168,11 @@ class TaskReplaceActorTest
       upgradeStrategy = UpgradeStrategy(0.5, 0.0)
     )
 
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskC = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
 
@@ -186,26 +187,26 @@ class TaskReplaceActorTest
     assert(f.killService.numKilled == 1)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(2) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // second new task becomes healthy and the last old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(3) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // third new task becomes healthy
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     f.killService.numKilled should be(3)
 
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
     verify(f.queue).resetDelay(app)
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
 
     expectTerminated(ref)
   }
@@ -219,11 +220,11 @@ class TaskReplaceActorTest
       upgradeStrategy = UpgradeStrategy(1.0, 0.0) // 1 task over-capacity is ok
     )
 
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskC = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
 
@@ -236,26 +237,26 @@ class TaskReplaceActorTest
     assert(f.killService.numKilled == 0)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(1) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // second new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(2) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // third new task becomes healthy and last old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(3) }
     queueOrder.verify(f.queue, never()).add(_: AppDefinition, 1)
 
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
 
     expectTerminated(ref)
   }
@@ -269,11 +270,11 @@ class TaskReplaceActorTest
       upgradeStrategy = UpgradeStrategy(1.0, 0.7)
     )
 
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskC = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC))
 
     val promise = Promise[Unit]()
 
@@ -286,26 +287,26 @@ class TaskReplaceActorTest
     assert(f.killService.numKilled == 0)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(1) }
     eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
 
     // second new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(2) }
     queueOrder.verify(f.queue, never()).add(_: AppDefinition, 1)
 
     // third new task becomes healthy and last old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(3) }
     queueOrder.verify(f.queue, never()).add(_: AppDefinition, 1)
 
     Await.result(promise.future, 5.seconds)
 
     // all old tasks are killed
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
 
     expectTerminated(ref)
   }
@@ -319,12 +320,12 @@ class TaskReplaceActorTest
       upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1.0, maximumOverCapacity = 0.3)
     )
 
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskC = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskD = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskC = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskD = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC, taskD))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB, taskC, taskD))
 
     val promise = Promise[Unit]()
 
@@ -333,33 +334,33 @@ class TaskReplaceActorTest
 
     // one task is killed directly because we are over capacity
     val order = org.mockito.Mockito.inOrder(f.queue)
-    f.killService.killed should contain (taskA.taskId)
+    f.killService.killed should contain (taskA.id)
 
     // the kill is confirmed (see answer above) and the first new task is queued
     eventually { order.verify(f.queue).add(app, 1) }
     assert(f.killService.numKilled == 1)
 
     // first new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(2) }
     eventually { order.verify(f.queue).add(app, 1) }
 
     // second new task becomes healthy and another old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(3) }
     eventually { order.verify(f.queue).add(app, 1) }
 
     // third new task becomes healthy and last old task is killed
-    ref ! HealthStatusChanged(app.id, Task.Id.forRunSpec(app.id), app.version, alive = true)
+    ref ! HealthStatusChanged(app.id, Instance.Id.forRunSpec(app.id), app.version, alive = true)
     eventually { f.killService.numKilled should be(4) }
     eventually { order.verify(f.queue, never()).add(app, 1) }
 
     Await.result(promise.future, 5.seconds)
 
     // all remaining old tasks are killed
-    f.killService.killed should contain (taskB.taskId)
-    f.killService.killed should contain (taskC.taskId)
-    f.killService.killed should contain (taskD.taskId)
+    f.killService.killed should contain (taskB.id)
+    f.killService.killed should contain (taskC.id)
+    f.killService.killed should contain (taskD.id)
 
     expectTerminated(ref)
   }
@@ -367,10 +368,10 @@ class TaskReplaceActorTest
   test("Cancelled") {
     val f = new Fixture
     val app = AppDefinition(id = "/myApp".toPath, instances = 2)
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
 
@@ -389,10 +390,10 @@ class TaskReplaceActorTest
   test("Wait until the tasks are killed") {
     val f = new Fixture
     val app = AppDefinition(id = "/myApp".toPath, instances = 5, upgradeStrategy = UpgradeStrategy(0.0))
-    val taskA = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
-    val taskB = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+    val taskA = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
+    val taskB = MarathonTestHelper.runningTask(Instance.Id.forRunSpec(app.id).idString)
 
-    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
+    when(f.tracker.specInstancesLaunchedSync(app.id)).thenReturn(Iterable(taskA, taskB))
 
     val promise = Promise[Unit]()
 
@@ -400,11 +401,11 @@ class TaskReplaceActorTest
     watch(ref)
 
     for (i <- 0 until app.instances)
-      ref.receive(MesosStatusUpdateEvent("", Task.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString))
+      ref.receive(MesosStatusUpdateEvent("", Instance.Id.forRunSpec(app.id), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString))
 
     verify(f.queue, Mockito.timeout(1000)).resetDelay(app)
-    f.killService.killed should contain (taskA.taskId)
-    f.killService.killed should contain (taskB.taskId)
+    f.killService.killed should contain (taskA.id)
+    f.killService.killed should contain (taskB.id)
 
     Await.result(promise.future, 0.second)
     promise.isCompleted should be(true)
@@ -416,7 +417,7 @@ class TaskReplaceActorTest
     private[this] val driver = mock[SchedulerDriver]
     val killService = new TaskKillServiceMock(system)
     val queue = mock[LaunchQueue]
-    val tracker = mock[TaskTracker]
+    val tracker = mock[InstanceTracker]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
 
     def replaceActor(app: AppDefinition, promise: Promise[Unit]): TestActorRef[TaskReplaceActor] = TestActorRef(

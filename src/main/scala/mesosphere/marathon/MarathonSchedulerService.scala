@@ -14,8 +14,8 @@ import mesosphere.marathon.MarathonSchedulerActor._
 import mesosphere.marathon.core.election.{ ElectionCandidate, ElectionService }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.heartbeat._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.leadership.LeadershipCoordinator
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.migration.Migration
@@ -150,7 +150,7 @@ class MarathonSchedulerService @Inject() (
 
   def killTasks(
     appId: PathId,
-    tasks: Iterable[Task]): Iterable[Task] = {
+    tasks: Iterable[Instance]): Iterable[Instance] = {
     schedulerActor ! KillTasks(appId, tasks)
 
     tasks

@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.{ LocalVolumeId, Reservation }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.{ Protos, SerializationFailedException }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -29,8 +29,8 @@ object TaskSerializer {
       }
     }
 
-    def agentInfo: Task.AgentInfo = {
-      Task.AgentInfo(
+    def agentInfo: Instance.AgentInfo = {
+      Instance.AgentInfo(
         host = required("host", opt(_.hasHost, _.getHost)),
         agentId = opt(_.hasSlaveId, _.getSlaveId).map(_.getValue),
         attributes = proto.getAttributesList.iterator().asScala.toVector
@@ -67,7 +67,7 @@ object TaskSerializer {
     }
 
     constructTask(
-      taskId = Task.Id(proto.getId),
+      taskId = Instance.Id(proto.getId),
       agentInfo = agentInfo,
       reservation,
       launchedTask,
@@ -76,8 +76,8 @@ object TaskSerializer {
   }
 
   private[this] def constructTask(
-    taskId: Task.Id,
-    agentInfo: Task.AgentInfo,
+    taskId: Instance.Id,
+    agentInfo: Instance.AgentInfo,
     reservationOpt: Option[Reservation],
     launchedOpt: Option[Task.Launched],
     taskStatus: Task.Status): Task = {
@@ -104,8 +104,8 @@ object TaskSerializer {
   def toProto(task: Task): Protos.MarathonTask = {
     val builder = Protos.MarathonTask.newBuilder()
 
-    def setId(taskId: Task.Id): Unit = builder.setId(taskId.idString)
-    def setAgentInfo(agentInfo: Task.AgentInfo): Unit = {
+    def setId(taskId: Instance.Id): Unit = builder.setId(taskId.idString)
+    def setAgentInfo(agentInfo: Instance.AgentInfo): Unit = {
       builder.setHost(agentInfo.host)
       agentInfo.agentId.foreach { agentId =>
         builder.setSlaveId(MesosProtos.SlaveID.newBuilder().setValue(agentId))
@@ -122,11 +122,11 @@ object TaskSerializer {
       status.mesosStatus.foreach(status => builder.setStatus(status))
       builder.addAllPorts(hostPorts.map(Integer.valueOf).asJava)
     }
-    def setMarathonTaskStatus(marathonTaskStatus: MarathonTaskStatus): Unit = {
+    def setMarathonTaskStatus(marathonTaskStatus: InstanceStatus): Unit = {
       builder.setMarathonTaskStatus(MarathonTaskStatusSerializer.toProto(marathonTaskStatus))
     }
 
-    setId(task.taskId)
+    setId(task.id)
     setAgentInfo(task.agentInfo)
     setMarathonTaskStatus(task.status.taskStatus)
 
@@ -148,7 +148,7 @@ object TaskSerializer {
 
 object MarathonTaskStatusSerializer {
 
-  import mesosphere.marathon.core.task.state.MarathonTaskStatus._
+  import mesosphere.marathon.core.instance.InstanceStatus._
   import mesosphere._
 
   private val proto2model = Map(
@@ -168,14 +168,14 @@ object MarathonTaskStatusSerializer {
     marathon.Protos.MarathonTask.MarathonTaskStatus.Dropped -> Dropped
   )
 
-  private val model2proto: Map[MarathonTaskStatus, marathon.Protos.MarathonTask.MarathonTaskStatus] =
+  private val model2proto: Map[InstanceStatus, marathon.Protos.MarathonTask.MarathonTaskStatus] =
     proto2model.map(_.swap)
 
-  def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): MarathonTaskStatus = {
+  def fromProto(proto: Protos.MarathonTask.MarathonTaskStatus): InstanceStatus = {
     proto2model.getOrElse(proto, throw new SerializationFailedException(s"Unable to parse $proto"))
   }
 
-  def toProto(marathonTaskStatus: MarathonTaskStatus): Protos.MarathonTask.MarathonTaskStatus = {
+  def toProto(marathonTaskStatus: InstanceStatus): Protos.MarathonTask.MarathonTaskStatus = {
     model2proto.getOrElse(
       marathonTaskStatus,
       throw new SerializationFailedException(s"Unable to serialize $marathonTaskStatus"))

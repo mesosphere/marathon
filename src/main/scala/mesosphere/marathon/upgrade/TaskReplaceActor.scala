@@ -5,11 +5,10 @@ import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.Task.Id
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
@@ -25,18 +24,18 @@ class TaskReplaceActor(
     val driver: SchedulerDriver,
     val killService: TaskKillService,
     val launchQueue: LaunchQueue,
-    val taskTracker: TaskTracker,
+    val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val app: AppDefinition,
     promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
 
-  val tasksToKill = taskTracker.appTasksLaunchedSync(app.id)
+  val tasksToKill = instanceTracker.specInstancesLaunchedSync(app.id)
   var newTasksStarted: Int = 0
-  var oldTaskIds = tasksToKill.map(_.taskId).to[SortedSet]
+  var oldTaskIds = tasksToKill.map(_.id).to[SortedSet]
   val toKill = tasksToKill.to[mutable.Queue]
   var maxCapacity = (app.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
-  var outstandingKills = Set.empty[Task.Id]
+  var outstandingKills = Set.empty[Instance.Id]
 
   override def preStart(): Unit = {
     super.preStart()
@@ -84,7 +83,7 @@ class TaskReplaceActor(
     case x: Any => log.debug(s"Received $x")
   }
 
-  override def taskStatusChanged(taskId: Id): Unit = {
+  override def taskStatusChanged(taskId: Instance.Id): Unit = {
     killNextOldTask(Some(taskId))
     checkFinished()
   }
@@ -100,18 +99,18 @@ class TaskReplaceActor(
     }
   }
 
-  def killNextOldTask(maybeNewTaskId: Option[Task.Id] = None): Unit = {
+  def killNextOldTask(maybeNewTaskId: Option[Instance.Id] = None): Unit = {
     if (toKill.nonEmpty) {
       val nextOldTask = toKill.dequeue()
 
       maybeNewTaskId match {
-        case Some(newTaskId: Task.Id) =>
+        case Some(newTaskId: Instance.Id) =>
           log.info(s"Killing old $nextOldTask because $newTaskId became reachable")
         case _ =>
           log.info(s"Killing old $nextOldTask")
       }
 
-      outstandingKills += nextOldTask.taskId
+      outstandingKills += nextOldTask.id
       killService.killTask(nextOldTask, TaskKillReason.Upgrading)
     }
   }
@@ -147,7 +146,7 @@ object TaskReplaceActor {
     driver: SchedulerDriver,
     killService: TaskKillService,
     launchQueue: LaunchQueue,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
     app: AppDefinition,

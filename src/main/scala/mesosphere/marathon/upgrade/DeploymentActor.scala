@@ -7,11 +7,11 @@ import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
@@ -28,7 +28,7 @@ private class DeploymentActor(
     killService: TaskKillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,
@@ -115,10 +115,10 @@ private class DeploymentActor(
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int,
-    toKill: Option[Iterable[Task]],
+    toKill: Option[Iterable[Instance]],
     status: DeploymentStatus): Future[Unit] = {
-    val runningTasks = taskTracker.appTasksLaunchedSync(app.id)
-    def killToMeetConstraints(notSentencedAndRunning: Iterable[Task], toKillCount: Int) =
+    val runningTasks = taskTracker.specInstancesLaunchedSync(app.id)
+    def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) =
       Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
@@ -141,7 +141,7 @@ private class DeploymentActor(
   }
 
   def stopApp(app: AppDefinition): Future[Unit] = {
-    val tasks = taskTracker.appTasksLaunchedSync(app.id)
+    val tasks = taskTracker.specInstancesLaunchedSync(app.id)
     // TODO: the launch queue is purged in stopApp, but it would make sense to do that before calling kill(tasks)
     killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
       case Success(_) => scheduler.stopApp(app)
@@ -181,7 +181,7 @@ object DeploymentActor {
     killService: TaskKillService,
     scheduler: SchedulerActions,
     plan: DeploymentPlan,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     launchQueue: LaunchQueue,
     storage: StorageProvider,
     healthCheckManager: HealthCheckManager,

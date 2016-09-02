@@ -4,9 +4,9 @@ import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.task.Task.Id
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.instance.Instance
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._
@@ -21,7 +21,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   def launchQueue: LaunchQueue
   def driver: SchedulerDriver
   def scheduler: SchedulerActions
-  def taskTracker: TaskTracker
+  def instanceTracker: InstanceTracker
 
   def initializeStart(): Unit
 
@@ -44,7 +44,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
       launchQueue.add(app)
 
     case Sync =>
-      val actualSize = launchQueue.get(app.id).map(_.finalTaskCount).getOrElse(taskTracker.countLaunchedAppTasksSync(app.id))
+      val actualSize = launchQueue.get(app.id).map(_.finalTaskCount).getOrElse(instanceTracker.countLaunchedSpecInstancesSync(app.id))
       val tasksToStartNow = Math.max(scaleTo - actualSize, 0)
       if (tasksToStartNow > 0) {
         log.info(s"Reconciling tasks during app ${app.id.toString} scaling: queuing $tasksToStartNow new tasks")
@@ -53,7 +53,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
-  override def taskStatusChanged(taskId: Id): Unit = {
+  override def taskStatusChanged(taskId: Instance.Id): Unit = {
     log.info(s"New task $taskId changed during app ${app.id.toString} scaling, " +
       s"${readyTasks.size} ready ${healthyTasks.size} healthy need $nrToStart")
     checkFinished()

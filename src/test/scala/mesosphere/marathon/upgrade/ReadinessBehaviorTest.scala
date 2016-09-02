@@ -1,19 +1,21 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{ ActorLogging, ActorRef, Actor }
+import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
-import mesosphere.marathon.core.readiness.{ ReadinessCheckResult, ReadinessCheck, ReadinessCheckExecutor }
+import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.event.{ HealthStatusChanged, MesosStatusUpdateEvent, DeploymentStatus }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{ Matchers, GivenWhenThen, FunSuite }
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 import rx.lang.scala.Observable
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
@@ -155,13 +157,13 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val step = DeploymentStep(Seq.empty)
     val plan = DeploymentPlan("deploy", Group.empty, Group.empty, Seq(step), Timestamp.now())
     val deploymentStatus = DeploymentStatus(plan, step)
-    val tracker = mock[TaskTracker]
+    val tracker = mock[InstanceTracker]
     val task = mock[Task]
     val launched = mock[Task.Launched]
-    val agentInfo = mock[Task.AgentInfo]
+    val agentInfo = mock[Instance.AgentInfo]
 
     val appId = PathId("/test")
-    val taskId = Task.Id("app.task")
+    val taskId = Instance.Id("app.task")
     val version = Timestamp.now()
     val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
@@ -170,15 +172,15 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val taskIsHealthy = HealthStatusChanged(appId, taskId, version, alive = true)
 
     agentInfo.host returns "some.host"
-    task.taskId returns taskId
+    task.id returns taskId
     task.launched returns Some(launched)
     task.runSpecId returns appId
     task.effectiveIpAddress(any) returns Some("some.host")
     task.agentInfo returns agentInfo
     launched.hostPorts returns Seq(1, 2, 3)
-    tracker.task(any) returns Future.successful(Some(task))
+    tracker.instance(any) returns Future.successful(Some(task))
 
-    def readinessActor(appDef: AppDefinition, readinessCheckResults: Seq[ReadinessCheckResult], taskReadyFn: Task.Id => Unit) = {
+    def readinessActor(appDef: AppDefinition, readinessCheckResults: Seq[ReadinessCheckResult], taskReadyFn: Instance.Id => Unit) = {
       val executor = new ReadinessCheckExecutor {
         override def execute(readinessCheckInfo: ReadinessCheckSpec): Observable[ReadinessCheckResult] = {
           Observable.from(readinessCheckResults)
@@ -193,11 +195,11 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
         override def deploymentManager: ActorRef = deploymentManagerProbe.ref
         override def status: DeploymentStatus = deploymentStatus
         override def readinessCheckExecutor: ReadinessCheckExecutor = executor
-        override def taskTracker: TaskTracker = tracker
+        override def instanceTracker: InstanceTracker = tracker
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }
-        override def taskStatusChanged(taskId: Task.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
+        override def taskStatusChanged(taskId: Instance.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
       }
       )
     }

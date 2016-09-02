@@ -1,9 +1,9 @@
 package mesosphere.marathon.core.task.update.impl.steps
 
 import com.google.inject.{ Inject, Provider }
+import mesosphere.marathon.core.instance.InstanceStatus
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
@@ -23,8 +23,8 @@ class NotifyRateLimiterStepImpl @Inject() (
   override def processUpdate(taskChanged: TaskChanged): Future[_] = {
     // if MesosUpdate and status terminal != killed
     taskChanged.stateOp match {
-      case TaskStateOp.MesosUpdate(task, status: MarathonTaskStatus.Terminal, mesosStatus, _) //
-      if status != MarathonTaskStatus.Killed =>
+      case TaskStateOp.MesosUpdate(task, status: InstanceStatus.Terminal, mesosStatus, _) //
+      if status != InstanceStatus.Killed =>
         notifyRateLimiter(mesosStatus, task)
       case _ => Future.successful(())
     }

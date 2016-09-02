@@ -5,7 +5,7 @@ import akka.testkit._
 import mesosphere.marathon._
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.storage.repository.AppRepository
@@ -39,7 +39,7 @@ class HealthCheckActorTest
 
     when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
-    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.task))
+    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.task))
 
     val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
     actor.underlyingActor.dispatchJobs()
@@ -50,7 +50,7 @@ class HealthCheckActorTest
   test("should not dispatch health checks for lost tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.lostTask))
+    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.lostTask))
 
     val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
 
@@ -62,7 +62,7 @@ class HealthCheckActorTest
   test("should not dispatch health checks for unreachable tasks") {
     val f = new Fixture
     val latch = TestLatch(1)
-    when(f.tracker.appTasksSync(f.appId)).thenReturn(Set(f.unreachableTask))
+    when(f.tracker.specInstancesSync(f.appId)).thenReturn(Set(f.unreachableTask))
 
     val actor = f.actorWithLatch(HealthCheck(maxConsecutiveFailures = 3), latch)
 
@@ -76,7 +76,7 @@ class HealthCheckActorTest
     val f = new Fixture
     val actor = f.actor(HealthCheck(maxConsecutiveFailures = 3))
 
-    actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.taskId, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(f.task, Health(f.task.id, consecutiveFailures = 3))
     verify(f.killService).killTask(f.task, TaskKillReason.FailedHealthChecks)
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
@@ -85,12 +85,12 @@ class HealthCheckActorTest
     val f = new Fixture
     val actor = f.actor(HealthCheck(maxConsecutiveFailures = 3))
 
-    actor.underlyingActor.checkConsecutiveFailures(f.unreachableTask, Health(f.unreachableTask.taskId, consecutiveFailures = 3))
+    actor.underlyingActor.checkConsecutiveFailures(f.unreachableTask, Health(f.unreachableTask.id, consecutiveFailures = 3))
     verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
   }
 
   class Fixture {
-    val tracker = mock[TaskTracker]
+    val tracker = mock[InstanceTracker]
 
     val appId = "/test".toPath
     val appVersion = Timestamp(1)

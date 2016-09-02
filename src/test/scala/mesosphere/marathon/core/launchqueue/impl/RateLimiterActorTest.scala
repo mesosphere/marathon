@@ -6,7 +6,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import org.mockito.Mockito
 
@@ -50,7 +50,7 @@ class RateLimiterActorTest extends MarathonSpec {
   private[this] implicit var actorSystem: ActorSystem = _
   private[this] var clock: ConstantClock = _
   private[this] var rateLimiter: RateLimiter = _
-  private[this] var taskTracker: TaskTracker = _
+  private[this] var taskTracker: InstanceTracker = _
   private[this] var updateReceiver: TestProbe = _
   private[this] var limiterRef: ActorRef = _
 
@@ -58,7 +58,7 @@ class RateLimiterActorTest extends MarathonSpec {
     actorSystem = ActorSystem()
     clock = ConstantClock()
     rateLimiter = Mockito.spy(new RateLimiter(clock))
-    taskTracker = mock[TaskTracker]
+    taskTracker = mock[InstanceTracker]
     updateReceiver = TestProbe()
     val props = RateLimiterActor.props(rateLimiter, updateReceiver.ref)
     limiterRef = actorSystem.actorOf(props, "limiter")

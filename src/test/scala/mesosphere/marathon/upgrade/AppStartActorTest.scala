@@ -1,21 +1,21 @@
 package mesosphere.marathon.upgrade
 
-import akka.testkit.{ TestProbe, TestActorRef }
+import akka.testkit.{ TestActorRef, TestProbe }
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId }
-import mesosphere.marathon.test.{ Mockito, MarathonActorSupport }
-import mesosphere.marathon.{ MarathonTestHelper, AppStartCanceledException, MarathonSpec, SchedulerActions }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.{ AppStartCanceledException, MarathonSpec, MarathonTestHelper, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Future, Await, Promise }
+import scala.concurrent.{ Await, Future, Promise }
 
 class AppStartActorTest
     extends MarathonActorSupport
@@ -33,14 +33,14 @@ class AppStartActorTest
 
     system.eventStream.publish(
       MesosStatusUpdateEvent(
-        slaveId = "", taskId = Task.Id("task_a"),
+        slaveId = "", taskId = Instance.Id("task_a"),
         taskStatus = "TASK_RUNNING", message = "", appId = app
         .id, host = "", ipAddresses = None, ports = Nil, version = app.version.toString
       )
     )
     system.eventStream.publish(
       MesosStatusUpdateEvent(
-        slaveId = "", taskId = Task.Id("task_b"), taskStatus = "TASK_RUNNING", message = "", appId = app.id, host = "",
+        slaveId = "", taskId = Instance.Id("task_b"), taskStatus = "TASK_RUNNING", message = "", appId = app.id, host = "",
         ipAddresses = None, ports = Nil, version = app.version.toString
       )
     )
@@ -58,8 +58,8 @@ class AppStartActorTest
     val ref = f.startActor(app, scaleTo = 2, promise)
     watch(ref)
 
-    system.eventStream.publish(HealthStatusChanged(app.id, Task.Id("task_a"), app.version, alive = true))
-    system.eventStream.publish(HealthStatusChanged(app.id, Task.Id("task_b"), app.version, alive = true))
+    system.eventStream.publish(HealthStatusChanged(app.id, Instance.Id("task_a"), app.version, alive = true))
+    system.eventStream.publish(HealthStatusChanged(app.id, Instance.Id("task_b"), app.version, alive = true))
 
     Await.result(promise.future, 5.seconds)
 
@@ -118,7 +118,7 @@ class AppStartActorTest
     val driver: SchedulerDriver = mock[SchedulerDriver]
     val scheduler: SchedulerActions = mock[SchedulerActions]
     val launchQueue: LaunchQueue = mock[LaunchQueue]
-    val taskTracker: TaskTracker = MarathonTestHelper.createTaskTracker(AlwaysElectedLeadershipModule.forActorSystem(system))
+    val taskTracker: InstanceTracker = MarathonTestHelper.createTaskTracker(AlwaysElectedLeadershipModule.forActorSystem(system))
     val deploymentManager: TestProbe = TestProbe()
     val deploymentStatus: DeploymentStatus = mock[DeploymentStatus]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]

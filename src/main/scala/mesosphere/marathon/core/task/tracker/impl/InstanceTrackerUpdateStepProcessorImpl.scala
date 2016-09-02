@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.tracker.TaskTrackerUpdateStepProcessor
+import mesosphere.marathon.core.task.tracker.InstanceTrackerUpdateStepProcessor
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.metrics.{ Metrics, MetricPrefixes }
 import mesosphere.marathon.metrics.Metrics.Timer
@@ -13,9 +13,9 @@ import scala.concurrent.{ ExecutionContext, Future }
   * Takes care of performing the given [[TaskUpdateStep]]s and should be called after a task state
   * change has been persisted in the repository
   */
-private[tracker] class TaskTrackerUpdateStepProcessorImpl(
+private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
     steps: Seq[TaskUpdateStep],
-    metrics: Metrics) extends TaskTrackerUpdateStepProcessor {
+    metrics: Metrics) extends InstanceTrackerUpdateStepProcessor {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
 

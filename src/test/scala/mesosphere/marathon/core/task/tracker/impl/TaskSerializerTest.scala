@@ -1,9 +1,9 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.Protos.MarathonTask
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolumeId
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonTestHelper, SerializationFailedException }
@@ -31,7 +31,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val task = TaskSerializer.fromProto(taskProto)
 
     Then("we get a minimal task State")
-    val expectedState = MarathonTestHelper.mininimalTask(f.taskId.idString, now, None, MarathonTaskStatus.Running)
+    val expectedState = MarathonTestHelper.mininimalTask(f.taskId.idString, now, None, InstanceStatus.Running)
 
     task should be(expectedState)
 
@@ -173,7 +173,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
   class Fixture {
     private[this] val appId = PathId.fromSafePath("/test")
-    val taskId = Task.Id("task")
+    val taskId = Instance.Id("task")
     val sampleHost: String = "host.some"
     private[this] val sampleAttributes: Iterable[Attribute] = Iterable(attribute("label1", "value1"))
     private[this] val stagedAtLong: Long = 1
@@ -194,13 +194,13 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
     val fullSampleTaskStateWithoutNetworking: Task.LaunchedOnReservation =
       Task.LaunchedOnReservation(
         taskId,
-        Task.AgentInfo(host = sampleHost, agentId = Some(sampleSlaveId.getValue), attributes = sampleAttributes),
+        Instance.AgentInfo(host = sampleHost, agentId = Some(sampleSlaveId.getValue), attributes = sampleAttributes),
         runSpecVersion = appVersion,
         status = Task.Status(
           stagedAt = Timestamp(stagedAtLong),
           startedAt = Some(Timestamp(startedAtLong)),
           mesosStatus = Some(sampleTaskStatus),
-          taskStatus = MarathonTaskStatus.Running
+          taskStatus = InstanceStatus.Running
         ),
         hostPorts = Seq.empty,
         reservation = Task.Reservation(
@@ -236,7 +236,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       import scala.concurrent.duration._
 
       private[this] val appId = PathId("/test")
-      private[this] val taskId = Task.Id("reserved1")
+      private[this] val taskId = Instance.Id("reserved1")
       private[this] val host = "some.host"
       private[this] val agentId = "agent-1"
       private[this] val now = MarathonTestHelper.clock.now()
@@ -247,7 +247,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
       private[this] val stagedAt = now - 1.minute
       private[this] val startedAt = now - 55.seconds
       private[this] val mesosStatus = MarathonTestHelper.statusForState(taskId.idString, MesosProtos.TaskState.TASK_RUNNING)
-      private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus), taskStatus = MarathonTaskStatus.Running)
+      private[this] val status = Task.Status(stagedAt, Some(startedAt), Some(mesosStatus), taskStatus = InstanceStatus.Running)
       private[this] val hostPorts = Seq(1, 2, 3)
 
       def reservedProto = MarathonTask.newBuilder()
@@ -267,11 +267,11 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
         .build()
 
       def reservedState = Task.Reserved(
-        Task.Id(taskId.idString),
-        Task.AgentInfo(host = host, agentId = Some(agentId), attributes),
+        Instance.Id(taskId.idString),
+        Instance.AgentInfo(host = host, agentId = Some(agentId), attributes),
         reservation = Task.Reservation(localVolumeIds, Task.Reservation.State.New(Some(Task.Reservation.Timeout(
           initiated = now, deadline = now + 1.minute, reason = Task.Reservation.Timeout.Reason.ReservationTimeout)))),
-        status = Task.Status(stagedAt = Timestamp(0), taskStatus = MarathonTaskStatus.Reserved)
+        status = Task.Status(stagedAt = Timestamp(0), taskStatus = InstanceStatus.Reserved)
       )
 
       def launchedEphemeralProto = MarathonTask.newBuilder()
@@ -296,7 +296,7 @@ class TaskSerializerTest extends FunSuite with Mockito with Matchers with GivenW
 
       def launchedOnReservationState = Task.LaunchedOnReservation(
         taskId,
-        Task.AgentInfo(host = host, agentId = Some(agentId), attributes),
+        Instance.AgentInfo(host = host, agentId = Some(agentId), attributes),
         appVersion,
         status,
         hostPorts,

@@ -1,8 +1,8 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -22,13 +22,13 @@ class MarathonTaskFormatTest extends MarathonSpec {
     )
 
     val taskWithoutIp = new Task.LaunchedEphemeral(
-      taskId = Task.Id("/foo/bar"),
-      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      id = Instance.Id("/foo/bar"),
+      agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
-      status = Task.Status(time, None, taskStatus = MarathonTaskStatus.Running),
+      status = Task.Status(time, None, taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty)
 
-    def mesosStatus(taskId: Task.Id) = {
+    def mesosStatus(taskId: Instance.Id) = {
       import scala.collection.JavaConverters._
       MesosProtos.TaskStatus.newBuilder()
         .setTaskId(taskId.mesosTaskId)
@@ -39,22 +39,22 @@ class MarathonTaskFormatTest extends MarathonSpec {
     }
 
     val taskWithMultipleIPs = new Task.LaunchedEphemeral(
-      taskId = Task.Id("/foo/bar"),
-      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      id = Instance.Id("/foo/bar"),
+      agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
       status = Task.Status(
         stagedAt = time,
         startedAt = None,
-        mesosStatus = Some(mesosStatus(Task.Id("/foo/bar"))),
-        taskStatus = MarathonTaskStatus.Running),
+        mesosStatus = Some(mesosStatus(Instance.Id("/foo/bar"))),
+        taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty
     )
 
     val taskWithLocalVolumes = new Task.LaunchedOnReservation(
-      taskId = Task.Id("/foo/bar"),
-      agentInfo = Task.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
+      id = Instance.Id("/foo/bar"),
+      agentInfo = Instance.AgentInfo("agent1.mesos", Some("abcd-1234"), Iterable.empty),
       runSpecVersion = time,
-      status = Task.Status(time, Some(time), taskStatus = MarathonTaskStatus.Running),
+      status = Task.Status(time, Some(time), taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty,
       reservation = Task.Reservation(
         Seq(Task.LocalVolumeId.unapply("appid#container#random")).flatten,

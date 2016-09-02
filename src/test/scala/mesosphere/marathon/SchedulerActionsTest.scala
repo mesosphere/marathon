@@ -9,8 +9,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.TaskTracker.{ AppTasks, TasksByApp }
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.{ SpecInstances, InstancesBySpec }
 import mesosphere.marathon.state.{ AppDefinition, PathId }
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository }
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
@@ -40,7 +40,7 @@ class SchedulerActionsTest
     val app = AppDefinition(id = PathId("/myapp"))
 
     f.repo.delete(app.id) returns Future.successful(Done)
-    f.taskTracker.appTasks(eq(app.id))(any) returns Future.successful(Iterable.empty[Task])
+    f.taskTracker.specInstances(eq(app.id))(any) returns Future.successful(Iterable.empty[Task])
 
     f.scheduler.stopApp(app).futureValue(1.second)
 
@@ -62,7 +62,7 @@ class SchedulerActionsTest
     val app = AppDefinition(id = PathId("/myapp"))
 
     val tasks = Set(runningTask, stagedTask, stagedTaskWithSlaveId)
-    f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(AppTasks.forTasks(app.id, tasks)))
+    f.taskTracker.instancessBySpec() returns Future.successful(InstancesBySpec.of(SpecInstances.forInstances(app.id, tasks)))
     f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
@@ -78,7 +78,7 @@ class SchedulerActionsTest
   test("Task reconciliation only one empty list, when no tasks are present in Marathon") {
     val f = new Fixture
 
-    f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.empty)
+    f.taskTracker.instancessBySpec() returns Future.successful(InstancesBySpec.empty)
     f.repo.ids() returns Source.empty
 
     f.scheduler.reconcileTasks(f.driver).futureValue
@@ -97,11 +97,11 @@ class SchedulerActionsTest
     val orphanedTask = MarathonTestHelper.runningTask("orphaned task")
 
     val app = AppDefinition(id = PathId("/myapp"))
-    val tasksOfApp = AppTasks.forTasks(app.id, Iterable(task))
+    val tasksOfApp = SpecInstances.forInstances(app.id, Iterable(task))
     val orphanedApp = AppDefinition(id = PathId("/orphan"))
-    val tasksOfOrphanedApp = AppTasks.forTasks(orphanedApp.id, Iterable(orphanedTask))
+    val tasksOfOrphanedApp = SpecInstances.forInstances(orphanedApp.id, Iterable(orphanedTask))
 
-    f.taskTracker.tasksByApp() returns Future.successful(TasksByApp.of(tasksOfApp, tasksOfOrphanedApp))
+    f.taskTracker.instancessBySpec() returns Future.successful(InstancesBySpec.of(tasksOfApp, tasksOfOrphanedApp))
     f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
@@ -122,7 +122,7 @@ class SchedulerActionsTest
       tasksLost = 5,
       backOffUntil = f.clock.now())
     f.queue.get(app.id) returns Some(queued)
-    f.taskTracker.countAppTasksSync(eq(app.id), any) returns (queued.finalTaskCount - queued.tasksLost) // 10
+    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns (queued.finalTaskCount - queued.tasksLost) // 10
 
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)
@@ -137,7 +137,7 @@ class SchedulerActionsTest
     Given("An active queue and lost tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 15)
     f.queue.get(app.id) returns None
-    f.taskTracker.countAppTasksSync(eq(app.id), any) returns 10
+    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 10
 
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)
@@ -179,8 +179,8 @@ class SchedulerActionsTest
     )
 
     f.queue.get(app.id) returns Some(queued)
-    f.taskTracker.countAppTasksSync(eq(app.id), any) returns 7
-    f.taskTracker.appTasksSync(app.id) returns tasks
+    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 7
+    f.taskTracker.specInstancesSync(app.id) returns tasks
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)
 
@@ -199,7 +199,7 @@ class SchedulerActionsTest
     Given("an inactive queue, running tasks and some overCapacity")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 5)
 
-    def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt)
+    def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt, startedAt = stagedAt)
 
     val running_6 = runningTask(s"running-6", stagedAt = 6L)
     val running_7 = runningTask(s"running-7", stagedAt = 7L)
@@ -214,8 +214,8 @@ class SchedulerActionsTest
     )
 
     f.queue.get(app.id) returns None
-    f.taskTracker.countAppTasksSync(eq(app.id), any) returns 7
-    f.taskTracker.appTasksSync(app.id) returns tasks
+    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 7
+    f.taskTracker.specInstancesSync(app.id) returns tasks
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)
 
@@ -243,7 +243,7 @@ class SchedulerActionsTest
       backOffUntil = f.clock.now())
 
     def stagedTask(id: String, stagedAt: Long) = MarathonTestHelper.stagedTask(id, stagedAt = stagedAt)
-    def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt)
+    def runningTask(id: String, stagedAt: Long) = MarathonTestHelper.runningTask(id, stagedAt = stagedAt, startedAt = stagedAt)
 
     val staged_1 = stagedTask("staged-1", 1L)
     val running_4 = runningTask("running-4", stagedAt = 4L)
@@ -256,8 +256,8 @@ class SchedulerActionsTest
     )
 
     f.queue.get(app.id) returns Some(queued)
-    f.taskTracker.countAppTasksSync(eq(app.id), any) returns 5
-    f.taskTracker.appTasksSync(app.id) returns tasks
+    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns 5
+    f.taskTracker.specInstancesSync(app.id) returns tasks
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)
 
@@ -278,7 +278,7 @@ class SchedulerActionsTest
   class Fixture {
     val queue = mock[LaunchQueue]
     val repo = mock[AppRepository]
-    val taskTracker = mock[TaskTracker]
+    val taskTracker = mock[InstanceTracker]
     val driver = mock[SchedulerDriver]
     val killService = mock[TaskKillService]
     val clock = ConstantClock()

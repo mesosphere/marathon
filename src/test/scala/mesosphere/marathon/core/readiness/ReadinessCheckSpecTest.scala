@@ -29,7 +29,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     spec should equal(
       ReadinessCheckExecutor.ReadinessCheckSpec(
         url = "http://some.host:80/",
-        taskId = task.taskId,
+        taskId = task.id,
         checkName = app.readinessChecks.head.name,
         interval = app.readinessChecks.head.interval,
         timeout = app.readinessChecks.head.timeout,
@@ -59,7 +59,7 @@ class ReadinessCheckSpecTest extends FunSuite with Matchers with GivenWhenThen {
     spec should equal(
       ReadinessCheckExecutor.ReadinessCheckSpec(
         url = "http://some.host:80/",
-        taskId = task.taskId,
+        taskId = task.id,
         checkName = app.readinessChecks.head.name,
         interval = app.readinessChecks.head.interval,
         timeout = app.readinessChecks.head.timeout,

@@ -6,9 +6,9 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state.{ AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
-
 import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos.{ HealthCheck => _, _ }
@@ -20,7 +20,7 @@ import scala.util.Random
 
 class TaskBuilder(
     runSpec: RunSpec,
-    newTaskId: PathId => Task.Id,
+    newTaskId: PathId => Instance.Id,
     config: MarathonConf,
     appTaskProc: Option[RunSpecTaskProcessor] = None) {
 
@@ -282,7 +282,7 @@ object TaskBuilder {
 
   def commandInfo(
     runSpec: RunSpec,
-    taskId: Option[Task.Id],
+    taskId: Option[Instance.Id],
     host: Option[String],
     hostPorts: Seq[Option[Int]],
     envPrefix: Option[String]): CommandInfo.Builder = {
@@ -434,7 +434,7 @@ object TaskBuilder {
     }
   }
 
-  def taskContextEnv(runSpec: RunSpec, taskId: Option[Task.Id]): Map[String, String] = {
+  def taskContextEnv(runSpec: RunSpec, taskId: Option[Instance.Id]): Map[String, String] = {
     if (taskId.isEmpty) {
       // This branch is taken during serialization. Do not add environment variables in this case.
       Map.empty

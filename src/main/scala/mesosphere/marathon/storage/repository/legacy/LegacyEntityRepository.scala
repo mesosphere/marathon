@@ -6,6 +6,7 @@ import java.time.OffsetDateTime
 import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.{ Repository, VersionedRepository }
 import mesosphere.marathon.storage.repository.legacy.store.EntityStore
@@ -174,17 +175,17 @@ class TaskEntityRepository(private[storage] val store: EntityStore[MarathonTaskS
   ctx: ExecutionContext = ExecutionContext.global,
   metrics: Metrics)
     extends TaskRepository with VersionedEntry {
-  private[storage] val repo = new LegacyEntityRepository[Task.Id, MarathonTaskState](
+  private[storage] val repo = new LegacyEntityRepository[Instance.Id, MarathonTaskState](
     store,
-    _.idString, Task.Id(_), task => Task.Id(task.task.getId))
-  override def ids(): Source[Task.Id, NotUsed] = repo.ids()
+    _.idString, Instance.Id(_), task => Instance.Id(task.task.getId))
+  override def ids(): Source[Instance.Id, NotUsed] = repo.ids()
 
   override def all(): Source[Task, NotUsed] = repo.all().map(t => TaskSerializer.fromProto(t.toProto))
 
-  override def get(id: Task.Id): Future[Option[Task]] =
+  override def get(id: Instance.Id): Future[Option[Task]] =
     repo.get(id).map(_.map(t => TaskSerializer.fromProto(t.toProto)))
 
-  override def delete(id: Task.Id): Future[Done] = repo.delete(id)
+  override def delete(id: Instance.Id): Future[Done] = repo.delete(id)
 
   override def store(v: Task): Future[Done] = repo.store(MarathonTaskState(TaskSerializer.toProto(v)))
 }

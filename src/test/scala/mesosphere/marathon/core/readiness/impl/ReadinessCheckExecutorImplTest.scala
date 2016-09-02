@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.readiness.impl
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckResult }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonActorSupport
 import org.scalatest.concurrent.ScalaFutures
@@ -109,7 +109,7 @@ class ReadinessCheckExecutorImplTest
 
   class Fixture {
     lazy val check = ReadinessCheckSpec(
-      taskId = Task.Id.forRunSpec(PathId("/test")),
+      taskId = Instance.Id.forRunSpec(PathId("/test")),
       checkName = "testCheck",
       url = "http://sample.url:123",
       interval = 3.seconds,

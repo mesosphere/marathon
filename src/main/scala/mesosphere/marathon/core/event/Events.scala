@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.event
 
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.upgrade.{ DeploymentPlan, DeploymentStep }
 
@@ -94,7 +94,7 @@ case class RemoveHealthCheck(
 
 case class FailedHealthCheck(
   appId: PathId,
-  taskId: Task.Id,
+  taskId: Instance.Id,
   healthCheck: HealthCheck,
   eventType: String = "failed_health_check_event",
   timestamp: String = Timestamp.now().toString)
@@ -102,7 +102,7 @@ case class FailedHealthCheck(
 
 case class HealthStatusChanged(
   appId: PathId,
-  taskId: Task.Id,
+  taskId: Instance.Id,
   version: Timestamp,
   alive: Boolean,
   eventType: String = "health_status_changed_event",
@@ -111,7 +111,7 @@ case class HealthStatusChanged(
 
 case class UnhealthyTaskKillEvent(
   appId: PathId,
-  taskId: Task.Id,
+  taskId: Instance.Id,
   version: Timestamp,
   reason: String,
   host: String,
@@ -175,7 +175,7 @@ case class AppTerminatedEvent(
 
 case class MesosStatusUpdateEvent(
   slaveId: String,
-  taskId: Task.Id,
+  taskId: Instance.Id,
   taskStatus: String,
   message: String,
   appId: PathId,

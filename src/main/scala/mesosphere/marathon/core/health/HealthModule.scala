@@ -5,7 +5,7 @@ import akka.event.EventStream
 import mesosphere.marathon.ZookeeperConf
 import mesosphere.marathon.core.health.impl.MarathonHealthCheckManager
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 
 /**
@@ -15,7 +15,7 @@ class HealthModule(
     actorSystem: ActorSystem,
     killService: TaskKillService,
     eventBus: EventStream,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     appRepository: ReadOnlyAppRepository,
     zkConf: ZookeeperConf) {
   lazy val healthCheckManager = new MarathonHealthCheckManager(

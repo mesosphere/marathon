@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.readiness
 
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
@@ -22,7 +23,7 @@ object ReadinessCheckExecutor {
     * a readiness check.
     */
   case class ReadinessCheckSpec(
-    taskId: Task.Id,
+    taskId: Instance.Id,
     checkName: String,
     url: String,
     interval: FiniteDuration = ReadinessCheck.DefaultInterval,
@@ -70,7 +71,7 @@ object ReadinessCheckExecutor {
         }
 
         ReadinessCheckSpec(
-          taskId = task.taskId,
+          taskId = task.id,
           checkName = checkDef.name,
           url = url,
           interval = checkDef.interval,

@@ -1,13 +1,13 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
-import mesosphere.marathon.core.launcher.TaskOp
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.Task.Id
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.task.TaskStateOp
-import mesosphere.marathon.core.task.tracker.TaskTracker
-import mesosphere.marathon.core.task.tracker.TaskTracker.TasksByApp
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{ Group, Timestamp }
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.util.state.FrameworkId
@@ -28,7 +28,7 @@ import scala.concurrent.Future
   *   a delay
   * * and creating unreserved/destroy operations for tasks in state "garbage" only
   */
-private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupRepository: GroupRepository)
+private[reconcile] class OfferMatcherReconciler(taskTracker: InstanceTracker, groupRepository: GroupRepository)
     extends OfferMatcher {
 
   private val log = LoggerFactory.getLogger(getClass)
@@ -39,35 +39,38 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
 
     val frameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
 
-    val resourcesByTaskId: Map[Id, Iterable[Resource]] = {
+    val resourcesByTaskId: Map[Instance.Id, Iterable[Resource]] = {
       import scala.collection.JavaConverters._
       offer.getResourcesList.asScala.groupBy(TaskLabels.taskIdForResource(frameworkId, _)).collect {
         case (Some(taskId), resources) => taskId -> resources
       }
     }
 
-    processResourcesByTaskId(offer, resourcesByTaskId)
+    processResourcesByInstanceId(offer, resourcesByTaskId)
   }
 
-  private[this] def processResourcesByTaskId(
-    offer: Offer, resourcesByTaskId: Map[Id, Iterable[Resource]]): Future[MatchedTaskOps] =
+  // TODO POD support
+  private[this] def processResourcesByInstanceId(
+    offer: Offer, resourcesByInstanceId: Map[Instance.Id, Iterable[Resource]]): Future[MatchedTaskOps] =
     {
       // do not query taskTracker in the common case
-      if (resourcesByTaskId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
+      if (resourcesByInstanceId.isEmpty) Future.successful(MatchedTaskOps.noMatch(offer.getId))
       else {
-        def createTaskOps(tasksByApp: TasksByApp, rootGroup: Group): MatchedTaskOps = {
-          def spurious(taskId: Id): Boolean =
+        def createTaskOps(tasksByApp: InstancesBySpec, rootGroup: Group): MatchedTaskOps = {
+          def spurious(taskId: Instance.Id): Boolean =
             tasksByApp.task(taskId).isEmpty || rootGroup.app(taskId.runSpecId).isEmpty
 
-          val taskOps = resourcesByTaskId.iterator.collect {
-            case (taskId, spuriousResources) if spurious(taskId) =>
+          val taskOps = resourcesByInstanceId.iterator.collect {
+            case (instanceId, spuriousResources) if spurious(instanceId) =>
               val unreserveAndDestroy =
-                TaskOp.UnreserveAndDestroyVolumes(
-                  stateOp = TaskStateOp.ForceExpunge(taskId),
-                  oldTask = tasksByApp.task(taskId),
+                InstanceOp.UnreserveAndDestroyVolumes(
+                  stateOp = TaskStateOp.ForceExpunge(instanceId),
+                  oldInstance = tasksByApp.task(instanceId),
                   resources = spuriousResources.to[Seq]
                 )
-              log.warn("removing spurious resources and volumes of {} because the app does no longer exist", taskId)
+              log.warn(
+                "removing spurious resources and volumes of {} because the instance does no longer exist",
+                instanceId)
               TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
           }.to[Seq]
 
@@ -75,17 +78,17 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: TaskTracker, groupR
         }
 
         // query in parallel
-        val tasksByAppFuture = taskTracker.tasksByApp()
+        val tasksByAppFuture = taskTracker.instancessBySpec()
         val rootGroupFuture = groupRepository.root()
 
         for { tasksByApp <- tasksByAppFuture; rootGroup <- rootGroupFuture } yield createTaskOps(tasksByApp, rootGroup)
       }
     }
 
-  private[this] def source(offerId: OfferID) = new TaskOpSource {
-    override def taskOpAccepted(taskOp: TaskOp): Unit =
-      log.info(s"accepted unreserveAndDestroy for ${taskOp.taskId} in offer [${offerId.getValue}]")
-    override def taskOpRejected(taskOp: TaskOp, reason: String): Unit =
-      log.info("rejected unreserveAndDestroy for {} in offer [{}]: {}", taskOp.taskId, offerId.getValue, reason)
+  private[this] def source(offerId: OfferID) = new InstanceOpSource {
+    override def instanceOpAccepted(taskOp: InstanceOp): Unit =
+      log.info(s"accepted unreserveAndDestroy for ${taskOp.instanceId} in offer [${offerId.getValue}]")
+    override def instanceOpRejected(taskOp: InstanceOp, reason: String): Unit =
+      log.info("rejected unreserveAndDestroy for {} in offer [{}]: {}", taskOp.instanceId, offerId.getValue, reason)
   }
 }

@@ -5,7 +5,7 @@ import mesosphere.marathon.core.task.TaskStateOp
 import scala.concurrent.Future
 
 /**
-  * Notifies the [[TaskTracker]] of task creation and termination.
+  * Notifies the [[InstanceTracker]] of task creation and termination.
   */
 trait TaskCreationHandler {
   /**

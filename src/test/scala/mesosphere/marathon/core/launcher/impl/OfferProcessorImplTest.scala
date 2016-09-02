@@ -2,10 +2,10 @@ package mesosphere.marathon.core.launcher.impl
 
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher, TaskOp }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher, InstanceOp }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.Metrics
@@ -22,8 +22,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
   private[this] val offer = MarathonTestHelper.makeBasicOffer().build()
   private[this] val offerId = offer.getId
   private val appId: PathId = PathId("/testapp")
-  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(appId).idString).build()
-  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id.forRunSpec(appId).idString).build()
+  private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Instance.Id.forRunSpec(appId).idString).build()
+  private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Instance.Id.forRunSpec(appId).idString).build()
   private[this] val tasks = Seq(taskInfo1, taskInfo2)
 
   test("match successful, launch tasks successful") {
@@ -43,7 +43,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     }
 
     And("a working taskLauncher")
-    val ops: Seq[TaskOp] = tasksWithSource.map(_.op)
+    val ops: Seq[InstanceOp] = tasksWithSource.map(_.op)
     taskLauncher.acceptOffer(offerId, ops) returns true
 
     When("processing the offer")
@@ -111,9 +111,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     val tasksWithSource = tasks.map { task =>
       val dummyTask = MarathonTestHelper.residentReservedTask(appId)
       val taskStateOp = TaskStateOp.LaunchOnReservation(
-        taskId = dummyTask.taskId,
+        taskId = dummyTask.id,
         runSpecVersion = clock.now(),
-        status = Task.Status(clock.now(), taskStatus = MarathonTaskStatus.Running),
+        status = Task.Status(clock.now(), taskStatus = InstanceStatus.Running),
         hostPorts = Seq.empty)
       val launch = f.launchWithOldTask(
         task,
@@ -131,7 +131,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     for (task <- tasksWithSource) {
       val op = task.op
       taskCreationHandler.created(op.stateOp) returns Future.successful(op.stateOp)
-      taskCreationHandler.created(TaskStateOp.Revert(op.oldTask.get)) returns Future.successful(op.oldTask.get)
+      taskCreationHandler.created(TaskStateOp.Revert(op.oldInstance.get.asInstanceOf[Task])) returns Future.successful(op.oldInstance.get)
     }
 
     And("a dysfunctional taskLauncher")
@@ -153,7 +153,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       val op = task.op
       val ordered = inOrder(taskCreationHandler)
       ordered.verify(taskCreationHandler).created(op.stateOp)
-      ordered.verify(taskCreationHandler).created(TaskStateOp.Revert(op.oldTask.get))
+      ordered.verify(taskCreationHandler).created(TaskStateOp.Revert(op.oldInstance.get.asInstanceOf[Task]))
     }
   }
 
@@ -161,7 +161,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     Given("an offer")
     val dummySource = new DummySource
     val tasksWithSource = tasks.map(task => TaskOpWithSource(
-      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, marathonTaskStatus = MarathonTaskStatus.Running))))
+      dummySource, f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, marathonTaskStatus = InstanceStatus.Running))))
 
     val offerProcessor = createProcessor()
 
@@ -215,15 +215,15 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
         clock += 1.hour
         Future.successful(task.op.stateOp)
       }
-      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.op.taskId)).asInstanceOf[Future[Unit]] returns
-        Future.successful(Some(task.op.taskId))
+      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.op.instanceId)).asInstanceOf[Future[Unit]] returns
+        Future.successful(Some(task.op.instanceId))
     }
 
     When("processing the offer")
     Await.result(offerProcessor.processOffer(offer), 1.second)
 
     Then("we saw the matchOffer request and the task launch attempt for the first task")
-    val firstTaskOp: Seq[TaskOp] = tasksWithSource.take(1).map(_.op)
+    val firstTaskOp: Seq[InstanceOp] = tasksWithSource.take(1).map(_.op)
 
     verify(offerMatcher).matchOffer(deadline, offer)
     verify(taskLauncher).acceptOffer(offerId, firstTaskOp)
@@ -292,15 +292,15 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
   object f {
     import org.apache.mesos.{ Protos => Mesos }
-    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
-    val launchWithOldTask = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
+    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
+    val launchWithOldTask = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
   }
 
-  class DummySource extends TaskOpSource {
-    var rejected = Vector.empty[(TaskOp, String)]
-    var accepted = Vector.empty[TaskOp]
+  class DummySource extends InstanceOpSource {
+    var rejected = Vector.empty[(InstanceOp, String)]
+    var accepted = Vector.empty[InstanceOp]
 
-    override def taskOpRejected(op: TaskOp, reason: String): Unit = rejected :+= op -> reason
-    override def taskOpAccepted(op: TaskOp): Unit = accepted :+= op
+    override def instanceOpRejected(op: InstanceOp, reason: String): Unit = rejected :+= op -> reason
+    override def instanceOpAccepted(op: InstanceOp): Unit = accepted :+= op
   }
 }

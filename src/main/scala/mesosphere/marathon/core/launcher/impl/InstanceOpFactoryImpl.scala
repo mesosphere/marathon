@@ -2,10 +2,10 @@ package mesosphere.marathon.core.launcher.impl
 
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.{ TaskOp, TaskOpFactory }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
 import mesosphere.marathon.state.{ ResourceRole, RunSpec }
@@ -18,23 +18,23 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
-class TaskOpFactoryImpl(
+class InstanceOpFactoryImpl(
   config: MarathonConf,
   clock: Clock,
   pluginManager: PluginManager = PluginManager.None)
-    extends TaskOpFactory {
+    extends InstanceOpFactory {
 
   private[this] val log = LoggerFactory.getLogger(getClass)
   private[this] val taskOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.get
     val roleOpt = config.mesosRole.get
 
-    new TaskOpFactoryHelper(principalOpt, roleOpt)
+    new InstanceOpFactoryHelper(principalOpt, roleOpt)
   }
 
   private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor])
 
-  override def buildTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
+  override def buildTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     log.debug("buildTaskOp")
 
     if (request.isForResidentRunSpec) {
@@ -44,32 +44,34 @@ class TaskOpFactoryImpl(
     }
   }
 
-  private[this] def inferNormalTaskOp(request: TaskOpFactory.Request): Option[TaskOp] = {
-    val TaskOpFactory.Request(runSpec, offer, tasks, _) = request
+  private[this] def inferNormalTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
+    val InstanceOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).buildIfMatches(offer, tasks.values).map {
-      case (taskInfo, ports) =>
-        val task = Task.LaunchedEphemeral(
-          taskId = Task.Id(taskInfo.getTaskId),
-          agentInfo = Task.AgentInfo(
-            host = offer.getHostname,
-            agentId = Some(offer.getSlaveId.getValue),
-            attributes = offer.getAttributesList.asScala
-          ),
-          runSpecVersion = runSpec.version,
-          status = Task.Status(
-            stagedAt = clock.now(),
-            taskStatus = MarathonTaskStatus.Created
-          ),
-          hostPorts = ports.flatten
-        )
+    new TaskBuilder(runSpec, Instance.Id.forRunSpec, config, Some(appTaskProc)).
+      // TODO POD remove asInstanceOf[Task]
+      buildIfMatches(offer, tasks.values.map(_.asInstanceOf[Task])).map {
+        case (taskInfo, ports) =>
+          val task = Task.LaunchedEphemeral(
+            id = Instance.Id(taskInfo.getTaskId),
+            agentInfo = Instance.AgentInfo(
+              host = offer.getHostname,
+              agentId = Some(offer.getSlaveId.getValue),
+              attributes = offer.getAttributesList.asScala
+            ),
+            runSpecVersion = runSpec.version,
+            status = Task.Status(
+              stagedAt = clock.now(),
+              taskStatus = InstanceStatus.Created
+            ),
+            hostPorts = ports.flatten
+          )
 
-        taskOperationFactory.launchEphemeral(taskInfo, task)
-    }
+          taskOperationFactory.launchEphemeral(taskInfo, task)
+      }
   }
 
-  private[this] def inferForResidents(request: TaskOpFactory.Request): Option[TaskOp] = {
-    val TaskOpFactory.Request(runSpec, offer, tasks, additionalLaunches) = request
+  private[this] def inferForResidents(request: InstanceOpFactory.Request): Option[InstanceOp] = {
+    val InstanceOpFactory.Request(runSpec, offer, tasks, additionalLaunches) = request
 
     val needToLaunch = additionalLaunches > 0 && request.hasWaitingReservations
     val needToReserve = request.numberOfWaitingReservations < additionalLaunches
@@ -95,13 +97,14 @@ class TaskOpFactoryImpl(
       maybeVolumeMatch.flatMap { volumeMatch =>
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
         // by the Reserved task that we actually want to launch
-        val tasksToConsiderForConstraints = tasks - volumeMatch.task.taskId
+        val tasksToConsiderForConstraints = tasks - volumeMatch.task.id
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
         val matchingReservedResourcesWithoutVolumes =
+          // TODO POD remove asInstanceOf[Task]
           ResourceMatcher.matchResources(
-            offer, runSpec, tasksToConsiderForConstraints.values,
+            offer, runSpec, tasksToConsiderForConstraints.values.map(_.asInstanceOf[Task]),
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
           )
 
@@ -121,8 +124,9 @@ class TaskOpFactoryImpl(
       }
 
       val matchingResourcesForReservation =
+        // TODO POD remove asInstanceOf[Task]
         ResourceMatcher.matchResources(
-          offer, runSpec, tasks.values,
+          offer, runSpec, tasks.values.map(_.asInstanceOf[Task]),
           ResourceSelector.reservable
         )
       matchingResourcesForReservation.map { resourceMatch =>
@@ -138,17 +142,17 @@ class TaskOpFactoryImpl(
     offer: Mesos.Offer,
     task: Task.Reserved,
     resourceMatch: Option[ResourceMatcher.ResourceMatch],
-    volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[TaskOp] = {
+    volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[InstanceOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(spec, (_) => task.id, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
         val taskStateOp = TaskStateOp.LaunchOnReservation(
-          task.taskId,
+          task.id,
           runSpecVersion = spec.version,
           status = Task.Status(
             stagedAt = clock.now(),
-            taskStatus = MarathonTaskStatus.Created
+            taskStatus = InstanceStatus.Created
           ),
           hostPorts = ports.flatten)
 
@@ -160,7 +164,7 @@ class TaskOpFactoryImpl(
     frameworkId: FrameworkId,
     RunSpec: RunSpec,
     offer: Mesos.Offer,
-    resourceMatch: ResourceMatcher.ResourceMatch): TaskOp = {
+    resourceMatch: ResourceMatcher.ResourceMatch): InstanceOp = {
 
     val localVolumes: Iterable[Task.LocalVolume] = RunSpec.persistentVolumes.map { volume =>
       Task.LocalVolume(Task.LocalVolumeId(RunSpec.id, volume), volume)
@@ -173,8 +177,8 @@ class TaskOpFactoryImpl(
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
     val task = Task.Reserved(
-      taskId = Task.Id.forRunSpec(RunSpec.id),
-      agentInfo = Task.AgentInfo(
+      id = Instance.Id.forRunSpec(RunSpec.id),
+      agentInfo = Instance.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),
         attributes = offer.getAttributesList.asScala
@@ -182,7 +186,7 @@ class TaskOpFactoryImpl(
       reservation = Task.Reservation(persistentVolumeIds, Task.Reservation.State.New(timeout = Some(timeout))),
       status = Task.Status(
         stagedAt = now,
-        taskStatus = MarathonTaskStatus.Reserved
+        taskStatus = InstanceStatus.Reserved
       )
     )
     val taskStateOp = TaskStateOp.Reserve(task)

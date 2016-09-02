@@ -3,10 +3,12 @@ package mesosphere.marathon.core.appinfo
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec }
-import org.scalatest.{ Matchers, GivenWhenThen }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
+
 import scala.concurrent.duration._
 
 class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matchers {
@@ -18,7 +20,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
       now = now,
       versionInfo = versionInfo,
       tasks = Seq.empty,
-      statuses = Map.empty[Task.Id, Seq[Health]]
+      statuses = Map.empty[Instance.Id, Seq[Health]]
     )
     Then("we get none")
     stats should be (
@@ -48,7 +50,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
     ) ++ afterLastScalingTasks
 
     val tasks = outdatedTasks ++ afterLastConfigChangeTasks
-    val statuses = Map.empty[Task.Id, Seq[Health]]
+    val statuses = Map.empty[Instance.Id, Seq[Health]]
 
     When("calculating stats")
     val stats = TaskStatsByVersion(

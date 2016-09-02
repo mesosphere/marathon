@@ -6,8 +6,8 @@ import java.util.UUID
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
 import mesosphere.marathon.{ MarathonConf, Protos }
@@ -28,7 +28,7 @@ final case class StartApplication(app: AppDefinition, scaleTo: Int) extends Depl
 final case class ScaleApplication(
   app: AppDefinition,
   scaleTo: Int,
-  sentencedToDeath: Option[Iterable[Task]] = None) extends DeploymentAction
+  sentencedToDeath: Option[Iterable[Instance]] = None) extends DeploymentAction
 
 // application is started, but shall be completely stopped
 final case class StopApplication(app: AppDefinition) extends DeploymentAction
@@ -108,7 +108,7 @@ final case class DeploymentPlan(
       case StopApplication(app) => s"Stop(${appString(app)})"
       case ScaleApplication(app, scale, toKill) =>
         val killTasksString =
-          toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.taskId.idString).mkString(",")).getOrElse("")
+          toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.id.idString).mkString(",")).getOrElse("")
         s"Scale(${appString(app)}, instances=$scale$killTasksString)"
       case RestartApplication(app) => s"Restart(${appString(app)})"
       case ResolveArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
@@ -210,7 +210,7 @@ object DeploymentPlan {
     * from the topology of the target group's dependency graph.
     */
   def dependencyOrderedSteps(original: Group, target: Group,
-    toKill: Map[PathId, Iterable[Task]]): Seq[DeploymentStep] = {
+    toKill: Map[PathId, Iterable[Instance]]): Seq[DeploymentStep] = {
     val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
 
     val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
@@ -254,7 +254,7 @@ object DeploymentPlan {
     target: Group,
     resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Iterable[Task]] = Map.empty,
+    toKill: Map[PathId, Iterable[Instance]] = Map.empty,
     id: Option[String] = None): DeploymentPlan = {
 
     // Lookup maps for original and target apps.

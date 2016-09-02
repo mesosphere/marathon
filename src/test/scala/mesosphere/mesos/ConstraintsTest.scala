@@ -29,7 +29,7 @@ class ConstraintsTest extends MarathonSpec with GivenWhenThen with Matchers {
 
     Then("10 tasks got selected and evenly distributed")
     result should have size 10
-    val dist = result.groupBy(_.taskId.idString.toInt % 2 == 1)
+    val dist = result.groupBy(_.id.idString.toInt % 2 == 1)
     dist should have size 2
     dist.values.head should have size 5
   }

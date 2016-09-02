@@ -2,10 +2,11 @@ package mesosphere.marathon.core.launcher.impl
 
 import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.launcher.{ TaskOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
-import mesosphere.marathon.core.task.TaskStateOp
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
@@ -98,14 +99,16 @@ private[launcher] class OfferProcessorImpl(
   }
 
   /** Revert the effects of the task ops on the task state. */
-  private[this] def revertTaskOps(ops: Iterable[TaskOp]): Future[Unit] = {
+  private[this] def revertTaskOps(ops: Iterable[InstanceOp]): Future[Unit] = {
     ops.foldLeft(Future.successful(())) { (terminatedFuture, nextOp) =>
       terminatedFuture.flatMap { _ =>
-        nextOp.oldTask match {
-          case Some(existingTask) =>
+        nextOp.oldInstance match {
+          case Some(existingTask: Task) =>
             taskCreationHandler.created(TaskStateOp.Revert(existingTask)).map(_ => ())
+          case Some(existingTask: Instance) =>
+            Future.successful(()) // TODO POD remove asInstanceOf[Task]
           case None =>
-            taskCreationHandler.terminated(TaskStateOp.ForceExpunge(nextOp.taskId)).map(_ => ())
+            taskCreationHandler.terminated(TaskStateOp.ForceExpunge(nextOp.instanceId)).map(_ => ())
         }
       }
     }.recover {
@@ -143,7 +146,7 @@ private[launcher] class OfferProcessorImpl(
           savingTasksTimeoutMeter.mark(savedTasks.size.toLong)
           nextTask.reject("saving timeout reached")
           log.info(
-            s"Timeout reached, skipping launch and save for ${nextTask.op.taskId}. " +
+            s"Timeout reached, skipping launch and save for ${nextTask.op.instanceId}. " +
               s"You can reconfigure this with --${conf.saveTasksToLaunchTimeout.name}.")
           Future.successful(savedTasks)
         } else {

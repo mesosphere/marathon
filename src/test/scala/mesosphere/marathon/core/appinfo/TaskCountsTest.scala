@@ -1,8 +1,8 @@
 package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.state.MarathonTaskStatus
 import mesosphere.marathon.core.health.Health
+import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
@@ -56,7 +56,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
       MarathonTestHelper.runningTask("task1")
     )
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Task.Id("task1") -> aliveHealth))
+    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Instance.Id("task1") -> aliveHealth))
     Then("all counts are 0 except healthy")
     counts should be(TaskCounts.zero.copy(tasksRunning = 1, tasksHealthy = 1))
   }
@@ -67,7 +67,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
       MarathonTestHelper.runningTask("task1")
     )
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Task.Id("task1") -> notAliveHealth))
+    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Instance.Id("task1") -> notAliveHealth))
     Then("all counts are 0 except tasksUnhealthy")
     counts should be(TaskCounts.zero.copy(tasksRunning = 1, tasksUnhealthy = 1))
   }
@@ -78,7 +78,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
       MarathonTestHelper.runningTask("task1")
     )
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Task.Id("task1") -> mixedHealth))
+    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Instance.Id("task1") -> mixedHealth))
     Then("all counts are 0 except tasksUnhealthy")
     counts should be(TaskCounts.zero.copy(tasksRunning = 1, tasksUnhealthy = 1))
   }
@@ -89,7 +89,7 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
       MarathonTestHelper.runningTask("task1")
     )
     When("getting counts")
-    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Task.Id("task1") -> noHealths))
+    val counts = TaskCounts(appTasks = oneRunningTask, healthStatuses = Map(Instance.Id("task1") -> noHealths))
     Then("all counts are 0")
     counts should be(TaskCounts.zero.copy(tasksRunning = 1))
   }
@@ -106,8 +106,8 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
     val counts = TaskCounts(
       appTasks = oneStagedTask,
       healthStatuses = Map(
-        Task.Id("task3") -> aliveHealth,
-        Task.Id("task4") -> notAliveHealth
+        Instance.Id("task3") -> aliveHealth,
+        Instance.Id("task4") -> notAliveHealth
       )
     )
     Then("all counts are 0 except staged")
@@ -168,23 +168,23 @@ class TaskCountsTest extends MarathonSpec with GivenWhenThen with Mockito with M
   }
 
   private[this] val noHealths = Seq.empty[Health]
-  private[this] val aliveHealth = Seq(Health(Task.Id("task1"), lastSuccess = Some(Timestamp(1))))
+  private[this] val aliveHealth = Seq(Health(Instance.Id("task1"), lastSuccess = Some(Timestamp(1))))
   require(aliveHealth.forall(_.alive))
-  private[this] val notAliveHealth = Seq(Health(Task.Id("task1"), lastFailure = Some(Timestamp(1))))
+  private[this] val notAliveHealth = Seq(Health(Instance.Id("task1"), lastFailure = Some(Timestamp(1))))
   require(notAliveHealth.forall(!_.alive))
   private[this] val mixedHealth = aliveHealth ++ notAliveHealth
 }
 
 class Fixture {
   val taskWithoutState = Task.LaunchedEphemeral(
-    taskId = Task.Id("task1"),
-    agentInfo = Task.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
+    id = Instance.Id("task1"),
+    agentInfo = Instance.AgentInfo("some.host", Some("agent-1"), Iterable.empty),
     runSpecVersion = Timestamp(0),
     status = Task.Status(
       stagedAt = Timestamp(1),
       startedAt = None,
       mesosStatus = None,
-      taskStatus = MarathonTaskStatus.Running
+      taskStatus = InstanceStatus.Running
     ),
     hostPorts = Seq.empty
   )

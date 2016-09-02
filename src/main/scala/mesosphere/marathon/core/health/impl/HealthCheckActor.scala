@@ -6,8 +6,9 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.health._
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 
@@ -15,14 +16,14 @@ private[health] class HealthCheckActor(
     app: AppDefinition,
     killService: TaskKillService,
     healthCheck: HealthCheck,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     eventBus: EventStream) extends Actor with ActorLogging {
 
   import context.dispatcher
   import HealthCheckWorker.HealthCheckJob
 
   var nextScheduledCheck: Option[Cancellable] = None
-  var taskHealth = Map[Task.Id, Health]()
+  var instanceHealth = Map[Instance.Id, Health]()
 
   val workerProps = Props[HealthCheckWorkerActor]
 
@@ -61,10 +62,10 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    val activeTaskIds = taskTracker.appTasksLaunchedSync(app.id).map(_.taskId).toSet
+    val activeTaskIds = taskTracker.specInstancesLaunchedSync(app.id).map(_.id).toSet
     // The Map built with filterKeys wraps the original map and contains a reference to activeTaskIds.
     // Therefore we materialize it into a new map.
-    taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
+    instanceHealth = instanceHealth.filterKeys(activeTaskIds).iterator.toMap
   }
 
   def scheduleNextHealthCheck(): Unit =
@@ -84,15 +85,16 @@ private[health] class HealthCheckActor(
 
   def dispatchJobs(): Unit = {
     log.debug("Dispatching health check jobs to workers")
-    taskTracker.appTasksSync(app.id).foreach { task =>
-
-      task.launched.foreach { launched =>
-        if (launched.runSpecVersion == app.version && task.isRunning) {
-          log.debug("Dispatching health check job for {}", task.taskId)
-          val worker: ActorRef = context.actorOf(workerProps)
-          worker ! HealthCheckJob(app, task, launched, healthCheck)
+    taskTracker.specInstancesSync(app.id).foreach {
+      case task: Task =>
+        task.launched.foreach { launched =>
+          if (launched.runSpecVersion == app.version && task.isRunning) {
+            log.debug("Dispatching health check job for {}", task.id)
+            val worker: ActorRef = context.actorOf(workerProps)
+            worker ! HealthCheckJob(app, task, launched, healthCheck)
+          }
         }
-      }
+      case _ => () // TODO POD support
     }
   }
 
@@ -103,19 +105,19 @@ private[health] class HealthCheckActor(
     // ignore failures if maxFailures == 0
     if (consecutiveFailures >= maxFailures && maxFailures > 0) {
       log.info(
-        s"Detected unhealthy ${task.taskId} of app [${app.id}] version [${app.version}] on host ${task.agentInfo.host}"
+        s"Detected unhealthy ${task.id} of app [${app.id}] version [${app.version}] on host ${task.agentInfo.host}"
       )
 
       // kill the task, if it is reachable
       if (task.isUnreachable) {
-        val id = task.taskId
+        val id = task.id
         log.info(s"Task $id on host ${task.agentInfo.host} is temporarily unreachable. Performing no kill.")
       } else {
-        log.info(s"Send kill request for ${task.taskId} on host ${task.agentInfo.host} to driver")
+        log.info(s"Send kill request for ${task.id} on host ${task.agentInfo.host} to driver")
         eventBus.publish(
           UnhealthyTaskKillEvent(
             appId = task.runSpecId,
-            taskId = task.taskId,
+            taskId = task.id,
             version = app.version,
             reason = health.lastFailureCause.getOrElse("unknown"),
             host = task.agentInfo.host,
@@ -142,10 +144,10 @@ private[health] class HealthCheckActor(
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   def receive: Receive = {
-    case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
+    case GetInstanceHealth(taskId) => sender() ! instanceHealth.getOrElse(taskId, Health(taskId))
 
     case GetAppHealth =>
-      sender() ! AppHealth(taskHealth.values.toSeq)
+      sender() ! AppHealth(instanceHealth.values.toSeq)
 
     case Tick =>
       purgeStatusOfDoneTasks()
@@ -154,14 +156,14 @@ private[health] class HealthCheckActor(
 
     case result: HealthResult if result.version == app.version =>
       log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
-      val taskId = result.taskId
-      val health = taskHealth.getOrElse(taskId, Health(taskId))
+      val taskId = result.instanceId
+      val health = instanceHealth.getOrElse(taskId, Health(taskId))
 
       val newHealth = result match {
         case Healthy(_, _, _) =>
           health.update(result)
         case Unhealthy(_, _, _, _) =>
-          taskTracker.tasksByAppSync.task(taskId) match {
+          taskTracker.instancesBySpecSync.task(taskId) match {
             case Some(task) =>
               if (ignoreFailures(task, health)) {
                 // Don't update health
@@ -177,7 +179,7 @@ private[health] class HealthCheckActor(
           }
       }
 
-      taskHealth += (taskId -> newHealth)
+      instanceHealth += (taskId -> newHealth)
 
       if (health.alive != newHealth.alive) {
         eventBus.publish(
@@ -200,7 +202,7 @@ object HealthCheckActor {
     app: AppDefinition,
     killService: TaskKillService,
     healthCheck: HealthCheck,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     eventBus: EventStream): Props = {
 
     Props(new HealthCheckActor(
@@ -213,7 +215,7 @@ object HealthCheckActor {
 
   // self-sent every healthCheck.intervalSeconds
   case object Tick
-  case class GetTaskHealth(taskId: Task.Id)
+  case class GetInstanceHealth(instanceId: Instance.Id)
   case object GetAppHealth
 
   case class AppHealth(health: Seq[Health])

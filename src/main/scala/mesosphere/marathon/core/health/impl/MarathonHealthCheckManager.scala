@@ -9,9 +9,10 @@ import mesosphere.marathon.ZookeeperConf
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.HealthCheckActor.{ AppHealth, GetAppHealth }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.TaskTracker
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp }
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import mesosphere.util.RWLock
@@ -27,7 +28,7 @@ class MarathonHealthCheckManager(
     actorRefFactory: ActorRefFactory,
     killService: TaskKillService,
     eventBus: EventStream,
-    taskTracker: TaskTracker,
+    taskTracker: InstanceTracker,
     appRepository: ReadOnlyAppRepository,
     zkConf: ZookeeperConf) extends HealthCheckManager {
 
@@ -118,9 +119,10 @@ class MarathonHealthCheckManager(
       case Some(app) =>
         log.info(s"reconcile [$appId] with latest version [${app.version}]")
 
-        val tasks: Iterable[Task] = taskTracker.appTasksSync(app.id)
+        val tasks: Iterable[Instance] = taskTracker.specInstancesSync(app.id)
         val activeAppVersions: Set[Timestamp] =
-          tasks.iterator.flatMap(_.launched.map(_.runSpecVersion)).toSet + app.version
+          // TODO POD remove asInstanceOf[Task]
+          tasks.iterator.flatMap(_.asInstanceOf[Task].launched.map(_.runSpecVersion)).toSet + app.version
 
         val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
           // remove health checks for which the app version is not current and no tasks remain
@@ -158,7 +160,7 @@ class MarathonHealthCheckManager(
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
     appHealthChecks.readLock { ahcs =>
       // construct a health result from the incoming task status
-      val taskId = Task.Id(taskStatus.getTaskId.getValue)
+      val taskId = Instance.Id(taskStatus.getTaskId.getValue)
       val maybeResult: Option[HealthResult] =
         if (taskStatus.hasHealthy) {
           val healthy = taskStatus.getHealthy
@@ -170,7 +172,7 @@ class MarathonHealthCheckManager(
         }
 
       // compute the app ID for the incoming task status
-      val appId = Task.Id(taskStatus.getTaskId).runSpecId
+      val appId = Instance.Id(taskStatus.getTaskId).runSpecId
 
       // collect health check actors for the associated app's command checks.
       val healthCheckActors: Iterable[ActorRef] = listActive(appId, version).collect {
@@ -187,13 +189,14 @@ class MarathonHealthCheckManager(
       }
     }
 
-  override def status(appId: PathId, taskId: Task.Id): Future[Seq[Health]] = {
-    import HealthCheckActor.GetTaskHealth
+  override def status(appId: PathId, taskId: Instance.Id): Future[Seq[Health]] = {
+    import HealthCheckActor.GetInstanceHealth
     implicit val timeout: Timeout = Timeout(2, SECONDS)
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
-      maybeTaskState <- taskTracker.task(taskId)
-    } yield maybeTaskState.flatMap(_.launched).map(_.runSpecVersion)
+      maybeTaskState <- taskTracker.instance(taskId)
+      // TODO POD remove asInstanceOf[Task]
+    } yield maybeTaskState.flatMap(_.asInstanceOf[Task].launched).map(_.runSpecVersion)
 
     futureAppVersion.flatMap {
       case None => Future.successful(Nil)
@@ -201,13 +204,13 @@ class MarathonHealthCheckManager(
         Future.sequence(
           listActive(appId, appVersion).iterator.collect {
           case ActiveHealthCheck(_, actor) =>
-            (actor ? GetTaskHealth(taskId)).mapTo[Health]
+            (actor ? GetInstanceHealth(taskId)).mapTo[Health]
         }.to[Seq]
         )
     }
   }
 
-  override def statuses(appId: PathId): Future[Map[Task.Id, Seq[Health]]] =
+  override def statuses(appId: PathId): Future[Map[Instance.Id, Seq[Health]]] =
     appHealthChecks.readLock { ahcs =>
       implicit val timeout: Timeout = Timeout(2, SECONDS)
       val futureHealths = for {
@@ -215,13 +218,13 @@ class MarathonHealthCheckManager(
       } yield (actor ? GetAppHealth).mapTo[AppHealth]
 
       Future.sequence(futureHealths) flatMap { healths =>
-        val groupedHealth = healths.flatMap(_.health).groupBy(_.taskId)
+        val groupedHealth: Map[Instance.Id, Vector[Health]] = healths.flatMap(_.health).groupBy(_.taskId)
 
-        taskTracker.appTasks(appId).map { appTasks =>
+        taskTracker.specInstances(appId).map { appTasks =>
           appTasks.iterator.map { task =>
-            groupedHealth.get(task.taskId) match {
-              case Some(xs) => task.taskId -> xs
-              case None => task.taskId -> Nil
+            groupedHealth.get(task.id) match {
+              case Some(xs) => task.id -> xs
+              case None => task.id -> Nil
             }
           }.toMap
         }
