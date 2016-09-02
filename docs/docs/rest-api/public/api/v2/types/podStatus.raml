@@ -141,9 +141,11 @@ types:
         type: StatusCondition[]
         description: |
           Set of status conditions that apply to this pod instance.
-      agent?:
+      agentHostname?:
         type: string
-        description: agent that this instance was launched on
+        description: |
+          Hostname that this instance was launched on.
+          May be an IP address if the agent was configured to advertise its hostname that way.
       resources?:
         type: resources.Resources
         description: |
@@ -165,6 +167,15 @@ types:
         type: datetime
         description: |
           Time that this status was last modified (some aspect of status did change)
+  ContainerTerminationHistory:
+    type: object
+    properties:
+      containerId:
+        type: string
+      lastKnownState?:
+        type: ContainerState
+      termination?:
+        type: ContainerTerminationState
   TerminationHistory:
     type: object
     properties:
@@ -178,6 +189,9 @@ types:
         type: string
         description: |
           Human-friendly explanation for termination.
+      containers?:
+        type: array
+        items: ContainerTerminationHistory
   PodStatus:
     description: |
       Pod status communicates the lifecycle phase of the pod, current instance and container
