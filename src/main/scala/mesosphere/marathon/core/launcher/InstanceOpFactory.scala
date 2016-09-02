@@ -34,7 +34,7 @@ object InstanceOpFactory {
 
   object Request {
     def apply(runSpec: RunSpec, offer: Mesos.Offer, instances: Iterable[Instance], additionalLaunches: Int): Request = {
-      new Request(runSpec, offer, Task.tasksById(instances), additionalLaunches)
+      new Request(runSpec, offer, Instance.instancesById(instances), additionalLaunches)
     }
   }
 }

@@ -3,7 +3,7 @@ package mesosphere.marathon
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.InstanceOpFactory
-import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
+import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
@@ -251,7 +251,7 @@ class LaunchQueueModuleTest
     val taskId = Instance.Id.forRunSpec(PathId("/test"))
     val mesosTask = MarathonTestHelper.makeOneCPUTask("").setTaskId(taskId.mesosTaskId).build()
     val marathonTask = MarathonTestHelper.runningTask(taskId.idString)
-    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
+    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(mesosTask, marathonTask)
     val taskChanged = TaskChanged(
       stateOp = TaskStateOp.LaunchEphemeral(marathonTask),
       stateChange = TaskStateChange.Update(newState = marathonTask, oldState = None)

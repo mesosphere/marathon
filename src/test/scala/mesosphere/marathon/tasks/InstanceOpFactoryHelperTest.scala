@@ -1,6 +1,6 @@
 package mesosphere.marathon.tasks
 
-import mesosphere.marathon.core.launcher.impl.TaskOpFactoryHelper
+import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
@@ -44,6 +44,6 @@ class InstanceOpFactoryHelperTest extends MarathonSpec with GivenWhenThen with M
   }
 
   class Fixture {
-    val helper = new TaskOpFactoryHelper(Some("principal"), Some("role"))
+    val helper = new InstanceOpFactoryHelper(Some("principal"), Some("role"))
   }
 }

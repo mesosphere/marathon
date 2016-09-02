@@ -29,7 +29,7 @@ class InstanceOpFactoryImpl(
     val principalOpt = config.mesosAuthenticationPrincipal.get
     val roleOpt = config.mesosRole.get
 
-    new TaskOpFactoryHelper(principalOpt, roleOpt)
+    new InstanceOpFactoryHelper(principalOpt, roleOpt)
   }
 
   private[this] lazy val appTaskProc: RunSpecTaskProcessor = combine(pluginManager.plugins[RunSpecTaskProcessor])

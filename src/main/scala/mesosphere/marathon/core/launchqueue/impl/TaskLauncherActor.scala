@@ -11,8 +11,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
-import mesosphere.marathon.core.matcher.base.util.TaskOpSourceDelegate.TaskOpNotification
-import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, TaskOpSourceDelegate }
+import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.TaskOpNotification
+import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, InstanceOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -95,7 +95,7 @@ private class TaskLauncherActor(
   private[this] var instanceMap: Map[Instance.Id, Instance] = _
 
   /** Decorator to use this actor as a [[base.OfferMatcher#TaskOpSource]] */
-  private[this] val myselfAsLaunchSource = TaskOpSourceDelegate(self)
+  private[this] val myselfAsLaunchSource = InstanceOpSourceDelegate(self)
 
   override def preStart(): Unit = {
     super.preStart()
@@ -228,7 +228,7 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveTaskLaunchNotification: Receive = {
-    case TaskOpSourceDelegate.TaskOpRejected(op, reason) if inFlight(op) =>
+    case InstanceOpSourceDelegate.TaskOpRejected(op, reason) if inFlight(op) =>
       removeTask(op.instanceId)
       log.info(
         "Task op '{}' for {} was REJECTED, reason '{}', rescheduling. {}",
@@ -242,17 +242,17 @@ private class TaskLauncherActor(
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
-    case TaskOpSourceDelegate.TaskOpRejected(op, TaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON) =>
+    case InstanceOpSourceDelegate.TaskOpRejected(op, TaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON) =>
       // This is a message that we scheduled in this actor.
       // When we receive a launch confirmation or rejection, we cancel this timer but
       // there is still a race and we might send ourselves the message nevertheless, so we just
       // ignore it here.
       log.debug("Ignoring task launch rejected for '{}' as the task is not in flight anymore", op.instanceId)
 
-    case TaskOpSourceDelegate.TaskOpRejected(op, reason) =>
+    case InstanceOpSourceDelegate.TaskOpRejected(op, reason) =>
       log.warning("Unexpected task op '{}' rejected for {}.", op.getClass.getSimpleName, op.instanceId)
 
-    case TaskOpSourceDelegate.TaskOpAccepted(op) =>
+    case InstanceOpSourceDelegate.TaskOpAccepted(op) =>
       inFlightInstanceOperations -= op.instanceId
       log.info("Task op '{}' for {} was accepted. {}", op.getClass.getSimpleName, op.instanceId, status)
   }
@@ -393,7 +393,7 @@ private class TaskLauncherActor(
   }
 
   private[this] def scheduleTaskOpTimeout(taskOp: InstanceOp): Unit = {
-    val reject = TaskOpSourceDelegate.TaskOpRejected(
+    val reject = InstanceOpSourceDelegate.TaskOpRejected(
       taskOp, TaskLauncherActor.TASK_OP_REJECTED_TIMEOUT_REASON
     )
     val cancellable = scheduleTaskOperationTimeout(context, reject)
@@ -404,7 +404,7 @@ private class TaskLauncherActor(
 
   protected def scheduleTaskOperationTimeout(
     context: ActorContext,
-    message: TaskOpSourceDelegate.TaskOpRejected): Cancellable =
+    message: InstanceOpSourceDelegate.TaskOpRejected): Cancellable =
     {
       import context.dispatcher
       context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, message)

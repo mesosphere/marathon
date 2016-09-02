@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
 
-class TaskOpFactoryHelper(
+class InstanceOpFactoryHelper(
     private val principalOpt: Option[String],
     private val roleOpt: Option[String]) {
 

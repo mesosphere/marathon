@@ -14,8 +14,8 @@ object ScalingProposition {
     scaleTo: Int): ScalingProposition = {
 
     // TODO: tasks in state KILLING shouldn't be killed and should decrease the amount to kill
-    val runningTaskMap = Task.tasksById(runningTasks)
-    val toKillMap = Task.tasksById(toKill.getOrElse(Set.empty))
+    val runningTaskMap = Instance.instancesById(runningTasks)
+    val toKillMap = Instance.instancesById(toKill.getOrElse(Set.empty))
 
     val (sentencedAndRunningMap, notSentencedAndRunningMap) = runningTaskMap partition {
       case (k, v) =>

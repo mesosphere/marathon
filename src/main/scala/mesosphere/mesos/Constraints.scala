@@ -184,7 +184,7 @@ object Constraints {
         case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
       }
       val taskGroups: Seq[Map[Instance.Id, Instance]] =
-        runningTasks.groupBy(groupFn).values.map(Task.tasksById(_)).toSeq
+        runningTasks.groupBy(groupFn).values.map(Instance.instancesById).toSeq
       GroupByDistribution(constraint, taskGroups)
     }
 

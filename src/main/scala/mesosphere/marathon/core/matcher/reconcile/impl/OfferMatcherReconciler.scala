@@ -68,7 +68,9 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: InstanceTracker, gr
                   oldInstance = tasksByApp.task(instanceId),
                   resources = spuriousResources.to[Seq]
                 )
-              log.warn("removing spurious resources and volumes of {} because the app does no longer exist", instanceId)
+              log.warn(
+                "removing spurious resources and volumes of {} because the instance does no longer exist",
+                instanceId)
               TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
           }.to[Seq]
 

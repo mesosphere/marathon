@@ -292,8 +292,8 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
 
   object f {
     import org.apache.mesos.{ Protos => Mesos }
-    val launch = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
-    val launchWithOldTask = new TaskOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
+    val launch = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
+    val launchWithOldTask = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
   }
 
   class DummySource extends TaskOpSource {

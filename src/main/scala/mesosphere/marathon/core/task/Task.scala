@@ -346,9 +346,6 @@ object Task {
 
   def reservedTasks(tasks: Iterable[Instance]): Iterable[Task.Reserved] = tasks.collect { case r: Task.Reserved => r }
 
-  def tasksById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
-    tasks.iterator.map(task => task.id -> task).toMap
-
   /**
     * Represents a reservation for all resources that are needed for launching a task
     * and associated persistent local volumes.
