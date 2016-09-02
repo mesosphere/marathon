@@ -209,7 +209,7 @@ object RamlTypeGenerator {
 
     val playReader = {
       // required fields never have defaults
-      if (required) {
+      if (required || repeated) {
         TUPLE(REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`
       } else {
         if (defaultValue.isDefined) {
@@ -250,7 +250,18 @@ object RamlTypeGenerator {
           VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
             actualFields.map(_.playReader).reduce(_ DOT "and" APPLY(_))
           ) APPLY(REF(name) DOT "apply _"),
-          VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF("play.api.libs.json.Json") DOT "writes" APPLYTYPE(name)
+          VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF(PlayJson) DOT "writes" APPLYTYPE(name)
+        )
+      } else if (actualFields.size > 22) {
+        Seq(
+          OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+              REF("???")
+            ),
+            DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+              REF("???")
+            )
+          )
         )
       } else {
         Seq(VAL("playJsonFormat") withFlags Flags.IMPLICIT := REF("play.api.libs.json.Json") DOT "format" APPLYTYPE(name))
@@ -289,7 +300,7 @@ object RamlTypeGenerator {
       }
 
       val commentBlock = (comments ++ actualFields.map(_.comment)(collection.breakOut))
-      Seq(klass.withDoc(commentBlock), obj) ++ childTypes.flatMap(_.toTree())
+      Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(_.toTree()) ++ Seq(obj)
     }
   }
 
