@@ -106,7 +106,7 @@ private[launcher] class OfferProcessorImpl(
           case Some(existingTask: Task) =>
             taskCreationHandler.created(TaskStateOp.Revert(existingTask)).map(_ => ())
           case Some(existingTask: Instance) =>
-            Future.successful(()) // TODO ju PODs
+            Future.successful(()) // TODO POD remove asInstanceOf[Task]
           case None =>
             taskCreationHandler.terminated(TaskStateOp.ForceExpunge(nextOp.instanceId)).map(_ => ())
         }

@@ -146,7 +146,7 @@ trait Formats
       }.getOrElse(launched)
 
       reservation
-    case _ => JsString("") // TODO ju POD
+    case _ => JsString("") // TODO POD support
   }
 
   implicit lazy val EnrichedTaskWrites: Writes[EnrichedTask] = Writes { task =>

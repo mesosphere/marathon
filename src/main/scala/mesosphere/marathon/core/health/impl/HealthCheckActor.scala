@@ -94,7 +94,7 @@ private[health] class HealthCheckActor(
             worker ! HealthCheckJob(app, task, launched, healthCheck)
           }
         }
-      case _ => () // TODO ju POD
+      case _ => () // TODO POD support
     }
   }
 

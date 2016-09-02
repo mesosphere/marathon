@@ -60,7 +60,7 @@ private[tracker] object InstanceOpProcessorImpl {
         case Some(existingTask: Task) =>
           existingTask.update(op)
 
-        // TODO ju POD
+        // TODO POD support
         case Some(existingTask) => TaskStateChange.Failure("TODO")
 
         case None =>
@@ -74,7 +74,7 @@ private[tracker] object InstanceOpProcessorImpl {
         case Some(existingTask: Task) =>
           TaskStateChange.Expunge(existingTask)
 
-        // TODO ju POD
+        // TODO POD support
         case Some(existingTask) => TaskStateChange.Failure("TODO")
 
         case None =>

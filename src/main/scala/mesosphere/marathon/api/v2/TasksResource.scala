@@ -130,7 +130,7 @@ class TasksResource @Inject() (
       val killed = result(Future.sequence(toKill.map {
         case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe)
       })).flatten
-      // TODO ju fixme
+      // TODO POD remove asInstanceOf[Task]
       ok(jsonObjString("tasks" -> killed.map(task =>
         EnrichedTask(task.id.runSpecId, task.asInstanceOf[Task], Seq.empty))))
     }

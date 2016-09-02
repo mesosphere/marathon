@@ -127,7 +127,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
           for {
             launched <- task.launched
           } me ! ScheduleReadinessCheckFor(task, launched)
-        case _ => // TODO ju POD
+        case _ => // TODO POD support
       }
     }
 

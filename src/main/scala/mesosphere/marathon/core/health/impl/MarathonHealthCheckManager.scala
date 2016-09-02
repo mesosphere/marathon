@@ -121,7 +121,7 @@ class MarathonHealthCheckManager(
 
         val tasks: Iterable[Instance] = taskTracker.specInstancesSync(app.id)
         val activeAppVersions: Set[Timestamp] =
-          // TODO ju asInstance
+          // TODO POD remove asInstanceOf[Task]
           tasks.iterator.flatMap(_.asInstanceOf[Task].launched.map(_.runSpecVersion)).toSet + app.version
 
         val healthCheckAppVersions: Set[Timestamp] = appHealthChecks.writeLock { ahcs =>
@@ -195,7 +195,7 @@ class MarathonHealthCheckManager(
 
     val futureAppVersion: Future[Option[Timestamp]] = for {
       maybeTaskState <- taskTracker.instance(taskId)
-      // TODO ju asInstance
+      // TODO POD remove asInstanceOf[Task]
     } yield maybeTaskState.flatMap(_.asInstanceOf[Task].launched).map(_.runSpecVersion)
 
     futureAppVersion.flatMap {

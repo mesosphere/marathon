@@ -50,7 +50,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
         val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
         stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))
 
-      // TODO ju POD
+      // TODO POD support
       //      case Some(task) =>
       //        val taskStateOp = TaskStateOp.MesosUpdate(task, status, now)
       //        stateOpProcessor.process(taskStateOp).flatMap(_ => acknowledge(status))

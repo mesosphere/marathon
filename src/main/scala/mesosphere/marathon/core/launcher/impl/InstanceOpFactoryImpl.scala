@@ -48,7 +48,7 @@ class InstanceOpFactoryImpl(
     val InstanceOpFactory.Request(runSpec, offer, tasks, _) = request
 
     new TaskBuilder(runSpec, Instance.Id.forRunSpec, config, Some(appTaskProc)).
-      // TODO ju asInstance
+      // TODO POD remove asInstanceOf[Task]
       buildIfMatches(offer, tasks.values.map(_.asInstanceOf[Task])).map {
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
@@ -102,7 +102,7 @@ class InstanceOpFactoryImpl(
         val rolesToConsider = config.mesosRole.get.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
         val matchingReservedResourcesWithoutVolumes =
-          // TODO ju asInstance
+          // TODO POD remove asInstanceOf[Task]
           ResourceMatcher.matchResources(
             offer, runSpec, tasksToConsiderForConstraints.values.map(_.asInstanceOf[Task]),
             ResourceSelector.reservedWithLabels(rolesToConsider, reservationLabels)
@@ -124,7 +124,7 @@ class InstanceOpFactoryImpl(
       }
 
       val matchingResourcesForReservation =
-        // TODO ju asInstance
+        // TODO POD remove asInstanceOf[Task]
         ResourceMatcher.matchResources(
           offer, runSpec, tasks.values.map(_.asInstanceOf[Task]),
           ResourceSelector.reservable
