@@ -10,8 +10,29 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo
 import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
 
+/**
+  * A generic spec that specifies something that Marathon is able to launch instances of.
+  */
+trait RunnableSpec extends plugin.RunSpec {
+  def id: PathId
+  def env: Map[String, EnvVarValue]
+  def labels: Map[String, String]
+  // TODO: Should this really be an Option of a collection?!
+  def acceptedResourceRoles: Option[Set[String]]
+  def secrets: Map[String, Secret]
+
+  def instances: Int
+  def constraints: Set[Constraint]
+
+  // TODO: these could go into a resources object
+  def cpus: Double
+  def mem: Double
+  def disk: Double
+  def gpus: Int
+}
+
 //scalastyle:off
-trait RunSpec extends plugin.RunSpec {
+trait RunSpec extends plugin.RunSpec with RunnableSpec {
 
   def id: PathId
 

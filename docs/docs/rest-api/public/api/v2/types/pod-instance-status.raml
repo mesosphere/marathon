@@ -1,0 +1,70 @@
+#%RAML 1.0 DataType
+type: object
+(scalaType): PodInstanceStatus
+additionalProperties: false
+properties:
+  id:
+    type: !include name.raml
+    description: |
+      Unique ID of this pod instance in the cluster.
+      TODO(jdef) Probably represents the Mesos executor ID.
+  status:
+    type: string
+    (scalaType): PodInstanceState
+    enum: [ PENDING, STAGING, STABLE, DEGRADED, TERMINAL ]
+    description: |
+      PENDING  - Instance is queued for launch.
+      STAGING  - Instance has been launched but is not yet running.
+      STABLE   - Any terminated containers have completed successfully and any running containers
+                 are healthy (TBD by health checks, if enabled).
+      DEGRADED - One or more containers are running but the instance is not considered STABLE.
+      TERMINAL - Instance is in the process of shutting down.
+  statusSince:
+    type: datetime
+    description: |
+      Time at which the status code was last modified.
+  message?:
+    type: string
+    description: |
+      Human-friendly explanation for reason of the current status.
+  conditions?:
+    type: array
+    description: |
+      Set of status conditions that apply to this pod instance.
+    items:
+      type: !include status-condition.raml
+  agent?:
+    type: string
+    description: agent that this instance was launched on
+  resources?:
+    type: !include resources.raml
+    description: |
+      Sum of all resources allocated for this pod instance.
+      May include additional, system-allocated resources for the default executor.
+  networks?:
+    type: array
+    description: |
+      Status of the networks to which this instance is attached.
+    items:
+      type: object
+      (scalaType): NetworkStatus
+      additionalProperties: false
+      properties:
+        name?:
+          type: !include name.raml
+          description: name of the network
+        addresses?:
+          type: string[]
+  containers?:
+    type: array
+    description: status for each running container of this instance.
+    items:
+      type: !include container-status.raml
+  lastUpdated:
+    type: datetime
+    description: |
+      Time that this status was last checked and updated (even if nothing changed)
+  lastChanged:
+    type: datetime
+    description: |
+      Time that this status was last modified (some aspect of status did change)

@@ -1,0 +1,19 @@
+#%RAML 1.0 DataType
+type: object
+(scalaType): EnvVar
+maxProperties: 2
+additionalProperties: false
+properties:
+  name:
+    type: string
+    minLength: 1
+    maxLength: 1024
+    pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+  value?:
+    type: string
+    description: literal value of the environment variable
+  secret?:
+    type: string
+    description: The name of the secret to refer to. At runtime, the
+      value of the secret will be injected into the value of the variable.
+      Mutually exclusive
