@@ -1,10 +1,9 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
-import java.time.OffsetDateTime
-
-import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.raml.{ MesosContainer, Network, Volume }
-import mesosphere.marathon.state.{ EnvVarValue, PathId, RunnableSpec, Secret }
+import mesosphere.marathon.Protos
+import mesosphere.marathon.raml.{Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue, _}
+import mesosphere.marathon.state._
+import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 import scala.collection.immutable.Seq
 // scalastyle:on
@@ -32,7 +31,6 @@ case class PodDefinition(
   lazy val disk: Double = containers.flatMap(_.resources.disk.map(_.toDouble)).sum
   lazy val gpus: Int = containers.flatMap(_.resources.gpus).sum
 
-  /*
   lazy val asPodDef: Pod = {
     val envVars: EnvVars = EnvVars(env.mapValues {
           case EnvVarSecretRef(secret) =>
@@ -42,7 +40,7 @@ case class PodDefinition(
         }
     )
 
-    val constraintDefs: Seq[Constraint] = constraints.map { c =>
+    val constraintDefs: Seq[RamlConstraint] = constraints.map { c =>
       val operator = c.getOperator match {
         case Protos.Constraint.Operator.UNIQUE => ConstraintOperator.Unique
         case Protos.Constraint.Operator.CLUSTER => ConstraintOperator.Cluster
@@ -51,14 +49,14 @@ case class PodDefinition(
         case Protos.Constraint.Operator.UNLIKE => ConstraintOperator.Unlike
         case Protos.Constraint.Operator.MAX_PER => ConstraintOperator.MaxPer
       }
-      Constraint(c.getField, operator, Option(c.getValue))
+      RamlConstraint(c.getField, operator, Option(c.getValue))
     }(collection.breakOut)
 
     // TODO: we're missing stuff here
     val schedulingPolicy = PodSchedulingPolicy(None, None,
-      Some(PodSchedulingPlacementPolicy(constraintDefs, acceptedResourceRoles.fold(Seq.empty[String])(_.toVector))))
+      Some(PodPlacementPolicy(constraintDefs, acceptedResourceRoles.fold(Seq.empty[String])(_.toVector))))
 
-    val scalingPolicy = PodScalingPolicy(Some(Fixed(instances, maxInstances)))
+    val scalingPolicy = FixedPodScalingPolicy(instances, maxInstances)
 
     Pod(
       id = id.safePath,
@@ -66,7 +64,7 @@ case class PodDefinition(
       user = user,
       containers = containers,
       environment = Some(envVars),
-      labels = labels.map { case (k, v) => Label(k, if (v.nonEmpty) Some(v) else None) }(collection.breakOut),
+      labels = Some(KVLabels(Some(labels))),
       scaling = Some(scalingPolicy),
       scheduling = Some(schedulingPolicy),
       volumes = volumes,
@@ -75,8 +73,8 @@ case class PodDefinition(
   }
 
   override def mergeFromProto(message: Protos.PodDefinition): PodDefinition = {
-    import spray.json._
-    PodDefinition(message.getJson.parseJson.convertTo[PodDef])
+    // TODO(jdef) dup of fromProto?
+    PodDefinition(Json.parse(message.getJson).as[Pod])
   }
 
   override def mergeFromProto(bytes: Array[Byte]): PodDefinition = {
@@ -84,25 +82,25 @@ case class PodDefinition(
   }
 
   override def toProto: Protos.PodDefinition = {
-    import spray.json._
-    val json = asPodDef.toJson
-    Protos.PodDefinition.newBuilder.setJson(json.compactPrint).build()
+    //import spray.json._
+    val json = Json.toJson(asPodDef)
+    Protos.PodDefinition.newBuilder.setJson(Json.stringify(json)).build()
   }
-  */
 }
 
 object PodDefinition {
-  /*
-  def apply(podDef: PodDef): PodDefinition = {
+  def apply(podDef: Pod): PodDefinition = {
     val env: Map[String, EnvVarValue] =
-      podDef.environment.withFilter(e => e.value.isDefined || e.secret.isDefined).map { env =>
-        if (env.secret.isDefined)
-          env.name -> EnvVarSecretRef(env.secret.get)
-        else if (env.value.isDefined)
-          env.name -> EnvVarString(env.value.get)
-        else
-          throw new IllegalStateException("Not reached")
-      }(collection.breakOut)
+      podDef.environment.fold(Map.empty[String,EnvVarValue]) { envvars =>
+        envvars.values.map { e =>
+          e._1 -> (e._2 match {
+            case RamlEnvVarSecretRef(secretRef) =>
+              EnvVarSecretRef(secretRef)
+            case RamlEnvVarValue(literalValue) =>
+              EnvVarString(literalValue)
+          })
+        }.toMap[String,EnvVarValue]
+      }
 
     val constraints = podDef.scheduling.flatMap(_.placement).map(_.constraints.map { c =>
       val operator = c.operator match {
@@ -118,16 +116,25 @@ object PodDefinition {
       builder.build()
     }.toSet).getOrElse(Set.empty)
 
-    PodDefinition(
+    val (instances, maxInstances) = podDef.scaling.fold((DefaultInstances -> DefaultMaxInstances)) { policy =>
+      policy match {
+        case FixedPodScalingPolicy(i,m) => (i -> m)
+      }
+    }
+
+    new PodDefinition(
       id = PathId(podDef.id),
       user = podDef.user,
       env = env,
-      labels = podDef.labels.map(l => l.name -> l.value.getOrElse(""))(collection.breakOut),
+      labels = Map.empty[String,String]/* TODO(jdef) podDef.labels.fold(Map.empty[String,String]) { kvLabels =>
+        kvLabels.values.fold(Map.empty[String,String])
+        l.name -> l.value.getOrElse("")
+      })(collection.breakOut) */,
       acceptedResourceRoles = podDef.scheduling.flatMap(_.placement).map(_.acceptedResourceRoles.toSet),
       secrets = Map.empty, // TODO: don't have this defined yet
       containers = podDef.containers,
-      instances = podDef.scaling.flatMap(_.fixed).fold(1)(_.instances),
-      maxInstances = podDef.scaling.flatMap(_.fixed.flatMap(_.maxInstances)),
+      instances = instances,
+      maxInstances = maxInstances,
       constraints = constraints,
       version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
       volumes = podDef.volumes,
@@ -136,15 +143,14 @@ object PodDefinition {
   }
 
   def fromProto(proto: Protos.PodDefinition): PodDefinition = {
-    import spray.json._
-    PodDefinition(proto.getJson.parseJson.convertTo[PodDef])
+    PodDefinition(Json.parse(proto.getJson).as[Pod])
   }
 
   implicit val playJsonFormat: Format[PodDefinition] = new Format[PodDefinition] {
     override def reads(json: JsValue): JsResult[PodDefinition] =
-      PodDef.PodDefPlayJsonFormat.reads(json).map(PodDefinition(_))
+      Pod.playJsonFormat.reads(json).map(PodDefinition(_))
 
-    override def writes(o: PodDefinition): JsValue = PodDef.PodDefPlayJsonFormat.writes(o.asPodDef)
+    override def writes(o: PodDefinition): JsValue = Pod.playJsonFormat.writes(o.asPodDef)
   }
 
   val DefaultId = PathId.empty
@@ -160,5 +166,4 @@ object PodDefinition {
   val DefaultVersion = Timestamp.now()
   val DefaultVolumes = Seq.empty[Volume]
   val DefaultNetworks = Seq.empty[Network]
-  */
 }
