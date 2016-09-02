@@ -40,7 +40,13 @@ trait WithMesosCluster extends SingleMarathonIntegrationTest { self: Suite =>
   }
 
   def startSlave(name: String, wipe: Boolean = true): Unit = {
-    ProcessKeeper.startMesos(name, s"$mesosWorkDir/$name", Seq("mesos", "slave", "--no-systemd_enable_support", s"--master=zk://${config.zkHostAndPort}/mesos", s"--hostname=$name", s"--work_dir=$mesosWorkDir/$name", s"--port=${processPort(name)}"), "registered with master", wipe)
+    val systemdFlag =
+      if (sys.env.getOrElse("OMIT_SYSTEMD_FLAG", "false") == "true") Seq()
+      else Seq("--no-systemd_enable_support")
+
+    val args = Seq("mesos", "slave", s"--master=zk://${config.zkHostAndPort}/mesos", s"--hostname=$name", s"--work_dir=$mesosWorkDir/$name", s"--port=${processPort(name)}")
+
+    ProcessKeeper.startMesos(name, s"$mesosWorkDir/$name", args ++ systemdFlag, "registered with master", wipe)
   }
 
   def stopMesos(name: String): Unit = ProcessKeeper.stopProcess(name)
