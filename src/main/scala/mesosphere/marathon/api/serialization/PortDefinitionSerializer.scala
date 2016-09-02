@@ -6,18 +6,20 @@ import org.apache.mesos
 import scala.collection.JavaConverters._
 
 object PortDefinitionSerializer {
-  def toProto(portDefinition: PortDefinition): mesos.Protos.Port = {
-    val builder = mesos.Protos.Port.newBuilder
-      .setNumber(portDefinition.port)
-      .setProtocol(portDefinition.protocol)
+  def toProto(portDefinition: PortDefinition): Seq[mesos.Protos.Port] = {
+    portDefinition.protocol.split(',').map { protocol =>
+      val builder = mesos.Protos.Port.newBuilder
+        .setNumber(portDefinition.port)
+        .setProtocol(protocol)
 
-    portDefinition.name.foreach(builder.setName)
+      portDefinition.name.foreach(builder.setName)
 
-    if (portDefinition.labels.nonEmpty) {
-      builder.setLabels(LabelsSerializer.toMesosLabelsBuilder(portDefinition.labels))
+      if (portDefinition.labels.nonEmpty) {
+        builder.setLabels(LabelsSerializer.toMesosLabelsBuilder(portDefinition.labels))
+      }
+
+      builder.build
     }
-
-    builder.build
   }
 
   def fromProto(proto: mesos.Protos.Port): PortDefinition = {

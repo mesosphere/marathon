@@ -90,6 +90,43 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     discoveryInfo should equal(discoveryInfoProto)
   }
 
+  test("BuildIfMatches with port on tcp and udp") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        executor = "//cmd",
+        portDefinitions = Seq(
+          PortDefinition(8080, "udp,tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
+          PortDefinition(8081, "udp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
+        )
+      )
+    )
+
+    assert(task.isDefined)
+
+    val (taskInfo, taskPorts) = task.get
+
+    val discoveryInfo = taskInfo.getDiscovery
+    val discoveryInfoProto = MesosProtos.DiscoveryInfo.newBuilder
+      .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
+      .setName(taskInfo.getName)
+      .setPorts(Helpers.mesosPorts(
+        Helpers.mesosPort("http", "udp", "127.0.0.1:8080", taskPorts(0)),
+        Helpers.mesosPort("http", "tcp", "127.0.0.1:8080", taskPorts(0)),
+        Helpers.mesosPort("admin", "udp", "127.0.0.1:8081", taskPorts(1))
+      )).build
+
+    TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
+    discoveryInfo should equal(discoveryInfoProto)
+  }
+
   test("BuildIfMatches with port name, different protocol and labels") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
