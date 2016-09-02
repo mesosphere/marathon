@@ -27,9 +27,10 @@ types:
     properties:
       pod:
         type: pods.Pod
+  QueueItem: QueueApp | QueuePod
   Queue:
     properties:
       queue?:
         type: array
         items:
-          type: QueueApp | QueuePod
+          type: QueueItem

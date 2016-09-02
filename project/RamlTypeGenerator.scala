@@ -19,6 +19,7 @@ object RamlTypeGenerator {
       "int8" -> ByteClass,
       "int16" -> ShortClass,
       "int32" -> IntClass,
+      "integer" -> IntClass,
       "int64" -> LongClass,
       "long" -> LongClass,
       "float" -> FloatClass,
@@ -30,6 +31,7 @@ object RamlTypeGenerator {
       "datetime" -> RootClass.newClass("java.time.OffsetDateTime")
     )
 
+  val TryClass = RootClass.newClass("scala.util.Try")
   val JsonFormat = RootClass.newClass("spray.json.JsonFormat")
 
   def JSON_FORMAT(typ: Type): Type = JsonFormat TYPE_OF typ
@@ -54,6 +56,7 @@ object RamlTypeGenerator {
 
   def PLAY_JSON_RESULT(typ: Type): Type = PlayJsonResult TYPE_OF typ
 
+  val PlayJson = RootClass.newClass("play.api.libs.json.Json")
   val PlayJsValue = RootClass.newClass("play.api.libs.json.JsValue")
   val PlayJsString = RootClass.newClass("play.api.libs.json.JsString")
   val PlayJsArray = RootClass.newClass("play.api.libs.json.JsArray")
@@ -63,8 +66,8 @@ object RamlTypeGenerator {
 
   def camelify(name: String): String = name.toLowerCase.capitalize
 
-  def underscoreToCamel(name: String) = "_([a-z\\d])".r.replaceAllIn(name, { m =>
-    m.group(1).toUpperCase()
+  def underscoreToCamel(name: String) = "(_|\\,)([a-z\\d])".r.replaceAllIn(name, { m =>
+    m.group(2).toUpperCase()
   })
 
   def enumName(s: StringTypeDeclaration, default: Option[String] = None): String = {
@@ -85,7 +88,6 @@ object RamlTypeGenerator {
     }
   }
 
-
   def buildTypeTable(types: Set[TypeDeclaration]): Map[String, Symbol] = {
     @tailrec def build(types: Set[TypeDeclaration], result: Map[String, Symbol]): Map[String, Symbol] = {
       types match {
@@ -102,6 +104,8 @@ object RamlTypeGenerator {
               build(s.tail, result + (e.name -> RootClass.newClass(e.name)))
             case str: StringTypeDeclaration =>
               build(s.tail, result + (str.name -> StringClass))
+            case n: NumberTypeDeclaration =>
+              build(s.tail, result + (n.name -> result(n.format())))
             case _ =>
               build(s.tail, result)
           }
@@ -122,7 +126,7 @@ object RamlTypeGenerator {
     override def toString: String = s"Enum($name, $values)"
 
     override def toTree(): Seq[Tree] = {
-      val baseTrait = TRAITDEF(name) withFlags Flags.SEALED := BLOCK(
+      val baseTrait = TRAITDEF(name) withParents("Product", "Serializable") withFlags Flags.SEALED := BLOCK(
         VAL("value", StringClass),
         DEF("toString", StringClass) withFlags Flags.OVERRIDE := REF("value")
       )
@@ -247,39 +251,46 @@ object RamlTypeGenerator {
     override def toString: String = parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
 
     override def toTree(): Seq[Tree] = {
-      val params = fields.map(_.param)
+      val actualFields = fields.filter(_.name != discriminator.getOrElse(""))
+      val params = actualFields.map(_.param)
       val klass = if (childTypes.nonEmpty) {
-        parentType.fold(TRAITDEF(name) := BLOCK(params))(parent =>
-          TRAITDEF(name) withParents parent := BLOCK(params)
-        )
+        if (params.nonEmpty) {
+          parentType.fold(TRAITDEF(name) withParents("Product", "Serializable") := BLOCK(params))(parent =>
+            TRAITDEF(name) withParents(parent, "Product", "Serializable") := BLOCK(params)
+          )
+        } else {
+          parentType.fold((TRAITDEF(name) withParents("Product", "Serializable")).tree)(parent =>
+            (TRAITDEF(name) withParents(parent, "Product", "Serializable")).tree
+          )
+        }
       } else {
         parentType.fold(CASECLASSDEF(name) withParams params)(parent =>
           CASECLASSDEF(name) withParams params withParents parent
         ).tree
       }
 
-      val sprayFormat = if (fields.exists(_.default.nonEmpty)) {
+      val sprayFormat = if (actualFields.exists(_.default.nonEmpty)) {
         OBJECTDEF("SprayJsonFormat") withParents (ROOT_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
           IMPORT("spray.json._"),
           DEF("write", JsValue) withParams PARAM("o", name) := BLOCK(
-            REF(JsObject) APPLY fields.map(f => TUPLE(LIT(f.name), REF("o") DOT f.name DOT "toJson"))
+            REF(JsObject) APPLY actualFields.map(f => TUPLE(LIT(f.name), REF("o") DOT f.name DOT "toJson"))
           ),
           DEF("read", name) withParams PARAM("json", JsValue) := BLOCK(
             Seq(VAL("fields") := (REF("json") DOT "asJsObject" DOT "fields")) ++
-              fields.map(_.sprayReader(name)) ++
-              Seq(REF(name) APPLY(fields.map(f => REF(f.name) := REF(f.name))))
+              actualFields.map(_.sprayReader(name)) ++
+              Seq(REF(name) APPLY(actualFields.map(f => REF(f.name) := REF(f.name))))
           )
         )
       } else {
-        VAL("sprayJsonFormat") withFlags Flags.IMPLICIT := REF(s"jsonFormat${fields.size}") APPLY(REF(name) DOT "apply")
+        VAL("sprayJsonFormat") withFlags Flags.IMPLICIT := REF(s"jsonFormat${actualFields.size}") APPLY(REF(name) DOT "apply")
       }
 
-      val playFormat = if (fields.nonEmpty && fields.exists(_.default.nonEmpty)) {
+      val playFormat = if (actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty)) {
         Seq(
           IMPORT("play.api.libs.json._"),
           IMPORT("play.api.libs.functional.syntax._"),
           VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
-            fields.map(_.playReader).reduce(_ DOT "and" APPLY(_))
+            actualFields.map(_.playReader).reduce(_ DOT "and" APPLY(_))
           ) APPLY(REF(name) DOT "apply _"),
           VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF("play.api.libs.json.Json") DOT "writes" APPLYTYPE(name)
         )
@@ -292,9 +303,7 @@ object RamlTypeGenerator {
           sprayFormat +:
             playFormat
         )
-      } else {
-        if (discriminator.isEmpty)
-          sys.error("Attempted to use subclassing without a discrimantor defined")
+      } else if (discriminator.isDefined) {
         val childDiscriminators: Map[String, ObjectT] = childTypes.map(ct => ct.discriminatorValue.getOrElse(ct.name) -> ct)(collection.breakOut)
         (OBJECTDEF(name) withParents DefaultJsonProtocol) := BLOCK(
           OBJECTDEF("SprayJsonFormat") withParents ROOT_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
@@ -302,7 +311,7 @@ object RamlTypeGenerator {
             DEF("read", name) withParams PARAM("json", JsValue) := BLOCK(
               REF("json") DOT "asJsObject" DOT "fields" DOT "get" APPLY(LIT(discriminator.get)) MATCH(
                 childDiscriminators.map { case (k, v) =>
-                  CASE(JsString APPLY LIT(k)) ==> (REF("json") DOT "convertTo" APPLYTYPE(v.name))
+                  CASE(SomeClass APPLY(JsString APPLY LIT(k))) ==> (REF("json") DOT "convertTo" APPLYTYPE(v.name))
                 } ++
                   Seq(CASE(WILDCARD) ==> THROW(REF("spray.json.deserializationError") APPLY LIT(s"$name: Unable to deserialize into any of the types: ${childTypes.map(_.name).mkString(", ")}")))
                 )
@@ -310,21 +319,41 @@ object RamlTypeGenerator {
             DEF("write", JsValue) withParams PARAM("o", name) := BLOCK(
               REF("o") MATCH
                 childDiscriminators.map { case (k, v) =>
-                  CASE(REF(s"f:${v.name}")) ==> (REF("f") DOT "toJson" APPLYTYPE(v.name))
+                  CASE(REF(s"f:${v.name}")) ==> (REF("f") DOT "toJson")
                 }
+            )
+          ),
+          OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
+              TUPLE(REF("json") DOT "\\" APPLY LIT(discriminator.get)) DOT "validate" APPLYTYPE(StringClass) MATCH(
+                childDiscriminators.map { case (k, v) =>
+                  CASE(PlayJsSuccess APPLY(LIT(k), REF("_"))) ==> (REF("json") DOT "validate" APPLYTYPE(v.name))
+                } ++
+                Seq(
+                  CASE(WILDCARD) ==> (REF(PlayJsError) APPLY(REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"expected one of (${childDiscriminators.keys.mkString(", ")})"))))
+                )
+              )
+            },
+            DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+              REF("o") MATCH
+              childDiscriminators.map { case (k, v) =>
+                CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f"))
+              }
             )
           )
         )
+      } else {
+        System.err.println(s"[WARNING] $name uses subtyping but has no discriminator. If it is not a union type when it is" +
+          " used, it will not be able to be deserialized at this time")
+        OBJECTDEF(name).tree
       }
 
-      val commentBlock = (comments ++ fields.map(_.comment)(collection.breakOut))
+      val commentBlock = (comments ++ actualFields.map(_.comment)(collection.breakOut))
       Seq(klass.withDoc(commentBlock), obj) ++ childTypes.flatMap(_.toTree())
     }
   }
 
-  case object StringT extends GeneratedClass {
-    val name = "value"
-
+  case class StringT(name: String) extends GeneratedClass {
     override def toTree(): Seq[treehugger.forest.Tree] = Seq.empty[Tree]
   }
 
@@ -332,8 +361,69 @@ object RamlTypeGenerator {
     override def toString: String = s"Union($name, $childTypes)"
 
     override def toTree(): Seq[Tree] = {
-      println(s"Union Type: $name (${childTypes.map(_.name)})")
-      Seq.empty[Tree]
+      val base = (TRAITDEF(name) withParents("Product", "Serializable")).tree.withDoc(comments)
+      val obj = (OBJECTDEF(name) withParents(DefaultJsonProtocol)) := BLOCK(
+        OBJECTDEF("SprayJsonFormat") withParents ROOT_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+          DEF("read", name) withParams PARAM("json", JsValue) := BLOCK(
+           SEQ(
+              childTypes.map {
+              case e: EnumT =>
+                (REF(TryClass) APPLY(REF("json") DOT "convertTo" APPLYTYPE(e.name)) DOT "toOption").tree
+              case o: ObjectT =>
+                (REF(TryClass) APPLY(REF("json") DOT "convertTo" APPLYTYPE(o.name)) DOT "toOption").tree
+              case u: UnionT =>
+                (REF(TryClass) APPLY(REF("json") DOT "convertTo" APPLYTYPE(u.name)) DOT "toOption").tree
+              case s: StringT =>
+                (REF(TryClass) APPLY(REF("json") DOT "convertTo" APPLYTYPE(s.name)) DOT "toOption").tree
+            }) DOT "flatten" DOT "headOption" DOT "getOrElse" APPLY(REF("spray.json.deserializationError") APPLY LIT(s"Unable to deserialize to one of: (${childTypes.map(_.name).mkString(", ")})"))
+          )
+        ),
+        DEF("write", JsValue) withParams PARAM("o", name) := BLOCK(
+          IMPORT("spray.json._"),
+          REF("o") MATCH
+            childTypes.map { t =>
+                CASE(REF(s"f:${t.name}")) ==> (REF("f") DOT "toJson")
+            }
+        ),
+        OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+          DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+            REF("???")
+          ),
+          DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+            REF("???")
+          )
+        )
+      )
+      val children = childTypes.flatMap {
+        case s: StringT =>
+          Seq[Tree](
+            CASECLASSDEF(s.name) withParents name withParams PARAM("value", StringClass).tree,
+            OBJECTDEF(s.name) withParents DefaultJsonProtocol := BLOCK(
+              OBJECTDEF("SprayJsonFormat") withParents ROOT_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
+                DEF("read", s.name) withParams PARAM("json", JsValue) := BLOCK(
+                  REF("json") MATCH(
+                    CASE(JsString APPLY ID("s")) ==> (REF(s.name) APPLY REF("s")),
+                    CASE(WILDCARD) ==> THROW(REF("spray.json.deserializationError") APPLY LIT("expected string"))
+                  )
+                ),
+                DEF("write", JsValue) withParams PARAM("o", s.name) := BLOCK(JsString APPLY(REF("o") DOT "value")
+              ),
+                IMPORT("play.api.libs.json._"),
+                IMPORT("play.api.libs.functional.syntax._"),
+                OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
+                  DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+                    REF("json") DOT "validate" APPLYTYPE(StringClass) DOT "map" APPLY(REF(s.name) DOT "apply")
+                  ),
+                  DEF("writes", PlayJsValue) withParams PARAM("o", s.name) := BLOCK(
+                    REF(PlayJsString) APPLY(REF("o") DOT "value")
+                  )
+                )
+            )
+          )
+          )
+        case t => t.toTree()
+      }
+      Seq(base) ++ children ++ Seq(obj)
     }
   }
 
@@ -453,15 +543,18 @@ object RamlTypeGenerator {
         val required = defaultValue.fold(Option(field.required()).fold(false)(_.booleanValue()))(_ => false)
         field match {
           case a: ArrayTypeDeclaration =>
-            a.items() match {
-              case a: ArrayTypeDeclaration =>
-                sys.error("Nested Arrays are not yet supported")
-              case o: ObjectTypeDeclaration =>
-                val typeName = objectName(o)._1
-                FieldT(a.name(), TYPE_SEQ(typeTable(typeName)), comments, required, defaultValue, true)
-              case t: TypeDeclaration =>
-                FieldT(a.name(), TYPE_SEQ(typeTable(t.`type`().replaceAll("\\[\\]", ""))), comments, required, defaultValue, true)
+            @tailrec def arrayType(a: ArrayTypeDeclaration, outerType: Type): FieldT = {
+              a.items() match {
+                case n: ArrayTypeDeclaration =>
+                  arrayType(n, outerType TYPE_OF SeqClass)
+                case o: ObjectTypeDeclaration =>
+                  val typeName = objectName(o)._1
+                  FieldT(a.name(), outerType TYPE_OF typeName, comments, required, defaultValue, true)
+                case t: TypeDeclaration =>
+                  FieldT(a.name(), outerType TYPE_OF typeTable(t.`type`().replaceAll("\\[\\]", "")), comments, required, defaultValue, true)
+              }
             }
+            arrayType(a, SeqClass)
           case n: NumberTypeDeclaration =>
             FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue)
           case t: TypeDeclaration =>
@@ -488,7 +581,7 @@ object RamlTypeGenerator {
                     val fields: Seq[FieldT] = o.properties().withFilter(_.`type`() != "nil").map(createField)(collection.breakOut)
                     ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()))
                   case s: StringTypeDeclaration =>
-                    StringT
+                    StringT(s.name)
                   case t =>
                     sys.error(s"Unable to generate union types of non-object/string subtypes: ${u.name()} ${t.name()} ${t.`type`()}")
                 }
@@ -523,14 +616,27 @@ object RamlTypeGenerator {
     val childTypes = all.collect { case obj: ObjectT if obj.parentType.isDefined => obj }.groupBy(_.parentType.get)
     val childNames = childTypes.values.flatMap(_.map(_.name)).toSet
 
-    val unionTypeNames = all.collect { case u: UnionT => u }.flatMap { t => t.childTypes.map(_.name) + t.name }
-    all.withFilter(t => !unionTypeNames.contains(t.name) && !childNames.contains(t.name) && t != StringT).map {
+
+    val unionTypeNames = all.collect { case u: UnionT => u }.flatMap { t => t.childTypes.map(_.name) }
+
+    // Reduce the list so that union types and type hierarchies are now all included from just the top-level type
+    val filterPhase1 = all.withFilter(t => !unionTypeNames.contains(t.name) && !childNames.contains(t.name) && !t.isInstanceOf[StringT]).map {
+      case u: UnionT =>
+        val children = u.childTypes.map {
+          case o: ObjectT =>
+            o.copy(parentType = Some(u.name))
+          case t => t
+        }
+        u.copy(childTypes = children)
       case obj: ObjectT if childTypes.containsKey(obj.name) =>
-        val children = childTypes(obj.name)/*.map { child =>
-          child.copy(fields = obj.fields ++ child.fields)
-        }*/
+        val children = childTypes(obj.name)
         obj.copy(childTypes = children.to[Seq])
       case t => t
+    }
+    filterPhase1.filter {
+      case o: ObjectT =>
+        !o.childTypes.map(_.name).exists(unionTypeNames.contains)
+      case t => true
     }
   }
 

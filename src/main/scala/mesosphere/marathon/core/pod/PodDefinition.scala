@@ -3,8 +3,8 @@ package mesosphere.marathon.core.pod
 import java.time.OffsetDateTime
 
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.raml.{ ConstraintOperator, EnvVar, Label, MesosContainer, Network, PodDef, PodSchedulingPlacementPolicy, PodSchedulingPolicy, Volume, Constraint => RamlConstraint }
-import mesosphere.marathon.state.{ EnvVarSecretRef, EnvVarString, EnvVarValue, PathId, RunnableSpec, Secret }
+import mesosphere.marathon.raml.{ MesosContainer, Network, Volume }
+import mesosphere.marathon.state.{ EnvVarValue, PathId, RunnableSpec, Secret }
 
 import scala.collection.immutable.Seq
 // scalastyle:on
@@ -32,16 +32,15 @@ case class PodDefinition(
   lazy val disk: Double = containers.flatMap(_.resources.disk.map(_.toDouble)).sum
   lazy val gpus: Int = containers.flatMap(_.resources.gpus).sum
 
-  lazy val asPodDef: PodDef = {
-    val envVars: Seq[EnvVar] = env.map {
-      case (k, v) =>
-        v match {
+  /*
+  lazy val asPodDef: Pod = {
+    val envVars: EnvVars = EnvVars(env.mapValues {
           case EnvVarSecretRef(secret) =>
-            EnvVar(k, secret = Some(secret))
+            RamlEnvVarSecretRef(secret)
           case EnvVarString(value) =>
-            EnvVar(k, value = Some(value))
+            RamlEnvVarValue(value)
         }
-    }(collection.breakOut)
+    )
 
     val constraintDefs: Seq[Constraint] = constraints.map { c =>
       val operator = c.getOperator match {
@@ -61,12 +60,12 @@ case class PodDefinition(
 
     val scalingPolicy = PodScalingPolicy(Some(Fixed(instances, maxInstances)))
 
-    PodDef(
+    Pod(
       id = id.safePath,
       version = Some(version.toOffsetDateTime),
       user = user,
       containers = containers,
-      environment = envVars,
+      environment = Some(envVars),
       labels = labels.map { case (k, v) => Label(k, if (v.nonEmpty) Some(v) else None) }(collection.breakOut),
       scaling = Some(scalingPolicy),
       scheduling = Some(schedulingPolicy),
@@ -89,9 +88,11 @@ case class PodDefinition(
     val json = asPodDef.toJson
     Protos.PodDefinition.newBuilder.setJson(json.compactPrint).build()
   }
+  */
 }
 
 object PodDefinition {
+  /*
   def apply(podDef: PodDef): PodDefinition = {
     val env: Map[String, EnvVarValue] =
       podDef.environment.withFilter(e => e.value.isDefined || e.secret.isDefined).map { env =>
@@ -159,4 +160,5 @@ object PodDefinition {
   val DefaultVersion = Timestamp.now()
   val DefaultVolumes = Seq.empty[Volume]
   val DefaultNetworks = Seq.empty[Network]
+  */
 }

@@ -39,7 +39,8 @@ types:
       httpStatusCodesForReady?:
         type: array
         items:
-          type: number
+          type: integer
+          format: int32
           minimum: 100
           maximum: 999
         description: The HTTP(s) status codes to treat as 'ready'
