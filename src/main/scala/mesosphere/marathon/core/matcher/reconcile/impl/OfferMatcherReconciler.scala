@@ -4,7 +4,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
@@ -85,10 +85,10 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: InstanceTracker, gr
       }
     }
 
-  private[this] def source(offerId: OfferID) = new TaskOpSource {
-    override def taskOpAccepted(taskOp: InstanceOp): Unit =
+  private[this] def source(offerId: OfferID) = new InstanceOpSource {
+    override def instanceOpAccepted(taskOp: InstanceOp): Unit =
       log.info(s"accepted unreserveAndDestroy for ${taskOp.instanceId} in offer [${offerId.getValue}]")
-    override def taskOpRejected(taskOp: InstanceOp, reason: String): Unit =
+    override def instanceOpRejected(taskOp: InstanceOp, reason: String): Unit =
       log.info("rejected unreserveAndDestroy for {} in offer [{}]: {}", taskOp.instanceId, offerId.getValue, reason)
   }
 }

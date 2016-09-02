@@ -10,15 +10,15 @@ import scala.concurrent.Future
 object OfferMatcher {
 
   /**
-    * A TaskOp with a [[TaskOpSource]].
+    * A TaskOp with a [[InstanceOpSource]].
     *
-    * The [[TaskOpSource]] is informed whether the op is ultimately send to Mesos or if it is rejected
+    * The [[InstanceOpSource]] is informed whether the op is ultimately send to Mesos or if it is rejected
     * (e.g. by throttling logic).
     */
-  case class TaskOpWithSource(source: TaskOpSource, op: InstanceOp) {
+  case class TaskOpWithSource(source: InstanceOpSource, op: InstanceOp) {
     def taskId: Instance.Id = op.instanceId
-    def accept(): Unit = source.taskOpAccepted(op)
-    def reject(reason: String): Unit = source.taskOpRejected(op, reason)
+    def accept(): Unit = source.instanceOpAccepted(op)
+    def reject(reason: String): Unit = source.instanceOpRejected(op, reason)
   }
 
   /**
@@ -60,9 +60,9 @@ object OfferMatcher {
       new MatchedTaskOps(offerId, Seq.empty, resendThisOffer = resendThisOffer)
   }
 
-  trait TaskOpSource {
-    def taskOpAccepted(taskOp: InstanceOp)
-    def taskOpRejected(taskOp: InstanceOp, reason: String)
+  trait InstanceOpSource {
+    def instanceOpAccepted(taskOp: InstanceOp)
+    def instanceOpRejected(taskOp: InstanceOp, reason: String)
   }
 }
 

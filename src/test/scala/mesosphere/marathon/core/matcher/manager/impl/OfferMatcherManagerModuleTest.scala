@@ -7,7 +7,7 @@ import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
@@ -182,12 +182,12 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
       Future.successful(result)
     }
 
-    object source extends TaskOpSource {
+    object source extends InstanceOpSource {
       var acceptedOps = Vector.empty[InstanceOp]
       var rejectedOps = Vector.empty[InstanceOp]
 
-      override def taskOpAccepted(taskOp: InstanceOp): Unit = acceptedOps :+= taskOp
-      override def taskOpRejected(taskOp: InstanceOp, reason: String): Unit = rejectedOps :+= taskOp
+      override def instanceOpAccepted(taskOp: InstanceOp): Unit = acceptedOps :+= taskOp
+      override def instanceOpRejected(taskOp: InstanceOp, reason: String): Unit = rejectedOps :+= taskOp
     }
   }
 

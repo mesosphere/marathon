@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.{ OfferProcessor, OfferProcessorConfig, TaskLauncher, InstanceOp }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpSource, TaskOpWithSource }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.TaskCreationHandler
 import mesosphere.marathon.metrics.Metrics
@@ -296,11 +296,11 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     val launchWithOldTask = new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchOnReservation _
   }
 
-  class DummySource extends TaskOpSource {
+  class DummySource extends InstanceOpSource {
     var rejected = Vector.empty[(InstanceOp, String)]
     var accepted = Vector.empty[InstanceOp]
 
-    override def taskOpRejected(op: InstanceOp, reason: String): Unit = rejected :+= op -> reason
-    override def taskOpAccepted(op: InstanceOp): Unit = accepted :+= op
+    override def instanceOpRejected(op: InstanceOp, reason: String): Unit = rejected :+= op -> reason
+    override def instanceOpAccepted(op: InstanceOp): Unit = accepted :+= op
   }
 }

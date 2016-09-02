@@ -2,23 +2,24 @@ package mesosphere.marathon.core.matcher.base.util
 
 import akka.actor.ActorRef
 import mesosphere.marathon.core.launcher.InstanceOp
-import mesosphere.marathon.core.matcher.base.OfferMatcher.TaskOpSource
-import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.{ TaskOpAccepted, TaskOpRejected }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.InstanceOpSource
+import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.{ InstanceAccepted, InstanceRejected }
 
-private class InstanceOpSourceDelegate(actorRef: ActorRef) extends TaskOpSource {
-  override def taskOpAccepted(taskOp: InstanceOp): Unit = actorRef ! TaskOpAccepted(taskOp)
-  override def taskOpRejected(taskOp: InstanceOp, reason: String): Unit = actorRef ! TaskOpRejected(taskOp, reason)
+private class InstanceOpSourceDelegate(actorRef: ActorRef) extends InstanceOpSource {
+  override def instanceOpAccepted(instanceOp: InstanceOp): Unit = actorRef ! InstanceAccepted(instanceOp)
+  override def instanceOpRejected(instanceOp: InstanceOp, reason: String): Unit =
+    actorRef ! InstanceRejected(instanceOp, reason)
 }
 
 object InstanceOpSourceDelegate {
-  def apply(actorRef: ActorRef): TaskOpSource = new InstanceOpSourceDelegate(actorRef)
+  def apply(actorRef: ActorRef): InstanceOpSource = new InstanceOpSourceDelegate(actorRef)
 
-  sealed trait TaskOpNotification {
-    def taskOp: InstanceOp
+  sealed trait InstanceNotification {
+    def instanceOp: InstanceOp
   }
-  object TaskOpNotification {
-    def unapply(notification: TaskOpNotification): Option[InstanceOp] = Some(notification.taskOp)
+  object InstanceNotification {
+    def unapply(notification: InstanceNotification): Option[InstanceOp] = Some(notification.instanceOp)
   }
-  case class TaskOpAccepted(taskOp: InstanceOp) extends TaskOpNotification
-  case class TaskOpRejected(taskOp: InstanceOp, reason: String) extends TaskOpNotification
+  case class InstanceAccepted(instanceOp: InstanceOp) extends InstanceNotification
+  case class InstanceRejected(instanceOp: InstanceOp, reason: String) extends InstanceNotification
 }
