@@ -4,8 +4,8 @@ import treehugger.forest._
 import definitions._
 import org.raml.v2.api.RamlModelResult
 import org.raml.v2.api.model.v10.api.Library
-import treehuggerDSL._
 import org.raml.v2.api.model.v10.datamodel._
+import treehuggerDSL._
 
 import scala.annotation.tailrec
 import scala.collection.JavaConversions._
@@ -32,18 +32,7 @@ object RamlTypeGenerator {
     )
 
   val TryClass = RootClass.newClass("scala.util.Try")
-  val JsonFormat = RootClass.newClass("spray.json.JsonFormat")
 
-  def JSON_FORMAT(typ: Type): Type = JsonFormat TYPE_OF typ
-
-  val RootJsonFormat = RootClass.newClass("spray.json.RootJsonFormat")
-
-  def ROOT_JSON_FORMAT(typ: Type): Type = RootJsonFormat TYPE_OF typ
-
-  val JsValue = RootClass.newClass("spray.json.JsValue")
-  val JsString = RootClass.newClass("spray.json.JsString")
-  val JsObject = RootClass.newClass("spray.json.JsObject")
-  val DefaultJsonProtocol = RootClass.newClass("RamlJsonProtocol")
   val SeqClass = RootClass.newClass("scala.collection.immutable.Seq")
 
   def TYPE_SEQ(typ: Type): Type = SeqClass TYPE_OF typ
@@ -141,21 +130,6 @@ object RamlTypeGenerator {
         CASE(LIT(enumValue.toLowerCase)) ==> REF(underscoreToCamel(camelify(enumValue)))
       }
 
-      val wildcard = CASE(WILDCARD) ==>
-        (REF("spray.json.deserializationError") APPLY LIT(s"Expected $name (${values.mkString(", ")})"))
-
-      val enumJsonFormat = (OBJECTDEF(s"jsonFormat") withParents JSON_FORMAT(name) withFlags Flags.IMPLICIT) := BLOCK(
-        DEF("read", name) withParams PARAM("value", JsValue) := {
-          REF("value") MATCH(
-            CASE(REF(JsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH (patternMatches + wildcard)),
-            wildcard
-            )
-        },
-        DEF("write", JsValue) withParams PARAM("o", name) := {
-          REF(JsString) APPLY (REF("o") DOT "value")
-        }
-      )
-
       val playWildcard = CASE(WILDCARD) ==>
         (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"$name (${values.mkString(", ")})"))))
       val playPatternMatches = values.map { enumValue =>
@@ -174,7 +148,7 @@ object RamlTypeGenerator {
       )
 
       val obj = OBJECTDEF(name) := BLOCK(
-        enumObjects ++ Seq(enumJsonFormat, playJsonFormat)
+        enumObjects ++ Seq(playJsonFormat)
       )
       Seq(baseTrait.withDoc(comments), obj)
     }
@@ -269,22 +243,6 @@ object RamlTypeGenerator {
         ).tree
       }
 
-      val sprayFormat = if (actualFields.exists(_.default.nonEmpty)) {
-        OBJECTDEF("SprayJsonFormat") withParents (ROOT_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
-          IMPORT("spray.json._"),
-          DEF("write", JsValue) withParams PARAM("o", name) := BLOCK(
-            REF(JsObject) APPLY actualFields.map(f => TUPLE(LIT(f.name), REF("o") DOT f.name DOT "toJson"))
-          ),
-          DEF("read", name) withParams PARAM("json", JsValue) := BLOCK(
-            Seq(VAL("fields") := (REF("json") DOT "asJsObject" DOT "fields")) ++
-              actualFields.map(_.sprayReader(name)) ++
-              Seq(REF(name) APPLY(actualFields.map(f => REF(f.name) := REF(f.name))))
-          )
-        )
-      } else {
-        VAL("sprayJsonFormat") withFlags Flags.IMPLICIT := REF(s"jsonFormat${actualFields.size}") APPLY(REF(name) DOT "apply")
-      }
-
       val playFormat = if (actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty)) {
         Seq(
           IMPORT("play.api.libs.json._"),
@@ -299,30 +257,12 @@ object RamlTypeGenerator {
       }
 
       val obj = if (childTypes.isEmpty) {
-        (OBJECTDEF(name) withParents DefaultJsonProtocol) := BLOCK(
-          sprayFormat +:
-            playFormat
+        (OBJECTDEF(name)) := BLOCK(
+          playFormat
         )
       } else if (discriminator.isDefined) {
         val childDiscriminators: Map[String, ObjectT] = childTypes.map(ct => ct.discriminatorValue.getOrElse(ct.name) -> ct)(collection.breakOut)
-        (OBJECTDEF(name) withParents DefaultJsonProtocol) := BLOCK(
-          OBJECTDEF("SprayJsonFormat") withParents ROOT_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
-            IMPORT("spray.json._"),
-            DEF("read", name) withParams PARAM("json", JsValue) := BLOCK(
-              REF("json") DOT "asJsObject" DOT "fields" DOT "get" APPLY(LIT(discriminator.get)) MATCH(
-                childDiscriminators.map { case (k, v) =>
-                  CASE(SomeClass APPLY(JsString APPLY LIT(k))) ==> (REF("json") DOT "convertTo" APPLYTYPE(v.name))
-                } ++
-                  Seq(CASE(WILDCARD) ==> THROW(REF("spray.json.deserializationError") APPLY LIT(s"$name: Unable to deserialize into any of the types: ${childTypes.map(_.name).mkString(", ")}")))
-                )
-            ),
-            DEF("write", JsValue) withParams PARAM("o", name) := BLOCK(
-              REF("o") MATCH
-                childDiscriminators.map { case (k, v) =>
-                  CASE(REF(s"f:${v.name}")) ==> (REF("f") DOT "toJson")
-                }
-            )
-          ),
+        OBJECTDEF(name) := BLOCK(
           OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
               TUPLE(REF("json") DOT "\\" APPLY LIT(discriminator.get)) DOT "validate" APPLYTYPE(StringClass) MATCH(
@@ -362,35 +302,20 @@ object RamlTypeGenerator {
 
     override def toTree(): Seq[Tree] = {
       val base = (TRAITDEF(name) withParents("Product", "Serializable")).tree.withDoc(comments)
-      val obj = (OBJECTDEF(name) withParents(DefaultJsonProtocol)) := BLOCK(
-        OBJECTDEF("SprayJsonFormat") withParents ROOT_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
-          DEF("read", name) withParams PARAM("json", JsValue) := BLOCK(
-           SEQ(
-              childTypes.map {
-              case e: EnumT =>
-                (REF(TryClass) APPLY(REF("json") DOT "convertTo" APPLYTYPE(e.name)) DOT "toOption").tree
-              case o: ObjectT =>
-                (REF(TryClass) APPLY(REF("json") DOT "convertTo" APPLYTYPE(o.name)) DOT "toOption").tree
-              case u: UnionT =>
-                (REF(TryClass) APPLY(REF("json") DOT "convertTo" APPLYTYPE(u.name)) DOT "toOption").tree
-              case s: StringT =>
-                (REF(TryClass) APPLY(REF("json") DOT "convertTo" APPLYTYPE(s.name)) DOT "toOption").tree
-            }) DOT "flatten" DOT "headOption" DOT "getOrElse" APPLY(REF("spray.json.deserializationError") APPLY LIT(s"Unable to deserialize to one of: (${childTypes.map(_.name).mkString(", ")})"))
-          )
-        ),
-        DEF("write", JsValue) withParams PARAM("o", name) := BLOCK(
-          IMPORT("spray.json._"),
-          REF("o") MATCH
-            childTypes.map { t =>
-                CASE(REF(s"f:${t.name}")) ==> (REF("f") DOT "toJson")
-            }
-        ),
+      val childJson: Seq[GenericApply] = childTypes.map { child =>
+        REF("json") DOT s"validate" APPLYTYPE(child.name)
+      }
+
+      val obj = OBJECTDEF(name) := BLOCK(
         OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
           DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
-            REF("???")
+            childJson.reduce( (acc, next) => acc DOT "orElse" APPLY next)
           ),
           DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
-            REF("???")
+            REF("o") MATCH
+              childTypes.map { child =>
+                CASE(REF(s"f:${child.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f"))
+              }
           )
         )
       )
@@ -398,18 +323,7 @@ object RamlTypeGenerator {
         case s: StringT =>
           Seq[Tree](
             CASECLASSDEF(s.name) withParents name withParams PARAM("value", StringClass).tree,
-            OBJECTDEF(s.name) withParents DefaultJsonProtocol := BLOCK(
-              OBJECTDEF("SprayJsonFormat") withParents ROOT_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
-                DEF("read", s.name) withParams PARAM("json", JsValue) := BLOCK(
-                  REF("json") MATCH(
-                    CASE(JsString APPLY ID("s")) ==> (REF(s.name) APPLY REF("s")),
-                    CASE(WILDCARD) ==> THROW(REF("spray.json.deserializationError") APPLY LIT("expected string"))
-                  )
-                ),
-                DEF("write", JsValue) withParams PARAM("o", s.name) := BLOCK(JsString APPLY(REF("o") DOT "value")
-              ),
-                IMPORT("play.api.libs.json._"),
-                IMPORT("play.api.libs.functional.syntax._"),
+            OBJECTDEF(s.name) := BLOCK(
                 OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
                   DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
                     REF("json") DOT "validate" APPLYTYPE(StringClass) DOT "map" APPLY(REF(s.name) DOT "apply")
@@ -420,74 +334,10 @@ object RamlTypeGenerator {
                 )
             )
           )
-          )
         case t => t.toTree()
       }
       Seq(base) ++ children ++ Seq(obj)
     }
-  }
-
-  def generateBuiltInTypes(pkg: String): Map[String, Tree] = {
-    val OffsetDateTime = RootClass.newClass("java.time.OffsetDateTime")
-    val LocalTime = RootClass.newClass("java.time.LocalTime")
-    val LocalDate = RootClass.newClass("java.time.LocalDate")
-    val LocalDateTime = RootClass.newClass("java.time.LocalDateTime")
-    val DateTimeFormatter = RootClass.newClass("java.time.format.DateTimeFormatter")
-
-    val jsonProtocolTrait = TRAITDEF("RamlJsonProtocol") withParents("spray.json.DefaultJsonProtocol", "play.api.libs.json.DefaultReads", "play.api.libs.json.DefaultWrites") := BLOCK(
-      VAL("dateTimeFormat") := REF(DateTimeFormatter) DOT "ISO_OFFSET_DATE_TIME",
-      VAL("timeFormat") := REF(DateTimeFormatter) DOT "ISO_LOCAL_TIME",
-      VAL("dateFormat") := REF(DateTimeFormatter) DOT "ISO_LOCAL_DATE",
-      VAL("dateTimeOnlyFormat") := REF(DateTimeFormatter) DOT "ISO_LOCAL_DATE_TIME",
-      OBJECTDEF("OffsetDateTimeJsonFormat") withParents JSON_FORMAT(OffsetDateTime) withFlags Flags.IMPLICIT := BLOCK(
-        DEF("read", OffsetDateTime) withParams PARAM("value", JsValue) := {
-          REF("value") MATCH(
-            CASE(REF(JsString) UNAPPLY ID("s")) ==> (REF(OffsetDateTime) DOT "parse" APPLY(REF("s"), REF("dateTimeOnlyFormat"))),
-            CASE(WILDCARD) ==>  (REF("spray.json.deserializationError") APPLY LIT(s"Expected offset date time (e.g. 2007-12-03T10:15:30+01:00)"))
-            )
-        },
-        DEF("write", JsValue) withParams PARAM("time", OffsetDateTime) := {
-          REF(JsString) APPLY(REF("time") DOT "format" APPLY REF("dateTimeFormat"))
-        }
-      ),
-      OBJECTDEF("LocalTimeJsonFormat") withParents JSON_FORMAT(LocalTime) withFlags Flags.IMPLICIT := BLOCK(
-        DEF("read", LocalTime) withParams PARAM("value", JsValue) := {
-          REF("value") MATCH(
-            CASE(REF(JsString) UNAPPLY ID("s")) ==> (REF(LocalTime) DOT "parse" APPLY(REF("s"), REF("dateTimeOnlyFormat"))),
-            CASE(WILDCARD) ==>  (REF("spray.json.deserializationError") APPLY LIT(s"Expected local time (e.g. 10:15:30)"))
-            )
-        },
-        DEF("write", JsValue) withParams PARAM("time", LocalTime) := {
-          REF(JsString) APPLY(REF("time") DOT "format" APPLY REF("timeFormat"))
-        }
-      ),
-      OBJECTDEF("LocalDateJsonFormat") withParents JSON_FORMAT(LocalDate) withFlags Flags.IMPLICIT := BLOCK(
-        DEF("read", LocalDate) withParams PARAM("value", JsValue) := {
-          REF("value") MATCH(
-            CASE(REF(JsString) UNAPPLY ID("s")) ==> (REF(LocalDate) DOT "parse" APPLY(REF("s"), REF("dateTimeOnlyFormat"))),
-            CASE(WILDCARD) ==>  (REF("spray.json.deserializationError") APPLY LIT(s"Expected local date (e.g. 2007-12-03)"))
-            )
-        },
-        DEF("write", JsValue) withParams PARAM("time", LocalDate) := {
-          REF(JsString) APPLY(REF("time") DOT "format" APPLY REF("timeFormat"))
-        }
-      ),
-      OBJECTDEF("LocalDateTimeJsonFormat") withParents JSON_FORMAT(LocalDateTime) withFlags Flags.IMPLICIT := BLOCK(
-        DEF("read", LocalDateTime) withParams PARAM("value", JsValue) := {
-          REF("value") MATCH(
-            CASE(REF(JsString) UNAPPLY ID("s")) ==> (REF(LocalDateTime) DOT "parse" APPLY(REF("s"), REF("dateTimeOnlyFormat"))),
-            CASE(WILDCARD) ==>  (REF("spray.json.deserializationError") APPLY LIT(s"Expected local date (e.g. 2007-12-03T10:15:30)"))
-            )
-        },
-        DEF("write", JsValue) withParams PARAM("time", LocalDateTime) := {
-          REF(JsString) APPLY(REF("time") DOT "format" APPLY REF("timeFormat"))
-        }
-      )
-    )
-
-    val jsonProtocolObj = OBJECTDEF("RamlJsonProtocol") withParents "RamlJsonProtocol"
-
-    Map("RamlJsonProtocol" -> BLOCK(jsonProtocolTrait, jsonProtocolObj).inPackage(pkg))
   }
 
   @tailrec def libraryTypes(libraries: List[Library], result: Set[TypeDeclaration] = Set.empty): Set[TypeDeclaration] = {
@@ -645,7 +495,7 @@ object RamlTypeGenerator {
     val typeTable = buildTypeTable(typeDeclarations)
     val types = buildTypes(typeTable, typeDeclarations)
 
-    generateBuiltInTypes(pkg) ++ types.map { tpe =>
+    types.map { tpe =>
       val tree = tpe.toTree()
       if (tree.nonEmpty) {
         tpe.name -> BLOCK(tree).inPackage(pkg)
