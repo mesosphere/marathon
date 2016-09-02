@@ -6,6 +6,7 @@ import akka.stream.Materializer
 import com.typesafe.config.Config
 import mesosphere.marathon.PrePostDriverCallback
 import mesosphere.marathon.core.event.EventSubscribers
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{ AppDefinition, Group, MarathonTaskState, TaskFailure }
@@ -67,6 +68,8 @@ object StorageModule {
       case l: LegacyStorageConfig =>
         val appStore = l.entityStore[AppDefinition] _
         val appRepository = AppRepository.legacyRepository(appStore, l.maxVersions)
+        val podStore = l.entityStore[PodDefinition] _
+        val podRepository = PodRepository.legacyRepository(podStore, l.maxVersions)
         val taskStore = l.entityStore[MarathonTaskState] _
         val taskRepository = TaskRepository.legacyRepository(taskStore)
         val deployStore = l.entityStore[DeploymentPlan] _
@@ -74,7 +77,7 @@ object StorageModule {
         val taskFailureStore = l.entityStore[TaskFailure] _
         val taskFailureRepository = TaskFailureRepository.legacyRepository(taskFailureStore)
         val groupStore = l.entityStore[Group] _
-        val groupRepository = GroupRepository.legacyRepository(groupStore, l.maxVersions, appRepository)
+        val groupRepository = GroupRepository.legacyRepository(groupStore, l.maxVersions, appRepository, podRepository)
         val frameworkIdStore = l.entityStore[FrameworkId] _
         val frameworkIdRepository = FrameworkIdRepository.legacyRepository(frameworkIdStore)
         val eventSubscribersStore = l.entityStore[EventSubscribers] _
@@ -87,17 +90,18 @@ object StorageModule {
         val leadershipInitializers = Seq(appStore, taskStore, deployStore, taskFailureStore,
           groupStore, frameworkIdStore, eventSubscribersStore).collect { case s: PrePostDriverCallback => s }
 
-        StorageModuleImpl(appRepository, taskRepository, deploymentRepository,
+        StorageModuleImpl(appRepository, podRepository, taskRepository, deploymentRepository,
           taskFailureRepository, groupRepository, frameworkIdRepository, eventSubscribersRepository, migration,
           leadershipInitializers)
       case zk: CuratorZk =>
         val store = zk.store
         val appRepository = AppRepository.zkRepository(store)
-        val groupRepository = GroupRepository.zkRepository(store, appRepository)
+        val podRepository = PodRepository.zkRepository(store)
+        val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository)
 
         val taskRepository = TaskRepository.zkRepository(store)
         val deploymentRepository = DeploymentRepository.zkRepository(store, groupRepository,
-          appRepository, zk.maxVersions)
+          appRepository, podRepository, zk.maxVersions)
         val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.zkRepository(store)
         val eventSubscribersRepository = EventSubscribersRepository.zkRepository(store)
@@ -114,6 +118,7 @@ object StorageModule {
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
           appRepository,
+          podRepository,
           taskRepository,
           deploymentRepository,
           taskFailureRepository,
@@ -125,10 +130,11 @@ object StorageModule {
       case mem: InMem =>
         val store = mem.store
         val appRepository = AppRepository.inMemRepository(store)
+        val podRepository = PodRepository.inMemRepository(store)
         val taskRepository = TaskRepository.inMemRepository(store)
-        val groupRepository = GroupRepository.inMemRepository(store, appRepository)
+        val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository)
         val deploymentRepository = DeploymentRepository.inMemRepository(store, groupRepository,
-          appRepository, mem.maxVersions)
+          appRepository, podRepository, mem.maxVersions)
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)
         val eventSubscribersRepository = EventSubscribersRepository.inMemRepository(store)
@@ -145,6 +151,7 @@ object StorageModule {
           frameworkIdRepository, eventSubscribersRepository)
         StorageModuleImpl(
           appRepository,
+          podRepository,
           taskRepository,
           deploymentRepository,
           taskFailureRepository,
@@ -159,6 +166,7 @@ object StorageModule {
 
 private[storage] case class StorageModuleImpl(
   appRepository: ReadOnlyAppRepository,
+  podRepository: ReadOnlyPodRepository,
   taskRepository: TaskRepository,
   deploymentRepository: DeploymentRepository,
   taskFailureRepository: TaskFailureRepository,
