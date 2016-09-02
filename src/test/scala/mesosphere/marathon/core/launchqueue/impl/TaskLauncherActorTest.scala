@@ -13,7 +13,7 @@ import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedTaskOps
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
-import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.InstanceRejected
+import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.InstanceOpRejected
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -208,7 +208,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
         f.app, tasksToLaunch = 1
       ) {
         override protected def scheduleTaskOperationTimeout(
-          context: ActorContext, message: InstanceRejected): Cancellable = {
+          context: ActorContext, message: InstanceOpRejected): Cancellable = {
           scheduleCalled = true
           mock[Cancellable]
         }
