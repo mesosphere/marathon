@@ -48,6 +48,7 @@ object RamlTypeGenerator {
   val PlayJson = RootClass.newClass("play.api.libs.json.Json")
   val PlayJsValue = RootClass.newClass("play.api.libs.json.JsValue")
   val PlayJsString = RootClass.newClass("play.api.libs.json.JsString")
+  val PlayJsObject = RootClass.newClass("play.api.libs.json.JsObject")
   val PlayJsArray = RootClass.newClass("play.api.libs.json.JsArray")
   val PlayValidationError = RootClass.newClass("play.api.data.validation.ValidationError")
   val PlayJsError = RootClass.newClass("play.api.libs.json.JsError")
@@ -190,32 +191,27 @@ object RamlTypeGenerator {
       }
     }.map { value => LIT(value) }
 
-    def sprayReader(parent: String) = {
-      // required fields never have defaults
-      if (required) {
-        VAL(name) := (REF("fields") DOT "get" APPLY(LIT(name)) DOT "map" APPLY (REF("_") DOT "convertTo" APPLYTYPE(`type`))) DOT "getOrElse" APPLY(THROW(REF("spray.json.deserializationError") APPLY LIT(s"$parent: missing required field: $name")))
-      } else {
-        defaultValue.fold {
-          if (repeated) {
-            VAL(name) := (REF("fields") DOT "getOrElse" APPLY((LIT(name) DOT "convertTo" APPLYTYPE(`type`)), NIL))
-          } else {
-            VAL(name) := (REF("fields") DOT "get" APPLY(LIT(name)) DOT "map" APPLY(REF("_") DOT "convertTo" APPLYTYPE(`type`)))
-          }
-        } { defaultValue =>
-          VAL(name) := (REF("fields") DOT "get" APPLY(LIT(name)) DOT "map" APPLY(REF("_") DOT "convertTo" APPLYTYPE(`type`)) DOT "getOrElse" APPLY defaultValue)
-        }
-      }
-    }
-
     val playReader = {
       // required fields never have defaults
       if (required || repeated) {
         TUPLE(REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`
       } else {
         if (defaultValue.isDefined) {
-          TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY(REF("Reads") DOT "pure" APPLY(defaultValue.get))
+          TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY(REF("Reads") DOT "pure" APPLY defaultValue.get)
         } else {
           TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "readNullable" APPLYTYPE`type`)
+        }
+      }
+    }
+
+    val playValidator = {
+      if (required || repeated) {
+        REF("json") DOT "\\" APPLY LIT(name) DOT "validate" APPLYTYPE `type`
+      } else {
+        if (defaultValue.isDefined) {
+          (REF("json") DOT "\\" APPLY LIT(name)) DOT "validate" APPLYTYPE `type` DOT "orElse" APPLY(REF("Reads") DOT "pure" APPLY defaultValue.get)
+        } else {
+          (REF("json") DOT "\\" APPLY LIT(name)) DOT "validateOpt" APPLYTYPE `type`
         }
       }
     }
@@ -256,10 +252,30 @@ object RamlTypeGenerator {
         Seq(
           OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
-              REF("???")
+              actualFields.map { field =>
+                VAL(field.name) := field.playValidator
+              } ++ Seq(
+                // TODO: This should actually be a collect, then the type cast is unnecessary
+                VAL("errors") := SEQ(actualFields.map(f => REF(f.name))) DOT "filter" APPLY(REF("_") DOT "isError"),
+                IF(REF("errors") DOT "nonEmpty") THEN (
+                    REF("errors") DOT "map" APPLY(REF("_") DOT "asInstanceOf" APPLYTYPE PlayJsError) DOT "reduce" APPLYTYPE PlayJsError APPLY(REF("_") DOT "++" APPLY REF("_"))
+                  ) ELSE (
+                REF(PlayJsSuccess) APPLY(REF(name) APPLY
+                  actualFields.map { field =>
+                    REF(field.name) := (REF(field.name) DOT "get")
+                  }))
+              )
             ),
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
-              REF("???")
+              actualFields.map { field =>
+                VAL(field.name) := REF(PlayJson) DOT "toJson" APPLY(REF("o") DOT field.name)
+              } ++
+                Seq(
+                  REF(PlayJsObject) APPLY SEQ(
+                    actualFields.map { field =>
+                      TUPLE(LIT(field.name), REF(field.name))
+                    })
+                )
             )
           )
         )
@@ -280,16 +296,16 @@ object RamlTypeGenerator {
                 childDiscriminators.map { case (k, v) =>
                   CASE(PlayJsSuccess APPLY(LIT(k), REF("_"))) ==> (REF("json") DOT "validate" APPLYTYPE(v.name))
                 } ++
-                Seq(
-                  CASE(WILDCARD) ==> (REF(PlayJsError) APPLY(REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"expected one of (${childDiscriminators.keys.mkString(", ")})"))))
+                  Seq(
+                    CASE(WILDCARD) ==> (REF(PlayJsError) APPLY(REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"expected one of (${childDiscriminators.keys.mkString(", ")})"))))
+                  )
                 )
-              )
             },
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               REF("o") MATCH
-              childDiscriminators.map { case (k, v) =>
-                CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f"))
-              }
+                childDiscriminators.map { case (k, v) =>
+                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f"))
+                }
             )
           )
         )
@@ -335,14 +351,14 @@ object RamlTypeGenerator {
           Seq[Tree](
             CASECLASSDEF(s.name) withParents name withParams PARAM("value", StringClass).tree,
             OBJECTDEF(s.name) := BLOCK(
-                OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
-                  DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
-                    REF("json") DOT "validate" APPLYTYPE(StringClass) DOT "map" APPLY(REF(s.name) DOT "apply")
-                  ),
-                  DEF("writes", PlayJsValue) withParams PARAM("o", s.name) := BLOCK(
-                    REF(PlayJsString) APPLY(REF("o") DOT "value")
-                  )
+              OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
+                DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+                  REF("json") DOT "validate" APPLYTYPE(StringClass) DOT "map" APPLY(REF(s.name) DOT "apply")
+                ),
+                DEF("writes", PlayJsValue) withParams PARAM("o", s.name) := BLOCK(
+                  REF(PlayJsString) APPLY(REF("o") DOT "value")
                 )
+              )
             )
           )
         case t => t.toTree()
@@ -404,23 +420,24 @@ object RamlTypeGenerator {
         val required = defaultValue.fold(Option(field.required()).fold(false)(_.booleanValue()))(_ => false)
         field match {
           case a: ArrayTypeDeclaration =>
-            @tailrec def arrayType(a: ArrayTypeDeclaration, outerType: Type): FieldT = {
+            @tailrec def arrayType(name: String, a: ArrayTypeDeclaration, outerType: Type): FieldT = {
               a.items() match {
                 case n: ArrayTypeDeclaration =>
-                  arrayType(n, outerType TYPE_OF SeqClass)
+                  arrayType(name, n, outerType TYPE_OF SeqClass)
                 case o: ObjectTypeDeclaration =>
                   val typeName = objectName(o)._1
-                  FieldT(a.name(), outerType TYPE_OF typeName, comments, required, defaultValue, true)
+                  FieldT(name, outerType TYPE_OF typeName, comments, required, defaultValue, true)
                 case t: TypeDeclaration =>
-                  FieldT(a.name(), outerType TYPE_OF typeTable(t.`type`().replaceAll("\\[\\]", "")), comments, required, defaultValue, true)
+                  FieldT(name, outerType TYPE_OF typeTable(t.`type`().replaceAll("\\[\\]", "")), comments, required, defaultValue, true)
               }
             }
-            arrayType(a, SeqClass)
+            arrayType(a.name(), a, SeqClass)
           case n: NumberTypeDeclaration =>
             FieldT(n.name(), typeTable(Option(n.format()).getOrElse("double")), comments, required, defaultValue)
           case t: TypeDeclaration =>
             if (t.name().startsWith('/')) {
-              FieldT("values", TYPE_MAP(StringClass, typeTable(t.`type`())), comments, required, defaultValue)
+              // maps should never be required.
+              FieldT("values", TYPE_MAP(StringClass, typeTable(t.`type`())), comments, false, defaultValue)
             } else {
               FieldT(t.name(), typeTable(t.`type`()), comments, required, defaultValue)
             }
