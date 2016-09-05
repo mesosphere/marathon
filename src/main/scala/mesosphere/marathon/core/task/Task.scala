@@ -415,7 +415,7 @@ object Task {
   object LocalVolumeId {
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
     private val delimiter = "#"
-    private val LocalVolumeEncoderRE = s"^([^.]+)[$delimiter]([^.]+)[$delimiter]([^.]+)$$".r
+    private val LocalVolumeEncoderRE = s"^([^$delimiter]+)[$delimiter]([^$delimiter]+)[$delimiter]([^$delimiter]+)$$".r
 
     def apply(runSpecId: PathId, volume: PersistentVolume): LocalVolumeId =
       LocalVolumeId(runSpecId, volume.containerPath, uuidGenerator.generate().toString)
