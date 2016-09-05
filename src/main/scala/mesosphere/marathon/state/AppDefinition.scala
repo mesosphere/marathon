@@ -429,6 +429,8 @@ case class AppDefinition(
     else if (ipAddress.isDefined) fromDiscoveryInfo
     else fromPortDefinitions
   }
+
+  override def lastConfigChangeVersion: Timestamp = versionInfo.lastConfigChangeVersion
 }
 
 object AppDefinition extends GeneralPurposeCombinators {

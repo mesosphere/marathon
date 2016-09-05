@@ -86,6 +86,9 @@ case class PodDefinition(
     val json = Json.toJson(asPodDef)
     Protos.PodDefinition.newBuilder.setJson(Json.stringify(json)).build()
   }
+
+  // TODO (pods): how would or should we correctly implement this?
+  override lazy val lastConfigChangeVersion: Timestamp = Timestamp(version.toDateTime)
 }
 
 object PodDefinition {

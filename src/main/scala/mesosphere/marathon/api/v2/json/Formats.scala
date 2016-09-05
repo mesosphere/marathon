@@ -1022,6 +1022,11 @@ trait AppAndGroupFormats {
     }
   }
 
+  implicit lazy val RunnableSpecWrites: Writes[RunnableSpec] = new Writes[RunnableSpec] {
+    // TODO (pods): implicit conversion will redirect this, can be removed when #4293 is finished
+    override def writes(spec: RunnableSpec): JsValue = RunSpecWrites.writes(spec)
+  }
+
   implicit lazy val VersionInfoWrites: Writes[AppDefinition.VersionInfo] =
     Writes[AppDefinition.VersionInfo] {
       case AppDefinition.VersionInfo.FullVersionInfo(_, lastScalingAt, lastConfigChangeAt) =>
