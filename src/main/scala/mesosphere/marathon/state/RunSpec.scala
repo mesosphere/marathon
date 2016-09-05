@@ -5,7 +5,6 @@ import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin
-import mesosphere.marathon.state.AppDefinition.VersionInfo
 
 import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
@@ -24,7 +23,10 @@ trait RunnableSpec extends plugin.RunSpec {
 
   def instances: Int
   def constraints: Set[Constraint]
-  def lastConfigChangeVersion: Timestamp
+  def versionInfo: VersionInfo
+
+  // TODO (pods): we could remove this in favor of versionInfo or something else
+  def version: Timestamp
 
   // TODO: these could go into a resources object
   def cpus: Double
@@ -100,7 +102,7 @@ trait RunSpec extends plugin.RunSpec with RunnableSpec {
 
   def versionInfo: VersionInfo
 
-  def version: Timestamp
+  def version: Timestamp = versionInfo.version
 
   def residency: Option[Residency]
 

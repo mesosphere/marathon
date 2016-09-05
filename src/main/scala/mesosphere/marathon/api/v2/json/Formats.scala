@@ -895,7 +895,7 @@ trait AppAndGroupFormats {
             labels = extra.labels,
             acceptedResourceRoles = extra.acceptedResourceRoles,
             ipAddress = extra.ipAddress,
-            versionInfo = AppDefinition.VersionInfo.OnlyVersion(extra.version),
+            versionInfo = VersionInfo.OnlyVersion(extra.version),
             residency = extra.residencyOrDefault,
             readinessChecks = extra.readinessChecks,
             secrets = extra.secrets,
@@ -1027,16 +1027,16 @@ trait AppAndGroupFormats {
     override def writes(spec: RunnableSpec): JsValue = RunSpecWrites.writes(spec)
   }
 
-  implicit lazy val VersionInfoWrites: Writes[AppDefinition.VersionInfo] =
-    Writes[AppDefinition.VersionInfo] {
-      case AppDefinition.VersionInfo.FullVersionInfo(_, lastScalingAt, lastConfigChangeAt) =>
+  implicit lazy val VersionInfoWrites: Writes[VersionInfo] =
+    Writes[VersionInfo] {
+      case VersionInfo.FullVersionInfo(_, lastScalingAt, lastConfigChangeAt) =>
         Json.obj(
           "lastScalingAt" -> lastScalingAt,
           "lastConfigChangeAt" -> lastConfigChangeAt
         )
 
-      case AppDefinition.VersionInfo.OnlyVersion(version) => JsNull
-      case AppDefinition.VersionInfo.NoVersion => JsNull
+      case VersionInfo.OnlyVersion(version) => JsNull
+      case VersionInfo.NoVersion => JsNull
     }
 
   implicit lazy val TaskCountsWrites: Writes[TaskCounts] =

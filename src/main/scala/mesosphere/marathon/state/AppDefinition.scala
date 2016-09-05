@@ -18,8 +18,8 @@ import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
-import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
+import mesosphere.marathon.state.VersionInfo._
+import mesosphere.marathon.state.AppDefinition.Labels
 import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
@@ -294,8 +294,6 @@ case class AppDefinition(
     mergeFromProto(proto)
   }
 
-  val version: Timestamp = versionInfo.version
-
   /**
     * Returns whether this is a scaling change only.
     */
@@ -429,71 +427,11 @@ case class AppDefinition(
     else if (ipAddress.isDefined) fromDiscoveryInfo
     else fromPortDefinitions
   }
-
-  override def lastConfigChangeVersion: Timestamp = versionInfo.lastConfigChangeVersion
 }
 
 object AppDefinition extends GeneralPurposeCombinators {
 
   type AppKey = PathId
-
-  sealed trait VersionInfo {
-    def version: Timestamp
-    def lastConfigChangeVersion: Timestamp
-
-    def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
-      VersionInfo.forNewConfig(version).withScaleOrRestartChange(newVersion)
-    }
-
-    def withConfigChange(newVersion: Timestamp): VersionInfo = {
-      VersionInfo.forNewConfig(newVersion)
-    }
-  }
-
-  object VersionInfo {
-
-    /**
-      * This should only be used for new AppDefinitions.
-      *
-      * If you set the versionInfo of existing AppDefinitions to `NoVersion`,
-      * it will result in a restart when this AppDefinition is passed to the GroupManager update method.
-      */
-    case object NoVersion extends VersionInfo {
-      override def version: Timestamp = Timestamp(0)
-      override def lastConfigChangeVersion: Timestamp = version
-    }
-
-    /**
-      * Only contains a version timestamp. Will be converted to a FullVersionInfo before stored.
-      */
-    case class OnlyVersion(version: Timestamp) extends VersionInfo {
-      override def lastConfigChangeVersion: Timestamp = version
-    }
-
-    /**
-      * @param version The versioning timestamp (we are currently assuming that this is the same as lastChangeAt)
-      * @param lastScalingAt The time stamp of the last change including scaling or restart changes
-      * @param lastConfigChangeAt The time stamp of the last change that changed configuration
-      *                           besides scaling or restarting
-      */
-    case class FullVersionInfo(
-        version: Timestamp,
-        lastScalingAt: Timestamp,
-        lastConfigChangeAt: Timestamp) extends VersionInfo {
-
-      override def lastConfigChangeVersion: Timestamp = lastConfigChangeAt
-
-      override def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
-        copy(version = newVersion, lastScalingAt = newVersion)
-      }
-    }
-
-    def forNewConfig(newVersion: Timestamp): FullVersionInfo = FullVersionInfo(
-      version = newVersion,
-      lastScalingAt = newVersion,
-      lastConfigChangeAt = newVersion
-    )
-  }
 
   val RandomPortValue: Int = 0
   val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])

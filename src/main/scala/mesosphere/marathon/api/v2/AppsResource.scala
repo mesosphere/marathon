@@ -76,7 +76,7 @@ class AppsResource @Inject() (
               ipAddress.copy(networkName = Some(defaultName))
           }.getOrElse(ipAddress)
         },
-        versionInfo = AppDefinition.VersionInfo.OnlyVersion(now)
+        versionInfo = VersionInfo.OnlyVersion(now)
       )
 
       checkAuthorization(CreateRunSpec, app)

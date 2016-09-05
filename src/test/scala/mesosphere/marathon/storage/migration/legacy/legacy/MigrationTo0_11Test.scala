@@ -4,7 +4,7 @@ import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.MarathonSpec
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp, VersionInfo }
 import mesosphere.marathon.storage.LegacyInMemConfig
 import mesosphere.marathon.storage.repository.{ AppRepository, GroupRepository, PodRepository }
 import mesosphere.marathon.stream.Sink
@@ -62,7 +62,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
   test("if an app only exists in the groupRepo, it is created in the appRepo") {
     Given("one app in appRepo, none in groupRepo")
     val f = new Fixture
-    val versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(10))
+    val versionInfo = VersionInfo.OnlyVersion(Timestamp(10))
     val app: AppDefinition = AppDefinition(PathId("/test"), versionInfo = versionInfo)
     val groupWithApp = emptyGroup.copy(
       apps = Map(app.id -> app),
@@ -84,7 +84,7 @@ class MigrationTo0_11Test extends MarathonSpec with GivenWhenThen with Matchers 
     f.appRepo.versions(PathId("/test")).runWith(Sink.seq).futureValue should have size (1)
   }
 
-  private[this] def onlyVersion(ts: Long) = AppDefinition.VersionInfo.OnlyVersion(Timestamp(ts))
+  private[this] def onlyVersion(ts: Long) = VersionInfo.OnlyVersion(Timestamp(ts))
 
   test("if an app has (different) revisions in the appRepo and the groupRepo, they are combined") {
     Given("one app with multiple versions in appRepo and the newest version in groupRepo")

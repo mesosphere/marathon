@@ -1,8 +1,7 @@
 package mesosphere.marathon.upgrade
 
 import mesosphere.marathon.MarathonSpec
-import mesosphere.marathon.state.AppDefinition.VersionInfo
-import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, Group }
+import mesosphere.marathon.state.{ AppDefinition, PathId, Timestamp, Group, VersionInfo }
 import org.scalatest.{ Matchers, GivenWhenThen }
 
 class GroupVersioningUtilTest extends MarathonSpec with GivenWhenThen with Matchers {

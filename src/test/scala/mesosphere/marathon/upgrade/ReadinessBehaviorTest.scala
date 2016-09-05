@@ -9,7 +9,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually

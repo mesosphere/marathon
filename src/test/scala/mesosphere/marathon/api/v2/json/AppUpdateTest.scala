@@ -242,7 +242,7 @@ class AppUpdateTest extends MarathonSpec with Matchers {
     val app = AppDefinition(
       id = PathId("test"),
       cmd = Some("sleep 1"),
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1))
+      versionInfo = VersionInfo.forNewConfig(Timestamp(1))
     )
 
     val updateCmd = AppUpdate(cmd = Some("sleep 2"))

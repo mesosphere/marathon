@@ -27,7 +27,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
 
   def getDelay(spec: RunnableSpec): Timestamp =
     // TODO (pods): runnableSpec has no versionInfo. Need this?
-    taskLaunchDelays.get(spec.id -> spec.lastConfigChangeVersion).map(_.deadline) getOrElse clock.now()
+    taskLaunchDelays.get(spec.id -> spec.versionInfo.lastConfigChangeVersion).map(_.deadline) getOrElse clock.now()
 
   def addDelay(spec: RunnableSpec): Timestamp = {
     setNewDelay(spec, "Increasing delay") {

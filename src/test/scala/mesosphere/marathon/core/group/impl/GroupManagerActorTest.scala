@@ -287,7 +287,7 @@ class GroupManagerActorTest extends Mockito with Matchers with MarathonSpec {
     val group = Group(PathId.empty, Map(app.id -> app)).copy(version = Timestamp(1))
     when(f.groupRepo.root()).thenReturn(Future.successful(Group.empty))
     when(f.scheduler.deploy(any, any)).thenReturn(Future.successful(()))
-    val appWithVersionInfo = app.copy(versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1)))
+    val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
 
     val groupWithVersionInfo = Group(PathId.empty, Map(
       appWithVersionInfo.id -> appWithVersionInfo)).copy(version = Timestamp(1))

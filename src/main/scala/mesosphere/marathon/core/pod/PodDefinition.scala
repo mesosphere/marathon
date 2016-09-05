@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
 import mesosphere.marathon.Protos
-import mesosphere.marathon.raml.{ Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue, _ }
+import mesosphere.marathon.raml.{ Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue, VersionInfo => _, _ }
 import mesosphere.marathon.state._
 import play.api.libs.json.{ Format, JsResult, JsValue, Json }
 
@@ -88,7 +88,7 @@ case class PodDefinition(
   }
 
   // TODO (pods): how would or should we correctly implement this?
-  override lazy val lastConfigChangeVersion: Timestamp = Timestamp(version.toDateTime)
+  override def versionInfo: VersionInfo = VersionInfo.OnlyVersion(version)
 }
 
 object PodDefinition {
