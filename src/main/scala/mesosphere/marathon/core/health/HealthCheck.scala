@@ -92,8 +92,8 @@ case class MarathonHttpHealthCheck(
 
     path.foreach(builder.setPath)
 
-    portIndex.foreach { p => builder.setPortIndex(p) }
-    port.foreach { p => builder.setPort(p) }
+    portIndex.foreach(builder.setPortIndex)
+    port.foreach(builder.setPort)
 
     builder.build
   }
@@ -135,8 +135,8 @@ case class MarathonTcpHealthCheck(
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder.setProtocol(Protos.HealthCheckDefinition.Protocol.TCP)
 
-    portIndex.foreach { p => builder.setPortIndex(p) }
-    port.foreach { p => builder.setPort(p) }
+    portIndex.foreach(builder.setPortIndex)
+    port.foreach(builder.setPort)
 
     builder.build
   }
@@ -213,8 +213,8 @@ case class MesosHttpHealthCheck(
 
     path.foreach(builder.setPath)
 
-    portIndex.foreach { p => builder.setPortIndex(p) }
-    port.foreach { p => builder.setPort(p) }
+    portIndex.foreach(builder.setPortIndex)
+    port.foreach(builder.setPort)
 
     builder.build
   }
@@ -270,8 +270,8 @@ case class MesosTcpHealthCheck(
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder.setProtocol(Protos.HealthCheckDefinition.Protocol.MESOS_TCP)
 
-    portIndex.foreach { p => builder.setPortIndex(p) }
-    port.foreach { p => builder.setPort(p) }
+    portIndex.foreach(builder.setPortIndex)
+    port.foreach(builder.setPort)
 
     builder.build
   }

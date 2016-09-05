@@ -6,6 +6,7 @@ import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.core.health.MesosCommandHealthCheck
 import mesosphere.marathon.state.Container.Docker
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
@@ -744,9 +745,12 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
   }
 
-  private val haveAtMostOneMesosHealtCheck: Validator[AppDefinition] =
+  private val haveAtMostOneMesosHealthCheck: Validator[AppDefinition] =
     isTrue[AppDefinition]("AppDefinition can contain at most one Mesos health check") { appDef =>
-      appDef.healthChecks.filter(_.isInstanceOf[MesosHealthCheck]).size <= 1
+      // Previous versions of Marathon allowed saving an app definition with more than one command health check, and
+      // we don't want to make them invalid
+      (appDef.healthChecks.count(_.isInstanceOf[MesosHealthCheck]) -
+        appDef.healthChecks.count(_.isInstanceOf[MesosCommandHealthCheck])) <= 1
     }
 
   private def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
@@ -757,7 +761,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef is containsCmdArgsOrContainer
     appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
-    appDef must haveAtMostOneMesosHealtCheck
+    appDef must haveAtMostOneMesosHealthCheck
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     appDef.mem should be >= 0.0
