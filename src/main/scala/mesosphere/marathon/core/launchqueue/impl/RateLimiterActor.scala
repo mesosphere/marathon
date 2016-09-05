@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor.{
   ResetDelay,
   ResetDelayResponse
 }
-import mesosphere.marathon.state.{ RunSpec, Timestamp }
+import mesosphere.marathon.state.{ RunnableSpec, Timestamp }
 
 import scala.concurrent.duration._
 
@@ -23,14 +23,14 @@ private[launchqueue] object RateLimiterActor {
       rateLimiter, launchQueueRef
     ))
 
-  case class DelayUpdate(runSpec: RunSpec, delayUntil: Timestamp)
+  case class DelayUpdate(runSpec: RunnableSpec, delayUntil: Timestamp)
 
-  case class ResetDelay(runSpec: RunSpec)
+  case class ResetDelay(runSpec: RunnableSpec)
   case object ResetDelayResponse
 
-  case class GetDelay(runSpec: RunSpec)
-  private[impl] case class AddDelay(runSpec: RunSpec)
-  private[impl] case class DecreaseDelay(runSpec: RunSpec)
+  case class GetDelay(runSpec: RunnableSpec)
+  private[impl] case class AddDelay(runSpec: RunnableSpec)
+  private[impl] case class DecreaseDelay(runSpec: RunnableSpec)
 
   private case object CleanupOverdueDelays
 }
@@ -59,7 +59,7 @@ private class RateLimiterActor private (
 
   private[this] def receiveCleanup: Receive = {
     case CleanupOverdueDelays =>
-      // If an run spec gets removed or updated, the delay should be reset.
+      // If a run spec gets removed or updated, the delay should be reset.
       // Still, we can remove overdue delays before that and also make leaks less likely
       // by calling this periodically.
       rateLimiter.cleanUpOverdueDelays()
