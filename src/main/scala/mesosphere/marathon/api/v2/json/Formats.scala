@@ -694,14 +694,13 @@ trait HealthCheckFormats {
       case tcp: MarathonTcpHealthCheck =>
         Json.toJson(tcp)(MarathonTcpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "TCP")
       case http: MarathonHttpHealthCheck =>
-        Json.toJson(http)(MarathonHttpHealthCheckFormat).as[JsObject] ++
-          Json.obj("protocol" -> Json.toJson(http.protocol))
+        Json.toJson(http)(MarathonHttpHealthCheckFormat).as[JsObject]
       case command: MesosCommandHealthCheck =>
         Json.toJson(command)(MesosCommandHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "COMMAND")
       case tcp: MesosTcpHealthCheck =>
         Json.toJson(tcp)(MesosTcpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> "MESOS_TCP")
       case http: MesosHttpHealthCheck =>
-        Json.toJson(http)(MesosHttpHealthCheckFormat).as[JsObject] ++ Json.obj("protocol" -> Json.toJson(http.protocol))
+        Json.toJson(http)(MesosHttpHealthCheckFormat).as[JsObject]
     }
   )
 }
