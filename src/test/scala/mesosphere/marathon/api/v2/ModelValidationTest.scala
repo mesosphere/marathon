@@ -100,7 +100,6 @@ class ModelValidationTest
     result.isSuccess should be(true)
   }
 
-
   private def createServicePortApp(id: PathId, servicePort: Int) =
     AppDefinition(
       id,
