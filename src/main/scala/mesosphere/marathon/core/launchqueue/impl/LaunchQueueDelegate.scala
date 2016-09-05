@@ -6,7 +6,7 @@ import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.state.{ RunSpec, PathId }
+import mesosphere.marathon.state.{ PathId, RunnableSpec }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -31,7 +31,7 @@ private[launchqueue] class LaunchQueueDelegate(
 
   override def count(runSpecId: PathId): Int = get(runSpecId).map(_.tasksLeftToLaunch).getOrElse(0)
 
-  override def listRunSpecs: Seq[RunSpec] = list.map(_.runSpec)
+  override def listRunSpecs: Seq[RunnableSpec] = list.map(_.runSpec)
 
   override def purge(runSpecId: PathId): Unit = {
     // When purging, we wait for the TaskLauncherActor to shut down. This actor will wait for
@@ -40,7 +40,7 @@ private[launchqueue] class LaunchQueueDelegate(
     askQueueActor("purge", timeout = purgeTimeout)(LaunchQueueDelegate.Purge(runSpecId))
   }
 
-  override def add(runSpec: RunSpec, count: Int): Unit = askQueueActor("add")(LaunchQueueDelegate.Add(runSpec, count))
+  override def add(spec: RunnableSpec, count: Int): Unit = askQueueActor("add")(LaunchQueueDelegate.Add(spec, count))
 
   private[this] def askQueueActor[T](
     method: String,
@@ -63,9 +63,9 @@ private[launchqueue] class LaunchQueueDelegate(
     answerFuture
   }
 
-  override def addDelay(runSpec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(runSpec)
+  override def addDelay(spec: RunnableSpec): Unit = rateLimiterRef ! RateLimiterActor.AddDelay(spec)
 
-  override def resetDelay(runSpec: RunSpec): Unit = rateLimiterRef ! RateLimiterActor.ResetDelay(runSpec)
+  override def resetDelay(spec: RunnableSpec): Unit = rateLimiterRef ! RateLimiterActor.ResetDelay(spec)
 }
 
 private[impl] object LaunchQueueDelegate {
@@ -74,5 +74,5 @@ private[impl] object LaunchQueueDelegate {
   case class Count(runSpecId: PathId) extends Request
   case class Purge(runSpecId: PathId) extends Request
   case object ConfirmPurge extends Request
-  case class Add(runSpec: RunSpec, count: Int) extends Request
+  case class Add(spec: RunnableSpec, count: Int) extends Request
 }
