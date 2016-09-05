@@ -11,7 +11,7 @@ import mesosphere.marathon.test.MarathonActorSupport
 import org.apache.mesos.Protos.{ NetworkInfo, TaskState }
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{ BeforeAndAfterAll, Matchers }
 
 import scala.collection.immutable.Seq

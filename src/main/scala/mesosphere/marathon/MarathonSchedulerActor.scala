@@ -388,7 +388,7 @@ object MarathonSchedulerActor {
   }
 
   case class KillTasks(appId: PathId, tasks: Iterable[Task]) extends Command {
-    def answer: Event = TasksKilled(appId, tasks.map(_.taskId))
+    def answer: Event = TasksKilled(appId, tasks)
   }
 
   case object RetrieveRunningDeployments
@@ -397,7 +397,7 @@ object MarathonSchedulerActor {
   case class AppScaled(appId: PathId) extends Event
   case object TasksReconciled extends Event
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
-  case class TasksKilled(appId: PathId, taskIds: Iterable[Task.Id]) extends Event
+  case class TasksKilled(appId: PathId, tasks: Iterable[Task]) extends Event
 
   case class RunningDeployments(plans: Seq[DeploymentStepInfo])
 

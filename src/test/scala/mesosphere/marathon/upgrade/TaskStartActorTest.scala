@@ -20,7 +20,7 @@ import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.Mockito.{ spy, verify, when }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{ BeforeAndAfter, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._

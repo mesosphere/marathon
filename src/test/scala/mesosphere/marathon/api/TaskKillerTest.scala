@@ -10,8 +10,8 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mock.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.mockito.MockitoSugar
+import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -20,6 +20,7 @@ import scala.concurrent.duration._
 class TaskKillerTest extends MarathonSpec
     with Matchers
     with BeforeAndAfterAll
+    with GivenWhenThen
     with MockitoSugar
     with ScalaFutures {
 
@@ -90,6 +91,8 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill = Set(MarathonTestHelper.runningTaskForApp(appId))
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.appTasks(appId)).thenReturn(Future.successful(tasksToKill))
+    when(f.service.killTasks(appId, tasksToKill))
+      .thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, tasksToKill)))
 
     val result = f.taskKiller.kill(appId, { tasks =>
       tasks should equal(tasksToKill)
@@ -137,7 +140,8 @@ class TaskKillerTest extends MarathonSpec
     when(f.tracker.appTasks(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.stateOpProcessor.process(stateOp1)).thenReturn(Future.successful(TaskStateChange.Expunge(runningTask)))
     when(f.stateOpProcessor.process(stateOp2)).thenReturn(Future.successful(TaskStateChange.Expunge(reservedTask)))
-    when(f.service.killTasks(appId, launchedTasks)).thenReturn(launchedTasks)
+    when(f.service.killTasks(appId, launchedTasks))
+      .thenReturn(Future.successful(MarathonSchedulerActor.TasksKilled(appId, launchedTasks)))
 
     val result = f.taskKiller.kill(appId, { tasks =>
       tasks should equal(tasksToKill)

@@ -343,7 +343,7 @@ object Dependency {
 
     // test deps versions
     val Mockito = "1.10.19"
-    val ScalaTest = "2.2.6"
+    val ScalaTest = "3.0.0"
     val JUnit = "4.12"
     val ScalaMeter = "0.7"
   }
