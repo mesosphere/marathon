@@ -16,16 +16,6 @@ object ResourceHelpers {
       s"disk:${vol.persistent.`type`.toString}:${vol.persistent.size}:[${constraintsJson.mkString(",")}]"
   }
 
-  def diskSourceStringification(sourceOpt: Option[Source]): String = {
-    val diskType = DiskType.fromMesosType(sourceOpt.map(_.getType)).toString
-    diskType + (sourceOpt match {
-      case None =>
-        ""
-      case Some(source) =>
-        ":" + source.getDiskPath
-    })
-  }
-
   implicit class RichDiskSource(source: Source) {
     def getDiskPath: String = {
       if (source.hasMount)

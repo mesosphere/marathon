@@ -115,18 +115,67 @@ object DockerVolume {
   }
 }
 
-sealed trait DiskType
+case class DiskSource(diskType: DiskType, path: Option[String]) {
+  if (diskType == DiskType.Root)
+    require(path == None, "Path is not allowed for diskType")
+  else
+    require(path != None, "Path is required for non-root diskTypes")
+
+  override def toString: String =
+    path match {
+      case Some(p) => s"${diskType}:${p}"
+      case None => diskType.toString()
+    }
+
+  def asMesos: Option[Source] = (path, diskType) match {
+    case (None, DiskType.Root) =>
+      None
+    case (Some(p), DiskType.Path | DiskType.Root) =>
+      val bld = Source.newBuilder
+      bld.setType(diskType.toMesos.get)
+      if (diskType == DiskType.Mount)
+        bld.setMount(Source.Mount.newBuilder().setRoot(p))
+      else
+        bld.setPath(Source.Path.newBuilder().setRoot(p))
+      Some(bld.build)
+    case (_, _) =>
+      throw new RuntimeException("invalid state")
+  }
+}
+
+object DiskSource {
+  val root = DiskSource(DiskType.Root, None)
+  def fromMesos(source: Option[Source]): DiskSource = {
+    val diskType = DiskType.fromMesosType(source.map(_.getType))
+    diskType match {
+      case DiskType.Root =>
+        DiskSource(DiskType.Root, None)
+      case DiskType.Mount =>
+        DiskSource(DiskType.Mount, Some(source.get.getMount.getRoot))
+      case DiskType.Path =>
+        DiskSource(DiskType.Path, Some(source.get.getPath.getRoot))
+    }
+  }
+}
+
+sealed trait DiskType {
+  def toMesos: Option[Source.Type]
+}
+
 object DiskType {
   case object Root extends DiskType {
     override def toString: String = "root"
+    def toMesos: Option[Source.Type] = None
   }
 
   case object Path extends DiskType {
     override def toString: String = "path"
+    def toMesos: Option[Source.Type] = Some(Source.Type.PATH)
   }
 
   case object Mount extends DiskType {
     override def toString: String = "mount"
+    def toMesos: Option[Source.Type] = Some(Source.Type.MOUNT)
   }
 
   val all = Root :: Path :: Mount :: Nil
@@ -134,8 +183,8 @@ object DiskType {
   def fromMesosType(o: Option[Source.Type]): DiskType =
     o match {
       case None => DiskType.Root
-      case Some(Source.Type.MOUNT) => DiskType.Mount
       case Some(Source.Type.PATH) => DiskType.Path
+      case Some(Source.Type.MOUNT) => DiskType.Mount
       case Some(other) => throw new RuntimeException(s"unknown mesos disk type: ${other}")
     }
 }

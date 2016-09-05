@@ -4,6 +4,7 @@ import mesosphere.marathon.WrongConfigurationException
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.LocalVolume
+import mesosphere.marathon.state.DiskSource
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{ Protos => Mesos }
@@ -63,7 +64,7 @@ class OfferOperationFactory(
   def createVolumes(
     frameworkId: FrameworkId,
     taskId: Task.Id,
-    localVolumes: Iterable[(Option[Mesos.Resource.DiskInfo.Source], LocalVolume)]): Mesos.Offer.Operation = {
+    localVolumes: Iterable[(DiskSource, LocalVolume)]): Mesos.Offer.Operation = {
     import scala.collection.JavaConverters._
 
     val volumes: Iterable[Mesos.Resource] = localVolumes.map {
@@ -79,7 +80,7 @@ class OfferOperationFactory(
           val builder = Mesos.Resource.DiskInfo.newBuilder()
             .setPersistence(persistence)
             .setVolume(volume)
-          source.foreach(builder.setSource(_))
+          source.asMesos.foreach(builder.setSource(_))
           builder
         }
 

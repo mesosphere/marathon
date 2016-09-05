@@ -3,6 +3,7 @@ package mesosphere.marathon.core.launcher.impl
 import mesosphere.marathon.core.launcher.TaskOp
 import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
 import mesosphere.marathon.core.task.{ TaskStateOp, Task }
+import mesosphere.marathon.state.DiskSource
 import mesosphere.marathon.core.task.Task.LocalVolume
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{ Protos => Mesos }
@@ -43,7 +44,7 @@ class TaskOpFactoryHelper(
     frameworkId: FrameworkId,
     newTask: TaskStateOp.Reserve,
     resources: Iterable[Mesos.Resource],
-    localVolumes: Iterable[(Option[Mesos.Resource.DiskInfo.Source], LocalVolume)],
+    localVolumes: Iterable[(DiskSource, LocalVolume)],
     oldTask: Option[Task] = None): TaskOp.ReserveAndCreateVolumes = {
 
     def createOperations = Seq(

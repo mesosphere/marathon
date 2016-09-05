@@ -187,7 +187,7 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     )
     res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
       Set(
-        DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(diskReservation), None, None)
+        DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(diskReservation), DiskSource.root, None)
       )
     )
 
@@ -248,7 +248,8 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     )
     res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
       Set(
-        DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, reservation = Some(diskReservation), None, None)
+        DiskResourceMatch.Consumption(
+          2.0, ResourceRole.Unreserved, reservation = Some(diskReservation), DiskSource.root, None)
       )
     )
 
@@ -594,8 +595,8 @@ class ResourceMatcherTest extends MarathonSpec with Matchers {
     result shouldNot be(None)
     result.get.scalarMatch("disk").get.consumed.toSet shouldBe (
       Set(
-        DiskResourceMatch.Consumption(1024.0, "*", None, Some(MarathonTestHelper.pathSource("/path2")), Some(volume)),
-        DiskResourceMatch.Consumption(476.0, "*", None, Some(MarathonTestHelper.pathSource("/path2")), Some(volume))))
+        DiskResourceMatch.Consumption(1024.0, "*", None, DiskSource(DiskType.Path, Some("/path2")), Some(volume)),
+        DiskResourceMatch.Consumption(476.0, "*", None, DiskSource(DiskType.Path, Some("/path2")), Some(volume))))
   }
 
   test("match disk enforces constraints") {

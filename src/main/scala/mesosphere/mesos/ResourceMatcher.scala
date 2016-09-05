@@ -2,7 +2,7 @@ package mesosphere.mesos
 
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, RunSpec, DiskType }
+import mesosphere.marathon.state.{ PersistentVolume, ResourceRole, RunSpec, DiskType, DiskSource }
 import mesosphere.marathon.tasks.{ PortsMatch, PortsMatcher }
 import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos
@@ -35,8 +35,7 @@ object ResourceMatcher {
         portsMatch.resources
 
     // TODO - this assumes that volume matches are one resource to one volume, which should be correct, but may not be.
-    // TODO - don't use this because it doesn't return reservation info !!!
-    val localVolumes: Iterable[(Option[Source], PersistentVolume)] =
+    val localVolumes: Iterable[(DiskSource, PersistentVolume)] =
       scalarMatches.collect { case r: DiskResourceMatch => r.volumes }.flatten
   }
 
