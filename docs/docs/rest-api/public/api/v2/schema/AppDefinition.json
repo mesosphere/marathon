@@ -291,7 +291,7 @@
     },
     "disk": {
       "type": "number",
-      "description": "How much disk space is needed for this application. This number does not have to be an integer, but can be a fraction.",
+      "description": "How much disk space in MB is needed for this application. This number does not have to be an integer, but can be a fraction.",
       "minimum": 0
     },
     "env": {
