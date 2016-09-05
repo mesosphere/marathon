@@ -28,13 +28,24 @@ class AppDefinitionMesosHealthCheckValidationTest extends MarathonSpec with Matc
     validAppDefinition(app).isSuccess shouldBe true
   }
 
-  test("app with more than 1 Mesos health check is invalid") {
+  test("app with more than 1 non-command Mesos health check is invalid") {
     val f = new Fixture
     Given("an app with one health check")
-    val app = f.app(healthChecks = Set(MesosCommandHealthCheck(command = Command("true")), MesosHttpHealthCheck()))
+    val app = f.app(healthChecks = Set(MesosHttpHealthCheck(port = Some(80)), MesosHttpHealthCheck()))
 
     Then("the app is considered invalid")
     validAppDefinition(app).isFailure shouldBe true
+  }
+
+  test("app with more than 1 command Mesos health check is valid") {
+    val f = new Fixture
+    Given("an app with one health check")
+    val app = f.app(healthChecks = Set(
+      MesosCommandHealthCheck(command = Command("true")),
+      MesosCommandHealthCheck(command = Command("true"))))
+
+    Then("the app is considered valid")
+    validAppDefinition(app).isSuccess shouldBe true
   }
 
   class Fixture {

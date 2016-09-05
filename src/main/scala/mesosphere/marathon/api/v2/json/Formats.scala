@@ -6,11 +6,11 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
+import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.health._
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -642,10 +642,13 @@ trait HealthCheckFormats {
       (__ \ "portIndex").formatNullable[Int] ~
       (__ \ "port").formatNullable[Int]
 
-  val HttpHealthCheckFormatBuilder =
+  val HttpHealthCheckFormatBuilder = {
+    import mesosphere.marathon.core.health.MarathonHttpHealthCheck._
+
     HealthCheckWithPortsFormatBuilder ~
       (__ \ "path").formatNullable[String] ~
-      (__ \ "protocol").formatNullable[Protocol].withDefault(Protocol.HTTP)
+      (__ \ "protocol").formatNullable[Protocol].withDefault(DefaultProtocol)
+  }
 
   // Marathon health checks formats
   implicit val MarathonHttpHealthCheckFormat: Format[MarathonHttpHealthCheck] = {
@@ -877,7 +880,7 @@ trait AppAndGroupFormats {
             secrets: Map[String, Secret],
             maybeTaskKillGracePeriod: Option[FiniteDuration]) {
           def upgradeStrategyOrDefault: UpgradeStrategy = {
-            import UpgradeStrategy.{ forResidentTasks, empty }
+            import UpgradeStrategy.{ empty, forResidentTasks }
             upgradeStrategy.getOrElse {
               if (residencyOrDefault.isDefined || app.externalVolumes.nonEmpty) forResidentTasks else empty
             }
