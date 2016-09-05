@@ -46,7 +46,9 @@ class TaskKiller @Inject() (
 
           val launchedTasks = foundTasks.filter(_.launched.isDefined)
           if (launchedTasks.nonEmpty) await(service.killTasks(appId, launchedTasks))
-          // Return killed *and* expunged tasks
+          // Return killed *and* expunged tasks.
+          // The user only cares that all tasks won't exist eventually. That's why we send all tasks back and not just
+          // the killed tasks.
           foundTasks
         }
 
