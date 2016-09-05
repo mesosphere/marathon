@@ -35,7 +35,7 @@ class PortDefinitionTest extends FunSuiteLike with Matchers {
       name = Some("http-port"),
       labels = Map("foo" -> "bar"))
 
-    val tcpUdpPortDefinition= PortDefinition(
+    val tcpUdpPortDefinition = PortDefinition(
       port = 80,
       protocol = "udp,tcp",
       name = Some("http-port"),

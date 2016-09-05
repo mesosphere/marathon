@@ -1,17 +1,18 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
+import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
-import mesosphere.marathon.{ MarathonTestHelper, MarathonSpec, Protos }
-import mesosphere.mesos.protos.{ Resource, TaskID, _ }
+import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
+import mesosphere.marathon.{MarathonSpec, MarathonTestHelper, Protos}
+import mesosphere.mesos.protos.{Resource, TaskID, _}
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
-import org.apache.mesos.{ Protos => MesosProtos }
-import org.joda.time.{ DateTime, DateTimeZone }
+import org.apache.mesos.{Protos => MesosProtos}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
@@ -125,6 +126,15 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
     discoveryInfo should equal(discoveryInfoProto)
+  }
+
+  test("PortDefinition to proto (zk, mesos) with tcp, udp protocol") {
+    val portDefinition = PortDefinition(port = 80, protocol = "tcp,udp")
+
+    // used for mesos communication, should return two ports
+    PortDefinitionSerializer.toMesosProto(portDefinition).size should be (2)
+    // used for zk communication, should return only one port with "tcp,udp" as protocol name
+    PortDefinitionSerializer.toProto(portDefinition).getProtocol should be ("tcp,udp")
   }
 
   test("BuildIfMatches with port name, different protocol and labels") {

@@ -137,7 +137,7 @@ case class AppDefinition(
       .setId(id.toString)
       .setCmd(commandInfo)
       .setInstances(instances)
-      .addAllPortDefinitions(portDefinitions.flatMap(PortDefinitionSerializer.toProto).asJava)
+      .addAllPortDefinitions(portDefinitions.map(PortDefinitionSerializer.toProto).asJava)
       .setRequirePorts(requirePorts)
       .setBackoff(backoff.toMillis)
       .setBackoffFactor(backoffFactor)
