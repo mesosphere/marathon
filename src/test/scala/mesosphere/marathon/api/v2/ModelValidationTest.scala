@@ -89,6 +89,15 @@ class ModelValidationTest
     }
   }
 
+  test("PortDefinition should be allowed to contain tcp and udp as protocol.") {
+    val validApp = AppDefinition("/test/app".toPath, cmd = Some("foo"), portDefinitions = Seq(PortDefinition(port = 80, protocol = "tcp,udp")))
+
+    val group = Group("/test".toPath, apps = Map(validApp.id -> validApp))
+
+    val result = validate(group)(Group.validRootGroup(maxApps = None, Set()))
+    result.isSuccess should be(true)
+  }
+
   private def createServicePortApp(id: PathId, servicePort: Int) =
     AppDefinition(
       id,
