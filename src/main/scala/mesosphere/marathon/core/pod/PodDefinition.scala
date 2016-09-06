@@ -1,9 +1,9 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
 import mesosphere.marathon.Protos
-import mesosphere.marathon.raml.{Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue, _}
+import mesosphere.marathon.raml.{ Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue, _ }
 import mesosphere.marathon.state._
-import play.api.libs.json.{Format, JsResult, JsValue, Json}
+import play.api.libs.json.{ Format, JsResult, JsValue, Json }
 
 import scala.collection.immutable.Seq
 // scalastyle:on
@@ -24,7 +24,9 @@ case class PodDefinition(
     constraints: Set[Protos.Constraint] = PodDefinition.DefaultConstraints,
     version: Timestamp = PodDefinition.DefaultVersion,
     volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
-    networks: Seq[Network] = PodDefinition.DefaultNetworks
+    networks: Seq[Network] = PodDefinition.DefaultNetworks,
+    backoffStrategy: Option[PodSchedulingBackoffStrategy] = None,
+    upgradeStrategy: Option[PodUpgradeStrategy] = None
 ) extends RunnableSpec with MarathonState[Protos.PodDefinition, PodDefinition] {
   lazy val cpus: Double = containers.map(_.resources.cpus.toDouble).sum
   lazy val mem: Double = containers.map(_.resources.mem.toDouble).sum
@@ -33,11 +35,11 @@ case class PodDefinition(
 
   lazy val asPodDef: Pod = {
     val envVars: EnvVars = EnvVars(env.mapValues {
-          case EnvVarSecretRef(secret) =>
-            RamlEnvVarSecretRef(secret)
-          case EnvVarString(value) =>
-            RamlEnvVarValue(value)
-        }
+      case EnvVarSecretRef(secret) =>
+        RamlEnvVarSecretRef(secret)
+      case EnvVarString(value) =>
+        RamlEnvVarValue(value)
+    }
     )
 
     val constraintDefs: Seq[RamlConstraint] = constraints.map { c =>
@@ -53,7 +55,7 @@ case class PodDefinition(
     }(collection.breakOut)
 
     // TODO: we're missing stuff here
-    val schedulingPolicy = PodSchedulingPolicy(None, None,
+    val schedulingPolicy = PodSchedulingPolicy(backoffStrategy, upgradeStrategy,
       Some(PodPlacementPolicy(constraintDefs, acceptedResourceRoles.fold(Seq.empty[String])(_.toVector))))
 
     val scalingPolicy = FixedPodScalingPolicy(instances, maxInstances)
@@ -64,7 +66,7 @@ case class PodDefinition(
       user = user,
       containers = containers,
       environment = Some(envVars),
-      labels = Some(KVLabels(Some(labels))),
+      labels = Some(KVLabels(labels)),
       scaling = Some(scalingPolicy),
       scheduling = Some(schedulingPolicy),
       volumes = volumes,
@@ -73,7 +75,6 @@ case class PodDefinition(
   }
 
   override def mergeFromProto(message: Protos.PodDefinition): PodDefinition = {
-    // TODO(jdef) dup of fromProto?
     PodDefinition(Json.parse(message.getJson).as[Pod])
   }
 
@@ -82,7 +83,6 @@ case class PodDefinition(
   }
 
   override def toProto: Protos.PodDefinition = {
-    //import spray.json._
     val json = Json.toJson(asPodDef)
     Protos.PodDefinition.newBuilder.setJson(Json.stringify(json)).build()
   }
@@ -91,7 +91,7 @@ case class PodDefinition(
 object PodDefinition {
   def apply(podDef: Pod): PodDefinition = {
     val env: Map[String, EnvVarValue] =
-      podDef.environment.fold(Map.empty[String,EnvVarValue]) { envvars =>
+      podDef.environment.fold(Map.empty[String, EnvVarValue]) { envvars =>
         envvars.values.map { e =>
           e._1 -> (e._2 match {
             case RamlEnvVarSecretRef(secretRef) =>
@@ -99,7 +99,7 @@ object PodDefinition {
             case RamlEnvVarValue(literalValue) =>
               EnvVarString(literalValue)
           })
-        }.toMap[String,EnvVarValue]
+        }
       }
 
     val constraints = podDef.scheduling.flatMap(_.placement).map(_.constraints.map { c =>
@@ -116,29 +116,26 @@ object PodDefinition {
       builder.build()
     }.toSet).getOrElse(Set.empty)
 
-    val (instances, maxInstances) = podDef.scaling.fold((DefaultInstances -> DefaultMaxInstances)) { policy =>
-      policy match {
-        case FixedPodScalingPolicy(i,m) => (i -> m)
-      }
+    val (instances, maxInstances) = podDef.scaling.fold(DefaultInstances -> DefaultMaxInstances) {
+      case FixedPodScalingPolicy(i, m) => i -> m
     }
 
     new PodDefinition(
       id = PathId(podDef.id),
       user = podDef.user,
       env = env,
-      labels = Map.empty[String,String]/* TODO(jdef) podDef.labels.fold(Map.empty[String,String]) { kvLabels =>
-        kvLabels.values.fold(Map.empty[String,String])
-        l.name -> l.value.getOrElse("")
-      })(collection.breakOut) */,
+      labels = podDef.labels.fold(Map.empty[String, String])(_.values),
       acceptedResourceRoles = podDef.scheduling.flatMap(_.placement).map(_.acceptedResourceRoles.toSet),
-      secrets = Map.empty, // TODO: don't have this defined yet
+      secrets = podDef.secrets.fold(Map.empty[String, Secret])(_.values.mapValues(s => Secret(s.source))),
       containers = podDef.containers,
       instances = instances,
       maxInstances = maxInstances,
       constraints = constraints,
       version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
       volumes = podDef.volumes,
-      networks = podDef.networks
+      networks = podDef.networks,
+      backoffStrategy = podDef.scheduling.flatMap(_.backoff),
+      upgradeStrategy = podDef.scheduling.flatMap(_.upgrade)
     )
   }
 
