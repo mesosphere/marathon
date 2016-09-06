@@ -177,6 +177,7 @@ class TaskBuilder(
   protected def computeDiscoveryInfo(
     runSpec: RunSpec,
     hostPorts: Seq[Option[Int]]): org.apache.mesos.Protos.DiscoveryInfo = {
+
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
     discoveryInfoBuilder.setName(runSpec.id.toHostname)
     discoveryInfoBuilder.setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
@@ -188,15 +189,25 @@ class TaskBuilder(
           case Some(portMappings) =>
             // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
             portMappings.zip(hostPorts).collect {
-              case (portMapping, Some(hostPort)) => PortMappingSerializer.toMesosPort(portMapping, hostPort)
+              case (portMapping, None) =>
+                // TODO: What's the semantic of this???
+                // It seems this is the case when portMappings has None for hostPort.
+                ???
+              case (portMapping, Some(hostPort)) =>
+                val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
             }
           case None =>
             // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
             // overwrite them the port numbers assigned to this particular task.
             runSpec.portDefinitions.zip(hostPorts).collect {
+              case (portDefinition, None) =>
+                // TODO: Is this case possible?
+                ???
               case (portDefinition, Some(hostPort)) =>
                 // Add network-scope to labels
-                val updatedPortDefinition = portDefinition.copy(labels = portDefinition.labels + ("network-scope" -> "host"))
+                val updatedPortDefinition =
+                  portDefinition.copy(labels = portDefinition.labels + ("network-scope" -> "host"))
                 PortDefinitionSerializer.toMesosProto(updatedPortDefinition).map(_.toBuilder.setNumber(hostPort).build)
             }.flatten
         }

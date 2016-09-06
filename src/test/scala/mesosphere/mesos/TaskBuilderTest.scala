@@ -92,6 +92,28 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     discoveryInfo should equal(expectedDiscoveryInfoProto)
   }
 
+  test("BuildIfMatches without port match") {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 31000).build
+
+    val task: Option[(MesosProtos.TaskInfo, Seq[Option[Int]])] = buildIfMatches(
+      offer,
+      AppDefinition(
+        id = "/product/frontend".toPath,
+        cmd = Some("foo"),
+        cpus = 1.0,
+        mem = 64.0,
+        disk = 1.0,
+        executor = "//cmd",
+        portDefinitions = Seq(
+          PortDefinition(8080, "tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
+          PortDefinition(8081, "tcp", Some("admin"), Map("VIP" -> "127.0.0.1:8081"))
+        )
+      )
+    )
+
+    task.isDefined should be(false)
+  }
+
   test("BuildIfMatches with port on tcp and udp") {
     val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 
@@ -217,8 +239,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081"), taskPorts(1))
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), taskPorts(0)),
+        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "host"), taskPorts(1))
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
