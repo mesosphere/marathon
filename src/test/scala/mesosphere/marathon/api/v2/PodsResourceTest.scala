@@ -3,9 +3,9 @@ package mesosphere.marathon.api.v2
 import javax.servlet.http.HttpServletResponse
 
 import akka.event.EventStream
+import akka.stream.Materializer
 import mesosphere.marathon._
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.core.base.{ Clock, ConstantClock }
 import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.test.Mockito
 import org.scalatest.Matchers
@@ -32,8 +32,8 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
       auth: TestAuthFixture = new TestAuthFixture()
     )(implicit
       podSystem: PodManager = mock[PodManager],
-      clock: Clock = ConstantClock(),
-      eventBus: EventStream = mock[EventStream]): Fixture = {
+      eventBus: EventStream = mock[EventStream],
+      mat: Materializer = mock[Materializer]): Fixture = {
       val config = AllConf.withTestConfig(configArgs: _*)
       new Fixture(
         new PodsResource(config, auth.auth, auth.auth),
