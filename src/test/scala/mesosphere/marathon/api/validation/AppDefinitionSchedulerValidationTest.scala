@@ -7,7 +7,7 @@ import org.scalatest.{ GivenWhenThen, Matchers }
 
 class AppDefinitionSchedulerValidationTest extends MarathonSpec with Matchers with GivenWhenThen {
 
-  lazy val validAppDefinition = AppDefinition.validAppDefinition(PluginManager.None)
+  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
 
   test("scheduler app using API is considered a scheduler and valid") {
     val f = new Fixture

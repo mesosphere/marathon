@@ -2,6 +2,7 @@ package mesosphere.marathon.integration
 
 import java.util
 
+import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup._
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper.data.{ ACL, Id }
@@ -78,6 +79,18 @@ class AuthorizedZooKeeperTest extends IntegrationFunSuite
       expectedAcl = new util.ArrayList[ACL]
       expectedAcl.add(new ACL(Perms.ALL, new Id("digest", digest)))
       acls.toArray.toSet should equal(expectedAcl.toArray.toSet)
+
+      And(s"marathon can read and write to the state")
+      val app = appProxy(testBasePath / "app", "v1", instances = 1, withHealth = false)
+
+      When("The app is deployed")
+      val result = marathon.createAppV2(app)
+
+      Then("The app is created")
+      result.code should be (201) //Created
+      extractDeploymentIds(result) should have size 1
+      waitForEvent("deployment_success")
+      waitForTasks(app.id, 1) //make sure, the app has really started
     } finally {
       zooKeeper.close()
     }

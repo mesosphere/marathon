@@ -26,7 +26,7 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     When("The update is performed")
     val result = update(group, timestamp)
 
-    validate(result)(Group.validRootGroup(maxApps = None)).isSuccess should be(true)
+    validate(result)(Group.validRootGroup(maxApps = None, Set())).isSuccess should be(true)
 
     Then("The update is applied correctly")
     result.id should be(PathId.empty)
@@ -70,7 +70,7 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     When("The update is performed")
     val result: Group = update(actual, timestamp)
 
-    validate(result)(Group.validRootGroup(maxApps = None)).isSuccess should be(true)
+    validate(result)(Group.validRootGroup(maxApps = None, Set())).isSuccess should be(true)
 
     Then("The update is applied correctly")
     result.id should be(PathId.empty)
@@ -119,7 +119,7 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     val timestamp = Timestamp.now()
     val result = update(current, timestamp)
 
-    validate(result)(Group.validRootGroup(maxApps = None)).isSuccess should be(true)
+    validate(result)(Group.validRootGroup(maxApps = None, Set())).isSuccess should be(true)
 
     Then("The update is reflected in the current group")
     result.id.toString should be("/test")
@@ -161,7 +161,7 @@ class GroupUpdateTest extends FunSuite with Matchers with GivenWhenThen {
     When("The update is performed")
     val result = update(Group.empty, Timestamp.now())
 
-    validate(result)(Group.validRootGroup(maxApps = None)).isSuccess should be(true)
+    validate(result)(Group.validRootGroup(maxApps = None, Set())).isSuccess should be(true)
 
     Then("The update is applied correctly")
     val group = result.group("test-group".toRootPath)

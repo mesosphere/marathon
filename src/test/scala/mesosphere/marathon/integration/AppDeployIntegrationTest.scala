@@ -638,5 +638,50 @@ class AppDeployIntegrationTest
     maybeContainer1.get.docker shouldBe (empty)
   }
 
+  test("create a simple app with a docker container and update it") {
+    import scala.collection.immutable.Seq
+
+    Given("a new app")
+    val appId = testBasePath / "app"
+
+    val container = Container.Docker(
+      network = Some(org.apache.mesos.Protos.ContainerInfo.DockerInfo.Network.BRIDGE),
+      image = "jdef/helpme",
+      portMappings = Some(Seq(
+        Container.Docker.PortMapping(containerPort = 3000, protocol = "tcp")
+      ))
+    )
+
+    val app = AppDefinition(
+      id = appId,
+      cmd = Some("cmd"),
+      container = Some(container),
+      instances = 0
+    )
+
+    When("The app is deployed")
+    val result = marathon.createAppV2(app)
+
+    Then("The app is created")
+    result.code should be (201) //Created
+    extractDeploymentIds(result) should have size 1
+    waitForEvent("deployment_success")
+
+    val appUpdate = AppUpdate(container = Some(container.copy(portMappings = Some(Seq(
+      Container.Docker.PortMapping(containerPort = 4000, protocol = "tcp")
+    )))))
+    val updateResult = marathon.updateApp(app.id, appUpdate, true)
+
+    And("The app is updated")
+    updateResult.code should be (200)
+
+    Then("The container is updated correctly")
+    val updatedApp = marathon.app(appId)
+    updatedApp.value.app.container should not be None
+    updatedApp.value.app.container.get.portMappings should not be None
+    updatedApp.value.app.container.get.portMappings.get should have size 1
+    updatedApp.value.app.container.get.portMappings.get.head.containerPort should be (4000)
+  }
+
   def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)
 }

@@ -13,11 +13,12 @@ import org.apache.mesos.state.ZooKeeperState
 import org.apache.zookeeper.KeeperException.NoNodeException
 import org.apache.zookeeper.ZooDefs.Ids
 import org.scalatest._
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.{ Seconds, Span }
 
 class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matchers with ScalaFutures {
   import ZKStore._
@@ -58,7 +59,7 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matc
     val path = client("/s/o/m/e/d/e/e/p/ly/n/e/s/t/e/d/p/a/t/h")
     val store = new ZKStore(client, path, conf, 8, 1024)
     path.exists().asScala.failed.futureValue shouldBe a[NoNodeException]
-    store.initialize().futureValue
+    store.initialize().futureValue(Timeout(5.seconds))
     path.exists().asScala.futureValue.stat.getVersion should be(0)
   }
 
@@ -80,7 +81,7 @@ class ZKStoreTest extends PersistentStoreTest with ZookeeperServerTest with Matc
 
     val compress = CompressionConf(true, 0)
     val store = new ZKStore(persistentStore.client, persistentStore.client("/compressed"), compress, 8, 1024)
-    store.initialize().futureValue
+    store.initialize().futureValue(Timeout(5.seconds))
     val content = 1.to(100).map(num => s"Hello number $num!").mkString(", ").getBytes("UTF-8")
 
     //entity content is not changed , regardless of comression

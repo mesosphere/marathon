@@ -67,16 +67,20 @@ object GroupUpdate {
   }
   def empty(id: PathId): GroupUpdate = GroupUpdate(Some(id))
 
-  def validNestedGroupUpdateWithBase(base: PathId): Validator[GroupUpdate] = validator[GroupUpdate] { group =>
-    group is notNull
+  def validNestedGroupUpdateWithBase(base: PathId, enabledFeatures: Set[String]): Validator[GroupUpdate] =
+    validator[GroupUpdate] { group =>
+      group is notNull
 
-    group.version is theOnlyDefinedOptionIn(group)
-    group.scaleBy is theOnlyDefinedOptionIn(group)
+      group.version is theOnlyDefinedOptionIn(group)
+      group.scaleBy is theOnlyDefinedOptionIn(group)
 
-    group.id is valid
-    group.apps is optional(every(AppDefinition.validNestedAppDefinition(group.id.fold(base)(_.canonicalPath(base)))))
-    group.groups is optional(every(validNestedGroupUpdateWithBase(group.id.fold(base)(_.canonicalPath(base)))))
-  }
+      group.id is valid
+      group.apps is optional(every(
+        AppDefinition.validNestedAppDefinition(group.id.fold(base)(_.canonicalPath(base)), enabledFeatures)))
+      group.groups is optional(every(
+        validNestedGroupUpdateWithBase(group.id.fold(base)(_.canonicalPath(base)), enabledFeatures)))
+    }
 
-  implicit lazy val groupUpdateValid: Validator[GroupUpdate] = validNestedGroupUpdateWithBase(PathId.empty)
+  def groupUpdateValid(enabledFeatures: Set[String]): Validator[GroupUpdate] =
+    validNestedGroupUpdateWithBase(PathId.empty, enabledFeatures)
 }
