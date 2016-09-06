@@ -8,6 +8,10 @@ class PortDefinitionTest extends FunSuiteLike with Matchers {
     validate(Fixture.validPortDefinition) should be(Success)
   }
 
+  test("portDefinition with tcp and udp should be valid") {
+    validate(Fixture.tcpUdpPortDefinition) should be(Success)
+  }
+
   test("valid portDefinition with no name should be valid") {
     validate(Fixture.validPortDefinition.copy(name = None)) should be(Success)
   }
@@ -28,6 +32,12 @@ class PortDefinitionTest extends FunSuiteLike with Matchers {
     val validPortDefinition = PortDefinition(
       port = 80,
       protocol = "tcp",
+      name = Some("http-port"),
+      labels = Map("foo" -> "bar"))
+
+    val tcpUdpPortDefinition = PortDefinition(
+      port = 80,
+      protocol = "udp,tcp",
       name = Some("http-port"),
       labels = Map("foo" -> "bar"))
   }
