@@ -83,8 +83,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("admin", "tcp", Map("VIP" -> "127.0.0.1:8081"), taskPorts(1))
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), taskPorts(0)),
+        Helpers.mesosPort("admin", "tcp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "host"), taskPorts(1))
       )).build
 
     val discoveryInfoText = TextFormat.shortDebugString(discoveryInfo)
@@ -120,9 +120,9 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "udp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081"), taskPorts(1))
+        Helpers.mesosPort("http", "udp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), taskPorts(0)),
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), taskPorts(0)),
+        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "host"), taskPorts(1))
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -166,8 +166,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080"), taskPorts(0)),
-        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081"), taskPorts(1))
+        Helpers.mesosPort("http", "tcp", Map("VIP" -> "127.0.0.1:8080", "network-scope" -> "host"), taskPorts(0)),
+        Helpers.mesosPort("admin", "udp", Map("VIP" -> "127.0.0.1:8081", "network-scope" -> "host"), taskPorts(1))
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
@@ -1827,8 +1827,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       .setVisibility(MesosProtos.DiscoveryInfo.Visibility.FRAMEWORK)
       .setName(taskInfo.getName)
       .setPorts(Helpers.mesosPorts(
-        Helpers.mesosPort("", "tcp", Map.empty, taskPorts(0)),
-        Helpers.mesosPort("", "tcp", Map.empty, taskPorts(1))
+        Helpers.mesosPort("", "tcp", Map("network-scope" -> "host"), taskPorts(0)),
+        Helpers.mesosPort("", "tcp", Map("network-scope" -> "host"), taskPorts(1))
       )).build
 
     TextFormat.shortDebugString(discoveryInfo) should equal(TextFormat.shortDebugString(discoveryInfoProto))
