@@ -1,187 +1,193 @@
-###
-# Get the group
-#
-get:
-  description:
-    Get the group with all applications and all transitive child groups.
-  is: [ secured ]
-  queryParameters:
-    embed:
-      required: false
-      description:
-        Embeds nested resources that match the supplied path.
-        You can specify this parameter multiple times with different values.
-        Unknown embed parameters are ignored.
-        If you omit this parameter, it defaults to <code>group.groups</code>, <code>group.apps</code>
+#%RAML 1.0
+title: v2 groups API
+mediaType: application/json
+uses:
+  group: types/group.raml
+traits: !include ../traits.raml
 
-        - <code>group.groups</code> embed all child groups of each group<br/>
-
-        - <code>group.apps</code> embed all apps of each group<br/>
-
-        - <code>group.apps.tasks</code> embed all tasks of each application<br/>
-
-        - <code>group.apps.counts</code> embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy) <br/>
-
-        - <code>group.apps.deployments</code> embed all deployment identifier, if the related app currently is in deployment.
-
-        - <code>group.apps.readiness</code> embed all readiness check results
-
-        - <code>group.apps.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.
-
-        - <code>group.apps.taskStats</code> exposes task statistics in the JSON.
-
-      enum: [ group.groups, group.apps, group.apps.tasks, group.apps.count, group.apps.deployments, group.apps.lastTaskFailure, group.apps.failures, group.apps.taskStats ]
-      repeat: true
-      example: group.apps
-  responses:
-    200:
-      description: The group with all transitive dependencies.
-      body:
-        application/json:
-          example: !include examples/group.json
-          schema: Group
-
-###
-# Update the group
-#
-put:
-  description:
-    Change parameters of a deployed application group.
-    The new group parameters get applied.
-
-
-    * Changes to application parameters will result in a restart of this application.
-
-    * A new application added to the group will be started.
-
-    * An existing application removed from the group will be stopped.
-
-
-    If there are no changes to the application definition, no restart is triggered.
-    During restart marathon keeps track, that the configured amount of minimal running instances are _always_ available.
-
-    This method allows 2 special modes for the update operation>
-
-
-    * Provide only the `version` field in the group definition. This will rollback the group to that given version
-
-    * Provide only the `scaleBy` field will scale all transitive applications instance counts by the given factor.
-
-
-    When one of version or scaleBy are set, nothing else than a version change or transitive instance count scaling will be applied.
-    If both version and scaleBy are set, only a version rollback will be performed – the scaleBy value will not be applied.
-
-    A deployment can run forever. This is the case, when the new application has a problem and does not become healthy.
-    In this case, human interaction is needed with 2 possible choices
-
-
-    * Rollback to an existing older version
-
-    * Update with a newer version of the group which does not have the problems of the old one.
-
-
-    Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version.
-    The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
-    the given version.
-  is: [ secured, deployable ]
-  body:
-    application/json:
-      example: !include examples/group.json
-      schema: Group
-  responses:
-    400:
-      description: The group definition provided in the body is not valid.
-      body:
-        application/json:
-          example: |
-            {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
-    422:
-      description: The entity send can not be preocessed, since there are validation errors
-      body:
-        application/json:
-          example: |
-            {
-              "message":"Object is not valid",
-              "details": [
-                {
-                  "path":"/apps(0)/id",
-                  "errors": [
-                    "identifier /app is not child of /group. Hint: use relative paths."
-                  ]
-                }
-              ]
-            }
-
-
-###
-# Create a new application group
-#
-post:
-  description:
-    Create and start a new application group.
-    Application groups can contain other application groups.
-  is: [ secured, deployable ]
-  body:
-    application/json:
-      example: !include examples/group.json
-      schema: Group
-  responses:
-    400:
-      description: The group definition provided in the body is not valid.
-      body:
-        application/json:
-          example: |
-            {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
-    409:
-      description: There is an already deployed group with this name
-      body:
-        application/json:
-          example: |
-            {"message":"Group / is already created. Use PUT to change this group."}
-    422:
-      description: The entity send can not be preocessed, since there are validation errors
-      body:
-        application/json:
-          example: |
-            {
-              "message":"Object is not valid",
-              "details": [
-                {
-                  "path":"/apps(0)/id",
-                  "errors": [
-                    "identifier /app is not child of /group. Hint: use relative paths."
-                  ]
-                }
-              ]
-            }
-
-
-###
-# Delete the group
-#
-delete:
-  description:
-    Destroy a group. All data about that group and all associated applications will be deleted.
-    The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with
-    the given version.
-  is: [ secured, deployable ]
-
-###
-# Versions of the group
-#
-/versions:
+/:
   ###
-  # List the versions of the group with specific path
+  # Get the group
   #
   get:
     description:
-      List all versions the group with the specified path.
+      Get the group with all applications and all transitive child groups.
     is: [ secured ]
+    queryParameters:
+      embed:
+        required: false
+        description:
+          Embeds nested resources that match the supplied path.
+          You can specify this parameter multiple times with different values.
+          Unknown embed parameters are ignored.
+          If you omit this parameter, it defaults to <code>group.groups</code>, <code>group.apps</code>
+
+          - <code>group.groups</code> embed all child groups of each group<br/>
+
+          - <code>group.apps</code> embed all apps of each group<br/>
+
+          - <code>group.apps.tasks</code> embed all tasks of each application<br/>
+
+          - <code>group.apps.counts</code> embed all task counts (tasksStaged, tasksRunning, tasksHealthy, tasksUnhealthy) <br/>
+
+          - <code>group.apps.deployments</code> embed all deployment identifier, if the related app currently is in deployment.
+
+          - <code>group.apps.readiness</code> embed all readiness check results
+
+          - <code>group.apps.lastTaskFailure</code> embeds the lastTaskFailure for the application if there is one.
+
+          - <code>group.apps.taskStats</code> exposes task statistics in the JSON.
+
+        enum: [ group.groups, group.apps, group.apps.tasks, group.apps.count, group.apps.deployments, group.apps.lastTaskFailure, group.apps.failures, group.apps.taskStats ]
+        example: group.apps
     responses:
       200:
-        description: List all available versions of that group.
+        description: The group with all transitive dependencies.
+        body:
+          application/json:
+            example: !include examples/group.json
+            schema: group.Group
+
+  ###
+  # Update the group
+  #
+  put:
+    description:
+      Change parameters of a deployed application group.
+      The new group parameters get applied.
+
+
+      * Changes to application parameters will result in a restart of this application.
+
+      * A new application added to the group will be started.
+
+      * An existing application removed from the group will be stopped.
+
+
+      If there are no changes to the application definition, no restart is triggered.
+      During restart marathon keeps track, that the configured amount of minimal running instances are _always_ available.
+
+      This method allows 2 special modes for the update operation>
+
+
+      * Provide only the `version` field in the group definition. This will rollback the group to that given version
+
+      * Provide only the `scaleBy` field will scale all transitive applications instance counts by the given factor.
+
+
+      When one of version or scaleBy are set, nothing else than a version change or transitive instance count scaling will be applied.
+      If both version and scaleBy are set, only a version rollback will be performed – the scaleBy value will not be applied.
+
+      A deployment can run forever. This is the case, when the new application has a problem and does not become healthy.
+      In this case, human interaction is needed with 2 possible choices
+
+
+      * Rollback to an existing older version
+
+      * Update with a newer version of the group which does not have the problems of the old one.
+
+
+      Since the deployment of the group can take a considerable amount of time, this endpoint returns immediately with a version.
+      The failure or success of the action is signalled via event. There is a group_change_success and group_change_failed with
+      the given version.
+    is: [ secured, deployable ]
+    body:
+      application/json:
+        example: !include examples/group.json
+        schema: group.Group
+    responses:
+      400:
+        description: The group definition provided in the body is not valid.
         body:
           application/json:
             example: |
-              [ "2015-09-25T15:13:48.343Z", "2015-09-11T11:11:22.692Z", "2015-09-11T10:47:21.241Z" ]
+              {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+      422:
+        description: The entity send can not be preocessed, since there are validation errors
+        body:
+          application/json:
+            example: |
+              {
+                "message":"Object is not valid",
+                "details": [
+                  {
+                    "path":"/apps(0)/id",
+                    "errors": [
+                      "identifier /app is not child of /group. Hint: use relative paths."
+                    ]
+                  }
+                ]
+              }
 
+
+  ###
+  # Create a new application group
+  #
+  post:
+    description:
+      Create and start a new application group.
+      Application groups can contain other application groups.
+    is: [ secured, deployable ]
+    body:
+      application/json:
+        example: !include examples/group.json
+        schema: group.Group
+    responses:
+      400:
+        description: The group definition provided in the body is not valid.
+        body:
+          application/json:
+            example: |
+              {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+      409:
+        description: There is an already deployed group with this name
+        body:
+          application/json:
+            example: |
+              {"message":"Group / is already created. Use PUT to change this group."}
+      422:
+        description: The entity send can not be preocessed, since there are validation errors
+        body:
+          application/json:
+            example: |
+              {
+                "message":"Object is not valid",
+                "details": [
+                  {
+                    "path":"/apps(0)/id",
+                    "errors": [
+                      "identifier /app is not child of /group. Hint: use relative paths."
+                    ]
+                  }
+                ]
+              }
+
+
+  ###
+  # Delete the group
+  #
+  delete:
+    description:
+      Destroy a group. All data about that group and all associated applications will be deleted.
+      The failure or success of the action is signalled via events. There is a group_change_success and group_change_failed with
+      the given version.
+    is: [ secured, deployable ]
+
+  ###
+  # Versions of the group
+  #
+  /versions:
+    ###
+    # List the versions of the group with specific path
+    #
+    get:
+      description:
+        List all versions the group with the specified path.
+      is: [ secured ]
+      responses:
+        200:
+          description: List all available versions of that group.
+          body:
+            application/json:
+              example: |
+                [ "2015-09-25T15:13:48.343Z", "2015-09-11T11:11:22.692Z", "2015-09-11T10:47:21.241Z" ]

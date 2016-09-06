@@ -69,7 +69,7 @@ types:
           In BRIDGE mode it defaults to 0 if left unspecified.
           In USER mode an unspecified hostPort does not allocate a port
           from a Mesos offer.
-      labels:
+      labels?:
         type: label.KVLabels
         description:
           This can be used to add metadata to be interpreted by external

@@ -15,7 +15,9 @@ object RamlGeneratorPlugin extends AutoPlugin {
   override lazy val projectSettings = inConfig(Compile)(Seq(
     ramlFiles := Seq(
       baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "pods.raml",
-      baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "queue.raml"
+      baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "queue.raml",
+      baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "apps.raml",
+      baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "groups.raml"
     ),
     ramlPackage := "mesosphere.marathon.raml",
     ramlGenerate := {

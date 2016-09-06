@@ -252,7 +252,7 @@ object RamlTypeGenerator {
           ) APPLY (REF(name) DOT "apply _"),
           VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF(PlayJson) DOT "writes" APPLYTYPE (name)
         )
-      } else if (actualFields.size > 22) {
+      } else if (actualFields.size > 22 || actualFields.map(_.toString).exists(t => t.toString().startsWith(name) || t.toString.contains(s"[$name]"))) {
         Seq(
           OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
