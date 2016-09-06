@@ -5,21 +5,21 @@ import mesosphere.marathon.core.instance.InstanceStateOp
 import scala.concurrent.Future
 
 /**
-  * Notifies the [[InstanceTracker]] of task creation and termination.
+  * Notifies the [[InstanceTracker]] of instance creation and termination.
   */
 trait InstanceCreationHandler {
   /**
-    * Create a new task.
+    * Create a new instance.
     *
-    * If the task exists already, the existing task will be overwritten so make sure
+    * If the instance exists already, the existing instance will be overwritten so make sure
     * that you generate unique IDs.
     */
-  def created(taskStateOp: InstanceStateOp): Future[Unit]
+  def created(stateOp: InstanceStateOp): Future[Unit]
 
   /**
-    * Remove the task for the given app with the given ID completely.
+    * Remove the instance for the given app/pod with the given ID completely.
     *
-    * If the task does not exist, the returned Future will not fail.
+    * If the instance does not exist, the returned Future will not fail.
     */
-  def terminated(taskStateOp: InstanceStateOp.ForceExpunge): Future[_]
+  def terminated(stateOp: InstanceStateOp.ForceExpunge): Future[_]
 }

@@ -27,7 +27,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
-      InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.id, stateOp)
+      InstanceTrackerActor.ForwardInstanceOp(f.timeoutFromNow, task.id, stateOp)
     )
 
     When("the request is acknowledged")
@@ -47,7 +47,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
-      InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.id, stateOp)
+      InstanceTrackerActor.ForwardInstanceOp(f.timeoutFromNow, task.id, stateOp)
     )
 
     When("the response is an error")
@@ -73,7 +73,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
-      InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.id, stateOp)
+      InstanceTrackerActor.ForwardInstanceOp(f.timeoutFromNow, task.id, stateOp)
     )
 
     When("the request is acknowledged")
@@ -93,7 +93,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     Then("an expunge operation is requested")
     f.taskTrackerProbe.expectMsg(
-      InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, task.id, stateOp)
+      InstanceTrackerActor.ForwardInstanceOp(f.timeoutFromNow, task.id, stateOp)
     )
 
     When("the response is an error")
@@ -123,7 +123,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
-      InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, taskId, stateOp)
+      InstanceTrackerActor.ForwardInstanceOp(f.timeoutFromNow, taskId, stateOp)
     )
 
     When("the request is acknowledged")
@@ -148,7 +148,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
 
     Then("an update operation is requested")
     f.taskTrackerProbe.expectMsg(
-      InstanceTrackerActor.ForwardTaskOp(f.timeoutFromNow, taskId, stateOp)
+      InstanceTrackerActor.ForwardInstanceOp(f.timeoutFromNow, taskId, stateOp)
     )
 
     When("the response is an error")
