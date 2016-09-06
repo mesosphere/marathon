@@ -7,6 +7,7 @@ import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
@@ -17,27 +18,41 @@ import scala.collection.JavaConverters._
 import scala.collection.SortedMap
 import scala.collection.immutable.Seq
 
-sealed trait DeploymentAction {
-  def app: AppDefinition
+sealed trait DeploymentAction extends Product with Serializable
+sealed trait AppDeploymentAction extends DeploymentAction {
+  val app: AppDefinition
+}
+sealed trait PodDeploymentAction extends DeploymentAction {
+  val pod: PodDefinition
 }
 
 // application has not been started before
-final case class StartApplication(app: AppDefinition, scaleTo: Int) extends DeploymentAction
+final case class StartApplication(app: AppDefinition, scaleTo: Int) extends AppDeploymentAction
+
+case class StartPod(pod: PodDefinition, scaleTo: Int) extends PodDeploymentAction
 
 // application is started, but the instance count should be changed
 final case class ScaleApplication(
   app: AppDefinition,
   scaleTo: Int,
-  sentencedToDeath: Option[Iterable[Instance]] = None) extends DeploymentAction
+  sentencedToDeath: Option[Iterable[Instance]] = None) extends AppDeploymentAction
+
+case class ScalePod(pod: PodDefinition, scaleTo: Int, sentencedToDeath: Seq[Instance] = Nil) extends PodDeploymentAction
 
 // application is started, but shall be completely stopped
-final case class StopApplication(app: AppDefinition) extends DeploymentAction
+final case class StopApplication(app: AppDefinition) extends AppDeploymentAction
+
+case class StopPod(pod: PodDefinition) extends PodDeploymentAction
 
 // application is there but should be replaced
-final case class RestartApplication(app: AppDefinition) extends DeploymentAction
+final case class RestartApplication(app: AppDefinition) extends AppDeploymentAction
+
+case class RestartPod(pod: PodDefinition) extends PodDeploymentAction
 
 // resolve and store artifacts for given app
-final case class ResolveArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends DeploymentAction
+final case class ResolveAppArtifacts(app: AppDefinition, url2Path: Map[URL, String]) extends AppDeploymentAction
+
+case class ResolvePodArtifacts(pod: PodDefinition, url2Path: Map[URL, String]) extends PodDeploymentAction
 
 /**
   * One step in a deployment plan.
@@ -77,21 +92,33 @@ final case class DeploymentPlan(
 
   lazy val nonEmpty: Boolean = !isEmpty
 
-  lazy val affectedApplications: Set[AppDefinition] = steps.flatMap(_.actions.map(_.app)).toSet
+  lazy val affectedApplications: Set[AppDefinition] =
+    steps.flatMap(_.actions.collect { case a: AppDeploymentAction => a.app })(collection.breakOut)
+
+  lazy val affectedPods: Set[PodDefinition] =
+    steps.flatMap(_.actions.collect { case p: PodDeploymentAction => p.pod })(collection.breakOut)
 
   /** @return all ids of apps which are referenced in any deployment actions */
-  lazy val affectedApplicationIds: Set[PathId] = steps.flatMap(_.actions.map(_.app.id)).toSet
+  lazy val affectedIds: Set[PathId] = affectedApplications.map(_.id) ++ affectedPods.map(_.id)
 
   def isAffectedBy(other: DeploymentPlan): Boolean =
     // FIXME: check for group change conflicts?
-    affectedApplicationIds.intersect(other.affectedApplicationIds).nonEmpty
+    affectedIds.intersect(other.affectedIds).nonEmpty
 
   lazy val createdOrUpdatedApps: Seq[AppDefinition] = {
-    target.transitiveApps.toIndexedSeq.filter(app => affectedApplicationIds(app.id))
+    target.transitiveApps.toIndexedSeq.filter(app => affectedIds(app.id))
+  }
+
+  lazy val createdOrUpdatedPods: Seq[PodDefinition] = {
+    target.transitivePodsById.values.filter(pod => affectedIds(pod.id)).toIndexedSeq
   }
 
   lazy val deletedApps: Seq[PathId] = {
     original.transitiveAppIds.diff(target.transitiveAppIds).toVector
+  }
+
+  lazy val deletedPods: Seq[PathId] = {
+    original.transitivePodsById.keySet.diff(target.transitivePodsById.keySet).toVector
   }
 
   override def toString: String = {
@@ -103,15 +130,28 @@ final case class DeploymentPlan(
 
       s"App(${app.id}$dockerImageString$cmdString$argsString))"
     }
+
+    def podString(pod: PodDefinition): String = {
+      s"Pod(${pod.id})"
+    }
+
     def actionString(a: DeploymentAction): String = a match {
       case StartApplication(app, scale) => s"Start(${appString(app)}, instances=$scale)"
+      case StartPod(pod, scale) => s"Start(${podString(pod)}, instances=$scale)"
       case StopApplication(app) => s"Stop(${appString(app)})"
+      case StopPod(pod) => s"Stop(${podString(pod)})"
       case ScaleApplication(app, scale, toKill) =>
         val killTasksString =
           toKill.filter(_.nonEmpty).map(", killTasks=" + _.map(_.id.idString).mkString(",")).getOrElse("")
         s"Scale(${appString(app)}, instances=$scale$killTasksString)"
+      case ScalePod(pod, scale, toKill) =>
+        val killTasksString =
+          toKill.map(_.id.idString).mkString(",")
+        s"Scale(${podString(pod)}, instances=$scale, killTasks=$killTasksString)"
       case RestartApplication(app) => s"Restart(${appString(app)})"
-      case ResolveArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
+      case RestartPod(pod) => s"Restart(${podString(pod)})"
+      case ResolveAppArtifacts(app, urls) => s"Resolve(${appString(app)}, $urls})"
+      case ResolvePodArtifacts(pod, urls) => s"Resolve(${podString(pod)}, $urls})"
     }
     val stepString =
       if (steps.nonEmpty) {
@@ -209,13 +249,15 @@ object DeploymentPlan {
     * Returns a sequence of deployment steps, the order of which is derived
     * from the topology of the target group's dependency graph.
     */
+  // scalastyle:off
   def dependencyOrderedSteps(original: Group, target: Group,
     toKill: Map[PathId, Iterable[Instance]]): Seq[DeploymentStep] = {
     val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
+    val originalPods = original.transitivePodsById
 
     val appsByLongestPath: SortedMap[Int, Set[AppDefinition]] = appsGroupedByLongestPath(target)
 
-    appsByLongestPath.valuesIterator.map { (equivalenceClass: Set[AppDefinition]) =>
+    val appSteps = appsByLongestPath.valuesIterator.map { (equivalenceClass: Set[AppDefinition]) =>
       val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newApp: AppDefinition) =>
         originalApps.get(newApp.id) match {
           // New app.
@@ -238,7 +280,22 @@ object DeploymentPlan {
 
       DeploymentStep(actions.to[Seq])
     }.to[Seq]
+
+    // TODO(PODS): Definitely not correct yet (pod steps)
+    val podSteps = target.transitivePodsById.flatMap { case (id, pod) =>
+      originalPods.get(id) match {
+        case None =>
+          Some(ScalePod(pod, pod.instances))
+        case Some(old) if old.copy(instances = pod.instances) == pod =>
+          Some(ScalePod(pod, pod.instances, toKill.getOrElse(pod.id, Nil).to[Seq]))
+        // TODO(PODS) How to do restart?
+        case _ =>
+          None
+      }
+    }.to[Seq]
+    DeploymentStep(podSteps) +: appSteps
   }
+  // scalastyle:on
 
   /**
     * @param original the root group before the deployment
@@ -252,15 +309,17 @@ object DeploymentPlan {
   def apply(
     original: Group,
     target: Group,
-    resolveArtifacts: Seq[ResolveArtifacts] = Seq.empty,
+    resolveArtifacts: Seq[ResolveAppArtifacts] = Seq.empty,
     version: Timestamp = Timestamp.now(),
     toKill: Map[PathId, Iterable[Instance]] = Map.empty,
     id: Option[String] = None): DeploymentPlan = {
 
     // Lookup maps for original and target apps.
     val originalApps: Map[PathId, AppDefinition] = original.transitiveAppsById
+    val originalPods: Map[PathId, PodDefinition] = original.transitivePodsById
 
     val targetApps: Map[PathId, AppDefinition] = target.transitiveAppsById
+    val targetPods: Map[PathId, PodDefinition] = target.transitivePodsById
 
     // A collection of deployment steps for this plan.
     val steps = Seq.newBuilder[DeploymentStep]

@@ -12,6 +12,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -497,25 +498,42 @@ trait DeploymentFormats {
     }
   )
 
-  implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
-    Json.obj(
-      "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id
-    )
+  implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes {
+    case action: AppDeploymentAction =>
+      Json.obj(
+        "action" -> action.getClass.getSimpleName,
+        "app" -> action.app.id
+      )
+    case action: PodDeploymentAction =>
+      Json.obj(
+        "action" -> action.getClass.getSimpleName,
+        "pod" -> action.pod.id
+      )
   }
 
   implicit lazy val DeploymentStepWrites: Writes[DeploymentStep] = Json.writes[DeploymentStep]
 
   implicit lazy val DeploymentStepInfoWrites: Writes[DeploymentStepInfo] = Writes { info =>
-    def currentAction(action: DeploymentAction): JsObject = Json.obj (
-      "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id,
-      "readinessCheckResults" -> info.readinessChecksByApp(action.app.id)
-    )
+    def currentAction(action: DeploymentAction): JsObject = action match {
+      case action: AppDeploymentAction =>
+        Json.obj (
+          "action" -> action.getClass.getSimpleName,
+          "app" -> action.app.id,
+          "readinessCheckResults" -> info.readinessChecksById(action.app.id)
+        )
+      case action: PodDeploymentAction =>
+        Json.obj (
+          "action" -> action.getClass.getSimpleName,
+          "app" -> action.pod.id,
+          "readinessCheckResults" -> info.readinessChecksById(action.pod.id)
+        )
+    }
+
     Json.obj(
       "id" -> info.plan.id,
       "version" -> info.plan.version,
-      "affectedApps" -> info.plan.affectedApplicationIds,
+      "affectedApps" -> info.plan.affectedIds,
+      "affectedPods" -> info.plan.affectedPods.map(_.id),
       "steps" -> info.plan.steps,
       "currentActions" -> info.step.actions.map(currentAction),
       "currentStep" -> info.nr,
@@ -1223,16 +1241,16 @@ trait AppAndGroupFormats {
   implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
     (__ \ "apps").formatNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
-    //(__ \ "pods").formatNullable[Iterable[PodDefinition]].withDefault(Iterable.empty) ~
+    (__ \ "pods").formatNullable[Iterable[PodStatus]].withDefault(Iterable.empty) ~
     (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
   ) (
-      (id, apps, groups, dependencies, version) =>
+      (id, apps, pods, groups, dependencies, version) =>
         Group(id, apps.map(app => app.id -> app)(collection.breakOut),
-          Map.empty,
+          Map.empty, // we never deserialize pods from groups
           groups, dependencies, version),
-      { (g: Group) => (g.id, g.apps.values, /*g.pods.values,*/ g.groups, g.dependencies, g.version) })
+      { (g: Group) => (g.id, g.apps.values, g.podStatus(), g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~

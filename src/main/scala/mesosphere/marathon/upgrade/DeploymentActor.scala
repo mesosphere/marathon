@@ -12,6 +12,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure, DeploymentStepSuccess }
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
@@ -80,6 +81,7 @@ private class DeploymentActor(
       context.stop(self)
   }
 
+  // scalastyle:off
   def performStep(step: DeploymentStep): Future[Unit] = {
     if (step.actions.isEmpty) {
       Future.successful(())
@@ -88,13 +90,23 @@ private class DeploymentActor(
       eventBus.publish(status)
 
       val futures = step.actions.map { action =>
-        healthCheckManager.addAllFor(action.app) // ensure health check actors are in place before tasks are launched
+        action match {
+          case action: AppDeploymentAction =>
+            healthCheckManager.addAllFor(action.app) // ensure health check actors are in place before tasks are launched
+          case pod: PodDeploymentAction =>
+          // TODO(PODS): do we need to do this for pods?
+        }
         action match {
           case StartApplication(app, scaleTo) => startApp(app, scaleTo, status)
+          case StartPod(pod, scaleTo) => startPod(pod, scaleTo, status)
           case ScaleApplication(app, scaleTo, toKill) => scaleApp(app, scaleTo, toKill, status)
+          case ScalePod(pod, scaleTo, toKill) => scalePod(pod, scaleTo, toKill, status)
           case RestartApplication(app) => restartApp(app, status)
+          case RestartPod(pod) => restartPod(pod, status)
           case StopApplication(app) => stopApp(app.copy(instances = 0))
-          case ResolveArtifacts(app, urls) => resolveArtifacts(app, urls)
+          case StopPod(pod) => stopPod(pod.copy(instances = 0))
+          case ResolveAppArtifacts(app, urls) => resolveAppArtifacts(app, urls)
+          case ResolvePodArtifacts(pod, urls) => resolvePodArtifacts(pod, urls)
         }
       }
 
@@ -104,6 +116,7 @@ private class DeploymentActor(
       }
     }
   }
+  // scalastyle:on
 
   def startApp(app: AppDefinition, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
@@ -112,6 +125,11 @@ private class DeploymentActor(
         eventBus, readinessCheckExecutor, app, scaleTo, promise)
     )
     promise.future
+  }
+
+  def startPod(pod: PodDefinition, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
+    // TODO(PODS): implement start pod
+    Future.failed(???)
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int,
@@ -140,12 +158,22 @@ private class DeploymentActor(
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
+  def scalePod(pod: PodDefinition, scaleTo: Int, toKill: Seq[Instance], status: DeploymentStatus): Future[Unit] = {
+    // TODO(PODS): Implement scaling
+    Future.failed(???)
+  }
+
   def stopApp(app: AppDefinition): Future[Unit] = {
     val tasks = taskTracker.specInstancesLaunchedSync(app.id)
     // TODO: the launch queue is purged in stopApp, but it would make sense to do that before calling kill(tasks)
     killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
       case Success(_) => scheduler.stopApp(app)
     }
+  }
+
+  def stopPod(pod: PodDefinition): Future[Unit] = {
+    // TODO(PODS): implement stop pod
+    Future.failed(???)
   }
 
   def restartApp(app: AppDefinition, status: DeploymentStatus): Future[Unit] = {
@@ -159,10 +187,24 @@ private class DeploymentActor(
     }
   }
 
-  def resolveArtifacts(app: AppDefinition, urls: Map[URL, String]): Future[Unit] = {
+  def restartPod(pod: PodDefinition, status: DeploymentStatus): Future[Unit] = {
+    if (pod.instances == 0) {
+      Future.successful(())
+    } else {
+      // TODO(PODS): implement restart pod
+      Future.failed(???)
+    }
+  }
+
+  def resolveAppArtifacts(app: AppDefinition, urls: Map[URL, String]): Future[Unit] = {
     val promise = Promise[Boolean]()
     context.actorOf(Props(classOf[ResolveArtifactsActor], app, urls, promise, storage))
     promise.future.map(_ => ())
+  }
+
+  def resolvePodArtifacts(pod: PodDefinition, urls: Map[URL, String]): Future[Unit] = {
+    // TODO(PODS): implement resolve pod artifacts
+    Promise[Unit]().future
   }
 }
 

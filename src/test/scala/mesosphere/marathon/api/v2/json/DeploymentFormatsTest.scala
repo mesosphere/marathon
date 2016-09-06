@@ -135,7 +135,7 @@ class DeploymentFormatsTest extends MarathonSpec {
     ScaleApplication(genApp, genInt),
     StopApplication(genApp),
     RestartApplication(genApp),
-    ResolveArtifacts(genApp, Map.empty)
+    ResolveAppArtifacts(genApp, Map.empty)
   ))
 
   def genGroup(children: Set[Group] = Set.empty) = {

@@ -142,7 +142,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val to = Group("/".toPath, groups = Set(Group("/group".toPath, update)))
     val plan = DeploymentPlan(from, to)
 
-    plan.affectedApplicationIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
+    plan.affectedIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
     plan.isAffectedBy(plan) should equal (right = true)
     plan.isAffectedBy(DeploymentPlan(from, from)) should equal (right = false)
   }

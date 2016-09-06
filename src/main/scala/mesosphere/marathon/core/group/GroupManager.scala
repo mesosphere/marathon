@@ -1,10 +1,12 @@
 package mesosphere.marathon.core.group
 
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.Future
+import scala.collection.immutable.Seq
 
 /**
   * The group manager is the facade for all group related actions.
@@ -39,9 +41,16 @@ trait GroupManager {
   /**
     * Get a specific app definition by its id.
     * @param id the id of the app.
-    * @return the app uf ut is found, otherwise false
+    * @return the app if it is found, otherwise false
     */
   def app(id: PathId): Future[Option[AppDefinition]]
+
+  /**
+    * Get a specific pod definition by its id.
+    * @param id the id of the pod.
+    * @return the pod if it is found, otherwise false
+    */
+  def pod(id: PathId): Future[Option[PodDefinition]]
 
   /**
     * Update a group with given identifier.
@@ -82,4 +91,11 @@ trait GroupManager {
     force: Boolean = false,
     toKill: Iterable[Instance] = Iterable.empty): Future[DeploymentPlan]
 
+  def updatePod(
+    podId: PathId,
+    fn: Option[PodDefinition] => PodDefinition,
+    version: Timestamp = Timestamp.now(),
+    force: Boolean = false,
+    toKill: Seq[Instance] = Seq.empty
+  ): Future[DeploymentPlan]
 }

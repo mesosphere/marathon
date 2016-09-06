@@ -12,11 +12,12 @@ import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinition, _ }
 import mesosphere.marathon.storage.repository.{ GroupRepository, ReadOnlyAppRepository }
-import mesosphere.marathon.upgrade.{ DeploymentPlan, GroupVersioningUtil, ResolveArtifacts }
+import mesosphere.marathon.upgrade.{ DeploymentPlan, GroupVersioningUtil, ResolveAppArtifacts }
 import mesosphere.util.CapConcurrentExecutions
 import org.slf4j.LoggerFactory
 
@@ -30,6 +31,9 @@ private[group] object GroupManagerActor {
 
   // Replies with Option[AppDefinition]
   case class GetAppWithId(id: PathId) extends Request
+
+  // Replies with Option[PodDefinition]
+  case class GetPodWithId(id: PathId) extends Request
 
   // Replies with Option[Group]
   case class GetGroupWithId(id: PathId) extends Request
@@ -93,6 +97,7 @@ private[impl] class GroupManagerActor(
 
   override def receive: Receive = {
     case GetAppWithId(id) => getApp(id).pipeTo(sender())
+    case GetPodWithId(id) => getPod(id).pipeTo(sender())
     case GetRootGroup => groupRepo.root().pipeTo(sender())
     case GetGroupWithId(id) => getGroupWithId(id).pipeTo(sender())
     case GetGroupWithVersion(id, version) => getGroupWithVersion(id, version).pipeTo(sender())
@@ -103,6 +108,10 @@ private[impl] class GroupManagerActor(
 
   private[this] def getApp(id: PathId): Future[Option[AppDefinition]] = {
     groupRepo.root().map(_.app(id))
+  }
+
+  private[this] def getPod(id: PathId): Future[Option[PodDefinition]] = {
+    groupRepo.root().map(_.pod(id))
   }
 
   private[this] def getGroupWithId(id: PathId): Future[Option[Group]] = {
@@ -134,8 +143,9 @@ private[impl] class GroupManagerActor(
         _ = log.info(s"Computed new deployment plan:\n$plan")
         _ <- scheduler.deploy(plan, force)
         // TODO(PODS): Add in createdOrUpdatedPods and deletedPods
-        _ <- groupRepo.storeRoot(plan.target, plan.createdOrUpdatedApps, plan.deletedApps, Nil, Nil)
-        _ = log.info(s"Updated groups/apps according to deployment plan ${plan.id}")
+        _ <- groupRepo.storeRoot(plan.target, plan.createdOrUpdatedApps,
+          plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods)
+        _ = log.info(s"Updated groups/apps/pods according to deployment plan ${plan.id}")
       } yield plan
 
       deployment.onComplete {
@@ -162,7 +172,7 @@ private[impl] class GroupManagerActor(
     }
   }
 
-  private[this] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveArtifacts])] = {
+  private[this] def resolveStoreUrls(group: Group): Future[(Group, Seq[ResolveAppArtifacts])] = {
     def url2Path(url: String): Future[(String, String)] = contentPath(new URL(url)).map(url -> _)
     Future.sequence(group.transitiveApps.flatMap(_.storeUrls).map(url2Path))
       .map(_.toMap)
@@ -171,7 +181,7 @@ private[impl] class GroupManagerActor(
         //Since the path is derived from the content itself,
         //it will only change, if the content changes.
         val downloads = mutable.Map(paths.toSeq.filterNot { case (url, path) => storage.item(path).exists }: _*)
-        val actions = Seq.newBuilder[ResolveArtifacts]
+        val actions = Seq.newBuilder[ResolveAppArtifacts]
         group.updateApps(group.version) { app =>
           if (app.storeUrls.isEmpty) app
           else {
@@ -180,7 +190,7 @@ private[impl] class GroupManagerActor(
             val appDownloads: Map[URL, String] =
               app.storeUrls
                 .flatMap { url => downloads.remove(url).map { path => new URL(url) -> path } }.toMap
-            if (appDownloads.nonEmpty) actions += ResolveArtifacts(resolved, appDownloads)
+            if (appDownloads.nonEmpty) actions += ResolveAppArtifacts(resolved, appDownloads)
             resolved
           }
         } -> actions.result()

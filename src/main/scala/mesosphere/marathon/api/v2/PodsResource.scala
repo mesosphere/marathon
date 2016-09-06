@@ -5,7 +5,7 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status
-import javax.ws.rs.core.{Context, MediaType, Response}
+import javax.ws.rs.core.{ Context, MediaType, Response }
 
 import akka.event.EventStream
 import akka.stream.Materializer
@@ -13,9 +13,9 @@ import akka.stream.scaladsl.Sink
 import com.codahale.metrics.annotation.Timed
 import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.api.v2.validation.PodsValidation
-import mesosphere.marathon.api.{AuthResource, MarathonMediaType, RestResource}
+import mesosphere.marathon.api.{ AuthResource, MarathonMediaType, RestResource }
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.Pod
 import mesosphere.marathon.state.PathId
@@ -162,33 +162,31 @@ class PodsResource @Inject() (
 
         val deployment = result(podSystem.delete(id, force))
 
-        deployment.fold(notFound(id)) { deployment =>
-          Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Deleted))
-          Response.status(Status.ACCEPTED)
-            .location(new URI(deployment.id))
-            .header(DeploymentHeader, deployment.id)
-            .build()
-        }
+        Events.maybePost(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Deleted))
+        Response.status(Status.ACCEPTED)
+          .location(new URI(deployment.id))
+          .header(DeploymentHeader, deployment.id)
+          .build()
       }
     }
   }
 
-    @GET
-    @Timed
-    @Path("""{id:.+}::status""")
-    def status(
-                @PathParam("id") id: String,
-                @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
+  @GET
+  @Timed
+  @Path("""{id:.+}::status""")
+  def status(
+    @PathParam("id") id: String,
+    @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-      withValid(PathId(id)) { id =>
-        val pod = result(podSystem.find(id))
-        withAuthorization(ViewRunSpec, pod) {
-          result(podSystem.status(id)).fold(notFound(id)) { status =>
-            ok(Json.stringify(Json.toJson(status)))
-          }
+    withValid(PathId(id)) { id =>
+      val pod = result(podSystem.find(id))
+      withAuthorization(ViewRunSpec, pod) {
+        result(podSystem.status(id)).fold(notFound(id)) { status =>
+          ok(Json.stringify(Json.toJson(status)))
         }
       }
     }
+  }
 
   private def notFound(id: PathId): Response = notFound(s"""{"message": "pod '$id' does not exist"}""")
 }
