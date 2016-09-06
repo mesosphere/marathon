@@ -394,7 +394,7 @@ object MarathonTestHelper {
 
   def taskLaunchedOp(taskId: Instance.Id): TaskStateOp.LaunchOnReservation = {
     val now = Timestamp.now()
-    TaskStateOp.LaunchOnReservation(taskId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
+    TaskStateOp.LaunchOnReservation(instanceId = taskId, runSpecVersion = now, status = Task.Status(stagedAt = now, taskStatus = InstanceStatus.Running), hostPorts = Seq.empty)
   }
 
   def startingTaskForApp(appId: PathId, appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task.LaunchedEphemeral =

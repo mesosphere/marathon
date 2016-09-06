@@ -10,13 +10,13 @@ import scala.concurrent.Future
 object OfferMatcher {
 
   /**
-    * A TaskOp with a [[InstanceOpSource]].
+    * A InstanceOp with a [[InstanceOpSource]].
     *
     * The [[InstanceOpSource]] is informed whether the op is ultimately send to Mesos or if it is rejected
     * (e.g. by throttling logic).
     */
-  case class TaskOpWithSource(source: InstanceOpSource, op: InstanceOp) {
-    def taskId: Instance.Id = op.instanceId
+  case class InstanceOpWithSource(source: InstanceOpSource, op: InstanceOp) {
+    def instanceId: Instance.Id = op.instanceId
     def accept(): Unit = source.instanceOpAccepted(op)
     def reject(reason: String): Unit = source.instanceOpRejected(op, reason)
   }
@@ -34,7 +34,7 @@ object OfferMatcher {
     *
     * A MatchedTaskOps reply does not guarantee that these operations can actually be executed.
     * The launcher of message should setup some kind of timeout mechanism and handle
-    * taskOpAccepted/taskOpRejected calls appropriately.
+    * instanceOpAccepted/instanceOpRejected calls appropriately.
     *
     * @param offerId the identifier of the offer
     * @param opsWithSource the ops that should be executed on that offer including the source of each op
@@ -42,16 +42,16 @@ object OfferMatcher {
     *                        and should be resend and processed again
     */
   case class MatchedTaskOps(
-      offerId: Mesos.OfferID,
-      opsWithSource: Seq[TaskOpWithSource],
-      resendThisOffer: Boolean = false) {
+                             offerId: Mesos.OfferID,
+                             opsWithSource: Seq[InstanceOpWithSource],
+                             resendThisOffer: Boolean = false) {
 
-    /** all included [TaskOp] without the source information. */
+    /** all included [InstanceOp] without the source information. */
     def ops: Iterable[InstanceOp] = opsWithSource.view.map(_.op)
 
     /** All TaskInfos of launched tasks. */
     def launchedTaskInfos: Iterable[Mesos.TaskInfo] = ops.view.collect {
-      case InstanceOp.Launch(taskInfo, _, _, _) => taskInfo
+      case InstanceOp.LaunchTask(taskInfo, _, _, _) => taskInfo
     }
   }
 
@@ -61,8 +61,8 @@ object OfferMatcher {
   }
 
   trait InstanceOpSource {
-    def instanceOpAccepted(taskOp: InstanceOp)
-    def instanceOpRejected(taskOp: InstanceOp, reason: String)
+    def instanceOpAccepted(instanceOp: InstanceOp)
+    def instanceOpRejected(instanceOp: InstanceOp, reason: String)
   }
 }
 
@@ -73,7 +73,7 @@ trait OfferMatcher {
   /**
     * Process offer and return the ops that this matcher wants to execute on this offer.
     *
-    * The offer matcher can expect either a taskOpAccepted or a taskOpRejected call
+    * The offer matcher can expect either a instanceOpAccepted or a instanceOpRejected call
     * for every returned `org.apache.mesos.Protos.TaskInfo`.
     */
   def matchOffer(deadline: Timestamp, offer: Mesos.Offer): Future[OfferMatcher.MatchedTaskOps]

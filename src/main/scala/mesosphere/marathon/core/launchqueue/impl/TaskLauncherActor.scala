@@ -10,7 +10,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpWithSource }
 import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.InstanceOpNotification
 import mesosphere.marathon.core.matcher.base.util.{ ActorOfferMatcher, InstanceOpSourceDelegate }
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
@@ -236,7 +236,7 @@ private class TaskLauncherActor(
 
       op match {
         // only increment for launch ops, not for reservations:
-        case _: InstanceOp.Launch => tasksToLaunch += 1
+        case _: InstanceOp.LaunchTask => tasksToLaunch += 1
         case _ => ()
       }
 
@@ -369,7 +369,7 @@ private class TaskLauncherActor(
       val taskId = taskOp.instanceId
       taskOp match {
         // only decrement for launched tasks, not for reservations:
-        case _: InstanceOp.Launch => tasksToLaunch -= 1
+        case _: InstanceOp.LaunchTask => tasksToLaunch -= 1
         case _ => ()
       }
 
@@ -389,7 +389,7 @@ private class TaskLauncherActor(
       taskOp.getClass.getSimpleName, taskOp.instanceId.idString, runSpec.version, status)
 
     updateActorState()
-    sender() ! MatchedTaskOps(offer.getId, Seq(TaskOpWithSource(myselfAsLaunchSource, taskOp)))
+    sender() ! MatchedTaskOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, taskOp)))
   }
 
   private[this] def scheduleTaskOpTimeout(taskOp: InstanceOp): Unit = {

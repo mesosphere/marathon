@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import akka.Done
-import akka.actor.{ ActorRef, Status }
+import akka.actor.{ActorRef, Status}
 import akka.event.EventStream
 import akka.testkit.TestProbe
 import ch.qos.logback.classic.Level
@@ -10,26 +10,27 @@ import com.google.inject.Provider
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.InstanceStateOp
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusEmitter }
+import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusEmitter}
 import mesosphere.marathon.core.task.tracker.TaskUpdater
-import mesosphere.marathon.core.task.update.impl.steps.{ NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl }
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateChangeException, TaskStateOp }
+import mesosphere.marathon.core.task.update.impl.steps.{NotifyHealthCheckManagerStepImpl, NotifyLaunchQueueStepImpl, NotifyRateLimiterStepImpl, PostToEventStreamStepImpl, ScaleAppUpdateStepImpl, TaskStatusEmitterPublishStepImpl}
+import mesosphere.marathon.core.task.{Task, TaskStateChange, TaskStateChangeException, TaskStateOp}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{ PathId, Timestamp }
-import mesosphere.marathon.storage.repository.{ AppRepository, ReadOnlyAppRepository, TaskRepository }
-import mesosphere.marathon.test.{ CaptureLogEvents, MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.storage.repository.{AppRepository, ReadOnlyAppRepository, TaskRepository}
+import mesosphere.marathon.test.{CaptureLogEvents, MarathonActorSupport, Mockito}
+import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{GivenWhenThen, Matchers}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 class InstanceOpProcessorImplTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
@@ -229,7 +230,7 @@ class InstanceOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, TaskStateOp.ForceExpunge(taskId))
+      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, InstanceStateOp.ForceExpunge(taskId))
     )
     f.taskTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(taskChanged, ack))
     f.taskTrackerProbe.reply(())
@@ -264,7 +265,7 @@ class InstanceOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, TaskStateOp.ForceExpunge(taskId))
+      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, InstanceStateOp.ForceExpunge(taskId))
     )
     f.taskTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(taskChanged, ack))
     f.taskTrackerProbe.reply(())
@@ -306,7 +307,7 @@ class InstanceOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      InstanceOpProcessor.Operation(deadline, f.opSender.ref, task.id, TaskStateOp.ForceExpunge(task.id))
+      InstanceOpProcessor.Operation(deadline, f.opSender.ref, task.id, InstanceStateOp.ForceExpunge(task.id))
     )
     f.taskTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(expectedTaskChanged, ack))
     f.taskTrackerProbe.reply(())
@@ -400,7 +401,7 @@ class InstanceOpProcessorImplTest
 
     def stateOpLaunch(task: Task) = TaskStateOp.LaunchEphemeral(task)
     def stateOpUpdate(task: Task, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp = now) = TaskStateOp.MesosUpdate(task, mesosStatus, now)
-    def stateOpExpunge(task: Task) = TaskStateOp.ForceExpunge(task.id)
+    def stateOpExpunge(task: Task) = InstanceStateOp.ForceExpunge(task.id)
     def stateOpLaunchOnReservation(task: Task, status: Task.Status) = TaskStateOp.LaunchOnReservation(task.id, now, status, Seq.empty)
     def stateOpReservationTimeout(task: Task) = TaskStateOp.ReservationTimeout(task.id)
     def stateOpReserve(task: Task) = TaskStateOp.Reserve(task.asInstanceOf[Task.Reserved])

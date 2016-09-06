@@ -3,13 +3,14 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.instance.InstanceStateOp
+import mesosphere.marathon.core.task.{TaskStateChange, TaskStateOp}
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
-import org.apache.mesos.Protos.{ TaskID, TaskStatus }
+import mesosphere.marathon.test.{MarathonActorSupport, Mockito}
+import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
+import org.apache.mesos.Protos.{TaskID, TaskStatus}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ GivenWhenThen, Matchers }
+import org.scalatest.{GivenWhenThen, Matchers}
 
 class TaskCreationHandlerAndUpdaterDelegateTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {
@@ -64,7 +65,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = TaskStateOp.ForceExpunge(task.id)
+    val stateOp = InstanceStateOp.ForceExpunge(task.id)
     val expectedStateChange = TaskStateChange.Expunge(task)
 
     When("terminated is called")
@@ -85,7 +86,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     val f = new Fixture
     val appId: PathId = PathId("/test")
     val task = MarathonTestHelper.mininimalTask(appId)
-    val stateOp = TaskStateOp.ForceExpunge(task.id)
+    val stateOp = InstanceStateOp.ForceExpunge(task.id)
 
     When("terminated is called")
     val terminated = f.delegate.terminated(stateOp)

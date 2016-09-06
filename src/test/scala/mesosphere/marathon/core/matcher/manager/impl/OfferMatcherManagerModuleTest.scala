@@ -7,7 +7,7 @@ import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpSource, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpSource, InstanceOpWithSource }
 import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
@@ -174,7 +174,7 @@ class OfferMatcherManagerModuleTest extends FunSuite with BeforeAndAfter with Ma
     override def matchOffer(deadline: Timestamp, offer: Offer): Future[MatchedTaskOps] = {
       val opsWithSources = matchTasks(deadline, offer).map { task =>
         val launch = f.launch(task, MarathonTestHelper.makeTaskFromTaskInfo(task, offer))
-        TaskOpWithSource(source, launch)
+        InstanceOpWithSource(source, launch)
       }
 
       val result = MatchedTaskOps(offer.getId, opsWithSources)

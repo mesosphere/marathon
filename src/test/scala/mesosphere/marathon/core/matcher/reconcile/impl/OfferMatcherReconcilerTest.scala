@@ -1,17 +1,16 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.core.task.TaskStateOp
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.Mockito
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
+import org.scalatest.{FunSuite, GivenWhenThen, Matchers}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -49,7 +48,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val expectedOps =
       Iterable(
         InstanceOp.UnreserveAndDestroyVolumes(
-          TaskStateOp.ForceExpunge(taskId),
+          InstanceStateOp.ForceExpunge(taskId),
           oldInstance = None,
           resources = offer.getResourcesList.asScala.to[Seq]
         )
@@ -80,7 +79,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     Then("all resources are destroyed and unreserved")
     val expectedOps = Iterable(
       InstanceOp.UnreserveAndDestroyVolumes(
-        TaskStateOp.ForceExpunge(taskId),
+        InstanceStateOp.ForceExpunge(taskId),
         oldInstance = None,
         resources = offer.getResourcesList.asScala.to[Seq]
       )
@@ -111,7 +110,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     Then("all resources are destroyed and unreserved")
     val expectedOps = Iterable(
       InstanceOp.UnreserveAndDestroyVolumes(
-        TaskStateOp.ForceExpunge(taskId),
+        InstanceStateOp.ForceExpunge(taskId),
         oldInstance = Some(bogusTask),
         resources = offer.getResourcesList.asScala.to[Seq]
       )

@@ -2,15 +2,15 @@ package mesosphere.marathon.core.launcher.impl
 
 import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
-import mesosphere.marathon.core.task.tracker.TaskCreationHandler
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedTaskOps}
+import mesosphere.marathon.core.task.{Task, TaskStateOp}
+import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
+import mesosphere.marathon.metrics.{MetricPrefixes, Metrics}
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.Protos.{ Offer, OfferID }
+import org.apache.mesos.Protos.{Offer, OfferID}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -25,7 +25,7 @@ private[launcher] class OfferProcessorImpl(
     metrics: Metrics,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
-    taskCreationHandler: TaskCreationHandler) extends OfferProcessor {
+    taskCreationHandler: InstanceCreationHandler) extends OfferProcessor {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val log = LoggerFactory.getLogger(getClass)
@@ -86,7 +86,7 @@ private[launcher] class OfferProcessorImpl(
     Future.successful(())
   }
 
-  private[this] def acceptOffer(offerId: OfferID, taskOpsWithSource: Seq[TaskOpWithSource]): Future[Unit] = {
+  private[this] def acceptOffer(offerId: OfferID, taskOpsWithSource: Seq[InstanceOpWithSource]): Future[Unit] = {
     if (taskLauncher.acceptOffer(offerId, taskOpsWithSource.map(_.op))) {
       log.debug("Offer [{}]. Task launch successful", offerId.getValue)
       taskOpsWithSource.foreach(_.accept())
@@ -108,7 +108,7 @@ private[launcher] class OfferProcessorImpl(
           case Some(existingTask: Instance) =>
             Future.successful(()) // TODO POD remove asInstanceOf[Task]
           case None =>
-            taskCreationHandler.terminated(TaskStateOp.ForceExpunge(nextOp.instanceId)).map(_ => ())
+            taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(nextOp.instanceId)).map(_ => ())
         }
       }
     }.recover {
@@ -121,10 +121,12 @@ private[launcher] class OfferProcessorImpl(
     * Saves the given tasks sequentially, evaluating before each save whether the given deadline has been reached
     * already.
     */
-  private[this] def saveTasks(ops: Seq[TaskOpWithSource], savingDeadline: Timestamp): Future[Seq[TaskOpWithSource]] = {
-    def saveTask(taskOpWithSource: TaskOpWithSource): Future[Option[TaskOpWithSource]] = {
-      val taskId = taskOpWithSource.taskId
-      log.info(s"Processing ${taskOpWithSource.op.stateOp} for ${taskOpWithSource.taskId}")
+  private[this] def saveTasks(
+    ops: Seq[InstanceOpWithSource], savingDeadline: Timestamp): Future[Seq[InstanceOpWithSource]] = {
+
+    def saveTask(taskOpWithSource: InstanceOpWithSource): Future[Option[InstanceOpWithSource]] = {
+      val taskId = taskOpWithSource.instanceId
+      log.info(s"Processing ${taskOpWithSource.op.stateOp} for ${taskOpWithSource.instanceId}")
       taskCreationHandler
         .created(taskOpWithSource.op.stateOp)
         .map(_ => Some(taskOpWithSource))
@@ -140,7 +142,7 @@ private[launcher] class OfferProcessorImpl(
         }
     }
 
-    ops.foldLeft(Future.successful(Vector.empty[TaskOpWithSource])) { (savedTasksFuture, nextTask) =>
+    ops.foldLeft(Future.successful(Vector.empty[InstanceOpWithSource])) { (savedTasksFuture, nextTask) =>
       savedTasksFuture.flatMap { savedTasks =>
         if (clock.now() > savingDeadline) {
           savingTasksTimeoutMeter.mark(savedTasks.size.toLong)

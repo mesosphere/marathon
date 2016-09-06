@@ -2,7 +2,7 @@ package mesosphere.marathon.core.matcher.base.util
 
 import mesosphere.marathon.MarathonTestHelper
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ TaskOpWithSource, MatchedTaskOps }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedTaskOps }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos.Protos.Offer
@@ -87,7 +87,7 @@ class StopOnFirstMatchingOfferMatcherTest extends FunSuite with Mockito with Giv
     lazy val someMatch: OfferMatcher.MatchedTaskOps = {
       MatchedTaskOps(
         offer.getId,
-        Seq(mock[TaskOpWithSource]),
+        Seq(mock[InstanceOpWithSource]),
         resendThisOffer = true
       )
     }

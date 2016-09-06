@@ -5,7 +5,7 @@ import akka.event.LoggingReceive
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, TaskOpWithSource }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpWithSource }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ MatchTimeout, OfferData }
@@ -44,13 +44,13 @@ private[manager] object OfferMatcherManagerActor {
 
   private val log = LoggerFactory.getLogger(getClass)
   private case class OfferData(
-      offer: Offer,
-      deadline: Timestamp,
-      sender: ActorRef,
-      matcherQueue: Queue[OfferMatcher],
-      ops: Seq[TaskOpWithSource],
-      matchPasses: Int = 0,
-      resendThisOffer: Boolean = false) {
+                                offer: Offer,
+                                deadline: Timestamp,
+                                sender: ActorRef,
+                                matcherQueue: Queue[OfferMatcher],
+                                ops: Seq[InstanceOpWithSource],
+                                matchPasses: Int = 0,
+                                resendThisOffer: Boolean = false) {
 
     def addMatcher(matcher: OfferMatcher): OfferData = copy(matcherQueue = matcherQueue.enqueue(matcher))
     def nextMatcherOpt: Option[(OfferMatcher, OfferData)] = {
@@ -59,7 +59,7 @@ private[manager] object OfferMatcherManagerActor {
       }
     }
 
-    def addTasks(added: Seq[TaskOpWithSource]): OfferData = {
+    def addTasks(added: Seq[InstanceOpWithSource]): OfferData = {
       val leftOverOffer = added.foldLeft(offer) { (offer, nextOp) => nextOp.op.applyToOffer(offer) }
 
       copy(

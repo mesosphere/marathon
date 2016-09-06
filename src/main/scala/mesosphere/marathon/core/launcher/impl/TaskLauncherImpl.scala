@@ -37,7 +37,7 @@ private[launcher] class TaskLauncherImpl(
     if (accepted) {
       usedOffersMeter.mark()
       val launchCount = taskOps.count {
-        case _: InstanceOp.Launch => true
+        case _: InstanceOp.LaunchTask => true
         case _ => false
       }
       launchedTasksMeter.mark(launchCount)
