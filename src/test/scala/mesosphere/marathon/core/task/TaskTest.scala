@@ -1,6 +1,7 @@
 package mesosphere.marathon.core.task
 
 import mesosphere.marathon.MarathonTestHelper
+import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.state.{ AppDefinition, IpAddress, PathId }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos.{ Protos => MesosProtos }
@@ -120,6 +121,13 @@ class TaskTest extends FunSuite with Mockito with GivenWhenThen with Matchers {
   test("ipAddresses returns one IP for MarathonTask instances with one IP and multiple NetworkInfo") {
     val f = new Fixture
     f.taskWithMultipleNetworksAndOneIp.launched.value.ipAddresses.value should equal(Seq(f.ipAddress1))
+  }
+
+  test("VolumeId should be parsable, even if the task contains a dot in the appId") {
+    val volumeIdString = "registry.domain#storage#8e1f0af7-3fdd-11e6-a2ab-2687a99fcff1"
+    val volumeId = LocalVolumeId.unapply(volumeIdString)
+    volumeId should not be None
+    volumeId should be (Some(LocalVolumeId(PathId.fromSafePath("registry.domain"), "storage", "8e1f0af7-3fdd-11e6-a2ab-2687a99fcff1")))
   }
 
 }
