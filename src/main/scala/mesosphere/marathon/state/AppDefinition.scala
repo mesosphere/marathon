@@ -671,7 +671,7 @@ object AppDefinition extends GeneralPurposeCombinators {
       } and featureEnabled(enabledFeatures, Features.GPU_RESOURCES)
     }
 
-  private val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
+  val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
     import Constraint.Operator._
     override def apply(c: Constraint): Result = {
       if (!c.hasField || !c.hasOperator) {

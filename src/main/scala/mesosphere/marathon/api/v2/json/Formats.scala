@@ -6,13 +6,12 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
-import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
-import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
+import mesosphere.marathon.core.readiness.ReadinessCheck
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -530,6 +529,15 @@ trait EventFormats {
 
   implicit lazy val AppTerminatedEventWrites: Writes[AppTerminatedEvent] = Json.writes[AppTerminatedEvent]
 
+  implicit lazy val PodEventWrites: Writes[PodEvent] = Writes { event =>
+    Json.obj(
+      "clientIp" -> event.clientIp,
+      "uri" -> event.uri,
+      "eventType" -> event.eventType,
+      "timestamp" -> event.timestamp
+    )
+  }
+
   implicit lazy val ApiPostEventWrites: Writes[ApiPostEvent] = Writes { event =>
     Json.obj(
       "clientIp" -> event.clientIp,
@@ -603,6 +611,7 @@ trait EventFormats {
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
     case event: PodStatusUpdateEvent => Json.toJson(event)
+    case event: PodEvent => Json.toJson(event)
   }
   //scalastyle:on
 }
@@ -830,7 +839,7 @@ trait AppAndGroupFormats {
             secrets: Map[String, Secret],
             maybeTaskKillGracePeriod: Option[FiniteDuration]) {
           def upgradeStrategyOrDefault: UpgradeStrategy = {
-            import UpgradeStrategy.{ forResidentTasks, empty }
+            import UpgradeStrategy.{ empty, forResidentTasks }
             upgradeStrategy.getOrElse {
               if (residencyOrDefault.isDefined || app.externalVolumes.nonEmpty) forResidentTasks else empty
             }
@@ -1214,16 +1223,16 @@ trait AppAndGroupFormats {
   implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
     (__ \ "apps").formatNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
-    (__ \ "pods").formatNullable[Iterable[PodDefinition]].withDefault(Iterable.empty) ~
+    //(__ \ "pods").formatNullable[Iterable[PodDefinition]].withDefault(Iterable.empty) ~
     (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
   ) (
-      (id, apps, pods, groups, dependencies, version) =>
+      (id, apps, groups, dependencies, version) =>
         Group(id, apps.map(app => app.id -> app)(collection.breakOut),
-          pods.map(pod => pod.id -> pod)(collection.breakOut),
+          Map.empty,
           groups, dependencies, version),
-      { (g: Group) => (g.id, g.apps.values, g.pods.values, g.groups, g.dependencies, g.version) })
+      { (g: Group) => (g.id, g.apps.values, /*g.pods.values,*/ g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~

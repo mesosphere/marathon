@@ -2,6 +2,7 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
+import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
 
@@ -24,7 +25,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskCreationHandler, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.update.impl.steps._
 import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
 import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
@@ -144,6 +145,9 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def groupManager(coreModule: CoreModule): GroupManager = coreModule.groupManagerModule.groupManager
+
+  @Provides @Singleton
+  def podSystem(coreModule: CoreModule): PodManager = coreModule.podModule.podManager
 
   @Provides @Singleton
   def taskStatusUpdateSteps(

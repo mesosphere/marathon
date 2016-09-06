@@ -51,13 +51,13 @@ trait ZkStoreSerialization {
 
   implicit val podDefMarshaller: Marshaller[PodDefinition, ZkSerialized] =
     Marshaller.opaque { podDef =>
-      ZkSerialized(ByteString(Json.stringify(Json.toJson(podDef)), "UTF-8"))
+      ZkSerialized(ByteString(Json.stringify(Json.toJson(podDef.asPodDef)), "UTF-8"))
     }
 
   implicit val podDefUnmarshaller: Unmarshaller[ZkSerialized, PodDefinition] =
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
-        PodDefinition(Json.parse(byteString.utf8String).as[Pod])
+        PodDefinition(Json.parse(byteString.utf8String).as[Pod], None)
     }
 
   implicit val taskResolver: IdResolver[Instance.Id, Task, String, ZkId] =

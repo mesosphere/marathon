@@ -31,6 +31,8 @@ traits: !include ../traits.raml
     responses:
       201:
         description: Pod created successfully.
+        headers:
+          X-Marathon-Deployment-Id: string
         body:
           application/json:
             type: pod.Pod
@@ -73,6 +75,10 @@ traits: !include ../traits.raml
       Delete an existing pod-based service.
       TODO(jdef) would be nice to include link to deployment URI in a Location
       (or some such) header.
+    responses:
+      202:
+        headers:
+          X-Marathon-Deployment-Id: string
 
   put:
     is: [ secured, jsonValidator, objectValidator, objectLocator, deployable ]
