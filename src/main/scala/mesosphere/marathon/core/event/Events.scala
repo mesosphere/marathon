@@ -186,6 +186,20 @@ case class MesosStatusUpdateEvent(
   eventType: String = "status_update_event",
   timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
+// TODO PODs subject to enhance
+case class PodStatusUpdateEvent(
+   slaveId: String,
+   instanceId: Instance.Id,
+   instanceStatus: String,
+   message: String,
+   appId: PathId,
+   host: String,
+   ipAddresses: Option[Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress]],
+   ports: Seq[Int],
+   version: String,
+   eventType: String = "pod_status_update_event",
+   timestamp: String = Timestamp.now().toString) extends MarathonEvent
+
 case class MesosFrameworkMessageEvent(
   executorId: String,
   slaveId: String,
