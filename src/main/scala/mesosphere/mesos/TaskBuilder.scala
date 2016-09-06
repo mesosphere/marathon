@@ -195,7 +195,9 @@ class TaskBuilder(
             // overwrite them the port numbers assigned to this particular task.
             runSpec.portDefinitions.zip(hostPorts).collect {
               case (portDefinition, Some(hostPort)) =>
-                PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
+                // Add network-scope to labels
+                val updatedPortDefinition = portDefinition.copy(labels = portDefinition.labels + ("network-scope" -> "host"))
+                PortDefinitionSerializer.toMesosProto(updatedPortDefinition).map(_.toBuilder.setNumber(hostPort).build)
             }.flatten
         }
     }
