@@ -1,9 +1,9 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.ActorRef
+import akka.actor.Props
 import akka.testkit.TestActorRef
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
+import mesosphere.marathon.core.readiness.{ ReadinessCheckResult, ReadinessCheck, ReadinessCheckExecutor }
 import mesosphere.marathon.core.task.{ Task, TaskKillServiceMock }
 import mesosphere.marathon.core.task.tracker.TaskTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
@@ -21,6 +21,7 @@ import org.scalatest.{ BeforeAndAfterAll, FunSuiteLike, Matchers }
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Promise }
+import scala.collection.immutable.Seq
 
 class TaskReplaceActorTest
     extends MarathonActorSupport
@@ -410,9 +411,54 @@ class TaskReplaceActorTest
     promise.isCompleted should be(true)
   }
 
+  test("Tasks to replace need to wait for health and readiness checks") {
+    val f = new Fixture
+    val app = AppDefinition(
+      id = "/myApp".toPath,
+      instances = 1,
+      healthChecks = Set(HealthCheck()),
+      readinessChecks = Seq(ReadinessCheck()),
+      upgradeStrategy = UpgradeStrategy(1.0, 1.0)
+    )
+
+    val task = MarathonTestHelper.runningTask(Task.Id.forRunSpec(app.id).idString)
+
+    when(f.tracker.appTasksLaunchedSync(app.id)).thenReturn(Iterable(task))
+
+    val promise = Promise[Unit]()
+
+    val ref = f.replaceActor(app, promise)
+    watch(ref)
+
+    // only one task is queued directly
+    val queueOrder = org.mockito.Mockito.inOrder(f.queue)
+    eventually { queueOrder.verify(f.queue).add(_: AppDefinition, 1) }
+    assert(f.killService.numKilled == 0)
+
+    val newTaskId = Task.Id.forRunSpec(app.id)
+
+    //unhealthy
+    ref ! HealthStatusChanged(app.id, newTaskId, app.version, alive = false)
+    eventually { f.killService.numKilled should be(0) }
+
+    //unready
+    ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = false, None)
+    eventually { f.killService.numKilled should be(0) }
+
+    //healthy
+    ref ! HealthStatusChanged(app.id, newTaskId, app.version, alive = true)
+    eventually { f.killService.numKilled should be(0) }
+
+    //ready
+    ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = true, None)
+    eventually { f.killService.numKilled should be(1) }
+
+    Await.result(promise.future, 5.seconds)
+  }
+
   class Fixture {
-    val deploymentsManager = mock[ActorRef]
-    val deploymentStatus = mock[DeploymentStatus]
+    val deploymentsManager = TestActorRef(Props.empty)
+    val deploymentStatus = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
     private[this] val driver = mock[SchedulerDriver]
     val killService = new TaskKillServiceMock(system)
     val queue = mock[LaunchQueue]

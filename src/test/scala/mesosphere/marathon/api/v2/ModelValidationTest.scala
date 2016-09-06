@@ -94,7 +94,7 @@ class ModelValidationTest
 
     val group = Group("/test".toPath, apps = Map(validApp.id -> validApp))
 
-    val result = validate(group)(Group.validRootGroup(maxApps = None, Set()))
+    val result = validate(group)(Group.validRootGroup(maxApps = None))
     result.isSuccess should be(true)
   }
 
