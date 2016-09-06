@@ -53,6 +53,7 @@ object RamlTypeGenerator {
   val PlayValidationError = RootClass.newClass("play.api.data.validation.ValidationError")
   val PlayJsError = RootClass.newClass("play.api.libs.json.JsError")
   val PlayJsSuccess = RootClass.newClass("play.api.libs.json.JsSuccess")
+  val PlayReads = RootClass.newClass("play.api.libs.json.Reads")
 
   def camelify(name: String): String = name.toLowerCase.capitalize
 
@@ -176,7 +177,7 @@ object RamlTypeGenerator {
 
     lazy val comment: String = if (comments.nonEmpty) {
       val lines = comments.flatMap(_.lines)
-      s"@$name ${lines.head} ${if (lines.tail.nonEmpty) "\n  " else ""}${lines.tail.mkString("\n  ")}"
+      s"@param $name ${lines.head} ${if (lines.tail.nonEmpty) "\n  " else ""}${lines.tail.mkString("\n  ")}"
     } else {
       ""
     }
@@ -197,11 +198,13 @@ object RamlTypeGenerator {
 
     val playReader = {
       // required fields never have defaults
-      if (required || repeated) {
+      if (required) {
         TUPLE(REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`
+      } else if (repeated) {
+        TUPLE(REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type` DOT "orElse" APPLY(REF(PlayReads) DOT "pure" APPLY(`type` APPLY()))
       } else {
         if (defaultValue.isDefined) {
-          TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF("Reads") DOT "pure" APPLY defaultValue.get)
+          TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF(PlayReads) DOT "pure" APPLY defaultValue.get)
         } else {
           TUPLE((REF("__") DOT "\\" APPLY LIT(name)) DOT "readNullable" APPLYTYPE `type`)
         }
@@ -209,11 +212,13 @@ object RamlTypeGenerator {
     }
 
     val playValidator = {
-      if (required || repeated) {
+      if (required) {
         REF("json") DOT "\\" APPLY LIT(name) DOT "validate" APPLYTYPE `type`
+      } else if (repeated) {
+        REF("json") DOT "\\" APPLY LIT(name) DOT "validate" APPLYTYPE `type` DOT "orElse" APPLY (REF(PlayJsSuccess) APPLY(`type` APPLY()))
       } else {
         if (defaultValue.isDefined) {
-          (REF("json") DOT "\\" APPLY LIT(name)) DOT "validate" APPLYTYPE `type` DOT "orElse" APPLY (REF("Reads") DOT "pure" APPLY defaultValue.get)
+          (REF("json") DOT "\\" APPLY LIT(name)) DOT "validate" APPLYTYPE `type` DOT "orElse" APPLY (REF(PlayJsSuccess) APPLY defaultValue.get)
         } else {
           (REF("json") DOT "\\" APPLY LIT(name)) DOT "validateOpt" APPLYTYPE `type`
         }
@@ -243,26 +248,26 @@ object RamlTypeGenerator {
         ).tree
       }
 
-      val playFormat = if (actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty)) {
+      val playFormat = if (actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty) && !actualFields.exists(_.repeated)) {
         Seq(
           IMPORT("play.api.libs.json._"),
           IMPORT("play.api.libs.functional.syntax._"),
           VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
-            actualFields.map(_.playReader).reduce(_ DOT "and" APPLY (_))
+            actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _)
           ) APPLY (REF(name) DOT "apply _"),
           VAL("playJsonWriter") withFlags Flags.IMPLICIT := REF(PlayJson) DOT "writes" APPLYTYPE (name)
         )
-      } else if (actualFields.size > 22 || actualFields.map(_.toString).exists(t => t.toString().startsWith(name) || t.toString.contains(s"[$name]"))) {
+      } else if (actualFields.size > 22 || actualFields.exists(_.repeated) ||
+        actualFields.map(_.toString).exists(t => t.toString().startsWith(name) || t.toString.contains(s"[$name]"))) {
         Seq(
           OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
               actualFields.map { field =>
                 VAL(field.name) := field.playValidator
               } ++ Seq(
-                // TODO: This should actually be a collect, then the type cast is unnecessary
-                VAL("errors") := SEQ(actualFields.map(f => REF(f.name))) DOT "collect" APPLY BLOCK(CASE(REF(s"e:$PlayJsError")) ==> REF("e")),
-                IF(REF("errors") DOT "nonEmpty") THEN (
-                  REF("errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("errors") DOT "head")
+                VAL("_errors") := SEQ(actualFields.map(f => REF(f.name))) DOT "collect" APPLY BLOCK(CASE(REF(s"e:$PlayJsError")) ==> REF("e")),
+                IF(REF("_errors") DOT "nonEmpty") THEN (
+                  REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
                   ) ELSE (
                   REF(PlayJsSuccess) APPLY (REF(name) APPLY
                     actualFields.map { field =>
@@ -308,7 +313,7 @@ object RamlTypeGenerator {
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               REF("o") MATCH
                 childDiscriminators.map { case (k, v) =>
-                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f"))
+                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(v.name) DOT "playJsonWriter"))
                 }
             )
           )
@@ -357,7 +362,7 @@ object RamlTypeGenerator {
             OBJECTDEF(s.name) := BLOCK(
               OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
                 DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
-                  REF("json") DOT "validate" APPLYTYPE (StringClass) DOT "map" APPLY (REF(s.name) DOT "apply")
+                  REF("json") DOT "validate" APPLYTYPE StringClass DOT "map" APPLY (REF(s.name) DOT "apply")
                 ),
                 DEF("writes", PlayJsValue) withParams PARAM("o", s.name) := BLOCK(
                   REF(PlayJsString) APPLY (REF("o") DOT "value")

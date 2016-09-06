@@ -145,9 +145,9 @@ object PodDefinition {
 
   implicit val playJsonFormat: Format[PodDefinition] = new Format[PodDefinition] {
     override def reads(json: JsValue): JsResult[PodDefinition] =
-      Pod.playJsonFormat.reads(json).map(PodDefinition(_))
+      Pod.PlayJsonFormat.reads(json).map(PodDefinition(_))
 
-    override def writes(o: PodDefinition): JsValue = Pod.playJsonFormat.writes(o.asPodDef)
+    override def writes(o: PodDefinition): JsValue = Pod.PlayJsonFormat.writes(o.asPodDef)
   }
 
   val DefaultId = PathId.empty
