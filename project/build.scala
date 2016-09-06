@@ -303,7 +303,6 @@ object Dependencies {
     java8Compat % "compile",
     scalaLogging % "compile",
     logstash % "compile",
-    sprayJson % "compile",
 
     // test
     Test.diffson % "test",
@@ -335,7 +334,7 @@ object Dependency {
     val JGraphT = "0.9.3"
     val Hadoop = "2.7.2"
     val Diffson = "2.0.2"
-    val PlayJson = "2.5.4"
+    val PlayJson = "2.5.6"
     val JsonSchemaValidator = "2.2.6"
     val RxScala = "0.26.2"
     val MarathonUI = "1.1.3"
@@ -366,7 +365,6 @@ object Dependency {
   val asyncAwait = "org.scala-lang.modules" %% "scala-async" % V.AsyncAwait
   val sprayClient = "io.spray" %% "spray-client" % V.Spray
   val sprayHttpx = "io.spray" %% "spray-httpx" % V.Spray
-  val sprayJson = "io.spray" %%  "spray-json" % "1.3.2"
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val chaos = "mesosphere" %% "chaos" % V.Chaos exclude("org.glassfish.web", "javax.el")
   val guava = "com.google.guava" % "guava" % V.Guava

@@ -26,6 +26,8 @@ import play.api.libs.json._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
+// TODO: We should replace this entire thing with the auto-generated formats from the RAML.
+
 // scalastyle:off file.size.limit
 object Formats extends Formats {
 
@@ -573,6 +575,7 @@ trait EventFormats {
     Json.writes[SchedulerRegisteredEvent]
   implicit lazy val SchedulerReregisteredEventWritesWrites: Writes[SchedulerReregisteredEvent] =
     Json.writes[SchedulerReregisteredEvent]
+  implicit lazy val PodStatusUpdateEventWrites: Writes[PodStatusUpdateEvent] = Json.writes[PodStatusUpdateEvent]
 
   //scalastyle:off cyclomatic.complexity
   def eventToJson(event: MarathonEvent): JsValue = event match {
@@ -599,6 +602,7 @@ trait EventFormats {
     case event: SchedulerDisconnectedEvent => Json.toJson(event)
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
+    case event: PodStatusUpdateEvent => Json.toJson(event)
   }
   //scalastyle:on
 }

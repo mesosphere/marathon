@@ -1,0 +1,36 @@
+#%RAML 1.0 Library
+uses:
+  apps: app.raml
+  pods: pod.raml
+types:
+  QueueDelay:
+    properties:
+      timeLeftSeconds?:
+        type: number
+        format: int32
+      overdue?:
+        type: boolean
+  QueueObject:
+    properties:
+      count?:
+        type: number
+        format: int32
+      delay?:
+        type: QueueDelay
+  QueueApp:
+    type: QueueObject
+    properties:
+      app:
+        type: apps.App
+  QueuePod:
+    type: QueueObject
+    properties:
+      pod:
+        type: pods.Pod
+  QueueItem: QueueApp | QueuePod
+  Queue:
+    properties:
+      queue?:
+        type: array
+        items:
+          type: QueueItem

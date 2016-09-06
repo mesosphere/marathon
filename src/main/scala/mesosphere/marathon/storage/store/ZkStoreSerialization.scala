@@ -14,10 +14,11 @@ import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.zk.{ ZkId, ZkSerialized }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.impl.TaskSerializer
-import mesosphere.marathon.raml.PodDef
+import mesosphere.marathon.raml.Pod
 import mesosphere.marathon.state.{ AppDefinition, PathId, TaskFailure }
 import mesosphere.marathon.storage.repository.{ StoredGroup, StoredGroupRepositoryImpl, StoredPlan }
 import mesosphere.util.state.FrameworkId
+import play.api.libs.json.Json
 
 trait ZkStoreSerialization {
   /** General id resolver for a key of Path.Id */
@@ -50,15 +51,13 @@ trait ZkStoreSerialization {
 
   implicit val podDefMarshaller: Marshaller[PodDefinition, ZkSerialized] =
     Marshaller.opaque { podDef =>
-      import spray.json._
-      ZkSerialized(ByteString(podDef.asPodDef.toJson.compactPrint, "UTF-8"))
+      ZkSerialized(ByteString(Json.stringify(Json.toJson(podDef)), "UTF-8"))
     }
 
   implicit val podDefUnmarshaller: Unmarshaller[ZkSerialized, PodDefinition] =
     Unmarshaller.strict {
       case ZkSerialized(byteString) =>
-        import spray.json._
-        PodDefinition(byteString.utf8String.parseJson.convertTo[PodDef])
+        PodDefinition(Json.parse(byteString.utf8String).as[Pod])
     }
 
   implicit val taskResolver: IdResolver[Instance.Id, Task, String, ZkId] =

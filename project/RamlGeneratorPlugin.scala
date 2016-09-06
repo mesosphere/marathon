@@ -13,7 +13,12 @@ object RamlGeneratorPlugin extends AutoPlugin {
   }
   import autoImport._
   override lazy val projectSettings = inConfig(Compile)(Seq(
-    ramlFiles := Seq(baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "pods.raml"),
+    ramlFiles := Seq(
+      baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "pods.raml",
+      baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "queue.raml",
+      baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "apps.raml",
+      baseDirectory.value / "docs" / "docs" / "rest-api" / "public" / "api" / "v2" / "groups.raml"
+    ),
     ramlPackage := "mesosphere.marathon.raml",
     ramlGenerate := {
       generate(ramlFiles.value, ramlPackage.value, sourceManaged.value, streams.value.log)
@@ -31,9 +36,10 @@ object RamlGeneratorPlugin extends AutoPlugin {
       }
       model
     }
-    val types = RamlTypeGenerator.generateTypes(pkg, models.flatMap(m => m.getApiV10.types().toVector)(collection.breakOut))
+
+    val types = RamlTypeGenerator(models.toVector, pkg)
     types.map { case (typeName, content) =>
-      val file = outputDir / pkg / s"$typeName.scala"
+      val file = outputDir / pkg.replaceAll("\\.", "/") / s"$typeName.scala"
       IO.write(file, treehugger.forest.treeToString(content))
       file
     }(collection.breakOut)

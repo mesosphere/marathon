@@ -1,11 +1,11 @@
 #%RAML 1.0
 title: v2 pod API
 mediaType: application/json
-annotationTypes:  !include ../annotations.raml
 types:
-  PathId: !include types/pathId.raml
-  Pod: !include types/pod.raml
-  PodStatus: !include types/pod-status.raml
+uses:
+  strings: types/stringTypes.raml
+  pod: types/pod.raml
+  podStatus: types/podStatus.raml
 traits: !include ../traits.raml
 
 /:
@@ -27,13 +27,13 @@ traits: !include ../traits.raml
       (or some such) header.
     body:
       application/json:
-        type: Pod
+        type: pod.Pod
     responses:
       201:
         description: Pod created successfully.
         body:
           application/json:
-            type: Pod
+            type: pod.Pod
 
   get:
     is: [ secured ]
@@ -46,7 +46,7 @@ traits: !include ../traits.raml
           Useful to perform backups of all pods registered with Marathon.
         body:
           application/json:
-            type: Pod[]
+            type: pod.Pod[]
 
   put:
     is: [ secured, jsonValidator, objectValidator, objectCreator ]
@@ -64,7 +64,7 @@ traits: !include ../traits.raml
 /{id}:
   uriParameters:
     id:
-      type: PathId
+      type: strings.PathId
       description: The path of the pod
 
   delete:
@@ -83,7 +83,7 @@ traits: !include ../traits.raml
       (or some such) header.
     body:
       application/json:
-        type: Pod
+        type: pod.Pod
 
   get:
     is: [ secured, objectLocator ]
@@ -93,7 +93,7 @@ traits: !include ../traits.raml
       200:
         body:
           application/json:
-            type: Pod
+            type: pod.Pod
 
 '/{id}::status':
   description: |
@@ -102,7 +102,7 @@ traits: !include ../traits.raml
 
   uriParameters:
     id:
-      type: PathId
+      type: strings.PathId
       description: The path of the pod
 
   get:
@@ -113,4 +113,4 @@ traits: !include ../traits.raml
       200:
         body:
           application/json:
-            type: PodStatus
+            type: podStatus.PodStatus

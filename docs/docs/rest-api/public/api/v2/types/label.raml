@@ -1,13 +1,8 @@
-#%RAML 1.0 DataType
-type: object
-(scalaType): Label
-properties:
-  name:
-    type: string
-    minLength: 1
-    maxLength: 255
-    usage: |
-      Users should avoid inventing labels prefixed with MARATHON_ MESOS_
-      or DCOS_ since those may be defined by Marathon, Mesos, or DC/OS.
-  value?:
-    type: string
+#%RAML 1.0 Library
+types:
+  KVLabels:
+    type: object
+    properties:
+      /.*/:
+        type: string
+        required: false
