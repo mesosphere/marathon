@@ -1216,54 +1216,6 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     shouldBuildTask("Should take offer with spark:enabled", offerHostB)
   }
 
-  test("PortsEnv") {
-    val env = TaskBuilder.portsEnv(Seq(0, 0), Helpers.hostPorts(1001, 1002), Seq(None, None))
-    assert("1001" == env("PORT"))
-    assert("1001" == env("PORT0"))
-    assert("1002" == env("PORT1"))
-    assert(!env.contains("PORT_0"))
-  }
-
-  test("PortsEnvEmpty") {
-    val env = TaskBuilder.portsEnv(Seq(), Seq(), Seq())
-    assert(Map.empty == env)
-  }
-
-  test("PortsNamedEnv") {
-    val env = TaskBuilder.portsEnv(Seq(0, 0), Helpers.hostPorts(1001, 1002), Seq(Some("http"), Some("https")))
-    assert("1001" == env("PORT"))
-    assert("1001" == env("PORT0"))
-    assert("1002" == env("PORT1"))
-
-    assert("1001" == env("PORT_HTTP"))
-    assert("1002" == env("PORT_HTTPS"))
-  }
-
-  test("DeclaredPortsEnv") {
-    val env = TaskBuilder.portsEnv(Seq(80, 8080), Helpers.hostPorts(1001, 1002), Seq(None, None))
-    assert("1001" == env("PORT"))
-    assert("1001" == env("PORT0"))
-    assert("1002" == env("PORT1"))
-
-    assert("1001" == env("PORT_80"))
-    assert("1002" == env("PORT_8080"))
-  }
-
-  test("DeclaredPortsEnvNamed") {
-    val env = TaskBuilder.portsEnv(Seq(80, 8080, 443), Helpers.hostPorts(1001, 1002, 1003), Seq(Some("http"), None, Some("https")))
-    assert("1001" == env("PORT"))
-    assert("1001" == env("PORT0"))
-    assert("1002" == env("PORT1"))
-    assert("1003" == env("PORT2"))
-
-    assert("1001" == env("PORT_80"))
-    assert("1002" == env("PORT_8080"))
-    assert("1003" == env("PORT_443"))
-
-    assert("1001" == env("PORT_HTTP"))
-    assert("1003" == env("PORT_HTTPS"))
-  }
-
   test("TaskContextEnv empty when no taskId given") {
     val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
     val runSpec = AppDefinition(
@@ -1334,8 +1286,8 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   test("TaskContextEnv will provide label env safety") {
 
     // will exceed max length for sure
-    val longLabel = "longlabel" * TaskBuilder.maxVariableLength
-    var longValue = "longvalue" * TaskBuilder.maxEnvironmentVarLength
+    val longLabel = "longlabel" * EnvironmentHelper.maxVariableLength
+    var longValue = "longvalue" * EnvironmentHelper.maxEnvironmentVarLength
 
     val runSpec = AppDefinition(
       labels = Map(

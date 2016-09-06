@@ -49,11 +49,7 @@ class PortsMatcher(
           endpoint <- container.endpoints
         } yield endpoint.hostPort
 
-        if (podDefinition.requirePorts) {
-          mappedPortRanges(requiredPorts)
-        } else {
-          randomPorts(requiredPorts.size)
-        }
+        mappedPortRanges(requiredPorts)
       case _ =>
         val portMappings: Option[Seq[Container.Docker.PortMapping]] =
           for {
