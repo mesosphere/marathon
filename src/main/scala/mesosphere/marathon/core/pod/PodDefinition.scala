@@ -47,14 +47,14 @@ case class PodDefinition(
     case to: PodDefinition =>
       id == to.id && {
         user != to.user ||
-        env != to.env ||
-        labels != to.labels ||
-        acceptedResourceRoles != to.acceptedResourceRoles ||
-        secrets != to.secrets ||
-        containers != to.containers ||
-        constraints != to.constraints ||
-        podVolumes != to.podVolumes ||
-        networks != to.networks
+          env != to.env ||
+          labels != to.labels ||
+          acceptedResourceRoles != to.acceptedResourceRoles ||
+          secrets != to.secrets ||
+          containers != to.containers ||
+          constraints != to.constraints ||
+          podVolumes != to.podVolumes ||
+          networks != to.networks
         // TODO(PODS): upgrade and backoffStrategy?
       }
     case _ =>

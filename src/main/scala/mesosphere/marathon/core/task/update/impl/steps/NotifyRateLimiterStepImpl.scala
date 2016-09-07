@@ -9,9 +9,9 @@ import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceChange
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.update.TaskUpdateStep
-import mesosphere.marathon.core.task.TaskStateOp
-import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
+import mesosphere.marathon.core.task.{ Task, InstanceStateOp }
+import mesosphere.marathon.state.PathId
 
 import scala.concurrent.Future
 
@@ -30,12 +30,10 @@ class NotifyRateLimiterStepImpl @Inject() (
   override def processUpdate(taskChanged: TaskChanged): Future[Done] = {
     // if MesosUpdate and status terminal != killed
     taskChanged.stateOp match {
-      case TaskStateOp.MesosUpdate(task, status: InstanceStatus, mesosStatus, _) if limitWorthy(status) =>
-        task.launched.map { launched =>
-          notifyRateLimiter(task.runSpecId, launched.runSpecVersion.toOffsetDateTime)
-        }.getOrElse(Future.successful(Done))
-
-      case _ => Future.successful(Done)
+      case InstanceStateOp.MesosUpdate(task, status: InstanceStatus.Terminal, mesosStatus, _) //
+      if status != InstanceStatus.Killed =>
+        notifyRateLimiter(mesosStatus, task)
+      case _ => Future.successful(())
     }
   }
 

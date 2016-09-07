@@ -393,7 +393,7 @@ object MarathonSchedulerActor {
   }
 
   case class KillTasks(appId: PathId, tasks: Iterable[Instance]) extends Command {
-    def answer: Event = TasksKilled(appId, tasks.map(_.id))
+    def answer: Event = TasksKilled(appId, tasks.map(_.instanceId))
   }
 
   case object RetrieveRunningDeployments
@@ -453,7 +453,7 @@ class SchedulerActions(
       tasks.foreach {
         case task: Task =>
           if (task.launchedMesosId.isDefined) {
-            log.info("Killing {}", task.id)
+            log.info("Killing {}", task.instanceId)
             killService.killTask(task, TaskKillReason.DeletingApp)
           }
         // TODO(PODS): something's missing here for instances of a pod
@@ -486,18 +486,19 @@ class SchedulerActions(
   def reconcileTasks(driver: SchedulerDriver): Future[Status] = {
     // TODO(jdef) pods
     appRepository.ids().runWith(Sink.set).flatMap { appIds =>
-      taskTracker.instancesBySpec().map { tasksByApp =>
-        val knownTaskStatuses = appIds.map { appId =>
-          tasksByApp.specInstances(appId).flatMap(Task(_)).flatMap(_.mesosStatus)
-        }.flatten
+      taskTracker.instancesBySpec().map { instances =>
+        // TODO PODs was this change here correct or should we match to instance#state?
+        val knownTaskStatuses = appIds.flatMap { appId =>
+          instances.specInstances(appId).flatMap(_.tasks.flatMap(_.mesosStatus))
+        }
 
-        (tasksByApp.allSpecIdsWithInstances -- appIds).foreach { unknownAppId =>
+        (instances.allSpecIdsWithInstances -- appIds).foreach { unknownAppId =>
           log.warn(
             s"App $unknownAppId exists in TaskTracker, but not App store. " +
               "The app was likely terminated. Will now expunge."
           )
-          tasksByApp.specInstances(unknownAppId).foreach { orphanTask =>
-            log.info(s"Killing ${orphanTask.id}")
+          instances.specInstances(unknownAppId).foreach { orphanTask =>
+            log.info(s"Killing ${orphanTask.instanceId}")
             killService.killTask(orphanTask, TaskKillReason.Orphaned)
           }
         }
@@ -570,7 +571,7 @@ class SchedulerActions(
         .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)
 
-      log.info("Killing tasks {}", toKill.map(_.id))
+      log.info("Killing tasks {}", toKill.map(_.instanceId))
       killService.killTasks(toKill, TaskKillReason.ScalingApp)
     } else {
       log.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")

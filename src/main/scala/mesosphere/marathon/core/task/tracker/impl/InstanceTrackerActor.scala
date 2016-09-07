@@ -5,11 +5,11 @@ import akka.actor._
 import akka.event.LoggingReceive
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.appinfo.TaskCounts
-import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.{ Task, TaskStateChange }
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
+import mesosphere.marathon.core.task.{ InstanceStateOp, TaskStateChange }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardInstanceOp
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -30,8 +30,7 @@ object InstanceTrackerActor {
   private[impl] case class Get(taskId: Instance.Id)
 
   /** Forward an update operation to the child [[InstanceUpdateActor]]. */
-  private[impl] case class ForwardInstanceOp(
-    deadline: Timestamp, instanceId: Instance.Id, instanceStateOp: InstanceStateOp)
+  private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Instance.Id, taskStateOp: InstanceStateOp)
 
   /** Describes where and what to send after an update event has been processed by the [[InstanceTrackerActor]]. */
   private[impl] case class Ack(initiator: ActorRef, stateChange: TaskStateChange) {
@@ -99,7 +98,9 @@ private class InstanceTrackerActor(
       log.info("Task loading complete.")
 
       unstashAll()
-      context.become(withTasks(appTasks, TaskCounts(appTasks.allInstances, healthStatuses = Map.empty)))
+      context.become(withTasks(
+        appTasks,
+        TaskCounts(appTasks.allInstances.flatMap(_.tasks), healthStatuses = Map.empty)))
 
     case Status.Failure(cause) =>
       // escalate this failure
@@ -111,17 +112,17 @@ private class InstanceTrackerActor(
 
   private[this] def withTasks(appTasks: InstanceTracker.InstancesBySpec, counts: TaskCounts): Receive = {
 
-    def becomeWithUpdatedApp(appId: PathId)(taskId: Instance.Id, newTask: Option[Task]): Unit = {
-      val updatedAppTasks = newTask match {
-        case None => appTasks.updateApp(appId)(_.withoutInstance(taskId))
-        case Some(task) => appTasks.updateApp(appId)(_.withInstance(task))
+    def becomeWithUpdatedApp(appId: PathId)(instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
+      val updatedAppTasks = newInstance match {
+        case None => appTasks.updateApp(appId)(_.withoutInstance(instanceId))
+        case Some(instance) => appTasks.updateApp(appId)(_.withInstance(instance))
       }
 
       val updatedCounts = {
-        val oldTask = appTasks.instanceFor(taskId)
+        val oldTask = appTasks.instance(instanceId)
         // we do ignore health counts
-        val oldTaskCount = TaskCounts(oldTask, healthStatuses = Map.empty)
-        val newTaskCount = TaskCounts(newTask, healthStatuses = Map.empty)
+        val oldTaskCount = TaskCounts(oldTask.map(_.tasks).getOrElse(Seq()), healthStatuses = Map.empty)
+        val newTaskCount = TaskCounts(newInstance.map(_.tasks).getOrElse(Seq()), healthStatuses = Map.empty)
         counts + newTaskCount - oldTaskCount
       }
 
@@ -137,19 +138,19 @@ private class InstanceTrackerActor(
         sender() ! appTasks
 
       case InstanceTrackerActor.Get(taskId) =>
-        sender() ! appTasks.instanceFor(taskId)
+        sender() ! appTasks.instance(taskId)
 
-      case ForwardInstanceOp(deadline, taskId, taskStateOp) =>
+      case ForwardTaskOp(deadline, taskId, taskStateOp) =>
         val op = InstanceOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
         updaterRef.forward(InstanceUpdateActor.ProcessInstanceOp(op))
 
       case msg @ InstanceTrackerActor.StateChanged(change, ack) =>
         change.stateChange match {
           case TaskStateChange.Update(task, _) =>
-            becomeWithUpdatedApp(task.runSpecId)(task.id, newTask = Some(task))
+            becomeWithUpdatedApp(task.runSpecId)(Instance.Id(task.taskId), newInstance = Some(Instance(task)))
 
           case TaskStateChange.Expunge(task) =>
-            becomeWithUpdatedApp(task.runSpecId)(task.id, newTask = None)
+            becomeWithUpdatedApp(task.runSpecId)(Instance.Id(task.taskId), newInstance = None)
 
           case _: TaskStateChange.NoChange |
             _: TaskStateChange.Failure =>

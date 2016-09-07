@@ -3,9 +3,8 @@ package mesosphere.marathon.core.task.tracker.impl
 import akka.actor.{ Actor, ActorRef, Props, Terminated }
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
-import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, TaskStateChange }
+import mesosphere.marathon.{ InstanceConversions, MarathonTestHelper }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateChange }
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.Metrics
@@ -19,7 +18,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   * Most of the functionality is tested at a higher level in [[mesosphere.marathon.tasks.InstanceTrackerImplTest]].
   */
 class InstanceTrackerActorTest
-    extends MarathonActorSupport with FunSuiteLike with GivenWhenThen with Mockito with Matchers {
+    extends MarathonActorSupport with FunSuiteLike with GivenWhenThen with Mockito with Matchers with InstanceConversions {
 
   test("failures while loading the initial data are escalated") {
     val f = new Fixture
@@ -141,7 +140,7 @@ class InstanceTrackerActorTest
 
     When("staged task transitions to running")
     val probe = TestProbe()
-    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.id.idString)
+    val stagedTaskNowRunning = MarathonTestHelper.runningTask(stagedTask.taskId.idString)
     val mesosStatus = stagedTaskNowRunning.mesosStatus.get
     val update = TaskStatusUpdateTestHelper.taskUpdateFor(
       stagedTask,
@@ -172,7 +171,7 @@ class InstanceTrackerActorTest
 
     When("a new staged task gets added")
     val probe = TestProbe()
-    val newStagedTask = MarathonTestHelper.stagedTask(Instance.Id.forRunSpec(appId).toString)
+    val newStagedTask = MarathonTestHelper.stagedTask(Task.Id.forRunSpec(appId).toString)
     val update = TaskStatusUpdateTestHelper.taskLaunchFor(newStagedTask).wrapped
 
     val ack = InstanceTrackerActor.Ack(probe.ref, update.stateChange)

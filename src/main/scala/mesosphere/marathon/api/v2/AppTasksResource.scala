@@ -44,13 +44,12 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val taskMap = taskTracker.instancesBySpecSync
 
-    def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = for {
+    def runningTasks(appIds: Set[PathId]): Set[EnrichedTask] = (for {
       runningApps <- appIds.filter(taskMap.hasSpecInstances)
       id <- appIds
       health = result(healthCheckManager.statuses(id))
       instance <- taskMap.specInstances(id)
-      task <- Task(instance)
-    } yield EnrichedTask(id, task, health.getOrElse(task.id, Nil))
+    } yield instance.tasks.map(task => EnrichedTask(id, task, health.getOrElse(task.taskId, Nil)))).flatten
 
     id match {
       case GroupTasks(gid) =>
@@ -120,7 +119,7 @@ class AppTasksResource @Inject() (
     @QueryParam("wipe")@DefaultValue("false") wipe: Boolean = false,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val pathId = appId.toRootPath
-    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = appTasks.find(_.id == Instance.Id(id))
+    def findToKill(appTasks: Iterable[Instance]): Iterable[Instance] = appTasks.find(_.instanceId == Instance.Id(id))
 
     if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 

@@ -1,44 +1,32 @@
 package mesosphere.marathon.core.instance
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache._
 
-trait Instance {
-  def id: Instance.Id
-  def agentInfo: Instance.AgentInfo
-  def state: InstanceState
+case class Instance(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, state: InstanceState, tasks: Seq[Task]) {
 
   def isLaunched: Boolean
   def runSpecVersion: Timestamp
+  def runSpecId: PathId = instanceId.runSpecId
 
-  def isReserved: Boolean
-  def isCreated: Boolean
-  def isError: Boolean
-  def isFailed: Boolean
-  def isFinished: Boolean
-  def isKilled: Boolean
-  def isKilling: Boolean
-  def isRunning: Boolean
-  def isStaging: Boolean
-  def isStarting: Boolean
-  def isUnreachable: Boolean
-  def isGone: Boolean
-  def isUnknown: Boolean
-  def isDropped: Boolean
+  def isLaunched: Boolean = tasks.forall(task => task.launched.isDefined)
 }
 
 object Instance {
 
   def instancesById(tasks: Iterable[Instance]): Map[Instance.Id, Instance] =
-    tasks.iterator.map(task => task.id -> task).toMap
+    tasks.iterator.map(task => task.instanceId -> task).toMap
+
+  // TODO ju FIXME
+  def apply(task: Task): Instance = new Instance(Id(task.taskId), task.agentInfo,
+    InstanceState(task.status.taskStatus, task.status.startedAt.getOrElse(task.status.stagedAt)), Seq(task))
 
   case class InstanceState(status: InstanceStatus, since: Timestamp, version: Timestamp)
 
   case class Id(idString: String) extends Ordered[Id] {
     lazy val runSpecId: PathId = Id.runSpecId(idString)
-    lazy val mesosTaskId: mesos.Protos.TaskID = mesos.Protos.TaskID.newBuilder().setValue(idString).build()
 
     override def toString: String = s"instance [$idString]"
 
@@ -49,22 +37,16 @@ object Instance {
   }
 
   object Id {
-    private val runSpecDelimiter = "."
-    private val TaskIdRegex = """^(.+)[\._]([^_\.]+)$""".r
-    private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
+    private val InstanceIdRegex = """^(.+)[\._]([^_\.]+)$""".r
 
-    def runSpecId(taskId: String): PathId = {
+    def apply(executorId: mesos.Protos.ExecutorID): Id = new Id(executorId.getValue)
+
+    def apply(taskId: Task.Id): Id = new Id(taskId.idString) // TODO ju FIXME
+
+    def runSpecId(taskId: String): PathId = { // TODO ju really ???
       taskId match {
-        case TaskIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
-        case _ => throw new MatchError(s"taskId $taskId is no valid identifier")
+        case InstanceIdRegex(runSpecId, uuid) => PathId.fromSafePath(runSpecId)
       }
-    }
-
-    def apply(mesosTaskId: mesos.Protos.TaskID): Id = new Id(mesosTaskId.getValue)
-
-    def forRunSpec(id: PathId): Instance.Id = {
-      val taskId = id.safePath + runSpecDelimiter + uuidGenerator.generate()
-      Instance.Id(taskId)
     }
   }
 
@@ -75,5 +57,22 @@ object Instance {
     host: String,
     agentId: Option[String],
     attributes: Iterable[mesos.Protos.Attribute])
+
+  implicit class InstanceStatusComparison(val instance: Instance) extends AnyVal {
+    def isReserved: Boolean = instance.state.status == InstanceStatus.Reserved
+    def isCreated: Boolean = instance.state.status == InstanceStatus.Created
+    def isError: Boolean = instance.state.status == InstanceStatus.Error
+    def isFailed: Boolean = instance.state.status == InstanceStatus.Failed
+    def isFinished: Boolean = instance.state.status == InstanceStatus.Finished
+    def isKilled: Boolean = instance.state.status == InstanceStatus.Killed
+    def isKilling: Boolean = instance.state.status == InstanceStatus.Killing
+    def isRunning: Boolean = instance.state.status == InstanceStatus.Running
+    def isStaging: Boolean = instance.state.status == InstanceStatus.Staging
+    def isStarting: Boolean = instance.state.status == InstanceStatus.Starting
+    def isUnreachable: Boolean = instance.state.status == InstanceStatus.Unreachable
+    def isGone: Boolean = instance.state.status == InstanceStatus.Gone
+    def isUnknown: Boolean = instance.state.status == InstanceStatus.Unknown
+    def isDropped: Boolean = instance.state.status == InstanceStatus.Dropped
+  }
 
 }

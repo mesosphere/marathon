@@ -2,6 +2,7 @@ package mesosphere.marathon.upgrade
 
 import akka.actor.{ Actor, ActorLogging, ActorRef }
 import akka.testkit.{ TestActorRef, TestProbe }
+import mesosphere.marathon.InstanceConversions
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
@@ -18,7 +19,7 @@ import rx.lang.scala.Observable
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 
-class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen with Matchers with MarathonActorSupport with Eventually {
+class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen with Matchers with MarathonActorSupport with Eventually with InstanceConversions {
 
   test("An app without health checks but readiness checks becomes healthy") {
     Given ("An app with one instance")
@@ -141,7 +142,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     eventually(actor.underlyingActor.healthyTasks should have size 1)
 
     When("The task is killed")
-    actor.underlyingActor.instanceTerminated(f.taskId)
+    actor.underlyingActor.taskTerminated(f.taskId)
 
     Then("Task should be removed from healthy, ready and subscriptions.")
     actor.underlyingActor.healthyTasks should be (empty)
@@ -162,7 +163,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val agentInfo = mock[Instance.AgentInfo]
 
     val appId = PathId("/test")
-    val taskId = Instance.Id("app.task")
+    val taskId = Task.Id("app.task")
     val version = Timestamp.now()
     val checkIsReady = Seq(ReadinessCheckResult("test", taskId, ready = true, None))
     val checkIsNotReady = Seq(ReadinessCheckResult("test", taskId, ready = false, None))
@@ -171,7 +172,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     val taskIsHealthy = HealthStatusChanged(appId, taskId, version, alive = true)
 
     agentInfo.host returns "some.host"
-    task.id returns taskId
+    task.taskId returns taskId
     task.launched returns Some(launched)
     task.runSpecId returns appId
     task.effectiveIpAddress(any) returns Some("some.host")
@@ -198,7 +199,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }
-        override def taskStatusChanged(taskId: Instance.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
+        override def taskStatusChanged(taskId: Task.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
       }
       )
     }

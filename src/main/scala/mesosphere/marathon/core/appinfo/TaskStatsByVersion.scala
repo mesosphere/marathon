@@ -2,7 +2,7 @@ package mesosphere.marathon.core.appinfo
 
 import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.health.Health
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.{ Timestamp, VersionInfo }
 
@@ -45,8 +45,8 @@ object TaskStatsByVersion {
   def apply(
     now: Timestamp,
     versionInfo: VersionInfo,
-    tasks: Iterable[Instance],
-    statuses: Map[Instance.Id, Seq[Health]]): TaskStatsByVersion =
+    tasks: Iterable[Task],
+    statuses: Map[Task.Id, Seq[Health]]): TaskStatsByVersion =
     {
       TaskStatsByVersion(versionInfo, TaskForStatistics.forTasks(now, tasks, statuses))
     }
@@ -58,7 +58,7 @@ case class TaskStats(
 
 object TaskStats {
   def forSomeTasks(
-    now: Timestamp, tasks: Iterable[Instance], statuses: Map[Instance.Id, Seq[Health]]): Option[TaskStats] =
+    now: Timestamp, tasks: Iterable[Task], statuses: Map[Task.Id, Seq[Health]]): Option[TaskStats] =
     {
       forSomeTasks(TaskForStatistics.forTasks(now, tasks, statuses))
     }

@@ -1,10 +1,10 @@
 package mesosphere.marathon.core.health
 
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Timestamp
 
 case class Health(
-    taskId: Instance.Id,
+    taskId: Task.Id,
     firstSuccess: Option[Timestamp] = None,
     lastSuccess: Option[Timestamp] = None,
     lastFailure: Option[Timestamp] = None,

@@ -22,8 +22,7 @@ object TaskLabels {
     maybeMatchingFrameworkId.flatMap(_ => maybeTaskId)
   }
 
-  def labelsForTask(frameworkId: FrameworkId, task: Task): ReservationLabels =
-    labelsForTask(frameworkId, task.id)
+  def labelsForTask(frameworkId: FrameworkId, task: Task): ReservationLabels = labelsForTask(frameworkId, task)
 
   def labelsForTask(frameworkId: FrameworkId, taskId: Instance.Id): ReservationLabels =
     ReservationLabels(Map(

@@ -3,13 +3,14 @@ package mesosphere.marathon.upgrade
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
-import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
@@ -30,12 +31,12 @@ class TaskReplaceActor(
     val runSpec: RunSpec,
     promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
 
-  val tasksToKill = instanceTracker.specInstancesLaunchedSync(runSpec.id)
+  val tasksToKill = instanceTracker.specInstancesLaunchedSync(runSpec.id).flatMap(_.tasks)
   var newTasksStarted: Int = 0
-  var oldTaskIds = tasksToKill.map(_.id).to[SortedSet]
+  var oldTaskIds = tasksToKill.map(_.taskId).to[SortedSet]
   val toKill = tasksToKill.to[mutable.Queue]
   var maxCapacity = (runSpec.instances * (1 + runSpec.upgradeStrategy.maximumOverCapacity)).toInt
-  var outstandingKills = Set.empty[Instance.Id]
+  var outstandingKills = Set.empty[Task.Id]
 
   override def preStart(): Unit = {
     super.preStart()
@@ -70,7 +71,7 @@ class TaskReplaceActor(
     // New task failed to start, restart it
     case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `pathId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       log.error(s"New task $taskId failed on slave $slaveId during app $pathId restart")
-      instanceTerminated(taskId)
+      taskTerminated(taskId)
       launchQueue.add(runSpec)
 
     // Old task successfully killed
@@ -83,7 +84,7 @@ class TaskReplaceActor(
     case x: Any => log.debug(s"Received $x")
   }
 
-  override def taskStatusChanged(taskId: Instance.Id): Unit = {
+  override def taskStatusChanged(taskId: Task.Id): Unit = {
     if (healthyTasks(taskId) && readyTasks(taskId)) killNextOldTask(Some(taskId))
     checkFinished()
   }
@@ -99,19 +100,19 @@ class TaskReplaceActor(
     }
   }
 
-  def killNextOldTask(maybeNewTaskId: Option[Instance.Id] = None): Unit = {
+  def killNextOldTask(maybeNewTaskId: Option[Task.Id] = None): Unit = {
     if (toKill.nonEmpty) {
       val nextOldTask = toKill.dequeue()
 
       maybeNewTaskId match {
-        case Some(newTaskId: Instance.Id) =>
+        case Some(newTaskId: Task.Id) =>
           log.info(s"Killing old $nextOldTask because $newTaskId became reachable")
         case _ =>
           log.info(s"Killing old $nextOldTask")
       }
 
-      outstandingKills += nextOldTask.id
-      killService.killTask(nextOldTask, TaskKillReason.Upgrading)
+      outstandingKills += nextOldTask.taskId
+      killService.killTask(Instance(nextOldTask), TaskKillReason.Upgrading)
     }
   }
 

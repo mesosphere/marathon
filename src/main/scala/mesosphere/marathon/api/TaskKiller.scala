@@ -4,8 +4,9 @@ import javax.inject.Inject
 
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.InstanceStateOp
+import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
 import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -58,10 +59,10 @@ class TaskKiller @Inject() (
 
     tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
       resultSoFar.flatMap { _ =>
-        log.info("Expunging {}", nextTask.id)
-        stateOpProcessor.process(InstanceStateOp.ForceExpunge(nextTask.id)).map(_ => ()).recover {
+        log.info("Expunging {}", nextTask.instanceId)
+        stateOpProcessor.process(InstanceStateOp.ForceExpunge(nextTask.instanceId)).map(_ => ()).recover {
           case NonFatal(cause) =>
-            log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.id, cause): _*)
+            log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.instanceId, cause): _*)
         }
       }
     }

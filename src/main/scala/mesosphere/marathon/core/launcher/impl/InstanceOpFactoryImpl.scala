@@ -4,7 +4,7 @@ import mesosphere.marathon.MarathonConf
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.{ Task, InstanceStateOp }
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ RunSpec => PluginAppDefinition }
@@ -47,12 +47,12 @@ class InstanceOpFactoryImpl(
   private[this] def inferNormalTaskOp(request: InstanceOpFactory.Request): Option[InstanceOp] = {
     val InstanceOpFactory.Request(runSpec, offer, tasks, _) = request
 
-    new TaskBuilder(runSpec, Instance.Id.forRunSpec, config, Some(appTaskProc)).
+    new TaskBuilder(runSpec, Task.Id.forRunSpec, config, Some(appTaskProc)).
       // TODO POD remove asInstanceOf[Task]
       buildIfMatches(offer, tasks.values.map(_.asInstanceOf[Task])).map {
         case (taskInfo, ports) =>
           val task = Task.LaunchedEphemeral(
-            id = Instance.Id(taskInfo.getTaskId),
+            taskId = Task.Id(taskInfo.getTaskId),
             agentInfo = Instance.AgentInfo(
               host = offer.getHostname,
               agentId = Some(offer.getSlaveId.getValue),
@@ -97,7 +97,7 @@ class InstanceOpFactoryImpl(
       maybeVolumeMatch.flatMap { volumeMatch =>
         // we must not consider the volumeMatch's Reserved task because that would lead to a violation of constraints
         // by the Reserved task that we actually want to launch
-        val tasksToConsiderForConstraints = tasks - volumeMatch.task.id
+        val tasksToConsiderForConstraints = tasks - Instance.Id(volumeMatch.task.taskId)
         // resources are reserved for this role, so we only consider those resources
         val rolesToConsider = config.mesosRole.get.toSet
         val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, volumeMatch.task).labels
@@ -149,10 +149,10 @@ class InstanceOpFactoryImpl(
     volumeMatch: Option[PersistentVolumeMatcher.VolumeMatch]): Option[InstanceOp] = {
 
     // create a TaskBuilder that used the id of the existing task as id for the created TaskInfo
-    new TaskBuilder(spec, (_) => task.id, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
+    new TaskBuilder(spec, (_) => task.taskId, config, Some(appTaskProc)).build(offer, resourceMatch, volumeMatch) map {
       case (taskInfo, ports) =>
-        val taskStateOp = TaskStateOp.LaunchOnReservation(
-          task.id,
+        val taskStateOp = InstanceStateOp.LaunchOnReservation(
+          Instance.Id(taskInfo.getExecutor.getExecutorId),
           runSpecVersion = spec.version,
           status = Task.Status(
             stagedAt = clock.now(),
@@ -181,7 +181,7 @@ class InstanceOpFactoryImpl(
       reason = Task.Reservation.Timeout.Reason.ReservationTimeout
     )
     val task = Task.Reserved(
-      id = Instance.Id.forRunSpec(RunSpec.id),
+      taskId = Task.Id.forRunSpec(RunSpec.id),
       agentInfo = Instance.AgentInfo(
         host = offer.getHostname,
         agentId = Some(offer.getSlaveId.getValue),
@@ -193,7 +193,7 @@ class InstanceOpFactoryImpl(
         taskStatus = InstanceStatus.Reserved
       )
     )
-    val taskStateOp = TaskStateOp.Reserve(task)
+    val taskStateOp = InstanceStateOp.Reserve(task)
     taskOperationFactory.reserveAndCreateVolumes(frameworkId, taskStateOp, resourceMatch.resources, localVolumes)
   }
 

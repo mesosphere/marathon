@@ -1,11 +1,11 @@
 package mesosphere.marathon.core.readiness
 
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
+import mesosphere.marathon.core.task.Task
 
 case class ReadinessCheckResult(
     name: String,
-    taskId: Instance.Id,
+    taskId: Task.Id,
     ready: Boolean,
     lastResponse: Option[HttpResponse]) {
 

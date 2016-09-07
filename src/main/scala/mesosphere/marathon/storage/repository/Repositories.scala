@@ -12,7 +12,6 @@ import akka.stream.scaladsl.Source
 import akka.{ Done, NotUsed }
 import mesosphere.marathon.Protos.MarathonTask
 import mesosphere.marathon.core.event.EventSubscribers
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository._
 import mesosphere.marathon.core.storage.repository.impl.{ PersistenceStoreRepository, PersistenceStoreVersionedRepository }
@@ -171,8 +170,8 @@ object DeploymentRepository {
   }
 }
 
-trait TaskRepository extends Repository[Instance.Id, Task] {
-  def tasks(appId: PathId): Source[Instance.Id, NotUsed] = {
+trait TaskRepository extends Repository[Task.Id, Task] {
+  def tasks(appId: PathId): Source[Task.Id, NotUsed] = {
     ids().filter(_.runSpecId == appId)
   }
 }
@@ -339,10 +338,10 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
 }
 
 class TaskRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-  ir: IdResolver[Instance.Id, Task, C, K],
+  ir: IdResolver[Task.Id, Task, C, K],
   marshaller: Marshaller[Task, S],
   unmarshaller: Unmarshaller[S, Task])
-    extends PersistenceStoreRepository[Instance.Id, Task, K, C, S](persistenceStore, _.id)
+    extends PersistenceStoreRepository[Task.Id, Task, K, C, S](persistenceStore, _.taskId)
     with TaskRepository
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(

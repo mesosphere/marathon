@@ -4,7 +4,7 @@ import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
 import mesosphere.marathon.core.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import org.apache.mesos.SchedulerDriver
@@ -40,7 +40,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   def commonBehavior: Receive = {
     case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, `pathId`, _, _, _, `versionString`, _, _) => // scalastyle:off line.size.limit
       log.warning(s"New task [$taskId] failed during app ${runSpec.id.toString} scaling, queueing another task")
-      instanceTerminated(taskId)
+      taskTerminated(taskId)
       launchQueue.add(runSpec)
 
     case Sync =>
@@ -53,7 +53,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
-  override def taskStatusChanged(taskId: Instance.Id): Unit = {
+  override def taskStatusChanged(taskId: Task.Id): Unit = {
     log.info(s"New task $taskId changed during app ${runSpec.id.toString} scaling, " +
       s"${readyTasks.size} ready ${healthyTasks.size} healthy need $nrToStart")
     checkFinished()

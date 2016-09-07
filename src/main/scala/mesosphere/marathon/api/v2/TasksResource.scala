@@ -69,15 +69,15 @@ class TasksResource @Inject() (
 
     val enrichedTasks: IterableView[EnrichedTask, Iterable[_]] = for {
       (appId, instance) <- tasks
-      task <- Task(instance)
       app <- appIdsToApps(appId)
       if isAuthorized(ViewRunSpec, app)
-      if statusSet.isEmpty || statusSet(task.status.taskStatus)
+      if statusSet.isEmpty || statusSet(instance.state.status)
     } yield {
+      val task = instance.tasks.head // TODO PODs ju fixme
       EnrichedTask(
         appId,
         task,
-        health.getOrElse(task.id, Nil),
+        health.getOrElse(task.taskId, Nil),
         appToPorts.getOrElse(appId, Nil)
       )
     }
@@ -118,29 +118,28 @@ class TasksResource @Inject() (
       catch { case e: MatchError => throw new BadRequestException(s"Invalid task id '$id'.") }
     }.toMap
 
-    def scaleAppWithKill(toKill: Map[PathId, Iterable[Task]]): Response = {
+    def scaleAppWithKill(toKill: Map[PathId, Iterable[Instance]]): Response = {
       deploymentResult(result(taskKiller.killAndScale(toKill, force)))
     }
 
-    def killTasks(toKill: Map[PathId, Iterable[Task]]): Response = {
+    def killTasks(toKill: Map[PathId, Iterable[Instance]]): Response = {
       val affectedApps = tasksToAppId.values.flatMap(appId => result(groupManager.app(appId))).toSeq
       // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
       // starting to kill tasks
       affectedApps.foreach(checkAuthorization(UpdateRunSpec, _))
 
       val killed = result(Future.sequence(toKill.map {
-        case (appId, tasks) => taskKiller.kill(appId, _ => tasks, wipe)
+        case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
       })).flatten
       // TODO POD remove asInstanceOf[Task]
       ok(jsonObjString("tasks" -> killed.map(task =>
-        EnrichedTask(task.id.runSpecId, task.asInstanceOf[Task], Seq.empty))))
+        EnrichedTask(task.instanceId.runSpecId, task.asInstanceOf[Task], Seq.empty))))
     }
 
     val tasksByAppId = tasksToAppId
-      .flatMap { case (taskId, appId) => taskTracker.instancesBySpecSync.instanceFor(Instance.Id(taskId)) }
-      .flatMap(Task(_)) // TODO(jdef) pods: only allow non-pod tasks to be killed for now
-      .groupBy { task => task.id.runSpecId }
-      .map{ case (appId, tasks) => appId -> tasks }
+      .flatMap { case (taskId, appId) => taskTracker.instancesBySpecSync.instance(Instance.Id(taskId)) }
+      .groupBy { instance => instance.instanceId.runSpecId }
+      .map{ case (appId, instances) => appId -> instances }
 
     if (scale) scaleAppWithKill(tasksByAppId)
     else killTasks(tasksByAppId)

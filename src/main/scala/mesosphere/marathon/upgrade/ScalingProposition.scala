@@ -29,7 +29,7 @@ object ScalingProposition {
       killCount - sentencedAndRunningMap.size
     )
     // rest are tasks that are not sentenced and need not be killed to meet constraints
-    val rest = notSentencedAndRunningMap -- killToMeetConstraints.map(_.id)
+    val rest = notSentencedAndRunningMap -- killToMeetConstraints.map(_.instanceId)
 
     // TODO: this should evaluate a task's health as well
     // If we need to kill tasks, the order should be LOST - UNREACHABLE - UNHEALTHY - STAGING - (EVERYTHING ELSE)
