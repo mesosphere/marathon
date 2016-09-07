@@ -192,5 +192,5 @@ class PodsResource @Inject() (
 }
 
 object PodsResource {
-  val DeploymentHeader = "X-Marathon-Deployment-Id"
+  val DeploymentHeader = "Marathon-Deployment-Id"
 }
