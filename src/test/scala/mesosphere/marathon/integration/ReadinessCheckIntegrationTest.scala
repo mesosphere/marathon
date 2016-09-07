@@ -67,8 +67,8 @@ class ReadinessCheckIntegrationTest extends IntegrationFunSuite with SingleMarat
 
     while (continue && serviceFacade.plan().code != 200) {
       When("We continue on block until the plan is ready")
-      serviceFacade.continue()
       marathon.listDeploymentsForBaseGroup().value should have size 1
+      serviceFacade.continue()
     }
 
     Then("The deployment should finish")
