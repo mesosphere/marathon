@@ -190,12 +190,12 @@ class TaskBuilder(
             // The run spec uses bridge and user modes with portMappings, use them to create the Port messages
             portMappings.zip(hostPorts).collect {
               case (portMapping, None) =>
-                // TODO: What's the semantic of this???
-                // It seems this is the case when portMappings has None for hostPort.
-                ???
+                // No host port has been defined. See PortsMatcher.mappedPortRanges, use container port instead.
+                val updatedPortMapping =
+                  portMapping.copy(labels = portMapping.labels + ("network-scope" -> "container"))
+                PortMappingSerializer.toMesosPort(updatedPortMapping, portMapping.containerPort)
               case (portMapping, Some(hostPort)) =>
-                val updatedPortMapping = portMapping.copy(labels = portMapping.labels + ("network-scope" -> "host"))
-                PortMappingSerializer.toMesosPort(updatedPortMapping, hostPort)
+                PortMappingSerializer.toMesosPort(portMapping, hostPort)
             }
           case None =>
             // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
@@ -205,10 +205,7 @@ class TaskBuilder(
                 // TODO: Is this case possible?
                 ???
               case (portDefinition, Some(hostPort)) =>
-                // Add network-scope to labels
-                val updatedPortDefinition =
-                  portDefinition.copy(labels = portDefinition.labels + ("network-scope" -> "host"))
-                PortDefinitionSerializer.toMesosProto(updatedPortDefinition).map(_.toBuilder.setNumber(hostPort).build)
+                PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
             }.flatten
         }
     }
