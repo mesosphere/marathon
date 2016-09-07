@@ -2,16 +2,17 @@ package mesosphere.marathon.api
 
 import mesosphere.marathon._
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
+import mesosphere.marathon.core.instance.InstanceStateOp
+import mesosphere.marathon.core.task.{Task, TaskStateChange}
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{BeforeAndAfterAll, Matchers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -130,8 +131,8 @@ class TaskKillerTest extends MarathonSpec
     val reservedTask = MarathonTestHelper.residentReservedTask(appId)
     val tasksToKill = Set(runningTask, reservedTask)
     val launchedTasks = Set(runningTask)
-    val stateOp1 = TaskStateOp.ForceExpunge(runningTask.id)
-    val stateOp2 = TaskStateOp.ForceExpunge(reservedTask.id)
+    val stateOp1 = InstanceStateOp.ForceExpunge(runningTask.id)
+    val stateOp2 = InstanceStateOp.ForceExpunge(reservedTask.id)
 
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
@@ -147,8 +148,8 @@ class TaskKillerTest extends MarathonSpec
     // only task1 is killed
     verify(f.service, times(1)).killTasks(appId, launchedTasks)
     // both tasks are expunged from the repo
-    verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(runningTask.id))
-    verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(reservedTask.id))
+    verify(f.stateOpProcessor).process(InstanceStateOp.ForceExpunge(runningTask.id))
+    verify(f.stateOpProcessor).process(InstanceStateOp.ForceExpunge(reservedTask.id))
   }
 
   class Fixture {

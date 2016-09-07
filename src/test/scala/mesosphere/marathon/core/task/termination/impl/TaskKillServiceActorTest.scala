@@ -1,23 +1,23 @@
 package mesosphere.marathon.core.task.termination.impl
 
 import akka.Done
-import akka.actor.{ ActorRef, ActorSystem }
-import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
+import akka.actor.{ActorRef, ActorSystem}
+import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp, InstanceStatus}
 import mesosphere.marathon.core.task.termination.TaskKillConfig
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
-import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateOp }
-import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
+import mesosphere.marathon.core.task.{MarathonTaskStatus, Task}
+import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{ Seconds, Span }
-import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FunSuiteLike, GivenWhenThen, Matchers }
+import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuiteLike, GivenWhenThen, Matchers}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -98,7 +98,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     noMoreInteractions(f.driver)
 
     And("the stateOpProcessor receives an expunge")
-    verify(f.stateOpProcessor, timeout(500)).process(TaskStateOp.ForceExpunge(task.id))
+    verify(f.stateOpProcessor, timeout(500)).process(InstanceStateOp.ForceExpunge(task.id))
 
     When("a terminal status update is published via the event stream")
     f.publishStatusUpdate(task.id, mesos.Protos.TaskState.TASK_KILLED)
@@ -125,7 +125,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
 
     And("three kill requests are issued to the driver")
     verify(f.driver, timeout(500)).killTask(runningTask.id.mesosTaskId)
-    verify(f.stateOpProcessor, timeout(500)).process(TaskStateOp.ForceExpunge(lostTask.id))
+    verify(f.stateOpProcessor, timeout(500)).process(InstanceStateOp.ForceExpunge(lostTask.id))
     verify(f.driver, timeout(500)).killTask(stagingTask.id.mesosTaskId)
     noMoreInteractions(f.driver)
 
@@ -281,7 +281,7 @@ class TaskKillServiceActorTest extends TestKit(ActorSystem("test"))
     f.clock.+=(10.seconds)
 
     Then("the service will eventually expunge the task if it reached the max attempts")
-    verify(f.stateOpProcessor, timeout(1000)).process(TaskStateOp.ForceExpunge(task.id))
+    verify(f.stateOpProcessor, timeout(1000)).process(InstanceStateOp.ForceExpunge(task.id))
 
     When("a terminal status update is published via the event stream")
     f.publishStatusUpdate(task.id, mesos.Protos.TaskState.TASK_KILLED)

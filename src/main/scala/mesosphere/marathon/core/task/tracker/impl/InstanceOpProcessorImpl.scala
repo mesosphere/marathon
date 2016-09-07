@@ -1,17 +1,17 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import akka.actor.{ ActorRef, Status }
+import akka.actor.{ActorRef, Status}
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.TaskStateOpResolver
-import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerConfig }
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
+import mesosphere.marathon.core.task.{Task, TaskStateChange, TaskStateOp}
 import mesosphere.marathon.storage.repository.TaskRepository
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 private[tracker] object InstanceOpProcessorImpl {
@@ -25,20 +25,26 @@ private[tracker] object InstanceOpProcessorImpl {
   class TaskStateOpResolver(directTaskTracker: InstanceTracker) {
     private[this] val log = LoggerFactory.getLogger(getClass)
 
+    def resolve(op: InstanceStateOp)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
+      op match {
+        case op: InstanceStateOp.ForceExpunge => expungeTask(op.instanceId)
+        case tso: TaskStateOp => resolveTask(tso)
+        case _ => ??? // TODO(jdef) pod support
+      }
+    }
     /**
       * Maps the TaskStateOp
       *
       * * a TaskStateChange.Failure if the task does not exist OR ELSE
       * * delegates the TaskStateOp to the existing task that will then determine the state change
       */
-    def resolve(op: TaskStateOp)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
+    def resolveTask(op: TaskStateOp)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
       op match {
-        case op: TaskStateOp.LaunchEphemeral => updateIfNotExists(op.taskId, op.task)
+        case op: TaskStateOp.LaunchEphemeral => updateIfNotExists(op.instanceId, op.task)
         case op: TaskStateOp.LaunchOnReservation => updateExistingTask(op)
         case op: TaskStateOp.MesosUpdate => updateExistingTask(op)
         case op: TaskStateOp.ReservationTimeout => updateExistingTask(op)
-        case op: TaskStateOp.Reserve => updateIfNotExists(op.taskId, op.task)
-        case op: TaskStateOp.ForceExpunge => expungeTask(op.taskId)
+        case op: TaskStateOp.Reserve => updateIfNotExists(op.instanceId, op.task)
         case op: TaskStateOp.Revert =>
           Future.successful(TaskStateChange.Update(newState = op.task, oldState = None))
       }
@@ -56,7 +62,7 @@ private[tracker] object InstanceOpProcessorImpl {
     }
 
     private[this] def updateExistingTask(op: TaskStateOp)(implicit ec: ExecutionContext): Future[TaskStateChange] = {
-      directTaskTracker.instance(op.taskId).map {
+      directTaskTracker.instance(op.instanceId).map {
         case Some(existingTask: Task) =>
           existingTask.update(op)
 
@@ -64,7 +70,7 @@ private[tracker] object InstanceOpProcessorImpl {
         case Some(existingTask) => TaskStateChange.Failure("TODO")
 
         case None =>
-          val taskId = op.taskId
+          val taskId = op.instanceId
           TaskStateChange.Failure(new IllegalStateException(s"$taskId of app [${taskId.runSpecId}] does not exist"))
       }
     }
@@ -138,8 +144,13 @@ private[tracker] class InstanceOpProcessorImpl(
     import scala.concurrent.duration._
     implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
-    val msg = InstanceTrackerActor.StateChanged(taskChanged = TaskChanged(op.stateOp, ack.stateChange), ack)
-    (taskTrackerRef ? msg).map(_ => ())
+    op.stateOp match {
+      case tso: TaskStateOp =>
+        val msg = InstanceTrackerActor.StateChanged(taskChanged = TaskChanged( tso, ack.stateChange), ack)
+        (taskTrackerRef ? msg).map(_ => ())
+
+      case _ => Future{()} // TODO(jdef) pods support
+    }
   }
 
   /**

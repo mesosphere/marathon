@@ -1,17 +1,16 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedTaskOps, InstanceOpSource, TaskOpWithSource }
-import mesosphere.marathon.core.task.TaskStateOp
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, InstanceOpWithSource, MatchedTaskOps}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.state.{ Group, Timestamp }
+import mesosphere.marathon.state.{Group, Timestamp}
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
+import org.apache.mesos.Protos.{Offer, OfferID, Resource}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
@@ -64,14 +63,14 @@ private[reconcile] class OfferMatcherReconciler(taskTracker: InstanceTracker, gr
             case (instanceId, spuriousResources) if spurious(instanceId) =>
               val unreserveAndDestroy =
                 InstanceOp.UnreserveAndDestroyVolumes(
-                  stateOp = TaskStateOp.ForceExpunge(instanceId),
+                  stateOp = InstanceStateOp.ForceExpunge(instanceId),
                   oldInstance = tasksByApp.task(instanceId),
                   resources = spuriousResources.to[Seq]
                 )
               log.warn(
                 "removing spurious resources and volumes of {} because the instance does no longer exist",
                 instanceId)
-              TaskOpWithSource(source(offer.getId), unreserveAndDestroy)
+              InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
           }.to[Seq]
 
           MatchedTaskOps(offer.getId, taskOps, resendThisOffer = true)

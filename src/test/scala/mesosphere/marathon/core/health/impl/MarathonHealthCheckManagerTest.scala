@@ -2,30 +2,30 @@ package mesosphere.marathon.core.health.impl
 
 import akka.actor._
 import akka.event.EventStream
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.EventFilter
 import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.health.{ Health, HealthCheck }
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
+import mesosphere.marathon.core.health.{Health, HealthCheck}
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.leadership.{AlwaysElectedLeadershipModule, LeadershipModule}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, InstanceTracker }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceCreationHandler, TaskStateOpProcessor}
+import mesosphere.marathon.core.task.{Task, TaskStateOp}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.AppRepository
-import mesosphere.marathon.test.{ CaptureEvents, MarathonShutdownHookSupport }
+import mesosphere.marathon.test.{CaptureEvents, MarathonShutdownHookSupport}
 import mesosphere.util.Logging
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 import org.rogach.scallop.ScallopConf
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{ Millis, Span }
+import org.scalatest.time.{Millis, Span}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -35,7 +35,7 @@ class MarathonHealthCheckManagerTest
 
   var hcManager: MarathonHealthCheckManager = _
   var taskTracker: InstanceTracker = _
-  var taskCreationHandler: TaskCreationHandler = _
+  var taskCreationHandler: InstanceCreationHandler = _
   var stateOpProcessor: TaskStateOpProcessor = _
   var appRepository: AppRepository = _
   var eventStream: EventStream = _
@@ -250,7 +250,7 @@ class MarathonHealthCheckManagerTest
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: Task) =
-      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.id)).futureValue
+      taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(task.id)).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath

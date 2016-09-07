@@ -1,12 +1,12 @@
 package mesosphere.marathon.core.task
 
-import com.fasterxml.uuid.{ EthernetAddress, Generators }
+import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
-import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp, InstanceStatus}
+import mesosphere.marathon.state.{PathId, PersistentVolume, RunSpec, Timestamp}
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.{ Protos => MesosProtos }
+import org.apache.mesos.{Protos => MesosProtos}
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
@@ -57,7 +57,7 @@ sealed trait Task extends Instance {
   def launched: Option[Task.Launched]
 
   /** update the task based on the given trigger - depending on its state the task will decide what should happen */
-  def update(update: TaskStateOp): TaskStateChange
+  def update(update: InstanceStateOp): TaskStateChange
 
   def runSpecId: PathId = id.runSpecId
 
@@ -137,7 +137,7 @@ object Task {
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
     //scalastyle:off cyclomatic.complexity method.length
-    override def update(update: TaskStateOp): TaskStateChange = update match {
+    override def update(update: InstanceStateOp): TaskStateChange = update match {
       // case 1: now running
       case TaskStateOp.MesosUpdate(_, InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(
@@ -167,7 +167,7 @@ object Task {
             TaskStateChange.NoChange(id)
         }
 
-      case TaskStateOp.ForceExpunge(_) =>
+      case InstanceStateOp.ForceExpunge(_) =>
         TaskStateChange.Expunge(this)
 
       case TaskStateOp.LaunchEphemeral(task) =>
@@ -210,7 +210,7 @@ object Task {
 
     override def launched: Option[Launched] = None
 
-    override def update(update: TaskStateOp): TaskStateChange = update match {
+    override def update(update: InstanceStateOp): TaskStateChange = update match {
       case TaskStateOp.LaunchOnReservation(_, runSpecVersion, taskStatus, hostPorts) =>
         val updatedTask = LaunchedOnReservation(id, agentInfo, runSpecVersion, taskStatus, hostPorts, reservation)
         TaskStateChange.Update(newState = updatedTask, oldState = Some(this))
@@ -218,7 +218,7 @@ object Task {
       case _: TaskStateOp.ReservationTimeout =>
         TaskStateChange.Expunge(this)
 
-      case _: TaskStateOp.ForceExpunge =>
+      case _: InstanceStateOp.ForceExpunge =>
         TaskStateChange.Expunge(this)
 
       case _: TaskStateOp.Reserve =>
@@ -257,7 +257,7 @@ object Task {
     private[this] def hasStartedRunning: Boolean = status.startedAt.isDefined
 
     //scalastyle:off cyclomatic.complexity method.length
-    override def update(update: TaskStateOp): TaskStateChange = update match {
+    override def update(update: InstanceStateOp): TaskStateChange = update match {
       // case 1: now running
       case TaskStateOp.MesosUpdate(_, InstanceStatus.Running, mesosStatus, now) if !hasStartedRunning =>
         val updated = copy(
@@ -295,7 +295,7 @@ object Task {
           TaskStateChange.NoChange(id)
         }
 
-      case _: TaskStateOp.ForceExpunge =>
+      case _: InstanceStateOp.ForceExpunge =>
         TaskStateChange.Expunge(this)
 
       // failure case: LaunchOnReservation

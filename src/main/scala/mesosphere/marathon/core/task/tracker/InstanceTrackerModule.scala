@@ -24,7 +24,7 @@ class InstanceTrackerModule(
   lazy val taskTrackerUpdateStepProcessor: InstanceTrackerUpdateStepProcessor =
     new InstanceTrackerUpdateStepProcessorImpl(updateSteps, metrics)
 
-  def taskCreationHandler: TaskCreationHandler = taskStateOpProcessor
+  def taskCreationHandler: InstanceCreationHandler = taskStateOpProcessor
   def stateOpProcessor: TaskStateOpProcessor = taskStateOpProcessor
   def taskReservationTimeoutHandler: TaskReservationTimeoutHandler = taskStateOpProcessor
 

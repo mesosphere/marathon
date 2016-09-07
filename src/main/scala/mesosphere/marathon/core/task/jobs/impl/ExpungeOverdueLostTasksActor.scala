@@ -1,11 +1,12 @@
 package mesosphere.marathon.core.task.jobs.impl
 
-import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
+import akka.actor.{Actor, ActorLogging, Cancellable, Props}
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.instance.InstanceStateOp
+import mesosphere.marathon.core.task.{Task}
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
 import mesosphere.marathon.state.PathId
 import org.apache.mesos.Protos.TaskStatus
@@ -44,7 +45,7 @@ class ExpungeOverdueLostTasksActor(
   def expungeLostGCTask(task: Task): Unit = {
     val timestamp = new DateTime(task.mesosStatus.fold(0L)(_.getTimestamp.toLong * 1000))
     log.warning(s"Task ${task.id} is lost since $timestamp and will be expunged.")
-    val stateOp = TaskStateOp.ForceExpunge(task.id)
+    val stateOp = InstanceStateOp.ForceExpunge(task.id)
     stateOpProcessor.process(stateOp)
   }
 

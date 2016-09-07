@@ -4,16 +4,15 @@ import javax.inject.Inject
 
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.task.TaskStateOp
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, UpdateRunSpec}
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
+import mesosphere.marathon.{MarathonConf, MarathonSchedulerService, UnknownAppException}
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 class TaskKiller @Inject() (
     taskTracker: InstanceTracker,
@@ -57,7 +56,7 @@ class TaskKiller @Inject() (
     tasks.foldLeft(Future.successful(())) { (resultSoFar, nextTask) =>
       resultSoFar.flatMap { _ =>
         log.info("Expunging {}", nextTask.id)
-        stateOpProcessor.process(TaskStateOp.ForceExpunge(nextTask.id)).map(_ => ()).recover {
+        stateOpProcessor.process(InstanceStateOp.ForceExpunge(nextTask.id)).map(_ => ()).recover {
           case NonFatal(cause) =>
             log.info("Failed to expunge {}, got: {}", Array[Object](nextTask.id, cause): _*)
         }
