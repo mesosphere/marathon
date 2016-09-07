@@ -139,8 +139,6 @@ private[health] class HealthCheckActor(
     }
   }
 
-  //TODO: fix style issue and enable this scalastyle check
-  //scalastyle:off cyclomatic.complexity method.length
   def receive: Receive = {
     case GetTaskHealth(taskId) => sender() ! taskHealth.getOrElse(taskId, Health(taskId))
 
@@ -153,45 +151,49 @@ private[health] class HealthCheckActor(
       scheduleNextHealthCheck()
 
     case result: HealthResult if result.version == app.version =>
-      log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
-      val taskId = result.taskId
-      val health = taskHealth.getOrElse(taskId, Health(taskId))
-
-      val newHealth = result match {
-        case Healthy(_, _, _) =>
-          health.update(result)
-        case Unhealthy(_, _, _, _) =>
-          taskTracker.tasksByAppSync.task(taskId) match {
-            case Some(task) =>
-              if (ignoreFailures(task, health)) {
-                // Don't update health
-                health
-              } else {
-                eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
-                checkConsecutiveFailures(task, health)
-                health.update(result)
-              }
-            case None =>
-              log.error(s"Couldn't find task $taskId")
-              health.update(result)
-          }
-      }
-
-      taskHealth += (taskId -> newHealth)
-
-      if (health.alive != newHealth.alive) {
-        eventBus.publish(
-          HealthStatusChanged(
-            appId = app.id,
-            taskId = taskId,
-            version = result.version,
-            alive = newHealth.alive)
-        )
-      }
+      updateTaskHealth(result)
 
     case result: HealthResult =>
       log.warning(s"Ignoring health result [$result] due to version mismatch.")
 
+  }
+
+  def updateTaskHealth(result: HealthResult): Unit = {
+    log.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
+    val taskId = result.taskId
+    val health = taskHealth.getOrElse(taskId, Health(taskId))
+
+    val newHealth = result match {
+      case Healthy(_, _, _) =>
+        health.update(result)
+      case Unhealthy(_, _, _, _) =>
+        taskTracker.tasksByAppSync.task(taskId) match {
+          case Some(task) =>
+            if (ignoreFailures(task, health)) {
+              // Don't update health
+              health
+            } else {
+              eventBus.publish(FailedHealthCheck(app.id, taskId, healthCheck))
+              checkConsecutiveFailures(task, health)
+              health.update(result)
+            }
+          case None =>
+            log.error(s"Couldn't find task $taskId")
+            health.update(result)
+        }
+    }
+
+    taskHealth += (taskId -> newHealth)
+
+    if (health.alive != newHealth.alive) {
+      eventBus.publish(
+        HealthStatusChanged(
+          appId = app.id,
+          taskId = taskId,
+          version = result.version,
+          alive = newHealth.alive)
+      )
+    }
   }
 }
 
