@@ -357,7 +357,7 @@ object TaskBuilder {
   }
 
   /**
-    * portsEnv generates $PORT{x} and $PORT_{y} environment variables, wherein `x` is an index into
+    * portsEnv generates \$PORT{x} and \$PORT_{y} environment variables, wherein `x` is an index into
     * the portDefinitions or portMappings array and `y` is a non-zero port specifically requested by
     * the application specification.
     *
