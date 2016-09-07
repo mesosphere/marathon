@@ -35,7 +35,7 @@ class AppInfoBaseData(
   lazy val readinessChecksByAppFuture: Future[Map[PathId, Seq[ReadinessCheckResult]]] = {
     runningDeployments.map { infos =>
       infos.foldLeft(Map.empty[PathId, Vector[ReadinessCheckResult]].withDefaultValue(Vector.empty)) { (result, info) =>
-        result ++ info.readinessChecksByApp.map {
+        result ++ info.readinessChecksById.map {
           case (appId, checkResults) => appId -> (result(appId) ++ checkResults)
         }
       }

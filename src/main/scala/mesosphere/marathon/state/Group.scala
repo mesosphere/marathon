@@ -2,13 +2,13 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
-import mesosphere.marathon.state.Group._
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.plugin.{ Group => IGroup }
+import mesosphere.marathon.state.Group._
+import mesosphere.marathon.state.PathId._
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
@@ -47,6 +47,8 @@ case class Group(
 
   def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.get(appId))
 
+  def pod(podId: PathId): Option[PodDefinition] = transitivePodsById.get(podId)
+
   def group(gid: PathId): Option[Group] = {
     if (id == gid) Some(this) else {
       val restPath = gid.restOf(id)
@@ -58,6 +60,13 @@ case class Group(
     val groupId = path.parent
     makeGroup(groupId).update(timestamp) { group =>
       if (group.id == groupId) group.putApplication(fn(group.apps.get(path))) else group
+    }
+  }
+
+  def updatePod(path: PathId, fn: Option[PodDefinition] => PodDefinition, timestamp: Timestamp): Group = {
+    val groupId = path.parent
+    makeGroup(groupId).update(timestamp) { group =>
+      if (group.id == groupId) group.putPod(fn(group.pods.get(path))) else group
     }
   }
 
@@ -103,12 +112,22 @@ case class Group(
     )
   }
 
+  private def putPod(podDef: PodDefinition): Group = {
+    copy(
+      groups = groups.filter { group => group.id != podDef.id || group.containsApps },
+      // replace potentially existing app definition
+      pods = pods + (podDef.id -> podDef)
+    )
+  }
+
   /**
     * Remove the app with the given id if it is a direct child of this group.
     *
     * Use together with [[mesosphere.marathon.state.Group!.update(timestamp*]].
     */
   def removeApplication(appId: PathId): Group = copy(apps = apps - appId)
+
+  def removePod(podId: PathId): Group = copy(pods = pods - podId)
 
   def makeGroup(gid: PathId): Group = {
     if (gid.isEmpty) this //group already exists
@@ -177,7 +196,9 @@ case class Group(
   /** @return true if and only if this group directly or indirectly contains app definitions. */
   def containsApps: Boolean = apps.nonEmpty || groups.exists(_.containsApps)
 
-  def containsAppsOrGroups: Boolean = apps.nonEmpty || groups.nonEmpty
+  def containsPods: Boolean = pods.nonEmpty || groups.exists(_.containsPods)
+
+  def containsAppsOrPodsOrGroups: Boolean = apps.nonEmpty || groups.nonEmpty || pods.nonEmpty
 
   def withNormalizedVersion: Group = copy(version = Timestamp(0))
 
@@ -238,6 +259,7 @@ object Group {
       group.id is validPathWithBase(base)
       group.apps.values as "apps" is every(
         AppDefinition.validNestedAppDefinition(group.id.canonicalPath(base), enabledFeatures))
+      group is noAppsAndPodsWithSameId
       group is noAppsAndGroupsWithSameName
       group is conditional[Group](_.id.isRoot)(noCyclicDependencies)
       group.groups is every(valid(validNestedGroup(group.id.canonicalPath(base))))
@@ -249,6 +271,13 @@ object Group {
       validNestedGroup(PathId.empty) and
       ExternalVolumes.validRootGroup()
   }
+
+  private def noAppsAndPodsWithSameId: Validator[Group] =
+    isTrue(s"Applications and Pods may not share the same id") { group =>
+      val podIds = group.transitivePodsById.keySet
+      val appIds = group.transitiveAppIds
+      appIds.intersect(podIds).isEmpty
+    }
 
   private def noAppsAndGroupsWithSameName: Validator[Group] =
     isTrue(s"Groups and Applications may not have the same identifier.") { group =>

@@ -92,7 +92,9 @@ private[appinfo] class DefaultInfoService(
         def groupMatches(group: Group): Boolean = {
           alreadyMatched.getOrElseUpdate(group.id, groupSelector.matches(group) || group.groups.exists(groupMatches))
         }
-        if (groupMatches(ref)) Some(GroupInfo(ref, apps, groups)) else None
+        if (groupMatches(ref)) Some(GroupInfo(ref, apps,
+          Some(group.pods.values.map(_.asPodDef)(collection.breakOut)), groups))
+        else None
       }
       queryGroup(group)
     }

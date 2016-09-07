@@ -324,7 +324,9 @@ object RamlTypeGenerator {
         OBJECTDEF(name).tree
       }
 
-      val commentBlock = (comments ++ actualFields.map(_.comment)(collection.breakOut))
+      val commentBlock = (comments ++ actualFields.map(_.comment)(collection.breakOut)).map { s =>
+        s.replace("$", "$$")
+      }
       Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(_.toTree()) ++ Seq(obj)
     }
   }

@@ -2,15 +2,17 @@ package mesosphere.marathon.core
 
 import javax.inject.Named
 
+import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
 
 // scalastyle:off
-import akka.actor.{ ActorRef, ActorRefFactory, Props }
+import akka.actor.{ActorRef, ActorRefFactory, Props}
 import akka.stream.Materializer
 import com.google.inject._
 import com.google.inject.name.Names
-import mesosphere.marathon.core.appinfo.{ AppInfoModule, AppInfoService, GroupInfoService }
+import mesosphere.marathon.core.appinfo.{AppInfoModule, AppInfoService, GroupInfoService}
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.event.HttpCallbackSubscriptionService
@@ -18,21 +20,21 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.leadership.{ LeadershipCoordinator, LeadershipModule }
-import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
+import mesosphere.marathon.core.leadership.{LeadershipCoordinator, LeadershipModule}
+import mesosphere.marathon.core.plugin.{PluginDefinitions, PluginManager}
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.bus.{ TaskChangeObservables, TaskStatusEmitter }
+import mesosphere.marathon.core.task.bus.{TaskChangeObservables, TaskStatusEmitter}
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
 import mesosphere.marathon.core.task.update.impl.steps._
-import mesosphere.marathon.core.task.update.impl.{ TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor }
-import mesosphere.marathon.core.task.update.{ TaskStatusUpdateProcessor, TaskUpdateStep }
+import mesosphere.marathon.core.task.update.impl.{TaskStatusUpdateProcessorImpl, ThrottlingTaskStatusUpdateProcessor}
+import mesosphere.marathon.core.task.update.{TaskStatusUpdateProcessor, TaskUpdateStep}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer }
+import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.plugin.http.HttpRequestHandler
-import mesosphere.marathon.{ MarathonConf, ModuleNames, PrePostDriverCallback }
-import mesosphere.util.{ CapConcurrentExecutions, CapConcurrentExecutionsMetrics }
+import mesosphere.marathon.{MarathonConf, ModuleNames, PrePostDriverCallback}
+import mesosphere.util.{CapConcurrentExecutions, CapConcurrentExecutionsMetrics}
 import org.eclipse.jetty.servlets.EventSourceServlet
 
 import scala.collection.immutable
@@ -144,6 +146,9 @@ class CoreGuiceModule extends AbstractModule {
 
   @Provides @Singleton
   def groupManager(coreModule: CoreModule): GroupManager = coreModule.groupManagerModule.groupManager
+
+  @Provides @Singleton
+  def podSystem(coreModule: CoreModule): PodManager = coreModule.podModule.podManager
 
   @Provides @Singleton
   def taskStatusUpdateSteps(

@@ -103,7 +103,7 @@ private[upgrade] object DeploymentPlanReverter {
 
       def normalized(group: Group): Group = group.withNormalizedVersion.withoutChildren
       def isGroupUnchanged(group: Group): Boolean =
-        !group.containsAppsOrGroups && normalized(group) == normalized(newGroup)
+        !group.containsAppsOrPodsOrGroups && normalized(group) == normalized(newGroup)
 
       result.group(newGroup.id) match {
         case Some(unchanged) if isGroupUnchanged(unchanged) =>

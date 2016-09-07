@@ -25,6 +25,7 @@ import scala.concurrent.ExecutionContext
   */
 trait StorageModule {
   def appRepository: ReadOnlyAppRepository
+  def podRepository: ReadOnlyPodRepository
   def taskRepository: TaskRepository
   def deploymentRepository: DeploymentRepository
   def taskFailureRepository: TaskFailureRepository

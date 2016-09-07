@@ -1,9 +1,9 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
 import mesosphere.marathon.Protos
-import mesosphere.marathon.raml.{ Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue, _ }
-import mesosphere.marathon.state._
-import play.api.libs.json.{ Format, JsResult, JsValue, Json }
+import mesosphere.marathon.raml.{ ConstraintOperator, MesosContainer, Network, PodSchedulingPolicy, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue, _ }
+import mesosphere.marathon.state.{ EnvVarSecretRef, EnvVarString, EnvVarValue, MarathonState, PathId, RunnableSpec, Secret, Timestamp }
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 // scalastyle:on
@@ -39,8 +39,7 @@ case class PodDefinition(
         RamlEnvVarSecretRef(secret)
       case EnvVarString(value) =>
         RamlEnvVarValue(value)
-    }
-    )
+    })
 
     val constraintDefs: Seq[RamlConstraint] = constraints.map { c =>
       val operator = c.getOperator match {
@@ -75,7 +74,7 @@ case class PodDefinition(
   }
 
   override def mergeFromProto(message: Protos.PodDefinition): PodDefinition = {
-    PodDefinition(Json.parse(message.getJson).as[Pod])
+    PodDefinition.fromProto(message)
   }
 
   override def mergeFromProto(bytes: Array[Byte]): PodDefinition = {
@@ -89,16 +88,16 @@ case class PodDefinition(
 }
 
 object PodDefinition {
-  def apply(podDef: Pod): PodDefinition = {
+
+  //scalastyle:off
+  def apply(podDef: Pod, defaultNetworkName: Option[String]): PodDefinition = {
     val env: Map[String, EnvVarValue] =
-      podDef.environment.fold(Map.empty[String, EnvVarValue]) { envvars =>
-        envvars.values.map { e =>
-          e._1 -> (e._2 match {
-            case RamlEnvVarSecretRef(secretRef) =>
-              EnvVarSecretRef(secretRef)
-            case RamlEnvVarValue(literalValue) =>
-              EnvVarString(literalValue)
-          })
+      podDef.environment.fold(Map.empty[String, EnvVarValue]) {
+        _.values.mapValues {
+          case RamlEnvVarSecretRef(secretRef) =>
+            EnvVarSecretRef(secretRef)
+          case RamlEnvVarValue(literalValue) =>
+            EnvVarString(literalValue)
         }
       }
 
@@ -111,6 +110,7 @@ object PodDefinition {
         case ConstraintOperator.Unlike => Protos.Constraint.Operator.UNLIKE
         case ConstraintOperator.MaxPer => Protos.Constraint.Operator.MAX_PER
       }
+
       val builder = Protos.Constraint.newBuilder().setField(c.fieldName).setOperator(operator)
       c.value.foreach(builder.setValue)
       builder.build()
@@ -120,8 +120,16 @@ object PodDefinition {
       case FixedPodScalingPolicy(i, m) => i -> m
     }
 
+    val networks = podDef.networks.map { network =>
+      if (network.name.isEmpty) {
+        network.copy(name = defaultNetworkName)
+      } else {
+        network
+      }
+    }
+
     new PodDefinition(
-      id = PathId(podDef.id),
+      id = PathId(podDef.id).canonicalPath(),
       user = podDef.user,
       env = env,
       labels = podDef.labels.fold(Map.empty[String, String])(_.values),
@@ -133,21 +141,15 @@ object PodDefinition {
       constraints = constraints,
       version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
       volumes = podDef.volumes,
-      networks = podDef.networks,
+      networks = networks,
       backoffStrategy = podDef.scheduling.flatMap(_.backoff),
       upgradeStrategy = podDef.scheduling.flatMap(_.upgrade)
     )
   }
+  //scalastyle:on
 
   def fromProto(proto: Protos.PodDefinition): PodDefinition = {
-    PodDefinition(Json.parse(proto.getJson).as[Pod])
-  }
-
-  implicit val playJsonFormat: Format[PodDefinition] = new Format[PodDefinition] {
-    override def reads(json: JsValue): JsResult[PodDefinition] =
-      Pod.PlayJsonFormat.reads(json).map(PodDefinition(_))
-
-    override def writes(o: PodDefinition): JsValue = Pod.PlayJsonFormat.writes(o.asPodDef)
+    PodDefinition(Json.parse(proto.getJson).as[Pod], None)
   }
 
   val DefaultId = PathId.empty

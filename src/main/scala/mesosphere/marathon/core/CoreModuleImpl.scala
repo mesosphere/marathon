@@ -21,6 +21,7 @@ import mesosphere.marathon.core.matcher.base.util.StopOnFirstMatchingOfferMatche
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerModule
 import mesosphere.marathon.core.matcher.reconcile.OfferMatcherReconciliationModule
 import mesosphere.marathon.core.plugin.PluginModule
+import mesosphere.marathon.core.pod.PodModule
 import mesosphere.marathon.core.readiness.ReadinessModule
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.jobs.TaskJobsModule
@@ -200,6 +201,11 @@ class CoreModuleImpl @Inject() (
     storage,
     eventStream,
     metrics)(actorsModule.materializer)
+
+  // PODS
+
+  override lazy val podModule: PodModule =
+    PodModule(groupManagerModule.groupManager)(actorsModule.materializer, ExecutionContext.global)
 
   // GREEDY INSTANTIATION
   //
