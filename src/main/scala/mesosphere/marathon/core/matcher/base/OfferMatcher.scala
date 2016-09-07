@@ -46,7 +46,7 @@ object OfferMatcher {
       resendThisOffer: Boolean = false) {
 
     /** all included [InstanceOp] without the source information. */
-    val ops: immutable.Seq[InstanceOp] = opsWithSource.view.map(_.op)(collection.breakOut)
+    val ops: immutable.Seq[InstanceOp] = opsWithSource.map(_.op)(collection.breakOut)
   }
 
   object MatchedInstanceOps {

@@ -12,7 +12,7 @@ import scala.collection.immutable
 trait OfferMatcherSpec {
 
   /** All TaskInfos of launched tasks. */
-  def launchedTaskInfos(matched: MatchedInstanceOps): immutable.Seq[Mesos.TaskInfo] = matched.ops.view.collect {
+  def launchedTaskInfos(matched: MatchedInstanceOps): immutable.Seq[Mesos.TaskInfo] = matched.ops.collect {
     case InstanceOp.LaunchTask(taskInfo, _, _, _) => taskInfo
   }(collection.breakOut)
 }

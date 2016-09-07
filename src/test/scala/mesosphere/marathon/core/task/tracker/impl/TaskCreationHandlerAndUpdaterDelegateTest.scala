@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
@@ -33,7 +34,7 @@ class TaskCreationHandlerAndUpdaterDelegateTest
     When("the request is acknowledged")
     f.taskTrackerProbe.reply(expectedStateChange)
     Then("The reply is Unit, because task updates are deferred")
-    create.futureValue should be(())
+    create.futureValue should be(Done)
   }
 
   test("Launch fails") {
