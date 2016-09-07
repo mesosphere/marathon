@@ -37,7 +37,7 @@ trait RunnableSpec extends plugin.RunSpec {
 
 object RunnableSpec {
   // TODO (pods): These can be removed when AppDefinition/RunSpec usages have been replaced with RunnableSpec
-  implicit def runnableSpecToRunSpec(spec: RunnableSpec): RunSpec = spec.asInstanceOf[RunSpec]
+  implicit def runnableSpecToAppDefinition(spec: RunnableSpec): AppDefinition = spec.asInstanceOf[AppDefinition]
   implicit def runSpecToRunnableSpec(spec: RunSpec): RunnableSpec = spec.asInstanceOf[RunnableSpec]
 }
 

@@ -6,7 +6,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.DeploymentStatus
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.RunnableSpec
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
@@ -22,22 +22,24 @@ class AppStartActor(
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
-    val app: AppDefinition,
+    val runSpec: RunnableSpec,
     val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
   val nrToStart: Int = scaleTo
 
   def initializeStart(): Unit = {
-    scheduler.startApp(driver, app.copy(instances = scaleTo))
+    // TODO (pods): there's no copy on a trait. we could pass the scaleTo instead
+    scheduler.startApp(driver, runSpec.copy(instances = scaleTo))
   }
 
   override def postStop(): Unit = {
+    import mesosphere.marathon.state.RunnableSpec._
     eventBus.unsubscribe(self)
     if (!promise.isCompleted) {
-      if (promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
-        scheduler.stopApp(app).onFailure {
-          case NonFatal(e) => log.error(s"while stopping app ${app.id}", e)
+      if (promise.tryFailure(new AppStartCanceledException("The runSpec start has been cancelled"))) {
+        scheduler.stopApp(runSpec).onFailure {
+          case NonFatal(e) => log.error(s"while stopping runSpec ${runSpec.id}", e)
         }(context.dispatcher)
       }
     }
@@ -45,7 +47,7 @@ class AppStartActor(
   }
 
   def success(): Unit = {
-    log.info(s"Successfully started $scaleTo instances of ${app.id}")
+    log.info(s"Successfully started $scaleTo instances of ${runSpec.id}")
     promise.success(())
     context.stop(self)
   }
@@ -62,10 +64,10 @@ object AppStartActor {
     taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    app: AppDefinition,
+    runSpec: RunnableSpec,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
     Props(new AppStartActor(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
-      readinessCheckExecutor, app, scaleTo, promise))
+      readinessCheckExecutor, runSpec, scaleTo, promise))
   }
 }

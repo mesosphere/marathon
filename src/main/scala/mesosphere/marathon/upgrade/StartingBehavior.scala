@@ -26,7 +26,7 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   def initializeStart(): Unit
 
   final override def preStart(): Unit = {
-    if (app.healthChecks.nonEmpty) eventBus.subscribe(self, classOf[MarathonHealthCheckEvent])
+    if (runSpec.healthChecks.nonEmpty) eventBus.subscribe(self, classOf[MarathonHealthCheckEvent])
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
 
     initializeStart()
@@ -38,23 +38,23 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   final override def receive: Receive = readinessBehavior orElse commonBehavior
 
   def commonBehavior: Receive = {
-    case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, `appId`, _, _, _, `versionString`, _, _) => // scalastyle:off line.size.limit
-      log.warning(s"New task [$taskId] failed during app ${app.id.toString} scaling, queueing another task")
-      taskTerminated(taskId)
-      launchQueue.add(app)
+    case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, `pathId`, _, _, _, `versionString`, _, _) => // scalastyle:off line.size.limit
+      log.warning(s"New task [$taskId] failed during app ${runSpec.id.toString} scaling, queueing another task")
+      instanceTerminated(taskId)
+      launchQueue.add(runSpec)
 
     case Sync =>
-      val actualSize = launchQueue.get(app.id).map(_.finalTaskCount).getOrElse(instanceTracker.countLaunchedSpecInstancesSync(app.id))
+      val actualSize = launchQueue.get(runSpec.id).map(_.finalTaskCount).getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id))
       val tasksToStartNow = Math.max(scaleTo - actualSize, 0)
       if (tasksToStartNow > 0) {
-        log.info(s"Reconciling tasks during app ${app.id.toString} scaling: queuing $tasksToStartNow new tasks")
-        launchQueue.add(app, tasksToStartNow)
+        log.info(s"Reconciling tasks during app ${runSpec.id.toString} scaling: queuing $tasksToStartNow new tasks")
+        launchQueue.add(runSpec, tasksToStartNow)
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }
 
   override def taskStatusChanged(taskId: Instance.Id): Unit = {
-    log.info(s"New task $taskId changed during app ${app.id.toString} scaling, " +
+    log.info(s"New task $taskId changed during app ${runSpec.id.toString} scaling, " +
       s"${readyTasks.size} ready ${healthyTasks.size} healthy need $nrToStart")
     checkFinished()
   }

@@ -141,7 +141,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     eventually(actor.underlyingActor.healthyTasks should have size 1)
 
     When("The task is killed")
-    actor.underlyingActor.taskTerminated(f.taskId)
+    actor.underlyingActor.instanceTerminated(f.taskId)
 
     Then("Task should be removed from healthy, ready and subscriptions.")
     actor.underlyingActor.healthyTasks should be (empty)
@@ -190,7 +190,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
           system.eventStream.subscribe(self, classOf[MesosStatusUpdateEvent])
           system.eventStream.subscribe(self, classOf[HealthStatusChanged])
         }
-        override def app: AppDefinition = appDef
+        override def runSpec: AppDefinition = appDef
         override def deploymentManager: ActorRef = deploymentManagerProbe.ref
         override def status: DeploymentStatus = deploymentStatus
         override def readinessCheckExecutor: ReadinessCheckExecutor = executor
