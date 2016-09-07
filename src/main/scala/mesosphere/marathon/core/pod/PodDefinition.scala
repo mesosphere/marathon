@@ -2,6 +2,7 @@ package mesosphere.marathon.core.pod
 // scalastyle:off
 import mesosphere.marathon.Protos
 import mesosphere.marathon.raml.{ ConstraintOperator, MesosContainer, Network, PodSchedulingPolicy, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue, _ }
+import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.{ EnvVarSecretRef, EnvVarString, EnvVarValue, MarathonState, PathId, RunnableSpec, Secret, Timestamp }
 import play.api.libs.json.Json
 
@@ -16,7 +17,7 @@ case class PodDefinition(
     user: Option[String] = PodDefinition.DefaultUser,
     env: Map[String, EnvVarValue] = PodDefinition.DefaultEnv,
     labels: Map[String, String] = PodDefinition.DefaultLabels,
-    acceptedResourceRoles: Option[Set[String]] = PodDefinition.DefaultResourceRoles,
+    acceptedResourceRoles: Set[String] = PodDefinition.DefaultResourceRoles,
     secrets: Map[String, Secret] = PodDefinition.DefaultSecrets,
     containers: Seq[MesosContainer] = PodDefinition.DefaultContainers,
     instances: Int = PodDefinition.DefaultInstances,
@@ -25,13 +26,29 @@ case class PodDefinition(
     version: Timestamp = PodDefinition.DefaultVersion,
     volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
-    backoffStrategy: Option[PodSchedulingBackoffStrategy] = None,
-    upgradeStrategy: Option[PodUpgradeStrategy] = None
+    backoffStrategy: PodSchedulingBackoffStrategy = PodDefinition.DefaultBackoffStrategy,
+    upgradeStrategy: PodUpgradeStrategy = PodDefinition.DefaultUpgradeStrategy
 ) extends RunnableSpec with MarathonState[Protos.PodDefinition, PodDefinition] {
   lazy val cpus: Double = containers.map(_.resources.cpus.toDouble).sum
   lazy val mem: Double = containers.map(_.resources.mem.toDouble).sum
   lazy val disk: Double = containers.flatMap(_.resources.disk.map(_.toDouble)).sum
   lazy val gpus: Int = containers.flatMap(_.resources.gpus).sum
+
+  override val isResident: Boolean = false
+
+  override def withInstances(instances: Int): RunnableSpec = copy(instances = instances)
+
+  // TODO(PODS) is upgrade for pod
+  override def isUpgrade(to: RunnableSpec): Boolean = false
+
+  // TODO(PODS) needsRestart for pod
+  override def needsRestart(to: RunnableSpec): Boolean = false
+
+  // TODO(PODS) is only scale change for pods.
+  override def isOnlyScaleChange(to: RunnableSpec): Boolean = false
+
+  // TODO(PODS) versionInfo
+  override val versionInfo: VersionInfo = VersionInfo.OnlyVersion(version)
 
   lazy val asPodDef: Pod = {
     val envVars: EnvVars = EnvVars(env.mapValues {
@@ -54,13 +71,13 @@ case class PodDefinition(
     }(collection.breakOut)
 
     // TODO: we're missing stuff here
-    val schedulingPolicy = PodSchedulingPolicy(backoffStrategy, upgradeStrategy,
-      Some(PodPlacementPolicy(constraintDefs, acceptedResourceRoles.fold(Seq.empty[String])(_.toVector))))
+    val schedulingPolicy = PodSchedulingPolicy(Some(backoffStrategy), Some(upgradeStrategy),
+      Some(PodPlacementPolicy(constraintDefs, acceptedResourceRoles.toVector)))
 
     val scalingPolicy = FixedPodScalingPolicy(instances, maxInstances)
 
     Pod(
-      id = id.safePath,
+      id = id.toString,
       version = Some(version.toOffsetDateTime),
       user = user,
       containers = containers,
@@ -128,12 +145,14 @@ object PodDefinition {
       }
     }
 
+    val resourceRoles = podDef.scheduling.flatMap(_.placement).fold(Set.empty[String])(_.acceptedResourceRoles.toSet)
+
     new PodDefinition(
       id = PathId(podDef.id).canonicalPath(),
       user = podDef.user,
       env = env,
       labels = podDef.labels.fold(Map.empty[String, String])(_.values),
-      acceptedResourceRoles = podDef.scheduling.flatMap(_.placement).map(_.acceptedResourceRoles.toSet),
+      acceptedResourceRoles = resourceRoles,
       secrets = podDef.secrets.fold(Map.empty[String, Secret])(_.values.mapValues(s => Secret(s.source))),
       containers = podDef.containers,
       instances = instances,
@@ -142,8 +161,8 @@ object PodDefinition {
       version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
       volumes = podDef.volumes,
       networks = networks,
-      backoffStrategy = podDef.scheduling.flatMap(_.backoff),
-      upgradeStrategy = podDef.scheduling.flatMap(_.upgrade)
+      backoffStrategy = podDef.scheduling.flatMap(_.backoff).getOrElse(DefaultBackoffStrategy),
+      upgradeStrategy = podDef.scheduling.flatMap(_.upgrade).getOrElse(DefaultUpgradeStrategy)
     )
   }
   //scalastyle:on
@@ -156,7 +175,7 @@ object PodDefinition {
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
   val DefaultLabels = Map.empty[String, String]
-  val DefaultResourceRoles = Option.empty[Set[String]]
+  val DefaultResourceRoles = Set.empty[String]
   val DefaultSecrets = Map.empty[String, Secret]
   val DefaultContainers = Seq.empty[MesosContainer]
   val DefaultInstances = 1
@@ -165,4 +184,6 @@ object PodDefinition {
   val DefaultVersion = Timestamp.now()
   val DefaultVolumes = Seq.empty[Volume]
   val DefaultNetworks = Seq.empty[Network]
+  val DefaultBackoffStrategy = PodSchedulingBackoffStrategy()
+  val DefaultUpgradeStrategy = PodUpgradeStrategy(0.0, 1.0)
 }

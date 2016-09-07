@@ -323,7 +323,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
   test("Should create non-empty deployment plan when only args have changed") {
     val versionInfo: FullVersionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(10))
     val app = AppDefinition(id = "/test".toPath, cmd = Some("sleep 5"), versionInfo = versionInfo)
-    val appNew = app.copy(args = Some(Seq("foo")))
+    val appNew = app.copy(args = Seq("foo"))
 
     val from = Group("/".toPath, apps = Map(app.id -> app))
     val to = from.copy(apps = Map(appNew.id -> appNew))

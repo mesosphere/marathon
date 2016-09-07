@@ -173,7 +173,7 @@ class Migration(
 
   private def storeCurrentVersion(): Future[Done] = async {
     val legacyStore = await(legacyStoreFuture)
-    persistenceStore.map(_.setStorageVersion(StorageVersions.current)).orElse {
+    val storeVersionFuture = persistenceStore.map(_.setStorageVersion(StorageVersions.current)).orElse {
       val bytes = StorageVersions.current.toByteArray
       legacyStore.map { store =>
         store.load(StorageVersionName).flatMap {
@@ -181,7 +181,8 @@ class Migration(
           case None => store.create(StorageVersionName, bytes)
         }
       }
-    }
+    }.getOrElse(Future.successful(Done))
+    await(storeVersionFuture)
     Done
   }
 
@@ -240,7 +241,7 @@ object StorageVersions {
             by(version.getPatch, that.getPatch, 0))))
     }
 
-    def str: String = s"Version(${version.getMajor}, ${version.getMinor}, ${version.getPatch})"
+    def str: String = s"Version(${version.getMajor}, ${version.getMinor}, ${version.getPatch}, ${version.getFormat})"
 
     def nonEmpty: Boolean = !version.equals(empty)
   }

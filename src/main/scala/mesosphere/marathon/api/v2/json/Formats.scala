@@ -797,7 +797,7 @@ trait AppAndGroupFormats {
     (
       (__ \ "id").read[PathId].filterNot(_.isRoot) ~
       (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
-      (__ \ "args").readNullable[Seq[String]] ~
+      (__ \ "args").readNullable[Seq[String]].withDefault(Nil) ~
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, EnvVarValue]].withDefault(AppDefinition.DefaultEnv) ~
       (__ \ "instances").readNullable[Int].withDefault(AppDefinition.DefaultInstances) ~
@@ -833,7 +833,7 @@ trait AppAndGroupFormats {
             maybePorts: Option[Seq[Int]],
             upgradeStrategy: Option[UpgradeStrategy],
             labels: Map[String, String],
-            acceptedResourceRoles: Option[Set[String]],
+            acceptedResourceRoles: Set[String],
             ipAddress: Option[IpAddress],
             version: Timestamp,
             residency: Option[Residency],
@@ -860,7 +860,7 @@ trait AppAndGroupFormats {
             (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.Labels.Default) ~
-            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
+            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty).withDefault(Set.empty[String]) ~
             (__ \ "ipAddress").readNullable[IpAddress] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
             (__ \ "residency").readNullable[Residency] ~

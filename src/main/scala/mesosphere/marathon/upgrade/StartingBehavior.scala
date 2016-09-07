@@ -7,6 +7,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.state.AppDefinition
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._
@@ -26,7 +28,12 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
   def initializeStart(): Unit
 
   final override def preStart(): Unit = {
-    if (runSpec.healthChecks.nonEmpty) eventBus.subscribe(self, classOf[MarathonHealthCheckEvent])
+    runSpec match {
+      case appSpec: AppDefinition =>
+        if (appSpec.healthChecks.nonEmpty) eventBus.subscribe(self, classOf[MarathonHealthCheckEvent])
+      case podSpec: PodDefinition =>
+      // TODO(PODS) - what about pods?
+    }
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
 
     initializeStart()
@@ -41,14 +48,24 @@ trait StartingBehavior extends ReadinessBehavior { this: Actor with ActorLogging
     case MesosStatusUpdateEvent(_, taskId, StartErrorState(_), _, `runId`, _, _, _, `versionString`, _, _) => // scalastyle:off line.size.limit
       log.warning(s"New task [$taskId] failed during app ${runSpec.id.toString} scaling, queueing another task")
       taskTerminated(taskId)
-      launchQueue.add(runSpec)
+      runSpec match {
+        case app: AppDefinition =>
+          launchQueue.add(app)
+        case pod: PodDefinition =>
+        // TODO(PODS) - launchQueue.add(pod)
+      }
 
     case Sync =>
       val actualSize = launchQueue.get(runSpec.id).map(_.finalTaskCount).getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id))
       val tasksToStartNow = Math.max(scaleTo - actualSize, 0)
       if (tasksToStartNow > 0) {
         log.info(s"Reconciling tasks during app ${runSpec.id.toString} scaling: queuing $tasksToStartNow new tasks")
-        launchQueue.add(runSpec, tasksToStartNow)
+        runSpec match {
+          case app: AppDefinition =>
+            launchQueue.add(app, tasksToStartNow)
+          case pod: PodDefinition =>
+          // TODO(PODS) - launchQueue.add(pod)
+        }
       }
       context.system.scheduler.scheduleOnce(5.seconds, self, Sync)
   }

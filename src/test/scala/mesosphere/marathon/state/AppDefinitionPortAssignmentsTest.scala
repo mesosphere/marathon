@@ -65,7 +65,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withHostPorts(Seq.empty)
 
     Then("The port assignments are empty")
-    app.portAssignments(task).value should be(empty)
+    app.portAssignments(task) should be(empty)
   }
 
   test("portAssignments with a reserved task") {
@@ -242,6 +242,6 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val task = MarathonTestHelper.mininimalTask(app.id).withHostPorts(Seq.empty)
 
     Then("The port assignments are empty")
-    app.portAssignments(task).value should be(empty)
+    app.portAssignments(task) should be(empty)
   }
 }

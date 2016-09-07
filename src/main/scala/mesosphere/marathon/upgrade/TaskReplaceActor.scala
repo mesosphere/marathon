@@ -9,7 +9,8 @@ import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillServi
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{ RunnableSpec, AppDefinition }
+import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.state.{ AppDefinition, RunnableSpec }
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
@@ -34,7 +35,14 @@ class TaskReplaceActor(
   var newTasksStarted: Int = 0
   var oldTaskIds = tasksToKill.map(_.id).to[SortedSet]
   val toKill = tasksToKill.to[mutable.Queue]
-  var maxCapacity = (runSpec.instances * (1 + runSpec.upgradeStrategy.maximumOverCapacity)).toInt
+  var maxCapacity = {
+    runSpec match {
+      case app: AppDefinition =>
+        (runSpec.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
+      case pod: PodDefinition =>
+        (pod.instances * (1 + pod.upgradeStrategy.maximumOverCapacity)).toInt
+    }
+  }
   var outstandingKills = Set.empty[Instance.Id]
 
   override def preStart(): Unit = {
@@ -42,7 +50,13 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[HealthStatusChanged])
 
-    val ignitionStrategy = computeRestartStrategy(runSpec, tasksToKill.size)
+    val ignitionStrategy = runSpec match {
+      case app: AppDefinition =>
+        computeRestartStrategy(app, tasksToKill.size)
+      case pod: PodDefinition =>
+        // TODO(PODS) restart strategy for pods
+        TaskReplaceActor.RestartStrategy(0, pod.maxInstances.getOrElse(0))
+    }
     maxCapacity = ignitionStrategy.maxCapacity
 
     for (_ <- 0 until ignitionStrategy.nrToKillImmediately) {
@@ -52,7 +66,12 @@ class TaskReplaceActor(
     reconcileNewTasks()
 
     log.info("Resetting the backoff delay before restarting the app")
-    launchQueue.resetDelay(runSpec)
+    runSpec match {
+      case app: AppDefinition =>
+        launchQueue.resetDelay(app)
+      case pod: PodDefinition =>
+      // TODO(PODS): launchQueue.resetDelay(pod)
+    }
   }
 
   override def postStop(): Unit = {
@@ -71,7 +90,12 @@ class TaskReplaceActor(
     case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `runId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       log.error(s"New task $taskId failed on slave $slaveId during app $runId restart")
       taskTerminated(taskId)
-      launchQueue.add(runSpec)
+      runSpec match {
+        case app: AppDefinition =>
+          launchQueue.add(app)
+        case pod: PodDefinition =>
+        // TODO(PODS) add to launch queue
+      }
 
     // Old task successfully killed
     case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `runId`, _, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
@@ -94,7 +118,12 @@ class TaskReplaceActor(
     val tasksToStartNow = math.min(tasksNotStartedYet, leftCapacity)
     if (tasksToStartNow > 0) {
       log.info(s"Reconciling tasks during app $runId restart: queuing $tasksToStartNow new tasks")
-      launchQueue.add(runSpec, tasksToStartNow)
+      runSpec match {
+        case app: AppDefinition =>
+          launchQueue.add(app, tasksToStartNow)
+        case pod: PodDefinition =>
+        // TODO(PODS) add to launch queue
+      }
       newTasksStarted += tasksToStartNow
     }
   }

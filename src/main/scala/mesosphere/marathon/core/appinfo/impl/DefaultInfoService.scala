@@ -3,6 +3,7 @@ package mesosphere.marathon.core.appinfo.impl
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.core.pod.PodManager
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.ReadOnlyAppRepository
 import org.slf4j.LoggerFactory
@@ -14,6 +15,7 @@ import scala.concurrent.Future
 private[appinfo] class DefaultInfoService(
     groupManager: GroupManager,
     appRepository: ReadOnlyAppRepository,
+    podManager: PodManager,
     newBaseData: () => AppInfoBaseData) extends AppInfoService with GroupInfoService {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -93,7 +95,7 @@ private[appinfo] class DefaultInfoService(
           alreadyMatched.getOrElseUpdate(group.id, groupSelector.matches(group) || group.groups.exists(groupMatches))
         }
         if (groupMatches(ref)) Some(GroupInfo(ref, apps,
-          Some(group.pods.values.map(_.asPodDef)(collection.breakOut)), groups))
+          Some(podManager.status(group.pods)), groups))
         else None
       }
       queryGroup(group)

@@ -273,7 +273,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     MarathonTestHelper.validateJsonSchema(app, false)
 
-    app = correct.copy(cmd = Some("command"), args = Some(Seq("a", "b", "c")))
+    app = correct.copy(cmd = Some("command"), args = Seq("a", "b", "c"))
     shouldViolate(
       app,
       "/",
@@ -281,7 +281,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     )
     MarathonTestHelper.validateJsonSchema(app, false)
 
-    app = correct.copy(cmd = None, args = Some(Seq("a", "b", "c")))
+    app = correct.copy(cmd = None, args = Seq("a", "b", "c"))
     shouldNotViolate(
       app,
       "/",

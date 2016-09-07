@@ -102,10 +102,12 @@ class ZkPersistenceStore(
           ZKStoreEntry.newBuilder().setValue(com.google.protobuf.ByteString.copyFrom(actualVersion.toByteArray))
           .setName(Migration.StorageVersionName)
           .setCompressed(false)
+          .setUuid(com.google.protobuf.ByteString.copyFromUtf8(UUID.randomUUID().toString))
           .build.toByteArray
         )
         await(client.setData(path, data).asTry) match {
-          case Success(_) => Done
+          case Success(_) =>
+            Done
           case Failure(_: NoNodeException) =>
             await(client.create(path, data = Some(data)))
             Done

@@ -1,24 +1,24 @@
 package mesosphere.marathon.core.pod.impl
 
+import java.time.{ Clock, OffsetDateTime }
+
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.marathon.ConflictingChangeException
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
-import mesosphere.marathon.raml.PodStatus
+import mesosphere.marathon.raml.{ PodState, PodStatus }
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.upgrade.DeploymentPlan
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.immutable.Seq
 
-case class PodManagerImpl(
-    groupManager: GroupManager)(
-    implicit
-    mat: Materializer,
-    ctx: ExecutionContext) extends PodManager {
-
+case class PodManagerImpl(groupManager: GroupManager)(implicit
+  mat: Materializer,
+    ctx: ExecutionContext,
+    clock: Clock) extends PodManager {
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     def createOrThrow(opt: Option[PodDefinition]) = opt
       .map(_ => throw ConflictingChangeException(s"A pod with id [${p.id}] already exists."))
@@ -42,5 +42,17 @@ case class PodManagerImpl(
 
   def status(id: PathId): Future[Option[PodStatus]] = Future.failed(???)
 
-  override def status(ids: Set[PathId]): Seq[PodStatus] = ???
+  override def status(ids: Map[PathId, PodDefinition]): Seq[PodStatus] = {
+    ids.map {
+      case (id, podDef) =>
+        PodStatus(
+          id = id.toString,
+          spec = podDef.asPodDef,
+          status = PodState.Terminal,
+          statusSince = OffsetDateTime.now(clock),
+          lastUpdated = OffsetDateTime.now(clock),
+          lastChanged = OffsetDateTime.now(clock)
+        )
+    }(collection.breakOut)
+  }
 }

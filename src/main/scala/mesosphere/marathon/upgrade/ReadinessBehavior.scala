@@ -103,6 +103,7 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         case MesosStatusUpdateEvent(slaveId, taskId, "TASK_RUNNING", _, `runId`, _, _, _, `versionString`, _, _) =>
           taskFn(taskId)
       }
+
       taskIsRunning(
         if (readinessChecks(runSpec).isEmpty) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
     }
@@ -138,10 +139,14 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
     def readinessCheckBehavior: Receive = {
       case ScheduleReadinessCheckFor(task, launched) =>
         log.debug(s"Schedule readiness check for task: ${task.id}")
-        ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task, launched).foreach { spec =>
-          val subscriptionName = ReadinessCheckSubscriptionKey(task.id, spec.checkName)
-          val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
-          subscriptions += subscriptionName -> subscription
+        runSpec match {
+          case app: AppDefinition =>
+            ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(app, task, launched).foreach { spec =>
+              val subscriptionName = ReadinessCheckSubscriptionKey(task.id, spec.checkName)
+              val subscription = readinessCheckExecutor.execute(spec).subscribe(self ! _)
+              subscriptions += subscriptionName -> subscription
+            }
+          case pod: PodDefinition =>
         }
 
       case result: ReadinessCheckResult =>

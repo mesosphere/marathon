@@ -239,8 +239,8 @@ class GroupTest extends FunSpec with GivenWhenThen with Matchers {
       Given("a group with subgroups")
       val now = Timestamp(11)
       val fullVersion = VersionInfo.forNewConfig(now)
-      val app1 = AppDefinition("/test/group1/app1".toPath, args = Some(Seq("a", "b", "c")), versionInfo = fullVersion)
-      val app2 = AppDefinition("/test/group2/app2".toPath, args = Some(Seq("a", "b")), versionInfo = fullVersion)
+      val app1 = AppDefinition("/test/group1/app1".toPath, args = Seq("a", "b", "c"), versionInfo = fullVersion)
+      val app2 = AppDefinition("/test/group2/app2".toPath, args = Seq("a", "b"), versionInfo = fullVersion)
       val current = Group.empty.copy(groups = Set(
         Group("/test".toPath, groups = Set(
           Group("/test/group1".toPath, Map(app1.id -> app1)),

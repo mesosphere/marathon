@@ -1,128 +1,88 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin
 import mesosphere.marathon.state.AppDefinition.VersionInfo
 
-import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
-import scala.language.implicitConversions
+import scala.concurrent.duration.FiniteDuration
 
 /**
   * A generic spec that specifies something that Marathon is able to launch instances of.
   */
 trait RunnableSpec extends plugin.RunSpec {
-  def id: PathId
-  def env: Map[String, EnvVarValue]
-  def labels: Map[String, String]
-  // TODO: Should this really be an Option of a collection?!
-  def acceptedResourceRoles: Option[Set[String]]
-  def secrets: Map[String, Secret]
+  val id: PathId
+  val env: Map[String, EnvVarValue]
+  val labels: Map[String, String]
+  val acceptedResourceRoles: Set[String]
+  val secrets: Map[String, Secret]
 
-  def instances: Int
-  def constraints: Set[Constraint]
+  val instances: Int
+  val constraints: Set[Constraint]
 
   // TODO: these could go into a resources object
-  def cpus: Double
-  def mem: Double
-  def disk: Double
-  def gpus: Int
-}
+  val cpus: Double
+  val mem: Double
+  val disk: Double
+  val gpus: Int
+  val version: Timestamp
 
-object RunnableSpec {
+  val isResident: Boolean
 
-  //TODO(PODS): Work in progress conversion to make the code compile
-  implicit def runSpecToApp(runnableSpec: RunnableSpec): AppDefinition = runnableSpec match {
-    case app: AppDefinition => app
-    case _ => throw new IllegalArgumentException
-  }
+  def withInstances(instances: Int): RunnableSpec
+  def isUpgrade(to: RunnableSpec): Boolean
+  def needsRestart(to: RunnableSpec): Boolean
+  def isOnlyScaleChange(to: RunnableSpec): Boolean
+  val versionInfo: VersionInfo
 }
 
 //scalastyle:off
+// TODO(PODS) why do we need RunSpec and RunnableSpec?!? can we also collapse some of these giant lists of
+// fields into subtypes?
 trait RunSpec extends plugin.RunSpec with RunnableSpec {
-
-  def id: PathId
-
-  def cmd: Option[String]
-
-  def args: Option[Seq[String]]
-
-  def user: Option[String]
-
-  def env: Map[String, EnvVarValue]
-
-  def instances: Int
-
-  def cpus: Double
-
-  def mem: Double
-
-  def disk: Double
-
-  def gpus: Int
-
-  def executor: String
-
-  def constraints: Set[Constraint]
-
-  def fetch: Seq[FetchUri]
-
-  def storeUrls: Seq[String]
-
-  def portDefinitions: Seq[PortDefinition]
-
-  def requirePorts: Boolean
-
-  def backoff: FiniteDuration
-
-  def backoffFactor: Double
-
-  def maxLaunchDelay: FiniteDuration
-
-  def container: Option[Container]
-
-  def healthChecks: Set[HealthCheck]
-
-  def readinessChecks: Seq[ReadinessCheck]
-
-  def taskKillGracePeriod: Option[FiniteDuration]
-
-  def dependencies: Set[PathId]
-
-  def upgradeStrategy: UpgradeStrategy
-
-  def labels: Map[String, String]
-
-  def acceptedResourceRoles: Option[Set[String]]
-
-  def ipAddress: Option[IpAddress]
-
-  def versionInfo: VersionInfo
-
-  def version: Timestamp
-
-  def residency: Option[Residency]
-
-  def isResident: Boolean
-
-  def secrets: Map[String, Secret]
-
-  def isUpgrade(to: RunSpec): Boolean
-
-  def needsRestart(to: RunSpec): Boolean
-
-  def isOnlyScaleChange(to: RunSpec): Boolean
-
-  def isSingleInstance: Boolean
-  def volumes: Iterable[Volume]
-  def persistentVolumes: Iterable[PersistentVolume]
-  def externalVolumes: Iterable[ExternalVolume]
-  def diskForPersistentVolumes: Double
-  def portNumbers: Seq[Int]
-  def portNames: Seq[String]
-  def servicePorts: Seq[Int]
-  def portAssignments(task: Task): Option[Seq[PortAssignment]]
+  val id: PathId
+  val cmd: Option[String]
+  val args: Seq[String]
+  val user: Option[String]
+  val env: Map[String, EnvVarValue]
+  val instances: Int
+  val cpus: Double
+  val mem: Double
+  val disk: Double
+  val gpus: Int
+  val executor: String
+  val constraints: Set[Constraint]
+  val fetch: Seq[FetchUri]
+  val storeUrls: Seq[String]
+  val portDefinitions: Seq[PortDefinition]
+  val requirePorts: Boolean
+  val backoff: FiniteDuration
+  val backoffFactor: Double
+  val maxLaunchDelay: FiniteDuration
+  val container: Option[Container]
+  val healthChecks: Set[HealthCheck]
+  val readinessChecks: Seq[ReadinessCheck]
+  val taskKillGracePeriod: Option[FiniteDuration]
+  val dependencies: Set[PathId]
+  val upgradeStrategy: UpgradeStrategy
+  val labels: Map[String, String]
+  val acceptedResourceRoles: Set[String]
+  val ipAddress: Option[IpAddress]
+  val versionInfo: VersionInfo
+  val version: Timestamp
+  val residency: Option[Residency]
+  val isResident: Boolean
+  val secrets: Map[String, Secret]
+  val isSingleInstance: Boolean
+  val volumes: Seq[Volume]
+  val persistentVolumes: Seq[PersistentVolume]
+  val externalVolumes: Seq[ExternalVolume]
+  val diskForPersistentVolumes: Double
+  val portNumbers: Seq[Int]
+  val portNames: Seq[String]
+  val servicePorts: Seq[Int]
+  def portAssignments(task: Task): Seq[PortAssignment]
 }

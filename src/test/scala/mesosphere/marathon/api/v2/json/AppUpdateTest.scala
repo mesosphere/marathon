@@ -229,13 +229,13 @@ class AppUpdateTest extends MarathonSpec with Matchers {
   }
 
   test("acceptedResourceRoles of update is only applied when != None") {
-    val app = AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Some(Set("a")))
+    val app = AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Set("a"))
 
     val unchanged = AppUpdate().apply(app).copy(versionInfo = app.versionInfo)
     assert(unchanged == app)
 
     val changed = AppUpdate(acceptedResourceRoles = Some(Set("b"))).apply(app).copy(versionInfo = app.versionInfo)
-    assert(changed == app.copy(acceptedResourceRoles = Some(Set("b"))))
+    assert(changed == app.copy(acceptedResourceRoles = Set("b")))
   }
 
   test("AppUpdate does not change existing versionInfo") {

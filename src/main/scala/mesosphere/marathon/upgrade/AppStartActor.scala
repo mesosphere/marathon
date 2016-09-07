@@ -4,9 +4,10 @@ import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.RunnableSpec
+import mesosphere.marathon.state.{ AppDefinition, RunnableSpec }
 import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
 import org.apache.mesos.SchedulerDriver
 
@@ -29,16 +30,25 @@ class AppStartActor(
   val nrToStart: Int = scaleTo
 
   def initializeStart(): Unit = {
-    scheduler.startApp(driver, runSpec.copy(instances = scaleTo))
+    runSpec match {
+      case app: AppDefinition =>
+        scheduler.startApp(driver, app.copy(instances = scaleTo))
+      case pod: PodDefinition =>
+    }
   }
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
     if (!promise.isCompleted) {
       if (promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
-        scheduler.stopApp(runSpec).onFailure {
-          case NonFatal(e) => log.error(s"while stopping app ${runSpec.id}", e)
-        }(context.dispatcher)
+        runSpec match {
+          case app: AppDefinition =>
+            scheduler.stopApp(app).onFailure {
+              case NonFatal(e) => log.error(s"while stopping app ${runSpec.id}", e)
+            }(context.dispatcher)
+          case pod: PodDefinition =>
+          // TODO(PODS): stop the pod
+        }
       }
     }
     super.postStop()

@@ -620,7 +620,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       offer,
       AppDefinition(
         id = "testApp".toPath,
-        args = Some(Seq("a", "b", "c")),
+        args = Seq("a", "b", "c"),
         cpus = 1.0,
         mem = 64.0,
         disk = 1.0,
@@ -686,7 +686,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     offer,
     AppDefinition(
       id = "testApp".toPath,
-      args = Some(Seq("a", "b", "c")),
+      args = Seq("a", "b", "c"),
       cpus = 1.0,
       mem = 64.0,
       disk = 1.0,
@@ -893,7 +893,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         cpus = 1.0,
         mem = 64.0,
         disk = 1.0,
-        args = Some(Seq("a", "b", "c")),
+        args = Seq("a", "b", "c"),
         executor = "/custom/executor",
         portDefinitions = PortDefinitions(8080, 8081)
       )

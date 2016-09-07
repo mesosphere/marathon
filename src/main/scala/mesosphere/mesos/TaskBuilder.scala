@@ -72,7 +72,11 @@ class TaskBuilder(
   def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     val acceptedResourceRoles: Set[String] = {
-      val roles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
+        config.defaultAcceptedResourceRolesSet
+      } else {
+        runSpec.acceptedResourceRoles
+      }
       if (log.isDebugEnabled) log.debug(s"acceptedResourceRoles $roles")
       roles
     }
@@ -132,7 +136,7 @@ class TaskBuilder(
       case PathExecutor(path) =>
         val executorId = f"marathon-${taskId.idString}" // Fresh executor
         val executorPath = s"'$path'" // TODO: Really escape this.
-        val cmd = runSpec.cmd orElse runSpec.args.map(_ mkString " ") getOrElse ""
+        val cmd = runSpec.cmd.getOrElse(runSpec.args.mkString(" "))
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
 
         val info = ExecutorInfo.newBuilder()
@@ -320,11 +324,11 @@ object TaskBuilder {
     }
 
     // args take precedence over command, if supplied
-    runSpec.args.foreach { argv =>
+    if (runSpec.args.nonEmpty) {
       builder.setShell(false)
-      builder.addAllArguments(argv.asJava)
+      builder.addAllArguments(runSpec.args.asJava)
       //mesos command executor expects cmd and arguments
-      argv.headOption.foreach { value =>
+      runSpec.args.headOption.foreach { value =>
         if (runSpec.container.isEmpty) builder.setValue(value)
       }
     }

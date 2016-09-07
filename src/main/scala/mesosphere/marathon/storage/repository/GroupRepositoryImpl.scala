@@ -79,9 +79,18 @@ private[storage] case class StoredGroup(
           .build()
     }
 
+    val pods = podIds.map {
+      case (pod, podVersion) =>
+        Protos.GroupDefinition.AppReference.newBuilder()
+          .setId(pod.safePath)
+          .setVersion(DateFormat.format(podVersion))
+          .build()
+    }
+
     Protos.GroupDefinition.newBuilder
       .setId(id.safePath)
       .addAllApps(apps.asJava)
+      .addAllPods(pods.asJava)
       .addAllGroups(storedGroups.map(_.toProto).asJava)
       .addAllDependencies(dependencies.map(_.safePath).asJava)
       .setVersion(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(version))

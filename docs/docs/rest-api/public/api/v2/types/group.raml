@@ -1,7 +1,7 @@
 #%RAML 1.0 Library
 uses:
   app: app.raml
-  pod: pod.raml
+  pod: podStatus.raml
   strings: stringTypes.raml
 types:
   Group:
@@ -9,7 +9,7 @@ types:
     properties:
       id: strings.PathId
       apps?: app.App[]
-      pods?: pod.Pod[]
+      pods?: pod.PodStatus[]
       groups?:
         type: array
         items: Group

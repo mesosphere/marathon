@@ -23,7 +23,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       instances = 5,
       portDefinitions = PortDefinitions(8080, 8081),
       executor = "//cmd",
-      acceptedResourceRoles = Some(Set("a", "b"))
+      acceptedResourceRoles = Set("a", "b")
     )
 
     val proto1 = app1.toProto
@@ -46,7 +46,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val app2 = AppDefinition(
       id = "play".toPath,
       cmd = None,
-      args = Some(Seq("a", "b", "c")),
+      args = Seq("a", "b", "c"),
       container = Some(Container.Docker(image = "group/image")),
       cpus = 4.0,
       mem = 256.0,
@@ -92,7 +92,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
   test("ARGS to proto and back again") {
     val app = AppDefinition(
       id = "play".toPath,
-      args = Some(Seq("bash", "foo-*/start", "-Dhttp.port=$PORT")),
+      args = Seq("bash", "foo-*/start", "-Dhttp.port=$PORT"),
       versionInfo = fullVersion
     )
 
@@ -275,7 +275,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
 
     val app2 = AppDefinition(
       cmd = None,
-      args = Some(Seq("a", "b", "c")),
+      args = Seq("a", "b", "c"),
       versionInfo = fullVersion
     )
     val result2 = AppDefinition().mergeFromProto(app2.toProto)
