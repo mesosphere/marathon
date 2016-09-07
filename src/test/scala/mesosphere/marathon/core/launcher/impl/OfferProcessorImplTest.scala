@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launcher.impl
 
+import akka.Done
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.{Instance, InstanceStateOp, InstanceStatus}
@@ -39,7 +40,7 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
     for (task <- tasks) {
       val stateOp = TaskStateOp.LaunchEphemeral(MarathonTestHelper.makeTaskFromTaskInfo(task))
-      taskCreationHandler.created(stateOp) returns Future.successful(())
+      taskCreationHandler.created(stateOp) returns Future.successful(Done)
     }
 
     And("a working taskLauncher")
@@ -77,9 +78,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
       val op = task.op
-      taskCreationHandler.created(op.stateOp) returns Future.successful(op.stateOp)
-      taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(op.stateOp.instanceId)).asInstanceOf[Future[Unit]] returns
-        Future.successful(())
+      taskCreationHandler.created(op.stateOp) returns Future.successful(Done)
+      taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(
+        op.stateOp.instanceId)) returns Future.successful(Done)
     }
 
     And("a dysfunctional taskLauncher")
@@ -130,8 +131,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
     offerMatcher.matchOffer(deadline, offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
     for (task <- tasksWithSource) {
       val op = task.op
-      taskCreationHandler.created(op.stateOp) returns Future.successful(op.stateOp)
-      taskCreationHandler.created(TaskStateOp.Revert(op.oldInstance.get.asInstanceOf[Task])) returns Future.successful(op.oldInstance.get)
+      taskCreationHandler.created(op.stateOp) returns Future.successful(Done)
+      taskCreationHandler.created(TaskStateOp.Revert(
+        op.oldInstance.get.asInstanceOf[Task])) returns Future.successful(Done)
     }
 
     And("a dysfunctional taskLauncher")
@@ -213,10 +215,9 @@ class OfferProcessorImplTest extends MarathonSpec with GivenWhenThen with Mockit
       taskCreationHandler.created(task.op.stateOp) answers { args =>
         // simulate that stores are really slow
         clock += 1.hour
-        Future.successful(task.op.stateOp)
+        Future.successful(Done)
       }
-      taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(task.op.instanceId)).asInstanceOf[Future[Unit]] returns
-        Future.successful(Some(task.op.instanceId))
+      taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(task.op.instanceId)) returns Future.successful(Done)
     }
 
     When("processing the offer")

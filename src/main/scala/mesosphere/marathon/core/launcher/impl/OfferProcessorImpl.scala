@@ -1,16 +1,17 @@
 package mesosphere.marathon.core.launcher.impl
 
+import akka.Done
 import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
-import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
-import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
+import mesosphere.marathon.core.task.{Task, TaskStateOp}
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
-import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
+import mesosphere.marathon.metrics.{MetricPrefixes, Metrics}
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.Protos.{ Offer, OfferID }
+import org.apache.mesos.Protos.{Offer, OfferID}
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable
@@ -46,7 +47,7 @@ private[launcher] class OfferProcessorImpl(
   private[this] val savingTasksErrorMeter =
     metrics.meter(metrics.name(MetricPrefixes.SERVICE, getClass, "savingTasksErrors"))
 
-  override def processOffer(offer: Offer): Future[Unit] = {
+  override def processOffer(offer: Offer): Future[Done] = {
     incomingOffersMeter.mark()
 
     val matchingDeadline = clock.now() + offerMatchingTimeout
@@ -80,18 +81,18 @@ private[launcher] class OfferProcessorImpl(
       }
   }
 
-  private[this] def declineOffer(offerId: OfferID, resendThisOffer: Boolean): Future[Unit] = {
+  private[this] def declineOffer(offerId: OfferID, resendThisOffer: Boolean): Future[Done] = {
     //if the offer should be resent, than we ignore the configured decline offer duration
     val duration: Option[Long] = if (resendThisOffer) None else conf.declineOfferDuration.get
     taskLauncher.declineOffer(offerId, duration)
-    Future.successful(())
+    Future.successful(Done)
   }
 
-  private[this] def acceptOffer(offerId: OfferID, taskOpsWithSource: Seq[InstanceOpWithSource]): Future[Unit] = {
+  private[this] def acceptOffer(offerId: OfferID, taskOpsWithSource: Seq[InstanceOpWithSource]): Future[Done] = {
     if (taskLauncher.acceptOffer(offerId, taskOpsWithSource.map(_.op))) {
       log.debug("Offer [{}]. Task launch successful", offerId.getValue)
       taskOpsWithSource.foreach(_.accept())
-      Future.successful(())
+      Future.successful(Done)
     } else {
       log.warn("Offer [{}]. Task launch rejected", offerId.getValue)
       taskOpsWithSource.foreach(_.reject("driver unavailable"))
@@ -100,16 +101,17 @@ private[launcher] class OfferProcessorImpl(
   }
 
   /** Revert the effects of the task ops on the task state. */
-  private[this] def revertTaskOps(ops: Iterable[InstanceOp]): Future[Unit] = {
-    ops.foldLeft(Future.successful(())) { (terminatedFuture, nextOp) =>
+  private[this] def revertTaskOps(ops: Iterable[InstanceOp]): Future[Done] = {
+    val done: Future[Done] = Future.successful(Done)
+    ops.foldLeft(done) { (terminatedFuture, nextOp) =>
       terminatedFuture.flatMap { _ =>
         nextOp.oldInstance match {
           case Some(existingTask: Task) =>
-            taskCreationHandler.created(TaskStateOp.Revert(existingTask)).map(_ => ())
+            taskCreationHandler.created(TaskStateOp.Revert(existingTask))
           case Some(existingTask: Instance) =>
-            Future.successful(()) // TODO POD remove asInstanceOf[Task]
+            Future.successful(Done) // TODO POD remove asInstanceOf[Task]
           case None =>
-            taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(nextOp.instanceId)).map(_ => ())
+            taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(nextOp.instanceId))
         }
       }
     }.recover {

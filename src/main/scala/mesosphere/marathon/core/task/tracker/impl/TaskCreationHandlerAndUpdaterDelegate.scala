@@ -1,11 +1,12 @@
 package mesosphere.marathon.core.task.tracker.impl
 
+import akka.Done
 import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
+import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
 import mesosphere.marathon.core.task.TaskStateOp.ReservationTimeout
-import mesosphere.marathon.core.task.{ TaskStateChange }
+import mesosphere.marathon.core.task.TaskStateChange
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardInstanceOp
 import mesosphere.marathon.core.task.tracker._
 
@@ -30,11 +31,11 @@ private[tracker] class TaskCreationHandlerAndUpdaterDelegate(
     taskUpdate(stateOp.instanceId, stateOp)
   }
 
-  override def created(taskStateOp: InstanceStateOp): Future[Unit] = {
-    process(taskStateOp).map(_ => ())
+  override def created(taskStateOp: InstanceStateOp): Future[Done] = {
+    process(taskStateOp).map(_ => Done)
   }
-  override def terminated(stateOp: InstanceStateOp.ForceExpunge): Future[_] = {
-    process(stateOp)
+  override def terminated(stateOp: InstanceStateOp.ForceExpunge): Future[Done] = {
+    process(stateOp).map(_ => Done)
   }
   override def timeout(stateOp: ReservationTimeout): Future[_] = {
     process(stateOp)
