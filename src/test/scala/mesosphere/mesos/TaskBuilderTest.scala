@@ -1920,7 +1920,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
         if (protocol != "") b.setProtocol(protocol)
         if (labels.nonEmpty) {
           val labelsBuilder = MesosProtos.Labels.newBuilder()
-          labels foreach { case(key, value) =>
+          labels.foreach { case(key, value) =>
             labelsBuilder.addLabels(MesosProtos.Label.newBuilder().setKey(key).setValue(value))
           }
           b.setLabels(labelsBuilder)
