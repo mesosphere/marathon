@@ -5,14 +5,14 @@ import akka.actor._
 import akka.event.LoggingReceive
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.appinfo.TaskCounts
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.{Task, TaskStateChange}
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
+import mesosphere.marathon.core.task.{ Task, TaskStateChange }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardInstanceOp
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.slf4j.LoggerFactory
 
 object InstanceTrackerActor {

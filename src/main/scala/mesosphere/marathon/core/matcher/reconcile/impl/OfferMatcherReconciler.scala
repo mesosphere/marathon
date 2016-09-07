@@ -1,16 +1,16 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps}
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.state.{Group, Timestamp}
+import mesosphere.marathon.state.{ Group, Timestamp }
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.{Offer, OfferID, Resource}
+import org.apache.mesos.Protos.{ Offer, OfferID, Resource }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable

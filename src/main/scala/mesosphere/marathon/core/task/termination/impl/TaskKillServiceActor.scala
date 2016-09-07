@@ -1,14 +1,14 @@
 package mesosphere.marathon.core.task.termination.impl
 
 import akka.Done
-import akka.actor.{Actor, ActorLogging, Cancellable, Props}
+import akka.actor.{ Actor, ActorLogging, Cancellable, Props }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.task.termination.TaskKillConfig
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 
 import scala.collection.mutable
 import scala.concurrent.Promise

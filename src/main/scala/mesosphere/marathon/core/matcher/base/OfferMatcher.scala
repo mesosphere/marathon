@@ -41,9 +41,9 @@ object OfferMatcher {
     *                        and should be resend and processed again
     */
   case class MatchedInstanceOps(
-                             offerId: Mesos.OfferID,
-                             opsWithSource: immutable.Seq[InstanceOpWithSource] = immutable.Seq.empty,
-                             resendThisOffer: Boolean = false) {
+      offerId: Mesos.OfferID,
+      opsWithSource: immutable.Seq[InstanceOpWithSource] = immutable.Seq.empty,
+      resendThisOffer: Boolean = false) {
 
     /** all included [InstanceOp] without the source information. */
     val ops: immutable.Seq[InstanceOp] = opsWithSource.view.map(_.op)(collection.breakOut)

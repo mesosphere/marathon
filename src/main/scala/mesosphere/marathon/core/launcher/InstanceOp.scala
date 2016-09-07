@@ -1,10 +1,10 @@
 package mesosphere.marathon.core.launcher
 
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 import mesosphere.marathon.core.task.Task.LocalVolume
-import mesosphere.marathon.core.task.{Task, TaskStateOp}
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.tasks.ResourceUtil
-import org.apache.mesos.{Protos => MesosProtos}
+import org.apache.mesos.{ Protos => MesosProtos }
 
 /**
   * An operation which relates to a task and is send to Mesos for execution in an `acceptOffers` API call.

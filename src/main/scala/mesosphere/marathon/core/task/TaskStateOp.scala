@@ -1,6 +1,6 @@
 package mesosphere.marathon.core.task
 
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp, InstanceStatus}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp, InstanceStatus }
 import mesosphere.marathon.state.Timestamp
 import org.apache.mesos
 
@@ -28,10 +28,10 @@ object TaskStateOp {
   }
 
   case class LaunchOnReservation(
-                                  instanceId: Instance.Id,
-                                  runSpecVersion: Timestamp,
-                                  status: Task.Status,
-                                  hostPorts: Seq[Int]) extends TaskStateOp
+    instanceId: Instance.Id,
+    runSpecVersion: Timestamp,
+    status: Task.Status,
+    hostPorts: Seq[Int]) extends TaskStateOp
 
   case class MesosUpdate(task: Task, status: InstanceStatus,
       mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends TaskStateOp {

@@ -6,7 +6,7 @@ import akka.util.Timeout
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.Protos.Offer
 
 import scala.concurrent.Future

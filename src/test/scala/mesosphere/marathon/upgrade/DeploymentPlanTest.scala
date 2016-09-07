@@ -41,7 +41,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )))
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.appsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size (3)
@@ -74,7 +74,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.appsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size (4)
@@ -142,7 +142,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val to = Group("/".toPath, groups = Set(Group("/group".toPath, update)))
     val plan = DeploymentPlan(from, to)
 
-    plan.affectedApplicationIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
+    plan.affectedRunSpecIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
     plan.isAffectedBy(plan) should equal (right = true)
     plan.isAffectedBy(DeploymentPlan(from, from)) should equal (right = false)
   }

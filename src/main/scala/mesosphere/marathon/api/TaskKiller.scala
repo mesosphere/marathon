@@ -4,15 +4,15 @@ import javax.inject.Inject
 
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
-import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, Identity, UpdateRunSpec}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.plugin.auth.{ Authenticator, Authorizer, Identity, UpdateRunSpec }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentPlan
-import mesosphere.marathon.{MarathonConf, MarathonSchedulerService, UnknownAppException}
+import mesosphere.marathon.{ MarathonConf, MarathonSchedulerService, UnknownAppException }
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class TaskKiller @Inject() (
     taskTracker: InstanceTracker,

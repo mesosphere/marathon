@@ -1,20 +1,20 @@
 package mesosphere.marathon.core.matcher.manager.impl
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.event.LoggingReceive
 import akka.pattern.pipe
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
-import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{MatchTimeout, OfferData}
+import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{ MatchTimeout, OfferData }
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
-import mesosphere.marathon.metrics.{MetricPrefixes, Metrics}
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.ResourceUtil
-import org.apache.mesos.Protos.{Offer, OfferID}
+import org.apache.mesos.Protos.{ Offer, OfferID }
 import org.slf4j.LoggerFactory
 import rx.lang.scala.Observer
 
@@ -45,13 +45,13 @@ private[manager] object OfferMatcherManagerActor {
 
   private val log = LoggerFactory.getLogger(getClass)
   private case class OfferData(
-                                offer: Offer,
-                                deadline: Timestamp,
-                                sender: ActorRef,
-                                matcherQueue: Queue[OfferMatcher],
-                                ops: immutable.Seq[InstanceOpWithSource] = immutable.Seq.empty,
-                                matchPasses: Int = 0,
-                                resendThisOffer: Boolean = false) {
+      offer: Offer,
+      deadline: Timestamp,
+      sender: ActorRef,
+      matcherQueue: Queue[OfferMatcher],
+      ops: immutable.Seq[InstanceOpWithSource] = immutable.Seq.empty,
+      matchPasses: Int = 0,
+      resendThisOffer: Boolean = false) {
 
     def addMatcher(matcher: OfferMatcher): OfferData = copy(matcherQueue = matcherQueue.enqueue(matcher))
     def nextMatcherOpt: Option[(OfferMatcher, OfferData)] = {

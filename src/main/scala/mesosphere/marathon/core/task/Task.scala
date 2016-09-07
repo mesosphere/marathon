@@ -1,12 +1,12 @@
 package mesosphere.marathon.core.task
 
-import com.fasterxml.uuid.{EthernetAddress, Generators}
+import com.fasterxml.uuid.{ EthernetAddress, Generators }
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp, InstanceStatus}
-import mesosphere.marathon.state.{PathId, PersistentVolume, RunSpec, Timestamp}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp, InstanceStatus }
+import mesosphere.marathon.state.{ PathId, PersistentVolume, RunSpec, Timestamp }
 import org.apache.mesos.Protos.TaskState
 import org.apache.mesos.Protos.TaskState._
-import org.apache.mesos.{Protos => MesosProtos}
+import org.apache.mesos.{ Protos => MesosProtos }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq

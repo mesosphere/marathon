@@ -1,17 +1,17 @@
 package mesosphere.marathon.core.task.tracker.impl
 
-import akka.actor.{ActorRef, Status}
+import akka.actor.{ ActorRef, Status }
 import akka.util.Timeout
 import mesosphere.marathon.Protos.MarathonTask
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.TaskStateOpResolver
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
-import mesosphere.marathon.core.task.{Task, TaskStateChange, TaskStateOp}
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerConfig }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.storage.repository.TaskRepository
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
 private[tracker] object InstanceOpProcessorImpl {
@@ -146,10 +146,10 @@ private[tracker] class InstanceOpProcessorImpl(
 
     op.stateOp match {
       case tso: TaskStateOp =>
-        val msg = InstanceTrackerActor.StateChanged(taskChanged = TaskChanged( tso, ack.stateChange), ack)
+        val msg = InstanceTrackerActor.StateChanged(taskChanged = TaskChanged(tso, ack.stateChange), ack)
         (taskTrackerRef ? msg).map(_ => ())
 
-      case _ => Future{()} // TODO(jdef) pods support
+      case _ => Future{ () } // TODO(jdef) pods support
     }
   }
 

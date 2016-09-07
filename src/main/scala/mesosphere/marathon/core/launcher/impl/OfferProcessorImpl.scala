@@ -2,15 +2,15 @@ package mesosphere.marathon.core.launcher.impl
 
 import akka.pattern.AskTimeoutException
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
-import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
+import mesosphere.marathon.core.launcher.{ InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
-import mesosphere.marathon.core.task.{Task, TaskStateOp}
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpWithSource, MatchedInstanceOps }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
-import mesosphere.marathon.metrics.{MetricPrefixes, Metrics}
+import mesosphere.marathon.metrics.{ MetricPrefixes, Metrics }
 import mesosphere.marathon.state.Timestamp
-import org.apache.mesos.Protos.{Offer, OfferID}
+import org.apache.mesos.Protos.{ Offer, OfferID }
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable
