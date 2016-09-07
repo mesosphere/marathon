@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillServi
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{ RunnableSpec, AppDefinition }
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
@@ -27,14 +27,14 @@ class TaskReplaceActor(
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
-    val app: AppDefinition,
+    val run: RunnableSpec,
     promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
 
-  val tasksToKill = instanceTracker.specInstancesLaunchedSync(app.id)
+  val tasksToKill = instanceTracker.specInstancesLaunchedSync(run.id)
   var newTasksStarted: Int = 0
   var oldTaskIds = tasksToKill.map(_.id).to[SortedSet]
   val toKill = tasksToKill.to[mutable.Queue]
-  var maxCapacity = (app.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
+  var maxCapacity = (run.instances * (1 + run.upgradeStrategy.maximumOverCapacity)).toInt
   var outstandingKills = Set.empty[Instance.Id]
 
   override def preStart(): Unit = {
@@ -42,7 +42,7 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[MesosStatusUpdateEvent])
     eventBus.subscribe(self, classOf[HealthStatusChanged])
 
-    val ignitionStrategy = computeRestartStrategy(app, tasksToKill.size)
+    val ignitionStrategy = computeRestartStrategy(run, tasksToKill.size)
     maxCapacity = ignitionStrategy.maxCapacity
 
     for (_ <- 0 until ignitionStrategy.nrToKillImmediately) {
@@ -52,7 +52,7 @@ class TaskReplaceActor(
     reconcileNewTasks()
 
     log.info("Resetting the backoff delay before restarting the app")
-    launchQueue.resetDelay(app)
+    launchQueue.resetDelay(run)
   }
 
   override def postStop(): Unit = {
@@ -68,13 +68,13 @@ class TaskReplaceActor(
 
   def replaceBehavior: Receive = {
     // New task failed to start, restart it
-    case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `appId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
-      log.error(s"New task $taskId failed on slave $slaveId during app $appId restart")
+    case MesosStatusUpdateEvent(slaveId, taskId, FailedToStart(_), _, `runId`, _, _, _, `versionString`, _, _) if !oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+      log.error(s"New task $taskId failed on slave $slaveId during app $runId restart")
       taskTerminated(taskId)
-      launchQueue.add(app)
+      launchQueue.add(run)
 
     // Old task successfully killed
-    case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `appId`, _, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
+    case MesosStatusUpdateEvent(slaveId, taskId, KillComplete(_), _, `runId`, _, _, _, _, _, _) if oldTaskIds(taskId) => // scalastyle:ignore line.size.limit
       oldTaskIds -= taskId
       outstandingKills -= taskId
       reconcileNewTasks()
@@ -90,11 +90,11 @@ class TaskReplaceActor(
 
   def reconcileNewTasks(): Unit = {
     val leftCapacity = math.max(0, maxCapacity - oldTaskIds.size - newTasksStarted)
-    val tasksNotStartedYet = math.max(0, app.instances - newTasksStarted)
+    val tasksNotStartedYet = math.max(0, run.instances - newTasksStarted)
     val tasksToStartNow = math.min(tasksNotStartedYet, leftCapacity)
     if (tasksToStartNow > 0) {
-      log.info(s"Reconciling tasks during app $appId restart: queuing $tasksToStartNow new tasks")
-      launchQueue.add(app, tasksToStartNow)
+      log.info(s"Reconciling tasks during app $runId restart: queuing $tasksToStartNow new tasks")
+      launchQueue.add(run, tasksToStartNow)
       newTasksStarted += tasksToStartNow
     }
   }
@@ -116,12 +116,12 @@ class TaskReplaceActor(
   }
 
   def checkFinished(): Unit = {
-    if (taskTargetCountReached(app.instances) && oldTaskIds.isEmpty) {
-      log.info(s"App All new tasks for $appId are ready and all old tasks have been killed")
+    if (instanceTargetCountReached(run.instances) && oldTaskIds.isEmpty) {
+      log.info(s"App All new tasks for $runId are ready and all old tasks have been killed")
       promise.success(())
       context.stop(self)
     } else if (log.isDebugEnabled) {
-      log.debug(s"For app: [${app.id}] there are [${healthyTasks.size}] healthy and " +
+      log.debug(s"For app: [${run.id}] there are [${healthyTasks.size}] healthy and " +
         s"[${readyTasks.size}] ready new instances and " +
         s"[${oldTaskIds.size}] old instances.")
     }
@@ -149,10 +149,10 @@ object TaskReplaceActor {
     taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    app: AppDefinition,
+    run: RunnableSpec,
     promise: Promise[Unit]): Props = Props(
     new TaskReplaceActor(deploymentManager, status, driver, killService, launchQueue, taskTracker, eventBus,
-      readinessCheckExecutor, app, promise)
+      readinessCheckExecutor, run, promise)
   )
 
   /** Encapsulates the logic how to get a Restart going */

@@ -22,17 +22,17 @@ class TaskStartActor(
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
-    val app: AppDefinition,
+    val run: AppDefinition,
     val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
   val nrToStart: Int =
-    scaleTo - launchQueue.get(app.id).map(_.finalTaskCount)
-      .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(app.id))
+    scaleTo - launchQueue.get(run.id).map(_.finalTaskCount)
+      .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(run.id))
 
   override def initializeStart(): Unit = {
     if (nrToStart > 0)
-      launchQueue.add(app, nrToStart)
+      launchQueue.add(run, nrToStart)
   }
 
   override def postStop(): Unit = {
@@ -45,7 +45,7 @@ class TaskStartActor(
   }
 
   override def success(): Unit = {
-    log.info(s"Successfully started $nrToStart instances of ${app.id}")
+    log.info(s"Successfully started $nrToStart instances of ${run.id}")
     promise.success(())
     context.stop(self)
   }

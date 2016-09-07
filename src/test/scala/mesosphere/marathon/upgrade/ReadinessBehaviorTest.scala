@@ -114,7 +114,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
 
     Then("Task readiness checks are performed")
     eventually(taskIsReady should be (false))
-    actor.underlyingActor.taskTargetCountReached(1) should be (false)
+    actor.underlyingActor.instanceTargetCountReached(1) should be (false)
     eventually(actor.underlyingActor.readyTasks should have size 1)
     actor.underlyingActor.healthyTasks should have size 0
 
@@ -191,7 +191,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
           system.eventStream.subscribe(self, classOf[MesosStatusUpdateEvent])
           system.eventStream.subscribe(self, classOf[HealthStatusChanged])
         }
-        override def app: AppDefinition = appDef
+        override def run: AppDefinition = appDef
         override def deploymentManager: ActorRef = deploymentManagerProbe.ref
         override def status: DeploymentStatus = deploymentStatus
         override def readinessCheckExecutor: ReadinessCheckExecutor = executor
@@ -199,7 +199,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }
-        override def taskStatusChanged(taskId: Instance.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
+        override def taskStatusChanged(taskId: Instance.Id): Unit = if (instanceTargetCountReached(1)) taskReadyFn(taskId)
       }
       )
     }

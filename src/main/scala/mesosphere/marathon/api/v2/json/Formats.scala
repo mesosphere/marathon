@@ -501,7 +501,7 @@ trait DeploymentFormats {
   implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
     Json.obj(
       "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id
+      "app" -> action.runSpec.id
     )
   }
 
@@ -510,13 +510,14 @@ trait DeploymentFormats {
   implicit lazy val DeploymentStepInfoWrites: Writes[DeploymentStepInfo] = Writes { info =>
     def currentAction(action: DeploymentAction): JsObject = Json.obj (
       "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id,
-      "readinessCheckResults" -> info.readinessChecksByApp(action.app.id)
+      "app" -> action.runSpec.id,
+      "readinessCheckResults" -> info.readinessChecksByApp(action.runSpec.id)
     )
     Json.obj(
       "id" -> info.plan.id,
       "version" -> info.plan.version,
-      "affectedApps" -> info.plan.affectedApplicationIds,
+      "affectedApps" -> info.plan.affectedAppIds,
+      "affectedPods" -> info.plan.affectedPodIds,
       "steps" -> info.plan.steps,
       "currentActions" -> info.step.actions.map(currentAction),
       "currentStep" -> info.nr,
