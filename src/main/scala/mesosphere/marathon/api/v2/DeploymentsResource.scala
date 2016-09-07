@@ -28,7 +28,10 @@ class DeploymentsResource @Inject() (
   @GET
   def running(@Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
     val infos = result(service.listRunningDeployments())
-      .filter(_.plan.affectedApplications.exists(isAuthorized(ViewRunSpec, _)))
+      .filter(steps => (steps.plan.affectedApplications.isEmpty ||
+        steps.plan.affectedApplications.exists(isAuthorized(ViewRunSpec, _))) &&
+          (steps.plan.affectedPods.isEmpty ||
+                       steps.plan.affectedPods.exists(isAuthorized(ViewRunSpec, _))))
     ok(infos)
   }
 
@@ -41,6 +44,7 @@ class DeploymentsResource @Inject() (
     val plan = result(service.listRunningDeployments()).find(_.plan.id == id).map(_.plan)
     plan.fold(notFound(s"DeploymentPlan $id does not exist")) { deployment =>
       deployment.affectedApplications.foreach(checkAuthorization(UpdateRunSpec, _))
+      deployment.affectedPods.foreach(checkAuthorization(UpdateRunSpec, _))
 
       if (force) {
         // do not create a new deployment to return to the previous state

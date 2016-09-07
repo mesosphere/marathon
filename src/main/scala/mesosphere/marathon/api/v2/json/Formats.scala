@@ -7,18 +7,19 @@ import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.health.{ Health, HealthCheck }
+import mesosphere.marathon.core.health.{Health, HealthCheck}
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
+import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions}
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.PodStatus
+import mesosphere.marathon.raml.Pod
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.ContainerInfo
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
-import org.apache.mesos.{ Protos => mesos }
+import org.apache.mesos.{Protos => mesos}
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -532,7 +533,7 @@ trait DeploymentFormats {
     Json.obj(
       "id" -> info.plan.id,
       "version" -> info.plan.version,
-      "affectedApps" -> info.plan.affectedIds,
+      "affectedApps" -> info.plan.affectedApplications.map(_.id),
       "affectedPods" -> info.plan.affectedPods.map(_.id),
       "steps" -> info.plan.steps,
       "currentActions" -> info.step.actions.map(currentAction),
@@ -1135,7 +1136,8 @@ trait AppAndGroupFormats {
 
       val maybeJson = Seq[Option[JsObject]](
         info.maybeApps.map(apps => Json.obj("apps" -> apps)),
-        info.maybeGroups.map(groups => Json.obj("groups" -> groups))
+        info.maybeGroups.map(groups => Json.obj("groups" -> groups)),
+        info.maybePods.map(pods => Json.obj("pods" -> pods))
       ).flatten
 
       val groupJson = Json.obj (
@@ -1241,16 +1243,16 @@ trait AppAndGroupFormats {
   implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
     (__ \ "apps").formatNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
-    (__ \ "pods").formatNullable[Iterable[PodStatus]].withDefault(Iterable.empty) ~
+    (__ \ "pods").formatNullable[Iterable[Pod]].withDefault(Iterable.empty) ~
     (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
   ) (
       (id, apps, pods, groups, dependencies, version) =>
         Group(id, apps.map(app => app.id -> app)(collection.breakOut),
-          Map.empty, // we never deserialize pods from groups
+          pods.map(p => PathId(p.id).canonicalPath() -> PodDefinition(p, None))(collection.breakOut),
           groups, dependencies, version),
-      { (g: Group) => (g.id, g.apps.values, g.podStatus(), g.groups, g.dependencies, g.version) })
+      { (g: Group) => (g.id, g.apps.values, g.pods.values.map(_.asPodDef), g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~

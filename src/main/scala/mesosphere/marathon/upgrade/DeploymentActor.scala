@@ -129,7 +129,7 @@ private class DeploymentActor(
 
   def startPod(pod: PodDefinition, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     // TODO(PODS): implement start pod
-    Future.failed(???)
+    Future.successful(())
   }
 
   def scaleApp(app: AppDefinition, scaleTo: Int,
@@ -160,7 +160,7 @@ private class DeploymentActor(
 
   def scalePod(pod: PodDefinition, scaleTo: Int, toKill: Seq[Instance], status: DeploymentStatus): Future[Unit] = {
     // TODO(PODS): Implement scaling
-    Future.failed(???)
+    Future.successful(())
   }
 
   def stopApp(app: AppDefinition): Future[Unit] = {
@@ -173,7 +173,7 @@ private class DeploymentActor(
 
   def stopPod(pod: PodDefinition): Future[Unit] = {
     // TODO(PODS): implement stop pod
-    Future.failed(???)
+    Future.successful(())
   }
 
   def restartApp(app: AppDefinition, status: DeploymentStatus): Future[Unit] = {
@@ -192,7 +192,7 @@ private class DeploymentActor(
       Future.successful(())
     } else {
       // TODO(PODS): implement restart pod
-      Future.failed(???)
+      Future.successful(())
     }
   }
 

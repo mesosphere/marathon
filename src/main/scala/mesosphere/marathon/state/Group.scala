@@ -2,20 +2,18 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.plugin.{ Group => IGroup }
 import mesosphere.marathon.Protos.GroupDefinition
-import mesosphere.marathon.state.Group._
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.raml.PodStatus
+import mesosphere.marathon.plugin.{ Group => IGroup }
+import mesosphere.marathon.state.Group._
+import mesosphere.marathon.state.PathId._
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable.Seq
 
 case class Group(
     id: PathId,
@@ -50,9 +48,6 @@ case class Group(
   def app(appId: PathId): Option[AppDefinition] = group(appId.parent).flatMap(_.apps.get(appId))
 
   def pod(podId: PathId): Option[PodDefinition] = transitivePodsById.get(podId)
-
-  // TODO(PODS): how the hell is this supposed to work?
-  def podStatus(): Seq[PodStatus] = Seq.empty
 
   def group(gid: PathId): Option[Group] = {
     if (id == gid) Some(this) else {

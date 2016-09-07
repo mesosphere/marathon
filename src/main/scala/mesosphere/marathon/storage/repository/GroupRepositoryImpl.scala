@@ -8,23 +8,23 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.{ Done, NotUsed }
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersionedRepository
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.impl.cache.{ LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore }
-import mesosphere.marathon.core.storage.store.{ IdResolver, PersistenceStore }
-import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
-import mesosphere.marathon.util.{ RichLock, toRichFuture }
+import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, Timestamp}
+import mesosphere.marathon.util.{RichLock, toRichFuture}
 
-import scala.async.Async.{ async, await }
+import scala.async.Async.{async, await}
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
-import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 // scalastyle:on
 
 private[storage] case class StoredGroup(
@@ -202,6 +202,7 @@ class StoredGroupRepositoryImpl[K, C, S](
     }
   }
 
+  // scalastyle:off
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] =
     async {
@@ -231,8 +232,8 @@ class StoredGroupRepositoryImpl[K, C, S](
         throw ex
       }
 
-      storedApps match {
-        case Success(_) =>
+      (storedApps, storedPods) match {
+        case (Success(_), Success(_)) =>
           val storedRoot = await(storedRepo.store(storedGroup).asTry)
           storedRoot match {
             case Success(_) =>
@@ -242,12 +243,21 @@ class StoredGroupRepositoryImpl[K, C, S](
               logger.error(s"Unable to store updated group $group", ex)
               revertRoot(ex)
           }
-        case Failure(ex) =>
+        case (Failure(ex), Success(_)) =>
+          logger.error(s"Unable to store updated apps or pods: " +
+            s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
+          revertRoot(ex)
+        case (Success(_), Failure(ex)) =>
+          logger.error(s"Unable to store updated apps or pods: " +
+            s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
+          revertRoot(ex)
+        case (Failure(ex), Failure(_)) =>
           logger.error(s"Unable to store updated apps or pods: " +
             s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
           revertRoot(ex)
       }
     }
+  // scalastyle:on
 
   private[storage] def lazyRootVersion(version: OffsetDateTime): Future[Option[StoredGroup]] = {
     storedRepo.getVersion(RootId, version)

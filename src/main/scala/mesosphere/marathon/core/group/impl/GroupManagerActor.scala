@@ -141,10 +141,10 @@ private[impl] class GroupManagerActor(
         plan = DeploymentPlan(from, to, resolve, version, toKill)
         _ = validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator(config))
         _ = log.info(s"Computed new deployment plan:\n$plan")
-        _ <- scheduler.deploy(plan, force)
         // TODO(PODS): Add in createdOrUpdatedPods and deletedPods
         _ <- groupRepo.storeRoot(plan.target, plan.createdOrUpdatedApps,
           plan.deletedApps, plan.createdOrUpdatedPods, plan.deletedPods)
+        _ <- scheduler.deploy(plan, force)
         _ = log.info(s"Updated groups/apps/pods according to deployment plan ${plan.id}")
       } yield plan
 
