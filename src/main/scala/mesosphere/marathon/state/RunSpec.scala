@@ -35,8 +35,9 @@ trait RunnableSpec extends plugin.RunSpec {
 object RunnableSpec {
 
   //TODO(PODS): Work in progress conversion to make the code compile
-  implicit def runSpecToApp(runnableSpec: RunnableSpec): AppDefinition = {
-    runnableSpec.asInstanceOf[AppDefinition]
+  implicit def runSpecToApp(runnableSpec: RunnableSpec): AppDefinition = runnableSpec match {
+    case app: AppDefinition => app
+    case _ => throw new IllegalArgumentException
   }
 }
 

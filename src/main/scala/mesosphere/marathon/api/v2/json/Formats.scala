@@ -514,7 +514,8 @@ trait DeploymentFormats {
     Json.obj(
       "id" -> info.plan.id,
       "version" -> info.plan.version,
-      "affectedApps" -> info.plan.affectedRunSpecIds,
+      "affectedApps" -> info.plan.affectedAppIds,
+      "affectedPods" -> info.plan.affectedPodIds,
       "steps" -> info.plan.steps,
       "currentActions" -> info.step.actions.map(currentAction),
       "currentStep" -> info.nr,

@@ -83,6 +83,9 @@ final case class DeploymentPlan(
   /** @return all ids of apps which are referenced in any deployment actions */
   lazy val affectedRunSpecIds: Set[PathId] = steps.flatMap(_.actions.map(_.runSpec.id)).toSet
 
+  def affectedAppIds: Set[PathId] = affectedRunSpecs.collect{ case app: AppDefinition => app }.map(_.id)
+  def affectedPodIds: Set[PathId] = affectedRunSpecs.collect{ case pod: PodDefinition => pod }.map(_.id)
+
   def isAffectedBy(other: DeploymentPlan): Boolean =
     // FIXME: check for group change conflicts?
     affectedRunSpecIds.intersect(other.affectedRunSpecIds).nonEmpty
