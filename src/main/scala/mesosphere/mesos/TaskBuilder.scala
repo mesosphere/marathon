@@ -201,9 +201,6 @@ class TaskBuilder(
             // Serialize runSpec.portDefinitions to protos. The port numbers are the service ports, we need to
             // overwrite them the port numbers assigned to this particular task.
             runSpec.portDefinitions.zip(hostPorts).collect {
-              case (portDefinition, None) =>
-                // TODO: Is this case possible?
-                ???
               case (portDefinition, Some(hostPort)) =>
                 PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
             }.flatten
