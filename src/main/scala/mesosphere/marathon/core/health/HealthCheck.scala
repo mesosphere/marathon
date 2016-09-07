@@ -130,6 +130,8 @@ object HealthCheck {
   val DefaultIgnoreHttp1xx = false
   val DefaultPort = None
 
+  val FirstHealthCheckTime = 1.seconds
+
   implicit val healthCheck = validator[HealthCheck] { hc =>
     (hc.portIndex.nonEmpty is true) or (hc.port.nonEmpty is true)
     hc is validProtocol
