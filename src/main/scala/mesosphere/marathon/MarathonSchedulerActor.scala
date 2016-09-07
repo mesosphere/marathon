@@ -186,11 +186,11 @@ class MarathonSchedulerActor private (
     */
   def sharedHandlers: Receive = {
     case DeploymentFinished(plan) =>
-      lockedApps --= plan.affectedApplicationIds
+      lockedApps --= plan.affectedRunSpecIds
       deploymentSuccess(plan)
 
     case DeploymentManager.DeploymentFailed(plan, reason) =>
-      lockedApps --= plan.affectedApplicationIds
+      lockedApps --= plan.affectedRunSpecIds
       deploymentFailed(plan, reason)
 
     case AppScaled(id) => lockedApps -= id
@@ -236,7 +236,7 @@ class MarathonSchedulerActor private (
     * @param origSender The original sender of the deployment
     */
   def tryDeploy(plan: DeploymentPlan, origSender: ActorRef): Boolean = {
-    val affectedApps = plan.affectedApplicationIds
+    val affectedApps = plan.affectedRunSpecIds
     if (!lockedApps.exists(affectedApps)) {
       deploy(origSender, Deploy(plan, force = false))
       unstashAll()
@@ -277,7 +277,7 @@ class MarathonSchedulerActor private (
 
   def deploy(origSender: ActorRef, cmd: Deploy): Unit = {
     val plan = cmd.plan
-    val ids = plan.affectedApplicationIds
+    val ids = plan.affectedRunSpecIds
 
     val res = withLockFor(ids) {
       deploy(driver, plan)
@@ -300,7 +300,7 @@ class MarathonSchedulerActor private (
           .foreach {
             case RunningDeployments(plans) =>
               def intersectsWithNewPlan(existingPlan: DeploymentPlan): Boolean = {
-                existingPlan.affectedApplicationIds.intersect(plan.affectedApplicationIds).nonEmpty
+                existingPlan.affectedRunSpecIds.intersect(plan.affectedRunSpecIds).nonEmpty
               }
               val relatedDeploymentIds: Seq[String] = plans.collect {
                 case DeploymentStepInfo(p, _, _, _) if intersectsWithNewPlan(p) => p.id
@@ -324,7 +324,7 @@ class MarathonSchedulerActor private (
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Future[Unit] = {
     log.error(reason, s"Deployment of ${plan.target.id} failed")
-    plan.affectedApplicationIds.foreach(appId => launchQueue.purge(appId))
+    plan.affectedRunSpecIds.foreach(appId => launchQueue.purge(appId))
     eventBus.publish(DeploymentFailed(plan.id, plan))
     if (reason.isInstanceOf[DeploymentCanceledException]) {
       deploymentRepository.delete(plan.id).map(_ => ())

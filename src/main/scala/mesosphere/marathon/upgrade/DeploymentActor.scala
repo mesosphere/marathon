@@ -13,7 +13,7 @@ import mesosphere.marathon.core.event.{ DeploymentStatus, DeploymentStepFailure,
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.RunnableSpec
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
 import mesosphere.mesos.Constraints
 import org.apache.mesos.SchedulerDriver
@@ -88,13 +88,13 @@ private class DeploymentActor(
       eventBus.publish(status)
 
       val futures = step.actions.map { action =>
-        healthCheckManager.addAllFor(action.app) // ensure health check actors are in place before tasks are launched
+        healthCheckManager.addAllFor(action.runSpec) // ensure health checks are in place before tasks are launched
         action match {
-          case StartApplication(app, scaleTo) => startApp(app, scaleTo, status)
-          case ScaleApplication(app, scaleTo, toKill) => scaleApp(app, scaleTo, toKill, status)
-          case RestartApplication(app) => restartApp(app, status)
-          case StopApplication(app) => stopApp(app.copy(instances = 0))
-          case ResolveArtifacts(app, urls) => resolveArtifacts(app, urls)
+          case StartApplication(run, scaleTo) => startRunnable(run, scaleTo, status)
+          case ScaleApplication(run, scaleTo, toKill) => scaleRunnable(run, scaleTo, toKill, status)
+          case RestartApplication(run) => restartRunnable(run, status)
+          case StopApplication(run) => stopRunnable(run.copy(instances = 0))
+          case ResolveArtifacts(run, urls) => resolveArtifacts(run, urls)
         }
       }
 
@@ -105,21 +105,21 @@ private class DeploymentActor(
     }
   }
 
-  def startApp(app: AppDefinition, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
+  def startRunnable(runnableSpec: RunnableSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(
       AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker,
-        eventBus, readinessCheckExecutor, app, scaleTo, promise)
+        eventBus, readinessCheckExecutor, runnableSpec, scaleTo, promise)
     )
     promise.future
   }
 
-  def scaleApp(app: AppDefinition, scaleTo: Int,
+  def scaleRunnable(runnableSpec: RunnableSpec, scaleTo: Int,
     toKill: Option[Iterable[Instance]],
     status: DeploymentStatus): Future[Unit] = {
-    val runningTasks = taskTracker.specInstancesLaunchedSync(app.id)
+    val runningTasks = taskTracker.specInstancesLaunchedSync(runnableSpec.id)
     def killToMeetConstraints(notSentencedAndRunning: Iterable[Instance], toKillCount: Int) =
-      Constraints.selectTasksToKill(app, notSentencedAndRunning, toKillCount)
+      Constraints.selectTasksToKill(runnableSpec, notSentencedAndRunning, toKillCount)
 
     val ScalingProposition(tasksToKill, tasksToStart) = ScalingProposition.propose(
       runningTasks, toKill, killToMeetConstraints, scaleTo)
@@ -132,7 +132,7 @@ private class DeploymentActor(
       val promise = Promise[Unit]()
       context.actorOf(
         TaskStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
-          readinessCheckExecutor, app, scaleTo, promise)
+          readinessCheckExecutor, runnableSpec, scaleTo, promise)
       )
       promise.future
     }
@@ -140,28 +140,28 @@ private class DeploymentActor(
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
-  def stopApp(app: AppDefinition): Future[Unit] = {
-    val tasks = taskTracker.specInstancesLaunchedSync(app.id)
-    // TODO: the launch queue is purged in stopApp, but it would make sense to do that before calling kill(tasks)
+  def stopRunnable(runnableSpec: RunnableSpec): Future[Unit] = {
+    val tasks = taskTracker.specInstancesLaunchedSync(runnableSpec.id)
+    // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
     killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
-      case Success(_) => scheduler.stopApp(app)
+      case Success(_) => scheduler.stopApp(runnableSpec)
     }
   }
 
-  def restartApp(app: AppDefinition, status: DeploymentStatus): Future[Unit] = {
-    if (app.instances == 0) {
+  def restartRunnable(run: RunnableSpec, status: DeploymentStatus): Future[Unit] = {
+    if (run.instances == 0) {
       Future.successful(())
     } else {
       val promise = Promise[Unit]()
       context.actorOf(TaskReplaceActor.props(deploymentManager, status, driver, killService, launchQueue, taskTracker,
-        eventBus, readinessCheckExecutor, app, promise))
+        eventBus, readinessCheckExecutor, run, promise))
       promise.future
     }
   }
 
-  def resolveArtifacts(app: AppDefinition, urls: Map[URL, String]): Future[Unit] = {
+  def resolveArtifacts(run: RunnableSpec, urls: Map[URL, String]): Future[Unit] = {
     val promise = Promise[Boolean]()
-    context.actorOf(Props(classOf[ResolveArtifactsActor], app, urls, promise, storage))
+    context.actorOf(Props(classOf[ResolveArtifactsActor], run, urls, promise, storage))
     promise.future.map(_ => ())
   }
 }

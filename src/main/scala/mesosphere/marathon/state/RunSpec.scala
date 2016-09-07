@@ -9,6 +9,7 @@ import mesosphere.marathon.state.AppDefinition.VersionInfo
 
 import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
+import scala.language.implicitConversions
 
 /**
   * A generic spec that specifies something that Marathon is able to launch instances of.
@@ -29,6 +30,14 @@ trait RunnableSpec extends plugin.RunSpec {
   def mem: Double
   def disk: Double
   def gpus: Int
+}
+
+object RunnableSpec {
+
+  //TODO(PODS): Work in progress conversion to make the code compile
+  implicit def runSpecToApp(runnableSpec: RunnableSpec): AppDefinition = {
+    runnableSpec.asInstanceOf[AppDefinition]
+  }
 }
 
 //scalastyle:off

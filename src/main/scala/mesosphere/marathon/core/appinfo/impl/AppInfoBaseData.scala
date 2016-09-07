@@ -50,7 +50,7 @@ class AppInfoBaseData(
     allRunningDeploymentsFuture.map { allDeployments =>
       val byApp = Map.empty[PathId, Vector[DeploymentPlan]].withDefaultValue(Vector.empty)
       val deploymentsByAppId = allDeployments.foldLeft(byApp) { (result, deploymentPlan) =>
-        deploymentPlan.affectedApplicationIds.foldLeft(result) { (result, appId) =>
+        deploymentPlan.affectedRunSpecIds.foldLeft(result) { (result, appId) =>
           val newEl = appId -> (result(appId) :+ deploymentPlan)
           result + newEl
         }

@@ -125,6 +125,9 @@ case class Group(
 
   lazy val transitivePodsById: Map[PathId, PodDefinition] = this.pods ++ groups.flatMap(_.transitivePodsById)
 
+  lazy val transitiveRunSpecsById: Map[PathId, RunnableSpec] = transitiveAppsById ++ transitivePodsById
+  lazy val transitiveRunSpecs: Set[RunnableSpec] = transitiveRunSpecsById.values.toSet
+
   lazy val transitiveGroups: Set[Group] = groups.flatMap(_.transitiveGroups) + this
 
   lazy val transitiveAppGroups: Set[Group] = transitiveGroups.filter(_.apps.nonEmpty)
@@ -154,23 +157,21 @@ case class Group(
     result
   }
 
-  lazy val dependencyGraph: DirectedGraph[AppDefinition, DefaultEdge] = {
+  lazy val dependencyGraph: DirectedGraph[RunnableSpec, DefaultEdge] = {
     require(id.isRoot)
-    val graph = new DefaultDirectedGraph[AppDefinition, DefaultEdge](classOf[DefaultEdge])
-    for (app <- transitiveApps)
-      graph.addVertex(app)
-    for ((app, dependent) <- applicationDependencies)
-      graph.addEdge(app, dependent)
+    val graph = new DefaultDirectedGraph[RunnableSpec, DefaultEdge](classOf[DefaultEdge])
+    for (runnableSpec <- transitiveRunSpecsById.values) graph.addVertex(runnableSpec)
+    for ((app, dependent) <- applicationDependencies) graph.addEdge(app, dependent)
     new UnmodifiableDirectedGraph(graph)
   }
 
-  def appsWithNoDependencies: Set[AppDefinition] = {
+  def runSpecsWithNoDependencies: Set[RunnableSpec] = {
     val g = dependencyGraph
     g.vertexSet.filter { v => g.outDegreeOf(v) == 0 }.toSet
   }
 
   def hasNonCyclicDependencies: Boolean = {
-    !new CycleDetector[AppDefinition, DefaultEdge](dependencyGraph).detectCycles()
+    !new CycleDetector[RunnableSpec, DefaultEdge](dependencyGraph).detectCycles()
   }
 
   /** @return true if and only if this group directly or indirectly contains app definitions. */

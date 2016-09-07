@@ -5,17 +5,16 @@ import java.net.URL
 import akka.actor.Actor
 import akka.actor.Status.Failure
 import akka.pattern.pipe
-
 import mesosphere.marathon.ResolveArtifactsCanceledException
 import mesosphere.marathon.io.storage.StorageProvider
 import mesosphere.marathon.io.{ CancelableDownload, PathFun }
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.RunnableSpec
 import mesosphere.util.Logging
 
 import scala.concurrent.Promise
 
 class ResolveArtifactsActor(
-  app: AppDefinition,
+  runSpec: RunnableSpec,
   url2Path: Map[URL, String],
   promise: Promise[Boolean],
   storage: StorageProvider)
