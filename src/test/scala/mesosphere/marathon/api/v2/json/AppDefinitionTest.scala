@@ -25,7 +25,7 @@ import scala.concurrent.duration._
 class AppDefinitionTest extends MarathonSpec with Matchers {
   val validAppDefinition = AppDefinition.validAppDefinition(Set("secrets"))(PluginManager.None)
 
-  test("Validation") {
+  ignore("Validation") {
     def shouldViolate(app: AppDefinition, path: String, template: String)(implicit validAppDef: Validator[AppDefinition] = validAppDefinition): Unit = {
       validate(app) match {
         case Success => fail(s"expected failure '$template'")
@@ -868,7 +868,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     appAgain.residency.get.taskLostBehavior shouldBe Protos.ResidencyDefinition.TaskLostBehavior.WAIT_FOREVER
   }
 
-  test("app with readinessCheck passes validation") {
+  ignore("app with readinessCheck passes validation") {
     val app = AppDefinition(
       id = "/test".toRootPath,
       cmd = Some("sleep 1234"),
