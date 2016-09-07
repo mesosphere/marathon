@@ -62,7 +62,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("List Async") {
-    testList(_.instancessBySpec().futureValue)
+    testList(_.instancesBySpec().futureValue)
   }
 
   private[this] def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec): Unit = {

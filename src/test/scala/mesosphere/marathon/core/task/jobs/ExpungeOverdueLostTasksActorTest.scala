@@ -51,7 +51,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
     val running1 = MarathonTestHelper.minimalRunning("/running1".toPath, since = Timestamp(0))
     val running2 = MarathonTestHelper.minimalRunning("/running2".toPath, since = Timestamp(0))
 
-    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(running1, running2))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(running1, running2))
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -67,7 +67,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
     val running = MarathonTestHelper.minimalRunning("/running".toPath, since = Timestamp(0))
     val unreachable = MarathonTestHelper.minimalUnreachableTask("/unreachable".toPath, since = Timestamp(0))
 
-    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(
       running, unreachable))
 
     When("a check is performed")
@@ -85,7 +85,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec
     val unreachable1 = MarathonTestHelper.minimalUnreachableTask("/unreachable1".toPath, since = Timestamp(0))
     val unreachable2 = MarathonTestHelper.minimalUnreachableTask("/unreachable2".toPath, since = Timestamp.now())
 
-    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(
       InstancesBySpec.forTasks(unreachable1, unreachable2))
 
     When("a check is performed")

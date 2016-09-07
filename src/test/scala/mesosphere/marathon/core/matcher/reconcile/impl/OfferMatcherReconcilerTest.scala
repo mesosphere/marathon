@@ -39,7 +39,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     And("no groups")
     f.groupRepository.root() returns Future.successful(Group.empty)
     And("no tasks")
-    f.taskTracker.instancessBySpec()(any) returns Future.successful(InstancesBySpec.empty)
+    f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
     When("reconciling")
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
@@ -71,7 +71,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val app = AppDefinition(appId)
     f.groupRepository.root() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
     And("no tasks")
-    f.taskTracker.instancessBySpec()(any) returns Future.successful(InstancesBySpec.empty)
+    f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.empty)
 
     When("reconciling")
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
@@ -102,7 +102,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     f.groupRepository.root() returns Future.successful(Group.empty)
     And("a matching bogus task")
     val bogusTask = MarathonTestHelper.mininimalTask(taskId.idString)
-    f.taskTracker.instancessBySpec()(any) returns Future.successful(InstancesBySpec.forTasks(bogusTask))
+    f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.forTasks(bogusTask))
 
     When("reconciling")
     val matchedTaskOps = f.reconciler.matchOffer(Timestamp.now() + 1.day, offer).futureValue
@@ -133,7 +133,7 @@ class OfferMatcherReconcilerTest extends FunSuite with GivenWhenThen with Mockit
     val app = AppDefinition(appId)
     f.groupRepository.root() returns Future.successful(Group.empty.copy(apps = Map(app.id -> app)))
     And("a matching bogus task")
-    f.taskTracker.instancessBySpec()(any) returns Future.successful(
+    f.taskTracker.instancesBySpec()(any) returns Future.successful(
       InstancesBySpec.forTasks(MarathonTestHelper.mininimalTask(taskId.idString))
     )
 

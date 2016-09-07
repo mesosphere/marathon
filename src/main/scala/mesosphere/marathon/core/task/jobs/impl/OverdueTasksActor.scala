@@ -41,7 +41,7 @@ private[jobs] object OverdueTasksActor {
     def check(): Future[Unit] = {
       val now = clock.now()
       log.debug("checking for overdue tasks")
-      taskTracker.instancessBySpec().flatMap { tasksByApp =>
+      taskTracker.instancesBySpec().flatMap { tasksByApp =>
         val tasks = tasksByApp.allTasks
 
         killOverdueTasks(now, tasks)

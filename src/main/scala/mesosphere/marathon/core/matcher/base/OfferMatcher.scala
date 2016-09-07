@@ -6,6 +6,7 @@ import mesosphere.marathon.state.{ PathId, Timestamp }
 import org.apache.mesos.{ Protos => Mesos }
 
 import scala.concurrent.Future
+import scala.collection.immutable
 
 object OfferMatcher {
 
@@ -22,17 +23,15 @@ object OfferMatcher {
   }
 
   /**
-    * Reply from an offer matcher to a MatchOffer. If the offer match
-    * could not match the offer in any way it should simply leave the tasks
-    * collection empty.
+    * Reply from an offer matcher to a MatchOffer. If the offer match could not match the offer in any way it should
+    * simply leave the opsWithSource collection empty.
     *
-    * To increase fairness between matchers, each normal matcher should schedule as few operations
-    * as possible per offer per match, e.g. one for task launches without reservations. Multiple launches could be used
-    * if the tasks need to be colocated or if the operations are intrinsically dependent on each other.
-    * The OfferMultiplexer tries to summarize suitable
-    * matches from multiple offer matches into one response.
+    * To increase fairness between matchers, each normal matcher should schedule as few operations as possible per
+    * offer per match, e.g. one for instance launches without reservations. Multiple launches could be used
+    * if the instances need to be co-located or if the operations are intrinsically dependent on each other.
+    * The OfferMultiplexer tries to summarize suitable matches from multiple offer matches into one response.
     *
-    * A MatchedTaskOps reply does not guarantee that these operations can actually be executed.
+    * A MatchedInstanceOps reply does not guarantee that these operations can actually be executed.
     * The launcher of message should setup some kind of timeout mechanism and handle
     * instanceOpAccepted/instanceOpRejected calls appropriately.
     *
@@ -41,23 +40,18 @@ object OfferMatcher {
     * @param resendThisOffer true, if this offer could not be processed completely (e.g. timeout)
     *                        and should be resend and processed again
     */
-  case class MatchedTaskOps(
+  case class MatchedInstanceOps(
                              offerId: Mesos.OfferID,
-                             opsWithSource: Seq[InstanceOpWithSource],
+                             opsWithSource: immutable.Seq[InstanceOpWithSource] = immutable.Seq.empty,
                              resendThisOffer: Boolean = false) {
 
     /** all included [InstanceOp] without the source information. */
-    def ops: Iterable[InstanceOp] = opsWithSource.view.map(_.op)
-
-    /** All TaskInfos of launched tasks. */
-    def launchedTaskInfos: Iterable[Mesos.TaskInfo] = ops.view.collect {
-      case InstanceOp.LaunchTask(taskInfo, _, _, _) => taskInfo
-    }
+    val ops: immutable.Seq[InstanceOp] = opsWithSource.view.map(_.op)(collection.breakOut)
   }
 
-  object MatchedTaskOps {
-    def noMatch(offerId: Mesos.OfferID, resendThisOffer: Boolean = false): MatchedTaskOps =
-      new MatchedTaskOps(offerId, Seq.empty, resendThisOffer = resendThisOffer)
+  object MatchedInstanceOps {
+    def noMatch(offerId: Mesos.OfferID, resendThisOffer: Boolean = false): MatchedInstanceOps =
+      new MatchedInstanceOps(offerId, resendThisOffer = resendThisOffer)
   }
 
   trait InstanceOpSource {
@@ -67,7 +61,7 @@ object OfferMatcher {
 }
 
 /**
-  * Tries to match offers with given tasks.
+  * Tries to match offers with some instances.
   */
 trait OfferMatcher {
   /**
@@ -75,8 +69,10 @@ trait OfferMatcher {
     *
     * The offer matcher can expect either a instanceOpAccepted or a instanceOpRejected call
     * for every returned `org.apache.mesos.Protos.TaskInfo`.
+    *
+    * TODO(jdef) PODS ... 1:1 ratio between TaskInfo and instanceOpXXX may change?
     */
-  def matchOffer(deadline: Timestamp, offer: Mesos.Offer): Future[OfferMatcher.MatchedTaskOps]
+  def matchOffer(deadline: Timestamp, offer: Mesos.Offer): Future[OfferMatcher.MatchedInstanceOps]
 
   /**
     * We can optimize the offer routing for different offer matcher in case there are reserved resources.

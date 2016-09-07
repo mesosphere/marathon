@@ -70,7 +70,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running3 = MarathonTestHelper.runningTask("task3")
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.instancessBySpec()(global) returns
+    f.taskTracker.instancesBySpec()(global) returns
       Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(running1, running2, running3))))
 
     val alive = Health(running2.id, lastSuccess = Some(Timestamp(1)))
@@ -101,7 +101,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).instancessBySpec()(global)
+    verify(f.taskTracker, times(1)).instancesBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -118,7 +118,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     val running2 = MarathonTestHelper.runningTask("task3")
 
     import scala.concurrent.ExecutionContext.Implicits.global
-    f.taskTracker.instancessBySpec()(global) returns
+    f.taskTracker.instancesBySpec()(global) returns
       Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, Iterable(staged, running, running2))))
 
     f.healthCheckManager.statuses(app.id) returns Future.successful(
@@ -138,7 +138,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     )))
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).instancessBySpec()(global)
+    verify(f.taskTracker, times(1)).instancesBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)
@@ -268,7 +268,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
 
     import scala.concurrent.ExecutionContext.Implicits.global
     val tasks: Set[Task] = Set(staged, running, running2)
-    f.taskTracker.instancessBySpec()(global) returns
+    f.taskTracker.instancesBySpec()(global) returns
       Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances(app.id, tasks)))
 
     val statuses: Map[Instance.Id, Seq[Health]] = Map(
@@ -298,7 +298,7 @@ class AppInfoBaseDataTest extends MarathonSpec with GivenWhenThen with Mockito w
     }
 
     And("the taskTracker should have been called")
-    verify(f.taskTracker, times(1)).instancessBySpec()(global)
+    verify(f.taskTracker, times(1)).instancesBySpec()(global)
 
     And("the healthCheckManager as well")
     verify(f.healthCheckManager, times(1)).statuses(app.id)

@@ -5,7 +5,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
 import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessor, OfferProcessorConfig, TaskLauncher}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedTaskOps}
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
 import mesosphere.marathon.core.task.{Task, TaskStateOp}
 import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.metrics.{MetricPrefixes, Metrics}
@@ -13,6 +13,7 @@ import mesosphere.marathon.state.Timestamp
 import org.apache.mesos.Protos.{Offer, OfferID}
 import org.slf4j.LoggerFactory
 
+import scala.collection.immutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -51,7 +52,7 @@ private[launcher] class OfferProcessorImpl(
     val matchingDeadline = clock.now() + offerMatchingTimeout
     val savingDeadline = matchingDeadline + saveTasksToLaunchTimeout
 
-    val matchFuture: Future[MatchedTaskOps] = matchTimeMeter.timeFuture {
+    val matchFuture: Future[MatchedInstanceOps] = matchTimeMeter.timeFuture {
       offerMatcher.matchOffer(matchingDeadline, offer)
     }
 
@@ -60,22 +61,22 @@ private[launcher] class OfferProcessorImpl(
         case e: AskTimeoutException =>
           matchErrorsMeter.mark()
           log.warn(s"Could not process offer '${offer.getId.getValue}' in time. (See --max_offer_matching_timeout)")
-          MatchedTaskOps(offer.getId, Seq.empty, resendThisOffer = true)
+          MatchedInstanceOps(offer.getId, resendThisOffer = true)
         case NonFatal(e) =>
           matchErrorsMeter.mark()
           log.error(s"Could not process offer '${offer.getId.getValue}'", e)
-          MatchedTaskOps(offer.getId, Seq.empty, resendThisOffer = true)
+          MatchedInstanceOps(offer.getId, resendThisOffer = true)
       }.flatMap {
-        case MatchedTaskOps(offerId, tasks, resendThisOffer) =>
+        case MatchedInstanceOps(offerId, tasks, resendThisOffer) =>
           savingTasksTimeMeter.timeFuture {
             saveTasks(tasks, savingDeadline).map { savedTasks =>
               def notAllSaved: Boolean = savedTasks.size != tasks.size
-              MatchedTaskOps(offerId, savedTasks, resendThisOffer || notAllSaved)
+              MatchedInstanceOps(offerId, savedTasks, resendThisOffer || notAllSaved)
             }
           }
       }.flatMap {
-        case MatchedTaskOps(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
-        case MatchedTaskOps(offerId, tasks, _) => acceptOffer(offerId, tasks)
+        case MatchedInstanceOps(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
+        case MatchedInstanceOps(offerId, tasks, _) => acceptOffer(offerId, tasks)
       }
   }
 
@@ -122,7 +123,7 @@ private[launcher] class OfferProcessorImpl(
     * already.
     */
   private[this] def saveTasks(
-    ops: Seq[InstanceOpWithSource], savingDeadline: Timestamp): Future[Seq[InstanceOpWithSource]] = {
+    ops: Seq[InstanceOpWithSource], savingDeadline: Timestamp): Future[immutable.Seq[InstanceOpWithSource]] = {
 
     def saveTask(taskOpWithSource: InstanceOpWithSource): Future[Option[InstanceOpWithSource]] = {
       val taskId = taskOpWithSource.instanceId

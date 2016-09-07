@@ -63,7 +63,7 @@ class AppInfoBaseData(
 
   lazy val tasksByAppFuture: Future[InstanceTracker.InstancesBySpec] = {
     log.debug("Retrieve tasks")
-    taskTracker.instancessBySpec()
+    taskTracker.instancesBySpec()
   }
 
   def appInfoFuture(app: AppDefinition, embed: Set[AppInfo.Embed]): Future[AppInfo] = {

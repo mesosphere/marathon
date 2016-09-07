@@ -38,7 +38,7 @@ class ExpungeOverdueLostTasksActor(
   }
 
   override def receive: Receive = {
-    case Tick => taskTracker.instancessBySpec() pipeTo self
+    case Tick => taskTracker.instancesBySpec() pipeTo self
     case InstanceTracker.InstancesBySpec(appTasks) => filterLostGCTasks(appTasks).foreach(expungeLostGCTask)
   }
 

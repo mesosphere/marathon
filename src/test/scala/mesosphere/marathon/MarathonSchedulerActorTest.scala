@@ -63,7 +63,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
     val task = MarathonTestHelper.runningTask("task_a")
 
     repo.ids() returns Source.single(app.id)
-    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Iterable(task))))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.of(InstanceTracker.SpecInstances.forInstances("nope".toPath, Iterable(task))))
     repo.get(app.id) returns Future.successful(Some(app))
 
     val schedulerActor = createActor()
