@@ -161,7 +161,7 @@ private class DeploymentActor(
 
   def resolveArtifacts(app: AppDefinition, urls: Map[URL, String]): Future[Unit] = {
     val promise = Promise[Boolean]()
-    context.actorOf(Props(classOf[ResolveArtifactsActor], app, urls, promise, storage))
+    context.actorOf(ResolveArtifactsActor.props(urls, promise, storage))
     promise.future.map(_ => ())
   }
 }
