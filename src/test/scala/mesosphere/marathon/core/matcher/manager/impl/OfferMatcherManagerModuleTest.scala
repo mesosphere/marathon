@@ -7,25 +7,25 @@ import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps}
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps }
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
-import mesosphere.marathon.core.matcher.manager.{OfferMatcherManagerConfig, OfferMatcherManagerModule}
+import mesosphere.marathon.core.matcher.manager.{ OfferMatcherManagerConfig, OfferMatcherManagerModule }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.test.MarathonShutdownHookSupport
-import org.apache.mesos.Protos.{Offer, TaskInfo}
-import org.scalatest.{BeforeAndAfter, FunSuite, Matchers}
+import org.apache.mesos.Protos.{ Offer, TaskInfo }
+import org.scalatest.{ BeforeAndAfter, FunSuite, Matchers }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.util.Random
 import scala.collection.JavaConverters._
 
 class OfferMatcherManagerModuleTest extends FunSuite
-  with BeforeAndAfter with MarathonShutdownHookSupport with Matchers with OfferMatcherSpec {
+    with BeforeAndAfter with MarathonShutdownHookSupport with Matchers with OfferMatcherSpec {
 
   // FIXME: Missing Tests
   // Adding matcher while matching offers
@@ -138,7 +138,8 @@ class OfferMatcherManagerModuleTest extends FunSuite
 
   object F {
     import org.apache.mesos.{ Protos => Mesos }
-    val launch = new InstanceOpFactoryHelper(Some("principal"),
+    val launch = new InstanceOpFactoryHelper(
+      Some("principal"),
       Some("role")).launchEphemeral(_: Mesos.TaskInfo, _: Task.LaunchedEphemeral)
   }
 

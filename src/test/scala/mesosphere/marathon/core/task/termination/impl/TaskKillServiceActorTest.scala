@@ -1,23 +1,23 @@
 package mesosphere.marathon.core.task.termination.impl
 
 import akka.Done
-import akka.actor.{ActorRef, ActorSystem}
-import akka.testkit.{ImplicitSender, TestActorRef, TestKit, TestProbe}
+import akka.actor.{ ActorRef, ActorSystem }
+import akka.testkit.{ ImplicitSender, TestActorRef, TestKit, TestProbe }
 import mesosphere.marathon.MarathonSchedulerDriverHolder
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.event.MesosStatusUpdateEvent
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp, InstanceStatus}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp, InstanceStatus }
 import mesosphere.marathon.core.task.termination.TaskKillConfig
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
-import mesosphere.marathon.core.task.{MarathonTaskStatus, Task}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task }
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuiteLike, GivenWhenThen, Matchers}
+import org.scalatest.time.{ Seconds, Span }
+import org.scalatest.{ BeforeAndAfterAll, BeforeAndAfterEach, FunSuiteLike, GivenWhenThen, Matchers }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._

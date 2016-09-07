@@ -2,19 +2,19 @@ package mesosphere.marathon.core.task.tracker.impl
 
 import java.util.concurrent.TimeoutException
 
-import akka.actor.{Status, Terminated}
-import akka.testkit.{TestActorRef, TestProbe}
+import akka.actor.{ Status, Terminated }
+import akka.testkit.{ TestActorRef, TestProbe }
 import com.codahale.metrics.MetricRegistry
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{PathId, Timestamp}
-import mesosphere.marathon.test.{MarathonActorSupport, Mockito}
-import org.scalatest.{FunSuiteLike, GivenWhenThen, Matchers}
+import mesosphere.marathon.state.{ PathId, Timestamp }
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import org.scalatest.{ FunSuiteLike, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 
 class InstanceUpdateActorTest
     extends MarathonActorSupport with FunSuiteLike with Mockito with GivenWhenThen with Matchers {

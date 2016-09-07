@@ -103,7 +103,8 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         case MesosStatusUpdateEvent(slaveId, taskId, "TASK_RUNNING", _, `runId`, _, _, _, `versionString`, _, _) =>
           taskFn(taskId)
       }
-      taskIsRunning(if (readinessChecks(runSpec).isEmpty) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
+      taskIsRunning(
+        if (readinessChecks(runSpec).isEmpty) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
     }
 
     def taskHealthBehavior: Receive = {

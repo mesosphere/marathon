@@ -13,7 +13,12 @@ import mesosphere.marathon.upgrade.DeploymentPlan
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.immutable.Seq
 
-case class PodManagerImpl(groupManager: GroupManager)(implicit mat: Materializer, ctx: ExecutionContext) extends PodManager {
+case class PodManagerImpl(
+    groupManager: GroupManager)(
+    implicit
+    mat: Materializer,
+    ctx: ExecutionContext) extends PodManager {
+
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
     def createOrThrow(opt: Option[PodDefinition]) = opt
       .map(_ => throw ConflictingChangeException(s"A pod with id [${p.id}] already exists."))

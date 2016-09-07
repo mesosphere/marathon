@@ -4,13 +4,13 @@ import akka.actor.Status
 import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.instance.InstanceStateOp
-import mesosphere.marathon.core.task.{TaskStateChange, TaskStateOp}
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{MarathonActorSupport, Mockito}
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
-import org.apache.mesos.Protos.{TaskID, TaskStatus}
+import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
+import org.apache.mesos.Protos.{ TaskID, TaskStatus }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 class TaskCreationHandlerAndUpdaterDelegateTest
     extends MarathonActorSupport with MarathonSpec with Mockito with GivenWhenThen with ScalaFutures with Matchers {

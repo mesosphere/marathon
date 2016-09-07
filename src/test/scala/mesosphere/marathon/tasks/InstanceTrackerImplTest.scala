@@ -3,26 +3,26 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
-import mesosphere.marathon.core.task.{Task, TaskStateOp}
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
-import mesosphere.marathon.storage.repository.legacy.store.{InMemoryStore, PersistentStore}
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, TaskStateOpProcessor}
-import mesosphere.marathon.core.task.{Task, TaskStateOp}
+import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
+import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.test.{MarathonActorSupport, MarathonShutdownHookSupport}
-import mesosphere.marathon.{MarathonSpec, MarathonTestHelper}
+import mesosphere.marathon.test.{ MarathonActorSupport, MarathonShutdownHookSupport }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.TextAttribute
 import org.apache.mesos.Protos
-import org.apache.mesos.Protos.{TaskState, TaskStatus}
+import org.apache.mesos.Protos.{ TaskState, TaskStatus }
 import org.mockito.Matchers.any
-import org.mockito.Mockito.{reset, spy, times, verify}
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.mockito.Mockito.{ reset, spy, times, verify }
+import org.scalatest.{ GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 
@@ -173,7 +173,8 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     taskTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK STILL RUNNING
-    val updatedRunningTaskStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask,
+    val updatedRunningTaskStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(
+      sampleTask,
       TaskState.TASK_RUNNING), clock.now())
     stateOpProcessor.process(updatedRunningTaskStatus).futureValue
     shouldContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)

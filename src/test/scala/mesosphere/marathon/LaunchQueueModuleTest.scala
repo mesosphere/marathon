@@ -11,16 +11,16 @@ import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.task.{TaskStateChange, TaskStateOp}
+import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp }
 import mesosphere.marathon.integration.setup.WaitTestSupport
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.test.{MarathonShutdownHookSupport, Mockito}
+import mesosphere.marathon.test.{ MarathonShutdownHookSupport, Mockito }
 import org.mockito.Matchers
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatchers}
+import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers => ScalaTestMatchers }
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 class LaunchQueueModuleTest
     extends MarathonSpec

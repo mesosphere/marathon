@@ -3,28 +3,28 @@ package mesosphere.marathon.core.group.impl
 import java.net.URL
 import javax.inject.Provider
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{ Actor, ActorLogging, Props }
 import akka.event.EventStream
 import akka.pattern.pipe
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import mesosphere.marathon._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.core.event.{GroupChangeFailed, GroupChangeSuccess}
+import mesosphere.marathon.core.event.{ GroupChangeFailed, GroupChangeSuccess }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.io.PathFun
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{AppDefinition, Container, PortDefinition, _}
-import mesosphere.marathon.storage.repository.{GroupRepository, ReadOnlyAppRepository}
-import mesosphere.marathon.upgrade.{DeploymentPlan, GroupVersioningUtil, ResolveArtifacts}
+import mesosphere.marathon.state.{ AppDefinition, Container, PortDefinition, _ }
+import mesosphere.marathon.storage.repository.{ GroupRepository, ReadOnlyAppRepository }
+import mesosphere.marathon.upgrade.{ DeploymentPlan, GroupVersioningUtil, ResolveArtifacts }
 import mesosphere.util.CapConcurrentExecutions
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 private[group] object GroupManagerActor {
   sealed trait Request

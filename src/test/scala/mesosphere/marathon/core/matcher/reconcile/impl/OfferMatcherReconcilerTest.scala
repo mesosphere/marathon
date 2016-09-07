@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.matcher.reconcile.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.task.Task.LocalVolumeId
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -10,7 +10,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.Mockito
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{FunSuite, GivenWhenThen, Matchers}
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._

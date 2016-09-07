@@ -1,17 +1,17 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.{Instance, InstanceStateOp, InstanceStatus}
-import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp, InstanceStatus }
+import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.TaskStateOpResolver
-import mesosphere.marathon.core.task.{Task, TaskStateChange, TaskStateOp}
+import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
 import mesosphere.marathon.core.task.state.MarathonTaskStatusMapping
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.test.Mockito
 import org.apache.mesos
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{FunSuite, GivenWhenThen, Matchers}
+import org.scalatest.{ FunSuite, GivenWhenThen, Matchers }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
