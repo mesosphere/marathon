@@ -30,8 +30,8 @@ class DeploymentsResource @Inject() (
     val infos = result(service.listRunningDeployments())
       .filter(steps => (steps.plan.affectedApplications.isEmpty ||
         steps.plan.affectedApplications.exists(isAuthorized(ViewRunSpec, _))) &&
-          (steps.plan.affectedPods.isEmpty ||
-                       steps.plan.affectedPods.exists(isAuthorized(ViewRunSpec, _))))
+        (steps.plan.affectedPods.isEmpty ||
+          steps.plan.affectedPods.exists(isAuthorized(ViewRunSpec, _))))
     ok(infos)
   }
 

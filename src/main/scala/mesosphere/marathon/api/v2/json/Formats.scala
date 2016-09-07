@@ -7,9 +7,9 @@ import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event._
-import mesosphere.marathon.core.health.{Health, HealthCheck}
+import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions}
+import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
@@ -19,7 +19,7 @@ import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
 import org.apache.mesos.Protos.ContainerInfo
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
-import org.apache.mesos.{Protos => mesos}
+import org.apache.mesos.{ Protos => mesos }
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

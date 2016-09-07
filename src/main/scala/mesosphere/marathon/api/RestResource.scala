@@ -1,19 +1,17 @@
 package mesosphere.marathon.api
 
 import java.net.URI
-import java.nio.charset.{ Charset, StandardCharsets }
-import javax.servlet.http.HttpServletRequest
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.{ ResponseBuilder, Status }
 
+import com.wix.accord._
 import mesosphere.marathon.MarathonConf
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.state.{ PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{ Json, Writes }
-import com.wix.accord._
-import mesosphere.marathon.api.v2.Validation._
 
 import scala.concurrent.{ Await, Awaitable }
 
@@ -73,16 +71,5 @@ trait RestResource {
       //scalastyle:on
       case Success => fn(t)
     }
-  }
-
-  def decodeBytes(data: Array[Byte], req: HttpServletRequest): String = {
-    val maybeEncoding = Option(req.getCharacterEncoding)
-    val charset = maybeEncoding match {
-      case Some(charsetName) =>
-        Charset.forName(charsetName)
-      case None =>
-        StandardCharsets.ISO_8859_1
-    }
-    new String(data, charset)
   }
 }

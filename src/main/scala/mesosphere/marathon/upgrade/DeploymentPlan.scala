@@ -8,10 +8,10 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.storage.repository.legacy.store.{CompressionConf, ZKData}
+import mesosphere.marathon.storage.repository.legacy.store.{ CompressionConf, ZKData }
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.TwitterZk
-import mesosphere.marathon.{MarathonConf, Protos}
+import mesosphere.marathon.{ MarathonConf, Protos }
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
