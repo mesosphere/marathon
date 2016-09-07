@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillServi
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.RunnableSpec
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
@@ -27,7 +27,7 @@ class TaskReplaceActor(
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
-    val runSpec: AppDefinition,
+    val runSpec: RunnableSpec,
     promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
 
   val tasksToKill = instanceTracker.specInstancesLaunchedSync(runSpec.id)
@@ -51,7 +51,7 @@ class TaskReplaceActor(
 
     reconcileNewTasks()
 
-    log.info("Resetting the backoff delay before restarting the app")
+    log.info("Resetting the backoff delay before restarting the runSpec")
     launchQueue.resetDelay(runSpec)
   }
 
@@ -149,7 +149,7 @@ object TaskReplaceActor {
     taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    app: AppDefinition,
+    app: RunnableSpec,
     promise: Promise[Unit]): Props = Props(
     new TaskReplaceActor(deploymentManager, status, driver, killService, launchQueue, taskTracker, eventBus,
       readinessCheckExecutor, app, promise)
@@ -158,20 +158,21 @@ object TaskReplaceActor {
   /** Encapsulates the logic how to get a Restart going */
   private[upgrade] case class RestartStrategy(nrToKillImmediately: Int, maxCapacity: Int)
 
-  private[upgrade] def computeRestartStrategy(app: AppDefinition, runningTasksCount: Int): RestartStrategy = {
-    // in addition to an app definition which passed validation, we require:
-    require(app.instances > 0, s"instances must be > 0 but is ${app.instances}")
-    require(runningTasksCount >= 0, s"running task count must be >=0 but is $runningTasksCount")
+  // TODO (pods): this function should probably match against the type?
+  private[upgrade] def computeRestartStrategy(runSpec: RunnableSpec, runningInstancesCount: Int): RestartStrategy = {
+    // in addition to a spec which passed validation, we require:
+    require(runSpec.instances > 0, s"instances must be > 0 but is ${runSpec.instances}")
+    require(runningInstancesCount >= 0, s"running instances count must be >=0 but is $runningInstancesCount")
 
-    val minHealthy = (app.instances * app.upgradeStrategy.minimumHealthCapacity).ceil.toInt
-    var maxCapacity = (app.instances * (1 + app.upgradeStrategy.maximumOverCapacity)).toInt
-    var nrToKillImmediately = math.max(0, runningTasksCount - minHealthy)
+    val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
+    var maxCapacity = (runSpec.instances * (1 + runSpec.upgradeStrategy.maximumOverCapacity)).toInt
+    var nrToKillImmediately = math.max(0, runningInstancesCount - minHealthy)
 
-    if (minHealthy == maxCapacity && maxCapacity <= runningTasksCount) {
-      if (app.isResident) {
-        // Kill enough tasks so that we end up with end up with one task below minHealthy.
+    if (minHealthy == maxCapacity && maxCapacity <= runningInstancesCount) {
+      if (runSpec.isResident) {
+        // Kill enough tasks so that we end up with one task below minHealthy.
         // TODO: We need to do this also while restarting, since the kill could get lost.
-        nrToKillImmediately = runningTasksCount - minHealthy + 1
+        nrToKillImmediately = runningInstancesCount - minHealthy + 1
         log.info(
           "maxCapacity == minHealthy for resident app: " +
             s"adjusting nrToKillImmediately to $nrToKillImmediately in order to prevent over-capacity for resident app"
@@ -182,13 +183,13 @@ object TaskReplaceActor {
       }
     }
 
-    log.info(s"For minimumHealthCapacity ${app.upgradeStrategy.minimumHealthCapacity} of ${app.id.toString} leave " +
+    log.info(s"For minimumHealthCapacity ${runSpec.upgradeStrategy.minimumHealthCapacity} of ${runSpec.id.toString} leave " +
       s"$minHealthy tasks running, maximum capacity $maxCapacity, killing $nrToKillImmediately of " +
-      s"$runningTasksCount running tasks immediately")
+      s"$runningInstancesCount running tasks immediately")
 
     assume(nrToKillImmediately >= 0, s"nrToKillImmediately must be >=0 but is $nrToKillImmediately")
     assume(maxCapacity > 0, s"maxCapacity must be >0 but is $maxCapacity")
-    def canStartNewTasks: Boolean = minHealthy < maxCapacity || runningTasksCount - nrToKillImmediately < maxCapacity
+    def canStartNewTasks: Boolean = minHealthy < maxCapacity || runningInstancesCount - nrToKillImmediately < maxCapacity
     assume(canStartNewTasks, s"must be able to start new tasks")
 
     RestartStrategy(nrToKillImmediately = nrToKillImmediately, maxCapacity = maxCapacity)
