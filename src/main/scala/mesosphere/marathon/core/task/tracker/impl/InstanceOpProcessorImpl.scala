@@ -145,8 +145,8 @@ private[tracker] class InstanceOpProcessorImpl(
     implicit val taskTrackerQueryTimeout: Timeout = config.internalTaskTrackerRequestTimeout().milliseconds
 
     op.stateOp match {
-      case tso: TaskStateOp =>
-        val msg = InstanceTrackerActor.StateChanged(taskChanged = TaskChanged(tso, ack.stateChange), ack)
+      case _: InstanceStateOp.ForceExpunge | _:TaskStateOp =>
+        val msg = InstanceTrackerActor.StateChanged(taskChanged = TaskChanged(op.stateOp, ack.stateChange), ack)
         (taskTrackerRef ? msg).map(_ => ())
 
       case _ => Future{ () } // TODO(jdef) pods support

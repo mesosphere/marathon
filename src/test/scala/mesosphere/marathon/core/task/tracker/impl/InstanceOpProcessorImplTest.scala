@@ -220,11 +220,11 @@ class InstanceOpProcessorImplTest
     Given("a taskRepository")
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskId = task.id
-    val taskIdString = taskId.idString
     val stateOp = f.stateOpExpunge(task)
     val expectedChange = TaskStateChange.Expunge(task)
     val taskChanged = TaskChanged(stateOp, expectedChange)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedChange)
+
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.delete(task.id) returns Future.successful(Done)
 
