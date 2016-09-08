@@ -797,7 +797,7 @@ trait AppAndGroupFormats {
     (
       (__ \ "id").read[PathId].filterNot(_.isRoot) ~
       (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
-      (__ \ "args").readNullable[Seq[String]].withDefault(Nil) ~
+      (__ \ "args").readNullable[Seq[String]].withDefault(Seq.empty[String]) ~
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, EnvVarValue]].withDefault(AppDefinition.DefaultEnv) ~
       (__ \ "instances").readNullable[Int].withDefault(AppDefinition.DefaultInstances) ~
@@ -988,6 +988,7 @@ trait AppAndGroupFormats {
       var appJson: JsObject = Json.obj(
         "id" -> runSpec.id.toString,
         "cmd" -> runSpec.cmd,
+        "args" -> runSpec.args,
         "user" -> runSpec.user,
         "env" -> runSpec.env,
         "instances" -> runSpec.instances,
@@ -1015,10 +1016,6 @@ trait AppAndGroupFormats {
         "secrets" -> runSpec.secrets,
         "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod
       )
-
-      if (runSpec.args.nonEmpty) {
-        appJson = appJson + ("args" -> Json.toJson(runSpec.args))
-      }
 
       if (runSpec.acceptedResourceRoles.nonEmpty) {
         appJson = appJson + ("acceptedResourceRoles" -> Json.toJson(runSpec.acceptedResourceRoles))
