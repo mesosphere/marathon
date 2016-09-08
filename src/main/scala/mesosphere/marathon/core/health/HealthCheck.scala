@@ -24,7 +24,7 @@ sealed trait HealthCheck {
       .setMaxConsecutiveFailures(this.maxConsecutiveFailures)
 }
 
-sealed trait HealthCheckWithPort { this: HealthCheck =>
+sealed trait HealthCheckWithPort extends HealthCheck { this: HealthCheck =>
   def portIndex: Option[Int]
   def port: Option[Int]
 }
@@ -54,7 +54,7 @@ sealed trait MarathonHealthCheck extends HealthCheckWithPort { this: HealthCheck
   }
 }
 
-sealed trait MesosHealthCheck { this: HealthCheck =>
+sealed trait MesosHealthCheck extends HealthCheck { this: HealthCheck =>
   def gracePeriod: FiniteDuration
   def interval: FiniteDuration
   def timeout: FiniteDuration
