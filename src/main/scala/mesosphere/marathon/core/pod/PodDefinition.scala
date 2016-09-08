@@ -31,8 +31,8 @@ case class PodDefinition(
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy
 ) extends RunSpec with MarathonState[Protos.PodDefinition, PodDefinition] {
-  lazy val cpus: Double = containers.map(_.resources.cpus.toDouble).sum
-  lazy val mem: Double = containers.map(_.resources.mem.toDouble).sum
+  lazy val cpus: Double = PodDefinition.DefaultExecutorCpus + containers.map(_.resources.cpus.toDouble).sum
+  lazy val mem: Double = PodDefinition.DefaultExecutorMem + containers.map(_.resources.mem.toDouble).sum
   lazy val disk: Double = containers.flatMap(_.resources.disk.map(_.toDouble)).sum
   lazy val gpus: Int = containers.flatMap(_.resources.gpus).sum
 
@@ -122,6 +122,8 @@ case class PodDefinition(
 }
 
 object PodDefinition {
+  val DefaultExecutorCpus = 0.1
+  val DefaultExecutorMem = 32
 
   //scalastyle:off
   def apply(podDef: Pod, defaultNetworkName: Option[String]): PodDefinition = {
