@@ -6,7 +6,7 @@ import akka.event.EventStream
 import akka.stream.Materializer
 import mesosphere.marathon._
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.core.pod.{ PodDefinition, PodManager }
 import mesosphere.marathon.raml.Pod
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
@@ -16,6 +16,10 @@ import play.api.libs.json._
 import scala.concurrent.Future
 
 class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
+
+  // TODO(jdef) test findAll
+  // TODO(jdef) test status
+  // TODO(jdef) incorporate checks for firing pod events on C, U, D operations
 
   test("Marathon supports pods") {
     val f = Fixture.create()
@@ -47,7 +51,60 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
     parsedResponse should not be(None)
     parsedResponse.map(_.as[Pod]) should not be(None) // validate that we DID get back a pod definition
 
-    response.getMetadata().containsKey(PodsResource.DeploymentHeader)
+    response.getMetadata().containsKey(PodsResource.DeploymentHeader) should be(true)
+  }
+
+  test("update a simple single-container pod from docker image w/ shell command") {
+    implicit val podSystem = mock[PodManager]
+    val f = Fixture.create()
+
+    podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+    val postJson = """
+        | { "id": "/mypod", "containers": [
+        |   { "name": "webapp",
+        |     "resources": { "cpus": 0.03, "mem": 64 },
+        |     "image": { "kind": "DOCKER", "id": "busybox" },
+        |     "exec": { "command": { "shell": "sleep 1" } } } ] }
+      """.stripMargin
+    val response = f.podsResource.update("/mypod", postJson.getBytes(), false, f.auth.request)
+
+    response.getStatus() should be(HttpServletResponse.SC_OK)
+
+    val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+    parsedResponse should not be(None)
+    parsedResponse.map(_.as[Pod]) should not be(None) // validate that we DID get back a pod definition
+
+    response.getMetadata().containsKey(PodsResource.DeploymentHeader) should be(true)
+  }
+
+  test("delete a pod") {
+    implicit val podSystem = mock[PodManager]
+    val f = Fixture.create()
+
+    podSystem.find(any).returns(Future.successful(Some(PodDefinition())))
+    podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+    val response = f.podsResource.remove("/mypod", false, f.auth.request)
+
+    response.getStatus() should be(HttpServletResponse.SC_ACCEPTED)
+
+    val body = Option(response.getEntity.asInstanceOf[String])
+    body should be(None)
+
+    response.getMetadata().containsKey(PodsResource.DeploymentHeader) should be(true)
+  }
+
+  test("lookup a specific pod, and that pod does not exist") {
+    implicit val podSystem = mock[PodManager]
+    val f = Fixture.create()
+
+    podSystem.find(any).returns(Future.successful(Option.empty[PodDefinition]))
+    val response = f.podsResource.find("/mypod", f.auth.request)
+
+    response.getStatus() should be(HttpServletResponse.SC_NOT_FOUND)
+    val body = Option(response.getEntity.asInstanceOf[String])
+    body should not be(None)
+    body.foreach(_ should include("mypod does not exist"))
   }
 
   case class Fixture(
