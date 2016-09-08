@@ -286,7 +286,7 @@ object RamlTypeGenerator {
       } else if (actualFields.size > 22 || actualFields.exists(_.repeated) ||
         actualFields.map(_.toString).exists(t => t.toString().startsWith(name) || t.toString.contains(s"[$name]"))) {
         Seq(
-          OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+          OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
               actualFields.map { field =>
                 VAL(field.name) := field.playValidator
@@ -371,14 +371,14 @@ object RamlTypeGenerator {
       }
 
       val obj = OBJECTDEF(name) := BLOCK(
-        OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+        OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
           DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
             childJson.reduce((acc, next) => acc DOT "orElse" APPLY next)
           ),
           DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
             REF("o") MATCH
               childTypes.map { child =>
-                CASE(REF(s"f:${child.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f"))
+                CASE(REF(s"f:${child.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(child.name) DOT "playJsonFormat"))
               }
           )
         )
@@ -388,7 +388,7 @@ object RamlTypeGenerator {
           Seq[Tree](
             CASECLASSDEF(s.name) withParents name withParams PARAM("value", StringClass).tree,
             OBJECTDEF(s.name) := BLOCK(
-              OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
+              OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
                 DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
                   REF("json") DOT "validate" APPLYTYPE StringClass DOT "map" APPLY (REF(s.name) DOT "apply")
                 ),
