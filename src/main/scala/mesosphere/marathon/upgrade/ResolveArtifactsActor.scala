@@ -3,11 +3,11 @@ package mesosphere.marathon.upgrade
 import java.net.URL
 
 import akka.actor.Status.Failure
-import akka.actor.{Actor, Props}
+import akka.actor.{ Actor, Props }
 import akka.pattern.pipe
 import mesosphere.marathon.ResolveArtifactsCanceledException
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.io.{CancelableDownload, PathFun}
+import mesosphere.marathon.io.{ CancelableDownload, PathFun }
 import mesosphere.util.Logging
 
 import scala.concurrent.Promise

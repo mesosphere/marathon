@@ -3,11 +3,11 @@ package mesosphere.marathon.upgrade
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
-import mesosphere.marathon.core.event.{DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent}
+import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{TaskKillReason, TaskKillService}
+import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.upgrade.TaskReplaceActor._
@@ -15,7 +15,7 @@ import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
-import scala.collection.{SortedSet, mutable}
+import scala.collection.{ SortedSet, mutable }
 import scala.concurrent.Promise
 
 class TaskReplaceActor(

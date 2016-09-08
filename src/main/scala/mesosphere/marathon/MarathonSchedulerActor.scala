@@ -440,30 +440,31 @@ class SchedulerActions(
 
   // TODO move stuff below out of the scheduler
 
-  def startApp(driver: SchedulerDriver, app: AppDefinition): Unit = {
-    log.info(s"Starting app ${app.id}")
-    scale(driver, app)
+  def startApp(driver: SchedulerDriver, runSpec: RunSpec): Unit = {
+    log.info(s"Starting runSpec ${runSpec.id}")
+    scale(driver, runSpec)
   }
 
-  def stopApp(app: AppDefinition): Future[_] = {
-    healthCheckManager.removeAllFor(app.id)
+  def stopApp(runSpec: RunSpec): Future[_] = {
+    healthCheckManager.removeAllFor(runSpec.id)
 
-    log.info(s"Stopping app ${app.id}")
-    taskTracker.specInstances(app.id).map { tasks =>
+    log.info(s"Stopping runSpec ${runSpec.id}")
+    taskTracker.specInstances(runSpec.id).map { tasks =>
       tasks.foreach {
         case task: Task =>
           if (task.launchedMesosId.isDefined) {
             log.info("Killing {}", task.id)
             killService.killTask(task, TaskKillReason.DeletingApp)
           }
+        // TODO(PODS): something's missing here for instances of a pod
       }
-      launchQueue.purge(app.id)
-      launchQueue.resetDelay(app)
+      launchQueue.purge(runSpec.id)
+      launchQueue.resetDelay(runSpec)
 
       // The tasks will be removed from the TaskTracker when their termination
       // was confirmed by Mesos via a task update.
 
-      eventBus.publish(AppTerminatedEvent(app.id))
+      eventBus.publish(AppTerminatedEvent(runSpec.id))
     }
   }
 
@@ -535,35 +536,35 @@ class SchedulerActions(
     * Make sure the app is running the correct number of instances
     */
   // FIXME: extract computation into a function that can be easily tested
-  def scale(driver: SchedulerDriver, app: AppDefinition): Unit = {
+  def scale(driver: SchedulerDriver, runSpec: RunSpec): Unit = {
     import SchedulerActions._
 
     def inQueueOrRunning(t: Instance) = t.isCreated || t.isRunning || t.isStaging || t.isStarting || t.isKilling
 
-    val launchedCount = taskTracker.countSpecInstancesSync(app.id, inQueueOrRunning)
+    val launchedCount = taskTracker.countSpecInstancesSync(runSpec.id, inQueueOrRunning)
 
-    val targetCount = app.instances
+    val targetCount = runSpec.instances
 
     if (targetCount > launchedCount) {
-      log.info(s"Need to scale ${app.id} from $launchedCount up to $targetCount instances")
+      log.info(s"Need to scale ${runSpec.id} from $launchedCount up to $targetCount instances")
 
-      val queuedOrRunning = launchQueue.get(app.id).map {
+      val queuedOrRunning = launchQueue.get(runSpec.id).map {
         info => info.finalTaskCount - info.tasksLost
       }.getOrElse(launchedCount)
 
       val toQueue = targetCount - queuedOrRunning
 
       if (toQueue > 0) {
-        log.info(s"Queueing $toQueue new tasks for ${app.id} ($queuedOrRunning queued or running)")
-        launchQueue.add(app, toQueue)
+        log.info(s"Queueing $toQueue new tasks for ${runSpec.id} ($queuedOrRunning queued or running)")
+        launchQueue.add(runSpec, toQueue)
       } else {
-        log.info(s"Already queued or started $queuedOrRunning tasks for ${app.id}. Not scaling.")
+        log.info(s"Already queued or started $queuedOrRunning tasks for ${runSpec.id}. Not scaling.")
       }
     } else if (targetCount < launchedCount) {
-      log.info(s"Scaling ${app.id} from $launchedCount down to $targetCount instances")
-      launchQueue.purge(app.id)
+      log.info(s"Scaling ${runSpec.id} from $launchedCount down to $targetCount instances")
+      launchQueue.purge(runSpec.id)
 
-      val toKill = taskTracker.specInstancesSync(app.id).toSeq
+      val toKill = taskTracker.specInstancesSync(runSpec.id).toSeq
         .filter(t => runningOrStaged.contains(t.state.status))
         .sortWith(sortByStateAndTime)
         .take(launchedCount - targetCount)
@@ -571,7 +572,7 @@ class SchedulerActions(
       log.info("Killing tasks {}", toKill.map(_.id))
       killService.killTasks(toKill, TaskKillReason.ScalingApp)
     } else {
-      log.info(s"Already running ${app.instances} instances of ${app.id}. Not scaling.")
+      log.info(s"Already running ${runSpec.instances} instances of ${runSpec.id}. Not scaling.")
     }
   }
 

@@ -1,12 +1,12 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
-import mesosphere.marathon.core.event.{DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent}
+import akka.actor.{ Actor, ActorLogging, ActorRef }
+import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
+import mesosphere.marathon.core.readiness.{ ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
+import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentManager.ReadinessCheckUpdate
 import rx.lang.scala.Subscription
 
@@ -100,7 +100,8 @@ trait ReadinessBehavior { this: Actor with ActorLogging =>
         case MesosStatusUpdateEvent(slaveId, taskId, "TASK_RUNNING", _, `pathId`, _, _, _, `versionString`, _, _) =>
           taskFn(taskId)
       }
-      taskIsRunning(if (runSpec.readinessChecks.isEmpty) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
+      taskIsRunning(
+        if (runSpec.readinessChecks.isEmpty) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
     }
 
     def taskHealthBehavior: Receive = {

@@ -1,9 +1,9 @@
 package mesosphere.marathon.upgrade
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{ Actor, ActorLogging }
 import akka.event.EventStream
 import mesosphere.marathon.SchedulerActions
-import mesosphere.marathon.core.event.{MarathonHealthCheckEvent, MesosStatusUpdateEvent}
+import mesosphere.marathon.core.event.{ MarathonHealthCheckEvent, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.tracker.InstanceTracker

@@ -6,8 +6,8 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, MesosContainer, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue}
-import mesosphere.marathon.state.{AppDefinition, EnvVarSecretRef, EnvVarString, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo}
+import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, MesosContainer, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
+import mesosphere.marathon.state.{ AppDefinition, EnvVarSecretRef, EnvVarString, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
@@ -94,7 +94,8 @@ case class PodDefinition(
       RamlConstraint(c.getField, operator, Option(c.getValue))
     }(collection.breakOut)
 
-    val ramlUpgradeStrategy = PodUpgradeStrategy(upgradeStrategy.minimumHealthCapacity,
+    val ramlUpgradeStrategy = PodUpgradeStrategy(
+      upgradeStrategy.minimumHealthCapacity,
       upgradeStrategy.maximumOverCapacity)
     // TODO: we're missing stuff here
     val schedulingPolicy = PodSchedulingPolicy(Some(backoffStrategy), Some(ramlUpgradeStrategy),
