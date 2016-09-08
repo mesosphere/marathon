@@ -16,7 +16,7 @@ sealed trait VersionInfo {
 object VersionInfo {
 
   /**
-    * This should only be used for new [[RunnableSpec]]s.
+    * This should only be used for new [[mesosphere.marathon.state.RunSpec]]s.
     *
     * If you set the versionInfo of existing Specs to `NoVersion`,
     * it will result in a restart when this Spec is passed to the GroupManager update method.

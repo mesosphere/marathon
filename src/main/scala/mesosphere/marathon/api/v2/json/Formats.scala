@@ -807,7 +807,7 @@ trait AppAndGroupFormats {
     (
       (__ \ "id").read[PathId].filterNot(_.isRoot) ~
       (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
-      (__ \ "args").readNullable[Seq[String]].withDefault(Nil) ~
+      (__ \ "args").readNullable[Seq[String]].withDefault(Seq.empty[String]) ~
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, EnvVarValue]].withDefault(AppDefinition.DefaultEnv) ~
       (__ \ "instances").readNullable[Int].withDefault(AppDefinition.DefaultInstances) ~
@@ -1020,13 +1020,17 @@ trait AppAndGroupFormats {
         "dependencies" -> runSpec.dependencies,
         "upgradeStrategy" -> runSpec.upgradeStrategy,
         "labels" -> runSpec.labels,
-        "acceptedResourceRoles" -> runSpec.acceptedResourceRoles,
         "ipAddress" -> runSpec.ipAddress,
         "version" -> runSpec.version,
         "residency" -> runSpec.residency,
         "secrets" -> runSpec.secrets,
         "taskKillGracePeriodSeconds" -> runSpec.taskKillGracePeriod
       )
+
+      if (runSpec.acceptedResourceRoles.nonEmpty) {
+        appJson = appJson + ("acceptedResourceRoles" -> Json.toJson(runSpec.acceptedResourceRoles))
+      }
+
       // top-level ports fields are incompatible with IP/CT
       if (runSpec.ipAddress.isEmpty) {
         appJson = appJson ++ Json.obj(
