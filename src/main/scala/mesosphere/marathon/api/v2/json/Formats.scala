@@ -1017,11 +1017,11 @@ trait AppAndGroupFormats {
       )
 
       if (runSpec.args.nonEmpty) {
-        appJson + ("args" -> Json.toJson(runSpec.args))
+        appJson = appJson + ("args" -> Json.toJson(runSpec.args))
       }
 
       if (runSpec.acceptedResourceRoles.nonEmpty) {
-        appJson + ("acceptedResourceRoles" -> Json.toJson(runSpec.acceptedResourceRoles))
+        appJson = appJson + ("acceptedResourceRoles" -> Json.toJson(runSpec.acceptedResourceRoles))
       }
 
       // top-level ports fields are incompatible with IP/CT

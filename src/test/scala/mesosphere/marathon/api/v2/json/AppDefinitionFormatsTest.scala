@@ -167,7 +167,7 @@ class AppDefinitionFormatsTest
   test("""ToJSON should correctly handle acceptedResourceRoles""") {
     val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set("a"))
     val json = Json.toJson(appDefinition)
-    (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(None)
+    (json \ "acceptedResourceRoles").as[Set[String]] should be(Set("a"))
   }
 
   test("""FromJSON should parse "acceptedResourceRoles": ["production", "*"] """) {
