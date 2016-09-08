@@ -40,7 +40,13 @@ case class PodManagerImpl(groupManager: GroupManager)(implicit
     groupManager.update(id.parent, _.removePod(id), force = force)
   }
 
-  def status(id: PathId): Future[Option[PodStatus]] = Future.failed(???)
+  def status(id: PathId): Future[Option[PodStatus]] = {
+    find(id).map { maybePod =>
+      maybePod.flatMap { pod =>
+        status(Map(pod.id -> pod)).headOption
+      }
+    }
+  }
 
   override def status(ids: Map[PathId, PodDefinition]): Seq[PodStatus] = {
     ids.map {
