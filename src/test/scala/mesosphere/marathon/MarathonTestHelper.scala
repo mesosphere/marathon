@@ -21,6 +21,7 @@ import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerM
 import mesosphere.marathon.core.task.update.TaskUpdateStep
 import mesosphere.marathon.core.task.{ MarathonTaskStatus, Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
@@ -271,9 +272,7 @@ object MarathonTestHelper {
 
   def makeBasicApp() = AppDefinition(
     id = "/test-app".toPath,
-    cpus = 1.0,
-    mem = 64.0,
-    disk = 1.0,
+    resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
     executor = "//cmd"
   )
 

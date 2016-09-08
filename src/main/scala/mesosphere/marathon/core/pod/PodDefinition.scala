@@ -4,7 +4,7 @@ import mesosphere.marathon.Protos
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, MesosContainer, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
+import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, MesosContainer, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
 import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarSecretRef, EnvVarString, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import play.api.libs.json.Json
 
@@ -32,10 +32,13 @@ case class PodDefinition(
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy
 ) extends RunSpec with MarathonState[Protos.PodDefinition, PodDefinition] {
-  lazy val cpus: Double = PodDefinition.DefaultExecutorCpus + containers.map(_.resources.cpus.toDouble).sum
-  lazy val mem: Double = PodDefinition.DefaultExecutorMem + containers.map(_.resources.mem.toDouble).sum
-  lazy val disk: Double = containers.flatMap(_.resources.disk.map(_.toDouble)).sum
-  lazy val gpus: Int = containers.flatMap(_.resources.gpus).sum
+
+  val resources = Resources(
+    cpus = PodDefinition.DefaultExecutorCpus + containers.map(_.resources.cpus).sum,
+    mem = PodDefinition.DefaultExecutorMem + containers.map(_.resources.mem).sum,
+    disk = containers.map(_.resources.disk).sum,
+    gpus = containers.map(_.resources.gpus).sum
+  )
 
   override def withInstances(instances: Int): RunSpec = copy(instances = instances)
 
@@ -199,8 +202,8 @@ object PodDefinition {
     PodDefinition(Json.parse(proto.getJson).as[Pod], None)
   }
 
-  val DefaultExecutorCpus = 0.1
-  val DefaultExecutorMem = 32
+  val DefaultExecutorCpus: Double = 0.1
+  val DefaultExecutorMem: Double = 32.0
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]

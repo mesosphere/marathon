@@ -4,6 +4,7 @@ import com.google.protobuf.TextFormat
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
@@ -40,9 +41,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
       )
@@ -64,9 +63,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = Seq(
           PortDefinition(8080, "tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
@@ -100,9 +97,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = Seq(
           PortDefinition(8080, "udp,tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
@@ -146,9 +141,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = Seq(
           PortDefinition(8080, "tcp", Some("http"), Map("VIP" -> "127.0.0.1:8080")),
@@ -181,9 +174,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       offer,
       AppDefinition(
         id = "/product/frontend".toPath,
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         container = Some(Docker(
           network = Some(DockerInfo.Network.BRIDGE),
@@ -237,9 +228,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
       )
@@ -261,9 +250,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
       )
@@ -290,7 +277,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        disk = 0.0
+        resources = Resources(disk = 0.0)
       )
     )
 
@@ -311,9 +298,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
       ),
@@ -343,8 +328,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 32.0,
+        resources = Resources(cpus = 1.0, mem = 32.0),
         executor = "//cmd",
         portDefinitions = Nil,
         container = Some(Docker(
@@ -383,8 +367,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 32.0,
+        resources = Resources(cpus = 1.0, mem = 32.0),
         executor = "//cmd",
         portDefinitions = Nil,
         container = Some(Docker(
@@ -442,8 +425,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 32.0,
+        resources = Resources(cpus = 1.0, mem = 32.0),
         executor = "//cmd",
         portDefinitions = Nil,
         container = Some(Docker(
@@ -504,8 +486,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 32.0,
+        resources = Resources(cpus = 1.0, mem = 32.0),
         executor = "/qazwsx",
         portDefinitions = Nil,
         container = Some(Container.Mesos(
@@ -568,9 +549,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
       id = "testApp".toPath,
-      cpus = 1.0,
-      mem = 64.0,
-      disk = 1.0,
+      resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Container.MesosDocker(
         image = "busybox",
@@ -607,9 +586,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
       id = "testApp".toPath,
-      cpus = 1.0,
-      mem = 64.0,
-      disk = 1.0,
+      resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Container.MesosAppC(
         image = "anImage",
@@ -642,9 +619,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081),
         labels = labels
@@ -668,9 +643,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "testApp".toPath,
         args = Seq("a", "b", "c"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
       )
@@ -708,9 +681,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       AppDefinition(
         id = "/product/frontend".toPath,
         cmd = Some("foo"),
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = Seq.empty
       )
@@ -734,9 +705,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     AppDefinition(
       id = "testApp".toPath,
       args = Seq("a", "b", "c"),
-      cpus = 1.0,
-      mem = 64.0,
-      disk = 1.0,
+      resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       portDefinitions = Nil,
       executor = executor,
       ipAddress = Some(
@@ -908,9 +877,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       offer,
       AppDefinition(
         id = "testApp".toPath,
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         cmd = Some("foo"),
         executor = "/custom/executor",
         portDefinitions = PortDefinitions(8080, 8081)
@@ -937,9 +904,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       offer,
       AppDefinition(
         id = "testApp".toPath,
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         args = Seq("a", "b", "c"),
         executor = "/custom/executor",
         portDefinitions = PortDefinitions(8080, 8081)
@@ -970,9 +935,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       offer,
       AppDefinition(
         id = "testApp".toPath,
-        cpus = 2.0,
-        mem = 200.0,
-        disk = 2.0,
+        resources = Resources(cpus = 2.0, mem = 200.0, disk = 2.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
       ),
@@ -1011,9 +974,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       offer,
       AppDefinition(
         id = "testApp".toPath,
-        cpus = 1.0,
-        mem = 64.0,
-        disk = 1.0,
+        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         portDefinitions = PortDefinitions(8080, 8081)
       )
@@ -1046,9 +1007,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
       id = "testApp".toPath,
-      cpus = 1.0,
-      mem = 64.0,
-      disk = 1.0,
+      resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.BRIDGE),
@@ -1076,9 +1035,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
       id = "testApp".toPath,
-      cpus = 1.0,
-      mem = 64.0,
-      disk = 1.0,
+      resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.USER),
@@ -1111,9 +1068,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
     val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
       offer, AppDefinition(
       id = "testApp".toPath,
-      cpus = 1.0,
-      mem = 64.0,
-      disk = 1.0,
+      resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
       executor = "//cmd",
       container = Some(Docker(
         network = Some(DockerInfo.Network.USER),
@@ -1352,10 +1307,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
       container = Some(Docker(
         image = "myregistry/myimage:version"
       )),
-      cpus = 10.0,
-      mem = 256.0,
-      disk = 128.0,
-      gpus = 2,
+      resources = Resources(cpus = 10.0, mem = 256.0, disk = 128.0, gpus = 2),
       labels = Map(
         "LABEL1" -> "VALUE1",
         "LABEL2" -> "VALUE2"

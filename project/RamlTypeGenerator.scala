@@ -162,7 +162,7 @@ object RamlTypeGenerator {
 
     lazy val param: treehugger.forest.ValDef = {
       if (required || default.isDefined) {
-        PARAM(name, `type`).tree
+        defaultValue.fold { PARAM(name, `type`).tree } { d => PARAM(name, `type`) := d }
       } else {
         if (repeated) {
           if (`type`.toString().startsWith("Map")) {

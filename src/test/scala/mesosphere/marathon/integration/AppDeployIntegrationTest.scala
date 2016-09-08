@@ -381,7 +381,7 @@ class AppDeployIntegrationTest
     waitForEvent("deployment_success")
 
     When("A resource specification is updated")
-    val updatedDisk: Double = v1.disk + 1.0
+    val updatedDisk: Double = v1.resources.disk + 1.0
     val appUpdate = AppUpdate(Option(v1.id), disk = Option(updatedDisk))
     val updateResponse = marathon.updateApp(v1.id, appUpdate)
     updateResponse.code should be (200)
@@ -390,12 +390,12 @@ class AppDeployIntegrationTest
     Then("It should create a new version with the right data")
     val responseOriginalVersion = marathon.appVersion(v1.id, originalVersion)
     responseOriginalVersion.code should be (200)
-    responseOriginalVersion.value.disk should be (v1.disk)
+    responseOriginalVersion.value.resources.disk should be (v1.resources.disk)
 
     val updatedVersion = updateResponse.value.version
     val responseUpdatedVersion = marathon.appVersion(v1.id, updatedVersion)
     responseUpdatedVersion.code should be (200)
-    responseUpdatedVersion.value.disk should be (updatedDisk)
+    responseUpdatedVersion.value.resources.disk should be (updatedDisk)
   }
 
   test("kill a task of an App") {

@@ -44,10 +44,10 @@ trait PodsValidation {
   }
 
   val resourceValidator = validator[Resources] { resource =>
-    resource.cpus should be >= 0.0f
-    resource.mem should be >= 0.0f
-    resource.disk.getOrElse(0.0f) should be >= 0.0f
-    resource.gpus.getOrElse(0) should be >= 0
+    resource.cpus should be >= 0.0
+    resource.mem should be >= 0.0
+    resource.disk should be >= 0.0
+    resource.gpus should be >= 0
   }
 
   val containerValidator: Validator[MesosContainer] = validator[MesosContainer] { container =>
@@ -148,7 +148,7 @@ trait PodsValidation {
     PathId(pod.id) is valid(PathId.absolutePathValidator)
     pod.user is optional(notEmpty)
     pod.environment is optional(envValidator)
-    pod.containers is every(containerValidator)
+    pod.containers is notEmpty and every(containerValidator)
     pod.secrets is optional(secretValidator)
     pod.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     pod.volumes is every(volumeValidator)

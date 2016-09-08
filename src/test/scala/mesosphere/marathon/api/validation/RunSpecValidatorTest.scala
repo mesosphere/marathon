@@ -8,6 +8,7 @@ import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.plugin.{ PluginDefinitions, PluginManager }
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.{ Protos => mesos }
 import org.scalatest.{ GivenWhenThen, Ignore, Matchers }
@@ -382,17 +383,17 @@ class RunSpecValidatorTest extends MarathonSpec with Matchers with GivenWhenThen
     AppDefinition.residentUpdateIsValid(from)(to5).isSuccess should be(false)
 
     When("Check if changing mem is valid")
-    val to6 = from.copy(mem = 123)
+    val to6 = from.copy(resources = Resources(mem = 123))
     Then("Should be invalid")
     AppDefinition.residentUpdateIsValid(from)(to6).isSuccess should be(false)
 
     When("Check if changing cpu is valid")
-    val to7 = from.copy(cpus = 123)
+    val to7 = from.copy(resources = Resources(cpus = 123))
     Then("Should be invalid")
     AppDefinition.residentUpdateIsValid(from)(to7).isSuccess should be(false)
 
     When("Check if changing disk is valid")
-    val to8 = from.copy(disk = 123)
+    val to8 = from.copy(resources = Resources(disk = 123))
     Then("Should be invalid")
     AppDefinition.residentUpdateIsValid(from)(to8).isSuccess should be(false)
 

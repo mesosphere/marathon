@@ -13,6 +13,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -528,7 +529,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     {
       val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
-        versionInfo = OnlyVersion(Timestamp.zero), mem = -128)
+        versionInfo = OnlyVersion(Timestamp.zero), resources = Resources(mem = -128))
       val (body, plan) = prepareApp(app)
 
       Then("A constraint violation exception is thrown")
@@ -538,7 +539,7 @@ class AppsResourceTest extends MarathonSpec with MarathonActorSupport with Match
 
     {
       val app = AppDefinition(id = PathId("/app"), cmd = Some("cmd"),
-        versionInfo = OnlyVersion(Timestamp.zero), cpus = -1)
+        versionInfo = OnlyVersion(Timestamp.zero), resources = Resources(cpus = -1))
       val (body, plan) = prepareApp(app)
 
       val response = appsResource.create(body, false, auth.request)

@@ -7,6 +7,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 
 import scala.collection.immutable.Seq
@@ -110,10 +111,12 @@ case class AppUpdate(
     user = user.orElse(app.user),
     env = env.getOrElse(app.env),
     instances = instances.getOrElse(app.instances),
-    cpus = cpus.getOrElse(app.cpus),
-    mem = mem.getOrElse(app.mem),
-    disk = disk.getOrElse(app.disk),
-    gpus = gpus.getOrElse(app.gpus),
+    resources = Resources(
+      cpus = cpus.getOrElse(app.resources.cpus),
+      mem = mem.getOrElse(app.resources.mem),
+      disk = disk.getOrElse(app.resources.disk),
+      gpus = gpus.getOrElse(app.resources.gpus)
+    ),
     executor = executor.getOrElse(app.executor),
     constraints = constraints.getOrElse(app.constraints),
     fetch = fetch.getOrElse(app.fetch),

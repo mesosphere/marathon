@@ -13,7 +13,7 @@ import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.raml.Pod
+import mesosphere.marathon.raml.{ Pod, Resources }
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -830,8 +830,9 @@ trait AppAndGroupFormats {
         id, cmd, args, maybeString, env, instances, cpus, mem, disk, gpus, executor, constraints, storeUrls,
         requirePorts, backoff, backoffFactor, maxLaunchDelay, container, checks
       ) => AppDefinition(
-        id = id, cmd = cmd, args = args, user = maybeString, env = env, instances = instances, cpus = cpus,
-        mem = mem, disk = disk, gpus = gpus, executor = executor, constraints = constraints, storeUrls = storeUrls,
+        id = id, cmd = cmd, args = args, user = maybeString, env = env, instances = instances,
+        resources = Resources(cpus = cpus, mem = mem, disk = disk, gpus = gpus),
+        executor = executor, constraints = constraints, storeUrls = storeUrls,
         requirePorts = requirePorts, backoff = backoff,
         backoffFactor = backoffFactor, maxLaunchDelay = maxLaunchDelay, container = container,
         healthChecks = checks)).flatMap { app =>
@@ -1002,10 +1003,10 @@ trait AppAndGroupFormats {
         "user" -> runSpec.user,
         "env" -> runSpec.env,
         "instances" -> runSpec.instances,
-        "cpus" -> runSpec.cpus,
-        "mem" -> runSpec.mem,
-        "disk" -> runSpec.disk,
-        "gpus" -> runSpec.gpus,
+        "cpus" -> runSpec.resources.cpus,
+        "mem" -> runSpec.resources.mem,
+        "disk" -> runSpec.resources.disk,
+        "gpus" -> runSpec.resources.gpus,
         "executor" -> runSpec.executor,
         "constraints" -> runSpec.constraints,
         "uris" -> runSpec.fetch.map(_.uri),

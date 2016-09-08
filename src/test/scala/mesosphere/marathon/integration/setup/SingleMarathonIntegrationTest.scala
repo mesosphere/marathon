@@ -5,6 +5,7 @@ import java.util
 
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.integration.facades.{ ITDeploymentResult, ITEnrichedTask, MarathonFacade, MesosFacade }
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.{ AppDefinition, Container, DockerVolume, PathId }
 import org.apache.commons.io.FileUtils
 import org.apache.mesos.Protos
@@ -248,8 +249,7 @@ trait SingleMarathonIntegrationTest
         )
       )),
       instances = instances,
-      cpus = 0.5,
-      mem = 128.0,
+      resources = Resources(cpus = 0.5, mem = 128.0),
       healthChecks = if (withHealth) appProxyHealthChecks else Set.empty[HealthCheck],
       dependencies = dependencies
     )
@@ -262,8 +262,7 @@ trait SingleMarathonIntegrationTest
       cmd = cmd,
       executor = "//cmd",
       instances = instances,
-      cpus = 0.5,
-      mem = 128.0,
+      resources = Resources(cpus = 0.5, mem = 128.0),
       healthChecks = if (withHealth) appProxyHealthChecks else Set.empty[HealthCheck],
       dependencies = dependencies
     )

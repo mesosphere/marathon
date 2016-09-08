@@ -7,6 +7,7 @@ import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
@@ -44,13 +45,7 @@ case class AppDefinition(
 
   instances: Int = AppDefinition.DefaultInstances,
 
-  cpus: Double = AppDefinition.DefaultCpus,
-
-  mem: Double = AppDefinition.DefaultMem,
-
-  disk: Double = AppDefinition.DefaultDisk,
-
-  gpus: Int = AppDefinition.DefaultGpus,
+  resources: Resources = AppDefinition.DefaultResources,
 
   override val executor: String = AppDefinition.DefaultExecutor,
 
@@ -123,10 +118,10 @@ case class AppDefinition(
       hostPorts = Seq.empty,
       envPrefix = None
     )
-    val cpusResource = ScalarResource(Resource.CPUS, cpus)
-    val memResource = ScalarResource(Resource.MEM, mem)
-    val diskResource = ScalarResource(Resource.DISK, disk)
-    val gpusResource = ScalarResource(Resource.GPUS, gpus.toDouble)
+    val cpusResource = ScalarResource(Resource.CPUS, resources.cpus)
+    val memResource = ScalarResource(Resource.MEM, resources.mem)
+    val diskResource = ScalarResource(Resource.DISK, resources.disk)
+    val gpusResource = ScalarResource(Resource.GPUS, resources.gpus.toDouble)
     val appLabels = labels.map {
       case (key, value) =>
         mesos.Parameter.newBuilder
@@ -249,10 +244,12 @@ case class AppDefinition(
       maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds,
       constraints = proto.getConstraintsList.asScala.toSet,
       acceptedResourceRoles = acceptedResourceRoles,
-      cpus = resourcesMap.getOrElse(Resource.CPUS, this.cpus),
-      mem = resourcesMap.getOrElse(Resource.MEM, this.mem),
-      disk = resourcesMap.getOrElse(Resource.DISK, this.disk),
-      gpus = resourcesMap.getOrElse(Resource.GPUS, this.gpus.toDouble).toInt,
+      resources = Resources(
+        cpus = resourcesMap.getOrElse(Resource.CPUS, this.resources.cpus),
+        mem = resourcesMap.getOrElse(Resource.MEM, this.resources.mem),
+        disk = resourcesMap.getOrElse(Resource.DISK, this.resources.disk),
+        gpus = resourcesMap.getOrElse(Resource.GPUS, this.resources.gpus.toDouble).toInt
+      ),
       env = envMap ++ envRefs,
       fetch = proto.getCmd.getUrisList.asScala.map(FetchUri.fromProto).to[Seq],
       storeUrls = proto.getStoreUrlsList.asScala.to[Seq],
@@ -310,10 +307,7 @@ case class AppDefinition(
           args != to.args ||
           user != to.user ||
           env != to.env ||
-          cpus != to.cpus ||
-          mem != to.mem ||
-          disk != to.disk ||
-          gpus != to.gpus ||
+          resources != to.resources ||
           executor != to.executor ||
           constraints != to.constraints ||
           fetch != to.fetch ||
@@ -461,6 +455,8 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultGpus: Int = 0
 
+  val DefaultResources = Resources(cpus = DefaultCpus, mem = DefaultMem, disk = DefaultDisk, gpus = DefaultGpus)
+
   val DefaultExecutor: String = ""
 
   val DefaultConstraints = Set.empty[Constraint]
@@ -602,7 +598,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   }
 
   private def complyWithGpuRules(enabledFeatures: Set[String]): Validator[AppDefinition] =
-    conditional[AppDefinition](_.gpus > 0) {
+    conditional[AppDefinition](_.resources.gpus > 0) {
       isTrue[AppDefinition]("GPU resources only work with the Mesos containerizer") { app =>
         app.container match {
           case Some(_: Docker) => false
@@ -680,11 +676,11 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
-    appDef.mem should be >= 0.0
-    appDef.cpus should be >= 0.0
+    appDef.resources.mem as "mem" should be >= 0.0
+    appDef.resources.cpus as "cpus" should be >= 0.0
     appDef.instances should be >= 0
-    appDef.disk should be >= 0.0
-    appDef.gpus should be >= 0
+    appDef.resources.disk as "disk" should be >= 0.0
+    appDef.resources.gpus as "gpus" should be >= 0
     appDef.secrets is valid(Secret.secretsValidator)
     appDef.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     appDef.env is valid(EnvVarValue.envValidator)
@@ -721,10 +717,10 @@ object AppDefinition extends GeneralPurposeCombinators {
 
     val changeNoResources =
       isTrue[AppDefinition]("Resident Tasks may not change resource requirements!") { to =>
-        from.cpus == to.cpus &&
-          from.mem == to.mem &&
-          from.disk == to.disk &&
-          from.gpus == to.gpus &&
+        from.resources.cpus == to.resources.cpus &&
+          from.resources.mem == to.resources.mem &&
+          from.resources.disk == to.resources.disk &&
+          from.resources.gpus == to.resources.gpus &&
           from.portDefinitions == to.portDefinitions
       }
 

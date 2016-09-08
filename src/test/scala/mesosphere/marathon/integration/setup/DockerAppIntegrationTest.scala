@@ -2,7 +2,8 @@ package mesosphere.marathon.integration.setup
 
 import mesosphere.marathon.integration.facades.MarathonFacade
 import MarathonFacade._
-import mesosphere.marathon.state.{ Container, AppDefinition }
+import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.state.{ AppDefinition, Container }
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
 
 import scala.concurrent.duration._
@@ -24,8 +25,7 @@ class DockerAppIntegrationTest
         id = testBasePath / "dockerapp",
         cmd = Some("sleep 600"),
         container = Some(Container.Docker(image = "busybox")),
-        cpus = 0.2,
-        mem = 16.0,
+        resources = Resources(cpus = 0.2, mem = 16.0),
         instances = 1
       )
 
@@ -47,8 +47,7 @@ class DockerAppIntegrationTest
         id = testBasePath / "mesosdockerapp",
         cmd = Some("sleep 600"),
         container = Some(Container.MesosDocker(image = "busybox")),
-        cpus = 0.2,
-        mem = 16.0,
+        resources = Resources(cpus = 0.2, mem = 16.0),
         instances = 1
       )
 

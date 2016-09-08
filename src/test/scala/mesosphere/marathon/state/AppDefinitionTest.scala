@@ -1,6 +1,7 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.ServiceDefinition
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.{ MarathonSpec, Protos }
@@ -18,8 +19,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val app1 = AppDefinition(
       id = "play".toPath,
       cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
-      cpus = 4.0,
-      mem = 256.0,
+      resources = Resources(cpus = 4.0, mem = 256.0),
       instances = 5,
       portDefinitions = PortDefinitions(8080, 8081),
       executor = "//cmd",
@@ -48,8 +48,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       cmd = None,
       args = Seq("a", "b", "c"),
       container = Some(Container.Docker(image = "group/image")),
-      cpus = 4.0,
-      mem = 256.0,
+      resources = Resources(cpus = 4.0, mem = 256.0),
       instances = 5,
       portDefinitions = PortDefinitions(8080, 8081),
       executor = "//cmd",
@@ -258,8 +257,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
     val app1 = AppDefinition(
       id = "play".toPath,
       cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
-      cpus = 4.0,
-      mem = 256.0,
+      resources = Resources(cpus = 4.0, mem = 256.0),
       instances = 5,
       portDefinitions = PortDefinitions(8080, 8081),
       executor = "//cmd",

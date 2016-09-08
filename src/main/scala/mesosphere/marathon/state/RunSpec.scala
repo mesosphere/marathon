@@ -5,6 +5,7 @@ import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin
+import mesosphere.marathon.raml.Resources
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
@@ -28,11 +29,7 @@ trait RunSpec extends plugin.RunSpec {
 
   val version: Timestamp
 
-  // TODO: these could go into a resources object
-  val cpus: Double
-  val mem: Double
-  val disk: Double
-  val gpus: Int
+  val resources: Resources
 
   val backoffStrategy: BackoffStrategy
 

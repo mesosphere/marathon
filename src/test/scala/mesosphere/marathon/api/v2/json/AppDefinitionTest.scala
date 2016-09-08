@@ -3,12 +3,13 @@ package mesosphere.marathon.api.v2.json
 import com.wix.accord._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.{ Protos, MarathonTestHelper, MarathonSpec }
+import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.DiscoveryInfo.Port
 import mesosphere.marathon.state.PathId._
@@ -387,49 +388,49 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       "URI has invalid syntax."
     )
 
-    shouldViolate(app.copy(mem = -3.0), "/mem", "got -3.0, expected 0.0 or more")
-    shouldViolate(app.copy(cpus = -3.0), "/cpus", "got -3.0, expected 0.0 or more")
-    shouldViolate(app.copy(disk = -3.0), "/disk", "got -3.0, expected 0.0 or more")
-    shouldViolate(app.copy(gpus = -3), "/gpus", "got -3, expected 0 or more")
+    shouldViolate(app.copy(resources = Resources(mem = -3.0)), "/mem", "got -3.0, expected 0.0 or more")
+    shouldViolate(app.copy(resources = Resources(cpus = -3.0)), "/cpus", "got -3.0, expected 0.0 or more")
+    shouldViolate(app.copy(resources = Resources(disk = -3.0)), "/disk", "got -3.0, expected 0.0 or more")
+    shouldViolate(app.copy(resources = Resources(gpus = -3)), "/gpus", "got -3, expected 0 or more")
     shouldViolate(app.copy(instances = -3), "/instances", "got -3, expected 0 or more")
 
-    shouldViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+    shouldViolate(app.copy(resources = Resources(gpus = 1)), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
     {
       implicit val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
-      shouldNotViolate(app.copy(gpus = 1), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")(appValidator)
+      shouldNotViolate(app.copy(resources = Resources(gpus = 1)), "/", "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")(appValidator)
     }
 
     app = correct.copy(
-      gpus = 1,
+      resources = Resources(gpus = 1),
       container = Some(Container.Docker())
     )
 
     shouldViolate(app, "/", "GPU resources only work with the Mesos containerizer")
 
     app = correct.copy(
-      gpus = 1,
+      resources = Resources(gpus = 1),
       container = Some(Container.Mesos())
     )
 
     shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
 
     app = correct.copy(
-      gpus = 1,
+      resources = Resources(gpus = 1),
       container = Some(Container.MesosDocker())
     )
 
     shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
 
     app = correct.copy(
-      gpus = 1,
+      resources = Resources(gpus = 1),
       container = Some(Container.MesosAppC())
     )
 
     shouldNotViolate(app, "/", "GPU resources only work with the Mesos containerizer")
 
     app = correct.copy(
-      gpus = 1,
+      resources = Resources(gpus = 1),
       container = None
     )
 
@@ -482,9 +483,7 @@ class AppDefinitionTest extends MarathonSpec with Matchers {
       user = Some("nobody"),
       env = EnvVarValue(Map("key1" -> "value1", "key2" -> "value2")),
       instances = 5,
-      cpus = 5.0,
-      mem = 55.0,
-      disk = 550.0,
+      resources = Resources(cpus = 5.0, mem = 55.0, disk = 550.0),
       executor = "",
       constraints = Set(
         Constraint.newBuilder

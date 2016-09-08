@@ -136,16 +136,16 @@ object ResourceMatcher {
     // that means if the resources that are matched are still unreserved.
     def needToReserveDisk = selector.needToReserve && runSpec.diskForPersistentVolumes > 0
     val diskMatch = if (needToReserveDisk)
-      scalarResourceMatch(Resource.DISK, runSpec.disk + runSpec.diskForPersistentVolumes,
+      scalarResourceMatch(Resource.DISK, runSpec.resources.disk + runSpec.diskForPersistentVolumes,
         ScalarMatchResult.Scope.IncludingLocalVolumes)
     else
-      scalarResourceMatch(Resource.DISK, runSpec.disk, ScalarMatchResult.Scope.ExcludingLocalVolumes)
+      scalarResourceMatch(Resource.DISK, runSpec.resources.disk, ScalarMatchResult.Scope.ExcludingLocalVolumes)
 
     val scalarMatchResults = Iterable(
-      scalarResourceMatch(Resource.CPUS, runSpec.cpus, ScalarMatchResult.Scope.NoneDisk),
-      scalarResourceMatch(Resource.MEM, runSpec.mem, ScalarMatchResult.Scope.NoneDisk),
+      scalarResourceMatch(Resource.CPUS, runSpec.resources.cpus, ScalarMatchResult.Scope.NoneDisk),
+      scalarResourceMatch(Resource.MEM, runSpec.resources.mem, ScalarMatchResult.Scope.NoneDisk),
       diskMatch,
-      scalarResourceMatch(Resource.GPUS, runSpec.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)
+      scalarResourceMatch(Resource.GPUS, runSpec.resources.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)
     ).filter(_.requiredValue != 0)
 
     logUnsatisfiedResources(offer, selector, scalarMatchResults)
