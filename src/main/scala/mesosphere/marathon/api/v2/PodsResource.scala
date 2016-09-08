@@ -107,11 +107,14 @@ class PodsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
+    import PathId._
+
+    val podId = id.toRootPath
     withValid(unmarshal(body)) { podDef =>
-      if (id != podDef.id) {
+      if (podId != podDef.id.toRootPath) {
         Response.status(Status.BAD_REQUEST).entity(
           s"""
-            |{"message": "'$id' does not match definition's id ('${podDef.id}')" }
+            |{"message": "'$podId' does not match definition's id ('${podDef.id}')" }
           """.stripMargin
         ).build()
       } else {
@@ -141,7 +144,9 @@ class PodsResource @Inject() (
     @PathParam("id") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    withValid(PathId(id)) { id =>
+    import PathId._
+
+    withValid(id.toRootPath) { id =>
       result(podSystem.find(id)).fold(notFound(s"""{"message": "pod with $id does not exist"}""")) { pod =>
         withAuthorization(ViewRunSpec, pod) {
           ok(marshal(pod))
@@ -156,7 +161,9 @@ class PodsResource @Inject() (
     @DefaultValue("false")@QueryParam("force") force: Boolean,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    withValid(PathId(id)) { id =>
+    import PathId._
+
+    withValid(id.toRootPath) { id =>
       val pod = result(podSystem.find(id))
       withAuthorization(DeleteRunSpec, pod) {
 
@@ -178,7 +185,9 @@ class PodsResource @Inject() (
     @PathParam("id") id: String,
     @Context req: HttpServletRequest): Response = authenticated(req) { implicit identity =>
 
-    withValid(PathId(id)) { id =>
+    import PathId._
+
+    withValid(id.toRootPath) { id =>
       val pod = result(podSystem.find(id))
       withAuthorization(ViewRunSpec, pod) {
         result(podSystem.status(id)).fold(notFound(id)) { status =>
