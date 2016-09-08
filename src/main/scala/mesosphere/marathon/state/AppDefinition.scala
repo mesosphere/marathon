@@ -163,9 +163,11 @@ case class AppDefinition(
     readinessChecks.foreach { r => builder.addReadinessCheckDefinition(ReadinessCheckSerializer.toProto(r)) }
     taskKillGracePeriod.foreach { t => builder.setTaskKillGracePeriod(t.toMillis) }
 
-    val roles = Protos.ResourceRoles.newBuilder()
-    roles.addAllRole(acceptedResourceRoles.asJava)
-    builder.setAcceptedResourceRoles(roles)
+    if (acceptedResourceRoles.nonEmpty) {
+      val roles = Protos.ResourceRoles.newBuilder()
+      roles.addAllRole(acceptedResourceRoles.asJava)
+      builder.setAcceptedResourceRoles(roles)
+    }
 
     builder.setVersion(version.toString)
     versionInfo match {
