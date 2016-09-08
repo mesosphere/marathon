@@ -21,7 +21,7 @@ private[health] class HealthCheckActor(
   import context.dispatcher
   import HealthCheckWorker.HealthCheckJob
 
-  var nextScheduledCheck: Option[Cancellable] = None
+  var scheduledCheck: Option[Cancellable] = None
   var taskHealth = Map[Task.Id, Health]()
 
   val workerProps = Props[HealthCheckWorkerActor]
@@ -33,7 +33,7 @@ private[health] class HealthCheckActor(
       app.version,
       healthCheck
     )
-    scheduleNextHealthCheck()
+    scheduleHealthCheck()
   }
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit =
@@ -45,7 +45,7 @@ private[health] class HealthCheckActor(
     )
 
   override def postStop(): Unit = {
-    nextScheduledCheck.forall { _.cancel() }
+    scheduledCheck.forall { _.cancel() }
     log.info(
       "Stopped health check actor for app [{}] version [{}] and healthCheck [{}]",
       app.id,
@@ -67,7 +67,7 @@ private[health] class HealthCheckActor(
     taskHealth = taskHealth.filterKeys(activeTaskIds).iterator.toMap
   }
 
-  def scheduleNextHealthCheck(): Unit =
+  def scheduleHealthCheck(): Unit =
     if (healthCheck.protocol != Protocol.COMMAND) {
       log.debug(
         "Scheduling next health check for app [{}] version [{}] and healthCheck [{}]",
@@ -75,11 +75,13 @@ private[health] class HealthCheckActor(
         app.version,
         healthCheck
       )
-      nextScheduledCheck = Some(
-        context.system.scheduler.scheduleOnce(healthCheck.interval) {
-          self ! Tick
-        }
-      )
+      // In case there is no check or it was canceled, schedule a new one:
+      if (scheduledCheck.forall(_.isCancelled))
+        scheduledCheck = Some(
+          context.system.scheduler.schedule(HealthCheck.DefaultFirstHealthCheckTime, healthCheck.interval) {
+            self ! Tick
+          }
+        )
     }
 
   def dispatchJobs(): Unit = {
@@ -148,7 +150,6 @@ private[health] class HealthCheckActor(
     case Tick =>
       purgeStatusOfDoneTasks()
       dispatchJobs()
-      scheduleNextHealthCheck()
 
     case result: HealthResult if result.version == app.version =>
       updateTaskHealth(result)

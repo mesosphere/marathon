@@ -46,8 +46,8 @@ case class HealthCheck(
 
     path foreach builder.setPath
 
-    portIndex foreach { p => builder.setPortIndex(p.toInt) }
-    port foreach { p => builder.setPort(p.toInt) }
+    portIndex foreach { p => builder.setPortIndex(p) }
+    port foreach { p => builder.setPort(p) }
 
     builder.build
   }
@@ -123,6 +123,7 @@ object HealthCheck {
   val DefaultPortIndex = None
   val DefaultCommand = None
   // Dockers can take a long time to download, so default to a fairly long wait.
+  val DefaultFirstHealthCheckTime = 1.seconds
   val DefaultGracePeriod = 5.minutes
   val DefaultInterval = 1.minute
   val DefaultTimeout = 20.seconds
