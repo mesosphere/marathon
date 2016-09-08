@@ -4,7 +4,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.RunSpec
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.{ Protos => Mesos }
+import org.apache.mesos.{Protos => Mesos}
 
 /** Infers which TaskOps to create for given run spec and offers. */
 trait InstanceOpFactory {
@@ -29,11 +29,12 @@ object InstanceOpFactory {
     lazy val reserved: Iterable[Task.Reserved] = instances.collect { case r: Task.Reserved => r }
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
-    def isForResidentRunSpec: Boolean = runSpec.isResident
+    def isForResidentRunSpec: Boolean = runSpec.residency.isDefined
   }
 
   object Request {
-    def apply(runSpec: RunSpec, offer: Mesos.Offer, instances: Iterable[Instance], additionalLaunches: Int): Request = {
+    def apply(runSpec: RunSpec, offer: Mesos.Offer,
+              instances: Iterable[Instance], additionalLaunches: Int): Request = {
       new Request(runSpec, offer, Instance.instancesById(instances), additionalLaunches)
     }
   }

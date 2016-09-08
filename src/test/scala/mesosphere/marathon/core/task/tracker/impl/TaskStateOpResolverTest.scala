@@ -1,7 +1,7 @@
 package mesosphere.marathon.core.task.tracker.impl
 
 import mesosphere.marathon.MarathonTestHelper
-import mesosphere.marathon.core.instance.{ Instance, InstanceStatus }
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp, InstanceStatus }
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.impl.InstanceOpProcessorImpl.TaskStateOpResolver
@@ -31,7 +31,7 @@ class TaskStateOpResolverTest
     f.taskTracker.instance(f.notExistingTaskId) returns Future.successful(None)
 
     When("A ForceExpunge is scheduled with that taskId")
-    val stateChange = f.stateOpResolver.resolve(TaskStateOp.ForceExpunge(f.notExistingTaskId)).futureValue
+    val stateChange = f.stateOpResolver.resolve(InstanceStateOp.ForceExpunge(f.notExistingTaskId)).futureValue
 
     Then("taskTracker.task is called")
     verify(f.taskTracker).instance(f.notExistingTaskId)
@@ -50,7 +50,7 @@ class TaskStateOpResolverTest
 
     When("A LaunchOnReservation is scheduled with that taskId")
     val stateChange = f.stateOpResolver.resolve(TaskStateOp.LaunchOnReservation(
-      taskId = f.notExistingTaskId,
+      instanceId = f.notExistingTaskId,
       runSpecVersion = Timestamp(0),
       status = Task.Status(Timestamp(0), taskStatus = InstanceStatus.Running),
       hostPorts = Seq.empty)).futureValue

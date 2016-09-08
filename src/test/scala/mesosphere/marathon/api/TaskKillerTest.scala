@@ -2,8 +2,9 @@ package mesosphere.marathon.api
 
 import mesosphere.marathon._
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.task.{ TaskStateChange, TaskStateOp, Task }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.instance.InstanceStateOp
+import mesosphere.marathon.core.task.{ Task, TaskStateChange }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.state.{ AppDefinition, Group, PathId, Timestamp }
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.mockito.ArgumentCaptor
@@ -11,7 +12,7 @@ import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{ BeforeAndAfterAll, Matchers }
+import org.scalatest.{ BeforeAndAfterAll, GivenWhenThen, Matchers }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -20,6 +21,7 @@ import scala.concurrent.duration._
 class TaskKillerTest extends MarathonSpec
     with Matchers
     with BeforeAndAfterAll
+    with GivenWhenThen
     with MockitoSugar
     with ScalaFutures {
 
@@ -90,12 +92,37 @@ class TaskKillerTest extends MarathonSpec
     val tasksToKill = Set(MarathonTestHelper.runningTaskForApp(appId))
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
+    when(f.service.killTasks(appId, tasksToKill)).thenReturn(Future.successful(tasksToKill))
 
     val result = f.taskKiller.kill(appId, { tasks =>
       tasks should equal(tasksToKill)
       tasksToKill
     })
+
     result.futureValue shouldEqual tasksToKill
+    verify(f.service, times(1)).killTasks(appId, tasksToKill)
+  }
+
+  test("Fail when one task kill fails") {
+    Given("An app with several tasks")
+    val f = new Fixture
+    val appId = PathId(List("my", "app"))
+    val tasksToKill = Set(
+      MarathonTestHelper.runningTaskForApp(appId),
+      MarathonTestHelper.runningTaskForApp(appId)
+    )
+    when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
+    when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
+    when(f.service.killTasks(appId, tasksToKill)).thenReturn(Future.failed(AppLockedException()))
+
+    When("TaskKiller kills all tasks")
+    val result = f.taskKiller.kill(appId, { tasks =>
+      tasks should equal(tasksToKill)
+      tasksToKill
+    })
+
+    Then("The kill should fail.")
+    result.failed.futureValue shouldEqual AppLockedException()
     verify(f.service, times(1)).killTasks(appId, tasksToKill)
   }
 
@@ -130,14 +157,14 @@ class TaskKillerTest extends MarathonSpec
     val reservedTask = MarathonTestHelper.residentReservedTask(appId)
     val tasksToKill = Set(runningTask, reservedTask)
     val launchedTasks = Set(runningTask)
-    val stateOp1 = TaskStateOp.ForceExpunge(runningTask.id)
-    val stateOp2 = TaskStateOp.ForceExpunge(reservedTask.id)
+    val stateOp1 = InstanceStateOp.ForceExpunge(runningTask.id)
+    val stateOp2 = InstanceStateOp.ForceExpunge(reservedTask.id)
 
     when(f.groupManager.app(appId)).thenReturn(Future.successful(Some(AppDefinition(appId))))
     when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
     when(f.stateOpProcessor.process(stateOp1)).thenReturn(Future.successful(TaskStateChange.Expunge(runningTask)))
     when(f.stateOpProcessor.process(stateOp2)).thenReturn(Future.successful(TaskStateChange.Expunge(reservedTask)))
-    when(f.service.killTasks(appId, launchedTasks)).thenReturn(launchedTasks)
+    when(f.service.killTasks(appId, launchedTasks)).thenReturn(Future.successful(launchedTasks))
 
     val result = f.taskKiller.kill(appId, { tasks =>
       tasks should equal(tasksToKill)
@@ -147,8 +174,8 @@ class TaskKillerTest extends MarathonSpec
     // only task1 is killed
     verify(f.service, times(1)).killTasks(appId, launchedTasks)
     // both tasks are expunged from the repo
-    verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(runningTask.id))
-    verify(f.stateOpProcessor).process(TaskStateOp.ForceExpunge(reservedTask.id))
+    verify(f.stateOpProcessor).process(InstanceStateOp.ForceExpunge(runningTask.id))
+    verify(f.stateOpProcessor).process(InstanceStateOp.ForceExpunge(reservedTask.id))
   }
 
   class Fixture {

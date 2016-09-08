@@ -35,7 +35,7 @@ class TaskStatusUpdateProcessorImplTest
       fOpt = Some(new Fixture)
       val status = origUpdate.status
       val update = origUpdate
-      val taskId = update.wrapped.stateOp.taskId
+      val taskId = update.wrapped.stateOp.instanceId
 
       Given("an unknown task")
       f.taskTracker.instance(taskId) returns Future.successful(None)
@@ -62,7 +62,7 @@ class TaskStatusUpdateProcessorImplTest
     val origUpdate = TaskStatusUpdateTestHelper.running()
     val status = origUpdate.status
     val update = origUpdate
-    val taskId = update.wrapped.stateOp.taskId
+    val taskId = update.wrapped.stateOp.instanceId
 
     Given("an unknown task")
     f.taskTracker.instance(taskId) returns Future.successful(None)

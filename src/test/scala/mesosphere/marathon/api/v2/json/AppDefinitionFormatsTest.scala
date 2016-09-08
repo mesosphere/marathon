@@ -159,13 +159,13 @@ class AppDefinitionFormatsTest
   }
 
   test("""ToJSON should correctly handle missing acceptedResourceRoles""") {
-    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = None)
+    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set.empty)
     val json = Json.toJson(appDefinition)
     (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(None)
   }
 
   test("""ToJSON should correctly handle acceptedResourceRoles""") {
-    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Some(Set("a")))
+    val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set("a"))
     val json = Json.toJson(appDefinition)
     (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(Some(Set("a")))
   }

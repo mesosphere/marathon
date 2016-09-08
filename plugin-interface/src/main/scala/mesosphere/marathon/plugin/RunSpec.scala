@@ -8,7 +8,7 @@ trait RunSpec {
   def user: Option[String]
   def env: Map[String, EnvVarValue]
   def labels: Map[String, String]
-  def acceptedResourceRoles: Option[Set[String]]
+  def acceptedResourceRoles: Set[String]
   /** secrets maps a secret ID to a secret specification; a secret ID is unique within the context of the [[RunSpec]] */
   def secrets: Map[String, Secret]
 }

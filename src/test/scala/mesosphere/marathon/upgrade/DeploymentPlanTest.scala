@@ -40,7 +40,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )))
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.appsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size (3)
@@ -73,7 +73,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     )
 
     When("the group's apps are grouped by the longest outbound path")
-    val partitionedApps = DeploymentPlan.appsGroupedByLongestPath(group)
+    val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(group)
 
     Then("three equivalence classes should be computed")
     partitionedApps should have size (4)
@@ -141,7 +141,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
     val to = Group("/".toPath, groups = Set(Group("/group".toPath, update)))
     val plan = DeploymentPlan(from, to)
 
-    plan.affectedApplicationIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
+    plan.affectedRunSpecIds should equal (Set("/app".toPath, "/app2".toPath, "/app3".toPath, "/app4".toPath))
     plan.isAffectedBy(plan) should equal (right = true)
     plan.isAffectedBy(DeploymentPlan(from, from)) should equal (right = false)
   }
@@ -322,7 +322,7 @@ class DeploymentPlanTest extends MarathonSpec with Matchers with GivenWhenThen w
   test("Should create non-empty deployment plan when only args have changed") {
     val versionInfo: FullVersionInfo = VersionInfo.forNewConfig(Timestamp(10))
     val app = AppDefinition(id = "/test".toPath, cmd = Some("sleep 5"), versionInfo = versionInfo)
-    val appNew = app.copy(args = Some(Seq("foo")))
+    val appNew = app.copy(args = Seq("foo"))
 
     val from = Group("/".toPath, apps = Map(app.id -> app))
     val to = from.copy(apps = Map(appNew.id -> appNew))

@@ -7,7 +7,7 @@ import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
-import mesosphere.marathon.state.Container.{ Mesos, MesosAppC, MesosDocker }
+import mesosphere.marathon.state.Container.Docker
 // scalastyle:off
 import mesosphere.marathon.api.serialization.{ ContainerSerializer, EnvVarRefSerializer, PortDefinitionSerializer, ResidencySerializer, SecretsSerializer }
 // scalastyle:on
@@ -34,9 +34,9 @@ case class AppDefinition(
 
   id: PathId = AppDefinition.DefaultId,
 
-  cmd: Option[String] = AppDefinition.DefaultCmd,
+  override val cmd: Option[String] = AppDefinition.DefaultCmd,
 
-  args: Option[Seq[String]] = AppDefinition.DefaultArgs,
+  override val args: Seq[String] = AppDefinition.DefaultArgs,
 
   user: Option[String] = AppDefinition.DefaultUser,
 
@@ -52,17 +52,17 @@ case class AppDefinition(
 
   gpus: Int = AppDefinition.DefaultGpus,
 
-  executor: String = AppDefinition.DefaultExecutor,
+  override val executor: String = AppDefinition.DefaultExecutor,
 
   constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
-  fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
+  override val fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
 
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
-  portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
+  override val portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
 
-  requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
+  override val requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
 
   backoff: FiniteDuration = AppDefinition.DefaultBackoff,
 
@@ -70,13 +70,13 @@ case class AppDefinition(
 
   maxLaunchDelay: FiniteDuration = AppDefinition.DefaultMaxLaunchDelay,
 
-  container: Option[Container] = AppDefinition.DefaultContainer,
+  override val container: Option[Container] = AppDefinition.DefaultContainer,
 
   healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
-  taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+  override val taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
 
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
@@ -84,7 +84,7 @@ case class AppDefinition(
 
   labels: Map[String, String] = Labels.Default,
 
-  acceptedResourceRoles: Option[Set[String]] = None,
+  acceptedResourceRoles: Set[String] = AppDefinition.DefaultAcceptedResourceRoles,
 
   ipAddress: Option[IpAddress] = None,
 
@@ -93,7 +93,7 @@ case class AppDefinition(
   residency: Option[Residency] = AppDefinition.DefaultResidency,
 
   secrets: Map[String, Secret] = AppDefinition.DefaultSecrets)
-    extends RunSpec with plugin.RunSpec with RunnableSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    extends RunSpec with plugin.RunSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -101,16 +101,18 @@ case class AppDefinition(
     ipAddress.isEmpty || portDefinitions.isEmpty,
     s"IP address ($ipAddress) and ports ($portDefinitions) are not allowed at the same time")
 
-  val portNumbers: Seq[Int] = portDefinitions.map(_.port)
+  override val portNumbers: Seq[Int] = portDefinitions.map(_.port)
 
   val isResident: Boolean = residency.isDefined
 
-  val isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
-  val volumes: Iterable[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
-  val persistentVolumes: Iterable[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
-  val externalVolumes: Iterable[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
+  override val version: Timestamp = versionInfo.version
 
-  val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
+  override val isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
+  override val volumes: Seq[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
+  override val persistentVolumes: Seq[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
+  override val externalVolumes: Seq[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
+
+  override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
@@ -161,11 +163,9 @@ case class AppDefinition(
     readinessChecks.foreach { r => builder.addReadinessCheckDefinition(ReadinessCheckSerializer.toProto(r)) }
     taskKillGracePeriod.foreach { t => builder.setTaskKillGracePeriod(t.toMillis) }
 
-    acceptedResourceRoles.foreach { acceptedResourceRoles =>
-      val roles = Protos.ResourceRoles.newBuilder()
-      acceptedResourceRoles.seq.foreach(roles.addRole)
-      builder.setAcceptedResourceRoles(roles)
-    }
+    val roles = Protos.ResourceRoles.newBuilder()
+    roles.addAllRole(acceptedResourceRoles.asJava)
+    builder.setAcceptedResourceRoles(roles)
 
     builder.setVersion(version.toString)
     versionInfo match {
@@ -179,6 +179,8 @@ case class AppDefinition(
 
     builder.build
   }
+
+  override def withInstances(instances: Int): RunSpec = copy(instances = instances)
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
@@ -196,10 +198,7 @@ case class AppDefinition(
         r => r.getName -> (r.getScalar.getValue: Double)
       }.toMap
 
-    val argsOption =
-      if (proto.getCmd.getArgumentsCount > 0)
-        Some(proto.getCmd.getArgumentsList.asScala.to[Seq])
-      else None
+    val argsOption = proto.getCmd.getArgumentsList.asScala.to[Seq]
 
     //Precondition: either args or command is defined
     val commandOption =
@@ -209,11 +208,7 @@ case class AppDefinition(
 
     val containerOption = if (proto.hasContainer) Some(ContainerSerializer.fromProto(proto.getContainer)) else None
 
-    val acceptedResourceRoles: Option[Set[String]] =
-      if (proto.hasAcceptedResourceRoles)
-        Some(proto.getAcceptedResourceRoles.getRoleList.asScala.toSet)
-      else
-        None
+    val acceptedResourceRoles = proto.getAcceptedResourceRoles.getRoleList.asScala.toSet
 
     val versionInfoFromProto =
       if (proto.hasLastScalingAt)
@@ -303,37 +298,41 @@ case class AppDefinition(
     * True if the given app definition is a change to the current one in terms of runtime characteristics
     * of all deployed tasks of the current app, otherwise false.
     */
-  def isUpgrade(to: RunSpec): Boolean = {
-    id == to.id && {
-      cmd != to.cmd ||
-        args != to.args ||
-        user != to.user ||
-        env != to.env ||
-        cpus != to.cpus ||
-        mem != to.mem ||
-        disk != to.disk ||
-        gpus != to.gpus ||
-        executor != to.executor ||
-        constraints != to.constraints ||
-        fetch != to.fetch ||
-        storeUrls != to.storeUrls ||
-        portDefinitions != to.portDefinitions ||
-        requirePorts != to.requirePorts ||
-        backoff != to.backoff ||
-        backoffFactor != to.backoffFactor ||
-        maxLaunchDelay != to.maxLaunchDelay ||
-        container != to.container ||
-        healthChecks != to.healthChecks ||
-        taskKillGracePeriod != to.taskKillGracePeriod ||
-        dependencies != to.dependencies ||
-        upgradeStrategy != to.upgradeStrategy ||
-        labels != to.labels ||
-        acceptedResourceRoles != to.acceptedResourceRoles ||
-        ipAddress != to.ipAddress ||
-        readinessChecks != to.readinessChecks ||
-        residency != to.residency ||
-        secrets != to.secrets
-    }
+  def isUpgrade(to: RunSpec): Boolean = to match {
+    case to: AppDefinition =>
+      id == to.id && {
+        cmd != to.cmd ||
+          args != to.args ||
+          user != to.user ||
+          env != to.env ||
+          cpus != to.cpus ||
+          mem != to.mem ||
+          disk != to.disk ||
+          gpus != to.gpus ||
+          executor != to.executor ||
+          constraints != to.constraints ||
+          fetch != to.fetch ||
+          storeUrls != to.storeUrls ||
+          portDefinitions != to.portDefinitions ||
+          requirePorts != to.requirePorts ||
+          backoff != to.backoff ||
+          backoffFactor != to.backoffFactor ||
+          maxLaunchDelay != to.maxLaunchDelay ||
+          container != to.container ||
+          healthChecks != to.healthChecks ||
+          taskKillGracePeriod != to.taskKillGracePeriod ||
+          dependencies != to.dependencies ||
+          upgradeStrategy != to.upgradeStrategy ||
+          labels != to.labels ||
+          acceptedResourceRoles != to.acceptedResourceRoles ||
+          ipAddress != to.ipAddress ||
+          readinessChecks != to.readinessChecks ||
+          residency != to.residency ||
+          secrets != to.secrets
+      }
+    case _ =>
+      // TODO(PODS) can this even be reached at all?
+      throw new IllegalStateException("Can't change app to pod")
   }
 
   /**
@@ -371,7 +370,7 @@ case class AppDefinition(
     copy(id = baseId, dependencies = dependencies.map(_.canonicalPath(baseId)))
   }
 
-  def portAssignments(task: Task): Option[Seq[PortAssignment]] = {
+  def portAssignments(task: Task): Seq[PortAssignment] = {
     def fromDiscoveryInfo: Option[Seq[PortAssignment]] = ipAddress.flatMap {
       case IpAddress(_, _, DiscoveryInfo(appPorts), _) =>
         for {
@@ -413,12 +412,12 @@ case class AppDefinition(
       }
     }
 
-    if (networkModeBridge || networkModeUser) fromPortMappings
-    else if (ipAddress.isDefined) fromDiscoveryInfo
-    else fromPortDefinitions
+    if (networkModeBridge || networkModeUser) fromPortMappings.getOrElse(Nil)
+    else if (ipAddress.isDefined) fromDiscoveryInfo.getOrElse(Nil)
+    else fromPortDefinitions.getOrElse(Nil)
   }
 
-  val portNames: Seq[String] = {
+  override val portNames: Seq[String] = {
     def fromDiscoveryInfo = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
     def fromPortMappings = container.map(_.portMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
     def fromPortDefinitions = portDefinitions.flatMap(_.name)
@@ -437,15 +436,15 @@ object AppDefinition extends GeneralPurposeCombinators {
   val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])
 
   // App defaults
-  val DefaultId: PathId = PathId.empty
+  val DefaultId = PathId.empty
 
-  val DefaultCmd: Option[String] = None
+  val DefaultCmd = Option.empty[String]
 
-  val DefaultArgs: Option[Seq[String]] = None
+  val DefaultArgs = Seq.empty[String]
 
-  val DefaultUser: Option[String] = None
+  val DefaultUser = Option.empty[String]
 
-  val DefaultEnv: Map[String, EnvVarValue] = Map.empty
+  val DefaultEnv = Map.empty[String, EnvVarValue]
 
   val DefaultInstances: Int = 1
 
@@ -459,13 +458,13 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultExecutor: String = ""
 
-  val DefaultConstraints: Set[Constraint] = Set.empty
+  val DefaultConstraints = Set.empty[Constraint]
 
-  val DefaultUris: Seq[String] = Seq.empty
+  val DefaultUris = Seq.empty[String]
 
   val DefaultFetch: Seq[FetchUri] = FetchUri.empty
 
-  val DefaultStoreUrls: Seq[String] = Seq.empty
+  val DefaultStoreUrls = Seq.empty[String]
 
   val DefaultPortDefinitions: Seq[PortDefinition] = Seq(RandomPortDefinition)
 
@@ -477,22 +476,22 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultMaxLaunchDelay: FiniteDuration = 1.hour
 
-  val DefaultContainer: Option[Container] = None
+  val DefaultContainer = Option.empty[Container]
 
-  val DefaultHealthChecks: Set[HealthCheck] = Set.empty
+  val DefaultHealthChecks = Set.empty[HealthCheck]
 
-  val DefaultReadinessChecks: Seq[ReadinessCheck] = Seq.empty
+  val DefaultReadinessChecks = Seq.empty[ReadinessCheck]
 
-  val DefaultTaskKillGracePeriod: Option[FiniteDuration] = None
+  val DefaultTaskKillGracePeriod = Option.empty[FiniteDuration]
 
-  val DefaultDependencies: Set[PathId] = Set.empty
+  val DefaultDependencies = Set.empty[PathId]
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
-  val DefaultSecrets: Map[String, Secret] = Map.empty
+  val DefaultSecrets = Map.empty[String, Secret]
 
   object Labels {
-    val Default: Map[String, String] = Map.empty
+    val Default = Map.empty[String, String]
 
     val DcosMigrationApiPath = "DCOS_MIGRATION_API_PATH"
     val DcosMigrationApiVersion = "DCOS_MIGRATION_API_VERSION"
@@ -503,9 +502,9 @@ object AppDefinition extends GeneralPurposeCombinators {
   /**
     * This default is only used in tests
     */
-  val DefaultAcceptedResourceRoles: Set[String] = Set.empty
+  val DefaultAcceptedResourceRoles = Set.empty[String]
 
-  val DefaultResidency: Option[Residency] = None
+  val DefaultResidency = Option.empty[Residency]
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
     AppDefinition().mergeFromProto(proto)
@@ -600,18 +599,14 @@ object AppDefinition extends GeneralPurposeCombinators {
   private def complyWithGpuRules(enabledFeatures: Set[String]): Validator[AppDefinition] =
     conditional[AppDefinition](_.gpus > 0) {
       isTrue[AppDefinition]("GPU resources only work with the Mesos containerizer") { app =>
-        app.container.exists{
-          _ match {
-            case _: MesosDocker => true
-            case _: MesosAppC => true
-            case _: Mesos => true
-            case _ => false
-          }
+        app.container match {
+          case Some(_: Docker) => false
+          case _ => true
         }
       } and featureEnabled(enabledFeatures, Features.GPU_RESOURCES)
     }
 
-  private val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
+  val complyWithConstraintRules: Validator[Constraint] = new Validator[Constraint] {
     import Constraint.Operator._
     override def apply(c: Constraint): Result = {
       if (!c.hasField || !c.hasOperator) {
@@ -688,7 +683,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.secrets is valid(Secret.secretsValidator)
     appDef.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
     appDef.env is valid(EnvVarValue.envValidator)
-    appDef.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles(appDef.isResident))
+    appDef.acceptedResourceRoles is empty or valid(ResourceRole.validAcceptedResourceRoles(appDef.isResident))
     appDef must complyWithResidencyRules
     appDef must complyWithMigrationAPI
     appDef must complyWithSingleInstanceLabelRules

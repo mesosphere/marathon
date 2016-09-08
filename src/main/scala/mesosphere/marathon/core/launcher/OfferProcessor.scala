@@ -1,5 +1,6 @@
 package mesosphere.marathon.core.launcher
 
+import akka.Done
 import org.apache.mesos.Protos.Offer
 
 import scala.concurrent.Future
@@ -16,5 +17,5 @@ trait OfferProcessor {
     * @param offer the offer to match
     * @return the future indicating when the processing of the offer has finished and if there were any errors
     */
-  def processOffer(offer: Offer): Future[Unit]
+  def processOffer(offer: Offer): Future[Done]
 }

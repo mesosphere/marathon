@@ -116,7 +116,11 @@ class InstanceOpFactoryImpl(
     } else None
 
     def maybeReserveAndCreateVolumes = if (needToReserve) {
-      val configuredRoles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
+        config.defaultAcceptedResourceRolesSet
+      } else {
+        runSpec.acceptedResourceRoles
+      }
       // We can only reserve unreserved resources
       val rolesToConsider = Set(ResourceRole.Unreserved).intersect(configuredRoles)
       if (rolesToConsider.isEmpty) {

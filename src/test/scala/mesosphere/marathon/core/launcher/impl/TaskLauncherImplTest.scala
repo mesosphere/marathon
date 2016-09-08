@@ -20,7 +20,7 @@ import scala.collection.JavaConverters._
 class TaskLauncherImplTest extends MarathonSpec {
   private[this] val offerId = OfferID("offerId")
   private[this] val offerIdAsJava: util.Set[Protos.OfferID] = Collections.singleton[Protos.OfferID](offerId)
-  private[this] def launch(taskInfoBuilder: TaskInfo.Builder): InstanceOp.Launch = {
+  private[this] def launch(taskInfoBuilder: TaskInfo.Builder): InstanceOp.LaunchTask = {
     val taskInfo = taskInfoBuilder.build()
     new InstanceOpFactoryHelper(Some("principal"), Some("role")).launchEphemeral(taskInfo, MarathonTestHelper.makeTaskFromTaskInfo(taskInfo))
   }

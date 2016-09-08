@@ -4,7 +4,7 @@ import mesosphere.marathon.{ MarathonConf, MarathonSchedulerDriverHolder }
 import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.launcher.impl.{ OfferProcessorImpl, TaskLauncherImpl, InstanceOpFactoryImpl }
 import mesosphere.marathon.core.matcher.base.OfferMatcher
-import mesosphere.marathon.core.task.tracker.TaskCreationHandler
+import mesosphere.marathon.core.task.tracker.InstanceCreationHandler
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.metrics.Metrics
 
@@ -16,7 +16,7 @@ class LauncherModule(
     clock: Clock,
     metrics: Metrics,
     conf: MarathonConf,
-    taskCreationHandler: TaskCreationHandler,
+    taskCreationHandler: InstanceCreationHandler,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     offerMatcher: OfferMatcher,
     pluginManager: PluginManager) {

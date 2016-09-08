@@ -35,7 +35,7 @@ class AppInfoBaseData(
   lazy val readinessChecksByAppFuture: Future[Map[PathId, Seq[ReadinessCheckResult]]] = {
     runningDeployments.map { infos =>
       infos.foldLeft(Map.empty[PathId, Vector[ReadinessCheckResult]].withDefaultValue(Vector.empty)) { (result, info) =>
-        result ++ info.readinessChecksByApp.map {
+        result ++ info.readinessChecksById.map {
           case (appId, checkResults) => appId -> (result(appId) ++ checkResults)
         }
       }
@@ -50,7 +50,7 @@ class AppInfoBaseData(
     allRunningDeploymentsFuture.map { allDeployments =>
       val byApp = Map.empty[PathId, Vector[DeploymentPlan]].withDefaultValue(Vector.empty)
       val deploymentsByAppId = allDeployments.foldLeft(byApp) { (result, deploymentPlan) =>
-        deploymentPlan.affectedApplicationIds.foldLeft(result) { (result, appId) =>
+        deploymentPlan.affectedRunSpecIds.foldLeft(result) { (result, appId) =>
           val newEl = appId -> (result(appId) :+ deploymentPlan)
           result + newEl
         }
@@ -63,7 +63,7 @@ class AppInfoBaseData(
 
   lazy val tasksByAppFuture: Future[InstanceTracker.InstancesBySpec] = {
     log.debug("Retrieve tasks")
-    taskTracker.instancessBySpec()
+    taskTracker.instancesBySpec()
   }
 
   def appInfoFuture(app: AppDefinition, embed: Set[AppInfo.Embed]): Future[AppInfo] = {

@@ -107,8 +107,8 @@ case class HealthCheck(
   }
 
   def effectivePort(app: AppDefinition, task: Task): Option[Int] = {
-    def portViaIndex: Option[Int] = portIndex.flatMap { portIndex =>
-      app.portAssignments(task).flatMap(_.lift(portIndex)).map(_.effectivePort)
+    def portViaIndex: Option[Int] = portIndex.map { portIndex =>
+      app.portAssignments(task)(portIndex).effectivePort
     }
 
     port.orElse(portViaIndex)

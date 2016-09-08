@@ -16,13 +16,13 @@ class OfferMatcherReconciliationModule(
     reviveOffersConfig: ReviveOffersConfig,
     clock: Clock,
     marathonEventStream: EventStream,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     groupRepository: GroupRepository,
     offerMatcherManager: OfferMatcherManager,
     leadershipModule: LeadershipModule) {
 
   /** An offer matcher that performs reconciliation on the expected reservations. */
-  lazy val offerMatcherReconciler: OfferMatcher = new OfferMatcherReconciler(taskTracker, groupRepository)
+  lazy val offerMatcherReconciler: OfferMatcher = new OfferMatcherReconciler(instanceTracker, groupRepository)
   /** Emits true when offers are wanted for reconciliation. */
   def offersWantedObservable: Observable[Boolean] = offersWantedSubject
   /** Starts underlying actors etc. */

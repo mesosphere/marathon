@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launchqueue.impl
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.state.{ PathId, RunnableSpec, Timestamp }
+import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -25,18 +25,18 @@ private[launchqueue] class RateLimiter(clock: Clock) {
     }
   }
 
-  def getDelay(spec: RunnableSpec): Timestamp =
-    // TODO (pods): runnableSpec has no versionInfo. Need this?
+  def getDelay(spec: RunSpec): Timestamp =
+    // TODO (pods): RunSpec has no versionInfo. Need this?
     taskLaunchDelays.get(spec.id -> spec.versionInfo.lastConfigChangeVersion).map(_.deadline) getOrElse clock.now()
 
-  def addDelay(spec: RunnableSpec): Timestamp = {
+  def addDelay(spec: RunSpec): Timestamp = {
     setNewDelay(spec, "Increasing delay") {
       case Some(delay) => Some(delay.increased(clock, spec))
       case None => Some(Delay(clock, spec))
     }
   }
 
-  private[this] def setNewDelay(spec: RunnableSpec, message: String)(
+  private[this] def setNewDelay(spec: RunSpec, message: String)(
     calcDelay: Option[Delay] => Option[Delay]): Timestamp = {
     val maybeDelay: Option[Delay] = taskLaunchDelays.get(spec.id -> spec.versionInfo.lastConfigChangeVersion)
     calcDelay(maybeDelay) match {
@@ -60,7 +60,7 @@ private[launchqueue] class RateLimiter(clock: Clock) {
     }
   }
 
-  def resetDelay(runSpec: RunnableSpec): Unit = {
+  def resetDelay(runSpec: RunSpec): Unit = {
     if (taskLaunchDelays contains (runSpec.id -> runSpec.versionInfo.lastConfigChangeVersion)) {
       log.info(s"Task launch delay for [${runSpec.id} - ${runSpec.versionInfo.lastConfigChangeVersion}}] reset to zero")
       taskLaunchDelays -= (runSpec.id -> runSpec.versionInfo.lastConfigChangeVersion)
@@ -72,8 +72,8 @@ private object RateLimiter {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
   private object Delay {
-    // TODO (pods): use a BackoffSchedulingStrategy generic to RunnableSpec
-    def apply(clock: Clock, runSpec: RunnableSpec): Delay = Delay(clock, runSpec.backoff)
+    // TODO (pods): use a BackoffSchedulingStrategy generic to RunSpec
+    def apply(clock: Clock, runSpec: RunSpec): Delay = Delay(clock, runSpec.backoff)
     def apply(clock: Clock, delay: FiniteDuration): Delay = Delay(clock.now() + delay, delay)
   }
 
@@ -81,7 +81,7 @@ private object RateLimiter {
       deadline: Timestamp,
       delay: FiniteDuration) {
 
-    def increased(clock: Clock, runSpec: RunnableSpec): Delay = {
+    def increased(clock: Clock, runSpec: RunSpec): Delay = {
       val newDelay: FiniteDuration =
         runSpec.maxLaunchDelay min FiniteDuration((delay.toNanos * runSpec.backoffFactor).toLong, TimeUnit.NANOSECONDS)
       Delay(clock, newDelay)

@@ -15,24 +15,24 @@ class InstanceOpFactoryHelper(
 
   def launchEphemeral(
     taskInfo: Mesos.TaskInfo,
-    newTask: Task.LaunchedEphemeral): InstanceOp.Launch = {
+    newTask: Task.LaunchedEphemeral): InstanceOp.LaunchTask = {
 
     assume(newTask.id.mesosTaskId == taskInfo.getTaskId, "marathon task id and mesos task id must be equal")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
     val stateOp = TaskStateOp.LaunchEphemeral(newTask)
-    InstanceOp.Launch(taskInfo, stateOp, oldInstance = None, createOperations)
+    InstanceOp.LaunchTask(taskInfo, stateOp, oldInstance = None, createOperations)
   }
 
   def launchOnReservation(
     taskInfo: Mesos.TaskInfo,
     newTask: TaskStateOp.LaunchOnReservation,
-    oldTask: Task.Reserved): InstanceOp.Launch = {
+    oldTask: Task.Reserved): InstanceOp.LaunchTask = {
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
-    InstanceOp.Launch(taskInfo, newTask, Some(oldTask), createOperations)
+    InstanceOp.LaunchTask(taskInfo, newTask, Some(oldTask), createOperations)
   }
 
   def reserveAndCreateVolumes(
@@ -43,8 +43,8 @@ class InstanceOpFactoryHelper(
     oldTask: Option[Task] = None): InstanceOp.ReserveAndCreateVolumes = {
 
     def createOperations = Seq(
-      offerOperationFactory.reserve(frameworkId, newTask.taskId, resources),
-      offerOperationFactory.createVolumes(frameworkId, newTask.taskId, localVolumes))
+      offerOperationFactory.reserve(frameworkId, newTask.instanceId, resources),
+      offerOperationFactory.createVolumes(frameworkId, newTask.instanceId, localVolumes))
 
     InstanceOp.ReserveAndCreateVolumes(newTask, resources, localVolumes, createOperations)
   }

@@ -2,7 +2,7 @@ package mesosphere.marathon.core.launchqueue
 
 import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.state.{ PathId, RunnableSpec, Timestamp }
+import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -13,7 +13,7 @@ object LaunchQueue {
     * @param runSpec the currently used runSpec
     */
   case class QueuedTaskInfo(
-    runSpec: RunnableSpec,
+    runSpec: RunSpec,
     inProgress: Boolean,
     tasksLeftToLaunch: Int,
     finalTaskCount: Int,
@@ -29,10 +29,10 @@ trait LaunchQueue {
   /** Returns all entries of the queue. */
   def list: Seq[QueuedTaskInfo]
   /** Returns all runnable specs for which queue entries exist. */
-  def listRunSpecs: Seq[RunnableSpec]
+  def listRunSpecs: Seq[RunSpec]
 
   /** Request to launch `count` additional tasks conforming to the given run spec. */
-  def add(spec: RunnableSpec, count: Int = 1): Unit
+  def add(spec: RunSpec, count: Int = 1): Unit
 
   /** Get information for the given run spec id. */
   def get(specId: PathId): Option[QueuedTaskInfo]
@@ -44,10 +44,10 @@ trait LaunchQueue {
   def purge(specId: PathId): Unit
 
   /** Add delay to the given RunnableSpec because of a failed task */
-  def addDelay(spec: RunnableSpec): Unit
+  def addDelay(spec: RunSpec): Unit
 
   /** Reset the backoff delay for the given RunnableSpec. */
-  def resetDelay(spec: RunnableSpec): Unit
+  def resetDelay(spec: RunSpec): Unit
 
   /** Notify queue about TaskUpdate */
   def notifyOfTaskUpdate(taskChanged: TaskChanged): Future[Option[QueuedTaskInfo]]

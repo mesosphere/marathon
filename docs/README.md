@@ -29,20 +29,28 @@ following the instructions.
 3. Change into the "docs" directory where docs live
 
         $ cd docs
+        
+4. Install [raml2html](https://www.npmjs.com/package/raml2html)
 
-4. Install Bundler
+        $ node i -g raml2html 
+        
+5. Generate `api.html`
+
+        $ raml2html -i rest-api/public/api/api.raml -o generated/api.html
+
+6. Install Bundler
 
         $ gem install bundler
 
-5. Install the bundle's dependencies
+7. Install the bundle's dependencies
 
         $ bundle install
 
-6. Start the web server
+8. Start the web server
 
         $ bundle exec jekyll serve --watch
 
-7. Visit the site at
+9. Visit the site at
    [http://localhost:4000/marathon/](http://localhost:4000/marathon/)
 
 ## Deploying the site

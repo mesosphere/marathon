@@ -78,7 +78,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A Launch is inferred")
-    taskOp.value shouldBe a[InstanceOp.Launch]
+    taskOp.value shouldBe a[InstanceOp.LaunchTask]
   }
 
   test("Resident app -> None (insufficient offer)") {
@@ -146,7 +146,7 @@ class InstanceOpFactoryImplTest extends MarathonSpec with GivenWhenThen with Moc
     val taskOp = f.taskOpFactory.buildTaskOp(request)
 
     Then("A Launch is returned")
-    taskOp.value shouldBe a[InstanceOp.Launch]
+    taskOp.value shouldBe a[InstanceOp.LaunchTask]
 
     And("the taskInfo contains the correct persistent volume")
     import scala.collection.JavaConverters._

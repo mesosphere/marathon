@@ -3,19 +3,19 @@ package mesosphere.marathon.upgrade
 import akka.actor._
 import akka.event.EventStream
 import mesosphere.marathon.TaskUpgradeCanceledException
+import mesosphere.marathon.core.event.{DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent}
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
-import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
+import mesosphere.marathon.core.task.termination.{TaskKillReason, TaskKillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.RunnableSpec
+import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.upgrade.TaskReplaceActor._
 import org.apache.mesos.Protos.TaskID
 import org.apache.mesos.SchedulerDriver
 import org.slf4j.LoggerFactory
 
-import scala.collection.{ SortedSet, mutable }
+import scala.collection.{SortedSet, mutable}
 import scala.concurrent.Promise
 
 class TaskReplaceActor(
@@ -27,7 +27,7 @@ class TaskReplaceActor(
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
-    val runSpec: RunnableSpec,
+    val runSpec: RunSpec,
     promise: Promise[Unit]) extends Actor with ReadinessBehavior with ActorLogging {
 
   val tasksToKill = instanceTracker.specInstancesLaunchedSync(runSpec.id)
@@ -84,7 +84,7 @@ class TaskReplaceActor(
   }
 
   override def taskStatusChanged(taskId: Instance.Id): Unit = {
-    killNextOldTask(Some(taskId))
+    if (healthyTasks(taskId) && readyTasks(taskId)) killNextOldTask(Some(taskId))
     checkFinished()
   }
 
@@ -117,7 +117,7 @@ class TaskReplaceActor(
 
   def checkFinished(): Unit = {
     if (taskTargetCountReached(runSpec.instances) && oldTaskIds.isEmpty) {
-      log.info(s"App All new tasks for $pathId are ready and all old tasks have been killed")
+      log.info(s"All new tasks for $pathId are ready and all old tasks have been killed")
       promise.success(())
       context.stop(self)
     } else if (log.isDebugEnabled) {
@@ -149,7 +149,7 @@ object TaskReplaceActor {
     taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    app: RunnableSpec,
+    app: RunSpec,
     promise: Promise[Unit]): Props = Props(
     new TaskReplaceActor(deploymentManager, status, driver, killService, launchQueue, taskTracker, eventBus,
       readinessCheckExecutor, app, promise)
@@ -159,7 +159,7 @@ object TaskReplaceActor {
   private[upgrade] case class RestartStrategy(nrToKillImmediately: Int, maxCapacity: Int)
 
   // TODO (pods): this function should probably match against the type?
-  private[upgrade] def computeRestartStrategy(runSpec: RunnableSpec, runningInstancesCount: Int): RestartStrategy = {
+  private[upgrade] def computeRestartStrategy(runSpec: RunSpec, runningInstancesCount: Int): RestartStrategy = {
     // in addition to a spec which passed validation, we require:
     require(runSpec.instances > 0, s"instances must be > 0 but is ${runSpec.instances}")
     require(runningInstancesCount >= 0, s"running instances count must be >=0 but is $runningInstancesCount")
@@ -169,7 +169,7 @@ object TaskReplaceActor {
     var nrToKillImmediately = math.max(0, runningInstancesCount - minHealthy)
 
     if (minHealthy == maxCapacity && maxCapacity <= runningInstancesCount) {
-      if (runSpec.isResident) {
+      if (runSpec.residency.isDefined) {
         // Kill enough tasks so that we end up with one task below minHealthy.
         // TODO: We need to do this also while restarting, since the kill could get lost.
         nrToKillImmediately = runningInstancesCount - minHealthy + 1

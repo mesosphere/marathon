@@ -106,7 +106,7 @@ case class AppUpdate(
   def apply(app: AppDefinition): AppDefinition = app.copy(
     id = app.id,
     cmd = cmd.orElse(app.cmd),
-    args = args.orElse(app.args),
+    args = args.getOrElse(app.args),
     user = user.orElse(app.user),
     env = env.getOrElse(app.env),
     instances = instances.getOrElse(app.instances),
@@ -129,7 +129,7 @@ case class AppUpdate(
     dependencies = dependencies.map(_.map(_.canonicalPath(app.id))).getOrElse(app.dependencies),
     upgradeStrategy = upgradeStrategy.getOrElse(app.upgradeStrategy),
     labels = labels.getOrElse(app.labels),
-    acceptedResourceRoles = acceptedResourceRoles.orElse(app.acceptedResourceRoles),
+    acceptedResourceRoles = acceptedResourceRoles.getOrElse(app.acceptedResourceRoles),
     ipAddress = ipAddress.orElse(app.ipAddress),
     // The versionInfo may never be overridden by an AppUpdate.
     // Setting the version in AppUpdate means that the user wants to revert to that version. In that

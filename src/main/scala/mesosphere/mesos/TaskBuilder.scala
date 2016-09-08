@@ -3,15 +3,15 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
-import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
+import mesosphere.marathon.api.serialization.{ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{ AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
-import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
+import mesosphere.marathon.state.{AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec}
+import mesosphere.mesos.ResourceMatcher.{ResourceMatch, ResourceSelector}
 import org.apache.mesos.Protos.Environment._
-import org.apache.mesos.Protos.{ HealthCheck => _, _ }
+import org.apache.mesos.Protos.{HealthCheck => _, _}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -72,7 +72,11 @@ class TaskBuilder(
   def buildIfMatches(offer: Offer, runningTasks: => Iterable[Task]): Option[(TaskInfo, Seq[Option[Int]])] = {
 
     val acceptedResourceRoles: Set[String] = {
-      val roles = runSpec.acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet)
+      val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
+        config.defaultAcceptedResourceRolesSet
+      } else {
+        runSpec.acceptedResourceRoles
+      }
       if (log.isDebugEnabled) log.debug(s"acceptedResourceRoles $roles")
       roles
     }
@@ -132,7 +136,7 @@ class TaskBuilder(
       case PathExecutor(path) =>
         val executorId = f"marathon-${taskId.idString}" // Fresh executor
         val executorPath = s"'$path'" // TODO: Really escape this.
-        val cmd = runSpec.cmd orElse runSpec.args.map(_ mkString " ") getOrElse ""
+        val cmd = runSpec.cmd.getOrElse(runSpec.args.mkString(" "))
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
 
         val info = ExecutorInfo.newBuilder()
@@ -157,7 +161,7 @@ class TaskBuilder(
     val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
       runSpec.healthChecks.collect {
         case healthCheck: HealthCheck if healthCheck.protocol == Protocol.COMMAND => healthCheck.toMesos
-      }
+      }(collection.breakOut)
 
     if (mesosHealthChecks.size > 1) {
       val numUnusedChecks = mesosHealthChecks.size - 1
@@ -195,8 +199,8 @@ class TaskBuilder(
             // overwrite them the port numbers assigned to this particular task.
             runSpec.portDefinitions.zip(hostPorts).collect {
               case (portDefinition, Some(hostPort)) =>
-                PortDefinitionSerializer.toProto(portDefinition).toBuilder.setNumber(hostPort).build
-            }
+                PortDefinitionSerializer.toMesosProto(portDefinition).map(_.toBuilder.setNumber(hostPort).build)
+            }.flatten
         }
     }
 
@@ -320,11 +324,11 @@ object TaskBuilder {
     }
 
     // args take precedence over command, if supplied
-    runSpec.args.foreach { argv =>
+    if (runSpec.args.nonEmpty) {
       builder.setShell(false)
-      builder.addAllArguments(argv.asJava)
+      builder.addAllArguments(runSpec.args.asJava)
       //mesos command executor expects cmd and arguments
-      argv.headOption.foreach { value =>
+      runSpec.args.headOption.foreach { value =>
         if (runSpec.container.isEmpty) builder.setValue(value)
       }
     }

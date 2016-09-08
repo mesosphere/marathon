@@ -3,13 +3,13 @@ package mesosphere.marathon.tasks
 import com.codahale.metrics.MetricRegistry
 import mesosphere.FutureTestSupport._
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.storage.repository.legacy.TaskEntityRepository
 import mesosphere.marathon.storage.repository.legacy.store.{ InMemoryStore, PersistentStore }
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId
@@ -62,7 +62,7 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
   }
 
   test("List Async") {
-    testList(_.instancessBySpec().futureValue)
+    testList(_.instancesBySpec().futureValue)
   }
 
   private[this] def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec): Unit = {
@@ -173,13 +173,16 @@ class InstanceTrackerImplTest extends MarathonSpec with MarathonActorSupport
     taskTracker.specInstancesSync(TEST_APP_NAME).foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK STILL RUNNING
-    val updatedRunningTaskStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(sampleTask, TaskState.TASK_RUNNING), clock.now())
+    val updatedRunningTaskStatus = TaskStateOp.MesosUpdate(sampleTask, makeTaskStatus(
+      sampleTask,
+      TaskState.TASK_RUNNING), clock.now())
     stateOpProcessor.process(updatedRunningTaskStatus).futureValue
     shouldContainTask(taskTracker.specInstancesSync(TEST_APP_NAME), sampleTask)
-    taskTracker.specInstancesSync(TEST_APP_NAME).headOption.foreach(task => shouldHaveTaskStatus(task, runningTaskStatus))
+    taskTracker.specInstancesSync(TEST_APP_NAME).headOption.foreach(task =>
+      shouldHaveTaskStatus(task, runningTaskStatus))
 
     // TASK TERMINATED
-    stateOpProcessor.process(TaskStateOp.ForceExpunge(sampleTask.id)).futureValue
+    stateOpProcessor.process(InstanceStateOp.ForceExpunge(sampleTask.id)).futureValue
     stateShouldNotContainKey(state, sampleTask.id)
 
     // APP SHUTDOWN

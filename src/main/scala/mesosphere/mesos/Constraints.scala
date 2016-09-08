@@ -4,7 +4,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.RunnableSpec
+import mesosphere.marathon.state.RunSpec
 import org.apache.mesos.Protos.{ Attribute, Offer, Value }
 import org.slf4j.LoggerFactory
 
@@ -170,7 +170,7 @@ object Constraints {
     */
   //scalastyle:off return
   def selectTasksToKill(
-    runSpec: RunnableSpec, runningInstances: Iterable[Instance], toKillCount: Int): Iterable[Instance] = {
+    runSpec: RunSpec, runningInstances: Iterable[Instance], toKillCount: Int): Iterable[Instance] = {
 
     require(toKillCount <= runningInstances.size, "Can not kill more instances than running")
 

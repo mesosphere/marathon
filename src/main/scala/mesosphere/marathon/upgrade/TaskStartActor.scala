@@ -7,7 +7,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.DeploymentStatus
-import mesosphere.marathon.state.RunnableSpec
+import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.{ SchedulerActions, TaskUpgradeCanceledException }
 import org.apache.mesos.SchedulerDriver
 
@@ -22,7 +22,7 @@ class TaskStartActor(
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
-    val runSpec: RunnableSpec,
+    val runSpec: RunSpec,
     val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
@@ -62,7 +62,7 @@ object TaskStartActor {
     taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    runSpec: RunnableSpec,
+    runSpec: RunSpec,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
     Props(new TaskStartActor(deploymentManager, status, driver, scheduler, launchQueue, taskTracker,

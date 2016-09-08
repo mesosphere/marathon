@@ -62,7 +62,7 @@ class SchedulerActionsTest
     val app = AppDefinition(id = PathId("/myapp"))
 
     val tasks = Set(runningTask, stagedTask, stagedTaskWithSlaveId)
-    f.taskTracker.instancessBySpec() returns Future.successful(InstancesBySpec.of(SpecInstances.forInstances(app.id, tasks)))
+    f.taskTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(SpecInstances.forInstances(app.id, tasks)))
     f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
@@ -78,7 +78,7 @@ class SchedulerActionsTest
   test("Task reconciliation only one empty list, when no tasks are present in Marathon") {
     val f = new Fixture
 
-    f.taskTracker.instancessBySpec() returns Future.successful(InstancesBySpec.empty)
+    f.taskTracker.instancesBySpec() returns Future.successful(InstancesBySpec.empty)
     f.repo.ids() returns Source.empty
 
     f.scheduler.reconcileTasks(f.driver).futureValue
@@ -101,7 +101,7 @@ class SchedulerActionsTest
     val orphanedApp = AppDefinition(id = PathId("/orphan"))
     val tasksOfOrphanedApp = SpecInstances.forInstances(orphanedApp.id, Iterable(orphanedTask))
 
-    f.taskTracker.instancessBySpec() returns Future.successful(InstancesBySpec.of(tasksOfApp, tasksOfOrphanedApp))
+    f.taskTracker.instancesBySpec() returns Future.successful(InstancesBySpec.of(tasksOfApp, tasksOfOrphanedApp))
     f.repo.ids() returns Source.single(app.id)
 
     f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)

@@ -30,10 +30,10 @@ private[tracker] class InstanceTrackerDelegate(
 
   override def instancesBySpecSync: InstanceTracker.InstancesBySpec = {
     import ExecutionContext.Implicits.global
-    Await.result(instancessBySpec(), taskTrackerQueryTimeout.duration)
+    Await.result(instancesBySpec(), taskTrackerQueryTimeout.duration)
   }
 
-  override def instancessBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] = {
+  override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] = {
     def futureCall(): Future[InstanceTracker.InstancesBySpec] =
       (taskTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
         case e: AskTimeoutException =>
@@ -56,15 +56,15 @@ private[tracker] class InstanceTrackerDelegate(
 
   override def countSpecInstancesSync(appId: PathId): Int = instancesBySpecSync.specInstances(appId).size
   override def countSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Int] =
-    instancessBySpec().map(_.specInstances(appId).size)
+    instancesBySpec().map(_.specInstances(appId).size)
   override def hasSpecInstancesSync(appId: PathId): Boolean = instancesBySpecSync.hasSpecInstances(appId)
   override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
-    instancessBySpec().map(_.hasSpecInstances(appId))
+    instancesBySpec().map(_.hasSpecInstances(appId))
 
   override def specInstancesSync(appId: PathId): Iterable[Instance] =
     instancesBySpecSync.specInstances(appId)
   override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Iterable[Instance]] =
-    instancessBySpec().map(_.specInstances(appId))
+    instancesBySpec().map(_.specInstances(appId))
   override def specInstancesLaunchedSync(appId: PathId): Iterable[Instance] =
     specInstancesSync(appId).filter(_.isLaunched)
 

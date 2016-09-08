@@ -10,6 +10,7 @@ import com.google.inject.Provider
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
+import mesosphere.marathon.core.instance.InstanceStateOp
 import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.bus.{ MesosTaskStatusTestHelper, TaskStatusEmitter }
@@ -219,17 +220,17 @@ class InstanceOpProcessorImplTest
     Given("a taskRepository")
     val task = MarathonTestHelper.mininimalTask(appId)
     val taskId = task.id
-    val taskIdString = taskId.idString
     val stateOp = f.stateOpExpunge(task)
     val expectedChange = TaskStateChange.Expunge(task)
     val taskChanged = TaskChanged(stateOp, expectedChange)
     val ack = InstanceTrackerActor.Ack(f.opSender.ref, expectedChange)
+
     f.stateOpResolver.resolve(stateOp) returns Future.successful(expectedChange)
     f.taskRepository.delete(task.id) returns Future.successful(Done)
 
     When("the processor processes an update")
     val result = f.processor.process(
-      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, TaskStateOp.ForceExpunge(taskId))
+      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, InstanceStateOp.ForceExpunge(taskId))
     )
     f.taskTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(taskChanged, ack))
     f.taskTrackerProbe.reply(())
@@ -264,7 +265,7 @@ class InstanceOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, TaskStateOp.ForceExpunge(taskId))
+      InstanceOpProcessor.Operation(deadline, f.opSender.ref, taskId, InstanceStateOp.ForceExpunge(taskId))
     )
     f.taskTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(taskChanged, ack))
     f.taskTrackerProbe.reply(())
@@ -306,7 +307,7 @@ class InstanceOpProcessorImplTest
 
     When("the processor processes an update")
     val result = f.processor.process(
-      InstanceOpProcessor.Operation(deadline, f.opSender.ref, task.id, TaskStateOp.ForceExpunge(task.id))
+      InstanceOpProcessor.Operation(deadline, f.opSender.ref, task.id, InstanceStateOp.ForceExpunge(task.id))
     )
     f.taskTrackerProbe.expectMsg(InstanceTrackerActor.StateChanged(expectedTaskChanged, ack))
     f.taskTrackerProbe.reply(())
@@ -400,7 +401,7 @@ class InstanceOpProcessorImplTest
 
     def stateOpLaunch(task: Task) = TaskStateOp.LaunchEphemeral(task)
     def stateOpUpdate(task: Task, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp = now) = TaskStateOp.MesosUpdate(task, mesosStatus, now)
-    def stateOpExpunge(task: Task) = TaskStateOp.ForceExpunge(task.id)
+    def stateOpExpunge(task: Task) = InstanceStateOp.ForceExpunge(task.id)
     def stateOpLaunchOnReservation(task: Task, status: Task.Status) = TaskStateOp.LaunchOnReservation(task.id, now, status, Seq.empty)
     def stateOpReservationTimeout(task: Task) = TaskStateOp.ReservationTimeout(task.id)
     def stateOpReserve(task: Task) = TaskStateOp.Reserve(task.asInstanceOf[Task.Reserved])

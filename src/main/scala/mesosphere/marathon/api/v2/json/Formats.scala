@@ -6,13 +6,14 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.Protos.ResidencyDefinition.TaskLostBehavior
 import mesosphere.marathon.SerializationFailedException
 import mesosphere.marathon.core.appinfo._
-import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
-import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.plugin.{ PluginDefinition, PluginDefinitions }
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.readiness.ReadinessCheck
+import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.raml.Pod
 import mesosphere.marathon.state._
 import mesosphere.marathon.upgrade.DeploymentManager.DeploymentStepInfo
 import mesosphere.marathon.upgrade._
@@ -501,7 +502,7 @@ trait DeploymentFormats {
   implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
     Json.obj(
       "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id
+      "app" -> action.runSpec.id
     )
   }
 
@@ -510,13 +511,14 @@ trait DeploymentFormats {
   implicit lazy val DeploymentStepInfoWrites: Writes[DeploymentStepInfo] = Writes { info =>
     def currentAction(action: DeploymentAction): JsObject = Json.obj (
       "action" -> action.getClass.getSimpleName,
-      "app" -> action.app.id,
-      "readinessCheckResults" -> info.readinessChecksByApp(action.app.id)
+      "app" -> action.runSpec.id,
+      "readinessCheckResults" -> info.readinessChecksById(action.runSpec.id)
     )
     Json.obj(
       "id" -> info.plan.id,
       "version" -> info.plan.version,
-      "affectedApps" -> info.plan.affectedApplicationIds,
+      "affectedApps" -> info.plan.affectedAppIds,
+      "affectedPods" -> info.plan.affectedPodIds,
       "steps" -> info.plan.steps,
       "currentActions" -> info.step.actions.map(currentAction),
       "currentStep" -> info.nr,
@@ -529,6 +531,15 @@ trait EventFormats {
   import Formats._
 
   implicit lazy val AppTerminatedEventWrites: Writes[AppTerminatedEvent] = Json.writes[AppTerminatedEvent]
+
+  implicit lazy val PodEventWrites: Writes[PodEvent] = Writes { event =>
+    Json.obj(
+      "clientIp" -> event.clientIp,
+      "uri" -> event.uri,
+      "eventType" -> event.eventType,
+      "timestamp" -> event.timestamp
+    )
+  }
 
   implicit lazy val ApiPostEventWrites: Writes[ApiPostEvent] = Writes { event =>
     Json.obj(
@@ -603,6 +614,7 @@ trait EventFormats {
     case event: SchedulerRegisteredEvent => Json.toJson(event)
     case event: SchedulerReregisteredEvent => Json.toJson(event)
     case event: PodStatusUpdateEvent => Json.toJson(event)
+    case event: PodEvent => Json.toJson(event)
   }
   //scalastyle:on
 }
@@ -785,7 +797,7 @@ trait AppAndGroupFormats {
     (
       (__ \ "id").read[PathId].filterNot(_.isRoot) ~
       (__ \ "cmd").readNullable[String](Reads.minLength(1)) ~
-      (__ \ "args").readNullable[Seq[String]] ~
+      (__ \ "args").readNullable[Seq[String]].withDefault(Nil) ~
       (__ \ "user").readNullable[String] ~
       (__ \ "env").readNullable[Map[String, EnvVarValue]].withDefault(AppDefinition.DefaultEnv) ~
       (__ \ "instances").readNullable[Int].withDefault(AppDefinition.DefaultInstances) ~
@@ -821,7 +833,7 @@ trait AppAndGroupFormats {
             maybePorts: Option[Seq[Int]],
             upgradeStrategy: Option[UpgradeStrategy],
             labels: Map[String, String],
-            acceptedResourceRoles: Option[Set[String]],
+            acceptedResourceRoles: Set[String],
             ipAddress: Option[IpAddress],
             version: Timestamp,
             residency: Option[Residency],
@@ -830,7 +842,7 @@ trait AppAndGroupFormats {
             secrets: Map[String, Secret],
             maybeTaskKillGracePeriod: Option[FiniteDuration]) {
           def upgradeStrategyOrDefault: UpgradeStrategy = {
-            import UpgradeStrategy.{ forResidentTasks, empty }
+            import UpgradeStrategy.{ empty, forResidentTasks }
             upgradeStrategy.getOrElse {
               if (residencyOrDefault.isDefined || app.externalVolumes.nonEmpty) forResidentTasks else empty
             }
@@ -848,7 +860,7 @@ trait AppAndGroupFormats {
             (__ \ "ports").readNullable[Seq[Int]](uniquePorts) ~
             (__ \ "upgradeStrategy").readNullable[UpgradeStrategy] ~
             (__ \ "labels").readNullable[Map[String, String]].withDefault(AppDefinition.Labels.Default) ~
-            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty) ~
+            (__ \ "acceptedResourceRoles").readNullable[Set[String]](nonEmpty).withDefault(Set.empty[String]) ~
             (__ \ "ipAddress").readNullable[IpAddress] ~
             (__ \ "version").readNullable[Timestamp].withDefault(Timestamp.now()) ~
             (__ \ "residency").readNullable[Residency] ~
@@ -961,11 +973,18 @@ trait AppAndGroupFormats {
   ) (Residency(_, _), unlift(Residency.unapply))
 
   implicit lazy val RunSpecWrites: Writes[RunSpec] = {
+    Writes[RunSpec] {
+      case app: AppDefinition => AppDefWrites.writes(app)
+      case pod: PodDefinition => Json.toJson(pod.asPodDef)
+    }
+  }
+
+  implicit lazy val AppDefWrites: Writes[AppDefinition] = {
     implicit lazy val durationWrites = Writes[FiniteDuration] { d =>
       JsNumber(d.toSeconds)
     }
 
-    Writes[RunSpec] { runSpec =>
+    Writes[AppDefinition] { runSpec =>
       var appJson: JsObject = Json.obj(
         "id" -> runSpec.id.toString,
         "cmd" -> runSpec.cmd,
@@ -1020,11 +1039,6 @@ trait AppAndGroupFormats {
         case v: JsValue => appJson + ("versionInfo" -> v)
       }
     }
-  }
-
-  implicit lazy val RunnableSpecWrites: Writes[RunnableSpec] = new Writes[RunnableSpec] {
-    // TODO (pods): implicit conversion will redirect this, can be removed when #4293 is finished
-    override def writes(spec: RunnableSpec): JsValue = RunSpecWrites.writes(spec)
   }
 
   implicit lazy val VersionInfoWrites: Writes[VersionInfo] =
@@ -1113,7 +1127,8 @@ trait AppAndGroupFormats {
 
       val maybeJson = Seq[Option[JsObject]](
         info.maybeApps.map(apps => Json.obj("apps" -> apps)),
-        info.maybeGroups.map(groups => Json.obj("groups" -> groups))
+        info.maybeGroups.map(groups => Json.obj("groups" -> groups)),
+        info.maybePods.map(pods => Json.obj("pods" -> pods))
       ).flatten
 
       val groupJson = Json.obj (
@@ -1219,16 +1234,16 @@ trait AppAndGroupFormats {
   implicit lazy val GroupFormat: Format[Group] = (
     (__ \ "id").format[PathId] ~
     (__ \ "apps").formatNullable[Iterable[AppDefinition]].withDefault(Iterable.empty) ~
-    (__ \ "pods").formatNullable[Iterable[PodDefinition]].withDefault(Iterable.empty) ~
+    (__ \ "pods").formatNullable[Iterable[Pod]].withDefault(Iterable.empty) ~
     (__ \ "groups").lazyFormatNullable(implicitly[Format[Set[Group]]]).withDefault(Group.defaultGroups) ~
     (__ \ "dependencies").formatNullable[Set[PathId]].withDefault(Group.defaultDependencies) ~
     (__ \ "version").formatNullable[Timestamp].withDefault(Group.defaultVersion)
   ) (
       (id, apps, pods, groups, dependencies, version) =>
         Group(id, apps.map(app => app.id -> app)(collection.breakOut),
-          pods.map(pod => pod.id -> pod)(collection.breakOut),
+          pods.map(p => PathId(p.id).canonicalPath() -> PodDefinition(p, None))(collection.breakOut),
           groups, dependencies, version),
-      { (g: Group) => (g.id, g.apps.values, g.pods.values, g.groups, g.dependencies, g.version) })
+      { (g: Group) => (g.id, g.apps.values, g.pods.values.map(_.asPodDef), g.groups, g.dependencies, g.version) })
 
   implicit lazy val PortDefinitionFormat: Format[PortDefinition] = (
     (__ \ "port").formatNullable[Int].withDefault(AppDefinition.RandomPortValue) ~

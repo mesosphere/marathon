@@ -4,28 +4,28 @@ title: Running Docker Containers on Marathon
 
 # Running Docker Containers on Marathon
 
-This document describes how to run [Docker](https://docker.com/) containers on
-Marathon using the native Docker support added in Apache Mesos version 0.20.0
-(released August 2014).
+You can run Docker containers on Marathon either by configuring your application to run the Docker containerizer or by configuring the Mesos containerizer to provision the Docker container.
+
+# Configure Your Application to Use the Docker Containerizer
 
 ## Configuration
 
-Note that DCOS clusters are already configured to run Docker containers, so 
-DCOS users do not need to follow the steps below.
+DC/OS clusters are already configured to run Docker containers, so 
+DC/OS users do not need to follow the configuration steps below.
 
 #### Prerequisites
 
-+ Docker version 1.0.0 or later installed on each slave node.
++ Docker version 1.0.0 or later installed on each agent node.
 
-#### Configure mesos-slave
+#### Configure the Agent Process
 
   <div class="alert alert-info">
-    <strong>Note:</strong> All commands below assume `mesos-slave` is being run
+    <strong>Note:</strong> All commands below assume the Mesos agent process is being run
     as a service using the package provided by 
     <a href="http://mesosphere.com/2014/07/17/mesosphere-package-repositories/">Mesosphere</a>
   </div>
 
-1. Update slave configuration to specify the use of the Docker containerizer
+1. Update your agent node configuration to specify the use of the Docker containerizer
   <div class="alert alert-info">
     <strong>Note:</strong> The order of the parameters to `containerizers` is important. 
     It specifies the priority used when choosing the containerizer to launch
@@ -36,20 +36,19 @@ DCOS users do not need to follow the steps below.
     $ echo 'docker,mesos' > /etc/mesos-slave/containerizers
     ```
 
-2. Increase the executor timeout to account for the potential delay in pulling a docker image to the slave.
-
+2. Increase the executor timeout to account for the potential delay pulling a docker image to the agent node.
 
     ```bash
-    $ echo '5mins' > /etc/mesos-slave/executor_registration_timeout
+    $ echo '10mins' > /etc/mesos-slave/executor_registration_timeout
     ```
 
-3. Restart `mesos-slave` process to load the new configuration
+3. Restart the agent process to load the new configuration.
 
 #### Configure Marathon
 
 1. Increase the Marathon [command line option]({{ site.baseurl }}/docs/command-line-flags.html)
 `--task_launch_timeout` to at least the executor timeout, in milliseconds, 
-you set on your slaves in the previous step.
+you set on your agent nodes in the previous step.
 
 
 ## Overview
@@ -163,7 +162,7 @@ The `"protocol"` parameter is optional and defaults to `"tcp"`. Its possible val
 
 It's also possible to specify non-zero host ports. When doing this
 you must ensure that the target ports are included in some resource offers!
-The Mesos slave announces port resources in the range `[31000-32000]` by
+The Mesos agent node announces port resources in the range `[31000-32000]` by
 default. This can be overridden; for example to also expose ports in the range
 `[8000-9000]`:
 
@@ -171,7 +170,7 @@ default. This can be overridden; for example to also expose ports in the range
 --resources="ports(*):[8000-9000, 31000-32000]"
 ```
 
-See the [network configuration](https://docs.docker.com/articles/networking/)
+See the [network configuration](https://docs.docker.com/engine/userguide/networking/)
 documentation for more details on how Docker handles networking.
 
 ### Using a Private Docker Repository
@@ -280,12 +279,12 @@ the future, as Mesos may not always interact with Docker via the CLI.
 }
 ```
 
-#### Docker container support without Docker Engine
+# Configure Your Application to Use the Mesos Containerizer
 
-Starting with version 1.3.0, Marathon supports docker container images without having the Docker Containerizer
-depend on a Docker Engine. Instead the Mesos containerizer with native AppC support added in Apache Mesos version 1.0
-(released July 2016) directly uses native OS features to configure and start Docker containers and to provide isolation.
-This setup is selected by specifying a JSON combination that used to provoke an error message:
+Starting with version 1.3.0, Marathon supports Docker container images without having the Docker containerizer
+depend on a Docker engine. Instead, the Mesos containerizer (added in [Apache Mesos version 1.0](http://mesos.apache.org/blog/mesos-1-0-0-released/), released July 2016) uses native OS features to configure and start Docker or [AppC](https://github.com/appc/spec) containers and provide isolation.
+
+Selected this setup by specifying the follow JSON combination, which previously provoked an error message:
 container type "MESOS" and a "docker" object.
 
 ```json
@@ -307,8 +306,7 @@ The Mesos containerizer does not support the same parameter options as the Docke
 The only properties recognized by both containerizers are "image" and "forcePullImage",
 with the same semantics. All other Docker container properties result in an error with the Mesos containerizer.
 
-However, the latter introduces its own new property, "credential", with a "principal" and an optional "secret" field
-to authenticate when downloading the Docker image.
+However, the latest version of the Mesos containerizer introduces its own new property, "credential", with a "principal" and an optional "secret" field to authenticate when downloading the Docker image.
 
 ```json
 {

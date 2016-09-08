@@ -54,6 +54,7 @@ object RamlTypeGenerator {
   val PlayJsError = RootClass.newClass("play.api.libs.json.JsError")
   val PlayJsSuccess = RootClass.newClass("play.api.libs.json.JsSuccess")
   val PlayReads = RootClass.newClass("play.api.libs.json.Reads")
+  val PlayWrites = RootClass.newClass("play.api.libs.json.Writes")
 
   def camelify(name: String): String = name.toLowerCase.capitalize
 
@@ -248,7 +249,32 @@ object RamlTypeGenerator {
         ).tree
       }
 
-      val playFormat = if (actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty) && !actualFields.exists(_.repeated)) {
+      val playFormat = if (discriminator.isDefined) {
+        Seq(
+          IMPORT("play.api.libs.json._"),
+          IMPORT("play.api.libs.functional.syntax._"),
+          VAL("playJsonReader") withFlags Flags.IMPLICIT := TUPLE(
+            if (actualFields.size > 1) {
+              Seq(actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _))
+            } else {
+              actualFields.map(_.playReader)
+            }
+          ) APPLY (REF(name) DOT "apply _"),
+          // TODO: Need discriminator...
+          OBJECTDEF("playJsonWriter") withParents (PlayWrites APPLYTYPE name) withFlags Flags.IMPLICIT := BLOCK(
+            DEF("writes", PlayJsObject) withParams PARAM("o", name) := {
+              REF(PlayJson) DOT "obj" APPLY
+                fields.map { field =>
+                  if (field.name == discriminator.get) {
+                    TUPLE(LIT(field.name), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY LIT(discriminatorValue.getOrElse(name))))
+                  } else {
+                    TUPLE(LIT(field.name), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY (REF("o") DOT field.name)))
+                  }
+                }
+            }
+          )
+        )
+      } else if (actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty) && !actualFields.exists(_.repeated)) {
         Seq(
           IMPORT("play.api.libs.json._"),
           IMPORT("play.api.libs.functional.syntax._"),
@@ -324,7 +350,9 @@ object RamlTypeGenerator {
         OBJECTDEF(name).tree
       }
 
-      val commentBlock = (comments ++ actualFields.map(_.comment)(collection.breakOut))
+      val commentBlock = (comments ++ actualFields.map(_.comment)(collection.breakOut)).map { s =>
+        s.replace("$", "$$")
+      }
       Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(_.toTree()) ++ Seq(obj)
     }
   }

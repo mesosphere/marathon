@@ -10,11 +10,11 @@ import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.{ Health, HealthCheck }
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 import mesosphere.marathon.core.leadership.{ AlwaysElectedLeadershipModule, LeadershipModule }
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.task.termination.TaskKillService
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceCreationHandler, TaskStateOpProcessor }
 import mesosphere.marathon.core.task.{ Task, TaskStateOp }
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.PathId.StringPathId
@@ -35,7 +35,7 @@ class MarathonHealthCheckManagerTest
 
   var hcManager: MarathonHealthCheckManager = _
   var taskTracker: InstanceTracker = _
-  var taskCreationHandler: TaskCreationHandler = _
+  var taskCreationHandler: InstanceCreationHandler = _
   var stateOpProcessor: TaskStateOpProcessor = _
   var appRepository: AppRepository = _
   var eventStream: EventStream = _
@@ -250,7 +250,7 @@ class MarathonHealthCheckManagerTest
     }
     def startTask_i(i: Int): Unit = startTask(appId, tasks(i), versions(i), healthChecks(i))
     def stopTask(appId: PathId, task: Task) =
-      taskCreationHandler.terminated(TaskStateOp.ForceExpunge(task.id)).futureValue
+      taskCreationHandler.terminated(InstanceStateOp.ForceExpunge(task.id)).futureValue
 
     // one other task of another app
     val otherAppId = "other".toRootPath

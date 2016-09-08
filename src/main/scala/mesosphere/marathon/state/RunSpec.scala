@@ -1,128 +1,74 @@
 package mesosphere.marathon.state
 
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin
 
-import scala.concurrent.duration.FiniteDuration
 import scala.collection.immutable.Seq
-import scala.language.implicitConversions
+import scala.concurrent.duration.FiniteDuration
 
 /**
   * A generic spec that specifies something that Marathon is able to launch instances of.
   */
-trait RunnableSpec extends plugin.RunSpec {
-  def id: PathId
-  def env: Map[String, EnvVarValue]
-  def labels: Map[String, String]
-  // TODO: Should this really be an Option of a collection?!
-  def acceptedResourceRoles: Option[Set[String]]
-  def secrets: Map[String, Secret]
 
-  def instances: Int
-  def constraints: Set[Constraint]
-  def versionInfo: VersionInfo
+// TODO(PODS): Group some of this into little types and pattern match when things really
+// don't make sense to do generically, eg 'executor', 'cmd', 'args', etc.
+// we should try to group things up logically - pod does a decent job of this
+trait RunSpec extends plugin.RunSpec {
+  val id: PathId
+  val env: Map[String, EnvVarValue]
+  val labels: Map[String, String]
+  val acceptedResourceRoles: Set[String]
+  val secrets: Map[String, Secret]
 
-  // TODO (pods): we could remove this in favor of versionInfo or something else
-  def version: Timestamp
+  val instances: Int
+  val constraints: Set[Constraint]
+
+  val version: Timestamp
 
   // TODO: these could go into a resources object
-  def cpus: Double
-  def mem: Double
-  def disk: Double
-  def gpus: Int
-}
+  val cpus: Double
+  val mem: Double
+  val disk: Double
+  val gpus: Int
 
-object RunnableSpec {
-  // TODO (pods): These can be removed when AppDefinition/RunSpec usages have been replaced with RunnableSpec
-  implicit def runnableSpecToAppDefinition(spec: RunnableSpec): AppDefinition = spec.asInstanceOf[AppDefinition]
-  implicit def runSpecToRunnableSpec(spec: RunSpec): RunnableSpec = spec.asInstanceOf[RunnableSpec]
-}
+  // TODO: Group into backoff?
+  val backoff: FiniteDuration
+  val maxLaunchDelay: FiniteDuration
+  val backoffFactor: Double
 
-//scalastyle:off
-trait RunSpec extends plugin.RunSpec with RunnableSpec {
+  val residency: Option[Residency]
+  val healthChecks: Set[HealthCheck]
+  val readinessChecks: Seq[ReadinessCheck]
+  val upgradeStrategy: UpgradeStrategy
+  def portAssignments(task: Task): Seq[PortAssignment]
+  val taskKillGracePeriod = Option.empty[FiniteDuration]
 
-  def id: PathId
-
-  def cmd: Option[String]
-
-  def args: Option[Seq[String]]
-
-  def user: Option[String]
-
-  def env: Map[String, EnvVarValue]
-
-  def instances: Int
-
-  def cpus: Double
-
-  def mem: Double
-
-  def disk: Double
-
-  def gpus: Int
-
-  def executor: String
-
-  def constraints: Set[Constraint]
-
-  def fetch: Seq[FetchUri]
-
-  def storeUrls: Seq[String]
-
-  def portDefinitions: Seq[PortDefinition]
-
-  def requirePorts: Boolean
-
-  def backoff: FiniteDuration
-
-  def backoffFactor: Double
-
-  def maxLaunchDelay: FiniteDuration
-
-  def container: Option[Container]
-
-  def healthChecks: Set[HealthCheck]
-
-  def readinessChecks: Seq[ReadinessCheck]
-
-  def taskKillGracePeriod: Option[FiniteDuration]
-
-  def dependencies: Set[PathId]
-
-  def upgradeStrategy: UpgradeStrategy
-
-  def labels: Map[String, String]
-
-  def acceptedResourceRoles: Option[Set[String]]
-
-  def ipAddress: Option[IpAddress]
-
-  def versionInfo: VersionInfo
-
-  def version: Timestamp = versionInfo.version
-
-  def residency: Option[Residency]
-
-  def isResident: Boolean
-
-  def secrets: Map[String, Secret]
-
+  def withInstances(instances: Int): RunSpec
   def isUpgrade(to: RunSpec): Boolean
-
   def needsRestart(to: RunSpec): Boolean
-
   def isOnlyScaleChange(to: RunSpec): Boolean
+  val versionInfo: VersionInfo
 
-  def isSingleInstance: Boolean
-  def volumes: Iterable[Volume]
-  def persistentVolumes: Iterable[PersistentVolume]
-  def externalVolumes: Iterable[ExternalVolume]
-  def diskForPersistentVolumes: Double
-  def portNumbers: Seq[Int]
-  def portNames: Seq[String]
-  def servicePorts: Seq[Int]
-  def portAssignments(task: Task): Option[Seq[PortAssignment]]
+  // TODO(PODS)- do pods support this anyways?
+  val ipAddress: Option[IpAddress]
+
+  // TODO: These ones probably should only exist in app and we should be pattern matching
+  val requirePorts: Boolean = false
+  val portNumbers = Seq.empty[Int]
+  val container = Option.empty[Container]
+  val executor: String = ""
+  val cmd = Option.empty[String]
+  val args = Seq.empty[String]
+  val isSingleInstance: Boolean = false
+  val volumes = Seq.empty[Volume]
+  val persistentVolumes = Seq.empty[PersistentVolume]
+  val externalVolumes = Seq.empty[ExternalVolume]
+  val diskForPersistentVolumes: Double = 0.0
+  val portDefinitions = Seq.empty[PortDefinition]
+  // TODO(
+  val fetch = Seq.empty[FetchUri]
+  val portNames = Seq.empty[String]
 }

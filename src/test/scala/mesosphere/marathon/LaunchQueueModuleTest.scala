@@ -7,6 +7,7 @@ import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
+import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.task.bus.TaskBusModule
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -24,7 +25,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 class LaunchQueueModuleTest
     extends MarathonSpec
     with BeforeAndAfter with GivenWhenThen with MarathonShutdownHookSupport with ScalaTestMatchers
-    with Mockito with ScalaFutures {
+    with Mockito with ScalaFutures with OfferMatcherSpec {
 
   test("empty queue returns no results") {
     val f = new Fixture
@@ -203,7 +204,7 @@ class LaunchQueueModuleTest
     val request = InstanceOpFactory.Request(app, offer, Iterable.empty, additionalLaunches = 1)
     verify(taskOpFactory).buildTaskOp(request)
     matchedTasks.offerId should equal (offer.getId)
-    matchedTasks.launchedTaskInfos should equal (Seq(mesosTask))
+    launchedTaskInfos(matchedTasks) should equal (Seq(mesosTask))
 
     verify(taskTracker).instancesBySpecSync
 

@@ -79,9 +79,18 @@ private[storage] case class StoredGroup(
           .build()
     }
 
+    val pods = podIds.map {
+      case (pod, podVersion) =>
+        Protos.GroupDefinition.AppReference.newBuilder()
+          .setId(pod.safePath)
+          .setVersion(DateFormat.format(podVersion))
+          .build()
+    }
+
     Protos.GroupDefinition.newBuilder
       .setId(id.safePath)
       .addAllApps(apps.asJava)
+      .addAllPods(pods.asJava)
       .addAllGroups(storedGroups.map(_.toProto).asJava)
       .addAllDependencies(dependencies.map(_.safePath).asJava)
       .setVersion(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(version))
@@ -202,6 +211,7 @@ class StoredGroupRepositoryImpl[K, C, S](
     }
   }
 
+  // scalastyle:off
   override def storeRoot(group: Group, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
     updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] =
     async {
@@ -231,8 +241,8 @@ class StoredGroupRepositoryImpl[K, C, S](
         throw ex
       }
 
-      storedApps match {
-        case Success(_) =>
+      (storedApps, storedPods) match {
+        case (Success(_), Success(_)) =>
           val storedRoot = await(storedRepo.store(storedGroup).asTry)
           storedRoot match {
             case Success(_) =>
@@ -242,12 +252,21 @@ class StoredGroupRepositoryImpl[K, C, S](
               logger.error(s"Unable to store updated group $group", ex)
               revertRoot(ex)
           }
-        case Failure(ex) =>
+        case (Failure(ex), Success(_)) =>
+          logger.error(s"Unable to store updated apps or pods: " +
+            s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
+          revertRoot(ex)
+        case (Success(_), Failure(ex)) =>
+          logger.error(s"Unable to store updated apps or pods: " +
+            s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
+          revertRoot(ex)
+        case (Failure(ex), Failure(_)) =>
           logger.error(s"Unable to store updated apps or pods: " +
             s"${updatedApps.map(_.id).mkString} ${updatedPods.map(_.id).mkString}", ex)
           revertRoot(ex)
       }
     }
+  // scalastyle:on
 
   private[storage] def lazyRootVersion(version: OffsetDateTime): Future[Option[StoredGroup]] = {
     storedRepo.getVersion(RootId, version)

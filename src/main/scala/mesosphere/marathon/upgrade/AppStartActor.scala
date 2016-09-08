@@ -2,12 +2,13 @@ package mesosphere.marathon.upgrade
 
 import akka.actor._
 import akka.event.EventStream
+import mesosphere.marathon.core.event.DeploymentStatus
 import mesosphere.marathon.core.launchqueue.LaunchQueue
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.core.event.DeploymentStatus
-import mesosphere.marathon.state.RunnableSpec
-import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
+import mesosphere.marathon.state.{AppDefinition, RunSpec}
+import mesosphere.marathon.{AppStartCanceledException, SchedulerActions}
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.Promise
@@ -22,25 +23,33 @@ class AppStartActor(
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
-    val runSpec: RunnableSpec,
+    val runSpec: RunSpec,
     val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
   val nrToStart: Int = scaleTo
 
   def initializeStart(): Unit = {
-    // TODO (pods): there's no copy on a trait. we could pass the scaleTo instead
-    scheduler.startApp(driver, runSpec.copy(instances = scaleTo))
+    runSpec match {
+      case app: AppDefinition =>
+        scheduler.startApp(driver, app.copy(instances = scaleTo))
+      case pod: PodDefinition =>
+    }
+
   }
 
   override def postStop(): Unit = {
-    import mesosphere.marathon.state.RunnableSpec._
     eventBus.unsubscribe(self)
     if (!promise.isCompleted) {
-      if (promise.tryFailure(new AppStartCanceledException("The runSpec start has been cancelled"))) {
-        scheduler.stopApp(runSpec).onFailure {
-          case NonFatal(e) => log.error(s"while stopping runSpec ${runSpec.id}", e)
-        }(context.dispatcher)
+      if (promise.tryFailure(new AppStartCanceledException("The app start has been cancelled"))) {
+        runSpec match {
+          case app: AppDefinition =>
+            scheduler.stopApp(app).onFailure {
+              case NonFatal(e) => log.error(s"while stopping app ${runSpec.id}", e)
+            }(context.dispatcher)
+          case pod: PodDefinition =>
+          // TODO(PODS): stop the pod
+        }
       }
     }
     super.postStop()
@@ -64,7 +73,7 @@ object AppStartActor {
     taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    runSpec: RunnableSpec,
+    runSpec: RunSpec,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
     Props(new AppStartActor(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,

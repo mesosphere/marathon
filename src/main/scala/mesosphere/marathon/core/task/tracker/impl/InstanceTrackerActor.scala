@@ -5,11 +5,11 @@ import akka.actor._
 import akka.event.LoggingReceive
 import com.twitter.util.NonFatal
 import mesosphere.marathon.core.appinfo.TaskCounts
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{ Instance, InstanceStateOp }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
-import mesosphere.marathon.core.task.{ Task, TaskStateChange, TaskStateOp }
+import mesosphere.marathon.core.task.{ Task, TaskStateChange }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardInstanceOp
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.Metrics.AtomicIntGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -30,7 +30,8 @@ object InstanceTrackerActor {
   private[impl] case class Get(taskId: Instance.Id)
 
   /** Forward an update operation to the child [[InstanceUpdateActor]]. */
-  private[impl] case class ForwardTaskOp(deadline: Timestamp, taskId: Instance.Id, taskStateOp: TaskStateOp)
+  private[impl] case class ForwardInstanceOp(
+    deadline: Timestamp, instanceId: Instance.Id, instanceStateOp: InstanceStateOp)
 
   /** Describes where and what to send after an update event has been processed by the [[InstanceTrackerActor]]. */
   private[impl] case class Ack(initiator: ActorRef, stateChange: TaskStateChange) {
@@ -138,7 +139,7 @@ private class InstanceTrackerActor(
       case InstanceTrackerActor.Get(taskId) =>
         sender() ! appTasks.task(taskId)
 
-      case ForwardTaskOp(deadline, taskId, taskStateOp) =>
+      case ForwardInstanceOp(deadline, taskId, taskStateOp) =>
         val op = InstanceOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
         updaterRef.forward(InstanceUpdateActor.ProcessInstanceOp(op))
 

@@ -8,7 +8,7 @@ import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.storage.repository.legacy.store.InMemoryStore
 import mesosphere.marathon.core.task.TaskStateOp
-import mesosphere.marathon.core.task.tracker.{ TaskCreationHandler, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{ InstanceCreationHandler, InstanceTracker }
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
@@ -267,7 +267,7 @@ class TaskStartActorTest
     val taskTrackerModule = MarathonTestHelper.createTaskTrackerModule(
       leadershipModule, store = new InMemoryStore, metrics = metrics)
     val taskTracker: InstanceTracker = spy(taskTrackerModule.taskTracker)
-    val taskCreationHandler: TaskCreationHandler = taskTrackerModule.taskCreationHandler
+    val taskCreationHandler: InstanceCreationHandler = taskTrackerModule.taskCreationHandler
     val deploymentManager = TestProbe()
     val status: DeploymentStatus = mock[DeploymentStatus]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]

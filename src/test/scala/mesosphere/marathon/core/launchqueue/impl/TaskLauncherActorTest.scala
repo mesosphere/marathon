@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryHelper
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
-import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedTaskOps
+import mesosphere.marathon.core.matcher.base.OfferMatcher.{ MatchedInstanceOps }
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.base.util.InstanceOpSourceDelegate.InstanceOpRejected
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
@@ -129,7 +129,8 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val launcherRef = createLauncherRef(instances = 1)
     launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
-    Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedTaskOps]
+    Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds)
+      .asInstanceOf[MatchedInstanceOps]
 
     val counts = Await.result(launcherRef ? TaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
 
@@ -151,7 +152,8 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     launcherRef ! RateLimiterActor.DelayUpdate(f.app, clock.now())
 
     val matched =
-      Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds).asInstanceOf[MatchedTaskOps]
+      Await.result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds)
+        .asInstanceOf[MatchedInstanceOps]
 
     val testProbe = TestProbe()
     testProbe.watch(launcherRef)
@@ -177,7 +179,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val matchedTasks =
       Await
         .result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds)
-        .asInstanceOf[MatchedTaskOps]
+        .asInstanceOf[MatchedInstanceOps]
     matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
     val counts = Await.result(launcherRef ? TaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]
@@ -220,13 +222,13 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
 
     Await
       .result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds)
-      .asInstanceOf[MatchedTaskOps]
+      .asInstanceOf[MatchedInstanceOps]
 
     // just make sure that prior messages have been processed, will not launch further tasks
 
     Await
       .result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds)
-      .asInstanceOf[MatchedTaskOps]
+      .asInstanceOf[MatchedInstanceOps]
 
     assert(scheduleCalled)
 
@@ -246,7 +248,7 @@ class TaskLauncherActorTest extends MarathonSpec with GivenWhenThen {
     val matchedTasks =
       Await
         .result(launcherRef ? ActorOfferMatcher.MatchOffer(clock.now() + 1.seconds, offer), 3.seconds)
-        .asInstanceOf[MatchedTaskOps]
+        .asInstanceOf[MatchedInstanceOps]
     matchedTasks.opsWithSource.foreach(_.accept())
 
     val counts = Await.result(launcherRef ? TaskLauncherActor.GetCount, 3.seconds).asInstanceOf[QueuedTaskInfo]

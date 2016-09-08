@@ -4,10 +4,10 @@ import akka.actor.{ ActorRef, ActorSystem, PoisonPill, Terminated }
 import akka.testkit.TestProbe
 import mesosphere.marathon
 import mesosphere.marathon.core.base.ConstantClock
-import mesosphere.marathon.core.task.TaskStateOp
+import mesosphere.marathon.core.instance.InstanceStateOp
 import mesosphere.marathon.core.task.jobs.impl.ExpungeOverdueLostTasksActor
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.core.task.tracker.{ TaskStateOpProcessor, InstanceTracker }
+import mesosphere.marathon.core.task.tracker.{ InstanceTracker, TaskStateOpProcessor }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.GivenWhenThen
 import org.scalatest.concurrent.ScalaFutures
@@ -18,7 +18,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration.Duration
 
-class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
+class ExpungeOverdueLostTasksActorTest extends MarathonSpec
+    with GivenWhenThen with marathon.test.Mockito with ScalaFutures {
   implicit var actorSystem: ActorSystem = _
   val taskTracker: InstanceTracker = mock[InstanceTracker]
   val clock = ConstantClock()
@@ -50,7 +51,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     val running1 = MarathonTestHelper.minimalRunning("/running1".toPath, since = Timestamp(0))
     val running2 = MarathonTestHelper.minimalRunning("/running2".toPath, since = Timestamp(0))
 
-    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(running1, running2))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(running1, running2))
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -66,7 +67,8 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     val running = MarathonTestHelper.minimalRunning("/running".toPath, since = Timestamp(0))
     val unreachable = MarathonTestHelper.minimalUnreachableTask("/unreachable".toPath, since = Timestamp(0))
 
-    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(running, unreachable))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(
+      running, unreachable))
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -74,7 +76,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     testProbe.receiveOne(3.seconds)
 
     And("one kill call is issued")
-    verify(stateOpProcessor, once).process(TaskStateOp.ForceExpunge(unreachable.id))
+    verify(stateOpProcessor, once).process(InstanceStateOp.ForceExpunge(unreachable.id))
     noMoreInteractions(stateOpProcessor)
   }
 
@@ -83,7 +85,8 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     val unreachable1 = MarathonTestHelper.minimalUnreachableTask("/unreachable1".toPath, since = Timestamp(0))
     val unreachable2 = MarathonTestHelper.minimalUnreachableTask("/unreachable2".toPath, since = Timestamp.now())
 
-    taskTracker.instancessBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forTasks(unreachable1, unreachable2))
+    taskTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(
+      InstancesBySpec.forTasks(unreachable1, unreachable2))
 
     When("a check is performed")
     val testProbe = TestProbe()
@@ -91,7 +94,7 @@ class ExpungeOverdueLostTasksActorTest extends MarathonSpec with GivenWhenThen w
     testProbe.receiveOne(3.seconds)
 
     And("one kill call is issued")
-    verify(stateOpProcessor, once).process(TaskStateOp.ForceExpunge(unreachable1.id))
+    verify(stateOpProcessor, once).process(InstanceStateOp.ForceExpunge(unreachable1.id))
     noMoreInteractions(stateOpProcessor)
   }
 }
