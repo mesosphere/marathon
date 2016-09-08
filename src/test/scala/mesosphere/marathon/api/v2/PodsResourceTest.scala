@@ -7,9 +7,11 @@ import akka.stream.Materializer
 import mesosphere.marathon._
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.pod.PodManager
+import mesosphere.marathon.raml.Pod
 import mesosphere.marathon.test.Mockito
 import mesosphere.marathon.upgrade.DeploymentPlan
 import org.scalatest.Matchers
+import play.api.libs.json._
 
 import scala.concurrent.Future
 
@@ -29,18 +31,23 @@ class PodsResourceTest extends MarathonSpec with Matchers with Mockito {
     val f = Fixture.create()
 
     podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-    val response = f.podsResource.create(
-      """
+
+    val postJson = """
         | { "id": "/mypod", "containers": [
         |   { "name": "webapp",
         |     "resources": { "cpus": 0.03, "mem": 64 },
         |     "image": { "kind": "DOCKER", "id": "busybox" },
         |     "exec": { "command": { "shell": "sleep 1" } } } ] }
-      """.stripMargin.getBytes(), false, f.auth.request)
+      """.stripMargin
+    val response = f.podsResource.create(postJson.getBytes(), false, f.auth.request)
 
     response.getStatus() should be(HttpServletResponse.SC_CREATED)
-    // TODO(jdef) body should be that of the pod that was just created
-    // TODO(jdef) deployment plan header should be set
+
+    val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
+    parsedResponse should not be(None)
+    parsedResponse.map(_.as[Pod]) should not be(None) // validate that we DID get back a pod definition
+
+    response.getMetadata().containsKey(PodsResource.DeploymentHeader)
   }
 
   case class Fixture(
