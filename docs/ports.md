@@ -10,25 +10,27 @@ If you are running Marathon within a [DC/OS cluster](https://dcos.io/get-started
 
 ## Definitions
 
-*containerPort*: A _container port_ specifies a port within a container. This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
+*containerPort*: A _container port_ specifies a port within a container. This is only necessary as part of a _port mapping_ when using `BRIDGE` or `USER` mode networking with a Docker container.
 
-*hostPort*: A _host port_ specifies a port on the host to bind to. When used with `BRIDGE` mode networking, you specify a _port mapping_ from a _host port_ to a _container port_. In `HOST` networking, requested ports are _host ports_ by default. Note that only _host ports_ are made available to a task through environment variables.
+*hostPort*: A _host port_ specifies a port on the host to bind to. When used with `BRIDGE` or `USER` mode networking, you specify a _port mapping_ from a _host port_ to a _container port_. In `HOST` networking, requested ports are _host ports_ by default. Note that only _host ports_ are made available to a task through environment variables.
 
-*BRIDGE networking*: `BRIDGE` mode networking is used by Docker applications that specify `BRIDGE` mode networking. In this mode, container ports (a port within the container) are mapped to host ports (a port on the host machine). In this mode, applications bind to the specified ports within the container and Docker networking binds to the specified ports on the host.
+*BRIDGE networking*: used by Docker applications that specify `BRIDGE` mode networking. In this mode, container ports (a port within the container) are mapped to host ports (a port on the host machine). In this mode, applications bind to the specified ports within the container and Docker networking binds to the specified ports on the host.
 
-*HOST networking*: `HOST` networking is used by non-Docker Marathon applications and Docker applications that use `HOST` mode networking. In this mode, applications bind directly to one or more ports on the host machine.
+*USER networking*: used by Docker applications that specify `USER` mode networking. In this mode, container ports (a port within the container) are mapped to host ports (a port on the host machine). In this mode, applications bind to the specified ports within the container and Docker networking binds to the specified ports on the host. `USER` network mode is expected to be useful when integrating with "user-defined" Docker networks. In the Mesos world such networks are often made accessible via CNI plugins used in concert with a Mesos CNI network isolator.
 
-*portMapping*: In Docker `BRIDGE` mode, a port mapping is necessary for every port that should be reachable from outside of your container. A port mapping is a tuple containing a host port, container port, service port and protocol. Multiple _port mappings_ may be specified for a Marathon application.
+*HOST networking*: used by non-Docker Marathon applications and Docker applications that use `HOST` mode networking. In this mode, applications bind directly to one or more ports on the host machine.
+
+*portMapping*: In Docker `BRIDGE` mode, a port mapping is necessary for every port that should be reachable from outside of your container. A port mapping is a tuple containing a host port, container port, service port and protocol. Multiple _port mappings_ may be specified for a Marathon application; an unspecified `hostPort` defaults to `0` (meaning that Marathon will assign one at random). In Docker `USER` mode the semantic for `hostPort` slightly changes: `hostPort` is not required for `USER` mode and if left unspecified Marathon WILL NOT automatically allocate one at random. This allows containers to be deployed on `USER` networks that include `containerPort` and discovery information, but do NOT expose those ports on the host network (and by implication would not consume host port resources).
 
 *ports*: The _ports_ array is used to define ports that should be considered as part of a resource offer in `HOST` mode. It is necessary only if no port mappings are specified. Only one of _ports_ and _portDefinitions_ should be defined for an application.
 
 *portDefinitions*: The _portDefinitions_ array is used to define ports that should be considered as part of a resource offer. It is necessary only to define this array if you are using `HOST` networking and no port mappings are specified. This array is meant to replace the _ports_ array, and makes it possible to specify a port name, protocol and labels. Only one of _ports_ and _portDefinitions_ should be defined for an application.
 
-*protocol*: _Protocol_ specifies the internet protocol to use for a port (e.g. `tcp`, `udp` or `udp,tcp` for both). This is only necessary as part of a _port mapping_ when using `BRIDGE` mode networking with a Docker container.
+*protocol*: _Protocol_ specifies the internet protocol to use for a port (e.g. `tcp`, `udp` or `udp,tcp` for both). This is only necessary as part of a _port mapping_ when using `BRIDGE` or `USER` mode networking with a Docker container.
 
-*requirePorts*: _requirePorts_ is a property that specifies whether Marathon should specifically look for specified ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to `BRIDGE` mode networking.
+*requirePorts*: _requirePorts_ is a property that specifies whether Marathon should specifically look for specified ports in the resource offers it receives. This ensures that these ports are free and available to be bound to on the Mesos agent. This does not apply to `BRIDGE` or `USER` mode networking.
 
-*servicePort*: A _service port_ is a port used to describe the port that a service should made available at. Marathon does not bind to the service ports specified but will ensure that you cannot have multiple applications that use the same service port running on the same host. Service ports are typically only used by external applications (e.g. HAProxy) to make the application available at the specified port. See [Service Discovery & Load Balancing](service-discovery-load-balancing.html) for more information.
+*servicePort*: When you create a new application in Marathon (either through the REST API or the front end), you may assign one or more service ports to it. You can specify all valid port numbers as service ports or you can use 0 to indicate that Marathon should allocate free service ports to the app automatically. If you do choose your own service port, you have to ensure yourself that it is unique across all of your applications.
 
 ## Random Port Assignment
 
@@ -36,9 +38,9 @@ Using the value 0 for any port settings indicates to Marathon that you would lik
 
 ## Environment Variables
 
-Each *host port* value is exposed to the running application instance via environment variables `$PORT0`, `$PORT1`, etc. Each Marathon application is given a single port by default, so `$PORT0` is always available. These variables are available inside a Docker container being run by Marathon too.
+Each *host port* value is exposed to the running application instance via environment variables `$PORT0`, `$PORT1`, etc. Each Marathon application is given a single port by default, so `$PORT0` is always available. These variables are available inside a Docker container being run by Marathon too. Additionally, if the port is named `NAME`, it will also be accessible via the environment variable, `$PORT_NAME`.
 
-When using `BRIDGE` mode networking, be sure to bind your application to the `containerPort`s you have specified in your `portMapping`s. However, if you have set `containerPort` to 0 then this will be the same as `hostPort` and you can use the `$PORT` environment variables.
+When using `BRIDGE` or `USER` mode networking, be sure to bind your application to the `containerPort`s you have specified in your `portMapping`s. However, if you have set `containerPort` to 0 then this will be the same as `hostPort` and you can use the `$PORT` environment variables.
 
 ## Example Configuration
 
@@ -170,6 +172,23 @@ You need to specify bridge mode through the `network` property:
       "network": "BRIDGE"
     }
   },
+```
+
+#### Enabling User Mode
+
+You need to specify user mode through the `network` property:
+
+```json
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "my-image:1.0",
+      "network": "USER"
+    }
+  },
+  "ipAddress": {
+    "networkName": "someUserNetwork"
+  }
 ```
 
 #### Specifying Ports

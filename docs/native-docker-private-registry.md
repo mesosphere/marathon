@@ -93,3 +93,7 @@ the `uris` field of your app. The `docker.tar.gz` file should include the `.dock
     ```
 
 1. Docker image will now pull using the provided security credentials given.
+
+## More information
+
+Find out how to [set up a private Docker registry](https://dcos.io/docs/1.7/usage/registry/) with DC/OS. 

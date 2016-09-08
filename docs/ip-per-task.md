@@ -63,6 +63,29 @@ Network security groups only allow network traffic between tasks that have at le
 groups in common. This makes it easy to disallow your staging environment to interfere with production
 traffic.
 
+## Named Networks
+
+If your IPAM supports it, you can instruct Mesos to associate your application's containers with a specific named network:
+
+```javascript
+{
+  "id": "/task-assigned-to-named-network",
+  ...
+  "ipAddress": {
+    "networkName": "devops"
+  }
+}
+```
+
+Applications that specify a named network are automatically assigned an IP address, for each task, by the currently configured IPAM.
+Named network assignment is influenced by the `--default_network_name` flag: if a default network name has been configured then:
+
+1. An application that specifies an `ipAddress` but not its `networkName` field will implicity use the network named by `--default_network_name`.
+2. An application that specifies an `ipAddress.networkName` value overrides any value of `--default_network_name`.
+3. If an application MUST use the **physical host network** then the `ipAddress` field MUST be omitted from the application definition.
+
+Marathon passes the network name through to Mesos and is the responsibility of Mesos (and/or the loaded IPAM modules) to validate the network name.
+
 ## Service Discovery
 
 While an application that requires IP-per-task cannot request that ports be allocated in the agent node, you can still specify the ports that the application's tasks expose:
