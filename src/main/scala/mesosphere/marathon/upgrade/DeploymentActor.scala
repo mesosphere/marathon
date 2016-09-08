@@ -14,7 +14,7 @@ import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.io.storage.StorageProvider
-import mesosphere.marathon.state.{ AppDefinition, RunnableSpec }
+import mesosphere.marathon.state.{ AppDefinition, RunSpec }
 import mesosphere.marathon.upgrade.DeploymentManager.{ DeploymentFailed, DeploymentFinished, DeploymentStepInfo }
 import mesosphere.mesos.Constraints
 import org.apache.mesos.SchedulerDriver
@@ -111,7 +111,7 @@ private class DeploymentActor(
   }
   // scalastyle:on
 
-  def startRunnable(runnableSpec: RunnableSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
+  def startRunnable(runnableSpec: RunSpec, scaleTo: Int, status: DeploymentStatus): Future[Unit] = {
     val promise = Promise[Unit]()
     context.actorOf(
       AppStartActor.props(deploymentManager, status, driver, scheduler, launchQueue, taskTracker,
@@ -120,7 +120,7 @@ private class DeploymentActor(
     promise.future
   }
 
-  def scaleRunnable(runnableSpec: RunnableSpec, scaleTo: Int,
+  def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
     toKill: Option[Iterable[Instance]],
     status: DeploymentStatus): Future[Unit] = {
     val runningTasks = taskTracker.specInstancesLaunchedSync(runnableSpec.id)
@@ -158,7 +158,7 @@ private class DeploymentActor(
     killTasksIfNeeded.flatMap(_ => startTasksIfNeeded)
   }
 
-  def stopRunnable(runnableSpec: RunnableSpec): Future[Unit] = {
+  def stopRunnable(runnableSpec: RunSpec): Future[Unit] = {
     val tasks = taskTracker.specInstancesLaunchedSync(runnableSpec.id)
     // TODO: the launch queue is purged in stopRunnable, but it would make sense to do that before calling kill(tasks)
     killService.killTasks(tasks, TaskKillReason.DeletingApp).map(_ => ()).andThen {
@@ -171,7 +171,7 @@ private class DeploymentActor(
     }
   }
 
-  def restartRunnable(run: RunnableSpec, status: DeploymentStatus): Future[Unit] = {
+  def restartRunnable(run: RunSpec, status: DeploymentStatus): Future[Unit] = {
     if (run.instances == 0) {
       Future.successful(())
     } else {
@@ -182,9 +182,9 @@ private class DeploymentActor(
     }
   }
 
-  def resolveArtifacts(run: RunnableSpec, urls: Map[URL, String]): Future[Unit] = {
+  def resolveArtifacts(run: RunSpec, urls: Map[URL, String]): Future[Unit] = {
     val promise = Promise[Boolean]()
-    context.actorOf(Props(classOf[ResolveArtifactsActor], run, urls, promise, storage))
+    context.actorOf(ResolveArtifactsActor.props(urls, promise, storage))
     promise.future.map(_ => ())
   }
 }

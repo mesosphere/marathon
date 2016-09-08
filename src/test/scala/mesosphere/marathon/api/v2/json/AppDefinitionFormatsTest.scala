@@ -3,7 +3,7 @@ package mesosphere.marathon.api.v2.json
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
+import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.{ MarathonSpec, Protos }
@@ -26,7 +26,7 @@ class AppDefinitionFormatsTest
     val a1 = AppDefinition(
       id = "app1".toPath,
       cmd = Some("sleep 10"),
-      versionInfo = AppDefinition.VersionInfo.OnlyVersion(Timestamp(1))
+      versionInfo = VersionInfo.OnlyVersion(Timestamp(1))
     )
 
     val j1 = Json.parse("""
@@ -80,7 +80,7 @@ class AppDefinitionFormatsTest
   test("ToJson should serialize full version info") {
     import Fixture._
 
-    val r1 = Json.toJson(a1.copy(versionInfo = AppDefinition.VersionInfo.FullVersionInfo(
+    val r1 = Json.toJson(a1.copy(versionInfo = VersionInfo.FullVersionInfo(
       version = Timestamp(3),
       lastScalingAt = Timestamp(2),
       lastConfigChangeAt = Timestamp(1)

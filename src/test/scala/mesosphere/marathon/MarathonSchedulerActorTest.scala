@@ -212,14 +212,14 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       cmd = Some("cmd"),
       instances = 2,
       upgradeStrategy = UpgradeStrategy(0.5),
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+      versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
     val probe = TestProbe()
     val origGroup = Group(PathId("/foo/bar"), Map(app.id -> app))
 
     val appNew = app.copy(
       cmd = Some("cmd new"),
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(1000))
+      versionInfo = VersionInfo.forNewConfig(Timestamp(1000))
     )
 
     val targetGroup = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(appNew.id -> appNew))))
@@ -251,7 +251,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       cmd = Some("cmd"),
       instances = 2,
       upgradeStrategy = UpgradeStrategy(0.5),
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+      versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
     val probe = TestProbe()
     val taskA = MarathonTestHelper.runningTaskForApp(app.id)
@@ -288,7 +288,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       cmd = Some("cmd"),
       instances = 2,
       upgradeStrategy = UpgradeStrategy(0.5),
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+      versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
     val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 
@@ -326,7 +326,7 @@ class MarathonSchedulerActorTest extends MarathonActorSupport
       cmd = Some("cmd"),
       instances = 2,
       upgradeStrategy = UpgradeStrategy(0.5),
-      versionInfo = AppDefinition.VersionInfo.forNewConfig(Timestamp(0))
+      versionInfo = VersionInfo.forNewConfig(Timestamp(0))
     )
     val group = Group(PathId("/"), groups = Set(Group(PathId("/foo/bar"), Map(app.id -> app))))
 

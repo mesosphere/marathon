@@ -59,7 +59,7 @@ private class RateLimiterActor private (
 
   private[this] def receiveCleanup: Receive = {
     case CleanupOverdueDelays =>
-      // If an run spec gets removed or updated, the delay should be reset.
+      // If a run spec gets removed or updated, the delay should be reset.
       // Still, we can remove overdue delays before that and also make leaks less likely
       // by calling this periodically.
       rateLimiter.cleanUpOverdueDelays()

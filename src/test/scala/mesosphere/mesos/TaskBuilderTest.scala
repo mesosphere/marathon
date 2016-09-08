@@ -1,24 +1,24 @@
 package mesosphere.mesos
 
 import com.google.protobuf.TextFormat
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.api.serialization.PortDefinitionSerializer
-import mesosphere.marathon.state.AppDefinition.VersionInfo.OnlyVersion
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.Docker.PortMapping
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{ AppDefinition, Container, PathId, Timestamp, _ }
-import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper, Protos }
-import mesosphere.mesos.protos.{ Resource, TaskID, _ }
+import mesosphere.marathon.state.VersionInfo.OnlyVersion
+import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
+import mesosphere.marathon.{MarathonSpec, MarathonTestHelper, Protos}
+import mesosphere.mesos.protos.{Resource, TaskID, _}
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo
-import org.apache.mesos.{ Protos => MesosProtos }
-import org.joda.time.{ DateTime, DateTimeZone }
+import org.apache.mesos.{Protos => MesosProtos}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest.Matchers
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration._
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 
 class TaskBuilderTest extends MarathonSpec with Matchers {
 
@@ -1311,7 +1311,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("TaskContextEnv empty when no taskId given") {
-    val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+    val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
     val runSpec = AppDefinition(
       id = PathId("/app"),
       versionInfo = version
@@ -1322,7 +1322,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("TaskContextEnv minimal") {
-    val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+    val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
     val runSpec = AppDefinition(
       id = PathId("/app"),
       versionInfo = version
@@ -1344,7 +1344,7 @@ class TaskBuilderTest extends MarathonSpec with Matchers {
   }
 
   test("TaskContextEnv all fields") {
-    val version = AppDefinition.VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
+    val version = VersionInfo.forNewConfig(Timestamp(new DateTime(2015, 2, 3, 12, 30, DateTimeZone.UTC)))
     val taskId = TaskID("taskId")
     val runSpec = AppDefinition(
       id = PathId("/app"),

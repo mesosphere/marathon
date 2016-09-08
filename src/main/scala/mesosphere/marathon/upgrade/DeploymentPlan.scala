@@ -19,26 +19,26 @@ import scala.collection.SortedMap
 import scala.collection.immutable.Seq
 
 sealed trait DeploymentAction {
-  def runSpec: RunnableSpec
+  def runSpec: RunSpec
 }
 
 // runnable spec has not been started before
-final case class StartApplication(runSpec: RunnableSpec, scaleTo: Int) extends DeploymentAction
+final case class StartApplication(runSpec: RunSpec, scaleTo: Int) extends DeploymentAction
 
 // runnable spec is started, but the instance count should be changed
 final case class ScaleApplication(
-  runSpec: RunnableSpec,
+  runSpec: RunSpec,
   scaleTo: Int,
   sentencedToDeath: Option[Iterable[Instance]] = None) extends DeploymentAction
 
 // runnable spec is started, but shall be completely stopped
-final case class StopApplication(runSpec: RunnableSpec) extends DeploymentAction
+final case class StopApplication(runSpec: RunSpec) extends DeploymentAction
 
 // runnable spec is there but should be replaced
-final case class RestartApplication(runSpec: RunnableSpec) extends DeploymentAction
+final case class RestartApplication(runSpec: RunSpec) extends DeploymentAction
 
 // resolve and store artifacts for given runnable spec
-final case class ResolveArtifacts(runSpec: RunnableSpec, url2Path: Map[URL, String]) extends DeploymentAction
+final case class ResolveArtifacts(runSpec: RunSpec, url2Path: Map[URL, String]) extends DeploymentAction
 
 /**
   * One step in a deployment plan.
@@ -78,7 +78,7 @@ final case class DeploymentPlan(
 
   lazy val nonEmpty: Boolean = !isEmpty
 
-  lazy val affectedRunSpecs: Set[RunnableSpec] = steps.flatMap(_.actions.map(_.runSpec)).toSet
+  lazy val affectedRunSpecs: Set[RunSpec] = steps.flatMap(_.actions.map(_.runSpec)).toSet
 
   /** @return all ids of apps which are referenced in any deployment actions */
   lazy val affectedRunSpecIds: Set[PathId] = steps.flatMap(_.actions.map(_.runSpec.id)).toSet
@@ -107,7 +107,7 @@ final case class DeploymentPlan(
   }
 
   override def toString: String = {
-    def specString(spec: RunnableSpec): String = spec match {
+    def specString(spec: RunSpec): String = spec match {
       case app: AppDefinition => appString(app)
       case pod: PodDefinition => podString(pod)
 
@@ -182,7 +182,7 @@ object DeploymentPlan {
     *
     * Rationale:
     *
-    * #: RunnableSpec → ℤ is an equivalence relation on RunnableSpec where
+    * #: RunSpec → ℤ is an equivalence relation on RunSpec where
     * the members of each equivalence class can be concurrently deployed.
     *
     * This follows naturally:
@@ -199,7 +199,7 @@ object DeploymentPlan {
     * similar logic.
     */
   private[upgrade] def runSpecsGroupedByLongestPath(
-    group: Group): SortedMap[Int, Set[RunnableSpec]] = {
+    group: Group): SortedMap[Int, Set[RunSpec]] = {
 
     import org.jgrapht.DirectedGraph
     import org.jgrapht.graph.DefaultEdge
@@ -232,12 +232,12 @@ object DeploymentPlan {
     */
   def dependencyOrderedSteps(original: Group, target: Group,
     toKill: Map[PathId, Iterable[Instance]]): Seq[DeploymentStep] = {
-    val originalRunSpecs: Map[PathId, RunnableSpec] = original.transitiveRunSpecsById
+    val originalRunSpecs: Map[PathId, RunSpec] = original.transitiveRunSpecsById
 
-    val runsByLongestPath: SortedMap[Int, Set[RunnableSpec]] = runSpecsGroupedByLongestPath(target)
+    val runsByLongestPath: SortedMap[Int, Set[RunSpec]] = runSpecsGroupedByLongestPath(target)
 
-    runsByLongestPath.valuesIterator.map { (equivalenceClass: Set[RunnableSpec]) =>
-      val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newSpec: RunnableSpec) =>
+    runsByLongestPath.valuesIterator.map { (equivalenceClass: Set[RunSpec]) =>
+      val actions: Set[DeploymentAction] = equivalenceClass.flatMap { (newSpec: RunSpec) =>
         originalRunSpecs.get(newSpec.id) match {
           // New run spec.
           case None =>
@@ -265,7 +265,7 @@ object DeploymentPlan {
     * @param original the root group before the deployment
     * @param target the root group after the deployment
     * @param resolveArtifacts artifacts to resolve
-    * @param version the version to use for new RunnableSpec (should be very close to now)
+    * @param version the version to use for new RunSpec (should be very close to now)
     * @param toKill specific tasks that should be killed
     * @return The deployment plan containing the steps necessary to get from the original to the target group definition
     */
@@ -279,9 +279,9 @@ object DeploymentPlan {
     id: Option[String] = None): DeploymentPlan = {
 
     // Lookup maps for original and target run specs.
-    val originalRuns: Map[PathId, RunnableSpec] = original.transitiveRunSpecsById
+    val originalRuns: Map[PathId, RunSpec] = original.transitiveRunSpecsById
 
-    val targetRuns: Map[PathId, RunnableSpec] = target.transitiveRunSpecsById
+    val targetRuns: Map[PathId, RunSpec] = target.transitiveRunSpecsById
 
     // A collection of deployment steps for this plan.
     val steps = Seq.newBuilder[DeploymentStep]

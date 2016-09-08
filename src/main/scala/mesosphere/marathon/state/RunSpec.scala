@@ -5,7 +5,6 @@ import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin
-import mesosphere.marathon.state.AppDefinition.VersionInfo
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
@@ -13,7 +12,11 @@ import scala.concurrent.duration.FiniteDuration
 /**
   * A generic spec that specifies something that Marathon is able to launch instances of.
   */
-trait RunnableSpec extends plugin.RunSpec {
+
+// TODO(PODS): Group some of this into little types and pattern match when things really
+// don't make sense to do generically, eg 'executor', 'cmd', 'args', etc.
+// we should try to group things up logically - pod does a decent job of this
+trait RunSpec extends plugin.RunSpec {
   val id: PathId
   val env: Map[String, EnvVarValue]
   val labels: Map[String, String]
@@ -22,67 +25,50 @@ trait RunnableSpec extends plugin.RunSpec {
 
   val instances: Int
   val constraints: Set[Constraint]
+
+  val version: Timestamp
 
   // TODO: these could go into a resources object
   val cpus: Double
   val mem: Double
   val disk: Double
   val gpus: Int
-  val version: Timestamp
 
-  val isResident: Boolean
-
-  def withInstances(instances: Int): RunnableSpec
-  def isUpgrade(to: RunnableSpec): Boolean
-  def needsRestart(to: RunnableSpec): Boolean
-  def isOnlyScaleChange(to: RunnableSpec): Boolean
-  val versionInfo: VersionInfo
-}
-
-//scalastyle:off
-// TODO(PODS) why do we need RunSpec and RunnableSpec?!? can we also collapse some of these giant lists of
-// fields into subtypes?
-trait RunSpec extends plugin.RunSpec with RunnableSpec {
-  val id: PathId
-  val cmd: Option[String]
-  val args: Seq[String]
-  val user: Option[String]
-  val env: Map[String, EnvVarValue]
-  val instances: Int
-  val cpus: Double
-  val mem: Double
-  val disk: Double
-  val gpus: Int
-  val executor: String
-  val constraints: Set[Constraint]
-  val fetch: Seq[FetchUri]
-  val storeUrls: Seq[String]
-  val portDefinitions: Seq[PortDefinition]
-  val requirePorts: Boolean
+  // TODO: Group into backoff?
   val backoff: FiniteDuration
-  val backoffFactor: Double
   val maxLaunchDelay: FiniteDuration
-  val container: Option[Container]
+  val backoffFactor: Double
+
+  val residency: Option[Residency]
   val healthChecks: Set[HealthCheck]
   val readinessChecks: Seq[ReadinessCheck]
-  val taskKillGracePeriod: Option[FiniteDuration]
-  val dependencies: Set[PathId]
   val upgradeStrategy: UpgradeStrategy
-  val labels: Map[String, String]
-  val acceptedResourceRoles: Set[String]
-  val ipAddress: Option[IpAddress]
-  val versionInfo: VersionInfo
-  val version: Timestamp
-  val residency: Option[Residency]
-  val isResident: Boolean
-  val secrets: Map[String, Secret]
-  val isSingleInstance: Boolean
-  val volumes: Seq[Volume]
-  val persistentVolumes: Seq[PersistentVolume]
-  val externalVolumes: Seq[ExternalVolume]
-  val diskForPersistentVolumes: Double
-  val portNumbers: Seq[Int]
-  val portNames: Seq[String]
-  val servicePorts: Seq[Int]
   def portAssignments(task: Task): Seq[PortAssignment]
+  val taskKillGracePeriod = Option.empty[FiniteDuration]
+
+  def withInstances(instances: Int): RunSpec
+  def isUpgrade(to: RunSpec): Boolean
+  def needsRestart(to: RunSpec): Boolean
+  def isOnlyScaleChange(to: RunSpec): Boolean
+  val versionInfo: VersionInfo
+
+  // TODO(PODS)- do pods support this anyways?
+  val ipAddress: Option[IpAddress]
+
+  // TODO: These ones probably should only exist in app and we should be pattern matching
+  val requirePorts: Boolean = false
+  val portNumbers = Seq.empty[Int]
+  val container = Option.empty[Container]
+  val executor: String = ""
+  val cmd = Option.empty[String]
+  val args = Seq.empty[String]
+  val isSingleInstance: Boolean = false
+  val volumes = Seq.empty[Volume]
+  val persistentVolumes = Seq.empty[PersistentVolume]
+  val externalVolumes = Seq.empty[ExternalVolume]
+  val diskForPersistentVolumes: Double = 0.0
+  val portDefinitions = Seq.empty[PortDefinition]
+  // TODO(
+  val fetch = Seq.empty[FetchUri]
+  val portNames = Seq.empty[String]
 }

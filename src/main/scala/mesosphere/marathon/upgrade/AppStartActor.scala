@@ -7,8 +7,8 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{ AppDefinition, RunnableSpec }
-import mesosphere.marathon.{ AppStartCanceledException, SchedulerActions }
+import mesosphere.marathon.state.{AppDefinition, RunSpec}
+import mesosphere.marathon.{AppStartCanceledException, SchedulerActions}
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.Promise
@@ -23,7 +23,7 @@ class AppStartActor(
     val instanceTracker: InstanceTracker,
     val eventBus: EventStream,
     val readinessCheckExecutor: ReadinessCheckExecutor,
-    val runSpec: RunnableSpec,
+    val runSpec: RunSpec,
     val scaleTo: Int,
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
@@ -35,6 +35,7 @@ class AppStartActor(
         scheduler.startApp(driver, app.copy(instances = scaleTo))
       case pod: PodDefinition =>
     }
+
   }
 
   override def postStop(): Unit = {
@@ -72,10 +73,10 @@ object AppStartActor {
     taskTracker: InstanceTracker,
     eventBus: EventStream,
     readinessCheckExecutor: ReadinessCheckExecutor,
-    runnableSpec: RunnableSpec,
+    runSpec: RunSpec,
     scaleTo: Int,
     promise: Promise[Unit]): Props = {
     Props(new AppStartActor(deploymentManager, status, driver, scheduler, launchQueue, taskTracker, eventBus,
-      readinessCheckExecutor, runnableSpec, scaleTo, promise))
+      readinessCheckExecutor, runSpec, scaleTo, promise))
   }
 }

@@ -12,7 +12,7 @@ import scala.collection.immutable.Seq
 
 class AppDefinitionTest extends MarathonSpec with Matchers {
 
-  val fullVersion = AppDefinition.VersionInfo.forNewConfig(Timestamp(1))
+  val fullVersion = VersionInfo.forNewConfig(Timestamp(1))
 
   test("ToProto with port definitions") {
     val app1 = AppDefinition(

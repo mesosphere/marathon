@@ -51,7 +51,7 @@ private[launchqueue] object TaskLauncherActor {
     * Increase the task count of the receiver.
     * The actor responds with a [[QueuedTaskInfo]] message.
     */
-  case class AddTasks(runSpec: RunSpec, count: Int) extends Requests
+  case class AddTasks(spec: RunSpec, count: Int) extends Requests
   /**
     * Get the current count.
     * The actor responds with a [[QueuedTaskInfo]] message.
@@ -74,6 +74,7 @@ private[launchqueue] object TaskLauncherActor {
   * Allows processing offers for starting tasks for the given app.
   */
 // scalastyle:off parameter.number
+// TODO (pods): rename everything related to tasks -> instances
 private class TaskLauncherActor(
     config: LaunchQueueConfig,
     offerMatcherManager: OfferMatcherManager,
@@ -101,6 +102,7 @@ private class TaskLauncherActor(
   override def preStart(): Unit = {
     super.preStart()
 
+    // TODO (pods): need verion for RunSpec
     log.info(
       "Started taskLaunchActor for {} version {} with initial count {}",
       runSpec.id, runSpec.version, tasksToLaunch)
@@ -126,11 +128,11 @@ private class TaskLauncherActor(
   override def receive: Receive = waitForInitialDelay
 
   private[this] def waitForInitialDelay: Receive = LoggingReceive.withLabel("waitingForInitialDelay") {
-    case RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp == runSpec =>
+    case RateLimiterActor.DelayUpdate(spec, delayUntil) if spec == runSpec =>
       stash()
       unstashAll()
       context.become(active)
-    case msg @ RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp != runSpec =>
+    case msg @ RateLimiterActor.DelayUpdate(spec, delayUntil) if spec != runSpec =>
       log.warning("Received delay update for other app: {}", msg)
     case message: Any => stash()
   }
@@ -200,7 +202,7 @@ private class TaskLauncherActor(
     * Receive rate limiter updates.
     */
   private[this] def receiveDelayUpdate: Receive = {
-    case RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp == runSpec =>
+    case RateLimiterActor.DelayUpdate(spec, delayUntil) if spec == runSpec =>
 
       if (backOffUntil != Some(delayUntil)) {
 
@@ -222,7 +224,7 @@ private class TaskLauncherActor(
 
       log.debug("After delay update {}", status)
 
-    case msg @ RateLimiterActor.DelayUpdate(delayApp, delayUntil) if delayApp != runSpec =>
+    case msg @ RateLimiterActor.DelayUpdate(spec, delayUntil) if spec != runSpec =>
       log.warning("Received delay update for other app: {}", msg)
 
     case RecheckIfBackOffUntilReached => OfferMatcherRegistration.manageOfferMatcherStatus()
@@ -274,7 +276,8 @@ private class TaskLauncherActor(
           // of that node after a task on that node has died.
           //
           // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
-          if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchTasks)) {
+          // TODO (pods): we don't want to handle something like isResident here
+          if (runSpec.constraints.nonEmpty || (runSpec.residency.isDefined && shouldLaunchTasks)) {
             maybeOfferReviver.foreach(_.reviveOffers())
           }
 
@@ -296,10 +299,11 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveAddCount: Receive = {
-    case TaskLauncherActor.AddTasks(newApp, addCount) =>
-      val configChange = runSpec.isUpgrade(newApp)
-      if (configChange || runSpec.needsRestart(newApp) || runSpec.isOnlyScaleChange(newApp)) {
-        runSpec = newApp
+    case TaskLauncherActor.AddTasks(newRunSpec, addCount) =>
+      // TODO (pods): add isUpgrade/needsRestart/isOnlyScaleChange to base trait?
+      val configChange = runSpec.isUpgrade(newRunSpec)
+      if (configChange || runSpec.needsRestart(newRunSpec) || runSpec.isOnlyScaleChange(newRunSpec)) {
+        runSpec = newRunSpec
         tasksToLaunch = addCount
 
         if (configChange) {
@@ -432,6 +436,7 @@ private class TaskLauncherActor(
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
+      // TODO (pods): how shall we handle residency?
       new ActorOfferMatcher(clock, self, runSpec.residency.map(_ => runSpec.id))
     }
     private[this] var registeredAsMatcher = false

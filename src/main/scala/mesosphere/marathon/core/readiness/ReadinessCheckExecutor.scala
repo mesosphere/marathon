@@ -12,6 +12,9 @@ import scala.concurrent.duration.FiniteDuration
 /**
   * Poll readiness of the given endpoint until we receive readiness confirmation.
   * Intermediate results are returned as part of the Observable.
+  *
+  * Readiness checks are currently only available for AppDefinitions, therefore this code
+  * is typed for [[RunSpec]]
   */
 trait ReadinessCheckExecutor {
   def execute(readinessCheckInfo: ReadinessCheckSpec): Observable[ReadinessCheckResult]
@@ -41,7 +44,7 @@ object ReadinessCheckExecutor {
       launched: Task.Launched): Seq[ReadinessCheckExecutor.ReadinessCheckSpec] = {
 
       require(task.runSpecId == runSpec.id, s"Task id and RunSpec id must match: ${task.runSpecId} != ${runSpec.id}")
-      require(task.launched == Some(launched), "Launched info is not the one contained in the task")
+      require(task.launched.contains(launched), "Launched info is not the one contained in the task")
       require(
         task.effectiveIpAddress(runSpec).isDefined,
         "Task is unreachable: an IP address was requested but not yet assigned")

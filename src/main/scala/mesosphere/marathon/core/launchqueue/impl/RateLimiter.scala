@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launchqueue.impl
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.core.base.Clock
-import mesosphere.marathon.state.{ RunSpec, PathId, Timestamp }
+import mesosphere.marathon.state.{ PathId, RunSpec, Timestamp }
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -26,18 +26,19 @@ private[launchqueue] class RateLimiter(clock: Clock) {
   }
 
   def getDelay(spec: RunSpec): Timestamp =
+    // TODO (pods): RunSpec has no versionInfo. Need this?
     taskLaunchDelays.get(spec.id -> spec.versionInfo.lastConfigChangeVersion).map(_.deadline) getOrElse clock.now()
 
-  def addDelay(runSpec: RunSpec): Timestamp = {
-    setNewDelay(runSpec, "Increasing delay") {
-      case Some(delay) => Some(delay.increased(clock, runSpec))
-      case None => Some(Delay(clock, runSpec))
+  def addDelay(spec: RunSpec): Timestamp = {
+    setNewDelay(spec, "Increasing delay") {
+      case Some(delay) => Some(delay.increased(clock, spec))
+      case None => Some(Delay(clock, spec))
     }
   }
 
-  private[this] def setNewDelay(unSpec: RunSpec, message: String)(
+  private[this] def setNewDelay(spec: RunSpec, message: String)(
     calcDelay: Option[Delay] => Option[Delay]): Timestamp = {
-    val maybeDelay: Option[Delay] = taskLaunchDelays.get(unSpec.id -> unSpec.versionInfo.lastConfigChangeVersion)
+    val maybeDelay: Option[Delay] = taskLaunchDelays.get(spec.id -> spec.versionInfo.lastConfigChangeVersion)
     calcDelay(maybeDelay) match {
       case Some(newDelay) =>
         import mesosphere.util.DurationToHumanReadable
@@ -46,15 +47,15 @@ private[launchqueue] class RateLimiter(clock: Clock) {
         val timeLeft = (now until newDelay.deadline).toHumanReadable
 
         if (newDelay.deadline <= now) {
-          resetDelay(unSpec)
+          resetDelay(spec)
         } else {
-          log.info(s"$message. Task launch delay for [${unSpec.id}] changed from [$priorTimeLeft] to [$timeLeft].")
-          taskLaunchDelays += ((unSpec.id, unSpec.versionInfo.lastConfigChangeVersion) -> newDelay)
+          log.info(s"$message. Task launch delay for [${spec.id}] changed from [$priorTimeLeft] to [$timeLeft].")
+          taskLaunchDelays += ((spec.id, spec.versionInfo.lastConfigChangeVersion) -> newDelay)
         }
         newDelay.deadline
 
       case None =>
-        resetDelay(unSpec)
+        resetDelay(spec)
         clock.now()
     }
   }
@@ -71,6 +72,7 @@ private object RateLimiter {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
   private object Delay {
+    // TODO (pods): use a BackoffSchedulingStrategy generic to RunSpec
     def apply(clock: Clock, runSpec: RunSpec): Delay = Delay(clock, runSpec.backoff)
     def apply(clock: Clock, delay: FiniteDuration): Delay = Delay(clock.now() + delay, delay)
   }

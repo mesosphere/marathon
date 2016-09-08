@@ -45,7 +45,7 @@ private[upgrade] object DeploymentPlanReverter {
       changesOnIds(original.transitiveGroups, target.transitiveGroups)(_.id)
 
     /* a sequence of tuples with the old and the new run definition */
-    val runSpecChanges: Seq[(Option[RunnableSpec], Option[RunnableSpec])] = {
+    val runSpecChanges: Seq[(Option[RunSpec], Option[RunSpec])] = {
       changesOnIds(original.transitiveRunSpecs, target.transitiveRunSpecs)(_.id)
         .filter { case (oldOpt, newOpt) => oldOpt != newOpt }
     }
@@ -162,11 +162,11 @@ private[upgrade] object DeploymentPlanReverter {
     * prevents any concurrent changes.
     */
   private[this] def revertRunSpecChanges(
-    version: Timestamp, changes: Seq[(Option[RunnableSpec], Option[RunnableSpec])])(
+    version: Timestamp, changes: Seq[(Option[RunSpec], Option[RunSpec])])(
     g: Group): Group = {
 
     def appOrPodChange(
-      runnableSpec: RunnableSpec,
+      runnableSpec: RunSpec,
       appChange: AppDefinition => Group,
       podChange: PodDefinition => Group): Group = runnableSpec match {
       case app: AppDefinition => appChange(app)

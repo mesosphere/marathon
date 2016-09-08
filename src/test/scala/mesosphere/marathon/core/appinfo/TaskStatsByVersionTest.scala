@@ -4,7 +4,7 @@ import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{ AppDefinition, Timestamp }
+import mesosphere.marathon.state.{ Timestamp, VersionInfo }
 import mesosphere.marathon.{ MarathonSpec, MarathonTestHelper }
 import org.scalatest.{ GivenWhenThen, Matchers }
 import play.api.libs.json.Json
@@ -89,7 +89,7 @@ class TaskStatsByVersionTest extends MarathonSpec with GivenWhenThen with Matche
   private val intermediaryScalingAt: Timestamp = now - 20.seconds
   private val lastConfigChangeAt: Timestamp = now - 100.seconds
   private val outdatedVersion: Timestamp = now - 200.seconds
-  private[this] val versionInfo = AppDefinition.VersionInfo.FullVersionInfo(
+  private[this] val versionInfo = VersionInfo.FullVersionInfo(
     version = lastScalingAt,
     lastScalingAt = lastScalingAt,
     lastConfigChangeAt = lastConfigChangeAt

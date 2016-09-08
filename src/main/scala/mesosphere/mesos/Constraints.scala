@@ -4,7 +4,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.RunSpec
 import org.apache.mesos.Protos.{ Attribute, Offer, Value }
 import org.slf4j.LoggerFactory
 
@@ -163,28 +163,28 @@ object Constraints {
     * Select tasks to kill while maintaining the constraints of the application definition.
     * Note: It is possible, that the result of this operation does not select as much tasks as needed.
     *
-    * @param app the application definition of the tasks.
-    * @param runningTasks the list of running tasks to filter
-    * @param toKillCount the expected number of tasks to select for kill
-    * @return the selected tasks to kill. The number of tasks will not exceed toKill but can be less.
+    * @param runSpec the RunSpec.
+    * @param runningInstances the list of running instances to filter
+    * @param toKillCount the expected number of instances to select for kill
+    * @return the selected instances to kill. The number of instances will not exceed toKill but can be less.
     */
   //scalastyle:off return
   def selectTasksToKill(
-    app: AppDefinition, runningTasks: Iterable[Instance], toKillCount: Int): Iterable[Instance] = {
+    runSpec: RunSpec, runningInstances: Iterable[Instance], toKillCount: Int): Iterable[Instance] = {
 
-    require(toKillCount <= runningTasks.size, "Can not kill more instances than running")
+    require(toKillCount <= runningInstances.size, "Can not kill more instances than running")
 
     //short circuit, if all tasks shall be killed
-    if (runningTasks.size == toKillCount) return runningTasks
+    if (runningInstances.size == toKillCount) return runningInstances
 
     //currently, only the GROUP_BY operator is able to select tasks to kill
-    val distributions = app.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
+    val distributions = runSpec.constraints.filter(_.getOperator == Operator.GROUP_BY).map { constraint =>
       def groupFn(task: Instance): Option[String] = constraint.getField match {
         case "hostname" => Some(task.agentInfo.host)
         case field: String => task.agentInfo.attributes.find(_.getName == field).map(getValueString(_))
       }
       val taskGroups: Seq[Map[Instance.Id, Instance]] =
-        runningTasks.groupBy(groupFn).values.map(Instance.instancesById).toSeq
+        runningInstances.groupBy(groupFn).values.map(Instance.instancesById).toSeq
       GroupByDistribution(constraint, taskGroups)
     }
 
@@ -200,7 +200,7 @@ object Constraints {
         //select tasks to kill (without already selected ones)
         .flatMap(_.tasksToKillIterator(toKillTasks)) ++
         //fallback: if the distributions did not select a task, choose one of the not chosen ones
-        runningTasks.iterator.filterNot(task => toKillTasks.contains(task.id))
+        runningInstances.iterator.filterNot(task => toKillTasks.contains(task.id))
 
       val matchingTask =
         tried.find(tryTask => distributions.forall(_.isMoreEvenWithout(toKillTasks + (tryTask.id -> tryTask))))

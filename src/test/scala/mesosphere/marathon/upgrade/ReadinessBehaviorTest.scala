@@ -9,7 +9,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.event.{ DeploymentStatus, HealthStatusChanged, MesosStatusUpdateEvent }
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{ MarathonActorSupport, Mockito }
 import org.scalatest.concurrent.Eventually
@@ -114,7 +113,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
 
     Then("Task readiness checks are performed")
     eventually(taskIsReady should be (false))
-    actor.underlyingActor.instanceTargetCountReached(1) should be (false)
+    actor.underlyingActor.taskTargetCountReached(1) should be (false)
     eventually(actor.underlyingActor.readyTasks should have size 1)
     actor.underlyingActor.healthyTasks should have size 0
 
@@ -142,7 +141,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
     eventually(actor.underlyingActor.healthyTasks should have size 1)
 
     When("The task is killed")
-    actor.underlyingActor.taskTerminated(f.taskId)
+    actor.underlyingActor.instanceTerminated(f.taskId)
 
     Then("Task should be removed from healthy, ready and subscriptions.")
     actor.underlyingActor.healthyTasks should be (empty)
@@ -199,7 +198,7 @@ class ReadinessBehaviorTest extends FunSuite with Mockito with GivenWhenThen wit
         override def receive: Receive = readinessBehavior orElse {
           case notHandled => throw new RuntimeException(notHandled.toString)
         }
-        override def taskStatusChanged(taskId: Instance.Id): Unit = if (instanceTargetCountReached(1)) taskReadyFn(taskId)
+        override def taskStatusChanged(taskId: Instance.Id): Unit = if (taskTargetCountReached(1)) taskReadyFn(taskId)
       }
       )
     }

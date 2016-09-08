@@ -18,8 +18,8 @@ import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.state.AppDefinition.VersionInfo.{ FullVersionInfo, OnlyVersion }
-import mesosphere.marathon.state.AppDefinition.{ Labels, VersionInfo }
+import mesosphere.marathon.state.VersionInfo._
+import mesosphere.marathon.state.AppDefinition.Labels
 import mesosphere.marathon.{ Features, Protos, plugin }
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{ Resource, ScalarResource }
@@ -34,9 +34,9 @@ case class AppDefinition(
 
   id: PathId = AppDefinition.DefaultId,
 
-  cmd: Option[String] = AppDefinition.DefaultCmd,
+  override val cmd: Option[String] = AppDefinition.DefaultCmd,
 
-  args: Seq[String] = AppDefinition.DefaultArgs,
+  override val args: Seq[String] = AppDefinition.DefaultArgs,
 
   user: Option[String] = AppDefinition.DefaultUser,
 
@@ -52,17 +52,17 @@ case class AppDefinition(
 
   gpus: Int = AppDefinition.DefaultGpus,
 
-  executor: String = AppDefinition.DefaultExecutor,
+  override val executor: String = AppDefinition.DefaultExecutor,
 
   constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
 
-  fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
+  override val fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
 
   storeUrls: Seq[String] = AppDefinition.DefaultStoreUrls,
 
-  portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
+  override val portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
 
-  requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
+  override val requirePorts: Boolean = AppDefinition.DefaultRequirePorts,
 
   backoff: FiniteDuration = AppDefinition.DefaultBackoff,
 
@@ -70,13 +70,13 @@ case class AppDefinition(
 
   maxLaunchDelay: FiniteDuration = AppDefinition.DefaultMaxLaunchDelay,
 
-  container: Option[Container] = AppDefinition.DefaultContainer,
+  override val container: Option[Container] = AppDefinition.DefaultContainer,
 
   healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
 
   readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
-  taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+  override val taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
 
   dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
 
@@ -93,7 +93,7 @@ case class AppDefinition(
   residency: Option[Residency] = AppDefinition.DefaultResidency,
 
   secrets: Map[String, Secret] = AppDefinition.DefaultSecrets)
-    extends RunSpec with plugin.RunSpec with RunnableSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    extends RunSpec with plugin.RunSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   import mesosphere.mesos.protos.Implicits._
 
@@ -101,16 +101,18 @@ case class AppDefinition(
     ipAddress.isEmpty || portDefinitions.isEmpty,
     s"IP address ($ipAddress) and ports ($portDefinitions) are not allowed at the same time")
 
-  val portNumbers: Seq[Int] = portDefinitions.map(_.port)
+  override val portNumbers: Seq[Int] = portDefinitions.map(_.port)
 
   val isResident: Boolean = residency.isDefined
 
-  val isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
-  val volumes: Seq[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
-  val persistentVolumes: Seq[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
-  val externalVolumes: Seq[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
+  override val version: Timestamp = versionInfo.version
 
-  val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
+  override val isSingleInstance: Boolean = labels.get(Labels.SingleInstanceApp).contains("true")
+  override val volumes: Seq[Volume] = container.fold(Seq.empty[Volume])(_.volumes)
+  override val persistentVolumes: Seq[PersistentVolume] = volumes.collect { case vol: PersistentVolume => vol }
+  override val externalVolumes: Seq[ExternalVolume] = volumes.collect { case vol: ExternalVolume => vol }
+
+  override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   //scalastyle:off method.length
   def toProto: Protos.ServiceDefinition = {
@@ -178,7 +180,7 @@ case class AppDefinition(
     builder.build
   }
 
-  override def withInstances(instances: Int): RunnableSpec = copy(instances = instances)
+  override def withInstances(instances: Int): RunSpec = copy(instances = instances)
 
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
@@ -287,18 +289,16 @@ case class AppDefinition(
     mergeFromProto(proto)
   }
 
-  val version: Timestamp = versionInfo.version
-
   /**
     * Returns whether this is a scaling change only.
     */
-  def isOnlyScaleChange(to: RunnableSpec): Boolean = !isUpgrade(to) && (instances != to.instances)
+  def isOnlyScaleChange(to: RunSpec): Boolean = !isUpgrade(to) && (instances != to.instances)
 
   /**
     * True if the given app definition is a change to the current one in terms of runtime characteristics
     * of all deployed tasks of the current app, otherwise false.
     */
-  def isUpgrade(to: RunnableSpec): Boolean = to match {
+  def isUpgrade(to: RunSpec): Boolean = to match {
     case to: AppDefinition =>
       id == to.id && {
         cmd != to.cmd ||
@@ -346,7 +346,7 @@ case class AppDefinition(
     * This can either be caused by changed configuration (e.g. a new cmd, a new docker image version)
     * or by a forced restart.
     */
-  def needsRestart(to: RunnableSpec): Boolean = this.versionInfo != to.versionInfo || isUpgrade(to)
+  def needsRestart(to: RunSpec): Boolean = this.versionInfo != to.versionInfo || isUpgrade(to)
 
   /**
     * Identify other app definitions as the same, if id and version is the same.
@@ -417,7 +417,7 @@ case class AppDefinition(
     else fromPortDefinitions.getOrElse(Nil)
   }
 
-  val portNames: Seq[String] = {
+  override val portNames: Seq[String] = {
     def fromDiscoveryInfo = ipAddress.map(_.discoveryInfo.ports.map(_.name).toList).getOrElse(Seq.empty)
     def fromPortMappings = container.map(_.portMappings.getOrElse(Seq.empty).flatMap(_.name)).getOrElse(Seq.empty)
     def fromPortDefinitions = portDefinitions.flatMap(_.name)
@@ -431,64 +431,6 @@ case class AppDefinition(
 object AppDefinition extends GeneralPurposeCombinators {
 
   type AppKey = PathId
-
-  sealed trait VersionInfo {
-    def version: Timestamp
-    def lastConfigChangeVersion: Timestamp
-
-    def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
-      VersionInfo.forNewConfig(version).withScaleOrRestartChange(newVersion)
-    }
-
-    def withConfigChange(newVersion: Timestamp): VersionInfo = {
-      VersionInfo.forNewConfig(newVersion)
-    }
-  }
-
-  object VersionInfo {
-
-    /**
-      * This should only be used for new AppDefinitions.
-      *
-      * If you set the versionInfo of existing AppDefinitions to `NoVersion`,
-      * it will result in a restart when this AppDefinition is passed to the GroupManager update method.
-      */
-    case object NoVersion extends VersionInfo {
-      override def version: Timestamp = Timestamp(0)
-      override def lastConfigChangeVersion: Timestamp = version
-    }
-
-    /**
-      * Only contains a version timestamp. Will be converted to a FullVersionInfo before stored.
-      */
-    case class OnlyVersion(version: Timestamp) extends VersionInfo {
-      override def lastConfigChangeVersion: Timestamp = version
-    }
-
-    /**
-      * @param version The versioning timestamp (we are currently assuming that this is the same as lastChangeAt)
-      * @param lastScalingAt The time stamp of the last change including scaling or restart changes
-      * @param lastConfigChangeAt The time stamp of the last change that changed configuration
-      *                           besides scaling or restarting
-      */
-    case class FullVersionInfo(
-        version: Timestamp,
-        lastScalingAt: Timestamp,
-        lastConfigChangeAt: Timestamp) extends VersionInfo {
-
-      override def lastConfigChangeVersion: Timestamp = lastConfigChangeAt
-
-      override def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
-        copy(version = newVersion, lastScalingAt = newVersion)
-      }
-    }
-
-    def forNewConfig(newVersion: Timestamp): FullVersionInfo = FullVersionInfo(
-      version = newVersion,
-      lastScalingAt = newVersion,
-      lastConfigChangeAt = newVersion
-    )
-  }
 
   val RandomPortValue: Int = 0
   val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])

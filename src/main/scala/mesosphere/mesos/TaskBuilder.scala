@@ -3,15 +3,15 @@ package mesosphere.mesos
 import com.google.protobuf.TextFormat
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon._
-import mesosphere.marathon.api.serialization.{ ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer }
+import mesosphere.marathon.api.serialization.{ContainerSerializer, PortDefinitionSerializer, PortMappingSerializer}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
-import mesosphere.marathon.state.{ AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec }
-import mesosphere.mesos.ResourceMatcher.{ ResourceMatch, ResourceSelector }
+import mesosphere.marathon.state.{AppDefinition, Container, DiscoveryInfo, EnvVarString, IpAddress, PathId, RunSpec}
+import mesosphere.mesos.ResourceMatcher.{ResourceMatch, ResourceSelector}
 import org.apache.mesos.Protos.Environment._
-import org.apache.mesos.Protos.{ HealthCheck => _, _ }
+import org.apache.mesos.Protos.{HealthCheck => _, _}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -161,7 +161,7 @@ class TaskBuilder(
     val mesosHealthChecks: Set[org.apache.mesos.Protos.HealthCheck] =
       runSpec.healthChecks.collect {
         case healthCheck: HealthCheck if healthCheck.protocol == Protocol.COMMAND => healthCheck.toMesos
-      }
+      }(collection.breakOut)
 
     if (mesosHealthChecks.size > 1) {
       val numUnusedChecks = mesosHealthChecks.size - 1

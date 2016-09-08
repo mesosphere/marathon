@@ -2,7 +2,6 @@ package mesosphere.marathon.state
 
 import com.wix.accord._
 import mesosphere.marathon.api.v2.ValidationHelper
-import mesosphere.marathon.state.AppDefinition.VersionInfo
 import mesosphere.marathon.state.PathId._
 import org.scalatest.{ FunSpec, GivenWhenThen, Matchers }
 
