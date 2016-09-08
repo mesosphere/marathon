@@ -6,7 +6,7 @@ import akka.testkit.TestProbe
 import mesosphere.marathon.core.base.ConstantClock
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.launchqueue.LaunchQueue
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ TaskKillReason, TaskKillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -114,15 +114,15 @@ class SchedulerActionsTest
 
     Given("An active queue and lost tasks")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 15)
-    val queued = QueuedTaskInfo(
+    val queued = QueuedInstanceInfo(
       app,
-      tasksLeftToLaunch = 1,
+      instancesLeftToLaunch = 1,
       inProgress = true,
-      finalTaskCount = 15,
-      tasksLost = 5,
+      finalInstanceCount = 15,
+      unreachableInstances = 5,
       backOffUntil = f.clock.now())
     f.queue.get(app.id) returns Some(queued)
-    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns (queued.finalTaskCount - queued.tasksLost) // 10
+    f.taskTracker.countSpecInstancesSync(eq(app.id), any) returns (queued.finalInstanceCount - queued.unreachableInstances) // 10
 
     When("the app is scaled")
     f.scheduler.scale(f.driver, app)
@@ -156,12 +156,12 @@ class SchedulerActionsTest
 
     Given("an active queue, staged tasks and 5 overCapacity")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 5)
-    val queued = QueuedTaskInfo(
+    val queued = QueuedInstanceInfo(
       app,
-      tasksLeftToLaunch = 0,
+      instancesLeftToLaunch = 0,
       inProgress = true,
-      finalTaskCount = 7,
-      tasksLost = 0,
+      finalInstanceCount = 7,
+      unreachableInstances = 0,
       backOffUntil = f.clock.now())
 
     def stagedTask(id: String, stagedAt: Long) = MarathonTestHelper.stagedTask(id, stagedAt = stagedAt)
@@ -234,12 +234,12 @@ class SchedulerActionsTest
     Given("an active queue, running tasks and some overCapacity")
     val app = MarathonTestHelper.makeBasicApp().copy(instances = 3)
 
-    val queued = QueuedTaskInfo(
+    val queued = QueuedInstanceInfo(
       app,
-      tasksLeftToLaunch = 0,
+      instancesLeftToLaunch = 0,
       inProgress = true,
-      finalTaskCount = 5,
-      tasksLost = 0,
+      finalInstanceCount = 5,
+      unreachableInstances = 0,
       backOffUntil = f.clock.now())
 
     def stagedTask(id: String, stagedAt: Long) = MarathonTestHelper.stagedTask(id, stagedAt = stagedAt)

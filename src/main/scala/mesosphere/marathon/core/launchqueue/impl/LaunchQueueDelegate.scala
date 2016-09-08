@@ -3,7 +3,7 @@ package mesosphere.marathon.core.launchqueue.impl
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.{ LaunchQueue, LaunchQueueConfig }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.state.{ PathId, RunSpec }
@@ -18,18 +18,18 @@ private[launchqueue] class LaunchQueueDelegate(
     actorRef: ActorRef,
     rateLimiterRef: ActorRef) extends LaunchQueue {
 
-  override def list: Seq[QueuedTaskInfo] = {
+  override def list: Seq[QueuedInstanceInfo] = {
     askQueueActor("list")(LaunchQueueDelegate.List)
-      .asInstanceOf[Seq[QueuedTaskInfo]]
+      .asInstanceOf[Seq[QueuedInstanceInfo]]
   }
 
-  override def get(runSpecId: PathId): Option[QueuedTaskInfo] =
-    askQueueActor("get")(LaunchQueueDelegate.Count(runSpecId)).asInstanceOf[Option[QueuedTaskInfo]]
+  override def get(runSpecId: PathId): Option[QueuedInstanceInfo] =
+    askQueueActor("get")(LaunchQueueDelegate.Count(runSpecId)).asInstanceOf[Option[QueuedInstanceInfo]]
 
-  override def notifyOfTaskUpdate(taskChanged: TaskChanged): Future[Option[QueuedTaskInfo]] =
-    askQueueActorFuture("notifyOfTaskUpdate")(taskChanged).mapTo[Option[QueuedTaskInfo]]
+  override def notifyOfTaskUpdate(taskChanged: TaskChanged): Future[Option[QueuedInstanceInfo]] =
+    askQueueActorFuture("notifyOfTaskUpdate")(taskChanged).mapTo[Option[QueuedInstanceInfo]]
 
-  override def count(runSpecId: PathId): Int = get(runSpecId).map(_.tasksLeftToLaunch).getOrElse(0)
+  override def count(runSpecId: PathId): Int = get(runSpecId).map(_.instancesLeftToLaunch).getOrElse(0)
 
   override def listRunSpecs: Seq[RunSpec] = list.map(_.runSpec)
 

@@ -16,7 +16,7 @@ import akka.util.Timeout
 import mesosphere.marathon.core.launchqueue.{ LaunchQueueConfig, LaunchQueue }
 import mesosphere.marathon.core.task.bus.TaskChangeObservables.TaskChanged
 import mesosphere.marathon.state.{ RunSpec, PathId }
-import LaunchQueue.QueuedTaskInfo
+import LaunchQueue.QueuedInstanceInfo
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -149,8 +149,8 @@ private[impl] class LaunchQueueActor(
       import context.dispatcher
       launchers.get(taskChanged.runSpecId) match {
         case Some(actorRef) =>
-          val eventualCount: Future[QueuedTaskInfo] =
-            (actorRef ? taskChanged).mapTo[QueuedTaskInfo]
+          val eventualCount: Future[QueuedInstanceInfo] =
+            (actorRef ? taskChanged).mapTo[QueuedInstanceInfo]
           eventualCount.map(Some(_)).pipeTo(sender())
         case None => sender() ! None
       }
@@ -161,16 +161,16 @@ private[impl] class LaunchQueueActor(
       import context.dispatcher
       val scatter = launchers
         .keys
-        .map(appId => (self ? Count(appId)).mapTo[Option[QueuedTaskInfo]])
-      val gather: Future[Seq[QueuedTaskInfo]] = Future.sequence(scatter).map(_.flatten.to[Seq])
+        .map(appId => (self ? Count(appId)).mapTo[Option[QueuedInstanceInfo]])
+      val gather: Future[Seq[QueuedInstanceInfo]] = Future.sequence(scatter).map(_.flatten.to[Seq])
       gather.pipeTo(sender())
 
     case Count(appId) =>
       import context.dispatcher
       launchers.get(appId) match {
         case Some(actorRef) =>
-          val eventualCount: Future[QueuedTaskInfo] =
-            (actorRef ? TaskLauncherActor.GetCount).mapTo[QueuedTaskInfo]
+          val eventualCount: Future[QueuedInstanceInfo] =
+            (actorRef ? TaskLauncherActor.GetCount).mapTo[QueuedInstanceInfo]
           eventualCount.map(Some(_)).pipeTo(sender())
         case None => sender() ! None
       }
@@ -180,14 +180,14 @@ private[impl] class LaunchQueueActor(
         case None =>
           import context.dispatcher
           val actorRef = createAppTaskLauncher(app, count)
-          val eventualCount: Future[QueuedTaskInfo] =
-            (actorRef ? TaskLauncherActor.GetCount).mapTo[QueuedTaskInfo]
+          val eventualCount: Future[QueuedInstanceInfo] =
+            (actorRef ? TaskLauncherActor.GetCount).mapTo[QueuedInstanceInfo]
           eventualCount.map(_ => ()).pipeTo(sender())
 
         case Some(actorRef) =>
           import context.dispatcher
-          val eventualCount: Future[QueuedTaskInfo] =
-            (actorRef ? TaskLauncherActor.AddTasks(app, count)).mapTo[QueuedTaskInfo]
+          val eventualCount: Future[QueuedInstanceInfo] =
+            (actorRef ? TaskLauncherActor.AddTasks(app, count)).mapTo[QueuedInstanceInfo]
           eventualCount.map(_ => ()).pipeTo(sender())
       }
 

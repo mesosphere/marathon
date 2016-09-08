@@ -63,7 +63,7 @@ class TaskStartActorTest
 
   test("Start success with one task left to launch") {
     val f = new Fixture
-    val counts = Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 1, finalTaskCount = 1))
+    val counts = Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 1, finalInstanceCount = 1))
     val promise = Promise[Unit]()
     val app = AppDefinition("/myApp".toPath, instances = 5)
 
@@ -225,7 +225,7 @@ class TaskStartActorTest
 
     // let existing task die
     when(f.taskTracker.countLaunchedSpecInstancesSync(app.id)).thenReturn(0)
-    when(f.launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = 4, finalTaskCount = 4)))
+    when(f.launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = 4, finalInstanceCount = 4)))
     system.eventStream.publish(MesosStatusUpdateEvent(
       slaveId = "", taskId = taskId, taskStatus = "TASK_ERROR", message = "", appId = app.id, host = "",
       ipAddresses = None, ports = Nil,
@@ -243,7 +243,7 @@ class TaskStartActorTest
     Mockito.reset(f.launchQueue)
 
     // launch 4 of the tasks
-    when(f.launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(tasksLeftToLaunch = app.instances, finalTaskCount = 4)))
+    when(f.launchQueue.get(app.id)).thenReturn(Some(LaunchQueueTestHelper.zeroCounts.copy(instancesLeftToLaunch = app.instances, finalInstanceCount = 4)))
     when(f.taskTracker.countLaunchedSpecInstancesSync(app.id)).thenReturn(4)
     List(0, 1, 2, 3) foreach { i =>
       system.eventStream.publish(MesosStatusUpdateEvent("", Instance.Id(s"task-$i"), "TASK_RUNNING", "", app.id, "", None, Nil, app.version.toString))

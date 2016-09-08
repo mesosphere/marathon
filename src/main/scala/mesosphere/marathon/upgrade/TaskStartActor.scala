@@ -27,7 +27,7 @@ class TaskStartActor(
     promise: Promise[Unit]) extends Actor with ActorLogging with StartingBehavior {
 
   val nrToStart: Int =
-    scaleTo - launchQueue.get(runSpec.id).map(_.finalTaskCount)
+    scaleTo - launchQueue.get(runSpec.id).map(_.finalInstanceCount)
       .getOrElse(instanceTracker.countLaunchedSpecInstancesSync(runSpec.id))
 
   override def initializeStart(): Unit = {

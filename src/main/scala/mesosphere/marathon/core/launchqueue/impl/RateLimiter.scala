@@ -83,7 +83,8 @@ private object RateLimiter {
 
     def increased(clock: Clock, runSpec: RunSpec): Delay = {
       val newDelay: FiniteDuration =
-        runSpec.backoffStrategy.maxLaunchDelay min FiniteDuration((delay.toNanos * runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
+        runSpec.backoffStrategy.maxLaunchDelay min FiniteDuration(
+          (delay.toNanos * runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
       Delay(clock, newDelay)
     }
   }

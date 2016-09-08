@@ -6,7 +6,7 @@ import mesosphere.marathon.core.base.Clock
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launcher.{ InstanceOp, InstanceOpFactory }
-import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedTaskInfo
+import mesosphere.marathon.core.launchqueue.LaunchQueue.QueuedInstanceInfo
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base.OfferMatcher
@@ -31,7 +31,7 @@ private[launchqueue] object TaskLauncherActor {
     clock: Clock,
     taskOpFactory: InstanceOpFactory,
     maybeOfferReviver: Option[OfferReviver],
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef)(
     runSpec: RunSpec,
     initialCount: Int): Props = {
@@ -40,7 +40,7 @@ private[launchqueue] object TaskLauncherActor {
       offerMatcherManager,
       clock, taskOpFactory,
       maybeOfferReviver,
-      taskTracker, rateLimiterActor,
+      instanceTracker, rateLimiterActor,
       runSpec, initialCount))
   }
   // scalastyle:on parameter.number
@@ -49,12 +49,12 @@ private[launchqueue] object TaskLauncherActor {
 
   /**
     * Increase the task count of the receiver.
-    * The actor responds with a [[QueuedTaskInfo]] message.
+    * The actor responds with a [[QueuedInstanceInfo]] message.
     */
   case class AddTasks(spec: RunSpec, count: Int) extends Requests
   /**
     * Get the current count.
-    * The actor responds with a [[QueuedTaskInfo]] message.
+    * The actor responds with a [[QueuedInstanceInfo]] message.
     */
   case object GetCount extends Requests
 
@@ -85,7 +85,7 @@ private class TaskLauncherActor(
     rateLimiterActor: ActorRef,
 
     private[this] var runSpec: RunSpec,
-    private[this] var tasksToLaunch: Int) extends Actor with ActorLogging with Stash {
+    private[this] var instancesToLaunch: Int) extends Actor with ActorLogging with Stash {
   // scalastyle:on parameter.number
 
   private[this] var inFlightInstanceOperations = Map.empty[Instance.Id, Cancellable]
@@ -102,10 +102,10 @@ private class TaskLauncherActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    // TODO (pods): need verion for RunSpec
+    // TODO (pods): need version for RunSpec
     log.info(
       "Started taskLaunchActor for {} version {} with initial count {}",
-      runSpec.id, runSpec.version, tasksToLaunch)
+      runSpec.id, runSpec.version, instancesToLaunch)
 
     instanceMap = taskTracker.instancesBySpecSync.instancesMap(runSpec.id).instancekMap
     rateLimiterActor ! RateLimiterActor.GetDelay(runSpec)
@@ -239,7 +239,7 @@ private class TaskLauncherActor(
 
       op match {
         // only increment for launch ops, not for reservations:
-        case _: InstanceOp.LaunchTask => tasksToLaunch += 1
+        case _: InstanceOp.LaunchTask => instancesToLaunch += 1
         case _ => ()
       }
 
@@ -284,7 +284,7 @@ private class TaskLauncherActor(
         case _ =>
           log.info("receiveTaskUpdate: ignoring stateChange {}", stateChange)
       }
-      replyWithQueuedTaskCount()
+      replyWithQueuedInstanceCount()
   }
 
   private[this] def removeTask(taskId: Instance.Id): Unit = {
@@ -295,7 +295,7 @@ private class TaskLauncherActor(
 
   private[this] def receiveGetCurrentCount: Receive = {
     case TaskLauncherActor.GetCount =>
-      replyWithQueuedTaskCount()
+      replyWithQueuedInstanceCount()
   }
 
   private[this] def receiveAddCount: Receive = {
@@ -304,7 +304,7 @@ private class TaskLauncherActor(
       val configChange = runSpec.isUpgrade(newRunSpec)
       if (configChange || runSpec.needsRestart(newRunSpec) || runSpec.isOnlyScaleChange(newRunSpec)) {
         runSpec = newRunSpec
-        tasksToLaunch = addCount
+        instancesToLaunch = addCount
 
         if (configChange) {
           log.info(
@@ -321,12 +321,12 @@ private class TaskLauncherActor(
           )
         }
       } else {
-        tasksToLaunch += addCount
+        instancesToLaunch += addCount
       }
 
       OfferMatcherRegistration.manageOfferMatcherStatus()
 
-      replyWithQueuedTaskCount()
+      replyWithQueuedInstanceCount()
   }
 
   private[this] def suspendMatchingUntilWeGetBackoffDelayUpdate(): Unit = {
@@ -340,16 +340,16 @@ private class TaskLauncherActor(
     context.become(waitForInitialDelay)
   }
 
-  private[this] def replyWithQueuedTaskCount(): Unit = {
+  private[this] def replyWithQueuedInstanceCount(): Unit = {
     val tasksLaunched = instanceMap.values.count(_.isLaunched)
     val taskLaunchesInFlight = inFlightInstanceOperations.keys
       .count(taskId => instanceMap.get(taskId).exists(_.isLaunched))
-    sender() ! QueuedTaskInfo(
+    sender() ! QueuedInstanceInfo(
       runSpec,
-      inProgress = tasksToLaunch > 0 || inFlightInstanceOperations.nonEmpty,
-      tasksLeftToLaunch = tasksToLaunch,
-      finalTaskCount = tasksToLaunch + taskLaunchesInFlight + tasksLaunched,
-      tasksLost = instanceMap.values.count(value => value.isUnreachable),
+      inProgress = instancesToLaunch > 0 || inFlightInstanceOperations.nonEmpty,
+      instancesLeftToLaunch = instancesToLaunch,
+      finalInstanceCount = instancesToLaunch + taskLaunchesInFlight + tasksLaunched,
+      unreachableInstances = instanceMap.values.count(value => value.isUnreachable),
       backOffUntil.getOrElse(clock.now())
     )
   }
@@ -361,7 +361,7 @@ private class TaskLauncherActor(
       sender ! MatchedInstanceOps(offer.getId)
 
     case ActorOfferMatcher.MatchOffer(deadline, offer) =>
-      val matchRequest = InstanceOpFactory.Request(runSpec, offer, instanceMap, tasksToLaunch)
+      val matchRequest = InstanceOpFactory.Request(runSpec, offer, instanceMap, instancesToLaunch)
       val taskOp: Option[InstanceOp] = taskOpFactory.buildTaskOp(matchRequest)
       taskOp match {
         case Some(op) => handleTaskOp(op, offer)
@@ -374,7 +374,7 @@ private class TaskLauncherActor(
       val taskId = taskOp.instanceId
       taskOp match {
         // only decrement for launched tasks, not for reservations:
-        case _: InstanceOp.LaunchTask => tasksToLaunch -= 1
+        case _: InstanceOp.LaunchTask => instancesToLaunch -= 1
         case _ => ()
       }
 
@@ -416,7 +416,7 @@ private class TaskLauncherActor(
     }
 
   private[this] def backoffActive: Boolean = backOffUntil.forall(_ > clock.now())
-  private[this] def shouldLaunchTasks: Boolean = tasksToLaunch > 0 && !backoffActive
+  private[this] def shouldLaunchTasks: Boolean = instancesToLaunch > 0 && !backoffActive
 
   private[this] def status: String = {
     val backoffStr = backOffUntil match {
@@ -426,13 +426,13 @@ private class TaskLauncherActor(
 
     val inFlight = inFlightInstanceOperations.size
     val tasksLaunchedOrRunning = instanceMap.values.count(_.isLaunched) - inFlight
-    val instanceCountDelta = instanceMap.size + tasksToLaunch - runSpec.instances
+    val instanceCountDelta = instanceMap.size + instancesToLaunch - runSpec.instances
     val matchInstanceStr = if (instanceCountDelta == 0) "" else s"instance count delta $instanceCountDelta."
-    s"$tasksToLaunch tasksToLaunch, $inFlight in flight, " +
+    s"$instancesToLaunch instancesToLaunch, $inFlight in flight, " +
       s"$tasksLaunchedOrRunning confirmed. $matchInstanceStr $backoffStr"
   }
 
-  /** Manage registering this actor as offer matcher. Only register it if tasksToLaunch > 0. */
+  /** Manage registering this actor as offer matcher. Only register it if instancesToLaunch > 0. */
   private[this] object OfferMatcherRegistration {
     private[this] val myselfAsOfferMatcher: OfferMatcher = {
       //set the precedence only, if this app is resident
@@ -450,7 +450,7 @@ private class TaskLauncherActor(
         offerMatcherManager.addSubscription(myselfAsOfferMatcher)(context.dispatcher)
         registeredAsMatcher = true
       } else if (!shouldBeRegistered && registeredAsMatcher) {
-        if (tasksToLaunch > 0) {
+        if (instancesToLaunch > 0) {
           log.info("Backing off due to task failures. Stop receiving offers for {}, {}", runSpec.id, runSpec.version)
         } else {
           log.info("No tasks left to launch. Stop receiving offers for {}, {}", runSpec.id, runSpec.version)

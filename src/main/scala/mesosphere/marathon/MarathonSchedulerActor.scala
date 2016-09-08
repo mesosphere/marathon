@@ -549,7 +549,7 @@ class SchedulerActions(
       log.info(s"Need to scale ${runSpec.id} from $launchedCount up to $targetCount instances")
 
       val queuedOrRunning = launchQueue.get(runSpec.id).map {
-        info => info.finalTaskCount - info.tasksLost
+        info => info.finalInstanceCount - info.unreachableInstances
       }.getOrElse(launchedCount)
 
       val toQueue = targetCount - queuedOrRunning

@@ -53,8 +53,8 @@ class LaunchQueueModuleTest
     Then("we get back the added app")
     list should have size 1
     list.head.runSpec should equal(app)
-    list.head.tasksLeftToLaunch should equal(1)
-    list.head.finalTaskCount should equal(1)
+    list.head.instancesLeftToLaunch should equal(1)
+    list.head.finalInstanceCount should equal(1)
     list.head.inProgress should equal(true)
 
     verify(taskTracker).instancesBySpecSync
