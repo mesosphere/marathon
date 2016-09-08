@@ -182,6 +182,9 @@ case class AppDefinition(
 
   override def withInstances(instances: Int): RunSpec = copy(instances = instances)
 
+  // TODO(PODS): remove backoff, maxLaunchDelay, backoffFactor from AppDefinition
+  override val backoffStrategy: BackoffStrategy = BackoffStrategy(backoff, maxLaunchDelay, backoffFactor)
+
   //TODO: fix style issue and enable this scalastyle check
   //scalastyle:off cyclomatic.complexity method.length
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {

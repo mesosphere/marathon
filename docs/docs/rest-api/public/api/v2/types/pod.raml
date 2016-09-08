@@ -46,16 +46,19 @@ types:
     properties:
       backoff?:
         type: number
-        description: Configures exponential backoff behavior when launching potentially sick apps.
+        description: The initial backoff (seconds) applied when a launched instance fails.
+        default: 1
         minimum: 0
       backoffFactor?:
         type: number
-        description: Configures exponential backoff behavior when launching potentially sick apps.
+        description: The factor applied to the current backoff to determine the new backoff.
+        default: 1.15
         minimum: 0
       maxLaunchDelay?:
         type: number
-        description: Amount of time (seconds) until a pod is reported running
+        description: The maximum backoff (seconds) applied when subsequent failures are detected.
         minimum: 0
+        default: 3600
   PodUpgradeStrategy:
     type: object
     description: |

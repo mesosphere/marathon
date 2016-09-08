@@ -1,17 +1,14 @@
 package mesosphere.marathon.core.pod
 // scalastyle:off
-import java.util.concurrent.TimeUnit
-
 import mesosphere.marathon.Protos
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{ ConstraintOperator, EnvVars, FixedPodScalingPolicy, KVLabels, MesosContainer, Network, Pod, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, Volume, Constraint => RamlConstraint, EnvVarSecretRef => RamlEnvVarSecretRef, EnvVarValue => RamlEnvVarValue }
-import mesosphere.marathon.state.{ AppDefinition, EnvVarSecretRef, EnvVarString, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
+import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarSecretRef, EnvVarString, EnvVarValue, IpAddress, MarathonState, PathId, PortAssignment, Residency, RunSpec, Secret, Timestamp, UpgradeStrategy, VersionInfo }
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.FiniteDuration
 // scalastyle:on
 
 /**
@@ -31,7 +28,7 @@ case class PodDefinition(
     version: Timestamp = PodDefinition.DefaultVersion,
     podVolumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     networks: Seq[Network] = PodDefinition.DefaultNetworks,
-    backoffStrategy: PodSchedulingBackoffStrategy = PodDefinition.DefaultBackoffStrategy,
+    backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy
 ) extends RunSpec with MarathonState[Protos.PodDefinition, PodDefinition] {
   lazy val cpus: Double = containers.map(_.resources.cpus.toDouble).sum
@@ -53,17 +50,6 @@ case class PodDefinition(
   // TODO(PODS) versionInfo
   override val versionInfo: VersionInfo = VersionInfo.OnlyVersion(version)
 
-  // TODO(PODS) backoff
-  override val backoff: FiniteDuration = backoffStrategy.backoff.fold(AppDefinition.DefaultBackoff) { delay =>
-    FiniteDuration(delay.toLong, TimeUnit.MILLISECONDS)
-  }
-  // TODO(PODS) backoff
-  override val maxLaunchDelay: FiniteDuration =
-    backoffStrategy.maxLaunchDelay.fold(AppDefinition.DefaultMaxLaunchDelay)(delay =>
-      FiniteDuration(delay.toLong, TimeUnit.MILLISECONDS)
-    )
-  // TODO(PODS) backoff
-  override val backoffFactor: Double = backoffStrategy.backoffFactor.getOrElse(AppDefinition.DefaultBackoffFactor)
   override val residency = Option.empty[Residency]
   // TODO(PODS) healthChecks
   override val healthChecks = Set.empty[HealthCheck]
@@ -98,7 +84,11 @@ case class PodDefinition(
       upgradeStrategy.minimumHealthCapacity,
       upgradeStrategy.maximumOverCapacity)
     // TODO: we're missing stuff here
-    val schedulingPolicy = PodSchedulingPolicy(Some(backoffStrategy), Some(ramlUpgradeStrategy),
+    val ramlBackoffStrategy = PodSchedulingBackoffStrategy(
+      backoffStrategy.backoff.toSeconds.toDouble,
+      backoffStrategy.maxLaunchDelay.toSeconds.toDouble,
+      backoffStrategy.factor)
+    val schedulingPolicy = PodSchedulingPolicy(Some(ramlBackoffStrategy), Some(ramlUpgradeStrategy),
       Some(PodPlacementPolicy(constraintDefs, acceptedResourceRoles.toVector)))
 
     val scalingPolicy = FixedPodScalingPolicy(instances, maxInstances)
@@ -178,6 +168,13 @@ object PodDefinition {
       UpgradeStrategy(raml.minimumHealthCapacity, raml.maximumOverCapacity)
     }
 
+    import scala.concurrent.duration._
+    val x = podDef.scheduling.flatMap { policy =>
+      policy.backoff.map { strategy =>
+        BackoffStrategy(strategy.backoff.seconds, strategy.maxLaunchDelay.seconds, strategy.backoffFactor)
+      }
+    }.getOrElse(DefaultBackoffStrategy)
+
     new PodDefinition(
       id = PathId(podDef.id).canonicalPath(),
       user = podDef.user,
@@ -192,7 +189,11 @@ object PodDefinition {
       version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
       podVolumes = podDef.volumes,
       networks = networks,
-      backoffStrategy = podDef.scheduling.flatMap(_.backoff).getOrElse(DefaultBackoffStrategy),
+      backoffStrategy = podDef.scheduling.flatMap { policy =>
+        policy.backoff.map { strategy =>
+          BackoffStrategy(strategy.backoff.seconds, strategy.maxLaunchDelay.seconds, strategy.backoffFactor)
+        }
+      }.getOrElse(DefaultBackoffStrategy),
       upgradeStrategy = upgradeStrategy
     )
   }
@@ -215,6 +216,6 @@ object PodDefinition {
   val DefaultVersion = Timestamp.now()
   val DefaultVolumes = Seq.empty[Volume]
   val DefaultNetworks = Seq.empty[Network]
-  val DefaultBackoffStrategy = PodSchedulingBackoffStrategy()
+  val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
 }

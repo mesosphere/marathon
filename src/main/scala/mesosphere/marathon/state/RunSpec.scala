@@ -34,10 +34,7 @@ trait RunSpec extends plugin.RunSpec {
   val disk: Double
   val gpus: Int
 
-  // TODO: Group into backoff?
-  val backoff: FiniteDuration
-  val maxLaunchDelay: FiniteDuration
-  val backoffFactor: Double
+  val backoffStrategy: BackoffStrategy
 
   val residency: Option[Residency]
   val healthChecks: Set[HealthCheck]
