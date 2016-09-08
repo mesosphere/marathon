@@ -85,9 +85,9 @@ case class PodDefinition(
       upgradeStrategy.maximumOverCapacity)
     // TODO: we're missing stuff here
     val ramlBackoffStrategy = PodSchedulingBackoffStrategy(
-      Some(backoffStrategy.backoff.toSeconds.toDouble),
-      Some(backoffStrategy.maxLaunchDelay.toSeconds.toDouble),
-      Some(backoffStrategy.factor))
+      backoffStrategy.backoff.toSeconds.toDouble,
+      backoffStrategy.maxLaunchDelay.toSeconds.toDouble,
+      backoffStrategy.factor)
     val schedulingPolicy = PodSchedulingPolicy(Some(ramlBackoffStrategy), Some(ramlUpgradeStrategy),
       Some(PodPlacementPolicy(constraintDefs, acceptedResourceRoles.toVector)))
 
@@ -173,10 +173,7 @@ object PodDefinition {
     import scala.concurrent.duration._
     val x = podDef.scheduling.flatMap { policy =>
       policy.backoff.map { strategy =>
-        BackoffStrategy(
-          strategy.backoff.map(_.seconds).getOrElse(DefaultBackoffStrategy.backoff),
-          strategy.maxLaunchDelay.map(_.seconds).getOrElse(DefaultBackoffStrategy.maxLaunchDelay),
-          strategy.backoffFactor.getOrElse(DefaultBackoffStrategy.factor))
+        BackoffStrategy(strategy.backoff.seconds, strategy.maxLaunchDelay.seconds, strategy.backoffFactor)
       }
     }.getOrElse(DefaultBackoffStrategy)
 
@@ -196,10 +193,7 @@ object PodDefinition {
       networks = networks,
       backoffStrategy = podDef.scheduling.flatMap { policy =>
         policy.backoff.map { strategy =>
-          BackoffStrategy(
-            strategy.backoff.map(_.seconds).getOrElse(DefaultBackoffStrategy.backoff),
-            strategy.maxLaunchDelay.map(_.seconds).getOrElse(DefaultBackoffStrategy.maxLaunchDelay),
-            strategy.backoffFactor.getOrElse(DefaultBackoffStrategy.factor))
+          BackoffStrategy(strategy.backoff.seconds, strategy.maxLaunchDelay.seconds, strategy.backoffFactor)
         }
       }.getOrElse(DefaultBackoffStrategy),
       upgradeStrategy = upgradeStrategy
