@@ -35,6 +35,9 @@ message HealthCheckDefinition {
     TCP = 1;
     COMMAND = 2;
     HTTPS = 3;
+    MESOS_HTTP = 4;
+    MESOS_HTTPS = 5;
+    MESOS_TCP = 6;
   }
   required Protocol protocol = 1;
   optional uint32 portIndex = 2;

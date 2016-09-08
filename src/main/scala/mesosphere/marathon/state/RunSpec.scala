@@ -53,7 +53,7 @@ trait RunSpec extends plugin.RunSpec {
 
   def container: Option[Container]
 
-  def healthChecks: Set[HealthCheck]
+  def healthChecks: Set[_ <: HealthCheck]
 
   def readinessChecks: Seq[ReadinessCheck]
 
@@ -93,5 +93,5 @@ trait RunSpec extends plugin.RunSpec {
   def portNumbers: Seq[Int]
   def portNames: Seq[String]
   def servicePorts: Seq[Int]
-  def portAssignments(task: Task): Option[Seq[PortAssignment]]
+  def portAssignments(task: Task): Seq[PortAssignment]
 }

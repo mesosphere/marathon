@@ -1,6 +1,6 @@
 package mesosphere.marathon.integration
 
-import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state._
 import org.scalatest.{ BeforeAndAfter, GivenWhenThen, Matchers }
@@ -89,5 +89,9 @@ class GracefulTaskKillIntegrationTest
     waitedForTaskKilledEvent.toMillis should be < taskKillGracePeriod.toMillis
   }
 
-  def healthCheck = HealthCheck(gracePeriod = 20.second, interval = 1.second, maxConsecutiveFailures = 10)
+  def healthCheck = MarathonHttpHealthCheck(
+    gracePeriod = 20.second,
+    interval = 1.second,
+    maxConsecutiveFailures = 10,
+    portIndex = Some(0))
 }
