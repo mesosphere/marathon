@@ -1,6 +1,7 @@
 package mesosphere.marathon.api.v2.json
 
 import mesosphere.marathon.MarathonSpec
+import mesosphere.marathon.core.health.MarathonHttpHealthCheck
 import mesosphere.marathon.state.ResourceRole
 import org.scalatest.Matchers
 import play.api.libs.json.{ JsResultException, Json }
@@ -47,7 +48,7 @@ class AppUpdateFormatTest extends MarathonSpec with Matchers {
   test("FromJSON should set healthCheck portIndex to 0 when neither port nor portIndex are set") {
     val json = Json.parse(""" { "id": "test", "healthChecks": [{ "path": "/", "protocol": "HTTP" }] } """)
     val appUpdate = json.as[AppUpdate]
-    appUpdate.healthChecks.get.head.portIndex should equal(Some(0))
+    appUpdate.healthChecks.get.head.asInstanceOf[MarathonHttpHealthCheck].portIndex should equal(Some(0))
   }
 
 }
