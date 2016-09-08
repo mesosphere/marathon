@@ -172,8 +172,8 @@ class Migration(
   }
 
   private def storeCurrentVersion(): Future[Done] = async {
-    val legacyStore = await(legacyStoreFuture)
-    persistenceStore match {
+    val legacyStore: Option[PersistentStore] = await(legacyStoreFuture)
+    val storageVersionFuture: Future[Done] = persistenceStore match {
       case Some(store) => store.setStorageVersion(StorageVersions.current)
       case None =>
         val bytes = StorageVersions.current.toByteArray
@@ -181,10 +181,10 @@ class Migration(
           store.load(StorageVersionName).flatMap {
             case Some(entity) => store.update(entity.withNewContent(bytes))
             case None => store.create(StorageVersionName, bytes)
-          }
-        }
+          }.map(_ => Done)
+        }.getOrElse(Future.successful(Done))
     }
-    Done
+    await(storageVersionFuture)
   }
 
   private def closeLegacyStore: Future[Done] = async {
