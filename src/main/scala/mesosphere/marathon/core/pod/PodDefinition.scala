@@ -42,14 +42,37 @@ case class PodDefinition(
 
   override def withInstances(instances: Int): RunSpec = copy(instances = instances)
 
-  // TODO(PODS) is upgrade for pod
-  override def isUpgrade(to: RunSpec): Boolean = false
+  // scalastyle:off cyclomatic.complexity
+  override def isUpgrade(to: RunSpec): Boolean = to match {
+    case to: PodDefinition =>
+      id == to.id && {
+        user != to.user ||
+        env != to.env ||
+        labels != to.labels ||
+        acceptedResourceRoles != to.acceptedResourceRoles ||
+        secrets != to.secrets ||
+        containers != to.containers ||
+        constraints != to.constraints ||
+        podVolumes != to.podVolumes ||
+        networks != to.networks
+        // TODO(PODS): upgrade and backoffStrategy?
+      }
+    case _ =>
+      // TODO(PODS) can this even be reached at all?
+      throw new IllegalStateException("Can't change pod to app")
+  }
+  // scalastyle:on
 
-  // TODO(PODS) needsRestart for pod
-  override def needsRestart(to: RunSpec): Boolean = false
+  // TODO(PODS) needsRestart for pod - is this right?
+  override def needsRestart(to: RunSpec): Boolean = this.version != to.version || isUpgrade(to)
 
-  // TODO(PODS) is only scale change for pods.
-  override def isOnlyScaleChange(to: RunSpec): Boolean = false
+  override def isOnlyScaleChange(to: RunSpec): Boolean = to match {
+    case to: PodDefinition =>
+      !isUpgrade(to) && (instances != to.instances || maxInstances != to.maxInstances)
+    case _ =>
+      // TODO(PODS) can this even be reached at all?
+      throw new IllegalStateException("Can't change pod to app")
+  }
 
   // TODO(PODS) versionInfo
   override val versionInfo: VersionInfo = VersionInfo.OnlyVersion(version)
