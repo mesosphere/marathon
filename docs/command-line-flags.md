@@ -120,8 +120,13 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     sessions in milliseconds.
 * <span class="label label-default">v1.1.2</span> `--zk_max_node_size` (Optional. Default: 1 MiB):
     Maximum allowed ZooKeeper node size (in bytes).
+* <span class="label label-default">v1.2.0</span> `--[disable_]mesos_authentication`  (Optional. Default: disabled):
+    If enabled, framework authentication will be used while registering with Mesos with principal and optional secret.
 * `--mesos_authentication_principal` (Optional.): The Mesos principal used for
-    authentication
+    authentication and for resource reservations
+* <span class="label label-default">v1.2.0</span> `--mesos_authentication_secret` (Optional.): The secret to use for authentication.
+    Please also consider using `--mesos_authentication_secret_file` to specify the secret in a file.
+    Only specify `--mesos_authentication_secret_file` or `--mesos_authentication_secret`
 * `--mesos_authentication_secret_file` (Optional.): The path to the Mesos secret
     file containing the authentication secret
 * `--mesos_leader_ui_url` (Optional.): The URL to the Mesos master facade. By default this
@@ -147,6 +152,19 @@ The core functionality flags can be also set by environment variable `MARATHON_O
     The timeout for preparing the Marathon instance when elected as leader.
 * <span class="label label-default">v0.14.1</span> `--http_event_callback_slow_consumer_timeout` (Optional. Default: 10 seconds):
     A http event callback consumer is considered slow, if the delivery takes longer than this timeout.
+* `--default_network_name` (Optional.): Network name, injected into applications' `ipAddress{}` specs that do not define their own `networkName`.
+* <span class="label label-default">v0.15.4</span> `--task_lost_expunge_gc` (Optional. Default: 24 hours):
+    This is the length of time in milliseconds, until a lost task is garbage collected and expunged from the task tracker and task repository.
+* <span class="label label-default">v0.15.4</span> `--task_lost_expunge_initial_delay` (Optional. Default: 5 minutes):
+    This is the length of time, in milliseconds, before Marathon begins to periodically perform task expunge gc operations
+* <span class="label label-default">v0.15.4</span> `--task_lost_expunge_interval` (Optional. Default: 1 hour):
+    This is the length of time in milliseconds, for lost task gc operations.
+* `--mesos_heartbeat_interval` (Optional. Default: 15 seconds):
+    (milliseconds) in the absence of receiving a message from the mesos master during a time window of this duration,
+    attempt to coerce mesos into communicating with marathon.
+* `--mesos_heartbeat_failure_threshold` (Optional. Default: 5):
+    after missing this number of expected communications from the mesos master, infer that marathon has become
+    disconnected from the master.
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
@@ -324,3 +342,5 @@ The Web Site flags control the behavior of Marathon's web site, including the us
 * <span class="label label-default">v0.13.0</span> `--[disable_]tracing` (Optional. Default: disabled):
     Enable tracing for all service method calls.
     Log a trace message around the execution of every service method.
+* <span class="label label-default">v1.2.0</span> `--logstash` (Optional. Default: disabled):
+    Report logs over the network in JSON format as defined by the given endpoint in `(udp|tcp|ssl)://<host>:<port>` format.

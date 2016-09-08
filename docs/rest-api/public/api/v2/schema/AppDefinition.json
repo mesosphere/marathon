@@ -28,7 +28,7 @@
         "type": "string"
       },
       "type": "array",
-      "description": "Optional. A list of resource roles. Marathon considers only resource offers with roles in this list for launching tasks of this app. If you do not specify this, Marathon considers all resource offers with roles that have been configured by the `--default_accepted_resource_roles` command line flag. If no `--default_accepted_resource_roles` was given on startup, Marathon considers all resource offers. To register Marathon for a role, you need to specify the `--mesos_role` command line flag on startup. If you want to assign all resources of a slave to a role, you can use the `--default_role` argument when starting up the slave. If you need a more fine-grained configuration, you can use the `--resources` argument to specify resource shares per role. The Mesos master needs to be started with `--roles` followed by a comma-separated list of all roles you want to use across your cluster. See [the Mesos command line documentation](http://mesos.apache.org/documentation/latest/configuration/) for details."
+      "description": "Optional. A list of resource roles. Marathon considers only resource offers with roles in this list for launching tasks of this app. If you do not specify this, Marathon considers all resource offers with roles that have been configured by the `--default_accepted_resource_roles` command line flag. If no `--default_accepted_resource_roles` was given on startup, Marathon considers all resource offers. To register Marathon for a role, you need to specify the `--mesos_role` command line flag on startup. If you want to assign all resources of a slave to a role, you can use the `--default_role` argument when starting up the slave. If you need a more fine-grained configuration, you can use the `--resources` argument to specify resource shares per role. See [the Mesos attribute and resources documentation](http://mesos.apache.org/documentation/latest/attributes-resources/) for details."
     },
     "args": {
       "items": {
@@ -62,7 +62,7 @@
           },
           {
             "type": "string",
-            "enum": ["UNIQUE", "CLUSTER", "GROUP_BY", "LIKE", "UNLIKE"]
+            "enum": ["UNIQUE", "CLUSTER", "GROUP_BY", "LIKE", "UNLIKE", "MAX_PER"]
           },
           {
             "type": "string"
@@ -71,7 +71,7 @@
         "minItems": 2,
         "additionalItems": false
       },
-      "description": "Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE."
+      "description": "Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE, MAX_PER."
     },
     "container": {
       "additionalProperties": false,
@@ -79,6 +79,22 @@
         "docker": {
           "additionalProperties": false,
           "properties": {
+            "credential": {
+              "type": "object",
+              "description": "Credential to authenticate with the docker registry.",
+              "additionalProperties": false,
+              "properties": {
+                "principal": {
+                  "type": "string",
+                  "description": "Principal to authenticate with the docker registry."
+                },
+                "secret": {
+                  "type": "string",
+                  "description": "Secret to authenticate with the docker registry."
+                }
+              },
+              "required": [ "principal" ]
+            },
             "forcePullImage": {
               "type": "boolean",
               "description": "The container will be pulled, regardless if it is already available on the local system."
@@ -90,8 +106,8 @@
             },
             "network": {
               "type": "string",
-              "description": "The networking mode, this container should operate in. One of BRIDGED|HOST|NONE",
-              "enum": ["BRIDGE", "HOST", "NONE"]
+              "description": "The networking mode, this container should operate in. One of BRIDGE|HOST|NONE|USER",
+              "enum": ["BRIDGE", "HOST", "NONE", "USER"]
             },
             "parameters": {
               "type": "array",
@@ -121,13 +137,13 @@
                 "properties": {
                   "containerPort": {
                     "type": "integer",
-                    "description": "Refers to the port the application listens to inside of the container. It is optional and now defaults to 0, in which case Marathon assigns the container port the same value as the assigned hostPort. This is especially useful for apps that advertise the port they are listening on to the outside world for P2P communication. Without containerPort: 0 they would erroneously advertise their private container port which is usually not the same as the externally visible host port.",
+                    "description": "Refers to the port the application listens to inside of the container. It is optional and defaults to 0. For each containerPort with a value of 0 Marathon assigns the containerPort the same value as the assigned hostPort. This is especially useful for apps that advertise the port they are listening on to the outside world for P2P communication. Without containerPort: 0 they would erroneously advertise their private container port which is usually not the same as the externally visible host port.",
                     "maximum": 65535,
                     "minimum": 0
                   },
                   "hostPort": {
                     "type": "integer",
-                    "description": "Retains the traditional meaning in Marathon, which is a random port from the range included in the Mesos resource offer. The resulting host ports for each task are exposed via the task details in the REST API and the Marathon web UI. hostPort is optional and defaults to 0.",
+                    "description": "Retains the traditional meaning in Marathon, which is a random port from the range included in the Mesos resource offer. The resulting host ports for each task are exposed via the task details in the REST API and the Marathon web UI. hostPort is optional. In BRIDGE mode it defaults to 0 if left unspecified. In USER mode an unspecified hostPort does not allocate a port from a Mesos offer.",
                     "maximum": 65535,
                     "minimum": 0
                   },
@@ -167,9 +183,37 @@
           ],
           "type": "object"
         },
+        "appc": {
+          "additionalProperties": false,
+          "properties": {
+            "image": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the AppC image to use."
+            },
+            "id": {
+              "type": "string",
+              "minLength": 7,
+              "description": "An image ID is a string of the format 'hash-value', where 'hash' is the hash algorithm used and 'value' is the hex-encoded digest. Currently the only permitted hash algorithm is sha512."
+            },
+            "labels": {
+              "type": "object",
+              "description": "Optional labels. Suggested labels: 'version', 'os', and 'arch'.",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "forcePullImage": {
+              "type": "boolean",
+              "description": "The container will be pulled, regardless if it is already available on the local system."
+            }
+          },
+          "required": [ "image" ],
+          "type": "object"
+        },
         "type": {
           "type": "string",
-          "description": "Supported container types at the moment are DOCKER and MESOS.",
+          "description": "Container engine type. Supported engine types at the moment are DOCKER and MESOS.",
           "enum": ["MESOS", "DOCKER"]
         },
         "volumes": {
@@ -247,13 +291,28 @@
     },
     "disk": {
       "type": "number",
-      "description": "How much disk space is needed for this application. This number does not have to be an integer, but can be a fraction.",
+      "description": "How much disk space in MB is needed for this application. This number does not have to be an integer, but can be a fraction.",
       "minimum": 0
     },
     "env": {
       "patternProperties": {
         ".*": {
-          "type": "string"
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "object",
+              "description": "An environment variable set to a secret.",
+              "properties": {
+                "secret": {
+                  "type": "string",
+                  "description": "The key of the secret to be used as a value.",
+                  "minLength": 1
+                }
+              },
+              "required": [ "secret" ],
+              "additionalProperties": false
+            }
+          ]
         }
       },
       "type": "object"
@@ -285,6 +344,10 @@
           "cache": {
             "type": "boolean",
             "description": "Cache fetched artifact if supported by Mesos fetcher module"
+          },
+          "outputFile": {
+            "type": "string",
+            "description": "Rename fetched artifact with the given name"
           }
         },
         "required": [ "uri" ]
@@ -381,6 +444,11 @@
       "description": "The amount of memory in MB that is needed for the application per instance.",
       "minimum": 0
     },
+    "gpus": {
+     "type": "integer",
+     "description": "The amount of GPU cores that is needed for the application per instance.",
+     "minimum": 0
+    },
     "ipAddress": {
       "type": "object",
       "description": "If an application definition includes the 'ipAddress' field, then Marathon will request a per-task IP from Mesos. A separate ports/portMappings configuration is then disallowed.",
@@ -429,6 +497,10 @@
           "description": "Key value pair for meta data on that network interface.",
           "properties": {},
           "additionalProperties": true
+        },
+        "networkName": {
+          "type": "string",
+          "description": "If present, declares the name of the network that the container should join. In practice it is up to the IPAM to decide how to interpret this field."
         }
       }
     },
@@ -547,6 +619,25 @@
       "type": "boolean",
       "description": "Normally, the host ports of your tasks are automatically assigned. This corresponds to the requirePorts value false which is the default. If you need more control and want to specify your host ports in advance, you can set requirePorts to true. This way the ports you have specified are used as host ports. That also means that Marathon can schedule the associated tasks only on hosts that have the specified ports available."
     },
+    "secrets": {
+      "type": "object",
+      "description": "A map with named secret declarations. The key is used to reference the values from other places in the app definition.",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "description": "A secret declaration.",
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "The source of the secret's value. The format depends on the secret store used by Mesos.",
+              "minLength": 1
+            }
+          },
+          "required": [ "source" ],
+          "additionalProperties": false
+        }
+      }
+    },
     "storeUrls": {
       "type": "array",
       "description": "URL's that have to be resolved and put into the artifact store, before the task will be started.",
@@ -554,6 +645,11 @@
         "type": "string",
         "minLength": 1
       }
+    },
+    "taskKillGracePeriodSeconds": {
+      "type": "integer",
+      "description": "Configures the number of seconds between escalating from SIGTERM to SIGKILL when signalling tasks to terminate. Using this grace period, tasks should perform orderly shut down immediately upon receiving SIGTERM.",
+      "minimum": 0
     },
     "upgradeStrategy": {
       "type": "object",

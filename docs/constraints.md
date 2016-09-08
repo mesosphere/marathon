@@ -22,7 +22,9 @@ If the specified attribute is not defined on the agent node, most operators will
 
 Attribute field supports all operators of Marathon.
 
-Note that currently Marathon only supports text values for attributes and will not be able to process any numberic values. For example the attribute pair `foo:bar` will be recognised, but marathon will not be able to match `cpu:4`.
+Marathon supports text, scalar, range, and set attribute values. For scalars, ranges, and sets Marathon will perform a string comparison on the formatted values. The format matches that of the Mesos attribute formatting. For ranges and sets, the format is `[begin-end,...]` and `{item,...}` respectively. For example, you might have a range formatted as `[100-200]` and a set formatted as `{a,b,c}`.
+
+Regex is allowed for LIKE and UNLIKE operators; to match ANY value, use the string `.*`.
 
 ## Operators
 
@@ -115,3 +117,19 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "constraints": [["rack_id", "UNLIKE", "rack-[7-9]"]]
   }'
 ```
+
+### MAX_PER operator
+
+`MAX_PER` accepts a number as parameter which specifies the maximum size of each group.
+ It can be used to limit tasks across racks or datacenters:
+
+``` bash
+$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+    "id": "sleep-group-by",
+    "cmd": "sleep 60",
+    "instances": 3,
+    "constraints": [["rack_id", "MAX_PER", "2"]]
+  }'
+```
+
+Note, the parameter is required, or you'll get a warning.
