@@ -28,9 +28,14 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val portAssignments = app.portAssignments(task)
 
     Then("The right port assignment is returned")
-    portAssignments should equal(Some(Seq(
-      PortAssignment(portName = Some("http"), effectiveIpAddress = "192.168.0.1", effectivePort = 1)
-    )))
+    portAssignments should equal(Seq(
+      PortAssignment(
+        portName = Some("http"),
+        effectiveIpAddress = Some("192.168.0.1"),
+        effectivePort = 1,
+        hostPort = Some(1),
+        containerPort = None)
+    ))
   }
 
   test("portAssignments with IP-per-task defining ports, but a task which doesn't have an IP address yet") {
@@ -46,8 +51,8 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withNetworkInfos(Seq.empty)
       .withHostPorts(Seq.empty)
 
-    Then("The port assignments are None")
-    app.portAssignments(task) should be(None)
+    Then("The port assignments are empty")
+    app.portAssignments(task) should be(empty)
   }
 
   test("portAssignments with IP-per-task without ports") {
@@ -65,7 +70,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
       .withHostPorts(Seq.empty)
 
     Then("The port assignments are empty")
-    app.portAssignments(task).value should be(empty)
+    app.portAssignments(task) should be(empty)
   }
 
   test("portAssignments with a reserved task") {
@@ -75,8 +80,8 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     Given("A reserved task")
     val task = MarathonTestHelper.minimalReservedTask(app.id, MarathonTestHelper.newReservation)
 
-    Then("The port assignments are None")
-    app.portAssignments(task) should be(None)
+    Then("The port assignments are empty")
+    app.portAssignments(task) should be(empty)
   }
 
   test("portAssignments without IP-per-task and Docker BRIDGE mode with a port mapping") {
@@ -94,9 +99,14 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
 
     Then("The right port assignment is returned")
     val portAssignments = app.portAssignments(task)
-    portAssignments should be(Some(Seq(
-      PortAssignment(portName = Some("http"), effectiveIpAddress = task.agentInfo.host, effectivePort = 1)
-    )))
+    portAssignments should be(Seq(
+      PortAssignment(
+        portName = Some("http"),
+        effectiveIpAddress = Some(task.agentInfo.host),
+        effectivePort = 1,
+        hostPort = Some(1),
+        containerPort = Some(80))
+    ))
   }
 
   test("portAssignments without IP-per-task using Docker BRIDGE network and no port mappings") {
@@ -113,7 +123,7 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val task = MarathonTestHelper.mininimalTask(app.id)
 
     Then("The port assignments are empty")
-    app.portAssignments(task) should be(None)
+    app.portAssignments(task) should be(empty)
   }
 
   test("portAssignments with IP-per-task using Docker USER networking and a port mapping NOT requesting a host port") {
@@ -135,9 +145,14 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
 
     Then("The right port assignment is returned")
     val portAssignments = app.portAssignments(task)
-    portAssignments should be(Some(Seq(
-      PortAssignment(portName = Some("http"), effectiveIpAddress = "192.168.0.1", effectivePort = 80)
-    )))
+    portAssignments should be(Seq(
+      PortAssignment(
+        portName = Some("http"),
+        effectiveIpAddress = Some("192.168.0.1"),
+        effectivePort = 80,
+        containerPort = Some(80),
+        hostPort = None)
+    ))
   }
 
   test("portAssignments with IP-per-task Docker USER networking and a port mapping requesting a host port") {
@@ -160,9 +175,14 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
 
     Then("The right port assignment is returned")
     val portAssignments = app.portAssignments(task)
-    portAssignments should be(Some(Seq(
-      PortAssignment(portName = Some("http"), effectiveIpAddress = "192.168.0.1", effectivePort = 80)
-    )))
+    portAssignments should be(Seq(
+      PortAssignment(
+        portName = Some("http"),
+        effectiveIpAddress = Some("192.168.0.1"),
+        effectivePort = 80,
+        containerPort = Some(80),
+        hostPort = Some(30000))
+    ))
   }
 
   test("portAssignments with IP-per-task Docker, USER networking, and a mix of port mappings") {
@@ -186,10 +206,20 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
 
     Then("The right port assignment is returned")
     val portAssignments = app.portAssignments(task)
-    portAssignments should be(Some(Seq(
-      PortAssignment(portName = Some("http"), effectiveIpAddress = "192.168.0.1", effectivePort = 80),
-      PortAssignment(portName = Some("https"), effectiveIpAddress = "192.168.0.1", effectivePort = 443)
-    )))
+    portAssignments should be(Seq(
+      PortAssignment(
+        portName = Some("http"),
+        effectiveIpAddress = Some("192.168.0.1"),
+        effectivePort = 80,
+        containerPort = Some(80),
+        hostPort = None),
+      PortAssignment(
+        portName = Some("https"),
+        effectiveIpAddress = Some("192.168.0.1"),
+        effectivePort = 443,
+        containerPort = Some(443),
+        hostPort = Some(30000))
+    ))
   }
 
   test("portAssignments without IP-per-task, with Docker USER networking and a mix of port mappings") {
@@ -209,12 +239,22 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
 
     Then("The right port assignment is returned")
     val portAssignments = app.portAssignments(task)
-    portAssignments should be(Some(Seq(
+    portAssignments should be(Seq(
       // If there's no IP-per-task and no host port is required, fall back to the container port
-      PortAssignment(portName = Some("http"), effectiveIpAddress = task.agentInfo.host, effectivePort = 80),
+      PortAssignment(
+        portName = Some("http"),
+        effectiveIpAddress = Some(task.agentInfo.host),
+        effectivePort = 80,
+        containerPort = Some(80),
+        hostPort = None),
       // If there's no IP-per-task and a host port is required, use that host port
-      PortAssignment(portName = Some("https"), effectiveIpAddress = task.agentInfo.host, effectivePort = 30000)
-    )))
+      PortAssignment(
+        portName = Some("https"),
+        effectiveIpAddress = Some(task.agentInfo.host),
+        effectivePort = 30000,
+        containerPort = Some(443),
+        hostPort = Some(30000))
+    ))
   }
 
   test("portAssignments with port definitions") {
@@ -227,9 +267,14 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
 
     Then("The right port assignment is returned")
     val portAssignments = app.portAssignments(task)
-    portAssignments should be(Some(Seq(
-      PortAssignment(portName = Some("http"), effectiveIpAddress = task.agentInfo.host, effectivePort = 1)
-    )))
+    portAssignments should be(Seq(
+      PortAssignment(
+        portName = Some("http"),
+        effectiveIpAddress = Some(task.agentInfo.host),
+        effectivePort = 1,
+        containerPort = None,
+        hostPort = Some(1))
+    ))
   }
 
   test("portAssignments with absolutely no ports") {
@@ -242,6 +287,6 @@ class AppDefinitionPortAssignmentsTest extends FunSuiteLike with GivenWhenThen w
     val task = MarathonTestHelper.mininimalTask(app.id).withHostPorts(Seq.empty)
 
     Then("The port assignments are empty")
-    app.portAssignments(task).value should be(empty)
+    app.portAssignments(task) should be(empty)
   }
 }
