@@ -47,7 +47,7 @@ class HealthCheckWorkerActorTest
     finally { socket.close() }
 
     expectMsgPF(1.seconds) {
-      case Healthy(taskId, _, _) => ()
+      case Healthy(taskId, _, _, _) => ()
     }
   }
 
