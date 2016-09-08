@@ -61,9 +61,9 @@ trait PodsValidation {
   }
 
   val backoffStrategyValidator = validator[PodSchedulingBackoffStrategy] { bs =>
-    bs.backoff should be >= 0.0
-    bs.backoffFactor should be >= 0.0
-    bs.maxLaunchDelay should be >= 0.0
+    bs.backoff.each should be >= 0.0
+    bs.backoffFactor.each should be >= 0.0
+    bs.maxLaunchDelay.each should be >= 0.0
   }
 
   val upgradeStrategyValidator = validator[PodUpgradeStrategy] { us =>
