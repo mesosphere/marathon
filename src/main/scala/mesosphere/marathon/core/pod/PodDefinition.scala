@@ -9,6 +9,7 @@ import mesosphere.marathon.state.{ AppDefinition, BackoffStrategy, EnvVarSecretR
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 // scalastyle:on
 
 /**
@@ -83,10 +84,10 @@ case class PodDefinition(
     val ramlUpgradeStrategy = PodUpgradeStrategy(
       upgradeStrategy.minimumHealthCapacity,
       upgradeStrategy.maximumOverCapacity)
-    // TODO: we're missing stuff here
+
     val ramlBackoffStrategy = PodSchedulingBackoffStrategy(
-      backoffStrategy.backoff.toSeconds.toDouble,
-      backoffStrategy.maxLaunchDelay.toSeconds.toDouble,
+      backoffStrategy.backoff.toMillis.toDouble / 1000.0,
+      backoffStrategy.maxLaunchDelay.toMillis.toDouble / 1000.0,
       backoffStrategy.factor)
     val schedulingPolicy = PodSchedulingPolicy(Some(ramlBackoffStrategy), Some(ramlUpgradeStrategy),
       Some(PodPlacementPolicy(constraintDefs, acceptedResourceRoles.toVector)))
@@ -122,8 +123,6 @@ case class PodDefinition(
 }
 
 object PodDefinition {
-  val DefaultExecutorCpus = 0.1
-  val DefaultExecutorMem = 32
 
   //scalastyle:off
   def apply(podDef: Pod, defaultNetworkName: Option[String]): PodDefinition = {
@@ -170,8 +169,7 @@ object PodDefinition {
       UpgradeStrategy(raml.minimumHealthCapacity, raml.maximumOverCapacity)
     }
 
-    import scala.concurrent.duration._
-    val x = podDef.scheduling.flatMap { policy =>
+    val backoffStrategy = podDef.scheduling.flatMap { policy =>
       policy.backoff.map { strategy =>
         BackoffStrategy(strategy.backoff.seconds, strategy.maxLaunchDelay.seconds, strategy.backoffFactor)
       }
@@ -191,11 +189,7 @@ object PodDefinition {
       version = podDef.version.fold(Timestamp.now())(Timestamp(_)),
       podVolumes = podDef.volumes,
       networks = networks,
-      backoffStrategy = podDef.scheduling.flatMap { policy =>
-        policy.backoff.map { strategy =>
-          BackoffStrategy(strategy.backoff.seconds, strategy.maxLaunchDelay.seconds, strategy.backoffFactor)
-        }
-      }.getOrElse(DefaultBackoffStrategy),
+      backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy
     )
   }
@@ -205,6 +199,8 @@ object PodDefinition {
     PodDefinition(Json.parse(proto.getJson).as[Pod], None)
   }
 
+  val DefaultExecutorCpus = 0.1
+  val DefaultExecutorMem = 32
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
